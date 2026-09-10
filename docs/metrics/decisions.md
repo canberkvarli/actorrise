@@ -1005,3 +1005,36 @@ forms so "black swan" stays a title). No second column.
 
 Moves: the query_type distribution. Some `other` and `attribute` rows become
 `identity` or `multi` from today; do not read a drop in `other` as a fix.
+
+## 2026-09-10 — The brief's billing and classifier alarms, checked against prod
+
+- **`paid_invoices` = 0 is the known snapshot bug**, not a webhook failure:
+  billing_history has 76 rows, every one `status='succeeded'`, latest
+  2026-09-10 (see the 2026-08-28 entry: the snapshot filters `'paid'`).
+  Real charges this month: $12 on Sep 2 (user 1351) and $12 on Sep 9 (user 735).
+- **`subs_active` = 52 in the brief; 37 with the 09-08 exclusions** (13 manual
+  comps, 2 expired comps). The brief did not apply them.
+- **Trial events never fired, two causes, both in Stripe, both real:**
+  (1) the webhook endpoint `we_1SyX1WRg9rz1StUq5QGGQk4w` does not subscribe
+  to `customer.subscription.updated`, so the trialing→active transition never
+  reaches `handle_subscription_updated`; (2) the endpoint runs API
+  2025-12-15.clover, where `invoice.subscription` no longer exists, so
+  `handle_invoice_paid` threw inside its trial guard and swallowed it. User 735
+  converted on Sep 9 ($12, trial_end set) and cancelled two hours later,
+  feedback "too_expensive", and no `trial_converted` / `trial_ended` row and no
+  GA4 conversion was written. Handler fixed today (reads the id from
+  `parent.subscription_details` or our own row); the event subscription needs
+  a Stripe dashboard change. Backfilling 735's two events was NOT done.
+- **Weak `other` is not hidden TV titles the classifier could know.** Of 44
+  weak `other` rows this week, 4 match a title in `film_tv_references`
+  (1,585 titles; the classifier already consults the carried ones). The rest
+  are shows and people we do not have at all (the fallout, shameless,
+  moesha, april ludgate, courtney eaton) plus "War" ×5 and test strings.
+  Classifying them as `title` needs an external title list, not a code fix.
+- **Content requests dedupe correctly** (case-insensitive on title+author, no
+  duplicate titles in the table); `request_count` = 1 everywhere because
+  nobody has asked for the same thing twice. Non-title submissions were gated
+  on 2026-09-08.
+- **"easy short" → 0 results:** the query parser has no difficulty vocabulary
+  (`beginner` = 224 pieces, `intermediate` 15,011). Not built; three searches
+  in 30 days.

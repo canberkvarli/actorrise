@@ -304,7 +304,20 @@ def handle_invoice_paid(invoice: dict, db: Session):
     # up front is not miscounted as a converted trialist.
     try:
         if invoice.get("amount_paid", 0) > 0 and not had_prior_payment:
-            stripe_sub = stripe.Subscription.retrieve(invoice["subscription"])
+            # `invoice.subscription` left the top level in API 2025-03-31
+            # (basil); the endpoint runs 2025-12-15. Reading it raised a
+            # KeyError that the except below swallowed, so the first real
+            # trial conversion (user 735, 2026-09-09, $12, cancelled two
+            # hours later as "too expensive") wrote no event and no GA4 hit.
+            parent = invoice.get("parent") or {}
+            sub_id = (
+                invoice.get("subscription")
+                or (parent.get("subscription_details") or {}).get("subscription")
+                or subscription.stripe_subscription_id
+            )
+            if not sub_id:
+                raise KeyError("invoice has no subscription id")
+            stripe_sub = stripe.Subscription.retrieve(sub_id)
             if stripe_sub.get("trial_end"):
                 from app.services.analytics import track_trial_converted
 
@@ -324,7 +337,7 @@ def handle_invoice_paid(invoice: dict, db: Session):
                 # query and not a GA4 report nobody trusts.
                 from app.services.events import record_trial_ended, record_user_event
 
-                _sid = stripe_sub.get("id") or invoice.get("subscription")
+                _sid = stripe_sub.get("id") or sub_id
                 _tier = tier_row.name if tier_row else "plus"
                 record_user_event(
                     subscription.user_id,
@@ -338,7 +351,8 @@ def handle_invoice_paid(invoice: dict, db: Session):
                 )
                 record_trial_ended(db, subscription.user_id, _sid, "converted", tier=_tier)
     except Exception as e:
-        print(f"Warning: GA4 trial_converted not sent: {e}")
+        # logger, not print: this warning went unread for five months.
+        logger.warning("trial_converted not recorded for user %s: %s", subscription.user_id, e)
 
 
 def handle_payment_failed(invoice: dict, db: Session):
