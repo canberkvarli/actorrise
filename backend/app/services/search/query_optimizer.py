@@ -446,6 +446,39 @@ class KeywordExtractor:
         }
     }
 
+    #: "act 3", "act iii", "scene 1". Deliberately narrow: the number must
+    #: follow the word, so "the third act" and a bare "3" are not act filters.
+    _ACT_RE = re.compile(r'\bact\s+(\d+|[ivxIVX]+)\b')
+    _SCENE_RE = re.compile(r'\bscene\s+(\d+|[ivxIVX]+)\b')
+
+    @classmethod
+    def extract_act_scene(cls, query_lower: str) -> Dict:
+        """Act and scene numbers, for any tier.
+
+        These are the one part of a query that is not a judgement call. "act 3"
+        means act 3 whoever reads it, so unlike tone or era there is nothing a
+        model can be better at, and no reason to spend a token asking one.
+
+        It lives apart from `extract` because `optimize` throws the whole
+        keyword extraction away on tier 3 and defers to the LLM -- whose schema
+        has no act or scene field. An actor asking for "Rosalind's Act 3, Scene
+        2" therefore had those numbers silently dropped and was given Act 4
+        Scene 3. Same shape as `_augment_duration_bounds`, which already exists
+        because the model kept missing durations.
+        """
+        out: Dict = {}
+        for key, rx in (("act", cls._ACT_RE), ("scene", cls._SCENE_RE)):
+            m = rx.search(query_lower or "")
+            if not m:
+                continue
+            val = m.group(1)
+            n = int(val) if val.isdigit() else cls._roman_to_int(val.upper())
+            # An unconvertible roman numeral comes back 0/None. An `act = 0`
+            # filter matches nothing, so drop it rather than empty the results.
+            if n:
+                out[key] = n
+        return out
+
     @classmethod
     @lru_cache(maxsize=1000)  # Cache 1000 most recent extractions
     def extract(cls, query: str) -> Dict:
@@ -600,24 +633,9 @@ class KeywordExtractor:
         if themes_found:
             filters['themes'] = themes_found
 
-        # Extract act/scene numbers (pattern-based, not keyword)
-        # Matches: "act 3", "act iii", "act III", "scene 1", etc.
-        act_match = re.search(r'\bact\s+(\d+|[ivxIVX]+)\b', query_lower)
-        if act_match:
-            act_val = act_match.group(1)
-            if act_val.isdigit():
-                filters['act'] = int(act_val)
-            else:
-                # Convert Roman numeral to int
-                filters['act'] = cls._roman_to_int(act_val.upper())
-
-        scene_match = re.search(r'\bscene\s+(\d+|[ivxIVX]+)\b', query_lower)
-        if scene_match:
-            scene_val = scene_match.group(1)
-            if scene_val.isdigit():
-                filters['scene'] = int(scene_val)
-            else:
-                filters['scene'] = cls._roman_to_int(scene_val.upper())
+        # Act/scene. Shared with the tier-3 path via extract_act_scene, because
+        # "act 3" is a fact about the query, not an interpretation of it.
+        filters.update(cls.extract_act_scene(query_lower))
 
         # Extract duration intent. Multilingual (EN/IT/ES/FR/PT) so "5 minuti",
         # "2 minutos", "5-minute" all parse like "5 minutes". A BARE target
@@ -780,6 +798,15 @@ class QueryOptimizer:
         else:
             # Tier 3: Will use AI parsing
             extracted_filters = {}
+
+        # Act and scene survive every tier. Tier 3 hands the query to the LLM,
+        # whose filter schema has no act or scene field, so "Rosalind's Act 3,
+        # Scene 2" used to arrive at the search with those numbers thrown away
+        # and came back with Act 4 Scene 3. They are patterns, not judgements;
+        # there is nothing to defer to a model about them.
+        structural = self.extractor.extract_act_scene((query or "").lower())
+        for key, value in structural.items():
+            extracted_filters.setdefault(key, value)
 
         # Step 3: Merge with explicit filters (explicit takes precedence)
         merged_filters = {**extracted_filters, **(explicit_filters or {})}

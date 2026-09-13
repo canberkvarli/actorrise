@@ -670,6 +670,12 @@ _TITLE_FILLER = {
 _MIN_PHRASE_TITLE_CHARS = 8
 _MIN_TITLE_CHARS = 3
 
+#: "act 3", "scene ii" — a location within a play, not part of anyone's name.
+#: Only ever stripped from the CHARACTER candidate (see
+#: detect_catalogue_character), never from a title: a play may legitimately be
+#: called "Act One", and the title path has its own rules.
+_ACT_SCENE_TOKENS = re.compile(r"\b(?:act|scene)\s+(?:\d+|[ivx]+)\b")
+
 
 # The catalogue is ~1,200 titles and changes only when an ingest job runs, but
 # matching it in SQL costs a seq scan plus a Supabase round trip — measured at
@@ -789,11 +795,24 @@ def reset_catalogue_cache() -> None:
     _character_loaded_at = 0.0
 
 
+#: A trailing possessive, in the apostrophes actual users type (ASCII ' and the
+#: smart ’ that phones insert). Removed BEFORE punctuation becomes whitespace:
+#: otherwise "rosalind's" normalises to "rosalind s", the stray "s" is not a
+#: filler word, and the name no longer equals a catalogue entry. That one token
+#: was enough to lose "Hamlet's speech", "Juliet's monologue" and
+#: "Lady Macbeth's sleepwalking" -- the most natural way an actor names a piece.
+_POSSESSIVE = re.compile(r"[’']s\b|[’']\B")
+
+
 def _normalise_name(value: str) -> str:
-    """Lowercase, strip punctuation, collapse whitespace. Unlike _normalise_title
-    this does NOT drop a leading article — names don't carry one, and dropping it
-    would fold "A. J." oddly. Kept deliberately simple."""
-    v = re.sub(r"[^\w\s]", " ", (value or "").lower())
+    """Lowercase, drop a possessive, strip punctuation, collapse whitespace.
+
+    Unlike _normalise_title this does NOT drop a leading article — names don't
+    carry one, and dropping it would fold "A. J." oddly. Kept deliberately
+    simple.
+    """
+    v = _POSSESSIVE.sub("", (value or "").lower())
+    v = re.sub(r"[^\w\s]", " ", v)
     return re.sub(r"\s+", " ", v).strip()
 
 
@@ -861,7 +880,13 @@ def detect_catalogue_character(db, query: str) -> Optional[Dict[str, object]]:
         return None
 
     stripped = " ".join(w for w in nq.split() if w not in _TITLE_FILLER).strip()
-    for cand in (nq, stripped):
+    # "rosalind act 3 scene 2" still names Rosalind. The act and scene numbers
+    # are already pulled out as structured filters by the query optimizer and
+    # applied by find_character_monologues, so leaving them in the name
+    # candidate only prevents the match that makes them useful.
+    located = _ACT_SCENE_TOKENS.sub(" ", nq)
+    located = " ".join(w for w in located.split() if w not in _TITLE_FILLER).strip()
+    for cand in (nq, stripped, located):
         if not cand:
             continue
         entry = cat.get(cand)
