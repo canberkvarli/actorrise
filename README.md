@@ -1,296 +1,162 @@
-# ActorRise Platform
+# ActorRise
 
-A modern acting platform built with Next.js and FastAPI: the world's largest AI-powered monologue discovery for **theater and film/TV**. Find the right audition material in seconds.
+A platform for actors, built with Next.js and FastAPI. Find audition material in
+plain English, then actually rehearse it.
 
-## 🎭 Current Features
+Live at [actorrise.com](https://actorrise.com).
 
-- **AI Monologue Search**: Semantic search that understands what you're looking for
-  - **Theater**: 8,600+ monologues from 172 plays (4–8x larger than competitors). Full script text, filters (gender, age, duration, emotion, overdone), and profile-biased results
-  - **Film/TV**: Search film and TV scene references by character, emotion, tone, difficulty. After search, click a result, then use the **Script** link to open the scene (e.g. IMSDB) and **Watch** for YouTube when available. Same search bar: switch between Plays and Film/TV
-- **Authentication**: Secure Supabase authentication with JWT token verification
-- **Actor Profiles**: Comprehensive profile system for actors
-  - Basic info (name, age range, gender, ethnicity, height, build, location)
-  - Acting info (experience level, type, training background, union status)
-  - Preferences (preferred genres, profile bias settings)
-  - Headshot upload with image processing
-- **Dashboard**: User dashboard with profile completion tracking and quick actions
-- **My Submissions**: Track and manage your monologue submissions
-- **Modern UI**: Beautiful design with shadcn/ui components and dark theme
+## What's in the library
 
-## 🚀 Coming Soon
+| | monologues | titles |
+|---|---|---|
+| Plays | 13,998 | 732 |
+| Film | 4,069 | 1,208 |
+| Television | 1,313 | 224 |
+| **Searchable total** | **19,380** | |
 
-- **ScenePartner**: AI scene reader
-- **CraftCoach**: AI feedback on performances
-- **AuditionTracker**: Track your auditions
+Every piece is 100+ words for stage and 75+ for screen (see
+`monologue_quality.min_words_for_source` — the floor is per-source and lives in
+one place). Full text is stored only where the rights allow it; everything else
+links out to where an actor can buy the script.
 
-## 🛠 Tech Stack
+**A known gap, stated plainly:** the play corpus is public domain, which means
+nothing written after 1929. There is no contemporary play in the library, and no
+amount of scraping changes that, because every contemporary play is in
+copyright. 8% of searches ask for contemporary work.
 
-### Frontend
-- **Next.js 16** (App Router)
-- **TypeScript**
-- **shadcn/ui** - Modern component library
-- **Tailwind CSS v4**
-- **React Hook Form + Zod** - Form validation
-- **Supabase** - Authentication client
-- **Framer Motion** - Animations
-- **Sonner** - Toast notifications
+## Features
 
-### Backend
-- **FastAPI** - Modern Python web framework
-- **SQLAlchemy** - Database ORM
-- **PostgreSQL** - Database (via psycopg2)
-- **Supabase** - Authentication & Storage
-- **Pydantic** - Data validation
-- **Pillow** - Image processing
-- **uv** - Modern Python package manager
+- **Monologue search** — semantic search over the whole library. Understands
+  duration ("under 90 seconds"), act and scene, character names, tone, age, and
+  gender. Filters for overdone pieces so you are not the fourth Hamlet that day.
+- **ScenePartner** — AI scene reader that runs the other parts so you can
+  rehearse a scene alone. Upload a script, it extracts the scenes.
+- **Monologue Work** — audio-first rehearsal for a single piece, with
+  line-by-line delivery tracking.
+- **Callboard / Green Room** — a shared board and activity feed.
+- **Auditions, resume, self-tapes** — track submissions, build a resume, store
+  tapes.
+- **Actor profiles** — headshot, age range, type and training, used to bias
+  search results toward what suits you.
 
-## 📋 Prerequisites
+## Tech stack
 
-- **Node.js 18+**
-- **Python 3.9+**
-- **uv** - Modern Python package manager (install via `curl -LsSf https://astral.sh/uv/install.sh | sh` or `pip install uv`)
-- **PostgreSQL** database
-- **Supabase** account (for auth and storage)
+**Frontend** — Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4,
+shadcn/ui, Framer Motion, Zod 4. Deployed on Vercel.
 
-## 🚀 Getting Started
+**Backend** — FastAPI, SQLAlchemy, Pydantic, `uv`. Deployed on Render
+(auto-deploys on pushes touching `backend/**`).
 
-### 1. Clone the Repository
+**Data** — Supabase Postgres with pgvector. Embeddings are
+`text-embedding-3-large` at 1536 dimensions, searched with cosine distance over
+an HNSW index. `gpt-4o-mini` handles query parsing and content analysis.
 
-```bash
-git clone <your-repo-url>
-cd actorrise
-```
+**Auth and storage** — Supabase.
 
-### 2. Frontend Setup
+## Getting started
+
+Prerequisites: Node 18+, Python 3.9+, [uv](https://docs.astral.sh/uv/), a
+Postgres database with the `vector` extension, and a Supabase project.
 
 ```bash
-# Install dependencies
-npm install
+git clone <your-repo-url> && cd actorrise
 
-# Create environment file
-cp .env.example .env.local
-```
-
-Edit `.env.local` with your configuration:
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-# Optional: Google Analytics (GA4) – set to your Measurement ID (e.g. G-XXXXXXXXXX) for extra analytics alongside Vercel
-# NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
-```
-
-```bash
-# Start development server
-npm run dev
-```
-
-Frontend will run on **http://localhost:3000**
-
-### 3. Backend Setup
-
-```bash
-cd backend
-
-# Install dependencies (uv handles venv automatically)
-uv pip install -e .
-
-# Create environment file
-cp .env.example .env
-```
-
-Edit `.env` with your configuration:
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/actorrise
-JWT_SECRET=your-secret-key-change-in-production
-JWT_ALGORITHM=HS256
-CORS_ORIGINS=http://localhost:3000
-SUPABASE_URL=your-supabase-url
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
-SUPABASE_STORAGE_BUCKET=headshots
-```
-
-```bash
-# Start development server (no venv activation needed!)
-uv run uvicorn app.main:app --reload
-```
-
-Backend will run on **http://localhost:8000**
-
-### 4. Database Setup
-
-Make sure PostgreSQL is running and create a database:
-
-```sql
-CREATE DATABASE actorrise;
-```
-
-The database tables will be automatically created on first startup via SQLAlchemy.
-
-## 📁 Project Structure
-
-```
-actorrise/
-├── app/                    # Next.js app router pages
-│   ├── (auth)/            # Authentication pages
-│   │   ├── login/
-│   │   └── signup/
-│   └── (platform)/        # Protected platform pages
-│       ├── dashboard/
-│       ├── profile/
-│       ├── search/         # AI monologue search (theater + film/TV)
-│       └── admin/          # Admin moderation & content
-├── components/             # React components
-│   ├── auth/              # Authentication components
-│   ├── profile/           # Profile components
-│   ├── search/           # Search (MonologueResultCard, FilmTvMonologueCard, etc.)
-│   └── ui/               # shadcn/ui components
-├── lib/                   # Utilities
-│   ├── api.ts            # API client (fetch-based)
-│   ├── auth.tsx          # Auth context
-│   ├── supabase.ts       # Supabase client
-│   └── utils.ts          # Utility functions
-├── types/                 # TypeScript types
-├── backend/              # FastAPI application
-│   ├── app/
-│   │   ├── api/          # API endpoints
-│   │   │   ├── auth.py   # Authentication endpoints
-│   │   │   ├── profile.py # Profile endpoints
-│   │   │   ├── monologues.py # Theater monologue search
-│   │   │   └── film_tv.py   # Film/TV scene search
-│   │   ├── core/         # Core utilities
-│   │   │   ├── config.py      # Configuration
-│   │   │   ├── database.py    # Database setup
-│   │   │   └── security.py   # JWT verification
-│   │   ├── models/       # Database models
-│   │   │   ├── actor.py  # Actor profile model
-│   │   │   └── user.py   # User model
-│   │   ├── services/     # Business logic
-│   │   │   └── storage.py # Supabase storage
-│   │   └── main.py       # FastAPI app
-│   └── pyproject.toml    # Python dependencies (uv)
-└── README.md
-```
-
-## 🔐 Environment Variables
-
-### Frontend (.env.local)
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-```
-
-### Backend (.env)
-
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/actorrise
-
-# JWT (for token decoding, Supabase handles signing)
-JWT_SECRET=your-secret-key-change-in-production
-JWT_ALGORITHM=HS256
-
-# CORS
-CORS_ORIGINS=http://localhost:3000
-
-# Supabase
-SUPABASE_URL=your-supabase-project-url
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
-SUPABASE_STORAGE_BUCKET=headshots
-```
-
-## 📖 Usage
-
-1. **Sign Up**: Create an account at `/signup`
-2. **Login**: Sign in at `/login`
-3. **Complete Profile**: Fill out your actor profile at `/profile`
-   - Upload a headshot
-   - Set your preferences
-   - Enable profile bias for future recommendations
-4. **Dashboard**: View your profile completion and stats at `/dashboard`
-5. **Search**: AI-powered monologue search at `/search`: switch between **Plays** (8,600+ theater monologues) and **Film/TV** (scene references) and search in plain English
-
-## 🧪 Development
-
-### Running the Application
-
-```bash
-# Terminal 1 - Frontend
-npm run dev
-
-# Terminal 2 - Backend
-cd backend
-uv run uvicorn app.main:app --reload
-```
-
-### Linting
-
-```bash
 # Frontend
-npm run lint
+npm install
+npm run dev                    # http://localhost:3000
 
-# Backend (if you add pylint/flake8)
+# Backend, in a second terminal
 cd backend
-pylint app/
+uv pip install -e .
+uv run uvicorn app.main:app --reload   # http://localhost:8000
 ```
 
-## 🗄 Database
+Create `.env.local` and `backend/.env` by hand from the blocks below. There are
+no `.env.example` files to copy: `.gitignore` excludes `.env*`, so a committed
+example would be invisible to everyone who cloned the repo.
 
-The application uses PostgreSQL. Tables are automatically created via SQLAlchemy on startup:
+Tables are created by SQLAlchemy on first startup.
 
-- `users` - User accounts (synced with Supabase)
-- `actor_profiles` - Actor profile information
-- `monologues` - Theater monologue database (AI semantic search)
-- `film_tv_sources` / `film_tv_references` - Film & TV metadata and scene references (AI search)
+### Environment
 
-## 🔒 Authentication Flow
+**Frontend, `.env.local`**
 
-1. User signs up/logs in via Supabase Auth (frontend)
-2. Frontend receives JWT token from Supabase
-3. Frontend sends token in `Authorization: Bearer <token>` header
-4. Backend verifies token and extracts user info
-5. Backend creates/updates user in local database
-6. User is authenticated for API requests
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+# NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX   # optional
+```
 
-## 📝 API Endpoints
+**Backend, `.env`** (the settings `app/core/config.py` reads)
 
-### Authentication
-- `GET /api/auth/me` - Get current user info
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/actorrise
+JWT_SECRET=
+JWT_ALGORITHM=HS256
+CORS_ORIGINS=http://localhost:3000
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_STORAGE_BUCKET=headshots
+OPENAI_API_KEY=
+ENVIRONMENT=development
+SUPERUSER_EMAILS=
+REVIEW_EMAILS=
+```
 
-### Profile
-- `GET /api/profile` - Get user's actor profile
-- `POST /api/profile` - Create/update actor profile
-- `POST /api/profile/headshot` - Upload headshot image
-- `GET /api/profile/stats` - Get profile completion stats
+## Layout
 
-## 🎨 UI Components
+```
+app/                     Next.js App Router
+  (auth)/                login, signup
+  (marketing)/           public pages, SEO collection pages
+  (platform)/            monologues, practice, rehearse, scenes, callboard,
+                         greenroom, audition, resume, profile, billing, admin
+components/              React components (search/, profile/, ui/, ...)
+lib/                     api client, auth context, Supabase client
+backend/
+  app/api/               route modules, incl. admin/
+  app/models/            SQLAlchemy models
+  app/services/
+    search/              semantic_search, title_lookup, query_optimizer
+    extraction/          TEI XML, Gutenberg plain text, screenplay PDF parsers
+    data_ingestion/      pipeline.py — the only supported way to add monologues
+    ai/                  embeddings, content analysis
+  scripts/               corpus maintenance and audits (see below)
+  tests/                 119 files, 1,537 tests
+```
 
-Built with [shadcn/ui](https://ui.shadcn.com/) components:
-- Button, Card, Input, Label, Select, Switch
-- Dialog, Tooltip, Progress, Badge
-- Tabs, Separator, Skeleton
-- All components are customizable and themeable
+## Working on the corpus
 
-## 🚧 Roadmap
+`ingest_play()` in `app/services/data_ingestion/pipeline.py` is the only
+supported way to add monologues. It enforces the rights model
+(`services/licensing.py`), the word floor, and cross-source deduplication.
 
-- [x] AI-powered monologue search (theater + film/TV)
-- [x] Semantic search with embeddings (theater & film/TV)
-- [ ] ScenePartner - AI scene reader
-- [ ] CraftCoach - AI performance feedback
-- [ ] AuditionTracker
-- [ ] Advanced analytics dashboard
-- [ ] More film/TV titles and scene coverage
+Useful scripts:
 
-## 📄 License
+```bash
+python -m scripts.audit_corpus_quality        # run after EVERY ingest
+python -m scripts.audit_search_constraints    # replay real searches, check results
+python -m scripts.apply_table_storage_params  # DB storage params, in version control
+```
+
+Two habits worth keeping:
+
+1. **Run the quality audit after every ingest.** It found a Plautus footnote bug
+   in minutes on a source nobody had read, where every other problem cost hours
+   of sampling and luck.
+2. **Do not scan the whole corpus from a laptop.** Supabase bills egress and the
+   maintenance scripts are the largest consumer. Select the columns you need and
+   page; push work into SQL where you can.
+
+## Testing
+
+```bash
+cd backend && pytest -q          # 1,537 tests
+npm run lint                     # frontend
+```
+
+## License
 
 MIT
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
-
-Built with ❤️ for actors everywhere
