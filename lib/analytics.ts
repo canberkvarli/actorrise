@@ -28,6 +28,13 @@ type ScenePartnerOpenedParams = {
   source: "search_result" | "nav" | "direct";
 };
 
+type PartnerClickedParams = {
+  /** Organization name, e.g. "Virginia Theatre Association". */
+  partner: string;
+  /** Where the mark was clicked. */
+  surface: "landing" | "thanks";
+};
+
 type SignupCompletedParams = {
   source: string;
   /**
@@ -195,6 +202,15 @@ export function trackResultClicked(params: ResultClickedParams) {
 
 export function trackScenePartnerOpened(params: ScenePartnerOpenedParams) {
   sendEvent("scenepartner_opened", params);
+}
+
+/**
+ * A click on a partner organization's mark, outbound to their site. The traffic
+ * they send us is already visible as a referrer; this is the only way to see the
+ * traffic we send them, which is what the reciprocal listing was offered for.
+ */
+export function trackPartnerClicked(params: PartnerClickedParams) {
+  sendEvent("partner_clicked", params);
 }
 
 const SIGNUP_TRACKED_PREFIX = "actorrise_signup_tracked:";

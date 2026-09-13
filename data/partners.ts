@@ -39,7 +39,18 @@ export interface PartnerItem {
   approved: boolean;
 }
 
-export const PARTNERS: PartnerItem[] = [];
+export const PARTNERS: PartnerItem[] = [
+  {
+    name: "Virginia Theatre Association",
+    shortName: "VTA",
+    url: "https://www.vtasite.org",
+    logo: "/partners/vta.png",
+    blurb: "Lists ActorRise for its member teachers and actors.",
+    category: "chapter",
+    // Approved in writing by VTA's conference manager on 2026-09-13, logo file supplied.
+    approved: true,
+  },
+];
 
 /**
  * The only list any view should read. Filtering here rather than at each call site
@@ -47,8 +58,18 @@ export const PARTNERS: PartnerItem[] = [];
  */
 export const APPROVED_PARTNERS: PartnerItem[] = PARTNERS.filter((p) => p.approved);
 
-/** Below this, the landing row renders nothing: one logo reads worse than none. */
-export const PARTNERS_MIN_TO_SHOW = 3;
+/**
+ * Below this, the landing section renders nothing.
+ *
+ * One logo in a wrapped row does read worse than none, so the landing section
+ * doesn't use a row at one: it renders a single sentence with the mark beside it
+ * (see LandingPartners), which reads as a credential rather than a thin grid.
+ * The row takes over on its own once this many marks are approved.
+ */
+export const PARTNERS_MIN_TO_SHOW = 1;
+
+/** At or above this many approved marks, the landing section switches to the logo row. */
+export const PARTNERS_MIN_FOR_ROW = 3;
 
 /** Section order on /partners. Categories not listed here fall to the end, alphabetically. */
 export const PARTNER_CATEGORY_ORDER = [

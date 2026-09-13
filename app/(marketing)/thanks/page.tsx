@@ -64,7 +64,9 @@ function PartnerCard({ partner }: { partner: PartnerItem }) {
               src={partner.logo}
               alt={partner.name}
               loading="lazy"
-              className="max-h-12 w-auto max-w-full object-contain"
+              // dark:invert: supplied marks are black on transparent and vanish
+              // against the dark shell; inverting reads them as white there.
+              className="max-h-12 w-auto max-w-full object-contain dark:invert"
             />
           ) : (
             <span
