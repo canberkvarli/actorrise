@@ -46,7 +46,18 @@ def estimate_duration_seconds(text: str) -> int:
     text_no_ellipsis = re.sub(r'\.{3}|…', '', text)
 
     sentence_ends = len(re.findall(r'[.!?]+', text_no_ellipsis))
-    clause_breaks = len(re.findall(r'[,;:\u2014\u2013]', text))  # includes em/en dash
+    # "--" counts as a dash. Gutenberg-era plain text writes an em dash that
+    # way, and a third of the live corpus (6,390 of 19,403 rows) contains one,
+    # so leaving it out charged those editions no pause at all for punctuation
+    # that a typographic edition of the SAME speech gets paid for. It showed up
+    # as two copies of "To be, or not to be" quoting 1:50 and 2:19 at each
+    # other. Counted before the single-character class so one "--" is one
+    # pause, not two.
+    dash_pairs = len(re.findall(r'--+', text))
+    text_no_dashes = re.sub(r'--+', ' ', text)
+    clause_breaks = dash_pairs + len(
+        re.findall(r'[,;:\u2014\u2013]', text_no_dashes)
+    )  # includes em/en dash
     paragraph_breaks = len(re.findall(r'\n\s*\n', text))
     # Single line breaks (not paragraph breaks) count as shorter pauses
     single_breaks = text.count('\n') - (paragraph_breaks * 2)

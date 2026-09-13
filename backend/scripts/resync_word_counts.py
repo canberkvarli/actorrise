@@ -66,22 +66,40 @@ def main() -> None:
         # the stored count against the text without sending either back.
         total = db.execute(sa_text(
             "SELECT count(*) FROM monologues WHERE text IS NOT NULL")).scalar_one()
-        ids = [r[0] for r in db.execute(sa_text("""
-            SELECT id FROM monologues
-            WHERE text IS NOT NULL
-              AND COALESCE(word_count, 0) IS DISTINCT FROM
-                  array_length(regexp_split_to_array(trim(text), '\\s+'), 1)
-            ORDER BY id
-        """)).fetchall()]
+        # Every row with text, not just the ones whose WORD COUNT drifted.
+        #
+        # The old pre-filter compared the stored count against the text in SQL
+        # and only visited the mismatches. That is sound for word_count and
+        # blind for duration: a row can hold a perfectly correct word count
+        # beside a running time written by a different formula, and this script
+        # would never look at it. 14,136 live rows were in exactly that state,
+        # because scripts/extract_film_tv_monologues.py used to compute
+        # `round(word_count / 2.5)` — a flat 150 wpm with no pauses — against
+        # this helper's 130 wpm plus pause accounting, about 25% apart.
+        #
+        # Duration cannot be recomputed in SQL, so the comparison has to happen
+        # in Python. The chunking below is what keeps that safe: the pooler
+        # broke on a single SELECT of every row WITH its text, not on 500 at a
+        # time, and that loop already existed.
+        ids = [r[0] for r in db.execute(sa_text(
+            "SELECT id FROM monologues WHERE text IS NOT NULL ORDER BY id"
+        )).fetchall()]
 
         drifted = []
+        word_drift = dur_drift = 0
         for chunk in (ids[i:i + 500] for i in range(0, len(ids), 500)):
             for m in db.query(Monologue).filter(Monologue.id.in_(chunk)).all():
                 actual = len((m.text or "").split())
-                if actual != (m.word_count or 0):
-                    drifted.append((m, actual, estimate_duration_seconds(m.text)))
+                dur = estimate_duration_seconds(m.text)
+                bad_words = actual != (m.word_count or 0)
+                bad_dur = dur != (m.estimated_duration_seconds or 0)
+                if bad_words or bad_dur:
+                    word_drift += int(bad_words)
+                    dur_drift += int(bad_dur)
+                    drifted.append((m, actual, dur))
 
-        print(f"{total} monologues scanned, {len(drifted)} drifted")
+        print(f"{total} monologues scanned, {len(drifted)} drifted "
+              f"({word_drift} word_count, {dur_drift} duration)")
         if drifted:
             worst = sorted(drifted, key=lambda t: abs((t[0].word_count or 0) - t[1]))[-5:]
             print("  largest gaps (stored -> actual):")
@@ -90,6 +108,18 @@ def main() -> None:
             crossing = [t for t in drifted
                         if ((t[0].word_count or 0) >= 50) != (t[1] >= 50)]
             print(f"  rows that cross the 50-word bar once corrected: {len(crossing)}")
+
+            # Running time is what an actor screens on and the one number with
+            # a cost when it is wrong: told "two minutes", handed a piece
+            # labelled 1:50 that runs 2:01, they get stopped.
+            def _band(sec):
+                return min(int((sec or 0) // 60), 4)
+            moved = sum(1 for m, _a, d in drifted
+                        if _band(m.estimated_duration_seconds) != _band(d))
+            longer = sum(1 for m, _a, d in drifted
+                         if d > (m.estimated_duration_seconds or 0))
+            print(f"  rows changing minute band: {moved} "
+                  f"({longer} of {len(drifted)} get LONGER)")
 
         if not args.apply:
             print("\n(dry run - pass --apply)")
@@ -103,11 +133,44 @@ def main() -> None:
              for m, _a, _d in drifted}, ensure_ascii=False), encoding="utf-8")
         print(f"\nbackup written: {path}")
 
-        for m, actual, dur in drifted:
-            m.word_count = actual
-            m.estimated_duration_seconds = dur
-        db.commit()
-        print(f"resynced {len(drifted)} rows")
+        # Committed in batches, not in one transaction.
+        #
+        # This was a single commit, which was right for the 876 rows it was
+        # written for and fails at corpus scale: 16,256 UPDATEs in one
+        # statement hit Postgres's statement timeout and the whole thing rolled
+        # back, so an hour of work landed nothing. Batching also means an
+        # interruption keeps what it already wrote, and re-running finishes the
+        # rest rather than starting over — the row is only "drifted" until it
+        # is correct.
+        # One UPDATE ... FROM (VALUES ...) per batch, not one UPDATE per row.
+        #
+        # Assigning through the ORM emitted 16,256 individual statements and
+        # measured 72 rows/min against this database — a three and a half hour
+        # run for two columns of integers. The same rows through a VALUES join
+        # measured 7,644 rows/min. Writes to `monologues` are expensive here
+        # (the table carries an HNSW vector index), so the thing that matters
+        # is the number of statements, not the number of rows.
+        #
+        # Values are ints straight from len() and the estimator, so they are
+        # formatted in rather than bound — a VALUES list of 500 rows would
+        # otherwise need 1,500 bind parameters. int() is the guard that keeps
+        # that honest.
+        BATCH = 500
+        written = 0
+        for i in range(0, len(drifted), BATCH):
+            chunk = drifted[i:i + BATCH]
+            vals = ",".join(
+                f"({int(m.id)},{int(actual)},{int(dur)})" for m, actual, dur in chunk
+            )
+            db.execute(sa_text(
+                f"UPDATE monologues m SET word_count = v.wc,"
+                f" estimated_duration_seconds = v.dur, updated_at = now()"
+                f" FROM (VALUES {vals}) AS v(id, wc, dur) WHERE m.id = v.id"
+            ))
+            db.commit()
+            written += len(chunk)
+            print(f"  committed {written}/{len(drifted)}", flush=True)
+        print(f"resynced {written} rows")
     finally:
         db.close()
 

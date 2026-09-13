@@ -50,6 +50,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session as DBSession, sessionmaker
 
 from app.core.config import settings
+from app.utils.duration import estimate_duration_seconds
 from app.models.actor import FilmTvReference, Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
 from app.services.extraction.monologue_quality import DEFAULT_MIN_WORDS
@@ -859,7 +860,13 @@ def main() -> None:
                 mono_text = " ".join(words[:400])
                 word_count = 400
 
-            duration_seconds = round(word_count / 2.5)  # ~150 wpm
+            # The shared estimator, not a second formula. This line was
+            # `round(word_count / 2.5)` — a flat 150 wpm with no pauses — while
+            # app/utils/duration.py used 130 wpm plus pause accounting. The two
+            # differ by about 25%, which is how the library ended up holding
+            # one Hamlet speech at 1:50 and its twin at 2:19. Whichever number
+            # is right, the library must only have one of them.
+            duration_seconds = estimate_duration_seconds(mono_text)
             mono_title = sel.get("title", f"{character}'s speech")
             scene_desc = sel.get("scene_description", "")
 
