@@ -29,6 +29,7 @@ Usage (from backend/):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -57,6 +58,29 @@ def dedupe_key(text: str) -> str:
     """Normalized opening of a speech — same speech in two extractions collides."""
     words = re.sub(r"[^a-z0-9\s]", "", (text or "").lower()).split()
     return " ".join(words[:30])
+
+
+#: `dedupe_key` expressed in SQL, so the comparison set can be built without
+#: shipping the corpus.
+#:
+#: Reading every monologue's text to hash it locally cost 18 MB on the wire per
+#: ingest -- `SELECT monologues.text FROM monologues` is one of the largest
+#: egress items in pg_stat_statements, and Supabase bills egress. Postgres
+#: computes the same key and sends 32-byte digests instead: 0.79 MB, 23x less.
+#:
+#: The two definitions must agree exactly or re-ingest silently re-inserts
+#: speeches the library already has. `tests/test_dedupe_key_sql_matches_python.py`
+#: compares them on real rows rather than trusting that the regexes look alike.
+DEDUPE_KEY_SQL = (
+    "array_to_string((regexp_split_to_array("
+    "btrim(regexp_replace(lower(coalesce(text,'')), '[^a-z0-9[:space:]]', '', 'g')), "
+    r"'\s+'))[1:30], ' ')"
+)
+
+
+def dedupe_hash(text: str) -> str:
+    """The Python side of the comparison: hash what `dedupe_key` produces."""
+    return hashlib.md5(dedupe_key(text).encode("utf-8")).hexdigest()
 
 
 _CAPS_SPEAKER_RE = re.compile(r"^[A-Z][A-Z'\-\. ]{1,30}$")
@@ -356,10 +380,13 @@ def main() -> int:
             plays = plays[: args.limit_plays]
 
         # Openings of every existing monologue (all plays) so re-extraction
-        # can't re-insert something we already carry.
+        # can't re-insert something we already carry. Hashed in Postgres: the
+        # same set built from `Monologue.text` was 18 MB of egress per run
+        # (see DEDUPE_KEY_SQL).
         existing_keys = {
-            dedupe_key(t or "")
-            for (t,) in db.query(Monologue.text).all()
+            k for (k,) in db.execute(
+                sa_text(f"SELECT md5({DEDUPE_KEY_SQL}) FROM monologues")
+            )
         }
 
         # source_urls that more than one play row points at: anthologies and
@@ -445,8 +472,16 @@ def main() -> int:
             for m in found:
                 speech = (m.get("text") or "").replace("_", "").strip()
                 character = (m.get("character") or "").strip()
+                # `existing_keys` holds md5 digests (built in Postgres to keep
+                # the corpus off the wire), so the new speech is hashed too.
+                # The emptiness test stays on the key itself: md5("") is a
+                # perfectly good digest, and a speech that normalizes to
+                # nothing must be skipped, not deduped against.
                 key = dedupe_key(speech)
-                if not key or key in existing_keys or key in seen_this_play:
+                if not key:
+                    continue
+                key = hashlib.md5(key.encode("utf-8")).hexdigest()
+                if key in existing_keys or key in seen_this_play:
                     continue
                 q = assess_monologue_quality(speech)
                 if not q.ok:
