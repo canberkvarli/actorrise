@@ -1047,3 +1047,21 @@ From today, a trial ending (trialing → active/canceled/past_due) reaches
 trial writes `trial_converted` (handler fixed 2026-09-10). Trial-to-paid is
 computable from rows dated 2026-09-13 on. Nothing before that exists; user
 735's Sep 9 conversion is not backfilled.
+
+## 2026-09-13 — The 09-11 brief, checked
+
+- **H4 (exact title searches miss carried plays) is wrong on all three examples.**
+  The Cherry Orchard and You Can't Take It With You are in `plays` with ZERO
+  monologues (the empty shelf; since 2026-09-08 they get the "we have it, no
+  monologues yet" card, and the Sep 3 searches predate that). The Wolves is
+  not in `plays` at all; a real gap. The lexical title pre-pass it asks for
+  has existed since 2026-08-20 (`match_strategy` = title_exact /
+  title_exact_backfilled), and "you can't take it with you" on Aug 31 took it.
+- **H6 (searches per signup fell for a reason on our side) is the Labor Day
+  weekend.** Daily page-1 searches: Sep 2 = 84, Sep 4–7 = 40/22/21/20, Sep 8 = 60.
+  Distinct users move the same way. Nothing shipped Sep 2–4 touched search.
+- **Test traffic** (qzxq…, zzzq…) is user 1, already `exclude_from_stats`.
+  No `is_test` column; the snapshot should join users and drop
+  `exclude_from_stats`, as the admin dashboards do.
+- `paid_invoices` status='paid' → 'succeeded': recorded 2026-08-28, again 09-10.
+- H5 (day-1 favorite predicts return) = H-19, measured 09-08, query checked in.
