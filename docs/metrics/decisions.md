@@ -1038,3 +1038,12 @@ Moves: the query_type distribution. Some `other` and `attribute` rows become
 - **"easy short" → 0 results:** the query parser has no difficulty vocabulary
   (`beginner` = 224 pieces, `intermediate` 15,011). Not built; three searches
   in 30 days.
+
+## 2026-09-13 — Stripe endpoint now sends customer.subscription.updated
+
+Added to `we_1SyX1WRg9rz1StUq5QGGQk4w` via the API with the backend's key.
+From today, a trial ending (trialing → active/canceled/past_due) reaches
+`handle_subscription_updated` and writes `trial_ended`; a first charge on a
+trial writes `trial_converted` (handler fixed 2026-09-10). Trial-to-paid is
+computable from rows dated 2026-09-13 on. Nothing before that exists; user
+735's Sep 9 conversion is not backfilled.
