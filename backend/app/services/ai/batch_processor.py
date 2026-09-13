@@ -2,8 +2,10 @@
 
 import asyncio
 from typing import List, Optional
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from app.models.actor import Monologue, Play
+from app.services.search.semantic_search import HIDDEN_REVIEW_STATUSES
 from .content_analyzer import ContentAnalyzer
 import json
 
@@ -42,6 +44,19 @@ class BatchProcessor:
 
         if skip_analyzed:
             query = query.filter(Monologue.embedding_vector.is_(None))
+
+        # A row that search can never return must not be embedded. 4,550 rows
+        # retired as too_short/duplicate/not_monologue each carried 6 KB of
+        # float32 and an entry in the HNSW index -- 65 MB of a 500 MB quota
+        # spent on speeches nobody can reach. Their vectors were dropped, and
+        # without this filter the next `skip_analyzed` run would buy them all
+        # back from OpenAI and put the storage straight back.
+        query = query.filter(
+            or_(
+                Monologue.review_status.is_(None),
+                Monologue.review_status.notin_(tuple(HIDDEN_REVIEW_STATUSES)),
+            )
+        )
 
         monologues = query.all()
 

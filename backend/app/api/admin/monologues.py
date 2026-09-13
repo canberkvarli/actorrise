@@ -181,10 +181,18 @@ class ReviewItem(BaseModel):
         from_attributes = True
 
 
-def _clear_review(mono: Monologue) -> None:
-    mono.review_status = None
-    mono.review_reasons = None
-    mono.proposed_text = None
+def _clear_review(mono: Monologue, db: Session, text_changed: bool = False) -> None:
+    """Return the row to search, buying an embedding if it needs one.
+
+    A retired row carries no `embedding_vector` (see
+    `app.services.monologue_visibility`), so clearing the flag is not enough to
+    make it findable. `text_changed` covers the other half: approving rewrites
+    `text`, and the vector left behind describes a speech that is no longer
+    there.
+    """
+    from app.services.monologue_visibility import unhide
+
+    unhide(db, mono, force_embed=text_changed)
 
 
 @router.get("/review", response_model=List[ReviewItem])
@@ -264,7 +272,7 @@ def admin_approve_proposed_text(
     mono.text = mono.proposed_text
     mono.word_count = len(mono.text.split())
     mono.estimated_duration_seconds = estimate_duration_seconds(mono.text)
-    _clear_review(mono)
+    _clear_review(mono, db, text_changed=True)
     db.commit()
     db.refresh(mono)
     return _mono_to_admin_response(mono)
@@ -283,7 +291,7 @@ def admin_dismiss_review(
     mono = db.query(Monologue).filter(Monologue.id == monologue_id).first()
     if not mono:
         raise HTTPException(status_code=404, detail="Monologue not found")
-    _clear_review(mono)
+    _clear_review(mono, db)
     db.commit()
     return None
 
@@ -310,11 +318,15 @@ def admin_update_monologue(
         update["word_count"] = len(text.split())
         from app.utils.duration import estimate_duration_seconds
         update["estimated_duration_seconds"] = estimate_duration_seconds(text)
-        # A hand-edit of the text resolves any pending review flag.
-        _clear_review(mono)
 
     for key, value in update.items():
         setattr(mono, key, value)
+
+    # A hand-edit of the text resolves any pending review flag, and must run
+    # AFTER the new text is on the row: the re-embed reads `mono.text`, so
+    # clearing the flag first would embed the version the edit just replaced.
+    if "text" in update:
+        _clear_review(mono, db, text_changed=True)
 
     db.commit()
     db.refresh(mono)

@@ -39,6 +39,7 @@ from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 from app.core.config import settings  # noqa: E402
 from app.models.actor import Monologue, Play  # noqa: E402
+from app.services.monologue_visibility import unhide  # noqa: E402
 from app.services.extraction.monologue_quality import (  # noqa: E402
     DEFAULT_MIN_WORDS,
     SCREEN_MIN_WORDS,
@@ -146,6 +147,7 @@ def main() -> int:
         bk = BACKUP_DIR / f"ungated_{stamp}.json"
 
         done: list[dict] = []
+        embedded = 0
         for start in range(0, len(rows), CHUNK):
             batch = rows[start:start + CHUNK]
             done.extend(
@@ -154,13 +156,23 @@ def main() -> int:
                 for r in batch
             )
             bk.write_text(json.dumps({"status": STATUS, "rows": done}, indent=1))
-            db.query(Monologue).filter(
-                Monologue.id.in_([r.id for r in batch])
-            ).update({Monologue.review_status: None}, synchronize_session=False)
+            # A retired row carries no embedding (see
+            # app.services.monologue_visibility), so clearing the status alone
+            # would put it back in the library and leave it unfindable by every
+            # semantic query -- present, and silently unreachable. `unhide`
+            # buys the vector back as part of the same move.
+            for mono in (
+                db.query(Monologue)
+                .filter(Monologue.id.in_([r.id for r in batch]))
+                .all()
+            ):
+                unhide(db, mono)
+                embedded += 1
             db.commit()
             print(f"    un-gated {len(done)}/{len(rows)}", flush=True)
 
-        print(f"\nun-gated {len(done)} monologues (review_status -> NULL)")
+        print(f"\nun-gated {len(done)} monologues (review_status -> NULL), "
+              f"{embedded} re-embedded")
         print(f"undo: python -m scripts.ungate_above_floor --restore {bk}")
         return 0
     finally:
