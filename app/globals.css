@@ -2312,3 +2312,162 @@
   .t-appbar[data-scrolled="true"] { transform: none; }
   .t-appbar__light { transition: opacity 0.2s; }
 }
+
+/* --- Header utilities ----------------------------------------------------- */
+
+/* The callboard lamp. The bulb breathes only when the house is actually
+   awake — see CallboardLamp for why a permanently lit badge is worthless. */
+.t-lamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px 0 10px;
+  border-radius: 999px;
+  border: 1px solid oklch(0.35 0.03 55);
+  color: oklch(0.8 0.02 70);
+  font-family: var(--t-direction, ui-monospace, monospace);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  transition: border-color 0.3s, color 0.3s;
+}
+.t-lamp:hover,
+.t-lamp[data-active="true"] {
+  border-color: oklch(0.92 0.18 100);
+  color: oklch(0.92 0.18 100);
+}
+.t-lamp__bulb {
+  position: relative;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+}
+.t-lamp__breath {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: oklch(0.92 0.18 100);
+  animation: t-breathe 2s ease-in-out infinite;
+}
+.t-lamp__core {
+  position: absolute;
+  inset: 1px;
+  border-radius: 999px;
+  background: oklch(0.92 0.18 100);
+  box-shadow: 0 0 10px 2px oklch(0.92 0.18 100 / 0.7);
+}
+/* Dark house: the bulb is there, unlit. */
+.t-lamp[data-awake="false"] .t-lamp__core {
+  background: oklch(0.45 0.03 55);
+  box-shadow: none;
+}
+
+/* Help, set in the display italic — it opens a playbill, not a manual. */
+.t-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid oklch(0.35 0.03 55);
+  color: oklch(0.8 0.02 70);
+  font-family: var(--t-display, Georgia, serif);
+  font-style: italic;
+  font-size: 20px;
+  line-height: 1;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.t-help:hover {
+  border-color: oklch(0.92 0.18 100);
+  color: oklch(0.92 0.18 100);
+  transform: rotate(-10deg);
+}
+
+/* The house lights, as a switch. On the gel when they are up; a dim knob on a
+   dim track in blackout, because that is the state where nothing is lit. */
+.t-lights {
+  position: relative;
+  width: 58px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid oklch(0.35 0.03 55);
+  background: oklch(0.92 0.18 100 / 0.25);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.4s;
+}
+.t-lights[data-dark="true"] {
+  background: oklch(0.22 0.02 52);
+}
+.t-lights__knob {
+  position: absolute;
+  top: 3px;
+  left: 27px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: oklch(0.92 0.18 100);
+  color: oklch(0.13 0.015 50);
+  box-shadow: 0 0 14px 2px oklch(0.92 0.18 100 / 0.7);
+  transition:
+    left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 0.4s,
+    box-shadow 0.4s,
+    color 0.4s;
+}
+.t-lights[data-dark="true"] .t-lights__knob {
+  left: 3px;
+  background: oklch(0.35 0.03 55);
+  color: oklch(0.75 0.02 62);
+  box-shadow: none;
+}
+
+/* The account button. */
+.t-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px 0 3px;
+  border-radius: 999px;
+  border: 1px solid oklch(0.35 0.03 55);
+  background: oklch(0.17 0.018 52);
+  color: oklch(0.96 0.02 85);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.t-account[data-open="true"],
+.t-account:hover {
+  border-color: oklch(0.92 0.18 100);
+  background: oklch(0.2 0.02 52);
+}
+.t-account__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 2px solid oklch(0.92 0.18 100);
+  background: oklch(0.13 0.015 50);
+  color: oklch(0.96 0.02 85);
+}
+.t-account__tier {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: oklch(0.92 0.18 100);
+  color: oklch(0.13 0.015 50);
+  font-family: var(--t-direction, ui-monospace, monospace);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-help:hover { transform: none; }
+  .t-lamp__breath { animation: none; }
+}

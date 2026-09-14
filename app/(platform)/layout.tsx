@@ -79,6 +79,7 @@ import { LastAuthProviderSync } from "@/components/auth/LastAuthProviderSync";
 import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
 import { CallboardLamp, CallboardMenuRow } from "@/components/community/CallboardLamp";
 import { useHeaderLight } from "@/components/layout/useHeaderLight";
+import { HouseLightsSwitch } from "@/components/layout/HouseLightsSwitch";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -227,8 +228,9 @@ export default function PlatformLayout({
     { href: "/rehearse", label: "Collection", icon: IconBookmark, match: "exact" as const },
   ];
   /* The followspot behind the nav, and whether the bar has been scrolled past.
-     Keyed on pathname so it re-measures when the route changes. */
-  const { navRef, lightStyle, scrolled: headerScrolled } = useHeaderLight(pathname);
+     Keyed on pathname so it re-measures when the route changes. Both are
+     written straight to the DOM — see the hook for why neither is state. */
+  const { navRef, lightRef, barRef } = useHeaderLight(pathname);
 
   const isNavActive = (item: (typeof navItems)[number]) =>
     item.match === "prefix" ? (pathname || "").startsWith(item.href) : pathname === item.href;
@@ -308,10 +310,7 @@ export default function PlatformLayout({
         {/* The bar is a floating pill now, not a full-width band. It shrinks a
             touch once you scroll, so the page feels like it is passing under
             something rather than pushing it. */}
-        <div
-          className="t-appbar"
-          data-scrolled={headerScrolled}
-        >
+        <div ref={barRef} className="t-appbar" data-scrolled="false">
           {/* 64px on a phone, 80px from md up. A sticky 80px header plus the 64px
               bottom bar was eating ~20% of a 700px phone viewport permanently. */}
           <div className="flex h-[52px] items-center gap-2 md:h-[56px]">
@@ -337,7 +336,7 @@ export default function PlatformLayout({
               aria-label="Primary"
               className="relative hidden min-w-0 flex-1 items-center justify-center gap-0.5 md:flex"
             >
-              <span aria-hidden className="t-appbar__light" style={lightStyle} />
+              <span ref={lightRef} aria-hidden className="t-appbar__light" />
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = isNavActive(item);
@@ -380,26 +379,21 @@ export default function PlatformLayout({
                   everything around it was icon + word. This cluster is
                   icon-only, so the identical control is legible here. */}
               <CallboardLamp active={pathname === "/callboard"} />
-              <Button
-                asChild
-                variant={pathname === "/help" ? "secondary" : "ghost"}
-                size="icon"
-                className="h-9 w-9"
-              >
-                <Link href="/help" aria-label="Help">
-                  <IconHelpCircle className="h-4 w-4" />
-                  <span className="sr-only">Help</span>
-                </Link>
-              </Button>
-              <ThemeToggle />
+              <Link href="/help" aria-label="Help" title="Help" className="t-help">
+                ?
+              </Link>
+              <HouseLightsSwitch />
+              <span aria-hidden className="t-appbar__rule mx-1" />
               <div className="relative" ref={dropdownRef}>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="gap-2.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 h-10 min-w-[2.5rem] min-h-10"
+                  aria-expanded={profileDropdownOpen}
+                  aria-haspopup="menu"
+                  className="t-account"
+                  data-open={profileDropdownOpen}
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full overflow-hidden bg-foreground text-background text-xs font-medium">
+                  <span className="t-account__avatar flex shrink-0 items-center justify-center overflow-hidden text-xs font-medium">
                     {headshotUrl ? (
                       <Image
                         src={headshotUrl}
@@ -414,15 +408,19 @@ export default function PlatformLayout({
                       profileInitial
                     )}
                   </span>
-                  <span className="hidden lg:inline text-sm font-medium text-foreground truncate max-w-[8rem] min-w-[5rem]">
+                  <span className="hidden max-w-[8rem] truncate text-[13px] font-semibold lg:inline">
                     {displayName || "Account"}
                   </span>
+                  {userTier && userTier !== "free" && (
+                    <span className="t-account__tier">{userTier}</span>
+                  )}
                   <IconChevronDown
-                    className={`h-3.5 w-3.5 text-muted-foreground transition-transform flex-shrink-0 ${
+                    className={`size-3 shrink-0 transition-transform ${
                       profileDropdownOpen ? "rotate-180" : ""
                     }`}
+                    style={{ color: "oklch(0.65 0.02 62)" }}
                   />
-                </Button>
+                </button>
 
                 {/* Dropdown Menu */}
                 {profileDropdownOpen && (

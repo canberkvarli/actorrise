@@ -1,66 +1,62 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 /**
  * The followspot behind the primary nav, and the bar's scroll state.
  *
- * The light is measured from whichever tab is currently active rather than
- * animated per item: one absolutely-positioned span is told where to be, and
- * CSS moves it. That means adding or removing a nav item needs no new state,
- * and the movement reads as one lamp finding the next actor instead of two
- * pills swapping colour.
+ * Neither is React state. The light's position is a measurement of the active
+ * tab, and "have you scrolled past 24px" is a fact about the window — both are
+ * presentation, and putting them in state would re-render the whole header
+ * shell on every scroll frame and every resize to move one span four pixels.
+ * They are written straight to the DOM instead: the light gets left/width, the
+ * bar gets a data attribute, and CSS animates both.
  *
- * It re-measures on route change, on resize, and once more a beat after mount —
- * the nav's web font lands after first paint and shifts every tab's width, so a
- * single measurement on mount puts the light in the wrong place for as long as
- * the page is open.
+ * The light re-measures on route change, on resize, and once more a beat after
+ * mount — the nav's web font lands after first paint and changes every tab's
+ * width, so a single measurement on mount leaves the lamp in the wrong place
+ * for the life of the page.
  */
 export function useHeaderLight(routeKey: string) {
   const navRef = useRef<HTMLElement>(null);
-  const [light, setLight] = useState<{ left: number; width: number } | null>(null);
-  const [scrolled, setScrolled] = useState(false);
+  const lightRef = useRef<HTMLSpanElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
 
-  const measure = useCallback(() => {
+  const place = useCallback(() => {
     const nav = navRef.current;
-    if (!nav) return;
+    const light = lightRef.current;
+    if (!nav || !light) return;
     const active = nav.querySelector<HTMLElement>('[data-active="true"]');
     if (!active) {
-      setLight(null);
+      light.style.opacity = "0";
       return;
     }
-    setLight({ left: active.offsetLeft, width: active.offsetWidth });
+    light.style.opacity = "1";
+    light.style.left = `${active.offsetLeft}px`;
+    light.style.width = `${active.offsetWidth}px`;
   }, []);
 
   useEffect(() => {
-    measure();
+    place();
     /* Fonts land after first paint and change every tab's width. */
-    const settle = setTimeout(measure, 600);
-    const onResize = () => measure();
-    window.addEventListener("resize", onResize);
+    const settle = setTimeout(place, 600);
+    window.addEventListener("resize", place);
     return () => {
       clearTimeout(settle);
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", place);
     };
-  }, [measure, routeKey]);
+  }, [place, routeKey]);
 
   useEffect(() => {
+    const bar = barRef.current;
+    if (!bar) return;
     const onScroll = () => {
-      /* Compared before setting, so a scroll only re-renders the header on the
-         one frame the answer actually changes. */
-      setScrolled((was) => {
-        const now = window.scrollY > 24;
-        return now === was ? was : now;
-      });
+      bar.dataset.scrolled = window.scrollY > 24 ? "true" : "false";
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const lightStyle: React.CSSProperties = light
-    ? { left: light.left, width: light.width, opacity: 1 }
-    : { opacity: 0 };
-
-  return { navRef, lightStyle, scrolled };
+  return { navRef, lightRef, barRef };
 }

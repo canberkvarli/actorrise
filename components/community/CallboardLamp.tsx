@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { IconUsers } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import { IconUsers } from "@tabler/icons-react";
 import { useHouseIsAwake } from "@/hooks/useCallboardPulse";
 import { trackWhisperClicked } from "@/lib/analytics";
 
@@ -29,50 +29,29 @@ export function CallboardLamp({ active }: { active: boolean }) {
   const { awake, actorCount } = useHouseIsAwake();
 
   return (
-    <Button
-      asChild
-      variant={active ? "secondary" : "ghost"}
-      size="icon"
-      className="relative h-9 w-9"
+    <Link
+      href="/callboard"
+      onClick={() => trackWhisperClicked("nav_lamp", { awake })}
+      aria-label={awake ? `The Callboard — ${actorCount} in the house` : "The Callboard"}
+      title={awake ? `The Callboard — ${actorCount} in the house` : "The Callboard"}
+      className="t-lamp"
+      data-active={active}
+      data-awake={awake}
     >
-      <Link
-        href="/callboard"
-        onClick={() => trackWhisperClicked("nav_lamp", { awake })}
-        aria-label={
-          awake
-            ? `The Callboard — ${actorCount} in the house`
-            : "The Callboard"
-        }
-        title={awake ? `The Callboard — ${actorCount} in the house` : "The Callboard"}
-      >
-        <IconUsers className="h-4 w-4" />
-        {awake && (
-          <span
-            aria-hidden
-            /* Tucked to the icon's top-right rather than centred under it, so
-               it reads as a badge ON the icon instead of a second element
-               sharing the button. */
-            className="absolute right-1.5 top-1.5 flex h-2 w-2"
-          >
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
-          </span>
-        )}
-        <span className="sr-only">The Callboard</span>
-      </Link>
-    </Button>
+      {/* Lit only when the house has actually been active in the last six
+          hours. A permanently lit badge is chrome and stops registering within
+          a day; one that is genuinely dark on a quiet night is worth a glance.
+          When it is dark the count goes with it, because "0 in the house" is a
+          worse thing to say than nothing. */}
+      <span aria-hidden className="t-lamp__bulb">
+        {awake && <span className="t-lamp__breath" />}
+        <span className="t-lamp__core" />
+      </span>
+      {awake ? <span className="tabular-nums">{actorCount}</span> : <IconUsers className="size-4" />}
+    </Link>
   );
 }
 
-/**
- * The same thing as a row in the mobile hamburger.
- *
- * The lamp lives in a desktop-only cluster, so on a phone the board had no
- * persistent handle at all — only the whispers, which are contextual and
- * therefore easy to miss if you never hit the surface carrying one. The
- * hamburger is where this app already keeps its secondary destinations, and a
- * row there gets what the desktop icon cannot: a name.
- */
 export function CallboardMenuRow({
   active,
   onNavigate,
