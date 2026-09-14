@@ -26,11 +26,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  getGenreBadgeClassName,
-  getGenreBorderClassName,
-  getGenreDotClassName,
-} from "@/lib/genreColors";
+import { getGenreBorderClassName } from "@/lib/genreColors";
+import { PlayCover } from "@/components/monologue/PlayCover";
 import { invalidateShelf, useScript, type UserScript } from "@/hooks/useScripts";
 import { groupScenesByAct, formatSceneDuration, type Scene } from "@/lib/scenes";
 import { EditScriptDetailsModal } from "@/components/practice/EditScriptDetailsModal";
@@ -145,34 +142,36 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
     // so the eye connects the two.
     // overflow-clip, not overflow-hidden: hidden makes this a scroll container
     // and the sticky title page below stops sticking. Clipping is identical.
-    <div className="relative min-w-0 overflow-clip rounded-xl border border-border/60 bg-card/40 md:grid md:grid-cols-[280px_minmax(0,1fr)]">
-      <span
-        aria-hidden
-        className={`absolute inset-y-0 left-0 w-1 ${getGenreDotClassName(script.genre)} opacity-70`}
-      />
-
-      {/* Title page. The column still stretches, so its divider runs the full
-          height, but what's in it stays at the top and follows you down a long
-          list of scenes. */}
-      <div className="min-w-0 border-b border-border/60 md:border-b-0 md:border-r">
-        <div className="flex min-w-0 flex-col gap-3 px-5 py-5 sm:px-6 md:sticky md:top-6">
-          <div>
-            <h2 className="font-brand text-2xl font-medium tracking-tight text-foreground text-balance">
-              {script.title}
-            </h2>
-            {script.genre && (
-              <span
-                className={`mt-2 inline-flex items-center border px-1.5 py-0.5 text-[10px] uppercase tracking-wide font-medium ${getGenreBadgeClassName(script.genre)}`}
-              >
-                {script.genre}
-              </span>
-            )}
+    // The opened script is not a card on the page any more; it is the page.
+    // The room gives it the full width once it is open, so the scene titles
+    // have somewhere to go.
+    <div className="min-w-0 md:grid md:grid-cols-[minmax(0,260px)_minmax(0,1fr)] md:gap-10">
+      {/* Title page: a bound playscript, cloth and emblem, on a hard gel
+          shadow. It is the same cover the search detail panel prints, so a
+          play looks like itself wherever you meet it. */}
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-col gap-3 md:sticky md:top-6">
+          <div className="t-titlepage">
+            <PlayCover
+              title={script.title}
+              author={script.author}
+              genre={script.genre}
+              className="w-full"
+            />
           </div>
           {metaParts.length > 0 && (
-            <p className="text-sm text-muted-foreground">{metaParts.join(" · ")}</p>
+            <p
+              className="mt-5 text-sm"
+              style={{ color: "var(--t-muted-light)" }}
+            >
+              {metaParts.join(" · ")}
+            </p>
           )}
           {script.description && (
-            <p className="text-sm text-muted-foreground/90 leading-relaxed line-clamp-5">
+            <p
+              className="max-w-[32ch] text-[15px] leading-relaxed"
+              style={{ color: "var(--t-muted-light-3)" }}
+            >
               {script.description}
             </p>
           )}
@@ -186,7 +185,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
               <button
                 type="button"
                 onClick={() => setEditOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border/70 px-2.5 h-8 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                className="t-script-action"
               >
                 <IconPencil className="h-3.5 w-3.5" />
                 Edit details
@@ -194,7 +193,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
               <button
                 type="button"
                 onClick={() => setAddOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border/70 px-2.5 h-8 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors"
+                className="t-script-action"
               >
                 <IconPlus className="h-3.5 w-3.5" />
                 Add scene
@@ -211,7 +210,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
                   type="button"
                   onClick={requestRedo}
                   disabled={redoing}
-                  className="inline-flex items-center gap-1.5 rounded-md px-2.5 h-8 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-60"
+                  className="t-script-action t-script-action--quiet"
                 >
                   {redoing ? (
                     <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
@@ -227,7 +226,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
       </div>
 
       {/* The scenes */}
-      <div className="min-w-0 px-5 py-5 sm:px-6">
+      <div className="mt-8 min-w-0 md:mt-0">
         {isProcessing ? (
           <StatusNote>
             <IconLoader2 className="h-4 w-4 animate-spin" />
@@ -256,11 +255,12 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
             {groups.map((group, gi) => (
               <div key={group.act ?? `g${gi}`} className="space-y-3">
                 {group.act && (
-                  <div className="flex items-baseline justify-between gap-3 border-t border-border/60 pt-4">
-                    <h3 className="font-brand text-xl md:text-2xl font-medium tracking-tight text-foreground">
-                      {group.act}
-                    </h3>
-                    <span className="shrink-0 font-typewriter text-xs italic text-muted-foreground/60 tabular-nums">
+                  <div
+                    className="flex items-baseline justify-between gap-3 pb-2.5"
+                    style={{ borderBottom: "1.5px solid var(--t-line-dark-2)" }}
+                  >
+                    <h3 className="t-act-name">{group.act}</h3>
+                    <span className="t-act-count tabular-nums">
                       ({group.scenes.length} {group.scenes.length === 1 ? "scene" : "scenes"}.)
                     </span>
                   </div>

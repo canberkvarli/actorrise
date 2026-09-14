@@ -2168,6 +2168,559 @@
   color: var(--t-line-light);
 }
 
+/* ==========================================================================
+   THEATRE STAGE — /practice, the rehearsal room.
+   ==========================================================================
+   Same system as the landing and the search page. The room is two columns:
+   the work on the left, the shelf on the right, under a lit marquee. The
+   ghost light hangs in the corner because this is the room you come back to
+   at 2am, and something should be on.
+   ========================================================================== */
+
+.theatre-stage {
+  color: var(--t-cream);
+  font-family: var(--t-body);
+}
+
+/* The wash behind the room. Warm from the top left, a cooler gel bloom in the
+   far corner, and the same film grain the hero uses. */
+.t-stage-wash {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 45% at 22% 18%, oklch(0.72 0.17 55 / 0.22), transparent 70%),
+    radial-gradient(40% 40% at 85% 90%, oklch(0.92 0.18 100 / 0.06), transparent 70%),
+    var(--t-ink);
+}
+.t-stage-grain {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* The ghost light in the corner, on a cord that sways. */
+@keyframes t-sway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+.t-ghost-light {
+  position: absolute;
+  top: 0;
+  right: clamp(12px, 3vw, 48px);
+  z-index: -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: top center;
+  animation: t-sway 7s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0.9;
+}
+.t-ghost-light__cord {
+  display: block;
+  width: 2px;
+  height: clamp(140px, 26vh, 260px);
+  background: linear-gradient(to bottom, oklch(0.3 0.02 55), oklch(0.28 0.02 55));
+}
+.t-ghost-light__socket {
+  display: block;
+  width: 18px;
+  height: 12px;
+  border-radius: 4px 4px 2px 2px;
+  background: oklch(0.3 0.02 55);
+}
+.t-ghost-light__bulb {
+  display: block;
+  width: 36px;
+  height: 42px;
+  border-radius: 50% 50% 46% 46%;
+  background: radial-gradient(
+    circle at 50% 40%,
+    oklch(0.99 0.05 95),
+    oklch(0.92 0.18 100) 35%,
+    oklch(0.75 0.17 60)
+  );
+  box-shadow:
+    0 0 28px 6px oklch(0.85 0.17 80 / 0.75),
+    0 0 100px 40px oklch(0.72 0.17 55 / 0.28);
+  animation: t-flicker 9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-ghost-light { animation: none; }
+  .t-ghost-light__bulb { animation: none; }
+}
+
+/* The way to ask. Set in the display italic, because it opens a playbill. */
+.t-how-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--t-line-dark-3);
+  background: transparent;
+  color: var(--t-muted-light-2);
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 20px;
+  line-height: 1;
+  transition: all 0.3s var(--t-spring);
+}
+.t-how-button:hover {
+  border-color: var(--t-gel);
+  color: var(--t-gel);
+  transform: rotate(-8deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-how-button:hover { transform: none; }
+}
+
+/* --- The callboard marquee ------------------------------------------------ */
+@keyframes t-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50% { transform: scale(1.2); opacity: 0.95; }
+}
+.t-marquee {
+  border-radius: 999px;
+  border: 1px solid var(--t-line-dark-2);
+  background: oklch(0.17 0.018 52);
+  transition: border-color 0.3s;
+}
+.t-marquee:hover {
+  border-color: var(--t-cta-bd);
+  color: inherit;
+}
+/* The caps are a shade up from the strip, so the ticker reads as running
+   between two fixed plates rather than fading into the page. */
+.t-marquee__cap {
+  background: oklch(0.2 0.02 52);
+}
+.t-marquee__pulse {
+  background: var(--t-orange);
+  animation: t-breathe 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-marquee__pulse { animation: none; }
+}
+
+/* --- The stage ------------------------------------------------------------ */
+.t-slug {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--t-muted-light);
+}
+
+.t-stage-title {
+  margin: 14px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  font-size: clamp(3rem, 7vw, 6.5rem);
+  text-wrap: balance;
+  color: var(--t-cream);
+}
+
+/* The cued line, indented the way it sits on the page it came from. */
+@keyframes t-draw-down {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+.t-cue-rule {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--t-gel);
+  transform-origin: top;
+  animation: t-draw-down 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+}
+.t-cue-who {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--t-gel);
+}
+.t-cue-text {
+  margin: 10px 0 0;
+  max-width: 34ch;
+  font-family: var(--t-direction);
+  font-size: clamp(18px, 1.7vw, 23px);
+  line-height: 1.7;
+  color: oklch(0.92 0.02 80);
+  text-wrap: balance;
+}
+.t-cue-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  vertical-align: -3px;
+  margin-left: 2px;
+  background: var(--t-gel);
+  animation: t-blink 1.1s steps(2) infinite;
+}
+
+.t-stage-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  height: 64px;
+  padding: 0 8px 0 28px;
+  border-radius: 999px;
+  background: var(--t-cream);
+  color: var(--t-ink);
+  font-family: var(--t-body);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  box-shadow: 0 20px 60px -20px oklch(0.92 0.18 100 / 0.6);
+  transition: transform 0.35s var(--t-spring);
+}
+.t-stage-action:hover {
+  transform: scale(1.05) rotate(-1.5deg);
+  color: var(--t-ink);
+}
+.t-stage-action__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--t-gel);
+  color: var(--t-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-cue-rule,
+  .t-cue-caret { animation: none; }
+  .t-stage-action:hover { transform: none; }
+}
+
+/* --- The shelf ------------------------------------------------------------
+   A row per playscript, bound down the left edge in its genre colour. The
+   current one is picked out in gel with a glow, because on a dark shelf a
+   border alone does not read as "this is the one you have open". */
+.t-shelf-script {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1.5px solid var(--t-line-dark-2);
+  background: oklch(0.16 0.018 52);
+  padding: 14px 16px 14px 20px;
+  text-align: left;
+  transition:
+    transform 0.35s var(--t-spring),
+    border-color 0.3s,
+    box-shadow 0.3s;
+}
+.t-shelf-script:hover {
+  transform: translateX(6px) rotate(-0.4deg);
+  border-color: oklch(0.6 0.03 55);
+}
+.t-shelf-script.is-current {
+  border-color: var(--t-gel);
+  background: oklch(0.19 0.02 52);
+  box-shadow: 0 0 40px -12px oklch(0.92 0.18 100 / 0.5);
+}
+.t-shelf-script.is-held {
+  border-color: var(--t-gel);
+  background: oklch(0.19 0.02 52);
+}
+.t-shelf-script:focus-visible {
+  outline: 2px solid var(--t-gel);
+  outline-offset: 2px;
+}
+
+.t-shelf-script__spine {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 10px;
+  border-radius: 12px 0 0 12px;
+  background: var(--spine);
+}
+
+.t-shelf-script__title {
+  font-family: var(--t-direction);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.2;
+  color: var(--t-cream);
+}
+.t-shelf-script__author {
+  font-family: var(--t-direction);
+  font-size: 13px;
+  color: var(--t-muted-light);
+}
+.t-shelf-script__right {
+  font-family: var(--t-direction);
+  font-size: 12px;
+  color: oklch(0.65 0.02 62);
+}
+/* The genre reads in its own spine colour, so the word and the binding are
+   obviously the same fact said twice rather than two unrelated labels. */
+.t-shelf-script__genre {
+  font-family: var(--t-direction);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--spine);
+}
+
+/* "Bring in a script": dashed, like the search page's Find for me — the way
+   in for something you do not have yet. */
+.t-bring-in {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px dashed oklch(0.55 0.03 55);
+  background: transparent;
+  color: var(--t-cream);
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.3s var(--t-spring);
+}
+.t-bring-in:hover {
+  background: var(--t-gel);
+  color: var(--t-ink);
+  border-style: solid;
+  border-color: var(--t-gel);
+  transform: rotate(-1.5deg);
+}
+
+.t-shelf-heading {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-weight: 400;
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--t-cream);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-shelf-script:hover,
+  .t-bring-in:hover { transform: none; }
+}
+
+.t-back-to-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--t-muted-light);
+  transition: color 0.2s;
+}
+.t-back-to-stage:hover {
+  color: var(--t-gel);
+}
+
+/* --- The opened script ---------------------------------------------------- */
+/* The title page is a bound playscript on a hard gel shadow, tilted the way a
+   book lies on a desk and straightening when you reach for it. */
+.t-titlepage {
+  width: min(100%, 220px);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 8px 8px 0 var(--t-gel);
+  transform: rotate(-2deg);
+  transition: transform 0.5s var(--t-spring);
+}
+.t-titlepage:hover {
+  transform: rotate(0deg) translateY(-6px);
+}
+
+.t-act-name {
+  margin: 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--t-cream);
+}
+.t-act-count {
+  flex-shrink: 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: oklch(0.6 0.02 62);
+}
+
+.t-script-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-line-dark-3);
+  background: transparent;
+  color: var(--t-muted-light-3);
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 0.2s, color 0.2s;
+}
+.t-script-action:hover:not(:disabled) {
+  border-color: var(--t-cream);
+  color: var(--t-cream);
+}
+/* Redo is destructive-adjacent, so it is the quiet one until you reach it. */
+.t-script-action--quiet {
+  border-color: transparent;
+  color: oklch(0.65 0.02 62);
+}
+.t-script-action--quiet:hover:not(:disabled) {
+  border-color: transparent;
+  color: var(--t-gel);
+}
+.t-script-action:disabled { opacity: 0.6; }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-titlepage:hover { transform: rotate(-2deg); }
+}
+
+/* --- The playbill ---------------------------------------------------------
+   Cream paper on a hard gel shadow, with the act numeral watching from behind
+   it. The one light-on-dark object in the rehearsal room, because it is a
+   printed thing you are handed rather than part of the set. */
+.t-playbill {
+  background: var(--t-cream);
+  color: var(--t-text);
+  border: 1.5px solid var(--t-text) !important;
+  border-radius: 8px;
+  box-shadow: 14px 14px 0 var(--t-gel);
+  font-family: var(--t-body);
+}
+.t-playbill__numeral {
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 160px;
+  line-height: 1;
+  color: oklch(0.16 0.01 45 / 0.06);
+}
+.t-playbill__glyph {
+  color: var(--t-orange-deep);
+}
+.t-playbill__direction {
+  margin: 22px 0 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  letter-spacing: 0.08em;
+  font-size: 13px;
+  color: var(--t-muted-dark-2);
+}
+.t-playbill__title {
+  margin: 8px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-playbill__body {
+  margin: 14px 0 0;
+  max-width: 30ch;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--t-muted-dark);
+}
+.t-playbill__cta {
+  margin-top: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  height: 48px;
+  padding: 0 6px 0 20px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--t-cta-bg);
+  color: var(--t-cream);
+  font-family: var(--t-body);
+  font-size: 15px;
+  font-weight: 700;
+  transition: transform 0.3s var(--t-spring);
+}
+.t-playbill__cta:hover {
+  transform: scale(1.04) rotate(-1.5deg);
+}
+.t-playbill__cta-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--t-gel);
+  color: var(--t-cta-bg);
+}
+.t-playbill__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 14px 4px 0;
+  border-top: 1.5px solid var(--t-text);
+}
+.t-playbill__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-text);
+  background: transparent;
+  color: var(--t-text);
+  transition: opacity 0.2s;
+}
+.t-playbill__arrow:disabled { opacity: 0; }
+.t-playbill__dot {
+  height: 8px;
+  width: 8px;
+  border-radius: 999px;
+  border: 0;
+  padding: 0;
+  background: oklch(0.16 0.01 45 / 0.25);
+  transition: all 0.3s;
+}
+.t-playbill__dot[data-active="true"] {
+  width: 28px;
+  background: var(--t-orange-deep);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-playbill__cta:hover { transform: none; }
+}
+
+
 /* --- The search page in dark mode ----------------------------------------
    The Theatre Walk search design is drawn on cream paper, and the landing can
    get away with being fixed because it is a front page you walk into. This is

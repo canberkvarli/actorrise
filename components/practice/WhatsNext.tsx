@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { IconArrowRight, IconScissors, IconPlayerPlayFilled } from "@tabler/icons-react";
+import { IconScissors, IconPlayerPlayFilled } from "@tabler/icons-react";
 
 import type { WhatsNext as WhatsNextData } from "@/hooks/useWhatsNext";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
@@ -37,12 +37,14 @@ const rise = {
 
 function Line({ line }: { line: { character: string; text: string } }) {
   return (
-    <div className="mt-7 border-l border-border/70 pl-5 sm:pl-6">
-      <p className="font-typewriter text-[13px] uppercase tracking-[0.16em] text-muted-foreground/80">
-        {line.character}
-      </p>
-      <p className="mt-2 font-typewriter text-lg leading-[1.75] text-foreground/90 text-balance sm:text-xl">
+    <div className="relative mt-9 pl-7">
+      {/* The rule draws itself down the side of the speech as the room opens,
+          which is the only motion on this screen after load. */}
+      <span aria-hidden className="t-cue-rule" />
+      <p className="t-cue-who">{line.character}</p>
+      <p className="t-cue-text">
         {line.text}
+        <span aria-hidden className="t-cue-caret" />
       </p>
     </div>
   );
@@ -50,22 +52,27 @@ function Line({ line }: { line: { character: string; text: string } }) {
 
 function Slug({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-typewriter text-[13.5px] uppercase tracking-[0.16em] text-muted-foreground">
-      {children}
-    </p>
+    <p className="t-slug">{children}</p>
   );
 }
 
 function Title({ children }: { children: React.ReactNode }) {
   return (
-    <h1 className="mt-3 font-brand text-4xl font-medium leading-[1.03] tracking-tight text-foreground text-balance sm:text-5xl lg:text-6xl">
-      {children}
-    </h1>
+    <h1 className="t-stage-title">{children}</h1>
   );
 }
 
-const ACTION =
-  "group inline-flex items-center gap-2 rounded-md bg-primary px-5 h-11 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90";
+/** The one thing to press in the room. Cream, because it is the lit object on
+ *  a dark stage, with the play head in the gel dot. */
+const ACTION = "t-stage-action";
+
+function ActionDot({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="t-stage-action__dot" aria-hidden>
+      {children}
+    </span>
+  );
+}
 
 export function WhatsNext({ data }: { data: WhatsNextData }) {
   const { rung, script, scene, line, character, progress } = data;
@@ -134,12 +141,13 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
           variants={rise}
           initial="hidden"
           animate="visible"
-          className="mt-7 border-l border-dashed border-border/70 pl-5 sm:pl-6"
+          className="mt-9 pl-7"
+          style={{ borderLeft: "2px dashed var(--t-line-dark-3)" }}
         >
-          <p className="font-typewriter text-[13px] uppercase tracking-[0.16em] text-muted-foreground/80">
+          <p className="t-cue-who" style={{ color: "var(--t-muted-light)" }}>
             not yet cut
           </p>
-          <p className="mt-2 max-w-md font-typewriter text-base leading-[1.75] text-muted-foreground sm:text-lg">
+          <p className="t-cue-text" style={{ color: "var(--t-muted-light-2)" }}>
             It&apos;s on the shelf, but nobody has cut it into scenes yet.
           </p>
         </motion.div>
@@ -154,23 +162,30 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
       >
         {rung === "cut" ? (
           <Link href={`/practice?script=${script?.id}`} className={ACTION}>
-            <IconScissors className="h-4 w-4" />
             Cut the scenes
+            <ActionDot>
+              <IconScissors className="size-4" />
+            </ActionDot>
           </Link>
         ) : (
           <Link href={href} className={ACTION}>
-            <IconPlayerPlayFilled className="h-3.5 w-3.5" />
             {rung === "resume" ? "Pick it up" : rung === "demo" ? "Read it with me" : "Start it"}
-            <IconArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            <ActionDot>
+              <IconPlayerPlayFilled className="size-3.5" />
+            </ActionDot>
           </Link>
         )}
 
         {standing && (
-          <span className="font-typewriter text-[13px] text-muted-foreground">{standing}</span>
+          <span
+            style={{ fontFamily: "var(--t-direction)", fontSize: 14, color: "var(--t-muted-light)" }}
+          >
+            {standing}
+          </span>
         )}
 
         {rung === "demo" && (
-          <UploadScriptButton variant="compact">or bring your own</UploadScriptButton>
+          <UploadScriptButton variant="compact" className="t-bring-in">or bring your own</UploadScriptButton>
         )}
       </motion.div>
     </div>
@@ -183,13 +198,16 @@ export function NothingYet() {
     <div className="flex min-w-0 flex-col">
       <Slug>from the top</Slug>
       <Title>
-        Your first <em className="italic text-primary">scene</em> starts here.
+        Your first <em className="italic" style={{ color: "var(--t-gel)" }}>scene</em> starts here.
       </Title>
-      <p className="mt-5 max-w-md text-sm leading-relaxed text-muted-foreground">
+      <p
+        className="mt-6 max-w-[40ch] text-[17px] leading-relaxed"
+        style={{ color: "var(--t-muted-light-2)" }}
+      >
         Bring in a script and I&apos;ll read every other role with you.
       </p>
       <div className="mt-8">
-        <UploadScriptButton variant="primary">Upload a script</UploadScriptButton>
+        <UploadScriptButton variant="primary" className="t-stage-action">Upload a script</UploadScriptButton>
       </div>
     </div>
   );
