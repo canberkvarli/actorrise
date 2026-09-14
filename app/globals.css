@@ -2132,3 +2132,146 @@
 .t-empty-glyph {
   color: var(--t-line-light);
 }
+
+/* ==========================================================================
+   THEATRE STAGE — /practice, the rehearsal room.
+   ==========================================================================
+   Same system as the landing and the search page. The room is two columns:
+   the work on the left, the shelf on the right, under a lit marquee. The
+   ghost light hangs in the corner because this is the room you come back to
+   at 2am, and something should be on.
+   ========================================================================== */
+
+.theatre-stage {
+  color: var(--t-cream);
+  font-family: var(--t-body);
+}
+
+/* The wash behind the room. Warm from the top left, a cooler gel bloom in the
+   far corner, and the same film grain the hero uses. */
+.t-stage-wash {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 45% at 22% 18%, oklch(0.72 0.17 55 / 0.22), transparent 70%),
+    radial-gradient(40% 40% at 85% 90%, oklch(0.92 0.18 100 / 0.06), transparent 70%),
+    var(--t-ink);
+}
+.t-stage-grain {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* The ghost light in the corner, on a cord that sways. */
+@keyframes t-sway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+.t-ghost-light {
+  position: absolute;
+  top: 0;
+  right: clamp(12px, 3vw, 48px);
+  z-index: -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: top center;
+  animation: t-sway 7s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0.9;
+}
+.t-ghost-light__cord {
+  display: block;
+  width: 2px;
+  height: clamp(140px, 26vh, 260px);
+  background: linear-gradient(to bottom, oklch(0.3 0.02 55), oklch(0.28 0.02 55));
+}
+.t-ghost-light__socket {
+  display: block;
+  width: 18px;
+  height: 12px;
+  border-radius: 4px 4px 2px 2px;
+  background: oklch(0.3 0.02 55);
+}
+.t-ghost-light__bulb {
+  display: block;
+  width: 36px;
+  height: 42px;
+  border-radius: 50% 50% 46% 46%;
+  background: radial-gradient(
+    circle at 50% 40%,
+    oklch(0.99 0.05 95),
+    oklch(0.92 0.18 100) 35%,
+    oklch(0.75 0.17 60)
+  );
+  box-shadow:
+    0 0 28px 6px oklch(0.85 0.17 80 / 0.75),
+    0 0 100px 40px oklch(0.72 0.17 55 / 0.28);
+  animation: t-flicker 9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-ghost-light { animation: none; }
+  .t-ghost-light__bulb { animation: none; }
+}
+
+/* The way to ask. Set in the display italic, because it opens a playbill. */
+.t-how-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--t-line-dark-3);
+  background: transparent;
+  color: var(--t-muted-light-2);
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 20px;
+  line-height: 1;
+  transition: all 0.3s var(--t-spring);
+}
+.t-how-button:hover {
+  border-color: var(--t-gel);
+  color: var(--t-gel);
+  transform: rotate(-8deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-how-button:hover { transform: none; }
+}
+
+/* --- The callboard marquee ------------------------------------------------ */
+@keyframes t-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50% { transform: scale(1.2); opacity: 0.95; }
+}
+.t-marquee {
+  border-radius: 999px;
+  border: 1px solid var(--t-line-dark-2);
+  background: oklch(0.17 0.018 52);
+  transition: border-color 0.3s;
+}
+.t-marquee:hover {
+  border-color: var(--t-cta-bd);
+  color: inherit;
+}
+/* The caps are a shade up from the strip, so the ticker reads as running
+   between two fixed plates rather than fading into the page. */
+.t-marquee__cap {
+  background: oklch(0.2 0.02 52);
+}
+.t-marquee__pulse {
+  background: var(--t-orange);
+  animation: t-breathe 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-marquee__pulse { animation: none; }
+}

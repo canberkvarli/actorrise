@@ -24,7 +24,7 @@ export function CallboardMarquee() {
   return (
     <Link
       href="/callboard"
-      className="relative flex items-stretch overflow-hidden rounded-full border border-border/50 bg-card/40 backdrop-blur-sm"
+      className="t-marquee relative flex items-stretch overflow-hidden"
     >
       <style>{`
         @keyframes cb-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -32,12 +32,22 @@ export function CallboardMarquee() {
       `}</style>
 
       {/* label — dot always; the word only on wider screens */}
-      <div className="z-10 flex shrink-0 items-center gap-2 bg-card/80 py-2.5 pl-4 pr-3 sm:pr-4">
+      <div className="t-marquee__cap z-10 flex shrink-0 items-center gap-2.5 py-2.5 pl-[18px] pr-3.5 sm:pr-4">
         <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+          <span className="t-marquee__pulse absolute inline-flex h-full w-full rounded-full" />
+          <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: "var(--t-orange)" }} />
         </span>
-        <span className="hidden font-typewriter text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:inline">
+        <span
+          className="hidden sm:inline"
+          style={{
+            fontFamily: "var(--t-direction)",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: ".2em",
+            textTransform: "uppercase",
+            color: "var(--t-muted-light-2)",
+          }}
+        >
           Callboard
         </span>
       </div>
@@ -53,9 +63,17 @@ export function CallboardMarquee() {
               as separate flex items each got centered on its own line box, so
               words like "saved" rode above the rest. */}
           {run.map((e, i) => (
-            <span key={i} className="block py-2.5 text-sm leading-6 text-muted-foreground">
-              <span className="mx-4 align-baseline text-muted-foreground/30">•</span>
-              <span className="align-baseline font-medium text-foreground">{e.name}</span>{" "}
+            <span
+              key={i}
+              className="block py-2.5 text-sm leading-6"
+              style={{ color: "var(--t-muted-light-2)" }}
+            >
+              <span className="mx-3 align-baseline" style={{ color: "oklch(0.40 0.03 55)" }}>
+                •
+              </span>
+              <span className="align-baseline font-bold" style={{ color: "var(--t-cream)" }}>
+                {e.name}
+              </span>{" "}
               <EventLine e={e} />
             </span>
           ))}
@@ -63,7 +81,15 @@ export function CallboardMarquee() {
       </div>
 
       {/* trailing — arrow always; the words only on wider screens */}
-      <div className="z-10 flex shrink-0 items-center gap-1 bg-card/80 py-2.5 pl-3 pr-4 font-typewriter text-[11px] font-medium text-muted-foreground sm:pl-4">
+      <div
+        className="t-marquee__cap z-10 flex shrink-0 items-center gap-1.5 py-2.5 pl-3.5 pr-[18px] sm:pl-4"
+        style={{
+          fontFamily: "var(--t-direction)",
+          fontSize: 11,
+          letterSpacing: ".06em",
+          color: "var(--t-muted-light-2)",
+        }}
+      >
         <span className="hidden sm:inline">the board</span>
         <span aria-hidden>→</span>
       </div>

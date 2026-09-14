@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { IconQuestionMark } from "@tabler/icons-react";
 
 import { useScripts } from "@/hooks/useScripts";
 import { useAuth } from "@/lib/auth";
@@ -11,6 +10,7 @@ import UnderConstructionScripts from "@/components/UnderConstructionScripts";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { PracticeLibrary } from "@/components/practice/PracticeLibrary";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 import { CallboardMarquee } from "@/components/community/CallboardMarquee";
 import {
   HowItWorksWalkthrough,
@@ -65,10 +65,23 @@ export default function PracticePage() {
 
   return (
     <div
-      className={`container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${
+      className={`theatre-tokens theatre-stage ${theatreFontVars} container relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${
         hasOwnScript ? "py-8 sm:py-14" : "py-6 sm:py-8"
       }`}
     >
+      {/* The room it is lit from: a warm wash off the top-left corner, a gel
+          bloom in the far one, and the grain the hero uses. Fixed, so the
+          light belongs to the room rather than scrolling with the content. */}
+      <div aria-hidden className="t-stage-wash" />
+      <div aria-hidden className="t-stage-grain" />
+
+      {/* Something is always on in here. */}
+      <div aria-hidden className="t-ghost-light">
+        <span className="t-ghost-light__cord" />
+        <span className="t-ghost-light__socket" />
+        <span className="t-ghost-light__bulb" />
+      </div>
+
       {isLoading ? (
         <div className="space-y-8 sm:space-y-10">
           <Skeleton className="h-12 w-3/4 max-w-md" />
@@ -135,9 +148,9 @@ function HowItWorksButton({ onOpen }: { onOpen: () => void }) {
       onClick={onOpen}
       aria-label="How ScenePartner works"
       title="How it works"
-      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+      className="t-how-button"
     >
-      <IconQuestionMark className="h-4 w-4" />
+      ?
     </button>
   );
 }
