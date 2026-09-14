@@ -30,23 +30,23 @@ const DOORS = [
 
 export function StartingPoints({ mode = "plays" }: { mode?: "plays" | "film_tv" }) {
   return (
-    <section aria-label="Ways to start" className="mt-12">
+    <section aria-label="Ways to start" className="mt-8">
       <p className="t-dir text-center" style={{ color: "var(--t-muted-dark-2)" }}>
         (or start somewhere.)
       </p>
 
       <div
-        className="mt-6 grid gap-3.5"
+        className="mt-4 grid gap-3.5"
         style={{ gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))" }}
       >
         {DOORS.map(({ Sketch, label, query, rot }, i) => (
           <Link
             key={label}
             href={`/monologues?mode=${mode}&q=${encodeURIComponent(query)}`}
-            className="t-door group flex flex-col gap-3 p-5"
+            className="t-door group flex flex-col gap-2 p-4"
             style={{ ["--rot" as string]: rot }}
           >
-            <Sketch size={34} delay={0.1 + i * 0.08} className="t-door__glyph" />
+            <Sketch size={28} delay={0.1 + i * 0.08} className="t-door__glyph" />
             <span className="text-base font-bold" style={{ color: "var(--t-text)" }}>
               {label}
             </span>

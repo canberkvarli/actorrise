@@ -1839,7 +1839,16 @@
   transform: rotate(0deg) translateY(-6px);
   box-shadow: 9px 9px 0 var(--acc);
 }
+/* The door glyphs are drawn in ink, not the accent. Five accent marks in a
+   row under an accent Search button and two accent filter chips made the
+   accent mean nothing — it stopped reading as "this is the action" and
+   started reading as "this page is orange". They pick the accent up on
+   hover, where it means something. */
 .t-door__glyph {
+  color: var(--t-muted-dark-2);
+  transition: color 0.3s;
+}
+.t-door:hover .t-door__glyph {
   color: var(--acc);
 }
 

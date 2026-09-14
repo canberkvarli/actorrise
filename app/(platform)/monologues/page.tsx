@@ -1773,27 +1773,35 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         reads as the same object moving rather than two pills
                         trading colour — the mode change is now the quietest it
                         has been, and this is what carries it. */}
+                    {/* The fill sits at z-0, NOT -z-10. A negatively stacked
+                        child paints behind its own ancestor's background, so
+                        the fill went under the toggle's paper and the active
+                        tab rendered as cream text on cream — invisible, and
+                        the one tab you most need to see. The label rides above
+                        it at z-1. */}
                     {active && (
                       <motion.span
                         layoutId="search-mode-fill"
                         aria-hidden
-                        className="absolute inset-0 -z-10"
-                        style={{ borderRadius: 999, background: "var(--t-text)" }}
+                        className="absolute inset-0"
+                        style={{ borderRadius: 999, background: "var(--t-text)", zIndex: 0 }}
                         transition={{ type: "spring", stiffness: 420, damping: 34 }}
                       />
                     )}
-                    {isFilm ? (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                        <rect x="2" y="4" width="20" height="13" rx="2" />
-                        <path d="M8 21h8" />
-                      </svg>
-                    ) : (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                        <path d="M3 21V6a9 9 0 0 1 18 0v15" />
-                        <path d="M3 9h18" />
-                      </svg>
-                    )}
-                    {tab.label}
+                    <span className="relative z-[1] inline-flex items-center gap-2">
+                      {isFilm ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                          <rect x="2" y="4" width="20" height="13" rx="2" />
+                          <path d="M8 21h8" />
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                          <path d="M3 21V6a9 9 0 0 1 18 0v15" />
+                          <path d="M3 9h18" />
+                        </svg>
+                      )}
+                      {tab.label}
+                    </span>
                   </button>
                 );
               })}
@@ -1945,8 +1953,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         {/* Quick chips. They stay after a search now: the head is a fixed
             height and the bar no longer collapses, so there is nothing for
             hiding them to protect. */}
-        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <div className="min-w-0 flex-1">
+        {/* The chips get the whole row. They were sharing it with the
+            freshness caption, and because the row scrolls rather than wraps,
+            the caption's width came straight off the chips — the last one
+            ("Under 2 min") was cut mid-word at every desktop size, which
+            reads as a rendering fault rather than a scroll affordance. */}
+        <div className="mt-5">
+          <div className="min-w-0">
             <QuickFilterChips
               filters={filters}
               onToggle={(key, value) => setFilters({ ...filters, [key]: value })}
@@ -1962,7 +1975,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               activeFilterCount={activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
             />
           </div>
-          <p className="t-dir shrink-0" style={{ fontSize: 12, color: "var(--t-faint)" }}>
+          <p className="t-dir mt-2.5" style={{ fontSize: 12, color: "var(--t-faint)" }}>
             {maxOverdoneScore >= 1
               ? "(fresh picks first · showing everything)"
               : maxOverdoneScore <= 0
