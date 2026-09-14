@@ -317,7 +317,7 @@ export default function PlatformLayout({
             {/* Logo: left on all breakpoints */}
             <Link
               href="/practice"
-              className="flex min-w-0 shrink-0 items-center pl-1 transition-opacity hover:opacity-80"
+              className="flex min-w-0 shrink-0 items-center transition-opacity hover:opacity-80"
               aria-label="ActorRise Home"
             >
               <BrandLogo size="header" onDark />

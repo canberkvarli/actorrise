@@ -1686,7 +1686,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     // Holding the measure means a tab tap changes nothing horizontally, and the
     // opening view can arrive as a transition instead of a reload.
     <div
-      className={`theatre-tokens theatre-search ${theatreFontVars} relative mx-auto w-full max-w-[1160px] px-5 pb-32 pt-8 sm:px-6 sm:pt-14`}
+      className={`theatre-tokens theatre-search ${theatreFontVars} relative mx-auto w-full max-w-[1160px] px-5 pb-32 pt-8 md:px-[14px] sm:pt-14`}
       data-search-mode={searchMode satisfies SearchMode}
     >
       {/* Behind the page, not on it, so the shelf colour reaches the edges of

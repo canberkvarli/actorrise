@@ -37,7 +37,7 @@ function RehearseFallback() {
 export default function RehearsePage() {
   return (
     <div className={`theatre-tokens theatre-collection ${theatreFontVars}`}>
-      <div className="relative isolate container mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-14 lg:px-8">
+      <div className="relative isolate mx-auto w-full max-w-[1160px] px-5 py-8 sm:py-14 md:px-[14px]">
         <Suspense fallback={<RehearseFallback />}>
           <RehearseHub />
         </Suspense>
