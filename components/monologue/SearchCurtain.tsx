@@ -175,30 +175,32 @@ export function SearchCurtain({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
-      {/* The working light, dropped in on its cord.
+      {/* The drawings, one per beat, cross-faded.
 
-          This replaces the rotation of playbill sketches that used to fill the
-          wait. The note that stood here said not to use a bulb, because the
-          ghost light means "found nothing" and the two states should not look
-          alike; the design overrides that, and NoResultsState carries its own
-          glyph, so the pictures still differ. */}
+          A bulb stood here for a while. It had to go: the bulb is already the
+          house-lights switch in the header, the off-book mark on a cover, and
+          the callboard lamp — a picture that means "you know this piece" and
+          "someone is in the house" cannot also mean "wait". The playbill
+          sketches say the right thing instead, because leafing past plays is
+          what this moment actually is.
+
+          `Sketch` was being computed and thrown away while the bulb rendered,
+          so the rotation had been dead code. It is back on screen. */}
       <div className="relative flex h-32 w-32 items-center justify-center">
-        {!reduced && (
+        <AnimatePresence mode="wait">
           <motion.span
+            key={sketchIndex}
             aria-hidden
-            className="absolute inset-0 rounded-full blur-2xl"
-            style={{ background: "oklch(0.92 0.18 100 / .35)" }}
-            animate={{ scale: [1, 1.18, 1], opacity: [0.35, 0.7, 0.35] }}
-            transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
-          />
-        )}
-        <motion.span
-          aria-hidden
-          className="t-curtain-bulb"
-          initial={reduced ? false : { y: -120, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.9, ease: [0.22, 1.14, 0.36, 1] }}
-        />
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ color: "var(--t-muted-dark-2)" }}
+            initial={reduced ? false : { opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 1.04 }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Sketch size={88} />
+          </motion.span>
+        </AnimatePresence>
       </div>
 
       {/* The personal line. Deliberately NOT .stage-direction: that class
