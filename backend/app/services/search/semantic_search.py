@@ -242,19 +242,36 @@ def tv_clip_gate_active(filters: Optional[Dict]) -> bool:
 ERA_CUTOFF_YEAR = 1980
 
 
-def era_year_clause(category, year_col: str = "p.year_written") -> Optional[str]:
-    """SQL fragment enforcing era via year_written, to correct the category label.
+def era_year_clause(category, year_col: str = "p.year_written",
+                    rights_col: str = "p.copyright_status") -> Optional[str]:
+    """SQL fragment enforcing era, to correct a category label that is often wrong.
 
-    Returns None for any non-era category. Unknown year (NULL) is KEPT: the
-    category label is the only era signal we have for those rows, and 387 of the
-    contemporary plays have no year — excluding them would gut the catalogue.
-    So this only removes the KNOWN-wrong: a 'contemporary' play we can prove is
-    pre-1980, or a 'classical' one we can prove is modern.
+    Returns None for any non-era category.
+
+    A KNOWN year decides on its own. The interesting case is NULL, and it used
+    to be read as "might be contemporary" -- which meant 73% of everything a
+    contemporary search could return was public-domain work: Sophocles' Antigone,
+    Schiller, Dekker, Goethe, all undated and all treated as modern. Four actors
+    wrote in within four days to say "these aren't contemporary", and they were
+    describing exactly this.
+
+    Public domain settles it without needing a date. A work in the public domain
+    in 2026 was published before 1930, so it cannot be contemporary, and
+    `copyright_status` is already load-bearing enough to trust: it decides
+    whether the text may be stored and served at all (see services/licensing).
+
+    The old comment worried that excluding undated rows would gut the catalogue.
+    It does reduce it, honestly: 18,722 monologues drop to 5,061, and only 4 of
+    those are plays. That number IS the finding. An actor told "I have no
+    contemporary plays, here is the closest film and TV" goes and looks
+    elsewhere for that one piece and comes back. An actor handed Sophocles and
+    told it is contemporary decides the whole tool is broken.
     """
     if not isinstance(category, str):
         return None
     if category == "contemporary":
-        return f"({year_col} >= {ERA_CUTOFF_YEAR} OR {year_col} IS NULL)"
+        return (f"({year_col} >= {ERA_CUTOFF_YEAR} OR ({year_col} IS NULL AND "
+                f"COALESCE({rights_col}, '') <> 'public_domain'))")
     if category == "classical":
         return f"({year_col} < {ERA_CUTOFF_YEAR} OR {year_col} IS NULL)"
     return None
