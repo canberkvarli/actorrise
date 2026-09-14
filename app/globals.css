@@ -1170,12 +1170,25 @@
   --t-orange-glow: oklch(0.72 0.17 55);
   --t-gel: oklch(0.92 0.18 100);
 
-  /* Primary button. Ink fill, cream text, acid-yellow arrow dot. */
-  --t-cta-bg: oklch(0.15 0.03 45);
-  --t-cta-fg: oklch(0.96 0.02 85);
-  --t-cta-bd: oklch(0.45 0.03 55);
-  --t-cta-dot-bg: var(--t-gel);
-  --t-cta-dot-fg: oklch(0.15 0.03 45);
+  /* Primary button: orange fill, ink text, ink arrow dot with a gel arrow.
+     This is the design file's shipped `ctaStyle` default, and it is what the
+     prototype renders. The handoff README's prose says the opposite ("ink
+     fill … orange is no longer used as a button fill"), but it contradicts
+     its own props table two sections earlier, where the default is orange and
+     the decision is marked still open. The rendered artifact wins: an ink pill
+     on the ink hero is nearly invisible, which is the whole reason orange is
+     here.
+
+     The other three presets from the prototype, if this is ever revisited —
+     only these five lines change:
+       ink    #15/03/45 bg · cream fg · #45/03/55 bd · gel dot · ink arrow
+       cream  #96/02/85 bg · ink fg · transparent bd · ink dot · gel arrow
+       yellow #92/18/100 bg · ink fg · transparent bd · ink dot · gel arrow */
+  --t-cta-bg: oklch(0.7 0.18 48);
+  --t-cta-fg: oklch(0.15 0.03 45);
+  --t-cta-bd: transparent;
+  --t-cta-dot-bg: oklch(0.15 0.03 45);
+  --t-cta-dot-fg: var(--t-gel);
 
   /* Easing. Springy for anything a pointer touches, calm for entrances. */
   --t-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
