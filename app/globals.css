@@ -1972,3 +1972,85 @@
   .t-mark { animation: none; }
   .t-rehearse:hover { transform: none; }
 }
+
+/* The rule the results hang from. It draws itself left to right as the list
+   arrives, so the list reads as being set down rather than appearing. */
+@keyframes t-rule-draw {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.t-results-rule {
+  height: 2px;
+  background: var(--t-text);
+  transform-origin: left;
+  animation: t-rule-draw 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--rule-d, 0s) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-results-rule { animation: none; }
+}
+
+/* --- "Understood:" chips and Show more ----------------------------------- */
+@keyframes t-pop {
+  0% { opacity: 0; transform: translateY(10px) scale(0.94); }
+  60% { opacity: 1; transform: translateY(-2px) scale(1.01); }
+  100% { opacity: 1; transform: none; }
+}
+.t-understood {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 6px 0 12px;
+  border-radius: 999px;
+  background: var(--t-cta-bg);
+  color: var(--t-cream);
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: t-pop 0.5s var(--t-spring) var(--pop-d, 0s) both;
+}
+.t-understood__x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: oklch(0.3 0.02 55);
+  color: var(--t-gel);
+  transition: background 0.2s;
+}
+.t-understood__x:hover {
+  background: oklch(0.38 0.03 55);
+}
+
+.t-show-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 32px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-text);
+  background: transparent;
+  color: var(--t-text);
+  font-family: var(--t-body);
+  font-size: 15px;
+  font-weight: 600;
+  transition:
+    transform 0.3s var(--t-spring),
+    background 0.25s,
+    color 0.25s;
+}
+.t-show-more:hover:not(:disabled) {
+  background: var(--t-text);
+  color: var(--t-cream);
+  transform: rotate(-1deg);
+}
+.t-show-more:disabled { opacity: 0.6; }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-understood { animation: none; }
+  .t-show-more:hover:not(:disabled) { transform: none; }
+}

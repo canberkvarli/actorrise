@@ -113,11 +113,9 @@ export default function MonologuesPage() {
  */
 function SharedFactsLine({ label }: { label: string | null }) {
   if (!label) return null;
-  return (
-    <p className="stage-direction mb-5 text-sm text-muted-foreground/70">
-      (all {label}.)
-    </p>
-  );
+  /* Inline: it shares the echo line with the query now, so the header can hold
+     one height and the two asides read as one stage direction. */
+  return <span>(all {label}.)</span>;
 }
 
 function SearchContent() {
@@ -2139,7 +2137,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                        either. The poster thumbnail goes with the card; the
                        speech is the thing being chosen. */
                     <div>
-                      <SharedFactsLine label={constantFactsLabel(filmTvFacts)} />
+                      <p className="t-dir mb-4" style={{ color: "var(--t-muted-dark-2)" }}>
+                        {filmTvQuery && (
+                          <span style={{ color: "var(--t-text)" }}>
+                            (you said: &ldquo;{filmTvQuery}&rdquo;){" "}
+                          </span>
+                        )}
+                        <SharedFactsLine label={constantFactsLabel(filmTvFacts)} />
+                      </p>
+                      <div aria-hidden className="t-results-rule mb-2" />
                       {filmTvDisplay.map((mono, idx) => (
                         <MonologueSpeech
                           key={mono.id}
@@ -2306,59 +2312,92 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   toolbar starts exactly where the speeches do. Left at the
                   container edge it sat 124px to the left of every character
                   name, and the gutter read as a hole rather than a margin. */}
-              <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border/50 pb-4 sm:pl-[9.5rem]">
-                {/* items-center, not items-baseline. The row around this is
-                    centre-aligned, so baseline-aligning the pair inside it hung
-                    "monologues" 4px below everything else on the line: measured
-                    mid 258 against 254 for the count, the chip and the button. */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-2xl font-semibold tabular-nums text-foreground">
-                    {/* `total` is the server's full count for paging, but it was
-                        shown even when we held no results — a page reading
-                        "11 monologues" above nothing. Never report more than we
-                        actually have to show. */}
-                    {showBookmarkedOnly
-                      ? results.filter((m) => m.is_favorited).length
-                      : results.length === 0
-                        ? 0
-                        : total > 0
-                          ? total
-                          : results.length}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {showBookmarkedOnly ? "in your collection" : "monologues"}
-                  </span>
+              {/* One toolbar: what the search understood, how many came back,
+                  and the way back to the box. Indented to the margin column so
+                  it starts exactly where the speeches do. */}
+              <div className="mb-4 sm:pl-[9.5rem]">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                    {parsedConstraints && Object.keys(parsedConstraints).length > 0 && (
+                      <span
+                        className="shrink-0 text-sm font-semibold"
+                        style={{ color: "var(--t-muted-dark)" }}
+                      >
+                        Understood:
+                      </span>
+                    )}
+                    <ParsedConstraintChips constraints={parsedConstraints} onRemove={handleRemoveConstraint} />
+                    <ActiveFilterChips
+                      filters={filters}
+                      labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
+                      onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
+                      onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "", source_type: "" })}
+                    />
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="text-sm" style={{ color: "var(--t-muted-dark)" }}>
+                      {/* `total` is the server's full count for paging, but it
+                          was shown even when we held no results — a page
+                          reading "11 monologues" above nothing. Never report
+                          more than we actually have to show. */}
+                      <b className="tabular-nums" style={{ color: "var(--t-text)" }}>
+                        {showBookmarkedOnly
+                          ? results.filter((m) => m.is_favorited).length
+                          : results.length === 0
+                            ? 0
+                            : total > 0
+                              ? total
+                              : results.length}
+                      </b>{" "}
+                      {showBookmarkedOnly ? "in your collection" : "pieces"}
+                    </span>
+                    <span aria-hidden style={{ color: "var(--t-line-light)" }}>·</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById("search-input") as HTMLInputElement | null;
+                        el?.focus();
+                        el?.select();
+                        window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+                      }}
+                      className="text-sm underline underline-offset-4"
+                      style={{ color: "var(--t-muted-dark)" }}
+                    >
+                      new search
+                    </button>
+                    <Button
+                      variant={showBookmarkedOnly ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
+                      className="shrink-0 gap-2 rounded-full"
+                    >
+                      <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
+                      <span className="hidden sm:inline">In your collection</span>
+                      <span className="sm:hidden">Collection</span>
+                    </Button>
+                  </div>
                 </div>
 
-                {/* basis-full drops the chips onto their own line on a phone,
-                    where squeezing them between the count and the button
-                    interleaved everything; inline from sm up. */}
-                {/* No flex-1 here and no ml-auto on the button below. Together
-                    they threw the count to the far left and the collection
-                    toggle to the far right with ~800px of nothing between, on a
-                    row whose three items belong to each other. They read as one
-                    group now, left aligned with the cards underneath. */}
-                <div className="order-last flex min-w-0 basis-full flex-wrap items-center gap-2 sm:order-none sm:basis-auto">
-                  <ActiveFilterChips
-                    filters={filters}
-                    labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
-                    onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
-                    onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" })}
-                  />
-                  <ParsedConstraintChips constraints={parsedConstraints} onRemove={handleRemoveConstraint} />
-                </div>
-
-                <Button
-                  variant={showBookmarkedOnly ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                  className={`gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
-                >
-                  <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                  <span className="hidden sm:inline">In your collection</span>
-                  <span className="sm:hidden">Collection</span>
-                </Button>
+                {/* The query echo and the facts every row shares, on one line.
+                    This is why the H1 never repeats the query: the head has to
+                    hold one height, so what you typed lives here instead. */}
+                <p className="t-dir mt-3" style={{ color: "var(--t-muted-dark-2)" }}>
+                  {queryUsedForResults && (
+                    <span style={{ color: "var(--t-text)" }}>
+                      (you said: &ldquo;{queryUsedForResults}&rdquo;){" "}
+                    </span>
+                  )}
+                  <SharedFactsLine label={constantFactsLabel(playsFacts)} />
+                </p>
               </div>
+
+              {/* The rule the results hang from. */}
+              <div
+                aria-hidden
+                className="t-results-rule mb-2"
+                style={{ ["--rule-d" as string]: "0.2s" }}
+              />
 
               {/* Unified results grid: Best Match + Related use same card layout; hide confidence for broad queries */}
               {(() => {
@@ -2439,7 +2478,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 );
                 return (
                   <>
-                    <SharedFactsLine label={constantFactsLabel(playsFacts)} />
                     {!showBookmarkedOnly && showConfidence && bestMatches.length > 0 && (
                       <p className="mb-6 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
                         <span aria-hidden className="inline-block h-3 w-0.5 bg-primary" />
@@ -2477,17 +2515,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               })()}
               {hasMore && !showBookmarkedOnly && (
                 <div className="flex justify-center pt-6">
-                  <Button
-                    variant="outline"
+                  <button
+                    type="button"
                     onClick={loadMore}
                     disabled={isLoadingMore}
-                    className="rounded-full px-8"
+                    className="t-show-more"
                   >
-                    {isLoadingMore ? (
-                      <IconLoader2 className="h-4 w-4 animate-spin" />
-                    ) : null}
-                    Load more
-                  </Button>
+                    {isLoadingMore ? <IconLoader2 className="size-4 animate-spin" /> : null}
+                    Show {PAGE_SIZE} more
+                  </button>
                 </div>
               )}
               {/* Ask AFTER the results, not above them. In the toolbar it was
