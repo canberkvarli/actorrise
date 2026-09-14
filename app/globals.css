@@ -1165,6 +1165,14 @@
   --t-line-light: oklch(0.8 0.02 75);
   --t-line-light-2: oklch(0.85 0.02 75);
 
+  /* The colour that reads ON --t-text. In light that is cream; in dark --t-text
+     is itself cream, so anything filled with it needs ink on top instead. Two
+     places assumed cream forever and went invisible in dark: the active mode
+     tab and the search submit. */
+  --t-on-text: oklch(0.96 0.02 85);
+  /* Hard shadows are cast in ink, not in "the text colour" — which flips. */
+  --t-hard-shadow: oklch(0.16 0.01 45);
+
   /* Gels */
   --t-orange: oklch(0.7 0.18 48);
   --t-orange-deep: oklch(0.58 0.18 45);
@@ -1659,10 +1667,19 @@
    in several places and swapped classes per mode.
    ========================================================================== */
 
-.theatre-search {
-  /* Plays is the default shelf; the page root overwrites both on mode change. */
+/* Mode and theme compose here rather than being written inline from the page:
+   an inline custom property beats every stylesheet rule, so setting --acc and
+   --page from React made them untouchable by the dark theme. */
+.theatre-search,
+.theatre-search[data-search-mode="plays"],
+.t-outline-flash[data-search-mode="plays"] {
   --acc: oklch(0.58 0.18 45);
   --page: oklch(0.96 0.02 85);
+}
+.theatre-search[data-search-mode="film_tv"],
+.t-outline-flash[data-search-mode="film_tv"] {
+  --acc: oklch(0.62 0.15 300);
+  --page: oklch(0.95 0.02 300);
 }
 
 /* The full-viewport wash. It sits behind the page rather than on it, so the
@@ -1781,7 +1798,7 @@
   background: var(--t-paper);
   border: 1.5px solid var(--t-text);
   border-radius: 20px;
-  box-shadow: 5px 5px 0 var(--t-text);
+  box-shadow: 5px 5px 0 var(--t-hard-shadow);
   transform: rotate(var(--rot, 0deg));
   transition:
     transform 0.35s var(--t-spring),
@@ -1925,9 +1942,11 @@
   white-space: nowrap;
   animation: t-markin 0.5s ease-out var(--mark-d, 0s) both;
 }
+/* Best pick takes the mode accent, so it is orange on the play shelf and
+   violet on the screen shelf without a second rule. */
 .t-mark--best {
-  background: var(--t-orange-deep);
-  color: var(--t-cream);
+  background: var(--acc);
+  color: var(--t-on-text);
 }
 .t-mark--lane {
   background: var(--t-gel);
@@ -1935,7 +1954,7 @@
 }
 .t-mark--overdone {
   background: var(--t-text);
-  color: var(--t-cream);
+  color: var(--t-on-text);
 }
 .t-mark--match {
   border-color: var(--t-line-light);
@@ -1951,8 +1970,8 @@
   padding: 0 6px 0 18px;
   border-radius: 999px;
   background: var(--t-cta-bg);
-  border: 1.5px solid oklch(0.45 0.03 55);
-  color: var(--t-cream);
+  border: 1.5px solid var(--t-cta-bd);
+  color: var(--t-cta-fg);
   font-family: var(--t-body);
   font-size: 14px;
   font-weight: 700;
@@ -1960,7 +1979,7 @@
 }
 .t-rehearse:hover {
   transform: scale(1.04) rotate(-1.5deg);
-  color: var(--t-cream);
+  color: var(--t-cta-fg);
 }
 .t-rehearse__dot {
   display: inline-flex;
@@ -1969,8 +1988,8 @@
   width: 26px;
   height: 26px;
   border-radius: 999px;
-  background: var(--t-gel);
-  color: var(--t-cta-bg);
+  background: var(--t-cta-dot-bg);
+  color: var(--t-cta-dot-fg);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2008,7 +2027,7 @@
   padding: 0 6px 0 12px;
   border-radius: 999px;
   background: var(--t-cta-bg);
-  color: var(--t-cream);
+  color: var(--t-cta-fg);
   font-family: var(--t-body);
   font-size: 13px;
   font-weight: 600;
@@ -2050,7 +2069,7 @@
 }
 .t-show-more:hover:not(:disabled) {
   background: var(--t-text);
-  color: var(--t-cream);
+  color: var(--t-on-text);
   transform: rotate(-1deg);
 }
 .t-show-more:disabled { opacity: 0.6; }
@@ -2688,4 +2707,75 @@
 
 @media (prefers-reduced-motion: reduce) {
   .t-playbill__cta:hover { transform: none; }
+}
+
+/* --- The search page in dark mode ----------------------------------------
+   The Theatre Walk search design is drawn on cream paper, and the landing can
+   get away with being fixed because it is a front page you walk into. This is
+   a tool inside the app, opened daily, and it has to follow the actor's own
+   light/dark choice like every other screen they work on.
+
+   So the paper flips rather than the design changing: the same tokens, given
+   dark values. Everything downstream — cards, rules, chips, rows, the drawer —
+   reads these and needs no dark rules of its own.
+
+   `--acc` brightens in dark. orange-deep at 0.58 lightness is tuned to be
+   contrast-safe ON cream; on ink it goes muddy, so the accent moves to the
+   lighter orange the landing uses on dark ground. */
+.dark .theatre-search,
+.dark .theatre-search[data-search-mode="plays"],
+.dark .t-outline-flash[data-search-mode="plays"] {
+  --page: oklch(0.15 0.015 50);
+  --acc: oklch(0.7 0.18 48);
+
+  /* Surfaces: what was paper is now a raised dark card. */
+  --t-paper: oklch(0.19 0.018 52);
+  --t-paper-2: oklch(0.17 0.018 52);
+  --t-cream: oklch(0.96 0.02 85);
+
+  /* Text: the dark-text tokens become the light ones. */
+  --t-text: oklch(0.95 0.02 85);
+  --t-text-soft: oklch(0.93 0.02 85);
+  --t-muted-dark: oklch(0.75 0.02 62);
+  --t-muted-dark-2: oklch(0.68 0.02 62);
+  --t-faint: oklch(0.58 0.02 60);
+
+  /* Rules: the light lines become dark ones. */
+  --t-line-light: oklch(0.3 0.03 55);
+  --t-line-light-2: oklch(0.34 0.03 55);
+
+  /* The primary button was ink-on-cream. On ink it would vanish, so it
+     inverts to the cream pill the dark surfaces use. */
+  --t-cta-bg: oklch(0.96 0.02 85);
+  --t-cta-fg: oklch(0.15 0.03 45);
+  --t-cta-bd: transparent;
+  --t-cta-dot-bg: oklch(0.15 0.03 45);
+  --t-cta-dot-fg: var(--t-gel);
+
+  --t-on-text: oklch(0.15 0.03 45);
+  --t-hard-shadow: oklch(0.08 0.01 45);
+}
+
+/* Film & TV keeps its violet in dark, lifted off the deep end of the scale so
+   the wash reads as a shelf change rather than a bruise. */
+.dark .theatre-search[data-search-mode="film_tv"],
+.dark .t-outline-flash[data-search-mode="film_tv"] {
+  --page: oklch(0.16 0.025 300);
+  --acc: oklch(0.72 0.14 300);
+}
+
+/* A few places name a literal rather than a token, because the design does. */
+.dark .theatre-search .t-src--classical { color: oklch(0.78 0.14 45); }
+.dark .theatre-search .t-src--tv { color: oklch(0.76 0.12 300); }
+.dark .theatre-search .t-row__numeral { color: oklch(0.45 0.02 70); }
+.dark .theatre-search .t-row__name:hover { color: var(--acc); }
+.dark .theatre-search .t-mark--best { color: oklch(0.15 0.03 45); }
+.dark .theatre-search .t-mark--overdone {
+  background: oklch(0.96 0.02 85);
+  color: oklch(0.15 0.03 45);
+}
+/* The speech is set as a literal ink in light; in dark it needs to be read. */
+.dark .theatre-search .t-row blockquote,
+.dark .theatre-search [style*="oklch(0.22 0.01 45)"] {
+  color: oklch(0.88 0.02 80) !important;
 }

@@ -85,10 +85,12 @@ const MODE_TABS = [
  * mode-switch flash. `--page` is the ground. Setting two variables on the root
  * replaced a scatter of per-mode class swaps and three hardcoded violets.
  */
-const MODE_THEME = {
-  plays: { acc: "oklch(0.58 0.18 45)", page: "oklch(0.96 0.02 85)" },
-  film_tv: { acc: "oklch(0.62 0.15 300)", page: "oklch(0.95 0.02 300)" },
-} as const;
+/* The values live in CSS, keyed off this attribute, rather than being written
+   inline from here. Inline custom properties win over every stylesheet rule,
+   which meant the dark theme could flip the text tokens but not the ground or
+   the accent — the page stayed cream in dark mode. As an attribute, mode and
+   theme compose the way every other pair of variants in this file does. */
+type SearchMode = "plays" | "film_tv";
 
 export default function MonologuesPage() {
   return (
@@ -1592,7 +1594,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <div
         key={outlineFlash}
         className="t-outline-flash"
-        style={{ ["--acc" as string]: MODE_THEME[outlineFlash].acc }}
+        data-search-mode={outlineFlash}
         onAnimationEnd={() => setOutlineFlash(null)}
       />,
       document.body,
@@ -1658,13 +1660,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     // Holding the measure means a tab tap changes nothing horizontally, and the
     // opening view can arrive as a transition instead of a reload.
     <div
-      className="theatre-tokens theatre-search container relative mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6 md:py-8"
-      style={
-        {
-          "--acc": MODE_THEME[searchMode].acc,
-          "--page": MODE_THEME[searchMode].page,
-        } as React.CSSProperties
-      }
+      className="theatre-tokens theatre-search relative mx-auto w-full max-w-[1160px] px-5 pb-32 pt-8 sm:px-6 sm:pt-14"
+      data-search-mode={searchMode satisfies SearchMode}
     >
       {/* Behind the page, not on it, so the shelf colour reaches the edges of
           the viewport rather than stopping at the container. */}
@@ -1690,14 +1687,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {headDirection}
             </p>
             <h1
-              className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap"
+              className="mt-2"
               style={{
                 fontFamily: "var(--t-display)",
                 fontWeight: 400,
-                fontSize: "clamp(2.6rem, 6vw, 5rem)",
+                fontSize: "clamp(2.4rem, 5vw, 4.2rem)",
                 lineHeight: 0.95,
                 letterSpacing: "-0.02em",
                 color: "var(--t-text)",
+                /* Two lines' worth, always reserved. That is what keeps the
+                   row one height across every state — the old nowrap+ellipsis
+                   did the same job by cutting the sentence off, which read as
+                   a rendering fault rather than a design. */
+                minHeight: "1.9em",
+                textWrap: "balance",
               }}
             >
               {headTitle}
@@ -1735,7 +1738,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       color: active
                         ? isFilm
                           ? "oklch(0.98 0.01 300)"
-                          : "var(--t-cream)"
+                          : "var(--t-on-text)"
                         : "var(--t-muted-dark-2)",
                     }}
                   >
@@ -1847,15 +1850,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               style={{
                 borderRadius: 999,
                 background: "var(--t-cta-bg)",
-                border: "1.5px solid oklch(0.45 0.03 55)",
-                color: "var(--t-cream)",
+                border: "1.5px solid var(--t-cta-bd)",
+                color: "var(--t-cta-fg)",
                 transitionTimingFunction: "var(--t-spring)",
               }}
             >
               {isLoading ? "Looking" : "Search"}
               <span
                 className="flex size-6 items-center justify-center rounded-full"
-                style={{ background: "var(--t-gel)", color: "var(--t-cta-bg)" }}
+                style={{ background: "var(--t-cta-dot-bg)", color: "var(--t-cta-dot-fg)" }}
                 aria-hidden
               >
                 {isLoading ? (
