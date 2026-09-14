@@ -21,7 +21,7 @@ import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconEye, Ic
 
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
 import { HouseIsHunting } from "@/components/community/HouseIsHunting";
 import { ForYouShelf } from "@/components/monologue/ForYouShelf";
@@ -123,6 +123,7 @@ function SharedFactsLine({ label }: { label: string | null }) {
 function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const reducedMotion = useReducedMotion();
   const { user, isDemoUser, refreshUser } = useAuth();
   const [showSearchTour, setShowSearchTour] = useState(false);
   const [playsQuery, setPlaysQuery] = useState("");
@@ -1526,6 +1527,24 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     [searchMode, playsQuery, filmTvQuery, router],
   );
 
+  /* The transition choreography (handoff §5), as three named shapes so the
+     call sites cannot drift apart.
+
+     `fall` is what the outgoing block does on submit — it drops and shrinks a
+     little rather than sliding up, so it reads as scenery being struck rather
+     than the page scrolling. `liftout` is the curtain clearing once results
+     land: up and away, the opposite direction, because it is flown out rather
+     than struck. Under reduced motion both collapse to a plain swap. */
+  const FALL = reducedMotion
+    ? { opacity: 0 }
+    : { opacity: 0, y: 28, scale: 0.985, transition: { duration: 0.42, ease: [0.4, 0, 1, 1] as const } };
+  const LIFT_OUT = reducedMotion
+    ? { opacity: 0 }
+    : { opacity: 0, y: -40, scale: 0.96, transition: { duration: 0.48, ease: [0.4, 0, 1, 1] as const } };
+  const RISE_IN = reducedMotion
+    ? { opacity: 1, y: 0 }
+    : { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const } };
+
   /* The head's two lines of copy. The row is a fixed height, so these only
      ever change wording — never how much room they take. */
   const headState: "searching" | "results" | "empty" = isLoading
@@ -1593,7 +1612,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       key="presearch"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0, y: -20 }}
+      exit={FALL}
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
     >
       {/* Directly under the search bar, and first.
@@ -1982,10 +2001,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <motion.div
                 key="film-tv-loading"
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                animate={RISE_IN}
+                exit={LIFT_OUT}
               >
-                <SearchCurtain mode="film_tv" />
+                <SearchCurtain mode="film_tv" onStop={stopSearch} />
               </motion.div>
             ) : filmTvResults.length === 0 && !filmTvHasSearched ? (
               /* Was an empty <div />. Switching to a tab you had not searched
@@ -2031,8 +2050,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 key="film-tv-results"
                 id="search-results"
                 initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                animate={RISE_IN}
+                exit={FALL}
                 transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 className="space-y-4"
               >
@@ -2145,8 +2164,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <motion.div
               key="plays-loading"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              animate={RISE_IN}
+              exit={LIFT_OUT}
             >
               {/* Find for me gets its own curtain. Nobody typed anything, so
                   "reading twelve thousand pages" describes the wrong act — and
@@ -2154,6 +2173,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   rather than decorative, because the wait really is the
                   profile being read. */}
               <SearchCurtain
+                onStop={stopSearch}
                 mode={isFindingForMe ? "for_you" : "plays"}
                 name={firstName}
                 facts={forYouFacts}
@@ -2217,8 +2237,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               key="plays-results"
               id="search-results"
               initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
+              animate={RISE_IN}
+              exit={FALL}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               className="space-y-4"
             >

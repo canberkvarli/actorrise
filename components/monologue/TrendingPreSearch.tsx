@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { useTrending } from "@/hooks/useTrending";
-import type { Monologue } from "@/types/actor";
 import { ShelfCard } from "@/components/monologue/ShelfCard";
 
 /**

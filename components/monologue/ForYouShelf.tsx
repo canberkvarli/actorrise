@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { IconSparkles } from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
