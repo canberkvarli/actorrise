@@ -1208,6 +1208,11 @@
    theme-aware. `.theatre` adds the part that only the landing wants: the ink
    ground and the fixed, theme-independent surface. */
 .theatre {
+  /* No opening curtain on this page any more, so nothing is waiting for one.
+     The hero's entrance animations still hang off --curtain-delay; zeroing it
+     here starts them on load rather than after a lift that never comes. */
+  --curtain-delay: 0s;
+
   background: var(--t-ink);
   color: var(--t-cream);
   font-family: var(--t-body);
