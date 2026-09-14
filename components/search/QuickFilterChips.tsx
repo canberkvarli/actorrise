@@ -77,7 +77,7 @@ export function QuickFilterChips({
     // filter row scrolls horizontally (otherwise the off-screen filters are
     // invisible until you happen to swipe).
     <div className="relative">
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 pr-6 sm:pr-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="-my-2 flex items-center gap-2 overflow-x-auto py-2 pr-6 sm:pr-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {groups.flatMap((group) =>
           group.options.map((opt) => {
             const isActive = filters[group.key as keyof SearchFiltersState] === opt.value;
