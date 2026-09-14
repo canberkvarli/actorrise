@@ -1686,6 +1686,21 @@
   font-family: var(--t-body);
   color: var(--t-text);
 }
+
+/* Selecting text inside the search box drew the browser's default blue, which
+   is the one colour on the page that belongs to no part of the design. Every
+   Theatre Walk surface gets the gel-on-ink selection the landing already uses. */
+.theatre-search ::selection,
+.theatre-collection ::selection,
+.theatre-stage ::selection {
+  background: var(--t-gel);
+  color: oklch(0.13 0.015 50);
+}
+.theatre-search input::selection,
+.theatre-stage input::selection {
+  background: var(--t-gel);
+  color: oklch(0.13 0.015 50);
+}
 /* Form controls do not inherit a face — the UA sheet gives them their own, and
    the app's base then hands them Montserrat. Every chip, tab and submit on this
    page is a <button>, so without this the page keeps its old sans everywhere a
@@ -1868,6 +1883,95 @@
 .t-shelf-row:hover {
   border-color: var(--t-text);
   transform: translateX(6px);
+}
+
+/* The position numeral on the trending shelf. Courier, quiet, in its own
+   narrow column so the names still start on one line. */
+.t-shelf-row__rank {
+  flex-shrink: 0;
+  width: 18px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: right;
+  color: var(--t-faint);
+  font-variant-numeric: tabular-nums;
+}
+.t-shelf-row:hover .t-shelf-row__rank {
+  color: var(--acc, var(--t-orange-deep));
+}
+
+.t-shelf-row__name {
+  display: block;
+  font-family: var(--t-direction);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.25;
+  color: var(--t-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The play and the source pill on one line, because the pill is a fact ABOUT
+   the play. Kept out of the right-hand group, where its varying width pushed
+   the meta to a different x on every row. */
+.t-shelf-row__sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 2px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  color: var(--t-muted-dark-2);
+}
+/* The meta owns the right edge now, so it lines up down the column. */
+/* The search fault. Paper, an ink rule, one stage direction and one line —
+   the same furniture as every other panel here. No red: a failed request is
+   not an emergency, and the page has exactly one accent already. */
+.t-fault {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 22px 24px;
+  border-radius: 20px;
+  background: var(--t-paper);
+  border: 1.5px solid var(--t-line-light);
+  text-align: center;
+}
+.t-fault__line {
+  margin: 8px 0 0;
+  font-size: 15px;
+  color: var(--t-text);
+}
+.t-fault__retry {
+  margin-top: 16px;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-text);
+  background: transparent;
+  color: var(--t-text);
+  font-family: var(--t-body);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: all 0.3s var(--t-spring);
+}
+.t-fault__retry:hover {
+  background: var(--t-text);
+  color: var(--t-on-text);
+  transform: rotate(-1.5deg);
+}
+
+.t-shelf-row__meta {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--t-muted-dark);
 }
 
 /* Shelf headings: Instrument Serif with the tail in the mode accent. */
@@ -2206,22 +2310,55 @@
    at 2am, and something should be on.
    ========================================================================== */
 
+/* The rehearsal room is a LIT ROOM: ink ground in light and dark alike, the
+   same way the Collection's bench is. It has to paint that ground on itself.
+
+   It used to rely on `.t-stage-wash`, a `position: fixed; z-index: -2` layer —
+   which paints behind the BODY's background, not behind the page. So the ink
+   never appeared, and `color: var(--t-cream)` put cream text on the app's
+   light paper: the title, the cue, the speech and the shelf heading were all
+   invisible in light mode. Third time this z-index shape has bitten this
+   rollout (the collection ground and the search mode tab were the other two). */
 .theatre-stage {
+  position: relative;
+  isolation: isolate;
   color: var(--t-cream);
   font-family: var(--t-body);
+  min-height: 100vh;
 }
-
-/* The wash behind the room. Warm from the top left, a cooler gel bloom in the
-   far corner, and the same film grain the hero uses. */
-.t-stage-wash {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
+/* Full-bleed, because a rehearsal room is a room and not a card. The element
+   itself is a max-width container, so painting the ground on it left cream
+   margins down both sides and a hard horizontal edge under the header. This
+   breaks out to the viewport behind the content instead. */
+.theatre-stage::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 100vw;
+  margin-left: -50vw;
+  z-index: -1;
   pointer-events: none;
   background:
     radial-gradient(60% 45% at 22% 18%, oklch(0.72 0.17 55 / 0.22), transparent 70%),
     radial-gradient(40% 40% at 85% 90%, oklch(0.92 0.18 100 / 0.06), transparent 70%),
     var(--t-ink);
+}
+.theatre-stage button,
+.theatre-stage input,
+.theatre-stage select,
+.theatre-stage textarea {
+  font-family: inherit;
+}
+
+/* The wash behind the room. Warm from the top left, a cooler gel bloom in the
+   far corner, and the same film grain the hero uses. */
+/* Retired. The ground moved onto `.theatre-stage` itself — see the note
+   there. Kept as a no-op so the element in the markup costs nothing; do not
+   put a fixed, negatively stacked layer back here. */
+.t-stage-wash {
+  display: none;
 }
 .t-stage-grain {
   position: fixed;

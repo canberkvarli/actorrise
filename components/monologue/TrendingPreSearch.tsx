@@ -36,13 +36,18 @@ export function TrendingPreSearch() {
         variants={{ show: { transition: { staggerChildren: 0.05 } } }}
         className="flex flex-col gap-2.5"
       >
-        {items.map((m) => (
+        {/* Ranked. This shelf and "Picked for your type" were the same rows
+            in the same card in two identical columns, so the page read as one
+            list printed twice. A position numeral is both the distinction and
+            the actual meaning of "trending" — the other shelf has no order to
+            show, and correctly shows none. */}
+        {items.map((m, i) => (
           <motion.div
             key={m.id}
             variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
             transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
           >
-            <ShelfCard m={m} />
+            <ShelfCard m={m} rank={i + 1} />
           </motion.div>
         ))}
       </motion.div>

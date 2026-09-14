@@ -38,11 +38,36 @@ export function useHeaderLight(routeKey: string) {
 
   useEffect(() => {
     place();
-    /* Fonts land after first paint and change every tab's width. */
-    const settle = setTimeout(place, 600);
+
+    /* A single re-measure on a timer is not enough, and this is how the lamp
+       ended up stranded at the left of the bar on /practice with the active
+       tab rendering ink-on-ink — unreadable, because the tab's colour assumes
+       the light is behind it.
+
+       The nav is `flex: 1` between the logo and the utilities, so ANYTHING
+       that changes the utilities' width moves every tab: the account button
+       swapping "Account" for a real name and tier badge when the user loads,
+       the callboard lamp swapping an icon for a count, a web font landing.
+       Those happen at times no timeout can predict. An observer on the nav
+       catches all of them, including the font. */
+    const nav = navRef.current;
+    const ro =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => place())
+        : null;
+    if (ro && nav) {
+      ro.observe(nav);
+      /* Tabs can change width without the nav box changing at all. */
+      for (const tab of nav.querySelectorAll("[data-nav]")) ro.observe(tab);
+    }
+
+    /* Belt and braces for the font, which can land before the observer is
+       attached on a warm cache. */
+    document.fonts?.ready.then(place).catch(() => {});
+
     window.addEventListener("resize", place);
     return () => {
-      clearTimeout(settle);
+      ro?.disconnect();
       window.removeEventListener("resize", place);
     };
   }, [place, routeKey]);

@@ -26,7 +26,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
 import { HouseIsHunting } from "@/components/community/HouseIsHunting";
 import { ForYouShelf } from "@/components/monologue/ForYouShelf";
-import { SearchCurtain } from "@/components/monologue/SearchCurtain";
+import { SearchWaiting } from "@/components/monologue/SearchWaiting";
 // A ticket stub for "nothing on this bill" — the masks were already doing duty
 // as the gibberish/short empty state and as a starting-point tile, so film & TV
 // coming back empty looked identical to two other things.
@@ -116,9 +116,13 @@ export default function MonologuesPage() {
  */
 function SharedFactsLine({ label }: { label: string | null }) {
   if (!label) return null;
-  /* Inline: it shares the echo line with the query now, so the header can hold
-     one height and the two asides read as one stage direction. */
-  return <span>(all {label}.)</span>;
+  /* It used to share a line with a query echo. The echo is gone — it repeated
+     the search box verbatim — so this stands on its own. */
+  return (
+    <p className="t-dir mt-3" style={{ color: "var(--t-muted-dark-2)" }}>
+      (all {label}.)
+    </p>
+  );
 }
 
 function SearchContent() {
@@ -1975,13 +1979,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               activeFilterCount={activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
             />
           </div>
-          <p className="t-dir mt-2.5" style={{ fontSize: 12, color: "var(--t-faint)" }}>
-            {maxOverdoneScore >= 1
-              ? "(fresh picks first · showing everything)"
-              : maxOverdoneScore <= 0
-                ? "(freshest only)"
-                : "(fresh picks first)"}
-          </p>
         </div>
 
 
@@ -2043,15 +2040,32 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         {/* Error banner with retry */}
         {/* A real error (network/timeout) shows the retry card. A quota wall
             (searchUpgradeUrl set) shows the polished Plus paywall modal instead. */}
+        {/* A failure, said the way this page says everything else. It used to
+            be the app's generic destructive card — a red-bordered, red-filled
+            box with "Search failed." in red — which is the visual language of
+            a crashed form, not of a theatre, and it was the loudest thing on
+            a page whose own accent is one orange. The fault is worth saying
+            plainly and once; it is not worth an alarm. */}
         {searchError && !searchUpgradeUrl && (
-          <Card className="border-destructive/50 bg-destructive/5 max-w-md mx-auto">
-            <CardContent className="pt-4 pb-4 flex flex-col items-center text-center gap-3">
-              <p className="text-sm text-destructive font-medium">{searchError}</p>
-              <Button variant="outline" size="sm" onClick={() => { setSearchError(null); setSearchUpgradeUrl(null); searchMode === "film_tv" ? handleSearch() : performSearch(playsQuery, filters); }}>
-                Try again
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="t-fault">
+            <p className="t-dir" style={{ color: "var(--t-muted-dark-2)" }}>
+              (the search went dark.)
+            </p>
+            <p className="t-fault__line">
+              That one didn&apos;t come back. Nothing is lost — run it again.
+            </p>
+            <button
+              type="button"
+              className="t-fault__retry"
+              onClick={() => {
+                setSearchError(null);
+                setSearchUpgradeUrl(null);
+                searchMode === "film_tv" ? handleSearch() : performSearch(playsQuery, filters);
+              }}
+            >
+              Try it again
+            </button>
+          </div>
         )}
         <MonologuePaywallModal
           open={!!searchUpgradeUrl}
@@ -2072,7 +2086,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 animate={RISE_IN}
                 exit={LIFT_OUT}
               >
-                <SearchCurtain mode="film_tv" onStop={stopSearch} />
+                <SearchWaiting onStop={stopSearch} />
               </motion.div>
             ) : filmTvResults.length === 0 && !filmTvHasSearched ? (
               /* Was an empty <div />. Switching to a tab you had not searched
@@ -2207,14 +2221,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                        either. The poster thumbnail goes with the card; the
                        speech is the thing being chosen. */
                     <div>
-                      <p className="t-dir mb-4" style={{ color: "var(--t-muted-dark-2)" }}>
-                        {filmTvQuery && (
-                          <span style={{ color: "var(--t-text)" }}>
-                            (you said: &ldquo;{filmTvQuery}&rdquo;){" "}
-                          </span>
-                        )}
+                      <div className="mb-4">
                         <SharedFactsLine label={constantFactsLabel(filmTvFacts)} />
-                      </p>
+                      </div>
                       <div aria-hidden className="t-results-rule mb-2" />
                       {filmTvDisplay.map((mono, idx) => (
                         <MonologueSpeech
@@ -2243,17 +2252,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               animate={RISE_IN}
               exit={LIFT_OUT}
             >
-              {/* Find for me gets its own curtain. Nobody typed anything, so
-                  "reading twelve thousand pages" describes the wrong act — and
-                  this is the one moment where naming the actor is honest
-                  rather than decorative, because the wait really is the
-                  profile being read. */}
-              <SearchCurtain
-                onStop={stopSearch}
-                mode={isFindingForMe ? "for_you" : "plays"}
-                name={firstName}
-                facts={forYouFacts}
-              />
+              <SearchWaiting onStop={stopSearch} />
             </motion.div>
           ) : hasSearched && results.length === 0 && !searchError ? (
             <motion.div
@@ -2388,14 +2387,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <div className="mb-4 sm:pl-[9.5rem]">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
                   <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                    {parsedConstraints && Object.keys(parsedConstraints).length > 0 && (
-                      <span
-                        className="shrink-0 text-sm font-semibold"
-                        style={{ color: "var(--t-muted-dark)" }}
-                      >
-                        Understood:
-                      </span>
-                    )}
                     <ParsedConstraintChips constraints={parsedConstraints} onRemove={handleRemoveConstraint} />
                     <ActiveFilterChips
                       filters={filters}
@@ -2452,14 +2443,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 {/* The query echo and the facts every row shares, on one line.
                     This is why the H1 never repeats the query: the head has to
                     hold one height, so what you typed lives here instead. */}
-                <p className="t-dir mt-3" style={{ color: "var(--t-muted-dark-2)" }}>
-                  {queryUsedForResults && (
-                    <span style={{ color: "var(--t-text)" }}>
-                      (you said: &ldquo;{queryUsedForResults}&rdquo;){" "}
-                    </span>
-                  )}
-                  <SharedFactsLine label={constantFactsLabel(playsFacts)} />
-                </p>
+                {/* What every row here has in common, once. The query echo
+                    that used to lead this line is gone: it repeated, word for
+                    word, what is still sitting in the search box two inches
+                    above it. Four bands of metadata stood between the box and
+                    the first result; this is the only one that said anything
+                    the reader could not already see. */}
+                <SharedFactsLine label={constantFactsLabel(playsFacts)} />
               </div>
 
               {/* The rule the results hang from. */}

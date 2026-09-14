@@ -41,14 +41,29 @@ const GROUPS: FilterGroup[] = [
   { key: "max_duration", options: [{ label: "Under 2 min", value: "120" }] },
 ];
 
-/** The two shelf colours, matching `.t-src--*`. */
+/** The two shelf colours, matching `.t-src--*`.
+ *
+ *  Screen pieces used to take `var(--t-text)` for their border, which is cream
+ *  in dark mode — so Film and TV wore stark white outlines next to chips that
+ *  wore a hairline, and the row looked like two different components. They now
+ *  share the accent with the era chips: the row is one material, and which
+ *  SHELF you are on is said by the mode toggle above, not by four chips
+ *  shouting it. */
 const TAG_COLOR: Record<SourceTagKind, { line: string; text: string; on: string }> = {
-  classical: { line: "oklch(0.58 0.18 45)", text: "oklch(0.50 0.16 45)", on: "oklch(0.96 0.02 85)" },
-  contemporary: { line: "oklch(0.58 0.18 45)", text: "oklch(0.50 0.16 45)", on: "oklch(0.96 0.02 85)" },
-  /* Screen pieces are ink, matching their source pills — see .t-src--film. */
-  film: { line: "var(--t-text)", text: "var(--t-muted-dark)", on: "var(--t-on-text)" },
-  tv: { line: "var(--t-text)", text: "var(--t-muted-dark)", on: "var(--t-on-text)" },
+  classical: { line: "var(--acc)", text: "var(--acc)", on: "oklch(0.98 0.01 85)" },
+  contemporary: { line: "var(--acc)", text: "var(--acc)", on: "oklch(0.98 0.01 85)" },
+  film: { line: "var(--acc)", text: "var(--acc)", on: "oklch(0.98 0.01 85)" },
+  tv: { line: "var(--acc)", text: "var(--acc)", on: "oklch(0.98 0.01 85)" },
 };
+
+/** The width the mode-swapped pair reserves.
+ *
+ *  Classical/Contemporary and Film/TV occupy the same two slots, but
+ *  "Contemporary" is twice the width of "TV" — so switching shelves shoved
+ *  every chip after it sideways and the toggle felt like it broke the row
+ *  rather than changed a filter. Both pairs now hold one footprint, so the
+ *  only thing that moves on a mode switch is the label inside them. */
+const SHELF_CHIP_WIDTH = 132;
 
 interface QuickFilterChipsProps {
   filters: SearchFiltersState;
@@ -94,14 +109,20 @@ export function QuickFilterChips({
                 className="inline-flex min-h-[44px] shrink-0 cursor-pointer touch-manipulation items-center justify-center rounded-full px-4 text-[13px] font-semibold transition-transform hover:-translate-y-0.5 hover:-rotate-1 md:min-h-9"
                 style={{
                   transitionTimingFunction: "var(--t-spring)",
+                  /* The shelf pair reserves one width so switching mode does
+                     not reflow the row behind it. */
+                  minWidth: group.mode ? SHELF_CHIP_WIDTH : undefined,
                   border: `1.5px solid ${
                     isActive ? (c ? c.line : "var(--t-text)") : c ? c.line : "var(--t-line-light)"
                   }`,
-                  background: isActive ? (c ? c.line : "var(--t-gel)") : "transparent",
+                  background: isActive ? (c ? c.line : "var(--t-text)") : "transparent",
+                  /* Ink, fixed — not var(--t-text), which IS cream in dark and
+                     printed a pale label on a filled chip. Whatever the theme,
+                     a filled chip carries the colour that reads on its fill. */
                   color: isActive
                     ? c
                       ? c.on
-                      : "var(--t-text)"
+                      : "var(--t-on-text)"
                     : c
                       ? c.text
                       : "var(--t-muted-dark-2)",

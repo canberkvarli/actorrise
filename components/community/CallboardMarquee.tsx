@@ -38,7 +38,7 @@ export function CallboardMarquee() {
       <div className="t-marquee__cap z-10 flex shrink-0 items-center gap-2.5 py-2.5 pl-[18px] pr-3.5 sm:pr-4">
         <span className="relative flex h-2 w-2">
           <span className="t-marquee__pulse absolute inline-flex h-full w-full rounded-full" />
-          <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: "var(--t-orange)" }} />
+          <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: "var(--t-gel)" }} />
         </span>
         <span
           className="hidden sm:inline"
@@ -47,11 +47,10 @@ export function CallboardMarquee() {
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: ".2em",
-            textTransform: "uppercase",
             color: "var(--t-muted-light-2)",
           }}
         >
-          Callboard
+          callboard
         </span>
       </div>
 
@@ -66,10 +65,20 @@ export function CallboardMarquee() {
               as separate flex items each got centered on its own line box, so
               words like "saved" rode above the rest. */}
           {run.map((e, i) => (
+            /* Set as an overheard aside rather than a notification row: the
+               typewriter face, a little smaller, with the actor's name the one
+               thing carrying weight. It read as app chrome in the body sans —
+               the same voice the buttons use — which is the wrong register for
+               a line about someone else being in the building. */
             <span
               key={i}
-              className="block py-2.5 text-sm leading-6"
-              style={{ color: "var(--t-muted-light-2)" }}
+              className="block py-2.5 leading-6"
+              style={{
+                fontFamily: "var(--t-direction)",
+                fontSize: 13,
+                letterSpacing: "0.02em",
+                color: "var(--t-muted-light-2)",
+              }}
             >
               <span className="mx-3 align-baseline" style={{ color: "oklch(0.40 0.03 55)" }}>
                 •
