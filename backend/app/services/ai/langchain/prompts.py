@@ -91,9 +91,18 @@ Extract the following information if present in the query (return null if not me
    - Examples of valid extractions: love, betrayal, identity, power, family, revenge, loss, etc.
    - Return array or null
 
-5. category: Classical or contemporary era? Extract whenever the user signals an era.
-   - "modern", "contemporary", "modern monologue", "modern piece", "recent", "current", "today's", "new works" → "contemporary"
-   - "classical", "classic", "period", "old"/"older" (as in era), "greek", "elizabethan", "restoration", "verse drama", "tragedy (classical)" → "classical"
+5. category: Which era? THREE values, and modern is NOT a synonym for contemporary.
+   - "classical", "classic", "period", "old"/"older" (as in era), "greek",
+     "elizabethan", "restoration", "verse drama", "Shakespeare-era" → "classical"
+     (before 1879: Greeks, Shakespeare, Molière, Schiller)
+   - "modern", "modern drama", "modern piece", "modern monologue", "realism",
+     "naturalism", "Ibsen", "Chekhov", "Shaw" as an era signal → "modern"
+     (1879-1979: Ibsen, Chekhov, Wilde, Strindberg, O'Neill, Miller, Williams)
+   - "contemporary", "recent", "current", "today's", "new works", "living
+     playwright", "post-1990", "21st century" → "contemporary" (1980 onwards)
+   - In theatre "modern drama" is a period term meaning Ibsen onwards. An actor
+     asking for a "modern monologue" usually wants that period, NOT a piece
+     written last year. Only choose "contemporary" when they say so.
    - DO NOT extract category if the user names a specific play title or author (their work already implies the era) — leave it to intended_play/intended_author
    - Otherwise → null
 

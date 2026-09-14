@@ -516,13 +516,20 @@ def _lookup_over_plays(db, title_norm: Optional[str], filters: dict,
     # so both paths answer the same filter the same way.
     category = filters.get("category")
     if category:
+        from app.services.search.semantic_search import era_uses_stored_category
+
         cats = category if isinstance(category, list) else [category]
         cats = [c for c in cats if c]
-        if cats:
+        # 'modern' has no stored label — plays.category only ever holds
+        # classical/contemporary — so the column predicate would match nothing
+        # and the era_year_clause below has to carry it alone. Skipping it here
+        # is what keeps this path agreeing with SemanticSearch.
+        if cats and era_uses_stored_category(category):
             sql += " AND (" + " OR ".join(
                 f"p.category ILIKE :cat{i}" for i in range(len(cats))
             ) + ")"
             params.update({f"cat{i}": f"%{c}%" for i, c in enumerate(cats)})
+        if cats:
             # The label alone is not enough: `category` is dirty, so the vector
             # path corrects it with year_written and this must do the same or
             # the two paths disagree about what "contemporary" means. Single

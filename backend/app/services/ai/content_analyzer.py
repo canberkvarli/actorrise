@@ -358,7 +358,7 @@ Write the introduction:""")
                 'age_range': '20s' | '30s' | '40s' | etc. | None,
                 'emotion': 'joy' | 'sadness' | etc. | None,
                 'themes': ['love', 'power'] | None,
-                'category': 'classical' | 'contemporary' | None,
+                'category': 'classical' | 'modern' | 'contemporary' | None,
                 'tone': 'comedic' | 'dramatic' | etc. | None
             }
         """

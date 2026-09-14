@@ -47,8 +47,10 @@ TONE_VALUES = {
     "philosophical", "inspirational", "sarcastic", "melancholic", "romantic",
     "joyful",
 }
-# Era is plays.category, not a column on monologues.
-ERA_VALUES = {"classical", "contemporary"}
+# Era is plays.category for two of these; 'modern' is defined by year_written
+# alone (see semantic_search.YEAR_ONLY_ERAS) because the column has never held
+# that value. Listed here so a lane may still express the preference.
+ERA_VALUES = {"classical", "modern", "contemporary"}
 
 
 def credits_digest(credits: Iterable[ActorCredit]) -> str:

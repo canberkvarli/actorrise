@@ -242,6 +242,23 @@ def tv_clip_gate_active(filters: Optional[Dict]) -> bool:
 ERA_CUTOFF_YEAR = 1980
 
 
+#: Modern drama starts with Ibsen. A Doll's House is 1879 in this library and is
+#: the conventional opening of the canon, so the boundary sits on it rather than
+#: a rounder 1880 that would file it as classical.
+MODERN_START_YEAR = 1879
+
+#: `plays.category` only ever holds 'classical' or 'contemporary'. 'modern' has
+#: no stored value and is defined purely by year, so a search for it must NOT
+#: also filter on the column or it matches nothing. Everything that filters on
+#: category asks this first.
+YEAR_ONLY_ERAS = frozenset({"modern"})
+
+
+def era_uses_stored_category(category) -> bool:
+    """False when the era is defined by year alone and the label would block it."""
+    return not (isinstance(category, str) and category.lower() in YEAR_ONLY_ERAS)
+
+
 def era_year_clause(category, year_col: str = "p.year_written",
                     rights_col: str = "p.copyright_status") -> Optional[str]:
     """SQL fragment enforcing era, to correct a category label that is often wrong.
@@ -269,11 +286,18 @@ def era_year_clause(category, year_col: str = "p.year_written",
     """
     if not isinstance(category, str):
         return None
+    category = category.lower()
     if category == "contemporary":
         return (f"({year_col} >= {ERA_CUTOFF_YEAR} OR ({year_col} IS NULL AND "
                 f"COALESCE({rights_col}, '') <> 'public_domain'))")
+    if category == "modern":
+        # Ibsen to Miller. NULL is excluded here, unlike the other two: an
+        # undated public-domain row could be Sophocles or Chekhov, and 5,152
+        # monologues now carry a real date, so there is no need to guess. An
+        # undated straggler is better missing from 'modern' than wrong in it.
+        return f"({year_col} >= {MODERN_START_YEAR} AND {year_col} < {ERA_CUTOFF_YEAR})"
     if category == "classical":
-        return f"({year_col} < {ERA_CUTOFF_YEAR} OR {year_col} IS NULL)"
+        return f"({year_col} < {MODERN_START_YEAR} OR {year_col} IS NULL)"
     return None
 
 
@@ -1218,8 +1242,16 @@ class SemanticSearch:
                         Play.category.ilike(f"%{cat}%") for cat in category
                     ]
                     base_query = base_query.filter(or_(*category_conditions))
-                else:
+                elif era_uses_stored_category(category):
                     base_query = base_query.filter(Play.category.ilike(f"%{category}%"))
+                else:
+                    # 'modern' is a year range, not a stored label. Applying the
+                    # label here would return nothing; the era is enforced by
+                    # year_written on the raw-SQL path that actually retrieves.
+                    base_query = base_query.filter(
+                        Play.year_written >= MODERN_START_YEAR,
+                        Play.year_written < ERA_CUTOFF_YEAR,
+                    )
 
             if hard_filters.get("author"):
                 base_query = base_query.filter(
@@ -1345,8 +1377,13 @@ class SemanticSearch:
                 if hf.get("category"):
                     cat = hf["category"]
                     cats = cat if isinstance(cat, list) else [cat]
-                    cat_sql = " OR ".join(f"p.category ILIKE '%{c.replace(chr(39), '')}%'" for c in cats)
-                    wc.append(f"({cat_sql})")
+                    # 'modern' has no stored label (the column only ever holds
+                    # classical/contemporary), so filtering on it would match
+                    # nothing. The year clause below carries that era alone.
+                    if era_uses_stored_category(cat):
+                        cat_sql = " OR ".join(
+                            f"p.category ILIKE '%{c.replace(chr(39), '')}%'" for c in cats)
+                        wc.append(f"({cat_sql})")
                     # Era is category here, but the labels are dirty — correct
                     # them with year_written so "contemporary" excludes the plays
                     # we can prove are pre-1980 (single category only; a list is

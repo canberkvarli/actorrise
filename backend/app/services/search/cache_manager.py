@@ -53,7 +53,10 @@ logger = logging.getLogger(__name__)
 # Hamlet with one speech on it twice. It is 18 pieces from 12 plays through the
 # lookup, and warhorses no longer open a browse page. Old entries hold the
 # Hamlet-heavy pages, so they have to go.
-CACHE_VERSION = "16"
+# v17: a third era. The parsing prompt used to map "modern" onto
+# "contemporary", so every cached parse of "modern monologue" holds the answer
+# that sent an actor asking for Ibsen to the film shelf.
+CACHE_VERSION = "17"
 
 
 class CacheManager:

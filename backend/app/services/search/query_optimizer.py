@@ -349,23 +349,34 @@ class KeywordExtractor:
             'willy loman': 'Willy Loman',
         },
 
+        # Three eras, because actors use three words and they are not synonyms.
+        # "Modern drama" is a period term meaning Ibsen onwards; "contemporary"
+        # means living playwrights. Mapping modern -> contemporary sent every
+        # request for Ibsen to the film shelf, which got worse once public
+        # domain was correctly excluded from contemporary: "modern monologue
+        # for a woman" returned Big Little Lies and The Blues Brothers.
         'category': {
-            # Classical
+            # Classical — before Ibsen. Greeks, Shakespeare, Molière, Schiller.
             'shakespeare': 'classical', 'shakespearean': 'classical',
             'classical': 'classical', 'greek': 'classical', 'ancient': 'classical',
-            'chekhov': 'classical', 'ibsen': 'classical', 'wilde': 'classical',
-            'shaw': 'classical', 'sophocles': 'classical',
+            'sophocles': 'classical', 'verse': 'classical', 'restoration': 'classical',
 
-            # Contemporary
-            'modern': 'contemporary', 'contemporary': 'contemporary',
-            'new': 'contemporary', 'recent': 'contemporary',
+            # Modern — 1879 to 1979. The library holds 5,152 of these and could
+            # not surface one of them until they were dated.
+            'modern': 'modern', 'realism': 'modern', 'naturalism': 'modern',
+            'chekhov': 'modern', 'ibsen': 'modern', 'wilde': 'modern',
+            'shaw': 'modern', 'strindberg': 'modern', 'synge': 'modern',
+
+            # Contemporary — 1980 onwards, living playwrights.
+            'contemporary': 'contemporary', 'new': 'contemporary',
+            'recent': 'contemporary', 'current': 'contemporary',
 
             # Non-English (IT/ES/FR/PT)
             'classico': 'classical', 'clasico': 'classical', 'clásico': 'classical',
             'classique': 'classical', 'clássico': 'classical',
             'contemporaneo': 'contemporary', 'contemporáneo': 'contemporary',
             'contemporain': 'contemporary', 'contemporâneo': 'contemporary',
-            'moderno': 'contemporary',
+            'moderno': 'modern', 'moderne': 'modern',
         },
 
         'author': {
