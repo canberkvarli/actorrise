@@ -75,6 +75,19 @@ const MODE_TABS = [
   { mode: "film_tv" as const, label: "Film & TV", accent: "--accent-screen" },
 ];
 
+/**
+ * The two shelves are two colours, and the whole page reads them from here.
+ *
+ * `--acc` drives the H1 italic, the search box's hard shadow, the door glyphs
+ * and their hover shadow, the shelf-title italics, the best-pick mark and the
+ * mode-switch flash. `--page` is the ground. Setting two variables on the root
+ * replaced a scatter of per-mode class swaps and three hardcoded violets.
+ */
+const MODE_THEME = {
+  plays: { acc: "oklch(0.58 0.18 45)", page: "oklch(0.96 0.02 85)" },
+  film_tv: { acc: "oklch(0.62 0.15 300)", page: "oklch(0.95 0.02 300)" },
+} as const;
+
 export default function MonologuesPage() {
   return (
     <Suspense fallback={
@@ -1504,35 +1517,59 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     [searchMode, playsQuery, filmTvQuery, router],
   );
 
-  // Portal: gentle hue-style highlight around the edges (no hard border), soft bloom
+  /* The head's two lines of copy. The row is a fixed height, so these only
+     ever change wording — never how much room they take. */
+  const headState: "searching" | "results" | "empty" = isLoading
+    ? "searching"
+    : chromeCompact
+      ? "results"
+      : "empty";
+
+  const headDirection =
+    headState === "searching"
+      ? "(the house goes quiet.)"
+      : headState === "results"
+        ? "(lights to half.)"
+        : searchMode === "film_tv"
+          ? "(film & tv. the screen shelf.)"
+          : "(the search. say it out loud.)";
+
+  const headTitle =
+    headState === "searching" ? (
+      <em className="t-em" style={{ color: "var(--acc)" }}>
+        Looking.
+      </em>
+    ) : headState === "results" ? (
+      <>
+        Here&rsquo;s what{" "}
+        <em className="t-em" style={{ color: "var(--acc)" }}>
+          came back.
+        </em>
+      </>
+    ) : (
+      <>
+        What do you{" "}
+        <em className="t-em" style={{ color: "var(--acc)" }}>
+          need
+        </em>{" "}
+        tonight?
+      </>
+    );
+
+  /* The mode-switch flash. It used to carry two hardcoded rgba() bloom
+     values, one per mode, which is exactly the kind of thing --acc exists to
+     stop: the colour now comes from the theme like everything else. */
   const outlineOverlay =
     typeof document !== "undefined" &&
     outlineFlash &&
     createPortal(
-      <AnimatePresence>
-        <motion.div
-          key={outlineFlash}
-          className="fixed inset-0 pointer-events-none rounded-none"
-          style={{
-            zIndex: 2147483647,
-            border: "none",
-            // Soft edge vignette: large inset blur/spread, stronger hue on change
-            boxShadow:
-              outlineFlash === "plays"
-                ? "inset 0 0 160px 90px rgba(251, 146, 60, 0.22), inset 0 0 70px 35px rgba(255, 180, 120, 0.14)"
-                : "inset 0 0 160px 90px rgba(167, 139, 250, 0.22), inset 0 0 70px 35px rgba(196, 181, 255, 0.14)",
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 1, 0] }}
-          transition={{
-            duration: 1.2,
-            times: [0, 0.3, 1],
-            ease: "easeInOut",
-          }}
-          onAnimationComplete={() => setOutlineFlash(null)}
-        />
-      </AnimatePresence>,
-      document.body
+      <div
+        key={outlineFlash}
+        className="t-outline-flash"
+        style={{ ["--acc" as string]: MODE_THEME[outlineFlash].acc }}
+        onAnimationEnd={() => setOutlineFlash(null)}
+      />,
+      document.body,
     );
 
   /**
@@ -1588,112 +1625,114 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     // sprang 640px wider and re-centred while the title faded in underneath.
     // Holding the measure means a tab tap changes nothing horizontally, and the
     // opening view can arrive as a transition instead of a reload.
-    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 relative max-w-3xl">
+    <div
+      className="theatre-tokens theatre-search container relative mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6 md:py-8"
+      style={
+        {
+          "--acc": MODE_THEME[searchMode].acc,
+          "--page": MODE_THEME[searchMode].page,
+        } as React.CSSProperties
+      }
+    >
+      {/* Behind the page, not on it, so the shelf colour reaches the edges of
+          the viewport rather than stopping at the container. */}
+      <div aria-hidden className="t-search-wash" />
       {outlineOverlay}
 
-      {/* Hero Search Section. Once a search has run the title gets out of the
-          way and the search bar sticks to the top — otherwise the answer opens
-          below the fold and every search costs a scroll. */}
-      <div
-        className={
-          chromeCompact
-            /* top offsets clear the sticky nav, which measures 65px on mobile
-               and 81px from sm up — any less and the mode toggle tucks under it.
-               From sm up the mode toggle and the search bar sit on one line;
-               the title has animated away by then, so they're the only children. */
-            ? "sticky top-16 z-30 -mx-4 mb-4 border-b border-border/50 bg-background/90 px-4 py-2.5 backdrop-blur-md sm:top-20 sm:-mx-6 sm:px-6"
-            : "mb-4 sm:mb-6 md:mb-10"
-        }
-      >
-        <AnimatePresence initial={false}>
-          {!chromeCompact && (
-            <motion.div
-              key="hero-title"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="overflow-hidden"
+      {/* The search head.
+          
+          One height in every state, which is the whole point: the direction
+          and the H1 change wording as you search, but the row does not change
+          size, so results landing never shoves the page under the reader's
+          eye. That is why the H1 is nowrap + ellipsis rather than wrapping —
+          "What do you need tonight?" is longer than "Looking." and a wrapping
+          headline would move everything below it by a line.
+
+          This replaces the old chromeCompact behaviour, which hid the title
+          and stuck the bar to the top after a search. The fixed-height row is
+          the design's answer to the same problem. */}
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
+          <div className="min-w-0 flex-1 basis-80">
+            <p className="t-dir" style={{ color: "var(--t-muted-dark-2)" }}>
+              {headDirection}
+            </p>
+            <h1
+              className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap"
+              style={{
+                fontFamily: "var(--t-display)",
+                fontWeight: 400,
+                fontSize: "clamp(2.6rem, 6vw, 5rem)",
+                lineHeight: 0.95,
+                letterSpacing: "-0.02em",
+                color: "var(--t-text)",
+              }}
             >
-              <div className="text-center mb-3 sm:mb-4 md:mb-8">
-                <p className="hidden md:block stage-direction text-sm md:text-base text-muted-foreground/70 mb-3">
-                  (the search.)
-                </p>
-                <h1 className="font-brand font-medium leading-[1.05] text-4xl sm:text-5xl md:text-6xl">
-                  Find your next <em className="italic text-primary">piece</em>
-                </h1>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets. */}
-        <div
-          className={`flex items-center justify-center gap-2 px-1 ${
-            chromeCompact ? "mb-1.5" : "mb-3 sm:mb-4"
-          }`}
-        >
-          {/* Boxed segmented control while it's the hero; once you've searched
-              it drops to quiet text tabs so the bar reads as one thing.
-
-              Both states share one indicator that slides between the tabs
-              instead of two independently-styled buttons swapping colour. The
-              tab you left and the tab you arrive at are now visibly the same
-              object moving, which is the smallest possible statement that these
-              are two shelves and not two rooms. */}
-          <div
-            className={
-              chromeCompact
-                ? "inline-flex shrink-0 gap-1 sm:gap-0.5"
-                : "w-full max-w-sm sm:max-w-none sm:w-auto inline-flex rounded-xl border border-border bg-muted/40 p-2 gap-2 sm:p-1 sm:gap-0"
-            }
-          >
-            {MODE_TABS.map((tab) => {
-              const active = searchMode === tab.mode;
-              return (
-                <button
-                  key={tab.mode}
-                  type="button"
-                  aria-pressed={active}
-                  className={`relative ${
-                    chromeCompact
-                      ? `shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm transition-colors ${
-                          active ? "font-medium" : "text-muted-foreground hover:text-foreground"
-                        }`
-                      : `flex-1 sm:flex-none min-h-[44px] sm:min-w-0 sm:px-4 sm:py-2 rounded-lg sm:rounded-md text-sm font-medium transition-colors touch-manipulation ${
-                          active ? "" : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                        }`
-                  }`}
-                  style={active ? { color: `var(${tab.accent})` } : undefined}
-                  onClick={() => switchMode(tab.mode)}
-                >
-                  {active && (
-                    <motion.span
-                      layoutId="mode-indicator"
-                      aria-hidden
-                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                      className={`absolute inset-0 -z-10 ${
-                        chromeCompact ? "rounded-md" : "rounded-lg sm:rounded-md ring-1 ring-inset"
-                      }`}
-                      style={{
-                        backgroundColor: `color-mix(in oklch, var(${tab.accent}) 14%, transparent)`,
-                        ...(chromeCompact
-                          ? {}
-                          : { boxShadow: `inset 0 0 0 1px color-mix(in oklch, var(${tab.accent}) 35%, transparent)` }),
-                      }}
-                    />
-                  )}
-                  {tab.label}
-                </button>
-              );
-            })}
+              {headTitle}
+            </h1>
           </div>
-          {!chromeCompact && (
-            <div className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0">
-              <span className="w-10 h-10" aria-hidden />
+
+          {/* Plays vs Film & TV. Still 44px targets, still switchMode. */}
+          <div className="shrink-0">
+            <div
+              className="inline-flex gap-1 p-1"
+              style={{
+                borderRadius: 999,
+                border: "1.5px solid var(--t-text)",
+                background: "var(--t-paper)",
+              }}
+            >
+              {MODE_TABS.map((tab) => {
+                const active = searchMode === tab.mode;
+                const isFilm = tab.mode === "film_tv";
+                return (
+                  <button
+                    key={tab.mode}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => switchMode(tab.mode)}
+                    className="inline-flex min-h-[44px] items-center gap-2 px-4 text-sm font-semibold transition-transform hover:scale-[1.04]"
+                    style={{
+                      borderRadius: 999,
+                      transitionTimingFunction: "var(--t-spring)",
+                      background: active
+                        ? isFilm
+                          ? "oklch(0.62 0.15 300)"
+                          : "var(--t-text)"
+                        : "transparent",
+                      color: active
+                        ? isFilm
+                          ? "oklch(0.98 0.01 300)"
+                          : "var(--t-cream)"
+                        : "var(--t-muted-dark-2)",
+                    }}
+                  >
+                    {isFilm ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                        <rect x="2" y="4" width="20" height="13" rx="2" />
+                        <path d="M8 21h8" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                        <path d="M3 21V6a9 9 0 0 1 18 0v15" />
+                        <path d="M3 9h18" />
+                      </svg>
+                    )}
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
-          )}
+            <p className="t-dir mt-2 text-right" style={{ fontSize: 12, color: "var(--t-faint)" }}>
+              {searchMode === "film_tv"
+                ? "(scenes and speeches from the screen. no era filter here.)"
+                : "(19,000 pieces. classical and contemporary.)"}
+            </p>
+          </div>
         </div>
+      </div>
+
+      <div>
         {/* Search bar. Stacked on mobile for easier tap targets. Centred, and
             after a search it widens to the same measure as the results, so the
             bar, the count and the cards all share one edge and one centre. */}

@@ -1642,3 +1642,110 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ==========================================================================
+   THEATRE SEARCH — /monologues, in the same system as the landing.
+   ==========================================================================
+   The palette and the three faces come from `.theatre-tokens`. What is new
+   here is that the page has two shelves and they are different colours, so
+   the accent is a variable rather than a constant: `--acc` and `--page` are
+   set on the page root from `searchMode` and everything downstream reads
+   them. That replaces the old approach, which hardcoded the Film & TV violet
+   in several places and swapped classes per mode.
+   ========================================================================== */
+
+.theatre-search {
+  /* Plays is the default shelf; the page root overwrites both on mode change. */
+  --acc: oklch(0.58 0.18 45);
+  --page: oklch(0.96 0.02 85);
+}
+
+/* The full-viewport wash. It sits behind the page rather than on it, so the
+   colour reaches the edges instead of stopping at the container. */
+.t-search-wash {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  background: var(--page);
+  transition: background 0.6s ease;
+  pointer-events: none;
+}
+
+/* --- Source tags ----------------------------------------------------------
+   Which shelf a piece came off, said in one pill. Derived from `source_type`
+   first (film/tv are facts about the medium) and `category` second. Never
+   mixed in with the result marks — those say why this piece matched, this
+   says where it lives. */
+.t-src {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  line-height: 1.6;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+.t-src--classical {
+  border-color: oklch(0.58 0.18 45);
+  color: oklch(0.5 0.16 45);
+  background: transparent;
+}
+.t-src--contemporary {
+  border-color: oklch(0.58 0.18 45);
+  background: oklch(0.58 0.18 45);
+  color: oklch(0.96 0.02 85);
+}
+.t-src--film {
+  border-color: oklch(0.62 0.15 300);
+  background: oklch(0.62 0.15 300);
+  color: oklch(0.98 0.01 300);
+}
+.t-src--tv {
+  border-color: oklch(0.62 0.15 300);
+  color: oklch(0.5 0.15 300);
+  background: transparent;
+}
+
+/* The legend under the quick chips, so the four pills are readable the first
+   time rather than learned by inference. */
+.t-src-legend {
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--t-faint);
+}
+.t-src-legend b {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  vertical-align: -1px;
+}
+
+/* --- Mode switch flash ----------------------------------------------------
+   The existing viewport flash, recoloured off --acc instead of two hardcoded
+   rgb() values. A hard 8px frame rather than the old inset bloom: the shelf
+   changed, and that should read as the house lights changing, not a glow. */
+@keyframes t-outline-flash {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.t-outline-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  border: 8px solid var(--acc);
+  animation: t-outline-flash 0.7s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-outline-flash { display: none; }
+  .t-search-wash { transition: none; }
+}
