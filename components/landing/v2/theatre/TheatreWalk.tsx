@@ -1,5 +1,4 @@
 import { theatreFontVars } from "@/lib/fonts/theatre";
-import { HouseCurtain } from "@/components/landing/v2/HouseCurtain";
 import { TheatreNav } from "./TheatreNav";
 import { BackstageHero } from "./BackstageHero";
 import { PlayMarquee } from "./PlayMarquee";
@@ -20,14 +19,17 @@ import { TheatreFooter } from "./TheatreFooter";
  * own three faces; nothing here reads the app's semantic tokens, and nothing
  * here leaks back out to them.
  *
- * The one borrowed part is `HouseCurtain`, which flies out over the hero once
- * per tab session. `--curtain-delay` is the single clock: the hero's entrance
- * animations hang off it, so the copy rises exactly as the velvet clears.
+ * There is no opening curtain. One flew out over the hero on first visit each
+ * tab session; it is gone because the page does not need a gate in front of
+ * it — the first thing a visitor should meet is the headline, not a wait.
+ * `.theatre` zeroes `--curtain-delay` to match, so the hero's entrances (which
+ * still hang off that clock) start immediately instead of holding for velvet
+ * that no longer exists. The Act IV traveler is untouched: that one is scrolled
+ * to, not sprung on anyone.
  */
 export function TheatreWalk() {
   return (
     <div className={`theatre ${theatreFontVars}`}>
-      <HouseCurtain />
       <TheatreNav />
       <main>
         <BackstageHero />
