@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { toastBookmark } from "@/lib/toast";
@@ -22,15 +21,15 @@ import { RecentlyRemoved } from "@/components/rehearse/RecentlyRemoved";
 
 function BenchSkeleton() {
   return (
-    <div className="rounded-2xl border border-border px-5 py-7 sm:px-9 sm:py-10">
-      <div className="flex flex-col gap-6 sm:flex-row sm:gap-9">
-        <Skeleton className="aspect-[2/3] w-32 shrink-0 rounded-sm sm:w-44" />
+    <div className="t-bench">
+      <div className="t-bench__grid">
+        <Skeleton className="aspect-[2/3] w-[132px] shrink-0 rounded-sm bg-white/10 sm:w-[180px]" />
         <div className="w-full space-y-4">
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-11 w-2/3" />
-          <Skeleton className="h-4 w-1/2" />
-          <Skeleton className="h-24 w-full max-w-prose" />
-          <Skeleton className="h-11 w-40 rounded-md" />
+          <Skeleton className="h-4 w-28 bg-white/10" />
+          <Skeleton className="h-11 w-2/3 bg-white/10" />
+          <Skeleton className="h-4 w-1/2 bg-white/10" />
+          <Skeleton className="h-24 w-full max-w-prose bg-white/10" />
+          <Skeleton className="h-[60px] w-44 rounded-full bg-white/10" />
         </div>
       </div>
     </div>
@@ -53,12 +52,12 @@ function BenchSkeleton() {
  * page leads with that piece at working size and says the answer once.
  */
 export function RehearseHub() {
-  const router = useRouter();
   const queryClient = useQueryClient();
   // The collection is client-only data; render loading until mounted so SSR
-  // and the first client pass agree.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // and the first client pass agree. Read as an external store rather than
+  // set from an effect — an effect that sets state on mount is a cascading
+  // render, and the lint rule that catches it is right.
+  const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
   const { data, isLoading } = useBookmarks({ alwaysFresh: true });
 
   const mark = useToggleMemorized();
@@ -119,21 +118,35 @@ export function RehearseHub() {
       {!showContent ? (
         <BenchSkeleton />
       ) : isEmpty ? (
-        <div className="flex flex-col items-center justify-center gap-5 py-24 text-center">
-          <div className="space-y-1.5">
-            <p className="stage-direction text-xs text-muted-foreground/70">
-              (the shelf is bare.)
-            </p>
-            <p className="font-sans text-xl font-medium text-foreground">
-              Nothing here yet.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Save a monologue and it&apos;ll show up here, ready to work.
-            </p>
-          </div>
-          <Button onClick={() => router.push("/monologues")}>
+        <div className="t-bare">
+          {/* An empty slot on the shelf, drawn rather than described. */}
+          <div aria-hidden className="t-bare__slot">?</div>
+          <p className="t-dir mt-8 text-[var(--t-muted-dark-2)]">
+            (the shelf is bare.)
+          </p>
+          <h2 className="t-bare__name">
+            Nothing here <em>yet.</em>
+          </h2>
+          <p className="mt-4 max-w-[38ch] text-[17px] text-[var(--t-muted-dark)]">
+            Save a monologue and it&apos;ll show up here, ready to work.
+          </p>
+          <Link href="/monologues" className="t-cta t-cta--bench t-cta--paper mt-8">
             Find monologues
-          </Button>
+            <span aria-hidden className="t-cta__dot">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </span>
+          </Link>
           {/* What this drawer is for, demonstrated by a real actor instead of
               explained. "Save a monologue and it'll show up here" is
               instruction; "Kylie saved Lady Bracknell's speech" is evidence
@@ -225,11 +238,16 @@ function ShelfOverlapWhisper({ items }: { items: Monologue[] }) {
   const verb = event.event_type === "bookmarked" ? "saved" : "is reading";
 
   return (
-    <div className="mt-8 border-t border-border/50 pt-4">
+    <div className="t-coll-rule">
       <Whisper surface="collection" href={`/monologue/${monologueId}`}>
         <span className="font-medium text-foreground/90">{event.name}</span> {verb}{" "}
         <span className="font-typewriter">{title}</span> too
       </Whisper>
     </div>
   );
+}
+
+/** Nothing to subscribe to: "are we on the client" never changes after mount. */
+function subscribeNever() {
+  return () => {};
 }

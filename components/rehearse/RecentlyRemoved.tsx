@@ -1,15 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { IconChevronDown, IconRotateClockwise } from "@tabler/icons-react";
 import {
   useRecentlyRemoved,
   useRestoreMonologue,
 } from "@/hooks/useRecentlyRemoved";
+import { leadName } from "@/lib/collectionMeta";
 
 /**
  * A quiet safety net at the bottom of the Collection: monologues you removed in
  * the last 30 days, each restorable with one tap. Hidden when there are none.
+ *
+ * Set as a stage direction rather than a heading. It is a note about the
+ * shelf, not a section of it, and the only thing it should compete with is
+ * nothing.
  */
 export function RecentlyRemoved() {
   const { data } = useRecentlyRemoved();
@@ -22,37 +28,42 @@ export function RecentlyRemoved() {
   if (items.length === 0) return null;
 
   return (
-    <div className="border-t border-border pt-4">
+    <div className="t-removed">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="t-removed__toggle"
       >
         <IconChevronDown
-          className={`size-4 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`}
           aria-hidden
         />
-        Recently removed ({items.length})
+        (recently removed · {items.length}.)
       </button>
 
       {open && (
-        <>
-          <ul className="mt-4 space-y-3">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-3.5 flex flex-col gap-2"
+        >
+          <ul className="flex list-none flex-col gap-2 p-0">
             {items.map((m) => (
-              <li key={m.id} className="flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {m.title}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {[m.character_name, m.play_title].filter(Boolean).join(" · ")}
-                  </p>
-                </div>
+              <li key={m.id} className="t-removed__row">
+                <span className="min-w-0">
+                  <span className="block truncate font-typewriter text-[15px] font-bold">
+                    {leadName(m)}
+                  </span>
+                  <span className="block truncate font-typewriter text-xs text-[var(--t-muted-dark-2)]">
+                    {m.play_title}
+                  </span>
+                </span>
                 <button
                   type="button"
                   onClick={() => restore.mutate(m.id)}
-                  className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-foreground underline-offset-4 transition-colors hover:underline"
+                  className="t-restore"
                 >
                   <IconRotateClockwise className="size-3.5" aria-hidden />
                   Restore
@@ -60,10 +71,10 @@ export function RecentlyRemoved() {
               </li>
             ))}
           </ul>
-          <p className="mt-4 text-xs text-muted-foreground/60">
-            Removed monologues are kept here for 30 days.
+          <p className="mt-1.5 font-typewriter text-xs italic tracking-[0.06em] text-[var(--t-faint)]">
+            (kept for 30 days.)
           </p>
-        </>
+        </motion.div>
       )}
     </div>
   );

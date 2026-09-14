@@ -4,21 +4,22 @@ import { Suspense } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { RehearseHub } from "@/components/rehearse/RehearseHub";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 
 /* Shaped like the bench, because that is what arrives. It used to be a title,
    a filter bar and a six-card grid — none of which the page has any more, and
    the median collection is two pieces, so it was promising six. */
 function RehearseFallback() {
   return (
-    <div className="rounded-2xl border border-border px-5 py-7 sm:px-9 sm:py-10">
-      <div className="flex flex-col gap-6 sm:flex-row sm:gap-9">
-        <Skeleton className="aspect-[2/3] w-32 shrink-0 rounded-sm sm:w-44" />
+    <div className="t-bench">
+      <div className="t-bench__grid">
+        <Skeleton className="aspect-[2/3] w-[132px] shrink-0 rounded-sm bg-white/10 sm:w-[180px]" />
         <div className="w-full space-y-4">
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-11 w-2/3" />
-          <Skeleton className="h-4 w-1/2" />
-          <Skeleton className="h-24 w-full max-w-prose" />
-          <Skeleton className="h-11 w-40 rounded-md" />
+          <Skeleton className="h-4 w-28 bg-white/10" />
+          <Skeleton className="h-11 w-2/3 bg-white/10" />
+          <Skeleton className="h-4 w-1/2 bg-white/10" />
+          <Skeleton className="h-24 w-full max-w-prose bg-white/10" />
+          <Skeleton className="h-[60px] w-44 rounded-full bg-white/10" />
         </div>
       </div>
     </div>
@@ -27,16 +28,20 @@ function RehearseFallback() {
 
 /**
  * /rehearse — the Collection: monologues the actor is studying.
+ *
+ * Two rooms. The piece on the bench sits on a lit ink panel; everything else
+ * the actor owns sits below it in the house, on paper. `.theatre-collection`
+ * carries the palette and the three faces, scoped here so no other route
+ * loads the fonts or sees the tokens.
  */
 export default function RehearsePage() {
   return (
-    /* The page-level radial wash is gone: the bench is a lit panel now and
-       brings its own bloom, so a second glow sat behind an opaque surface
-       doing nothing but tinting the margins around it. */
-    <div className="relative isolate container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-6xl">
-      <Suspense fallback={<RehearseFallback />}>
-        <RehearseHub />
-      </Suspense>
+    <div className={`theatre-tokens theatre-collection ${theatreFontVars}`}>
+      <div className="relative isolate container mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-14 lg:px-8">
+        <Suspense fallback={<RehearseFallback />}>
+          <RehearseHub />
+        </Suspense>
+      </div>
     </div>
   );
 }

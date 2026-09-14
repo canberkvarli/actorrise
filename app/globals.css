@@ -1676,10 +1676,15 @@
   --acc: oklch(0.58 0.18 45);
   --page: oklch(0.96 0.02 85);
 }
+/* Film & TV used to recolour the whole page violet. It is the same library on
+   a different shelf, not a different room, and a full-page hue change on a tab
+   press was the loudest thing on the screen. Both shelves now share one ground
+   and one accent; the tabs, the caption and the source pills are what say
+   which shelf you are on. */
 .theatre-search[data-search-mode="film_tv"],
 .t-outline-flash[data-search-mode="film_tv"] {
-  --acc: oklch(0.62 0.15 300);
-  --page: oklch(0.95 0.02 300);
+  --acc: oklch(0.58 0.18 45);
+  --page: oklch(0.96 0.02 85);
 }
 
 /* The full-viewport wash. It sits behind the page rather than on it, so the
@@ -1722,14 +1727,17 @@
   background: oklch(0.58 0.18 45);
   color: oklch(0.96 0.02 85);
 }
+/* Screen pieces are ink where play pieces are orange: filled for film,
+   outlined for tv, the same fill/outline pair the play shelf uses. Four
+   distinguishable pills, one hue family each, no violet. */
 .t-src--film {
-  border-color: oklch(0.62 0.15 300);
-  background: oklch(0.62 0.15 300);
-  color: oklch(0.98 0.01 300);
+  border-color: var(--t-text);
+  background: var(--t-text);
+  color: var(--t-on-text);
 }
 .t-src--tv {
-  border-color: oklch(0.62 0.15 300);
-  color: oklch(0.5 0.15 300);
+  border-color: var(--t-text);
+  color: var(--t-muted-dark);
   background: transparent;
 }
 
@@ -1763,7 +1771,10 @@
   inset: 0;
   z-index: 2147483647;
   pointer-events: none;
-  border: 8px solid var(--acc);
+  border: none;
+  box-shadow:
+    inset 0 0 140px 60px color-mix(in oklab, var(--acc) 22%, transparent),
+    inset 0 0 50px 20px color-mix(in oklab, var(--acc) 12%, transparent);
   animation: t-outline-flash 0.7s ease-out forwards;
 }
 
@@ -2208,13 +2219,13 @@
    the wash reads as a shelf change rather than a bruise. */
 .dark .theatre-search[data-search-mode="film_tv"],
 .dark .t-outline-flash[data-search-mode="film_tv"] {
-  --page: oklch(0.16 0.025 300);
-  --acc: oklch(0.72 0.14 300);
+  --page: oklch(0.15 0.015 50);
+  --acc: oklch(0.7 0.18 48);
 }
 
 /* A few places name a literal rather than a token, because the design does. */
 .dark .theatre-search .t-src--classical { color: oklch(0.78 0.14 45); }
-.dark .theatre-search .t-src--tv { color: oklch(0.76 0.12 300); }
+.dark .theatre-search .t-src--tv { color: oklch(0.8 0.02 70); }
 .dark .theatre-search .t-row__numeral { color: oklch(0.45 0.02 70); }
 .dark .theatre-search .t-row__name:hover { color: var(--acc); }
 .dark .theatre-search .t-mark--best { color: oklch(0.15 0.03 45); }
@@ -2226,7 +2237,7 @@
 .dark .theatre-search .t-row blockquote,
 .dark .theatre-search [style*="oklch(0.22 0.01 45)"] {
   color: oklch(0.88 0.02 80) !important;
-}
+
 
 /* ==========================================================================
    THE PLATFORM HEADER — the bar every signed-in page hangs from.
@@ -2647,4 +2658,673 @@
 
 @media (prefers-reduced-motion: reduce) {
   .t-tabbar__tab { transition: none; }
+}
+}
+
+/* ==========================================================================
+   THEATRE COLLECTION — /rehearse, in the same system as the landing.
+   ==========================================================================
+   The page is two rooms. The piece you are working on sits on a lit ink panel
+   — the bench — and everything else you own sits below it in the house, on
+   paper. That split is the whole design, and it is why the bench keeps its
+   ink ground in light AND dark: it is a lit surface, not a card that follows
+   the theme.
+
+   The palette and the three faces come from `.theatre-tokens`. Mode/theme
+   composes through attributes and the cascade, never through inline custom
+   properties written from React — an inline custom property beats every
+   stylesheet rule, which is how the search page's dark mode was unable to
+   flip its own ground.
+   ========================================================================== */
+
+/* The paper is painted on this element rather than on a fixed, negatively
+   stacked layer behind it. A `z-index: -10` wash paints behind the BODY's own
+   background, not behind the page — so it renders, reports the right computed
+   colour, and is never seen. The collection's ground is its own element. */
+.theatre-collection {
+  --page: oklch(0.96 0.02 85);
+  --bench: oklch(0.13 0.015 50);
+  --bench-bd: oklch(0.16 0.01 45);
+  background: var(--page);
+  min-height: 100vh;
+  font-family: var(--t-body);
+  color: var(--t-text);
+}
+
+/* --- The bench ----------------------------------------------------------- */
+
+.t-bench {
+  position: relative;
+  isolation: isolate;
+  border-radius: 32px;
+  background: var(--bench);
+  color: var(--t-cream);
+  padding: clamp(24px, 4vw, 48px);
+  border: 1.5px solid var(--bench-bd);
+  /* Hard offset, no blur: the same printed-shadow move the shelf spines and
+     the landing's cards make. Cast in ink, never in "the text colour", which
+     flips to cream in dark and would draw a cream slab under the panel. */
+  box-shadow: 14px 14px 0 var(--t-hard-shadow);
+  overflow: clip;
+
+  /* On the ink panel the primary button is a cream pill with a gel dot, in
+     both themes. The page-level --t-cta-* tokens are tuned for the ground
+     they sit on; this one sits on ink whatever the ground is doing. */
+  --t-cta-bg: oklch(0.96 0.02 85);
+  --t-cta-fg: oklch(0.13 0.015 50);
+  --t-cta-bd: transparent;
+  --t-cta-dot-bg: var(--t-gel);
+  --t-cta-dot-fg: oklch(0.13 0.015 50);
+}
+
+/* The warm bloom, thrown from behind the cover. */
+.t-bench__bloom {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    55% 70% at 14% 10%,
+    oklch(0.72 0.17 55 / 0.3),
+    transparent 70%
+  );
+}
+.t-bench__grain {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* The practical. One bulb on a flex, hung in the top-right corner of the
+   panel, burning at full only when the piece is off book — the one mark in
+   the app that means "you know this". Hidden below sm, where the corner it
+   hangs in is occupied by the cover. */
+.t-bench__lamp {
+  position: absolute;
+  right: clamp(20px, 5vw, 64px);
+  top: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  opacity: 0.35;
+  transition: opacity 0.5s;
+}
+@media (min-width: 640px) {
+  .t-bench__lamp {
+    display: flex;
+  }
+}
+.t-bench[data-off-book="true"] .t-bench__lamp {
+  opacity: 1;
+}
+.t-bench__flex {
+  display: block;
+  width: 2px;
+  height: 44px;
+  background: oklch(0.35 0.02 55);
+}
+.t-bench__socket {
+  display: block;
+  width: 14px;
+  height: 9px;
+  border-radius: 3px 3px 2px 2px;
+  background: oklch(0.3 0.02 55);
+}
+.t-bench__bulb {
+  display: block;
+  width: 26px;
+  height: 30px;
+  border-radius: 50% 50% 46% 46%;
+  background: radial-gradient(
+    circle at 50% 40%,
+    oklch(0.99 0.05 95),
+    oklch(0.92 0.18 100) 35%,
+    oklch(0.75 0.17 60)
+  );
+  box-shadow:
+    0 0 22px 5px oklch(0.85 0.17 80 / 0.75),
+    0 0 80px 30px oklch(0.72 0.17 55 / 0.25);
+  animation: t-flicker 9s linear infinite;
+}
+@keyframes t-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  93% {
+    opacity: 0.6;
+  }
+  95% {
+    opacity: 1;
+  }
+  97% {
+    opacity: 0.75;
+  }
+}
+
+/* Cover left, piece right. Stacks below sm rather than letting the prototype's
+   auto-fit grid put the body in an implicit third track that runs off the
+   screen — which is what it does at 390px. */
+.t-bench__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+@media (min-width: 640px) {
+  .t-bench__grid {
+    flex-direction: row;
+    gap: 36px;
+    align-items: flex-start;
+  }
+}
+
+/* The cover, hung slightly off square with a hard gel shadow behind it. The
+   rotation is the reason nothing here is `overflow: hidden` — a straightened
+   corner on hover needs room to move into. */
+.t-cover {
+  position: relative;
+  display: block;
+  border-radius: 4px;
+  transform: rotate(-2deg);
+  box-shadow: 8px 8px 0 var(--t-gel);
+  transition: transform 0.5s var(--t-spring);
+}
+.t-cover > * {
+  border-radius: 4px;
+  overflow: hidden;
+}
+.t-cover:hover {
+  transform: rotate(0deg) translateY(-6px);
+}
+.t-cover:focus-visible {
+  outline: 3px solid var(--t-gel);
+  outline-offset: 5px;
+}
+/* Off book. The same gel as the bulb, so the mark means one thing everywhere. */
+.t-cover__mark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 2;
+  height: 4px;
+  background: var(--t-gel);
+  border-radius: 4px 4px 0 0;
+}
+.t-bench__cover {
+  width: 132px;
+  flex-shrink: 0;
+}
+@media (min-width: 640px) {
+  .t-bench__cover {
+    width: 180px;
+  }
+}
+
+.t-bench__body {
+  min-width: 0;
+  flex: 1;
+}
+
+/* The stage direction, coloured by what the piece needs. Gel for off book,
+   orange for one that has gone cold, quiet for everything else — so the line
+   is read before it is read. */
+.t-bench__dir {
+  color: var(--t-muted-light-2);
+}
+.t-bench__dir[data-bench-state="off-book"] {
+  color: var(--t-gel);
+}
+.t-bench__dir[data-bench-state="cold"] {
+  color: var(--t-orange);
+}
+
+.t-bench__name {
+  margin: 10px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  font-size: clamp(2.75rem, 7vw, 6rem);
+}
+.t-bench__name a {
+  color: inherit;
+  transition: color 0.25s;
+}
+.t-bench__name a:hover {
+  color: var(--t-gel);
+}
+
+.t-bench__source {
+  margin: 12px 0 0;
+  font-family: var(--t-direction);
+  font-size: 15px;
+  color: var(--t-muted-light-2);
+}
+
+/* The piece itself, not a summary of it. Masked rather than truncated: a line
+   that fades has more behind it, a line ending in "…" was cut short. */
+.t-bench__text {
+  margin: 24px 0 0;
+  max-width: 60ch;
+  max-height: 7.4em;
+  overflow: hidden;
+  font-family: var(--t-direction);
+  font-size: 15px;
+  line-height: 1.85;
+  color: oklch(0.88 0.02 80);
+  -webkit-mask-image: linear-gradient(180deg, #000 45%, transparent);
+  mask-image: linear-gradient(180deg, #000 45%, transparent);
+}
+@media (min-width: 640px) {
+  .t-bench__text {
+    font-size: 16px;
+  }
+}
+
+.t-bench__facts {
+  margin: 16px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: oklch(0.65 0.02 62);
+}
+
+.t-bench__actions {
+  margin-top: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 22px;
+}
+.t-cta--bench {
+  height: 60px;
+  padding: 0 8px 0 26px;
+  font-size: 17px;
+  box-shadow: 0 20px 60px -20px oklch(0.92 0.18 100 / 0.6);
+}
+.t-cta--bench:hover {
+  box-shadow: 0 26px 70px -20px oklch(0.92 0.18 100 / 0.75);
+}
+.t-cta--bench .t-cta__dot {
+  width: 40px;
+  height: 40px;
+}
+
+/* The bare shelf's button stands on paper, not on the lit panel, so it takes
+   the ink fill the landing uses on cream rather than the bench's cream pill. */
+.t-cta--paper {
+  --t-cta-bg: oklch(0.15 0.03 45);
+  --t-cta-fg: oklch(0.96 0.02 85);
+  --t-cta-bd: transparent;
+  --t-cta-dot-bg: var(--t-gel);
+  --t-cta-dot-fg: oklch(0.15 0.03 45);
+  box-shadow: none;
+}
+.t-cta--paper:hover {
+  box-shadow: none;
+}
+.dark .t-cta--paper {
+  --t-cta-bg: oklch(0.96 0.02 85);
+  --t-cta-fg: oklch(0.15 0.03 45);
+}
+
+/* The two quiet moves next to it. Underlined rather than boxed: there is one
+   button on this panel and it is the one you press. */
+.t-bench__quiet {
+  white-space: nowrap;
+  font-size: 15px;
+  color: var(--t-muted-light-3);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  text-decoration-color: oklch(0.4 0.03 55);
+  transition: color 0.25s;
+}
+.t-bench__quiet:hover {
+  color: var(--t-gel);
+}
+
+.t-bench__tools {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.t-memo {
+  height: 40px;
+  padding: 0 14px 0 10px;
+  border-radius: 999px;
+  border: 1.5px solid oklch(0.35 0.03 55);
+  background: transparent;
+  color: var(--t-muted-light-3);
+  cursor: pointer;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: all 0.3s var(--t-spring);
+}
+.t-memo:hover {
+  transform: scale(1.04);
+}
+.t-memo[aria-pressed="true"] {
+  border-color: var(--t-gel);
+  background: var(--t-gel);
+  color: oklch(0.13 0.015 50);
+}
+.t-drop {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1.5px solid oklch(0.35 0.03 55);
+  background: transparent;
+  color: oklch(0.65 0.02 62);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s var(--t-spring);
+}
+.t-drop:hover {
+  border-color: var(--t-cream);
+  color: var(--t-cream);
+  transform: rotate(90deg);
+}
+
+/* --- The shelf ----------------------------------------------------------- */
+
+.t-shelf {
+  margin-top: 56px;
+}
+.t-shelf__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.t-shelf__label {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  font-size: 14px;
+  color: var(--t-muted-dark-2);
+}
+.t-shelf__count {
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--t-faint);
+}
+/* The row scrolls rather than wraps: a collection is a run of spines you read
+   your eye along, and a grid of two with a gap where a third would go reads
+   as a page that failed to fill. The negative margin lets the row bleed to
+   the gutters; the vertical padding is what stops `overflow-x: auto` from
+   clipping the lifted covers and their hard shadows, which it does — it
+   clips both axes, not just the one you named. */
+.t-shelf__rail {
+  margin: 20px -24px 0;
+  padding: 10px 24px 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.t-shelf__rail::-webkit-scrollbar {
+  display: none;
+}
+.t-shelf__row {
+  display: flex;
+  gap: 22px;
+  width: max-content;
+  align-items: flex-start;
+  padding-bottom: 14px;
+  border-bottom: 3px solid var(--t-hard-shadow);
+  list-style: none;
+  margin: 0;
+}
+.t-spine-item {
+  width: 112px;
+  flex-shrink: 0;
+}
+@media (min-width: 640px) {
+  .t-spine-item {
+    width: 124px;
+  }
+}
+.t-spine {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+}
+.t-spine__cover {
+  position: relative;
+  display: block;
+  border-radius: 3px;
+  box-shadow: 5px 5px 0 var(--t-hard-shadow);
+  transform: rotate(var(--tilt, -1.5deg));
+  transition:
+    transform 0.4s var(--t-spring),
+    box-shadow 0.4s;
+}
+.t-spine__cover > * {
+  border-radius: 3px;
+  overflow: hidden;
+}
+.t-spine:hover .t-spine__cover,
+.t-spine:focus-visible .t-spine__cover {
+  transform: rotate(0deg) translateY(-8px);
+  box-shadow: 8px 8px 0 var(--t-orange-deep);
+}
+.t-spine:focus-visible {
+  outline: none;
+}
+.t-spine:focus-visible .t-spine__cover {
+  outline: 3px solid var(--t-gel);
+  outline-offset: 4px;
+}
+.t-spine__who {
+  display: block;
+  margin-top: 14px;
+  font-family: var(--t-direction);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--t-text);
+}
+.t-spine__play {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  color: var(--t-muted-dark-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The empty slot at the end of the row: the shelf asking for the next one. */
+.t-shelf__more {
+  width: 100%;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  aspect-ratio: 2 / 3;
+  border: 2px dashed var(--t-line-light);
+  border-radius: 3px;
+  color: var(--t-muted-dark-2);
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  transition: all 0.3s;
+}
+.t-shelf__more:hover {
+  border-color: var(--t-orange-deep);
+  color: var(--t-orange-deep);
+}
+.t-shelf__more span {
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 36px;
+  line-height: 1;
+}
+
+/* --- The house ----------------------------------------------------------- */
+
+.t-coll-rule {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--t-line-light-2);
+}
+
+.t-removed {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--t-line-light-2);
+}
+.t-removed__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--t-muted-dark-2);
+  transition: color 0.25s;
+}
+.t-removed__toggle:hover {
+  color: var(--t-text);
+}
+.t-removed__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1.5px dashed var(--t-line-light);
+}
+.t-restore {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-text);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--t-text);
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: all 0.3s var(--t-spring);
+}
+.t-restore:hover {
+  background: var(--t-text);
+  color: var(--t-on-text);
+  transform: rotate(-1.5deg);
+}
+
+/* --- The bare shelf ------------------------------------------------------ */
+
+.t-bare {
+  min-height: 56vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.t-bare__slot {
+  width: 120px;
+  aspect-ratio: 2 / 3;
+  border: 2px dashed var(--t-line-light);
+  border-radius: 4px;
+  transform: rotate(-3deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 48px;
+  color: var(--t-line-light);
+}
+.t-bare__name {
+  margin: 10px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  font-size: clamp(2.4rem, 6vw, 5rem);
+  text-wrap: balance;
+  color: var(--t-text);
+}
+.t-bare__name em {
+  font-style: italic;
+  color: var(--t-orange-deep);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-bench__bulb {
+    animation: none;
+  }
+}
+
+/* --- Dark ----------------------------------------------------------------
+   The paper flips; the design does not change. The bench keeps its ink
+   ground either way — it is a lit surface, not a card — so it lifts a shade
+   off the dark page and takes a visible rule, or it would dissolve into it. */
+.dark .theatre-collection {
+  --page: oklch(0.11 0.012 50);
+  --bench: oklch(0.195 0.02 52);
+  --bench-bd: oklch(0.32 0.03 55);
+
+  --t-paper: oklch(0.19 0.018 52);
+  --t-paper-2: oklch(0.17 0.018 52);
+
+  --t-text: oklch(0.95 0.02 85);
+  --t-text-soft: oklch(0.93 0.02 85);
+  --t-muted-dark: oklch(0.75 0.02 62);
+  --t-muted-dark-2: oklch(0.68 0.02 62);
+  --t-faint: oklch(0.58 0.02 60);
+
+  --t-line-light: oklch(0.3 0.03 55);
+  --t-line-light-2: oklch(0.34 0.03 55);
+
+  --t-on-text: oklch(0.15 0.03 45);
+  /* The printed shadows are cast in something darker than the page, not in
+     the text colour — which is cream here and would put a slab under every
+     spine on the shelf. */
+  --t-hard-shadow: oklch(0.07 0.01 45);
 }

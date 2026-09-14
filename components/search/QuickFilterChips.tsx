@@ -45,8 +45,9 @@ const GROUPS: FilterGroup[] = [
 const TAG_COLOR: Record<SourceTagKind, { line: string; text: string; on: string }> = {
   classical: { line: "oklch(0.58 0.18 45)", text: "oklch(0.50 0.16 45)", on: "oklch(0.96 0.02 85)" },
   contemporary: { line: "oklch(0.58 0.18 45)", text: "oklch(0.50 0.16 45)", on: "oklch(0.96 0.02 85)" },
-  film: { line: "oklch(0.62 0.15 300)", text: "oklch(0.50 0.15 300)", on: "oklch(0.98 0.01 300)" },
-  tv: { line: "oklch(0.62 0.15 300)", text: "oklch(0.50 0.15 300)", on: "oklch(0.98 0.01 300)" },
+  /* Screen pieces are ink, matching their source pills — see .t-src--film. */
+  film: { line: "var(--t-text)", text: "var(--t-muted-dark)", on: "var(--t-on-text)" },
+  tv: { line: "var(--t-text)", text: "var(--t-muted-dark)", on: "var(--t-on-text)" },
 };
 
 interface QuickFilterChipsProps {
