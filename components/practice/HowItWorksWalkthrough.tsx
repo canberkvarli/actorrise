@@ -52,15 +52,36 @@ const ACTS = [
   },
 ];
 
-/** True on the visit where the walkthrough should introduce itself. */
+/**
+ * Whether this browser has never been shown the playbill.
+ *
+ * Read-only, and resolved once per page load into a module-level cache. Both
+ * properties matter: the caller reads it through useSyncExternalStore, whose
+ * getSnapshot must be pure and must return the same value every time it is
+ * asked, or React re-renders forever chasing a moving answer. The older
+ * version of this function marked the flag as a side effect of being asked,
+ * which is exactly what a snapshot cannot do.
+ */
+let unseenCache: boolean | null = null;
+
 export function shouldAutoOpenWalkthrough(): boolean {
+  if (unseenCache !== null) return unseenCache;
   try {
-    if (localStorage.getItem(SEEN_KEY)) return false;
-    localStorage.setItem(SEEN_KEY, new Date().toISOString());
-    return true;
+    unseenCache = !localStorage.getItem(SEEN_KEY);
   } catch {
-    return false;
+    unseenCache = false;
   }
+  return unseenCache;
+}
+
+/** Marking it seen is a separate act, done when the playbill actually opens. */
+export function markWalkthroughSeen(): void {
+  try {
+    localStorage.setItem(SEEN_KEY, new Date().toISOString());
+  } catch {
+    /* private mode — it will introduce itself again, which is survivable */
+  }
+  unseenCache = false;
 }
 
 export function HowItWorksWalkthrough({
@@ -70,6 +91,32 @@ export function HowItWorksWalkthrough({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  /* Opening it is what counts as having seen it. Synchronising an external
+     store (localStorage) from an effect is what effects are for. */
+  useEffect(() => {
+    if (open) markWalkthroughSeen();
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="t-playbill max-w-[460px] overflow-hidden border-0 p-0">
+        <DialogTitle className="sr-only">How ScenePartner works</DialogTitle>
+        <PlaybillPages onDone={() => onOpenChange(false)} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * The pages themselves, and where the page/direction state lives.
+ *
+ * Inside the dialog rather than outside it, because Radix unmounts the content
+ * when the playbill closes — so every open gets a fresh act one for free. The
+ * version of this that kept the state in the parent needed an effect resetting
+ * it on open, which is a setState at the top of an effect and exactly the
+ * cascading render the repo's React rules reject.
+ */
+function PlaybillPages({ onDone }: { onDone: () => void }) {
   const [page, setPage] = useState(0);
   const [dir, setDir] = useState(1);
   const last = ACTS.length - 1;
@@ -83,31 +130,18 @@ export function HowItWorksWalkthrough({
     [page, last],
   );
 
-  // Fresh playbill every open.
   useEffect(() => {
-    if (open) {
-      setPage(0);
-      setDir(1);
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") go(page + 1);
       if (e.key === "ArrowLeft") go(page - 1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, page, go]);
+  }, [page, go]);
 
   const act = ACTS[page];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md overflow-hidden p-0 sm:rounded-xl">
-        <DialogTitle className="sr-only">How ScenePartner works</DialogTitle>
-
         <div className="relative px-6 pb-6 pt-10 sm:px-10 sm:pb-8 sm:pt-12 text-center">
           {/* ghost numeral, watching from behind */}
           <AnimatePresence mode="wait" initial={false}>
@@ -118,7 +152,7 @@ export function HowItWorksWalkthrough({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 select-none font-brand text-[7rem] leading-none text-foreground/[0.05]"
+              className="t-playbill__numeral pointer-events-none absolute left-1/2 top-6 -translate-x-1/2 select-none"
             >
               {act.numeral}
             </motion.span>
@@ -135,25 +169,21 @@ export function HowItWorksWalkthrough({
                 transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                 className="flex flex-col items-center"
               >
-                <act.Sketch size={72} delay={0.15} className="text-muted-foreground/70" />
-                <p className="mt-6 font-typewriter text-xs italic tracking-wide text-muted-foreground/70">
-                  {act.direction}
-                </p>
-                <h2 className="mt-2 font-brand text-2xl sm:text-[1.7rem] font-medium tracking-tight text-foreground">
-                  {act.title}
-                </h2>
-                <p className="mt-3 max-w-[19rem] text-sm leading-relaxed text-muted-foreground">
-                  {act.body}
-                </p>
+                <act.Sketch size={64} delay={0.15} className="t-playbill__glyph" />
+                <p className="t-playbill__direction">{act.direction}</p>
+                <h2 className="t-playbill__title">{act.title}</h2>
+                <p className="t-playbill__body">{act.body}</p>
 
                 {page === last && (
                   <button
                     type="button"
-                    onClick={() => onOpenChange(false)}
-                    className="mt-6 inline-flex h-10 items-center gap-1.5 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                    onClick={onDone}
+                    className="t-playbill__cta"
                   >
                     Start rehearsing
-                    <IconArrowRight className="h-4 w-4" />
+                    <span className="t-playbill__cta-dot" aria-hidden>
+                      <IconArrowRight className="size-3.5" />
+                    </span>
                   </button>
                 )}
               </motion.div>
@@ -161,13 +191,13 @@ export function HowItWorksWalkthrough({
           </div>
 
           {/* footer: back · dots · next */}
-          <div className="mt-2 flex items-center justify-between border-t border-border/50 pt-4">
+          <div className="t-playbill__footer">
             <button
               type="button"
               onClick={() => go(page - 1)}
               disabled={page === 0}
               aria-label="Previous"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-0"
+              className="t-playbill__arrow"
             >
               <IconArrowLeft className="h-4 w-4" />
             </button>
@@ -180,9 +210,8 @@ export function HowItWorksWalkthrough({
                   onClick={() => go(i)}
                   aria-label={`Act ${a.numeral}`}
                   aria-current={i === page ? "true" : undefined}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    i === page ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/25 hover:bg-muted-foreground/50"
-                  }`}
+                  className="t-playbill__dot"
+                  data-active={i === page}
                 />
               ))}
             </div>
@@ -192,14 +221,12 @@ export function HowItWorksWalkthrough({
               onClick={() => go(page + 1)}
               disabled={page === last}
               aria-label="Next"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-0"
+              className="t-playbill__arrow"
             >
               <IconArrowRight className="h-4 w-4" />
             </button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
   );
 }
 

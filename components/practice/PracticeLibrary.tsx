@@ -118,7 +118,18 @@ export function PracticeLibrary({
           a file browser however the type is set. The split gives the work the
           larger measure and demotes the shelf to what it is: where the rest of
           it lives until you reach for it. */}
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:gap-12">
+      {/* The room: the work on the left, the shelf on the right — until a
+          script is open, when the script takes the whole room and the shelf
+          drops below it. The design keeps both columns in that state, and at
+          1440 the scene titles truncate to "The b…" and "The f…", which is
+          the one thing a list of scenes cannot afford to do. */}
+      <div
+        className={
+          selectedScript
+            ? "flex flex-col gap-12"
+            : "grid gap-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:gap-12"
+        }
+      >
         {/* The stage. One region, two things it can hold, and the swap between
             them is the only motion on the screen after load. */}
         <div className="min-w-0">
@@ -140,7 +151,7 @@ export function PracticeLibrary({
                     // back-to-stage button appears to do nothing on remount.
                     router.replace("/practice", { scroll: false });
                   }}
-                  className="mb-4 inline-flex items-center gap-1.5 font-typewriter text-[11px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
+                  className="t-back-to-stage mb-5"
                 >
                   <IconArrowLeft className="h-3.5 w-3.5" />
                   back to the stage
@@ -203,16 +214,17 @@ export function PracticeLibrary({
         </div>
 
         {/* The shelf */}
-        <div className="min-w-0 lg:border-l lg:border-border/50 lg:pl-10">
+        <div className="min-w-0">
           {/* The way in sits at the top of the shelf, not under it. Below the
               list it was the last thing on the page and moved further down with
               every script added, so the more you used ScenePartner the harder
               it got to add to it. */}
-          <div className="mb-4 flex items-baseline justify-between gap-3">
-            <h2 className="font-typewriter text-[15px] uppercase tracking-[0.14em] text-foreground">
-              On the shelf
-            </h2>
-            <UploadScriptButton variant="compact">Bring in a script</UploadScriptButton>
+          <div
+            className="mb-4 flex items-center justify-between gap-3 pb-3.5"
+            style={{ borderBottom: "1.5px solid var(--t-line-dark-2)" }}
+          >
+            <h2 className="t-shelf-heading">On the shelf</h2>
+            <UploadScriptButton variant="compact" className="t-bring-in">Bring in a script</UploadScriptButton>
           </div>
           <PracticeLibraryRail
             scripts={ordered}

@@ -69,3 +69,34 @@ export function getGenreDotClassName(genre?: string | null): string {
   if (!genre) return "bg-muted-foreground/40";
   return GENRE_DOT_MAP[genre.toLowerCase().trim()] ?? "bg-primary/50";
 }
+
+/**
+ * The spine colour for a playscript on the ScenePartner shelf.
+ *
+ * Separate from the maps above on purpose: those are Tailwind palette classes
+ * for badges elsewhere in the app, and the shelf needs a literal colour it can
+ * put on a binding edge, a genre label and a glow at once. The five in the
+ * design are mapped straight; everything else falls back to a neutral rather
+ * than borrowing a meaning it does not have.
+ */
+const GENRE_SPINE: Record<string, string> = {
+  drama: "oklch(0.70 0.18 48)",
+  tragedy: "oklch(0.70 0.18 48)",
+  comedy: "oklch(0.92 0.18 100)",
+  farce: "oklch(0.92 0.18 100)",
+  satire: "oklch(0.92 0.18 100)",
+  thriller: "oklch(0.62 0.15 300)",
+  absurdist: "oklch(0.62 0.15 300)",
+  fantasy: "oklch(0.62 0.15 300)",
+  classical: "oklch(0.85 0.03 80)",
+  shakespeare: "oklch(0.85 0.03 80)",
+  historical: "oklch(0.85 0.03 80)",
+  romance: "oklch(0.72 0.14 10)",
+  musical: "oklch(0.72 0.14 10)",
+  contemporary: "oklch(0.75 0.02 62)",
+};
+
+export function getGenreSpineColor(genre?: string | null): string {
+  const key = (genre ?? "").toLowerCase().trim();
+  return GENRE_SPINE[key] ?? "oklch(0.60 0.03 55)";
+}

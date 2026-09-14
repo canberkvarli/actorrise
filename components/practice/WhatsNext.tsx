@@ -185,7 +185,7 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
         )}
 
         {rung === "demo" && (
-          <UploadScriptButton variant="compact">or bring your own</UploadScriptButton>
+          <UploadScriptButton variant="compact" className="t-bring-in">or bring your own</UploadScriptButton>
         )}
       </motion.div>
     </div>
@@ -207,7 +207,7 @@ export function NothingYet() {
         Bring in a script and I&apos;ll read every other role with you.
       </p>
       <div className="mt-8">
-        <UploadScriptButton variant="primary">Upload a script</UploadScriptButton>
+        <UploadScriptButton variant="primary" className="t-stage-action">Upload a script</UploadScriptButton>
       </div>
     </div>
   );

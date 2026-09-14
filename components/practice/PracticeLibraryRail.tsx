@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { getGenreDotClassName } from "@/lib/genreColors";
+import { getGenreDotClassName, getGenreSpineColor } from "@/lib/genreColors";
 import type { UserScript } from "@/hooks/useScripts";
 
 interface PracticeLibraryRailProps {
@@ -340,56 +340,34 @@ function ScriptCard({
         type="button"
         onClick={onSelect}
         aria-current={selected ? "true" : undefined}
-        className={[
-          "relative flex h-full w-full flex-col overflow-hidden rounded-lg border text-left transition-all",
-          pad,
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          held
-            ? "border-primary/50 bg-card shadow-lg"
-            : selected
-              ? "border-primary/50 bg-primary/[0.06] shadow-[0_0_28px_-14px_var(--primary)]"
-              : column
-                ? "border-border/60 bg-card/30 hover:border-primary/30 hover:bg-card/60"
-                : "border-border/60 bg-card/30 hover:-translate-y-0.5 hover:border-primary/30",
-        ].join(" ")}
+        className={`t-shelf-script ${held ? "is-held" : ""} ${selected ? "is-current" : ""} ${
+          column ? "w-full" : "w-44 shrink-0 sm:w-52"
+        }`}
+        style={{ ["--spine" as string]: getGenreSpineColor(script.genre) }}
       >
-        {/* the spine — a playscript's colored binding */}
-        <span
-          aria-hidden
-          className={`absolute inset-y-0 left-0 w-1 ${getGenreDotClassName(script.genre)} ${
-            selected ? "" : "opacity-70"
-          }`}
-        />
-        <h3
-          className={`font-typewriter font-semibold leading-snug text-foreground ${
-            column ? "truncate text-[15px]" : "line-clamp-2 text-base"
-          }`}
-        >
-          {script.title}
-        </h3>
-        <p className="mt-1 truncate font-typewriter text-[13px] text-muted-foreground">
-          {script.author}
-        </p>
-        <div
-          className={`mt-auto flex items-center justify-between gap-2 ${column ? "pt-1.5" : "pt-3"}`}
-        >
-          <span className="truncate font-typewriter text-[11.5px] uppercase tracking-[0.12em] text-muted-foreground/75">
-            {script.genre || " "}
-          </span>
-          {isProcessing ? (
-            <IconLoader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground/70" />
-          ) : script.is_sample ? (
-            <span className="border border-border px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-muted-foreground">
-              Demo
+        {/* the spine — a playscript's coloured binding */}
+        <span aria-hidden className="t-shelf-script__spine" />
+
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline justify-between gap-3">
+            <span className="t-shelf-script__title truncate">{script.title}</span>
+            <span className="t-shelf-script__right shrink-0">
+              {isProcessing ? (
+                "reading…"
+              ) : script.is_sample ? (
+                "demo"
+              ) : sceneCount > 0 ? (
+                `${sceneCount} ${sceneCount === 1 ? "scene" : "scenes"}`
+              ) : (
+                ""
+              )}
             </span>
-          ) : (
-            sceneCount > 0 && (
-              <span className="shrink-0 font-typewriter text-[13px] tabular-nums text-muted-foreground/80">
-                {sceneCount} {sceneCount === 1 ? "scene" : "scenes"}
-              </span>
-            )
-          )}
-        </div>
+          </span>
+          <span className="flex items-baseline justify-between gap-3">
+            <span className="t-shelf-script__author truncate">{script.author}</span>
+            <span className="t-shelf-script__genre shrink-0">{script.genre || ""}</span>
+          </span>
+        </span>
       </button>
 
       {/* actions — user scripts only, on hover */}
