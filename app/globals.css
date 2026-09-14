@@ -2237,6 +2237,7 @@
 .dark .theatre-search .t-row blockquote,
 .dark .theatre-search [style*="oklch(0.22 0.01 45)"] {
   color: oklch(0.88 0.02 80) !important;
+}
 
 
 /* ==========================================================================
@@ -2658,7 +2659,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .t-tabbar__tab { transition: none; }
-}
 }
 
 /* ==========================================================================
