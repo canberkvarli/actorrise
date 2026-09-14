@@ -18,14 +18,16 @@ import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
 import { LandingTestimonials } from "@/components/landing/LandingTestimonials";
 import { LandingCallboard } from "@/components/landing/LandingCallboard";
 import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
-import { RevealSection } from "@/components/landing/RevealSection";
 import { FinalCta } from "@/components/landing/v2/FinalCta";
 import { FlowingLine } from "@/components/landing/v2/FlowingLine";
+import { FlyIn } from "@/components/landing/v2/FlyIn";
 import { GhostLightAppTeaser } from "@/components/landing/v2/GhostLightAppTeaser";
+import { HouseCurtain } from "@/components/landing/v2/HouseCurtain";
 import { InkStatement } from "@/components/landing/v2/InkStatement";
 import { SpotlightHero } from "@/components/landing/v2/SpotlightHero";
 import { ThreeActs } from "@/components/landing/v2/ThreeActs";
 import { TitleMarquee } from "@/components/landing/v2/TitleMarquee";
+import { Traveler } from "@/components/landing/v2/Traveler";
 import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
 import { GhostLightModal } from "@/components/landing/GhostLightModal";
 import { APPROVED_PARTNERS } from "@/data/partners";
@@ -65,6 +67,11 @@ export function LandingGhostLight() {
           1,281 SEO landing pages, which is exactly the interstitial Google
           penalises; those pages get the Smart App Banner instead. */}
       <GhostLightModal />
+
+      {/* The house curtain. In the HTML from first paint, flown out by CSS;
+          the hero cues all wait on --curtain-delay so they fire the moment it
+          clears. Once per session, any input skips it. */}
+      <HouseCurtain />
 
       {/* Header lives on the stage: always dark, floats over every scene.
           The cursor spotlight tracks across it like the hero. wash + overflow
@@ -131,17 +138,18 @@ export function LandingGhostLight() {
           <ThreeActs />
         </div>
 
-        {/* House lights up — the product, in daylight */}
-        <div aria-hidden className="stage-footlights" />
-        <div id="watch">
+        {/* House lights up — the traveler parts, the footlights come up,
+            and the product is in daylight */}
+        <Traveler />
+        <FlyIn as="div" id="watch" variant="drop">
           <SceneMark>(house lights up.)</SceneMark>
           <LandingVideoShowcase />
-        </div>
+        </FlyIn>
 
-        <div>
+        <FlyIn as="div" variant="wing-left">
           <SceneMark>(now you try.)</SceneMark>
           <LandingSearchShowcase />
-        </div>
+        </FlyIn>
 
         {/* Live proof immediately before the quoted kind.
 
@@ -151,32 +159,32 @@ export function LandingGhostLight() {
             flatters us — so it goes first and lets the testimonials follow
             something already established rather than open the argument.
             Renders nothing on a quiet night. */}
-        <RevealSection id="callboard">
+        <FlyIn id="callboard" variant="drop">
           <SceneMark>(the house, tonight.)</SceneMark>
           <LandingCallboard />
-        </RevealSection>
+        </FlyIn>
 
         <InkStatement />
 
-        <RevealSection id="testimonials">
+        <FlyIn id="testimonials" variant="wing-right">
           <SceneMark>(the notices.)</SceneMark>
           <LandingTestimonials />
-        </RevealSection>
+        </FlyIn>
 
         {/* Renders nothing until three partners have approved their logo. */}
-        <RevealSection as="div">
+        <FlyIn as="div" variant="drop">
           <LandingPartners />
-        </RevealSection>
+        </FlyIn>
 
-        <RevealSection as="div">
+        <FlyIn as="div" variant="wing-left">
           <SceneMark>(the ticket.)</SceneMark>
           <LandingPricing />
-        </RevealSection>
+        </FlyIn>
 
-        <RevealSection as="div">
+        <FlyIn as="div" variant="drop">
           <SceneMark>(questions from the house.)</SceneMark>
           <LandingFaq />
-        </RevealSection>
+        </FlyIn>
 
         {/* Final scenes — back to the dark: the app, then the ghost light */}
         <div aria-hidden className="stage-footlights" />

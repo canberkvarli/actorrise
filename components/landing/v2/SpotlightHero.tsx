@@ -2,6 +2,7 @@ import { GhostLight } from "@/components/brand/GhostLight";
 import { HeroCta } from "@/components/landing/HeroCta";
 import { LandingLiveCount } from "@/components/landing/LandingLiveCount";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
+import { RopeHeadline } from "@/components/landing/v2/RopeHeadline";
 import { StageMotes } from "@/components/landing/v2/StageMotes";
 import { appStoreUrl } from "@/lib/appStore";
 
@@ -15,32 +16,29 @@ export function SpotlightHero() {
       <StageMotes />
       <div className="container mx-auto px-4 sm:px-6 pt-20 pb-16 sm:pt-28 sm:pb-20 md:pt-36 md:pb-24 text-center">
         {/* The one light, then the stage direction naming it */}
-        <div className="flex justify-center animate-stage-rise">
+        <div className="flex justify-center animate-stage-rise after-curtain">
           <GhostLight size="sm" />
         </div>
         <p
-          className="mt-4 stage-direction text-xs sm:text-sm text-[var(--stage-muted)] animate-stage-rise"
-          style={{ animationDelay: "0.05s" }}
+          className="mt-4 stage-direction text-xs sm:text-sm text-[var(--stage-muted)] animate-stage-rise after-curtain"
+          style={{ "--after-d": "0.05s" } as React.CSSProperties}
         >
           (a bare stage. one light. you.)
         </p>
 
-        <h1 className="mt-6 sm:mt-8 pb-2 font-brand font-medium leading-[1.25] text-[2.4rem] sm:text-5xl md:text-6xl lg:text-[4.6rem] mx-auto">
-          <span className="block overflow-hidden">
-            <span className="block animate-stage-rise" style={{ animationDelay: "0.15s" }}>
-              Find your <em className="not-italic sm:italic text-primary">monologue</em> in seconds.
-            </span>
-          </span>
-          <span className="block overflow-hidden">
-            <span className="block animate-stage-rise" style={{ animationDelay: "0.3s" }}>
-              Spend your time <em className="italic text-primary">rehearsing</em>.
-            </span>
-          </span>
-        </h1>
+        {/* One word per rope. They drop the moment the curtain clears,
+            overshoot, swing back and settle — see RopeHeadline. */}
+        <RopeHeadline
+          className="mt-6 sm:mt-8 pb-2 font-brand font-medium leading-[1.25] text-[2.4rem] sm:text-5xl md:text-6xl lg:text-[4.6rem] mx-auto"
+          lines={[
+            [{ text: "Find" }, { text: "your" }, { text: "monologue", hot: true }, { text: "in" }, { text: "seconds." }],
+            [{ text: "Spend" }, { text: "your" }, { text: "time" }, { text: "rehearsing", hot: true, italic: true, suffix: "." }],
+          ]}
+        />
 
         <p
-          className="mt-6 sm:mt-8 max-w-2xl mx-auto text-sm sm:text-base md:text-lg text-[var(--stage-muted)] leading-relaxed animate-stage-rise"
-          style={{ animationDelay: "0.45s" }}
+          className="mt-6 sm:mt-8 max-w-2xl mx-auto text-sm sm:text-base md:text-lg text-[var(--stage-muted)] leading-relaxed animate-stage-rise after-curtain"
+          style={{ "--after-d": "0.45s" } as React.CSSProperties}
         >
           {/* Was "AI search across N monologues from plays, film, and TV." That
               repeated the promise the H1 had already made, led with the mechanism
@@ -54,8 +52,8 @@ export function SpotlightHero() {
         </p>
 
         <div
-          className="mt-9 sm:mt-11 flex flex-col items-center gap-4 animate-stage-rise"
-          style={{ animationDelay: "0.6s" }}
+          className="mt-9 sm:mt-11 flex flex-col items-center gap-4 animate-stage-rise after-curtain"
+          style={{ "--after-d": "0.6s" } as React.CSSProperties}
         >
           <HeroCta />
           {/* A second, smaller yes.
@@ -89,8 +87,8 @@ export function SpotlightHero() {
         </div>
 
         <div
-          className="mt-12 sm:mt-14 flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-10 md:gap-12 animate-stage-rise"
-          style={{ animationDelay: "0.75s" }}
+          className="mt-12 sm:mt-14 flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-10 md:gap-12 animate-stage-rise after-curtain"
+          style={{ "--after-d": "0.75s" } as React.CSSProperties}
         >
           <LandingLiveCount variant="inline" />
         </div>

@@ -52,15 +52,34 @@ function MarqueeRow({ titles, reverse }: { titles: string[]; reverse?: boolean }
   );
 }
 
+/** A row of marquee bulbs that ignite in order once the curtain is up, then
+ *  hold with a slow filament twinkle. Static count so SSR matches. */
+const BULBS = 28;
+function BulbStrip() {
+  return (
+    // Centered and clipped: on a phone the row is wider than the screen and
+    // the ends simply run off, which is how a real marquee looks anyway.
+    <div aria-hidden className="flex justify-center gap-3 sm:gap-4 overflow-x-clip">
+      {Array.from({ length: BULBS }, (_, i) => (
+        <span key={i} className="bulb shrink-0" style={{ "--bulb-i": i } as React.CSSProperties} />
+      ))}
+    </div>
+  );
+}
+
 export function TitleMarquee() {
   return (
     <section aria-label="A few of the plays in the library" className="py-10 sm:py-14">
-      <p className="stage-direction text-center text-xs text-[var(--stage-faint)] mb-6">
+      <BulbStrip />
+      <p className="stage-direction text-center text-xs text-[var(--stage-faint)] mt-6 mb-6">
         (19,000+ pieces. plays, film, and tv. these are a few of the plays.)
       </p>
       <div className="space-y-4">
         <MarqueeRow titles={ROW_ONE} />
         <MarqueeRow titles={ROW_TWO} reverse />
+      </div>
+      <div className="mt-6">
+        <BulbStrip />
       </div>
     </section>
   );

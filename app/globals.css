@@ -890,3 +890,235 @@
   opacity: 0.9;
   margin-top: 0.125rem;
 }
+
+/* ============================================================================
+   THE FLYLOFT
+   The landing page is stage machinery. The house curtain owns the first
+   second; the headline drops in on ropes and swings before it settles;
+   sections arrive as scenery, flown in from above or tracked in from the
+   wings; the act change into daylight is a traveler parting, not a fade.
+   All pure CSS from first paint. JS only decides whether the curtain plays
+   (once per session) and flips the class that fires each scenery cue.
+   ========================================================================== */
+
+/* One clock. The hero waits exactly as long as the curtain takes to clear,
+   so the wait and the lift can never drift apart. The pre-paint script sets
+   data-curtain="skip" for a repeat visit in the same session (and for
+   reduced motion), which zeroes the wait and hides the curtain entirely. */
+:root {
+  --curtain-lift: 1.25s;
+  --curtain-delay: var(--curtain-lift);
+}
+:root[data-curtain="skip"] {
+  --curtain-delay: 0s;
+}
+
+/* --- House curtain -------------------------------------------------------- */
+.house-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  animation: curtain-fly var(--curtain-lift) cubic-bezier(0.76, 0, 0.18, 1) 0.28s both;
+}
+:root[data-curtain="skip"] .house-curtain,
+.house-curtain[data-done] {
+  display: none;
+}
+@keyframes curtain-fly {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(0, -104%, 0); }
+}
+
+/* Velvet: vertical folds from a repeating gradient with uneven stops so the
+   pleats do not read as a barcode, lit warm from the footlights below. */
+.house-curtain__velvet {
+  position: absolute;
+  inset: 0;
+  background-color: oklch(0.17 0.06 33);
+  background-image:
+    linear-gradient(
+      to bottom,
+      oklch(0.07 0.03 30 / 0.55) 0%,
+      transparent 28%,
+      transparent 72%,
+      oklch(0.42 0.14 45 / 0.35) 100%
+    ),
+    repeating-linear-gradient(
+      to right,
+      oklch(0.09 0.035 31) 0px,
+      oklch(0.19 0.065 35) 22px,
+      oklch(0.25 0.08 38) 41px,
+      oklch(0.21 0.07 36) 55px,
+      oklch(0.12 0.045 33) 74px,
+      oklch(0.09 0.035 31) 96px
+    );
+  border-radius: 0 0 46% 46% / 0 0 22px 22px;
+}
+/* Gold braid and the fringe hanging below the hem */
+.house-curtain__hem {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -30px;
+  height: 30px;
+  background:
+    linear-gradient(to bottom, oklch(0.78 0.14 82), oklch(0.62 0.13 75)) 0 0 / 100% 4px no-repeat,
+    repeating-linear-gradient(
+      to right,
+      oklch(0.74 0.13 80) 0 2px,
+      transparent 2px 5px
+    ) 0 4px / 100% 26px no-repeat;
+  mask-image: linear-gradient(to bottom, black 0, black 40%, transparent 100%);
+  border-radius: 0 0 46% 46% / 0 0 22px 22px;
+}
+/* The shadow the curtain throws on the stage, and the light spilling under it */
+.house-curtain__shadow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -110px;
+  height: 110px;
+  background: linear-gradient(to bottom, oklch(0.05 0.02 40 / 0.65), transparent);
+}
+
+/* --- Headline on ropes ---------------------------------------------------- */
+/* Each word hangs from a point well above its own box, so the rotation reads
+   as a swing on a line, not a wobble. It drops, overshoots, swings back,
+   settles. Stagger per word via --rope-d; alternate tilt via --rope-tilt. */
+@keyframes rope-drop {
+  0%   { opacity: 0; transform: translate3d(0, -0.9em, 0) rotate(var(--rope-tilt, -4deg)); }
+  50%  { opacity: 1; transform: translate3d(0, 0.09em, 0) rotate(calc(var(--rope-tilt, -4deg) * -0.45)); }
+  72%  { transform: translate3d(0, -0.04em, 0) rotate(calc(var(--rope-tilt, -4deg) * 0.2)); }
+  88%  { transform: translate3d(0, 0.015em, 0) rotate(calc(var(--rope-tilt, -4deg) * -0.06)); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg); }
+}
+.rope-word {
+  display: inline-block;
+  transform-origin: 50% -160%;
+  opacity: 0;
+  animation: rope-drop 1.25s cubic-bezier(0.3, 0.85, 0.35, 1) both;
+  animation-delay: calc(var(--curtain-delay) + var(--rope-d, 0s));
+  will-change: transform, opacity;
+}
+
+
+/* Everything else in the hero waits for the curtain too */
+.after-curtain {
+  animation-delay: calc(var(--curtain-delay) + var(--after-d, 0s)) !important;
+}
+
+/* --- Scenery cues: flown in or tracked in ---------------------------------- */
+.fly-in {
+  opacity: 0;
+}
+.fly-in.is-flown[data-fly="drop"] {
+  animation: batten-drop 1.05s cubic-bezier(0.3, 0.85, 0.35, 1) both;
+}
+.fly-in.is-flown[data-fly="wing-left"] {
+  animation: wing-track-left 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.fly-in.is-flown[data-fly="wing-right"] {
+  animation: wing-track-right 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* A batten dropping in on its lines: falls, bottoms out a touch past the
+   deck, lifts, settles. */
+@keyframes batten-drop {
+  0%   { opacity: 0; transform: translate3d(0, -72px, 0); }
+  58%  { opacity: 1; transform: translate3d(0, 11px, 0); }
+  80%  { transform: translate3d(0, -4px, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+/* A flat tracked in from the wings on its carriage: slides, a short
+   overshoot as the brake bites, settles. Small px offsets, never a
+   percentage of width, so nothing ever produces a horizontal scrollbar. */
+@keyframes wing-track-left {
+  0%   { opacity: 0; transform: translate3d(-64px, 0, 0); }
+  70%  { opacity: 1; transform: translate3d(7px, 0, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes wing-track-right {
+  0%   { opacity: 0; transform: translate3d(64px, 0, 0); }
+  70%  { opacity: 1; transform: translate3d(-7px, 0, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* --- Traveler: the act change --------------------------------------------- */
+/* Two halves of a curtain across the whole width. When the boundary scrolls
+   into view they draw off into the wings and the footlights come up. */
+.traveler {
+  position: relative;
+  height: 112px;
+  overflow-x: clip;
+  background: var(--background);
+}
+.traveler__half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 51%;
+  background-color: oklch(0.17 0.06 33);
+  background-image: repeating-linear-gradient(
+    to right,
+    oklch(0.09 0.035 31) 0px,
+    oklch(0.19 0.065 35) 22px,
+    oklch(0.25 0.08 38) 41px,
+    oklch(0.21 0.07 36) 55px,
+    oklch(0.12 0.045 33) 74px,
+    oklch(0.09 0.035 31) 96px
+  );
+  will-change: transform;
+}
+.traveler__half--left  { left: 0; box-shadow: 8px 0 24px oklch(0.05 0.02 40 / 0.6); }
+.traveler__half--right { right: 0; box-shadow: -8px 0 24px oklch(0.05 0.02 40 / 0.6); }
+.traveler.is-open .traveler__half--left  { animation: traveler-left  1.4s cubic-bezier(0.76, 0, 0.18, 1) both; }
+.traveler.is-open .traveler__half--right { animation: traveler-right 1.4s cubic-bezier(0.76, 0, 0.18, 1) both; }
+@keyframes traveler-left  { to { transform: translate3d(-102%, 0, 0); } }
+@keyframes traveler-right { to { transform: translate3d(102%, 0, 0); } }
+/* The footlights behind the traveler come up as it parts */
+.traveler__lights {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  opacity: 0;
+}
+.traveler.is-open .traveler__lights {
+  animation: lights-up 0.9s ease-out 0.5s both;
+}
+@keyframes lights-up { to { opacity: 1; } }
+
+/* --- Marquee bulbs -------------------------------------------------------- */
+/* A row of bulbs that ignite in order, once, then hold with a slow
+   filament twinkle. Stagger via --bulb-i. */
+.bulb {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: oklch(0.32 0.03 60);
+  animation:
+    bulb-ignite 0.35s ease-out calc(var(--curtain-delay) + 0.9s + var(--bulb-i, 0) * 45ms) both,
+    bulb-twinkle 4.5s ease-in-out calc(var(--curtain-delay) + 2.4s + var(--bulb-i, 0) * 180ms) infinite;
+}
+@keyframes bulb-ignite {
+  0%   { background: oklch(0.32 0.03 60); box-shadow: none; }
+  40%  { background: oklch(0.98 0.05 85); box-shadow: 0 0 14px 4px color-mix(in oklab, var(--stage-glow) 70%, transparent); }
+  100% { background: color-mix(in oklab, var(--stage-glow) 85%, white); box-shadow: 0 0 8px 2px color-mix(in oklab, var(--stage-glow) 45%, transparent); }
+}
+@keyframes bulb-twinkle {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(0.72); }
+}
+
+/* --- Reduced motion: no machinery, everything simply present ------------- */
+@media (prefers-reduced-motion: reduce) {
+  .house-curtain { display: none; }
+  .rope-word { animation: none; opacity: 1; }
+  .fly-in { opacity: 1; }
+  .fly-in.is-flown { animation: none; }
+  .traveler__half { display: none; }
+  .traveler__lights { opacity: 1; animation: none; }
+  .bulb { animation: none; background: color-mix(in oklab, var(--stage-glow) 85%, white); }
+}
