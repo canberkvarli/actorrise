@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+/** The canonical hydration guard: false on the server, true once the client
+ *  has taken over, with no state to set inside an effect. */
+const NEVER_CHANGES = () => () => {};
 import Link from "next/link";
 import { useCommunityFeed } from "@/hooks/useCommunityFeed";
 import { EventLine } from "./eventRender";
@@ -12,8 +16,7 @@ import { EventLine } from "./eventRender";
  */
 export function CallboardMarquee() {
   const { data } = useCommunityFeed(16);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(NEVER_CHANGES, () => true, () => false);
 
   const events = data?.events ?? [];
   if (!mounted || events.length === 0) return null;

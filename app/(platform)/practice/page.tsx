@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 
 import { useScripts } from "@/hooks/useScripts";
@@ -30,7 +30,16 @@ export default function PracticePage() {
   const { user, loading: authLoading } = useAuth();
   const { data: scripts, isLoading: scriptsLoading, isFetched: scriptsFetched } = useScripts();
 
-  const [walkthroughOpen, setWalkthroughOpen] = useState(false);
+  /* Whether this browser has been shown the playbill. Read through
+     useSyncExternalStore rather than an effect: it touches localStorage, which
+     the server cannot, and `false` is the honest pre-hydration answer. */
+  const unseen = useSyncExternalStore(
+    () => () => {},
+    shouldAutoOpenWalkthrough,
+    () => false,
+  );
+  /* null = nobody has opened or dismissed it yet, so the data decides. */
+  const [walkthroughOverride, setWalkthroughOverride] = useState<boolean | null>(null);
 
   const { demoScript, featuredScriptId, safeScripts, hasOwnScript } = useMemo(() => {
     const safeScripts = scripts ?? [];
@@ -50,16 +59,18 @@ export default function PracticePage() {
   const hasCachedData = scriptsFetched || safeScripts.length > 0;
   const isLoading = (authLoading && !user) || (scriptsLoading && !hasCachedData);
 
-  // The playbill walkthrough introduces itself to first-timers only, then lives
-  // behind (?). Two gates, because either alone is wrong: the seen-flag is
-  // per-browser, so an established actor signing in on a new device would get
-  // pitched the basics; and "no scripts yet" alone would re-pitch on every visit
-  // until they upload. Wait for the script list before deciding, or everyone
-  // looks like a first-timer for the first second.
-  useEffect(() => {
-    if (!user || !scriptsFetched || hasOwnScript) return;
-    if (shouldAutoOpenWalkthrough()) setWalkthroughOpen(true);
-  }, [user, scriptsFetched, hasOwnScript]);
+  // The playbill introduces itself to first-timers only, then lives behind (?).
+  // Two gates, because either alone is wrong: the seen-flag is per-browser, so
+  // an established actor signing in on a new device would get pitched the
+  // basics; and "no scripts yet" alone would re-pitch on every visit until they
+  // upload. Waiting for scriptsFetched is what stops everyone looking like a
+  // first-timer for the first second.
+  //
+  // Derived rather than fired from an effect, so opening it is not a second
+  // render pass — and once the actor opens or dismisses it themselves, the
+  // override wins for the rest of the visit.
+  const walkthroughOpen =
+    walkthroughOverride ?? (!!user && scriptsFetched && !hasOwnScript && unseen);
 
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
@@ -123,7 +134,7 @@ export default function PracticePage() {
               is for far better than a sentence describing it. All that is left
               up here is the way in and the way to ask. */}
           <div className="flex items-center justify-end gap-2">
-            <HowItWorksButton onOpen={() => setWalkthroughOpen(true)} />
+            <HowItWorksButton onOpen={() => setWalkthroughOverride(true)} />
           </div>
 
           <Suspense fallback={null}>
@@ -136,7 +147,7 @@ export default function PracticePage() {
         </motion.div>
       )}
 
-      <HowItWorksWalkthrough open={walkthroughOpen} onOpenChange={setWalkthroughOpen} />
+      <HowItWorksWalkthrough open={walkthroughOpen} onOpenChange={setWalkthroughOverride} />
     </div>
   );
 }
