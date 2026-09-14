@@ -2616,13 +2616,20 @@
 /* --- The mobile tab bar ---------------------------------------------------
    A floating pill under the thumb, matching the header pill above it, rather
    than a bar welded to the bottom edge of the screen. */
+/* The phone tab bar.
+
+   `display` is decided here, not by the `md:hidden` in the markup. Tailwind v4
+   emits its utilities inside `@layer utilities`, and an UNLAYERED rule in this
+   file beats every layered one — so `.t-tabbar { display: flex }` was winning
+   against `md:hidden`, and the phone bar sat across the bottom of the desktop
+   app at every width. The breakpoint is 768px to match Tailwind's `md`. */
 .t-tabbar {
   position: fixed;
   left: 12px;
   right: 12px;
   bottom: 14px;
   z-index: 9998;
-  display: flex;
+  display: none;
   padding: 6px;
   border-radius: 999px;
   background: oklch(0.13 0.015 50 / 0.92);
@@ -2631,6 +2638,11 @@
   border: 1px solid oklch(0.35 0.03 55 / 0.6);
   box-shadow: 0 12px 40px -12px rgb(0 0 0 / 0.7);
   color: oklch(0.96 0.02 85);
+}
+@media (max-width: 767.98px) {
+  .t-tabbar {
+    display: flex;
+  }
 }
 .t-tabbar > div { flex: 1; }
 .t-tabbar__tab {
