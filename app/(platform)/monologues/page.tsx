@@ -50,7 +50,7 @@ import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackProm
 import { extractQueryHighlights } from "@/lib/queryMatchHighlight";
 import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
 import { QuickFilterChips } from "@/components/search/QuickFilterChips";
-import { SourceTagLegend, MonologueSourceTag } from "@/components/search/SourceTag";
+import { MonologueSourceTag } from "@/components/search/SourceTag";
 import { ContentGapBanner } from "@/components/search/ContentGapBanner";
 import { RequestQueryButton } from "@/components/search/RequestQueryButton";
 import { EmotionPivots } from "@/components/search/EmotionPivots";
@@ -1038,21 +1038,41 @@ function SearchContent() {
       return;
     }
 
-    setIsPlaysLoading(true);
+    /* Which shelf the actor is standing at. This used to be hardcoded to
+       plays: it set the play loading flag, wrote into the play results and
+       pinned the stored mode to "plays", so pressing it from Film & TV would
+       have run a play search and dropped the answers where that tab cannot
+       show them. The recommender takes a source filter now. */
+    const onScreen = searchMode === "film_tv";
+
     setIsFindingForMe(true);
-    setHasSearched(true);
-    setPlaysQuery(""); // Clear query to show it's AI-based
+    if (onScreen) {
+      setIsFilmTvLoading(true);
+      setFilmTvHasSearched(true);
+      setFilmTvQuery("");
+    } else {
+      setIsPlaysLoading(true);
+      setHasSearched(true);
+      setPlaysQuery("");
+    }
     setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" }); // Clear filters
 
     try {
-      const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=20");
-      setResults(response.data);
+      const response = await api.get<Monologue[]>(
+        `/api/monologues/recommendations?limit=20${onScreen ? "&source_type=film,tv" : ""}`,
+      );
+      if (onScreen) {
+        setFilmTvResults(response.data);
+        setFilmTvTotal(response.data.length);
+      } else {
+        setResults(response.data);
+      }
       setCorrectedQuery(null);
 
       // Persist AI "Find for me" results as the last search so that
       // navigating away and back to /monologues keeps them visible.
       sessionStorage.setItem(
-        LAST_SEARCH_KEY,
+        onScreen ? FILM_TV_LAST_SEARCH_KEY : LAST_SEARCH_KEY,
         JSON.stringify({
           query: "",
           filters: { gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" },
@@ -1060,10 +1080,13 @@ function SearchContent() {
           total: response.data.length,
         })
       );
-      sessionStorage.setItem(SEARCH_LAST_MODE_KEY, "plays");
+      sessionStorage.setItem(SEARCH_LAST_MODE_KEY, onScreen ? "film_tv" : "plays");
 
-      // Update URL to reflect AI search
-      router.replace("/monologues?ai=true", { scroll: false });
+      // Update URL to reflect AI search, on the shelf it was run from.
+      router.replace(
+        onScreen ? "/monologues?mode=film_tv&ai=true" : "/monologues?ai=true",
+        { scroll: false },
+      );
 
       // Increment results view count for "every other search" feedback prompt
       try {
@@ -1084,9 +1107,11 @@ function SearchContent() {
       } else {
         console.error("Find For Me error:", error);
       }
-      setResults([]);
+      if (onScreen) setFilmTvResults([]);
+      else setResults([]);
     } finally {
-      setIsPlaysLoading(false);
+      if (onScreen) setIsFilmTvLoading(false);
+      else setIsPlaysLoading(false);
       setIsFindingForMe(false);
     }
   };
@@ -1683,9 +1708,19 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
           <div className="min-w-0 flex-1 basis-80">
-            <p className="t-dir" style={{ color: "var(--t-muted-dark-2)" }}>
-              {headDirection}
-            </p>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.p
+                key={headDirection}
+                className="t-dir"
+                style={{ color: "var(--t-muted-dark-2)" }}
+                initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {headDirection}
+              </motion.p>
+            </AnimatePresence>
             <h1
               className="mt-2"
               style={{
@@ -1726,22 +1761,26 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     type="button"
                     aria-pressed={active}
                     onClick={() => switchMode(tab.mode)}
-                    className="inline-flex min-h-[44px] items-center gap-2 px-4 text-sm font-semibold transition-transform hover:scale-[1.04]"
+                    className="relative inline-flex min-h-[44px] items-center gap-2 px-4 text-sm font-semibold transition-transform hover:scale-[1.04]"
                     style={{
                       borderRadius: 999,
                       transitionTimingFunction: "var(--t-spring)",
-                      background: active
-                        ? isFilm
-                          ? "oklch(0.62 0.15 300)"
-                          : "var(--t-text)"
-                        : "transparent",
-                      color: active
-                        ? isFilm
-                          ? "oklch(0.98 0.01 300)"
-                          : "var(--t-on-text)"
-                        : "var(--t-muted-dark-2)",
+                      color: active ? "var(--t-on-text)" : "var(--t-muted-dark-2)",
                     }}
                   >
+                    {/* One fill that slides between the two tabs, so the switch
+                        reads as the same object moving rather than two pills
+                        trading colour — the mode change is now the quietest it
+                        has been, and this is what carries it. */}
+                    {active && (
+                      <motion.span
+                        layoutId="search-mode-fill"
+                        aria-hidden
+                        className="absolute inset-0 -z-10"
+                        style={{ borderRadius: 999, background: "var(--t-text)" }}
+                        transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      />
+                    )}
                     {isFilm ? (
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
                         <rect x="2" y="4" width="20" height="13" rx="2" />
@@ -1758,11 +1797,24 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 );
               })}
             </div>
-            <p className="t-dir mt-2 text-right" style={{ fontSize: 12, color: "var(--t-faint)" }}>
-              {searchMode === "film_tv"
-                ? "(scenes and speeches from the screen. no era filter here.)"
-                : "(19,000 pieces. classical and contemporary.)"}
-            </p>
+            {/* The caption is the thing that actually says which shelf you
+                are on now that the page no longer changes colour, so it gets
+                the same cross-fade as the direction above. */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.p
+                key={searchMode}
+                className="t-dir mt-2 text-right"
+                style={{ fontSize: 12, color: "var(--t-faint)" }}
+                initial={reducedMotion ? false : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {searchMode === "film_tv"
+                  ? "(scenes and speeches from the screen. no era filter here.)"
+                  : "(19,000 pieces. classical and contemporary.)"}
+              </motion.p>
+            </AnimatePresence>
           </div>
         </div>
       </div>
@@ -1872,7 +1924,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </button>
           </div>
 
-          {searchMode === "plays" && (
+          {/* Both shelves. "I don't know what I want" is at least as true of
+              film and TV as it is of plays. */}
+          {(
             <button
               id="search-find-for-me"
               type="button"
@@ -1916,7 +1970,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </p>
         </div>
 
-        <SourceTagLegend className="mt-3" />
 
           {/* Mobile: filters in sheet (SearchFiltersSheet). Desktop: expandable inline filters */}
           <SearchFiltersSheet

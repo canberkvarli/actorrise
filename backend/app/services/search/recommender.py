@@ -168,6 +168,7 @@ class Recommender:
         limit: int = 20,
         fast: bool = False,
         user_id: Optional[int] = None,
+        source_type: Optional[str] = None,
     ) -> List[Monologue]:
         """
         Recommend monologues based on actor profile.
@@ -181,6 +182,10 @@ class Recommender:
         When user_id is None, falls back to the basic comfort-only approach.
         """
         filters = self._build_profile_filters(actor_profile)
+        # The shelf the actor is standing at. Without it "Find for me" can only
+        # ever answer with plays, which is wrong when they asked from Film & TV.
+        if source_type:
+            filters["source_type"] = source_type
         preferred_genres = _preferred_genres_list(actor_profile)
         overdone_sensitivity = _attr_float(actor_profile, "overdone_alert_sensitivity", 0.0)
 
@@ -337,7 +342,20 @@ class Recommender:
     # ── Shared filter helpers ─────────────────────────────────────────────────
 
     def _apply_casting_filters(self, query, filters: dict):
-        """Apply gender, age_range, and difficulty filters to a Monologue query."""
+        """Apply gender, age_range, difficulty and source filters to a query."""
+        # Which shelf. Expressed as a subquery on play_id rather than a join to
+        # Play, because this helper is called on queries that have already
+        # joined Play and on ones that have not, and adding a second join to
+        # the former raises. `in_` on the foreign key is correct either way.
+        source_types = filters.get("source_type")
+        if source_types:
+            if isinstance(source_types, str):
+                source_types = [s.strip() for s in source_types.split(",") if s.strip()]
+            query = query.filter(
+                Monologue.play_id.in_(
+                    self.db.query(Play.id).filter(Play.source_type.in_(source_types))
+                )
+            )
         if filters.get("gender"):
             query = query.filter(
                 or_(

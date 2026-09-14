@@ -95,6 +95,37 @@ def _seconds(value: str, unit: str) -> int:
     return n * 60 if unit.lower().startswith(("min", "m")) else n
 
 
+def catalogue_constraints(db, query: str) -> dict:
+    """Named things the library actually holds: a title, or a character.
+
+    Separate from `constraints` because these need the database. They are also
+    where the volume is: of 1,367 distinct logged queries, 185 name a title we
+    carry and 15 name a character, against 2 that mention an act or scene. The
+    first version of this audit checked act/scene and found nothing, which said
+    more about the sample than about the search.
+
+    An actor who types "12 angry men" has told us exactly what they want. If
+    nothing from that title comes back, the result set is wrong no matter how
+    confident it is.
+    """
+    from app.services.search import title_lookup as TL
+
+    out: dict = {}
+    try:
+        t = TL.detect_catalogue_title(db, query)
+        if t and t.get("title"):
+            out["title"] = t["title"]
+    except Exception:
+        pass
+    try:
+        ch = TL.detect_catalogue_character(db, query)
+        if ch and ch.get("names"):
+            out["character"] = list(ch["names"])
+    except Exception:
+        pass
+    return out
+
+
 def constraints(query: str) -> dict:
     """What this query unambiguously asked for. Empty when nothing is checkable."""
     q = query or ""
@@ -186,6 +217,25 @@ def violations(asked: dict, rows: list) -> list:
             out.append(("gender",
                         f"asked {want}, {len(bad)}/{len(rows)} were another gender"))
 
+    # Naming a title or a character is the least ambiguous thing an actor can
+    # do. Not returning ONE piece from it is a miss regardless of confidence.
+    if "title" in asked:
+        want = asked["title"].strip().lower()
+        got = {((m.play.title if m.play else m.title) or "").strip().lower()
+               for m, _ in rows}
+        if not any(want in g or g in want for g in got if g):
+            out.append(("title",
+                        f"asked for '{asked['title']}', nothing from it came back "
+                        f"(top: {sorted(g for g in got if g)[:3]})"))
+
+    if "character" in asked:
+        want = {n.strip().lower() for n in asked["character"]}
+        got = {(m.character_name or "").strip().lower() for m, _ in rows}
+        if not (want & got):
+            out.append(("character",
+                        f"asked for {sorted(want)[:2]}, nothing by them came back "
+                        f"(top: {sorted(g for g in got if g)[:3]})"))
+
     return out
 
 
@@ -206,8 +256,13 @@ def main() -> int:
         GROUP BY query ORDER BY count(*) DESC, max(created_at) DESC
     """)).fetchall()
 
-    checkable = [(r.query, r.times, constraints(r.query)) for r in rows]
-    checkable = [c for c in checkable if c[2]]
+    svc_db = db
+    checkable = []
+    for r in rows:
+        asked = constraints(r.query)
+        asked.update(catalogue_constraints(svc_db, r.query))
+        if asked:
+            checkable.append((r.query, r.times, asked))
     print(f"{len(rows)} distinct queries logged")
     print(f"{len(checkable)} carry a constraint this can check\n")
 
