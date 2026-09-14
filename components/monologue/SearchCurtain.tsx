@@ -11,7 +11,6 @@ import {
   ReelSketch,
   RoseSketch,
   SkullSketch,
-  SpotlightSketch,
 } from "@/components/brand/sketches";
 
 /**
@@ -99,14 +98,16 @@ const SKETCH_MS = 3600;
  * real signatures, so putting it in compiled cleanly and rendered a swag of
  * curtain twice the width of the slot.
  */
-const CURTAIN_SKETCHES: Record<SearchMode, typeof SpotlightSketch[]> = {
-  plays: [SpotlightSketch, MasksSketch, SkullSketch, CrownSketch, DaggerSketch, RoseSketch],
-  /* Three, not four: the marquee went the way of the footlights. Its canopy
-     over a row of bulbs reads as a table on castors once you take the building
-     away from it, and three drawings that land beat four with a dud in the
-     rotation. */
-  film_tv: [ClapperSketch, ReelSketch, SpotlightSketch],
-  for_you: [SpotlightSketch, MasksSketch, CrownSketch, DaggerSketch, RoseSketch, SkullSketch],
+const CURTAIN_SKETCHES: Record<SearchMode, typeof MasksSketch[]> = {
+  /* No spotlight. The lamp led every pool, so the first thing you saw on
+     tapping Search was a bulb — and the bulb is the house-lights switch in the
+     header, the off-book mark on a cover, and the callboard lamp. A drawing
+     that means "you know this piece" and "someone is in the house" cannot also
+     mean "wait". The rest of the playbill reads as leafing past plays, which
+     is what this moment actually is. */
+  plays: [MasksSketch, SkullSketch, CrownSketch, DaggerSketch, RoseSketch],
+  film_tv: [ClapperSketch, ReelSketch],
+  for_you: [MasksSketch, CrownSketch, DaggerSketch, RoseSketch, SkullSketch],
 };
 
 export function SearchCurtain({

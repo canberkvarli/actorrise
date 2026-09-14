@@ -1931,7 +1931,7 @@
    not an emergency, and the page has exactly one accent already. */
 .t-fault {
   max-width: 34rem;
-  margin: 0 auto;
+  margin: 28px auto 0;
   padding: 22px 24px;
   border-radius: 20px;
   background: var(--t-paper);

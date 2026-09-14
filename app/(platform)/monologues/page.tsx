@@ -26,7 +26,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
 import { HouseIsHunting } from "@/components/community/HouseIsHunting";
 import { ForYouShelf } from "@/components/monologue/ForYouShelf";
-import { SearchWaiting } from "@/components/monologue/SearchWaiting";
+import { SearchCurtain } from "@/components/monologue/SearchCurtain";
 // A ticket stub for "nothing on this bill" — the masks were already doing duty
 // as the gibberish/short empty state and as a starting-point tile, so film & TV
 // coming back empty looked identical to two other things.
@@ -2086,7 +2086,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 animate={RISE_IN}
                 exit={LIFT_OUT}
               >
-                <SearchWaiting onStop={stopSearch} />
+                <SearchCurtain mode="film_tv" onStop={stopSearch} />
               </motion.div>
             ) : filmTvResults.length === 0 && !filmTvHasSearched ? (
               /* Was an empty <div />. Switching to a tab you had not searched
@@ -2252,7 +2252,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               animate={RISE_IN}
               exit={LIFT_OUT}
             >
-              <SearchWaiting onStop={stopSearch} />
+              {/* Find for me gets its own beats. Nobody typed anything, so
+                  "reading twelve thousand pages" describes the wrong act. */}
+              <SearchCurtain
+                onStop={stopSearch}
+                mode={isFindingForMe ? "for_you" : "plays"}
+                name={firstName}
+                facts={forYouFacts}
+              />
             </motion.div>
           ) : hasSearched && results.length === 0 && !searchError ? (
             <motion.div
