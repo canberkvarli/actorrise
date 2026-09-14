@@ -1676,10 +1676,15 @@
   --acc: oklch(0.58 0.18 45);
   --page: oklch(0.96 0.02 85);
 }
+/* Film & TV used to recolour the whole page violet. It is the same library on
+   a different shelf, not a different room, and a full-page hue change on a tab
+   press was the loudest thing on the screen. Both shelves now share one ground
+   and one accent; the tabs, the caption and the source pills are what say
+   which shelf you are on. */
 .theatre-search[data-search-mode="film_tv"],
 .t-outline-flash[data-search-mode="film_tv"] {
-  --acc: oklch(0.62 0.15 300);
-  --page: oklch(0.95 0.02 300);
+  --acc: oklch(0.58 0.18 45);
+  --page: oklch(0.96 0.02 85);
 }
 
 /* The full-viewport wash. It sits behind the page rather than on it, so the
@@ -1722,14 +1727,17 @@
   background: oklch(0.58 0.18 45);
   color: oklch(0.96 0.02 85);
 }
+/* Screen pieces are ink where play pieces are orange: filled for film,
+   outlined for tv, the same fill/outline pair the play shelf uses. Four
+   distinguishable pills, one hue family each, no violet. */
 .t-src--film {
-  border-color: oklch(0.62 0.15 300);
-  background: oklch(0.62 0.15 300);
-  color: oklch(0.98 0.01 300);
+  border-color: var(--t-text);
+  background: var(--t-text);
+  color: var(--t-on-text);
 }
 .t-src--tv {
-  border-color: oklch(0.62 0.15 300);
-  color: oklch(0.5 0.15 300);
+  border-color: var(--t-text);
+  color: var(--t-muted-dark);
   background: transparent;
 }
 
@@ -1763,7 +1771,10 @@
   inset: 0;
   z-index: 2147483647;
   pointer-events: none;
-  border: 8px solid var(--acc);
+  border: none;
+  box-shadow:
+    inset 0 0 140px 60px color-mix(in oklab, var(--acc) 22%, transparent),
+    inset 0 0 50px 20px color-mix(in oklab, var(--acc) 12%, transparent);
   animation: t-outline-flash 0.7s ease-out forwards;
 }
 
@@ -2208,13 +2219,13 @@
    the wash reads as a shelf change rather than a bruise. */
 .dark .theatre-search[data-search-mode="film_tv"],
 .dark .t-outline-flash[data-search-mode="film_tv"] {
-  --page: oklch(0.16 0.025 300);
-  --acc: oklch(0.72 0.14 300);
+  --page: oklch(0.15 0.015 50);
+  --acc: oklch(0.7 0.18 48);
 }
 
 /* A few places name a literal rather than a token, because the design does. */
 .dark .theatre-search .t-src--classical { color: oklch(0.78 0.14 45); }
-.dark .theatre-search .t-src--tv { color: oklch(0.76 0.12 300); }
+.dark .theatre-search .t-src--tv { color: oklch(0.8 0.02 70); }
 .dark .theatre-search .t-row__numeral { color: oklch(0.45 0.02 70); }
 .dark .theatre-search .t-row__name:hover { color: var(--acc); }
 .dark .theatre-search .t-mark--best { color: oklch(0.15 0.03 45); }

@@ -50,7 +50,7 @@ import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackProm
 import { extractQueryHighlights } from "@/lib/queryMatchHighlight";
 import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
 import { QuickFilterChips } from "@/components/search/QuickFilterChips";
-import { SourceTagLegend, MonologueSourceTag } from "@/components/search/SourceTag";
+import { MonologueSourceTag } from "@/components/search/SourceTag";
 import { ContentGapBanner } from "@/components/search/ContentGapBanner";
 import { RequestQueryButton } from "@/components/search/RequestQueryButton";
 import { EmotionPivots } from "@/components/search/EmotionPivots";
@@ -1683,9 +1683,19 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
           <div className="min-w-0 flex-1 basis-80">
-            <p className="t-dir" style={{ color: "var(--t-muted-dark-2)" }}>
-              {headDirection}
-            </p>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.p
+                key={headDirection}
+                className="t-dir"
+                style={{ color: "var(--t-muted-dark-2)" }}
+                initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {headDirection}
+              </motion.p>
+            </AnimatePresence>
             <h1
               className="mt-2"
               style={{
@@ -1726,22 +1736,26 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     type="button"
                     aria-pressed={active}
                     onClick={() => switchMode(tab.mode)}
-                    className="inline-flex min-h-[44px] items-center gap-2 px-4 text-sm font-semibold transition-transform hover:scale-[1.04]"
+                    className="relative inline-flex min-h-[44px] items-center gap-2 px-4 text-sm font-semibold transition-transform hover:scale-[1.04]"
                     style={{
                       borderRadius: 999,
                       transitionTimingFunction: "var(--t-spring)",
-                      background: active
-                        ? isFilm
-                          ? "oklch(0.62 0.15 300)"
-                          : "var(--t-text)"
-                        : "transparent",
-                      color: active
-                        ? isFilm
-                          ? "oklch(0.98 0.01 300)"
-                          : "var(--t-on-text)"
-                        : "var(--t-muted-dark-2)",
+                      color: active ? "var(--t-on-text)" : "var(--t-muted-dark-2)",
                     }}
                   >
+                    {/* One fill that slides between the two tabs, so the switch
+                        reads as the same object moving rather than two pills
+                        trading colour — the mode change is now the quietest it
+                        has been, and this is what carries it. */}
+                    {active && (
+                      <motion.span
+                        layoutId="search-mode-fill"
+                        aria-hidden
+                        className="absolute inset-0 -z-10"
+                        style={{ borderRadius: 999, background: "var(--t-text)" }}
+                        transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      />
+                    )}
                     {isFilm ? (
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
                         <rect x="2" y="4" width="20" height="13" rx="2" />
@@ -1758,11 +1772,24 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 );
               })}
             </div>
-            <p className="t-dir mt-2 text-right" style={{ fontSize: 12, color: "var(--t-faint)" }}>
-              {searchMode === "film_tv"
-                ? "(scenes and speeches from the screen. no era filter here.)"
-                : "(19,000 pieces. classical and contemporary.)"}
-            </p>
+            {/* The caption is the thing that actually says which shelf you
+                are on now that the page no longer changes colour, so it gets
+                the same cross-fade as the direction above. */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.p
+                key={searchMode}
+                className="t-dir mt-2 text-right"
+                style={{ fontSize: 12, color: "var(--t-faint)" }}
+                initial={reducedMotion ? false : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {searchMode === "film_tv"
+                  ? "(scenes and speeches from the screen. no era filter here.)"
+                  : "(19,000 pieces. classical and contemporary.)"}
+              </motion.p>
+            </AnimatePresence>
           </div>
         </div>
       </div>
@@ -1872,6 +1899,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </button>
           </div>
 
+          {/* Plays only, still. Ungating this is a one-line change here and a
+              broken feature: handleFindForMe is hardcoded to the play shelf —
+              it sets isPlaysLoading, writes into `results`, pins the stored
+              mode to "plays", and calls /recommendations, which takes no
+              source_type and can only return plays. Pressed from the screen
+              shelf it would run a play search and drop the answers where this
+              tab cannot show them. The backend needs the filter first. */}
           {searchMode === "plays" && (
             <button
               id="search-find-for-me"
@@ -1916,7 +1950,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </p>
         </div>
 
-        <SourceTagLegend className="mt-3" />
 
           {/* Mobile: filters in sheet (SearchFiltersSheet). Desktop: expandable inline filters */}
           <SearchFiltersSheet
