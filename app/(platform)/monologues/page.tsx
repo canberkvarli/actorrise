@@ -20,6 +20,7 @@ import { trackSearchPerformed, trackResultClicked } from "@/lib/analytics";
 import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconEye, IconEyeOff, IconDownload, IconAdjustments, IconFlag, IconDeviceTv } from "@tabler/icons-react";
 
 import api from "@/lib/api";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
@@ -1685,7 +1686,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     // Holding the measure means a tab tap changes nothing horizontally, and the
     // opening view can arrive as a transition instead of a reload.
     <div
-      className="theatre-tokens theatre-search relative mx-auto w-full max-w-[1160px] px-5 pb-32 pt-8 sm:px-6 sm:pt-14"
+      className={`theatre-tokens theatre-search ${theatreFontVars} relative mx-auto w-full max-w-[1160px] px-5 pb-32 pt-8 sm:px-6 sm:pt-14`}
       data-search-mode={searchMode satisfies SearchMode}
     >
       {/* Behind the page, not on it, so the shelf colour reaches the edges of

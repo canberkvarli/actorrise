@@ -1676,6 +1676,26 @@
   --acc: oklch(0.58 0.18 45);
   --page: oklch(0.96 0.02 85);
 }
+
+/* The body face. Without this the page borrowed the app's Montserrat for
+   everything that was not explicitly asking for --t-display or --t-direction —
+   the chips, the cards, the buttons, the result rows — so two of the three
+   Theatre Walk faces were missing and the page read as the old app wearing a
+   serif headline. `.theatre-collection` sets this; `.theatre-search` did not. */
+.theatre-search {
+  font-family: var(--t-body);
+  color: var(--t-text);
+}
+/* Form controls do not inherit a face — the UA sheet gives them their own, and
+   the app's base then hands them Montserrat. Every chip, tab and submit on this
+   page is a <button>, so without this the page keeps its old sans everywhere a
+   control appears. */
+.theatre-search button,
+.theatre-search input,
+.theatre-search select,
+.theatre-search textarea {
+  font-family: inherit;
+}
 /* Film & TV used to recolour the whole page violet. It is the same library on
    a different shelf, not a different room, and a full-page hue change on a tab
    press was the loudest thing on the screen. Both shelves now share one ground
