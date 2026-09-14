@@ -1613,8 +1613,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       {/* Personalization, surfaced by default (not hidden behind "Find for
           me"): profile-havers rehearse ~1.6x more. Recruits a profile when
           there isn't one. Plays only — film/TV recs are separate. */}
-      {searchMode === "plays" && <ForYouShelf />}
-      <TrendingPreSearch />
+      {/* Two shelves, side by side where there is room. */}
+      <div
+        className="mt-10 grid gap-12"
+        style={{ gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,420px),1fr))" }}
+      >
+        {searchMode === "plays" && <ForYouShelf />}
+        <TrendingPreSearch />
+      </div>
       {/* Last, not first: the shelves are personal and current, these are the
           fallback for when nothing there catches you. */}
       <StartingPoints mode={searchMode} />

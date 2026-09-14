@@ -1767,3 +1767,67 @@
   border-style: solid;
   transform: rotate(1.5deg);
 }
+
+/* --- Pre-search doors and shelves ---------------------------------------- */
+
+/* Pinned-up cards: paper on a hard ink shadow, each at its own slight angle,
+   straightening as you reach for them. */
+.t-door {
+  background: var(--t-paper);
+  border: 1.5px solid var(--t-text);
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 var(--t-text);
+  transform: rotate(var(--rot, 0deg));
+  transition:
+    transform 0.35s var(--t-spring),
+    box-shadow 0.35s;
+}
+.t-door:hover {
+  transform: rotate(0deg) translateY(-6px);
+  box-shadow: 9px 9px 0 var(--acc);
+}
+.t-door__glyph {
+  color: var(--acc);
+}
+
+.t-shelf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: var(--t-paper);
+  border: 1.5px solid var(--t-line-light);
+  transition:
+    transform 0.3s var(--t-spring),
+    border-color 0.25s;
+}
+.t-shelf-row:hover {
+  border-color: var(--t-text);
+  transform: translateX(6px);
+}
+
+/* Shelf headings: Instrument Serif with the tail in the mode accent. */
+.t-shelf-title {
+  margin: 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-shelf-title em {
+  font-style: italic;
+  color: var(--acc);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-door,
+  .t-door:hover,
+  .t-shelf-row,
+  .t-shelf-row:hover {
+    transform: none;
+  }
+}
