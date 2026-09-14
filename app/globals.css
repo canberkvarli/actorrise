@@ -1411,6 +1411,83 @@
   animation: t-pop 0.7s var(--t-spring) var(--t-d, 0s) both;
 }
 
+/* --- The traveler (Act IV) ------------------------------------------------
+   Same velvet as the house curtain, not a brighter cousin of it. The first
+   pass used flat 24px bands of oklch(0.62 0.20 42) with a 6px acid-yellow
+   inner edge, which read as a beach umbrella: the hard double-stops gave the
+   folds a printed edge, and the bright rim drew the eye to the join instead
+   of the stage behind it.
+
+   Folds are single stops, so the gradient interpolates between them and the
+   cloth shades round instead of striping. Lightness tops out at 0.28 and the
+   leading edge is a soft warm rim a couple of dozen pixels wide — light
+   catching the fold, rather than a line drawn on it. */
+.t-traveler {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 51%;
+  background-color: oklch(0.16 0.055 34);
+  background-repeat: no-repeat, repeat, no-repeat;
+}
+
+.t-traveler::after {
+  /* Depth: the pelmet shadow up top, a little footlight spill at the hem. */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    oklch(0.06 0.02 30 / 0.6) 0%,
+    transparent 26%,
+    transparent 74%,
+    oklch(0.4 0.13 44 / 0.28) 100%
+  );
+  pointer-events: none;
+}
+
+.t-traveler--l {
+  left: 0;
+  background-image:
+    linear-gradient(
+      to right,
+      transparent 0,
+      transparent calc(100% - 30px),
+      oklch(0.46 0.12 44 / 0.55) 100%
+    ),
+    repeating-linear-gradient(
+      to right,
+      oklch(0.1 0.04 32) 0px,
+      oklch(0.21 0.07 36) 24px,
+      oklch(0.28 0.09 39) 45px,
+      oklch(0.23 0.075 37) 61px,
+      oklch(0.13 0.05 34) 82px,
+      oklch(0.1 0.04 32) 104px
+    );
+  box-shadow: 24px 0 70px oklch(0.05 0.02 30 / 0.7);
+}
+
+.t-traveler--r {
+  right: 0;
+  background-image:
+    linear-gradient(
+      to left,
+      transparent 0,
+      transparent calc(100% - 30px),
+      oklch(0.46 0.12 44 / 0.55) 100%
+    ),
+    repeating-linear-gradient(
+      to left,
+      oklch(0.1 0.04 32) 0px,
+      oklch(0.21 0.07 36) 24px,
+      oklch(0.28 0.09 39) 45px,
+      oklch(0.23 0.075 37) 61px,
+      oklch(0.13 0.05 34) 82px,
+      oklch(0.1 0.04 32) 104px
+    );
+  box-shadow: -24px 0 70px oklch(0.05 0.02 30 / 0.7);
+}
+
 /* --- Reduced motion ------------------------------------------------------
    Everything decorative stops. The two scroll rigs are handed their finished
    state by JS (see useTheatreScroll), so the house reads fully lit and the

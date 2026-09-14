@@ -30,9 +30,15 @@ export function CurtainAct() {
 
   const apply = useCallback((p: number) => {
     /* Offset by a tenth of a screen so the curtain is still shut for a beat
-       after the section arrives, instead of already opening on entry. */
+       after the section arrives, instead of already opening on entry.
+
+       Smoothstep, not an ease-out. An ease-out is fastest at the start, so
+       `1-(1-p)^n` had the panels a third open in the first inch of scroll and
+       then crawling — the snap was at the top, where it is most visible. This
+       eases both ends: the curtain takes weight before it moves, pulls
+       steadily through the middle, and settles instead of stopping. */
     const shifted = Math.min(1, Math.max(0, (p * 1.1 - 0.1) / 1));
-    const eased = 1 - Math.pow(1 - shifted, 3);
+    const eased = shifted * shifted * (3 - 2 * shifted);
     for (const r of [leftRef, rightRef, labelRef]) {
       r.current?.style.setProperty("--co", String(eased));
     }
@@ -145,34 +151,20 @@ export function CurtainAct() {
         <div
           ref={leftRef}
           aria-hidden
-          className="absolute inset-y-0 left-0"
-          style={{
-            width: "51%",
-            transform: "translateX(calc(var(--co,0) * -105%))",
-            background:
-              "repeating-linear-gradient(to right, oklch(0.62 0.20 42) 0 24px, oklch(0.50 0.18 40) 24px 48px, oklch(0.68 0.19 45) 48px 72px)",
-            boxShadow: "20px 0 60px rgb(0 0 0/.6)",
-            borderRight: "6px solid var(--t-gel)",
-          }}
+          className="t-traveler t-traveler--l"
+          style={{ transform: "translateX(calc(var(--co,0) * -105%))" }}
         />
         <div
           ref={rightRef}
           aria-hidden
-          className="absolute inset-y-0 right-0"
-          style={{
-            width: "51%",
-            transform: "translateX(calc(var(--co,0) * 105%))",
-            background:
-              "repeating-linear-gradient(to left, oklch(0.62 0.20 42) 0 24px, oklch(0.50 0.18 40) 24px 48px, oklch(0.68 0.19 45) 48px 72px)",
-            boxShadow: "-20px 0 60px rgb(0 0 0/.6)",
-            borderLeft: "6px solid var(--t-gel)",
-          }}
+          className="t-traveler t-traveler--r"
+          style={{ transform: "translateX(calc(var(--co,0) * 105%))" }}
         />
         <div
           ref={labelRef}
           aria-hidden
           className="pointer-events-none absolute inset-0 flex items-center justify-center text-center"
-          style={{ opacity: "calc(1 - var(--co,0) * 2.5)" }}
+          style={{ opacity: "calc(1 - var(--co,0) * 4)" }}
         >
           <p
             className="m-0"
