@@ -14,8 +14,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { BrandLogo } from "@/components/brand/BrandLogo";
+import Image from "next/image";
 import { AuthProgressiveDisclosure } from "@/components/auth/AuthProgressiveDisclosure";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 
 type AuthModalMode = "login" | "signup";
 
@@ -32,6 +33,14 @@ const DEFAULT_TITLES: Record<AuthModalMode, string> = {
 const DEFAULT_DESCRIPTIONS: Record<AuthModalMode, string> = {
   signup: "Start free. Upgrade anytime.",
   login: "Sign in to continue to your dashboard.",
+};
+
+/* The eyebrow carries the reassurance, so the card needs two lines of copy
+   rather than three. On signup that is the same promise the hero footnote
+   makes; a visitor who tapped the CTA has just read it. */
+const DIRECTIONS: Record<AuthModalMode, string> = {
+  signup: "(free to start. no card.)",
+  login: "(the ghost light is still on.)",
 };
 
 type AuthModalContextValue = {
@@ -72,43 +81,68 @@ export function AuthModalProvider({ children }: AuthModalProviderProps) {
     <AuthModalContext.Provider value={{ openAuthModal, closeAuthModal }}>
       {children}
       <Dialog open={open} onOpenChange={(o) => !o && closeAuthModal()}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-md max-h-[90dvh] overflow-y-auto overflow-x-hidden overscroll-contain p-5 sm:p-6">
-          <DialogHeader>
-            <div className="flex justify-center pt-0.5 sm:pt-1">
-              <BrandLogo size="auth" />
+        <DialogContent
+          className={`theatre-tokens theatre-auth ${theatreFontVars} w-[calc(100vw-2rem)] max-w-md max-h-[90dvh] overflow-y-auto overflow-x-hidden overscroll-contain border-0 p-6 sm:p-7`}
+          style={{
+            background: "var(--t-ink)",
+            borderRadius: 28,
+            boxShadow:
+              "0 0 0 1.5px oklch(0.35 0.03 55 / .5), 0 40px 120px -30px oklch(0.72 0.17 55 / .45)",
+          }}
+        >
+          <DialogHeader className="space-y-0">
+            <div className="flex justify-center">
+              <Image
+                src="/transparent_textlogo.png"
+                alt="ActorRise"
+                width={150}
+                height={36}
+                className="h-9 w-auto"
+              />
             </div>
-            <DialogTitle className="text-lg sm:text-xl text-center pt-2 font-semibold">
+            <p className="t-dir pt-4 text-center" style={{ color: "var(--t-muted-light)" }}>
+              {DIRECTIONS[mode]}
+            </p>
+            <DialogTitle
+              className="pt-2 text-center"
+              style={{
+                fontFamily: "var(--t-display)",
+                fontWeight: 400,
+                fontSize: "clamp(1.9rem, 7vw, 2.4rem)",
+                lineHeight: 1.05,
+                letterSpacing: "-0.02em",
+                color: "var(--t-cream)",
+              }}
+            >
               {title}
             </DialogTitle>
-            <DialogDescription className="text-center text-xs sm:text-sm text-muted-foreground">
-              {description}
-            </DialogDescription>
+            {/* The title and the eyebrow say it. This stays for screen readers
+                rather than adding a third line of chrome to a signup card. */}
+            <DialogDescription className="sr-only">{description}</DialogDescription>
           </DialogHeader>
-          <div className="flex gap-1 p-1 rounded-lg bg-muted/40 border border-border/40 mb-4">
+
+          <div className="t-auth-tabs mt-5">
             <button
               type="button"
+              data-theatre-tab
+              data-active={mode === "signup"}
+              className="t-auth-tab"
               onClick={() => setMode("signup")}
-              className={`flex-1 min-h-[36px] py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                mode === "signup"
-                  ? "bg-primary text-primary-foreground shadow-sm border border-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
             >
               Sign up
             </button>
             <button
               type="button"
+              data-theatre-tab
+              data-active={mode === "login"}
+              className="t-auth-tab"
               onClick={() => setMode("login")}
-              className={`flex-1 min-h-[36px] py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                mode === "login"
-                  ? "bg-background text-foreground shadow-sm border border-border"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
             >
               Sign in
             </button>
           </div>
-          <div className="max-w-[300px] mx-auto">
+
+          <div className="mt-5">
             <AuthProgressiveDisclosure mode={mode} redirectTo="/practice" />
           </div>
         </DialogContent>

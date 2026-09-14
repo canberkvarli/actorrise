@@ -201,7 +201,13 @@ export function BackstageHero() {
           b.lastX = e.clientX;
           b.v = 0;
           e.currentTarget.style.cursor = "grabbing";
-          e.preventDefault();
+          /* Only a mouse gets its default suppressed. This element is a
+             44x252 strip down the middle of the hero — exactly where a thumb
+             lands to scroll — and `touch-action: none` plus preventDefault
+             meant a swipe starting on the cord scrolled nothing at all.
+             touch-pan-y leaves the vertical pan to the browser and keeps the
+             horizontal swing for us. */
+          if (e.pointerType === "mouse") e.preventDefault();
         }}
         onKeyDown={(e) => {
           if (e.key !== "Enter" && e.key !== " ") return;
@@ -210,7 +216,7 @@ export function BackstageHero() {
           setLampOn(lampRef.current);
           heroRef.current?.style.setProperty("--lamp", lampRef.current ? "1" : "0");
         }}
-        className="absolute left-1/2 top-0 z-[3] cursor-grab select-none touch-none"
+        className="absolute left-1/2 top-0 z-[3] cursor-grab touch-pan-y select-none"
         style={{ transformOrigin: "top center", transform: "rotate(var(--swing,0deg))" }}
       >
         <div className="-ml-px flex flex-col items-center">

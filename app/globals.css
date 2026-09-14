@@ -1340,6 +1340,17 @@
   box-shadow: none;
 }
 
+/* 36px is a mouse target. On a touch device this pill is the primary way into
+   signup and sits under iOS's 44px minimum, so it grows there. `hover: none`
+   picks out touch without guessing from viewport width, and this has to sit
+   after the base rule — a media query adds no specificity, so above it the
+   36px would simply win. */
+@media (hover: none) {
+  .t-cta--nav {
+    height: 44px;
+  }
+}
+
 .t-cta__dot {
   display: inline-flex;
   width: 34px;
@@ -1424,6 +1435,121 @@
 
 .t-pop {
   animation: t-pop 0.7s var(--t-spring) var(--t-d, 0s) both;
+}
+
+/* --- Auth, in the theatre's voice ----------------------------------------
+   The signup and sign-in surfaces (the modal, /login, /signup) are the last
+   thing between an actor and the product, and they were still wearing the old
+   site: Montserrat, the old orange, a generic card.
+
+   This is a skin rather than a rewrite. Every consumer keeps its own markup
+   and all of its auth logic; only the surface is restated here, scoped under
+   `.theatre-auth`, so nothing in OAuthButtons, LoginForm or SignupForm had to
+   be touched to change how it looks.
+
+   Ink, not paper: this overlays a dark hero, and on a phone at night a cream
+   card is a flash in the face. */
+.theatre-auth {
+  font-family: var(--t-body);
+  color: var(--t-cream);
+}
+
+.theatre-auth label {
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--t-muted-light-2);
+}
+
+/* 16px minimum, always. Under it, iOS Safari zooms the page the moment the
+   field takes focus and the visitor has to pinch back out mid-signup. */
+.theatre-auth input {
+  font-family: var(--t-body);
+  font-size: 16px;
+  min-height: 48px;
+  border-radius: 999px;
+  padding: 0 20px;
+  background: oklch(0.18 0.02 52);
+  border: 1.5px solid var(--t-line-dark-2);
+  color: var(--t-cream);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.theatre-auth input::placeholder {
+  color: var(--t-faint);
+}
+.theatre-auth input:focus,
+.theatre-auth input:focus-visible {
+  outline: none;
+  border-color: var(--t-orange);
+  box-shadow: 0 0 0 3px oklch(0.7 0.18 48 / 0.22);
+}
+
+/* The provider row: pills on the ink card, at a real touch height. */
+.theatre-auth button:not(.t-cta):not([data-theatre-tab]) {
+  min-height: 48px;
+  border-radius: 999px;
+  font-family: var(--t-body);
+  font-size: 15px;
+  font-weight: 600;
+  background: transparent;
+  border: 1.5px solid var(--t-line-dark-2);
+  color: var(--t-cream);
+  transition: border-color 0.2s, background 0.2s, transform 0.3s var(--t-spring);
+}
+.theatre-auth button:not(.t-cta):not([data-theatre-tab]):hover {
+  background: oklch(1 0 0 / 0.04);
+  border-color: var(--t-line-dark-3);
+  color: var(--t-cream);
+}
+
+/* The one filled button in the form — submit — carries the page's orange. */
+.theatre-auth button[type="submit"] {
+  background: var(--t-cta-bg);
+  border-color: transparent;
+  color: var(--t-cta-fg);
+  font-weight: 700;
+}
+.theatre-auth button[type="submit"]:hover {
+  background: var(--t-cta-bg);
+  border-color: transparent;
+  color: var(--t-cta-fg);
+  transform: scale(1.02);
+}
+
+.theatre-auth a {
+  color: var(--t-muted-light-2);
+  text-decoration: none;
+}
+.theatre-auth a:hover {
+  color: var(--t-gel);
+}
+
+/* Segmented sign-up / sign-in switch. */
+.t-auth-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: oklch(0.18 0.02 52);
+  border: 1px solid var(--t-line-dark);
+}
+.t-auth-tab {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 999px;
+  font-family: var(--t-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--t-muted-light-2);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s;
+}
+.t-auth-tab[data-active="true"] {
+  background: var(--t-cta-bg);
+  color: var(--t-cta-fg);
 }
 
 /* --- The traveler (Act IV) ------------------------------------------------
