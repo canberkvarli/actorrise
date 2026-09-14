@@ -25,6 +25,10 @@ export type SearchFiltersState = {
   difficulty: string;
   author: string;
   max_duration: string;
+  /** Film & TV only: narrows the shelf to one medium. The search endpoint has
+   *  always accepted this (comma-separated); film/TV search simply always sent
+   *  "film,tv". The Film / TV quick chips set it to one or the other. */
+  source_type?: string;
 };
 
 const DURATION_OPTIONS = [

@@ -39,6 +39,7 @@ import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueSpeech, matchMarkIsUseful } from "@/components/monologue/MonologueSpeech";
 import { constantFacts, constantFactsLabel } from "@/lib/resultFacts";
 import { SearchFiltersSheet, getDurationLabel } from "@/components/search/SearchFiltersSheet";
+import type { SearchFiltersState } from "@/components/search/SearchFiltersSheet";
 import { accentTeal } from "@/components/search/MatchIndicatorTag";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
@@ -49,6 +50,7 @@ import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackProm
 import { extractQueryHighlights } from "@/lib/queryMatchHighlight";
 import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
 import { QuickFilterChips } from "@/components/search/QuickFilterChips";
+import { SourceTagLegend, MonologueSourceTag } from "@/components/search/SourceTag";
 import { ContentGapBanner } from "@/components/search/ContentGapBanner";
 import { RequestQueryButton } from "@/components/search/RequestQueryButton";
 import { EmotionPivots } from "@/components/search/EmotionPivots";
@@ -125,7 +127,10 @@ function SearchContent() {
   const [showSearchTour, setShowSearchTour] = useState(false);
   const [playsQuery, setPlaysQuery] = useState("");
   const [filmTvQuery, setFilmTvQuery] = useState("");
-  const [filters, setFilters] = useState({
+  /* Typed rather than inferred: source_type is optional on SearchFiltersState
+     (only Film & TV sets it) and an inferred literal would make it required
+     for every other filter object in this file. */
+  const [filters, setFilters] = useState<SearchFiltersState>({
     gender: "",
     age_range: "",
     emotion: "",
@@ -135,6 +140,7 @@ function SearchContent() {
     difficulty: "",
     author: "",
     max_duration: "",
+    source_type: "",
   });
   /** 0 = freshest only, 0.3 = fresh, 0.5 = some overdone OK, 1 = show all. Separate from filters for clearer UX. */
   const [maxOverdoneScore, setMaxOverdoneScore] = useState(1);
@@ -448,7 +454,7 @@ function SearchContent() {
           setIsFilmTvLoading(true);
           setSearchError(null);
           try {
-            const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1", source_type: "film,tv" });
+            const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1", source_type: filters.source_type || "film,tv" });
             if (urlQuery.trim()) params.set("q", urlQuery.trim());
             const res = await api.get<{ results: Monologue[]; total: number }>(`/api/monologues/search?${params.toString()}`, { signal: ctrl.signal });
             setFilmTvResults(res.data.results);
@@ -767,8 +773,11 @@ function SearchContent() {
     setRestoredFromLastSearch(false);
     try {
       const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(pageNum), source_type: "play" });
+      /* `source_type` is the Film & TV chip's field and this shelf is plays;
+         letting it through the loop below would overwrite the pin above. */
       if (searchQuery.trim()) params.set("q", searchQuery);
       Object.entries(searchFilters).forEach(([key, value]) => {
+        if (key === "source_type") return;
         if (value) params.append(key, value);
       });
       if (effectiveMaxOverdone < 1) params.set("max_overdone_score", String(effectiveMaxOverdone));
@@ -914,7 +923,7 @@ function SearchContent() {
       setSearchError(null);
       setQueryInvalidReason(null);
       try {
-        const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1", source_type: "film,tv" });
+        const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1", source_type: filters.source_type || "film,tv" });
         if (filmTvQuery.trim()) params.set("q", filmTvQuery.trim());
         // Apply the same filters as plays
         Object.entries(filters).forEach(([key, value]) => {
@@ -1733,236 +1742,155 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       </div>
 
       <div>
-        {/* Search bar. Stacked on mobile for easier tap targets. Centred, and
-            after a search it widens to the same measure as the results, so the
-            bar, the count and the cards all share one edge and one centre. */}
-        <div className={chromeCompact ? "mx-auto w-full" : "max-w-3xl mx-auto"}>
-          <div className={chromeCompact ? "flex items-center gap-2" : ""}>
-          <div className="relative group flex-1 min-w-0">
-            {/* Ambient glow effect - subtle background */}
-            <div
-              className={`absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-primary/0 via-primary/30 to-primary/0 blur-lg transition-all duration-500 ${
-                isTyping ? "opacity-100 scale-105" : "opacity-0 scale-100"
-              }`}
-            />
+        {/* The search box.
 
-            {/* Sweeping spotlight overlay */}
-            <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-              <div
-                className={`absolute inset-0 bg-gradient-to-r from-transparent ${searchMode === "film_tv" ? "via-violet-400/10" : "via-primary/10"} to-transparent transition-transform duration-700 ease-out ${
-                  isTyping ? "translate-x-full" : "-translate-x-full"
-                }`}
-              />
-            </div>
-
-            <div
-              className={`relative flex ${
-                /* stacked is roomier for a first search, but inside the sticky
-                   bar it costs a button's height of results on every phone */
-                chromeCompact
-                  ? "flex-row items-center gap-1 rounded-full border bg-muted/30 p-1 pl-1.5"
-                  : "flex-col gap-2 rounded-xl border bg-card p-2 shadow-sm"
-              } md:flex-row md:items-center transition-all duration-300 ${
-                isTyping
-                  ? searchMode === "film_tv"
-                    ? "border-violet-400/50"
-                    : "border-primary/50"
-                  : "border-border/70"
-              } ${jitter ? "search-jitter" : ""}`}
-              onAnimationEnd={() => setJitter(false)}
-            >
-              <div className="flex-1 relative min-w-0 w-full">
-                <IconSearch className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${
-                  isTyping ? (searchMode === "film_tv" ? "text-violet-400" : "text-primary") : "text-muted-foreground"
-                }`} />
-                <Input
-                  id="search-input"
-                  placeholder={typewriterText || (searchMode === "film_tv" ? "Search scripts, scenes, speeches..." : "Search monologues...")}
-                  value={searchMode === "plays" ? playsQuery : filmTvQuery}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (searchMode === "plays") setPlaysQuery(v);
-                    else setFilmTvQuery(v);
-                    pauseTypewriter();
-                    setIsTyping(true);
-                    if (typingTimeoutRef.current) {
-                      clearTimeout(typingTimeoutRef.current);
-                    }
-                    typingTimeoutRef.current = setTimeout(() => {
-                      setIsTyping(false);
-                    }, 800);
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  onFocus={() => {
-                    pauseTypewriter();
-                    noteSearchBoxFocused();
-                    if (currentQuery) setIsTyping(true);
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => setIsTyping(false), 200);
-                    if (!currentQuery) resumeTypewriter();
-                  }}
-                  /* pr clears the absolutely-positioned clear button (44px wide
-                     at right-3); pr-10 let long queries run underneath it. */
-                  className={`pl-11 pr-14 text-base border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 ${
-                    chromeCompact ? "min-h-[40px] h-10" : "min-h-[48px] md:h-12"
-                  }`}
-                />
-                {!isLoading && (searchMode === "plays" ? playsQuery : filmTvQuery) && (
-                  <button
-                    type="button"
-                    onClick={() => searchMode === "plays" ? setPlaysQuery("") : setFilmTvQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md hover:bg-muted/50 transition-colors"
-                    aria-label="Clear search"
-                  >
-                    <IconX className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-              {/* Always present. It shrinks to a round icon button once results
-                  are up (see the `chromeCompact` branch below) but it must not
-                  disappear: hiding it left Enter as the only way to re-run a
-                  search, which on a phone keyboard is not a discoverable path
-                  and on desktop reads as the search box having gone dead. */}
-              {(
-                <Button
-                  onClick={isLoading ? stopSearch : handleSearch}
-                  size="default"
-                  variant={isLoading ? "outline" : "default"}
-                  aria-label={isLoading ? "Stop search" : "Search"}
-                  className={`shrink-0 transition-all duration-300 ${
-                    chromeCompact
-                      ? "h-9 w-9 min-h-0 min-w-0 rounded-full p-0"
-                      : `min-h-[44px] min-w-[44px] md:min-h-[2.5rem] md:min-w-0 px-4 md:px-6 rounded-lg ${
-                          isLoading ? "" : isTyping ? (searchMode === "film_tv" ? "shadow-md shadow-violet-400/20" : "shadow-md shadow-primary/20") : ""
-                        }`
-                  }`}
-                >
-                  {isLoading ? (
-                    <>
-                      <IconX className="h-4 w-4" />
-                      {!chromeCompact && <span className="hidden md:inline ml-1">Stop</span>}
-                    </>
-                  ) : chromeCompact ? (
-                    /* The compact state is a 36px circle, so it needs a glyph.
-                       It was still rendering the word "Search", which spilled
-                       out of the circle — hence the button looking broken. */
-                    <IconSearch className="h-4 w-4" />
-                  ) : (
-                    "Search"
-                  )}
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Filters sits beside the field, not crammed inside it */}
-          {chromeCompact && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFiltersSheet(true)}
-                className="md:hidden shrink-0 gap-1 min-h-[40px] min-w-[40px] px-2 text-muted-foreground hover:text-foreground"
-                aria-label="Filters"
-              >
-                <IconAdjustments className="h-4 w-4" />
-                {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                  <span className="tabular-nums text-xs text-primary">
-                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
-                  </span>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFilters(true)}
-                className="hidden md:inline-flex shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
-              >
-                <IconAdjustments className="h-4 w-4" />
-                Filters
-                {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                  <span className="tabular-nums text-xs text-primary">
-                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
-                  </span>
-                )}
-              </Button>
-            </>
-          )}
-          </div>
-
-          {/* Action Row - Filters (Plays or Film & TV) + Find for me (Plays only).
-              After a search these controls move inside the search bar itself,
-              so this row would just be a duplicate taking up sticky height. */}
+            One pill on a hard shadow in the mode accent, with "Find for me"
+            beside it as a dashed twin — dashed because it is the "I don't know
+            what I want" door, and it should not look like the same commitment
+            as typing something. Every handler below is the one that was here
+            before; only the surface changed. */}
+        <div className="flex flex-wrap items-stretch gap-3">
           <div
-            id="search-filters"
-            className={`flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
-              chromeCompact ? "hidden" : "flex mt-3 sm:mt-4"
-            }`}
+            className="group relative flex min-w-0 flex-1 basis-80 items-center gap-3 px-5"
+            style={{
+              minHeight: 68,
+              borderRadius: 40,
+              background: "var(--t-paper)",
+              border: "2px solid var(--t-text)",
+              boxShadow: "8px 8px 0 var(--acc)",
+              transition: "transform .25s var(--t-spring), box-shadow .25s",
+            }}
+            onFocusCapture={(e) => {
+              e.currentTarget.style.transform = "translate(-2px,-2px)";
+              e.currentTarget.style.boxShadow = "10px 10px 0 var(--acc)";
+            }}
+            onBlurCapture={(e) => {
+              e.currentTarget.style.transform = "";
+              e.currentTarget.style.boxShadow = "8px 8px 0 var(--acc)";
+            }}
           >
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFiltersSheet(true)}
-                className="md:hidden gap-2 text-muted-foreground hover:text-foreground min-h-[44px]"
+            <IconSearch className="size-[22px] shrink-0" style={{ color: "var(--t-text)" }} aria-hidden />
+            <Input
+              id="search-input"
+              placeholder={
+                typewriterText ||
+                (searchMode === "film_tv" ? "Search scripts, scenes, speeches..." : "Search monologues...")
+              }
+              value={searchMode === "plays" ? playsQuery : filmTvQuery}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (searchMode === "plays") setPlaysQuery(v);
+                else setFilmTvQuery(v);
+                pauseTypewriter();
+                setIsTyping(true);
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 800);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              onFocus={() => {
+                pauseTypewriter();
+                noteSearchBoxFocused();
+                if (currentQuery) setIsTyping(true);
+              }}
+              onBlur={() => {
+                setTimeout(() => setIsTyping(false), 200);
+                if (!currentQuery) resumeTypewriter();
+              }}
+              className="min-h-0 flex-1 border-0 bg-transparent px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              style={{
+                fontFamily: "var(--t-body)",
+                fontSize: "clamp(17px,1.6vw,21px)",
+                fontWeight: 500,
+                color: "var(--t-text)",
+                borderRadius: 0,
+              }}
+            />
+            {!isLoading && (searchMode === "plays" ? playsQuery : filmTvQuery) && (
+              <button
+                type="button"
+                onClick={() => (searchMode === "plays" ? setPlaysQuery("") : setFilmTvQuery(""))}
+                aria-label="Clear search"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full transition-colors"
+                style={{ background: "oklch(0.92 0.02 80)", color: "var(--t-text)" }}
               >
-                <IconAdjustments className="h-4 w-4" />
-                Filters
-                {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
-                  </Badge>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                className={`hidden md:flex gap-2 text-muted-foreground hover:text-foreground ${showFilters ? "text-foreground bg-muted" : ""}`}
-              >
-                <IconAdjustments className="h-4 w-4" />
-                Filters
-                {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
-                  </Badge>
-                )}
-              </Button>
-            </div>
-
-            {searchMode === "plays" && (
-              <Button
-                id="search-find-for-me"
-                onClick={handleFindForMe}
-                disabled={isLoading}
-                variant="outline"
-                size="sm"
-                /* a way in before you've searched; on a phone afterwards it's
-                   just another row between the actor and the results */
-                className={`gap-2 min-h-[44px] md:min-h-0 border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary ${
-                  chromeCompact ? "hidden md:inline-flex" : ""
-                }`}
-              >
-                <IconSparkles className="h-4 w-4" />
-                Find for me
-              </Button>
+                <IconX className="size-4" />
+              </button>
             )}
+            <button
+              type="button"
+              onClick={isLoading ? stopSearch : handleSearch}
+              aria-label={isLoading ? "Stop search" : "Search"}
+              className="flex h-11 shrink-0 items-center gap-2.5 pl-5 pr-1.5 text-[15px] font-bold transition-transform hover:scale-[1.04] hover:-rotate-[1.5deg]"
+              style={{
+                borderRadius: 999,
+                background: "var(--t-cta-bg)",
+                border: "1.5px solid oklch(0.45 0.03 55)",
+                color: "var(--t-cream)",
+                transitionTimingFunction: "var(--t-spring)",
+              }}
+            >
+              {isLoading ? "Looking" : "Search"}
+              <span
+                className="flex size-6 items-center justify-center rounded-full"
+                style={{ background: "var(--t-gel)", color: "var(--t-cta-bg)" }}
+                aria-hidden
+              >
+                {isLoading ? (
+                  <IconLoader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                )}
+              </span>
+            </button>
           </div>
 
-          {/* Quick filter chips — one-tap popular filters. They're a way in to
-              the first search; after that the parsed-constraint chips and the
-              filter panel do this job, and keeping them would fatten the
-              sticky bar. */}
-          {!chromeCompact && (
-            <div className="mt-3">
-              <QuickFilterChips
-                filters={filters}
-                onToggle={(key, value) => setFilters({ ...filters, [key]: value })}
-                hideCategory={searchMode === "film_tv"}
-              />
-            </div>
+          {searchMode === "plays" && (
+            <button
+              id="search-find-for-me"
+              type="button"
+              onClick={handleFindForMe}
+              disabled={isLoading}
+              className="t-find-for-me flex shrink-0 items-center gap-2 px-6 text-[15px] font-semibold disabled:opacity-50"
+              style={{ minHeight: 68, borderRadius: 40 }}
+            >
+              <IconSparkles className="size-[18px]" />
+              Find for me
+            </button>
           )}
+        </div>
+
+        {/* Quick chips. They stay after a search now: the head is a fixed
+            height and the bar no longer collapses, so there is nothing for
+            hiding them to protect. */}
+        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="min-w-0 flex-1">
+            <QuickFilterChips
+              filters={filters}
+              onToggle={(key, value) => setFilters({ ...filters, [key]: value })}
+              hideCategory={searchMode === "film_tv"}
+              mode={searchMode}
+              onOpenFilters={() => {
+                if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
+                  setShowFilters(true);
+                } else {
+                  setShowFiltersSheet(true);
+                }
+              }}
+              activeFilterCount={activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
+            />
+          </div>
+          <p className="t-dir shrink-0" style={{ fontSize: 12, color: "var(--t-faint)" }}>
+            {maxOverdoneScore >= 1
+              ? "(fresh picks first · showing everything)"
+              : maxOverdoneScore <= 0
+                ? "(freshest only)"
+                : "(fresh picks first)"}
+          </p>
+        </div>
+
+        <SourceTagLegend className="mt-3" />
 
           {/* Mobile: filters in sheet (SearchFiltersSheet). Desktop: expandable inline filters */}
           <SearchFiltersSheet
@@ -2015,7 +1943,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
             </DialogContent>
           </Dialog>
-        </div>
       </div>
 
       <div className="space-y-6">

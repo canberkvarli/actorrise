@@ -1749,3 +1749,21 @@
   .t-outline-flash { display: none; }
   .t-search-wash { transition: none; }
 }
+
+/* "Find for me": the I-don't-know-what-I-want door. Dashed on purpose — it
+   should not read as the same commitment as typing something. */
+.t-find-for-me {
+  font-family: var(--t-body);
+  background: transparent;
+  border: 2px dashed var(--t-text);
+  color: var(--t-text);
+  transition:
+    transform 0.3s var(--t-spring),
+    background 0.25s,
+    border-color 0.25s;
+}
+.t-find-for-me:hover:not(:disabled) {
+  background: var(--t-gel);
+  border-style: solid;
+  transform: rotate(1.5deg);
+}
