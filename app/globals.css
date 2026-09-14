@@ -1860,3 +1860,115 @@
     box-shadow: 0 0 24px 5px oklch(0.85 0.17 80 / 0.6);
   }
 }
+
+/* --- Result rows ----------------------------------------------------------
+   A page of sides: a reserved margin on the left holding the scene number and
+   any pencil notes, the speech in the body. The margin is reserved whether or
+   not it holds anything, which is what stops a mark appearing from shoving the
+   speech sideways. */
+.t-row {
+  grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+  gap: 24px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--t-line-light);
+}
+
+.t-row__margin {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  padding-right: 20px;
+  text-align: right;
+  border-right: 1px solid var(--t-line-light);
+}
+
+.t-row__numeral {
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 28px;
+  line-height: 1;
+  color: oklch(0.75 0.02 70);
+}
+
+.t-row__name {
+  font-family: var(--t-direction);
+  font-weight: 700;
+  font-size: clamp(20px, 2vw, 26px);
+  line-height: 1.15;
+  color: var(--t-text);
+  transition: color 0.2s;
+}
+.t-row__name:hover {
+  color: var(--t-orange-deep);
+}
+
+/* Marks land just after the row they annotate — see --mark-d, set per mark. */
+@keyframes t-markin {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: none; }
+}
+.t-mark {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  white-space: nowrap;
+  animation: t-markin 0.5s ease-out var(--mark-d, 0s) both;
+}
+.t-mark--best {
+  background: var(--t-orange-deep);
+  color: var(--t-cream);
+}
+.t-mark--lane {
+  background: var(--t-gel);
+  color: var(--t-text);
+}
+.t-mark--overdone {
+  background: var(--t-text);
+  color: var(--t-cream);
+}
+.t-mark--match {
+  border-color: var(--t-line-light);
+  color: var(--t-muted-dark-2);
+}
+
+/* Rehearse: the one filled control on a row. */
+.t-rehearse {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 6px 0 18px;
+  border-radius: 999px;
+  background: var(--t-cta-bg);
+  border: 1.5px solid oklch(0.45 0.03 55);
+  color: var(--t-cream);
+  font-family: var(--t-body);
+  font-size: 14px;
+  font-weight: 700;
+  transition: transform 0.3s var(--t-spring);
+}
+.t-rehearse:hover {
+  transform: scale(1.04) rotate(-1.5deg);
+  color: var(--t-cream);
+}
+.t-rehearse__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--t-gel);
+  color: var(--t-cta-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-mark { animation: none; }
+  .t-rehearse:hover { transform: none; }
+}

@@ -9,6 +9,7 @@ import { Monologue } from "@/types/actor";
 import { displayableAuthor } from "@/lib/utils";
 import type { ProfileMatch } from "@/lib/profileMatch";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
+import { MonologueSourceTag } from "@/components/search/SourceTag";
 
 /**
  * A search result as a page of sides, not a card in a grid.
@@ -61,7 +62,23 @@ function excerpt(text: string, limit = 185): { text: string; endsClean: boolean 
   return { text: word > 0 ? window.slice(0, word) : window, endsClean: false };
 }
 
-type Mark = { key: string; label: string; className: string; title?: string };
+type MarkTone = "best" | "lane" | "overdone" | "match";
+type Mark = { key: string; label: string; tone: MarkTone; title?: string };
+
+/** Roman numerals for the margin. Results are a page of sides; the rank is set
+ *  the way a scene number is, not as a digit in a circle. */
+function roman(n: number): string {
+  const table: [number, string][] = [[10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"]];
+  let out = "";
+  let left = n;
+  for (const [value, sign] of table) {
+    while (left >= value) {
+      out += sign;
+      left -= value;
+    }
+  }
+  return out;
+}
 
 /**
  * Only the match types that say something. "Great match" on every row is noise,
@@ -99,7 +116,7 @@ function matchMark(m: Monologue): Mark | null {
   return {
     key: "match",
     label,
-    className: "text-muted-foreground/70",
+    tone: "match",
     title: "This came back because it matched the words you typed, not a guess at what you meant.",
   };
 }
@@ -112,7 +129,6 @@ function matchMark(m: Monologue): Mark | null {
 function marksFor(
   mono: Monologue,
   index: number,
-  mode: "plays" | "film_tv",
   profileMatch?: ProfileMatch,
   showMatchMark = true,
 ): Mark[] {
@@ -126,7 +142,7 @@ function marksFor(
     marks.push({
       key: "best",
       label: "best pick",
-      className: mode === "film_tv" ? "text-accent-screen" : "text-primary",
+      tone: "best",
       title: "The closest thing to what you asked for.",
     });
   }
@@ -139,7 +155,7 @@ function marksFor(
     marks.push({
       key: "lane",
       label: "your lane",
-      className: "text-teal-600 dark:text-teal-400",
+      tone: "lane",
       title: profileMatch.reasons[0],
     });
   }
@@ -150,7 +166,7 @@ function marksFor(
     marks.push({
       key: "overdone",
       label: "everyone brings this",
-      className: "text-amber-700 dark:text-amber-500",
+      tone: "overdone",
       title: "Auditors see this one a lot. Worth knowing before you pick it.",
     });
   }
@@ -221,7 +237,7 @@ export function MonologueSpeech({
   const shown = excerpt(body);
   const truncated = shown.text.length < body.length;
 
-  const marks = marksFor(mono, index, mode, profileMatch, showMatchMark);
+  const marks = marksFor(mono, index, profileMatch, showMatchMark);
   const poster = mode === "film_tv" ? mono.poster_url : null;
 
   /* Typed, not set in the UI face. These are notes in the margin of a page of
@@ -231,11 +247,12 @@ export function MonologueSpeech({
      page the speech is printed on. */
   const markList = (
     <>
-      {marks.map((m) => (
+      {marks.map((m, k) => (
         <span
           key={m.key}
           title={m.title}
-          className={`font-typewriter text-[10px] uppercase leading-relaxed tracking-[0.12em] ${m.className}`}
+          className={`t-mark t-mark--${m.tone}`}
+          style={{ ["--mark-d" as string]: `${0.35 + index * 0.09 + k * 0.1}s` }}
         >
           {m.label}
         </span>
@@ -245,9 +262,9 @@ export function MonologueSpeech({
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.04, 0.3), duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      initial={{ opacity: 0, y: 24, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ delay: Math.min(0.15 + index * 0.07, 0.9), duration: 0.6, ease: [0.34, 1.56, 0.64, 1] }}
       /* Two cells: the margin, and everything else.
          An earlier version split the right side into three grid rows so a mark
          could line up with the first line of the speech. The poster then set
@@ -255,7 +272,8 @@ export function MonologueSpeech({
          100px hole. Nothing needed that alignment badly enough to pay for it —
          a mark annotates the whole entry, and sitting beside the character
          name is where it belongs anyway. */
-      className="group border-t border-border/60 py-6 first:border-t-0 first:pt-2 sm:grid sm:grid-cols-[8rem_1fr]"
+      className="t-row group sm:grid"
+      style={{ ["--row-d" as string]: `${0.15 + index * 0.09}s` }}
     >
       {/* Below sm the margin has nowhere to go, so the marks run as one line
           above the name rather than stealing width from the speech. */}
@@ -268,14 +286,18 @@ export function MonologueSpeech({
       {/* The margin. The poster was dropped entirely when the cards became
           rows, and at 52px wide when it came back you could not tell one film
           from another. */}
-      <div className="hidden sm:flex sm:flex-col sm:items-end sm:gap-3 sm:pr-4 sm:pt-1 sm:text-right">
+      <div className="t-row__margin hidden sm:flex">
+        <span className="t-row__numeral" aria-hidden>
+          {roman(index + 1)}
+        </span>
         {poster && (
           <Image
             src={poster}
             alt=""
             width={96}
             height={144}
-            className="h-[144px] w-[96px] rounded-sm object-cover shadow-sm ring-1 ring-border/40 transition-transform duration-300 group-hover:scale-[1.03]"
+            className="h-[108px] w-[72px] rounded-sm object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            style={{ border: "1.5px solid var(--t-text)", boxShadow: "4px 4px 0 var(--t-text)" }}
             unoptimized
           />
         )}
@@ -283,20 +305,20 @@ export function MonologueSpeech({
       </div>
       {/* The rule is what makes the empty column read as a margin rather than a
           hole. It runs the height of the entry because this is one cell. */}
-      <div className="sm:border-l sm:border-border/40 sm:pl-6">
+      <div className="min-w-0">
         <div className="flex items-baseline justify-between gap-4">
           <h3 className="min-w-0">
             <button
               type="button"
               onClick={onSelect}
-              className="font-typewriter break-words text-left text-xl font-semibold leading-tight text-foreground transition-colors hover:text-primary sm:text-2xl"
+              className="t-row__name break-words text-left"
             >
               {mono.character_name}
             </button>
           </h3>
           {/* Length and who it is for: facts about the piece, so they sit with
               the title rather than drifting into the row of things you can do. */}
-          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+          <span className="shrink-0 text-[13px] tabular-nums" style={{ color: "var(--t-muted-dark)" }}>
             {[length, age, colour].filter(Boolean).join(" · ")}
           </span>
         </div>
@@ -306,11 +328,15 @@ export function MonologueSpeech({
              nowhere on the row. Its own flex child and shrink-0, so a long
              title truncates and the era survives — the other way round it was
              the first thing to disappear. */
-          <p className="mt-1 flex items-baseline gap-2 text-sm text-muted-foreground">
-            <span className="font-typewriter truncate">{source}</span>
-            {era && (
-              <span className="shrink-0 text-xs text-muted-foreground/70">{era}</span>
-            )}
+          <p
+            className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1"
+            style={{ fontFamily: "var(--t-direction)", fontSize: 14, color: "var(--t-muted-dark-2)" }}
+          >
+            <span className="truncate">{source}</span>
+            {era && <span className="shrink-0 text-[13px]">{era}</span>}
+            {/* Which shelf it is off, after the source line — the same pill the
+                quick chips and the shelf rows use. */}
+            <MonologueSourceTag monologue={mono} />
           </p>
         )}
 
@@ -328,7 +354,8 @@ export function MonologueSpeech({
       >
         <motion.p
           layout
-          className="font-typewriter max-w-[64ch] text-[15px] leading-[1.8] text-foreground/85"
+          className="max-w-[64ch]"
+          style={{ fontFamily: "var(--t-direction)", fontSize: 15, lineHeight: 1.8, color: "oklch(0.22 0.01 45)" }}
         >
           &ldquo;{open ? body : shown.text}
           {!open && truncated && !shown.endsClean && (
@@ -337,7 +364,7 @@ export function MonologueSpeech({
           &rdquo;
         </motion.p>
         {truncated && (
-          <span className="mt-1.5 inline-block text-xs text-muted-foreground/70 group-hover:text-muted-foreground">
+          <span className="mt-2 inline-block text-xs underline underline-offset-4" style={{ color: "var(--t-muted-dark-2)" }}>
             {open ? "less" : "read it all"}
           </span>
         )}
@@ -347,17 +374,24 @@ export function MonologueSpeech({
         {/* "Read" is gone: the character name opens the piece, and the speech
             itself now expands in place, so a third control for the same two
             jobs was just a link to argue with. */}
-        <Link prefetch={false}
+        <Link
+          prefetch={false}
           href={`/monologue/${mono.id}/work`}
           onClick={(e) => e.stopPropagation()}
-          className="font-medium text-primary underline-offset-4 hover:underline"
+          className="t-rehearse"
         >
           Rehearse
+          <span className="t-rehearse__dot" aria-hidden>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </span>
         </Link>
         <button
           type="button"
           onClick={(e) => onToggleFavorite(e, mono)}
-          className="inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
+          style={{ color: mono.is_favorited ? "var(--t-orange-deep)" : "var(--t-muted-dark-2)" }}
           aria-pressed={mono.is_favorited}
         >
           <BookmarkIcon filled={mono.is_favorited} className="h-4 w-4" />
