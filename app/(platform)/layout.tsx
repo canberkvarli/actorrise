@@ -424,9 +424,13 @@ export default function PlatformLayout({
 
                 {/* Dropdown Menu */}
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-border/50 bg-card/95 backdrop-blur-sm shadow-lg shadow-black/40 z-[9999]">
-                    <div className="p-3">
-                      <div className="flex items-center gap-4 rounded-xl bg-muted/60 px-4 py-4 mb-3">
+                  <div className="t-playbill-menu" role="menu">
+                    {/* The actor's initials, watching from behind the card. */}
+                    <span aria-hidden className="t-playbill-menu__mark">
+                      {profileInitial}
+                    </span>
+                    <div className="relative">
+                      <div className="t-playbill-menu__head">
                         {headshotUrl ? (
                           <Image
                             src={headshotUrl}
@@ -438,12 +442,10 @@ export default function PlatformLayout({
                             onError={() => setHeadshotFailed(true)}
                           />
                         ) : (
-                          <div className="flex items-center justify-center h-11 w-11 rounded-full bg-foreground text-background text-sm font-medium">
-                            {profileInitial}
-                          </div>
+                          <div className="t-playbill-menu__avatar">{profileInitial}</div>
                         )}
                         <div className="min-w-0 flex flex-col gap-1.5">
-                          <p className="text-sm font-semibold leading-tight truncate text-foreground">
+                          <p className="t-playbill-menu__name truncate">
                             {displayName ? profileLabel : "Your account"}
                           </p>
                           {!displayName && (
@@ -464,13 +466,11 @@ export default function PlatformLayout({
                         </div>
                       </div>
 
-                      <p className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                        Profile
-                      </p>
+                      <p className="t-playbill-menu__dir">(you.)</p>
                       <Link
                         href="/profile"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        className="t-playbill-menu__row"
                       >
                         <IconUser className="h-4 w-4 text-muted-foreground" />
                         <span>Edit profile</span>
@@ -478,7 +478,7 @@ export default function PlatformLayout({
                       <Link
                         href="/resume"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        className="t-playbill-menu__row"
                       >
                         <IconFileText className="h-4 w-4 text-muted-foreground" />
                         <span>Résumé</span>
@@ -486,19 +486,17 @@ export default function PlatformLayout({
                       <Link
                         href="/rehearse"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        className="t-playbill-menu__row"
                       >
                         <IconBookmark className="h-4 w-4 text-muted-foreground" />
                         <span>Collection</span>
                       </Link>
 
-                      <p className="px-2 py-1.5 mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                        Billing & settings
-                      </p>
+                      <p className="t-playbill-menu__dir">(the box office.)</p>
                       <Link
                         href="/billing"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        className="t-playbill-menu__row"
                       >
                         <IconCreditCard className="h-4 w-4 text-muted-foreground" />
                         <span>Billing</span>
@@ -506,7 +504,7 @@ export default function PlatformLayout({
                       <Link
                         href="/settings"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        className="t-playbill-menu__row"
                       >
                         <IconSettings className="h-4 w-4 text-muted-foreground" />
                         <span>Account settings</span>
@@ -520,7 +518,7 @@ export default function PlatformLayout({
                           <Link
                             href="/admin"
                             onClick={() => setProfileDropdownOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                            className="t-playbill-menu__row"
                           >
                             <IconShieldCheck className="h-4 w-4 text-muted-foreground" />
                             <span>Admin</span>
@@ -528,22 +526,22 @@ export default function PlatformLayout({
                         </>
                       )}
 
-                      <div className="my-2 h-px bg-border/40" />
+                    </div>
 
+                    <div className="t-playbill-menu__foot">
+                      <span className="t-playbill-menu__dir m-0 p-0">(curtain call.)</span>
                       <button
                         onClick={() => {
                           setProfileDropdownOpen(false);
                           void logout();
                         }}
                         disabled={isLoggingOut}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors text-left text-destructive disabled:opacity-70 disabled:pointer-events-none"
+                        className="t-playbill-menu__out"
                       >
                         {isLoggingOut ? (
-                          <IconLoader2 className="h-4 w-4 animate-spin shrink-0" />
-                        ) : (
-                          <IconLogout className="h-4 w-4 shrink-0" />
-                        )}
-                        <span>{isLoggingOut ? "Logging out…" : "Log out"}</span>
+                          <IconLoader2 className="size-3.5 animate-spin shrink-0" />
+                        ) : null}
+                        {isLoggingOut ? "Logging out…" : "Log out"}
                       </button>
                     </div>
                   </div>
@@ -726,10 +724,13 @@ export default function PlatformLayout({
       {/* Mobile Bottom Navigation - one-thumb access to primary actions */}
       {!isImmersive && (
       <nav
-        className="dark md:hidden fixed bottom-0 left-0 right-0 z-[9998] bg-[color-mix(in_oklab,var(--background)_92%,transparent)] backdrop-blur-md border-t border-border text-foreground safe-area-bottom"
+        /* A floating pill under the thumb rather than a bar welded to the
+           bottom edge, matching the header above it. safe-area-bottom keeps it
+           clear of the home indicator. */
+        className="t-tabbar dark safe-area-bottom md:hidden"
         style={{ ['--primary']: 'oklch(0.76 0.15 52)' } as React.CSSProperties}
       >
-        <div className="flex items-stretch justify-around min-h-[48px]">
+        <div className="flex items-stretch gap-1">
           {/* Same navItems, same order as the desktop bar, so the two navs can no
               longer drift apart. Account is appended here only, it lives in the
               avatar dropdown on desktop. */}
@@ -739,20 +740,20 @@ export default function PlatformLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-                  isNavActive(item) ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                }`}
+                className="t-tabbar__tab"
+                data-active={isNavActive(item)}
+                aria-current={isNavActive(item) ? "page" : undefined}
               >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <Icon className="size-[18px] shrink-0" />
+                {item.label}
               </Link>
             );
           })}
           <Link
             href="/profile"
-            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-              pathname === "/profile" ? "text-primary" : "text-muted-foreground hover:text-foreground"
-            }`}
+            className="t-tabbar__tab"
+            data-active={pathname === "/profile"}
+            aria-current={pathname === "/profile" ? "page" : undefined}
           >
             {headshotUrl ? (
               <Image
@@ -760,16 +761,16 @@ export default function PlatformLayout({
                 alt=""
                 width={24}
                 height={24}
-                className="rounded-full object-cover h-6 w-6 shrink-0"
+                className="size-[18px] shrink-0 rounded-full object-cover"
                 unoptimized
                 onError={() => setHeadshotFailed(true)}
               />
             ) : (
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background text-[10px] font-medium shrink-0">
+              <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-foreground text-[9px] font-medium text-background">
                 {profileInitial}
               </span>
             )}
-            <span className="text-[10px] font-medium">Account</span>
+            Account
           </Link>
         </div>
       </nav>
