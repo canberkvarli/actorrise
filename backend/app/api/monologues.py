@@ -1077,6 +1077,10 @@ async def search_demo(
 async def get_recommendations(
     limit: int = Query(20, le=100),
     fast: bool = Query(False, description="Use SQL-only for faster response (e.g. dashboard)"),
+    source_type: Optional[str] = Query(
+        None,
+        description="Limit to a shelf: 'play', or 'film,tv'. Comma-separated for multiple.",
+    ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -1094,7 +1098,8 @@ async def get_recommendations(
     # Get recommendations (fast=True skips semantic search for quicker dashboard load)
     recommender = Recommender(db)
     results = recommender.recommend_for_actor(
-        actor_profile, limit=limit, fast=fast, user_id=current_user.id
+        actor_profile, limit=limit, fast=fast, user_id=current_user.id,
+        source_type=source_type,
     )
 
     # Get favorites - OPTIMIZED: only for result set

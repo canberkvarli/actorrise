@@ -1038,21 +1038,41 @@ function SearchContent() {
       return;
     }
 
-    setIsPlaysLoading(true);
+    /* Which shelf the actor is standing at. This used to be hardcoded to
+       plays: it set the play loading flag, wrote into the play results and
+       pinned the stored mode to "plays", so pressing it from Film & TV would
+       have run a play search and dropped the answers where that tab cannot
+       show them. The recommender takes a source filter now. */
+    const onScreen = searchMode === "film_tv";
+
     setIsFindingForMe(true);
-    setHasSearched(true);
-    setPlaysQuery(""); // Clear query to show it's AI-based
+    if (onScreen) {
+      setIsFilmTvLoading(true);
+      setFilmTvHasSearched(true);
+      setFilmTvQuery("");
+    } else {
+      setIsPlaysLoading(true);
+      setHasSearched(true);
+      setPlaysQuery("");
+    }
     setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" }); // Clear filters
 
     try {
-      const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=20");
-      setResults(response.data);
+      const response = await api.get<Monologue[]>(
+        `/api/monologues/recommendations?limit=20${onScreen ? "&source_type=film,tv" : ""}`,
+      );
+      if (onScreen) {
+        setFilmTvResults(response.data);
+        setFilmTvTotal(response.data.length);
+      } else {
+        setResults(response.data);
+      }
       setCorrectedQuery(null);
 
       // Persist AI "Find for me" results as the last search so that
       // navigating away and back to /monologues keeps them visible.
       sessionStorage.setItem(
-        LAST_SEARCH_KEY,
+        onScreen ? FILM_TV_LAST_SEARCH_KEY : LAST_SEARCH_KEY,
         JSON.stringify({
           query: "",
           filters: { gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" },
@@ -1060,10 +1080,13 @@ function SearchContent() {
           total: response.data.length,
         })
       );
-      sessionStorage.setItem(SEARCH_LAST_MODE_KEY, "plays");
+      sessionStorage.setItem(SEARCH_LAST_MODE_KEY, onScreen ? "film_tv" : "plays");
 
-      // Update URL to reflect AI search
-      router.replace("/monologues?ai=true", { scroll: false });
+      // Update URL to reflect AI search, on the shelf it was run from.
+      router.replace(
+        onScreen ? "/monologues?mode=film_tv&ai=true" : "/monologues?ai=true",
+        { scroll: false },
+      );
 
       // Increment results view count for "every other search" feedback prompt
       try {
@@ -1084,9 +1107,11 @@ function SearchContent() {
       } else {
         console.error("Find For Me error:", error);
       }
-      setResults([]);
+      if (onScreen) setFilmTvResults([]);
+      else setResults([]);
     } finally {
-      setIsPlaysLoading(false);
+      if (onScreen) setIsFilmTvLoading(false);
+      else setIsPlaysLoading(false);
       setIsFindingForMe(false);
     }
   };
@@ -1899,14 +1924,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </button>
           </div>
 
-          {/* Plays only, still. Ungating this is a one-line change here and a
-              broken feature: handleFindForMe is hardcoded to the play shelf —
-              it sets isPlaysLoading, writes into `results`, pins the stored
-              mode to "plays", and calls /recommendations, which takes no
-              source_type and can only return plays. Pressed from the screen
-              shelf it would run a play search and drop the answers where this
-              tab cannot show them. The backend needs the filter first. */}
-          {searchMode === "plays" && (
+          {/* Both shelves. "I don't know what I want" is at least as true of
+              film and TV as it is of plays. */}
+          {(
             <button
               id="search-find-for-me"
               type="button"
