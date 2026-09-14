@@ -1137,7 +1137,8 @@
    element as `.theatre`, so nothing outside this class ever sees them.
    ========================================================================== */
 
-.theatre {
+.theatre,
+.theatre-tokens {
   /* Surfaces */
   --t-ink: oklch(0.13 0.015 50);
   --t-stage: oklch(0.16 0.018 52);
@@ -1198,7 +1199,15 @@
   --t-display: var(--font-theatre-display), Georgia, "Times New Roman", serif;
   --t-body: var(--font-theatre-body), ui-sans-serif, system-ui, sans-serif;
   --t-direction: var(--font-theatre-direction), "Courier New", Courier, monospace;
+}
 
+/* `.theatre-tokens` above is the palette and the three faces and nothing else.
+   The marketing pages mount it on a body that still follows the visitor's
+   light/dark choice, so their chrome — the nav pill, the stage hero band, the
+   footer — can speak the landing's language while the page underneath stays
+   theme-aware. `.theatre` adds the part that only the landing wants: the ink
+   ground and the fixed, theme-independent surface. */
+.theatre {
   background: var(--t-ink);
   color: var(--t-cream);
   font-family: var(--t-body);

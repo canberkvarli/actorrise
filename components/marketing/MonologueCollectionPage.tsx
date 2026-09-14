@@ -65,7 +65,7 @@ export function MonologueCollectionPage({ collection, monologues }: { collection
           <Link href={searchHref}>Search all of them</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/signup">Get started free</Link>
+          <Link href="/signup">Start rehearsing</Link>
         </Button>
       </StageHero>
 
@@ -149,7 +149,7 @@ export function MonologueCollectionPage({ collection, monologues }: { collection
               <Link href={searchHref}>Search the corpus</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-              <Link href="/signup">Get started free</Link>
+              <Link href="/signup">Start rehearsing</Link>
             </Button>
           </div>
         </div>

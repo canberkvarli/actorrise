@@ -33,7 +33,7 @@ export default function Page() {
       <StageHero direction="(dig deep.)" title={H1} lede={INTRO}>
         <div className="flex flex-wrap gap-4">
           <Button asChild size="lg" className="rounded-full px-6">
-            <Link href="/signup">Get started free</Link>
+            <Link href="/signup">Start rehearsing</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
             <Link href="/">Try the search</Link>

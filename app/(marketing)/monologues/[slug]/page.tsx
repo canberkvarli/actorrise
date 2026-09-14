@@ -204,7 +204,7 @@ export default async function PublicMonologuePage({ params }: Params) {
             <Link href={`/monologue/${m.id}/work`}>Rehearse free</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-            <Link href="/signup">Get started free</Link>
+            <Link href="/signup">Start rehearsing</Link>
           </Button>
         </div>
       </div>

@@ -93,7 +93,7 @@ export default function FiveMonologuesPage() {
           )}
         </ul>
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/signup">Get started free on ActorRise</Link>
+          <Link href="/signup">Start rehearsing on ActorRise</Link>
         </Button>
       </div>
     );

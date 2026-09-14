@@ -57,14 +57,6 @@ export const TESTIMONIALS: TestimonialItem[] = [
       website: "https://www.jeannilleettinoffe.com",
     },
   },
-  {
-    quote:
-      "Join and play around. If you like what we're building, reach out. I'm happy to send a code for founding member access. I'd rather have more actors in the room than behind a paywall.",
-    name: "Limited founding member spots.",
-    descriptor: "",
-    source: "direct",
-    // No image: placeholder; big icon opens contact on click
-  },
 ];
 
 /** Number of testimonials shown initially; rest appear on "Load more". */

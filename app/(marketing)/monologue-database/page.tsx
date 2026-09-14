@@ -115,7 +115,7 @@ export default function MonologueDatabasePage() {
             <Link href="/">Search the database</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-            <Link href="/signup">Get started free</Link>
+            <Link href="/signup">Start rehearsing</Link>
           </Button>
         </div>
 
@@ -195,7 +195,7 @@ export default function MonologueDatabasePage() {
               <Link href="/">Search the database</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-              <Link href="/signup">Get started free</Link>
+              <Link href="/signup">Start rehearsing</Link>
             </Button>
           </div>
         </div>

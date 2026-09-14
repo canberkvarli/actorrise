@@ -202,7 +202,7 @@ export default function Page() {
           <Link href="/monologue-finder">Find a fresh monologue</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/signup">Get started free</Link>
+          <Link href="/signup">Start rehearsing</Link>
         </Button>
       </div>
     </article>
