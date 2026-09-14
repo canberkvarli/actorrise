@@ -2567,7 +2567,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               exit={{ opacity: 0 }}
               onClick={closeMonologue}
               transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-              className="fixed inset-0 z-[10000] bg-black"
+              className="fixed inset-0 z-[10000]"
+              style={{ background: "var(--t-ink)", backdropFilter: "blur(2px)" }}
             />
 
             {/* Slide-over Panel */}
@@ -2581,16 +2582,27 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ease: [0.25, 0.1, 0.25, 1],
                 opacity: { duration: 0.25 },
               }}
-              className={`fixed right-0 top-0 bottom-0 z-[10001] overflow-y-auto bg-background border-l shadow-2xl transition-[width,box-shadow] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
-                isReadingMode
-                  ? "w-full"
-                  : "w-full md:w-[600px] lg:w-[700px]"
+              className={`theatre-sides fixed bottom-0 right-0 top-0 z-[10001] overflow-y-auto transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
+                isReadingMode ? "w-full" : "w-full md:w-[600px]"
               }`}
+              style={{
+                background: "var(--t-paper)",
+                borderLeft: "2px solid var(--t-text)",
+                color: "var(--t-text)",
+              }}
             >
-              <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002] ${
-                isReadingMode ? "border-b-0" : ""
-              }`}>
-                <div className="flex items-center justify-end px-4 py-3">
+              <div
+                className="sticky top-0 z-[10002]"
+                style={{
+                  background: "color-mix(in oklab, var(--t-paper) 95%, transparent)",
+                  backdropFilter: "blur(6px)",
+                  borderBottom: isReadingMode ? "none" : "1.5px solid var(--t-line-light)",
+                }}
+              >
+                <div className="flex items-center justify-between gap-3 px-5 py-3">
+                  <p className="t-dir" style={{ fontSize: 13, color: "var(--t-muted-dark-2)" }}>
+                    (the sides.)
+                  </p>
                   <div className="flex items-center gap-1 shrink-0">
                     {/* Download button - show in both modes; 44px touch target on mobile */}
                     <div className="relative z-[10002]">

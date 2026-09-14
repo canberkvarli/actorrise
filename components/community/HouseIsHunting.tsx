@@ -61,7 +61,10 @@ export function HouseIsHunting({
   const shown = tags.slice(0, 5);
 
   return (
-    <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-muted-foreground">
+    <p
+      className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm"
+      style={{ color: "var(--t-muted-dark)" }}
+    >
       <Link
         href="/callboard"
         onClick={() => trackWhisperClicked(surface, { target: "board" })}
@@ -86,7 +89,8 @@ export function HouseIsHunting({
           <Link
             href={`/monologues?q=${encodeURIComponent(tag)}`}
             onClick={() => trackWhisperClicked(surface, { target: "tag", tag })}
-            className="capitalize text-foreground/80 underline-offset-4 transition-colors hover:text-primary hover:underline"
+            className="capitalize underline underline-offset-4 transition-colors hover:!text-[var(--acc)]"
+            style={{ color: "var(--t-text)" }}
           >
             {tag}
           </Link>

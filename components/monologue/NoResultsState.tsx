@@ -78,20 +78,34 @@ export function NoResultsState({
       className="mx-auto flex max-w-md flex-col items-center px-4 py-16 text-center"
     >
       {/* 88 is the catalogue's empty-state size; muted ink, never the orange. */}
-      <Glyph name={glyph} size={88} className="text-muted-foreground/50" />
+      <Glyph name={glyph} size={88} className="t-empty-glyph" />
 
-      <p className="stage-direction mt-6 text-sm text-muted-foreground/70">{copy.direction}</p>
-      <h3 className="mt-2 font-brand text-3xl font-medium text-foreground sm:text-4xl">
+      <p className="t-dir mt-6" style={{ color: "var(--t-muted-dark-2)" }}>
+        {copy.direction}
+      </p>
+      <h3
+        className="mt-3"
+        style={{
+          fontFamily: "var(--t-display)",
+          fontWeight: 400,
+          fontSize: "clamp(1.9rem, 4vw, 2.6rem)",
+          lineHeight: 1.05,
+          letterSpacing: "-0.02em",
+          color: "var(--t-text)",
+        }}
+      >
         {title}
       </h3>
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{copy.body}</p>
+      <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--t-muted-dark)" }}>
+        {copy.body}
+      </p>
 
       <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row">
         {/* Filters are the usual culprit, so make undoing them one tap */}
         {activeFilterCount > 0 && onClearFilters && (
-          <Button variant="outline" size="sm" onClick={onClearFilters}>
+          <button type="button" onClick={onClearFilters} className="t-show-more">
             Clear {activeFilterCount} filter{activeFilterCount === 1 ? "" : "s"}
-          </Button>
+          </button>
         )}
         {children}
       </div>

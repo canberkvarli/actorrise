@@ -2054,3 +2054,81 @@
   .t-understood { animation: none; }
   .t-show-more:hover:not(:disabled) { transform: none; }
 }
+
+/* --- The sides (detail drawer) -------------------------------------------
+   A skin scoped to the drawer, so MonologueDetailContent keeps working
+   unchanged on /monologue/[id], which has not been restyled yet. Only what is
+   inside `.theatre-sides` speaks the new system. */
+.theatre-sides .font-brand {
+  font-family: var(--t-display) !important;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+/* Casting facts become outlined pills rather than plain text. */
+.theatre-sides .t-fact,
+.theatre-sides [data-fact] {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-line-light);
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t-muted-dark);
+}
+
+/* The speech itself, at reading size. */
+.theatre-sides .font-typewriter {
+  font-family: var(--t-direction);
+}
+
+/* The round close, which turns a quarter on hover. */
+.t-sides-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--t-cta-bg);
+  color: var(--t-cream);
+  transition: transform 0.35s var(--t-spring);
+}
+.t-sides-close:hover {
+  transform: rotate(90deg);
+  color: var(--t-cream);
+}
+
+/* Export / Report, as outlined pills. */
+.t-sides-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-line-light);
+  background: transparent;
+  color: var(--t-muted-dark);
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 0.2s, color 0.2s;
+}
+.t-sides-action:hover {
+  border-color: var(--t-text);
+  color: var(--t-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-sides-close:hover { transform: none; }
+}
+
+/* Empty-state glyph: muted ink, never the accent — this is the one view where
+   nothing was found, and colouring it would read as a result. */
+.t-empty-glyph {
+  color: var(--t-line-light);
+}
