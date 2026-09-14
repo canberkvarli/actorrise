@@ -78,6 +78,7 @@ import {
 import { LastAuthProviderSync } from "@/components/auth/LastAuthProviderSync";
 import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
 import { CallboardLamp, CallboardMenuRow } from "@/components/community/CallboardLamp";
+import { useHeaderLight } from "@/components/layout/useHeaderLight";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -225,6 +226,10 @@ export default function PlatformLayout({
     // fix was to give desktop the tab, not to take the tab off the phone.
     { href: "/rehearse", label: "Collection", icon: IconBookmark, match: "exact" as const },
   ];
+  /* The followspot behind the nav, and whether the bar has been scrolled past.
+     Keyed on pathname so it re-measures when the route changes. */
+  const { navRef, lightStyle, scrolled: headerScrolled } = useHeaderLight(pathname);
+
   const isNavActive = (item: (typeof navItems)[number]) =>
     item.match === "prefix" ? (pathname || "").startsWith(item.href) : pathname === item.href;
   const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$|^\/first-scene$|^\/monologue\/[^/]+\/work$/.test(pathname || "");
@@ -290,7 +295,7 @@ export default function PlatformLayout({
         as="nav"
         wash={false}
         overflowHidden={false}
-        className="dark bg-[color-mix(in_oklab,var(--background)_92%,transparent)] backdrop-blur-md border-b border-border text-foreground z-[9998]"
+        className="dark z-[9998] flex justify-center border-0 bg-transparent px-4 pt-3.5 text-foreground"
         /* sticky, not relative: on a phone the hamburger, theme toggle and
            account menu all live up here, and a relative header scrolls them off
            screen entirely. The marketing header has always been sticky top-0.
@@ -298,60 +303,71 @@ export default function PlatformLayout({
            className and class order in the attribute does not decide the winner.
            Its backdrop-blur makes this element the containing block for the
            fixed mobile menu below, so pinning it also pins that menu. */
-        style={{ position: 'sticky', top: 0, ['--primary']: 'oklch(0.76 0.15 52)' } as React.CSSProperties}
+        style={{ position: 'sticky', top: 0, pointerEvents: 'none', ['--primary']: 'oklch(0.76 0.15 52)' } as React.CSSProperties}
       >
-        <div className="container mx-auto px-4 sm:px-6">
+        {/* The bar is a floating pill now, not a full-width band. It shrinks a
+            touch once you scroll, so the page feels like it is passing under
+            something rather than pushing it. */}
+        <div
+          className="t-appbar"
+          data-scrolled={headerScrolled}
+        >
           {/* 64px on a phone, 80px from md up. A sticky 80px header plus the 64px
               bottom bar was eating ~20% of a 700px phone viewport permanently. */}
-          <div className="flex items-center justify-between h-16 md:h-20 gap-3">
+          <div className="flex h-[52px] items-center gap-2 md:h-[56px]">
             {/* Logo: left on all breakpoints */}
             <Link
               href="/practice"
-              className="flex items-center min-w-0 shrink-0 text-foreground hover:opacity-80 transition-opacity"
+              className="flex min-w-0 shrink-0 items-center pl-1 transition-opacity hover:opacity-80"
               aria-label="ActorRise Home"
             >
               <BrandLogo size="header" onDark />
             </Link>
+            <span aria-hidden className="t-appbar__rule" />
 
-            {/* Desktop Navigation - centered */}
-            <div className="hidden md:flex items-center justify-center gap-1 lg:gap-2 flex-1">
-              {navItems.map((item, index) => {
+            {/* Desktop navigation.
+
+                One light slides between the three tabs instead of each one
+                painting its own pill. It is measured from the active link's
+                box rather than animated per-item, so adding a nav item needs
+                no new state — and it makes the move read as a followspot
+                finding the next actor, which is the whole idea. */}
+            <nav
+              ref={navRef}
+              aria-label="Primary"
+              className="relative hidden min-w-0 flex-1 items-center justify-center gap-0.5 md:flex"
+            >
+              <span aria-hidden className="t-appbar__light" style={lightStyle} />
+              {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = isNavActive(item);
-                const isPrimary = index === 0;
                 return (
-                  <Button
+                  <Link
                     key={item.href}
-                    asChild
-                    variant={isActive ? "outline" : "ghost"}
-                    size="sm"
-                    className={`gap-1.5 lg:gap-2 rounded-full px-2.5 lg:px-4 text-xs lg:text-sm ${
-                      isActive
-                        ? "bg-primary/10 text-primary border-primary/40 hover:bg-primary/15 hover:text-primary"
-                        : ""
-                    }`}
+                    href={item.href}
+                    data-nav={item.href}
+                    aria-current={isActive ? "page" : undefined}
+                    className="t-appbar__tab"
+                    data-active={isActive}
                   >
-                    <Link href={item.href}>
-                      <Icon className="h-4 w-4" />
-                      <span className={`hidden sm:inline ${isActive || isPrimary ? "font-semibold" : ""}`}>{item.label}</span>
-                    </Link>
-                  </Button>
+                    <Icon className="size-4 shrink-0" />
+                    {item.label}
+                  </Link>
                 );
               })}
               {user?.is_moderator && (
-                <Button
-                  asChild
-                  variant={pathname.startsWith("/admin") ? "outline" : "ghost"}
-                  size="sm"
-                  className="gap-1.5 lg:gap-2 rounded-full px-2.5 lg:px-4 text-xs lg:text-sm"
+                <Link
+                  href="/admin"
+                  data-nav="/admin"
+                  aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+                  className="t-appbar__tab"
+                  data-active={pathname.startsWith("/admin")}
                 >
-                  <Link href="/admin">
-                    <IconShieldCheck className="h-4 w-4" />
-                    <span className="hidden sm:inline">Admin</span>
-                  </Link>
-                </Button>
+                  <IconShieldCheck className="size-4 shrink-0" />
+                  Admin
+                </Link>
               )}
-            </div>
+            </nav>
 
             {/* Desktop Profile Dropdown - right aligned */}
             <div className="hidden md:flex items-center gap-1">
