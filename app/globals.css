@@ -1122,3 +1122,292 @@
   .traveler__lights { opacity: 1; animation: none; }
   .bulb { animation: none; background: color-mix(in oklab, var(--stage-glow) 85%, white); }
 }
+
+/* ==========================================================================
+   THEATRE WALK — the landing page, and only the landing page.
+   ==========================================================================
+   Every token here is scoped under `.theatre`. The page is one continuous
+   walk through a house: backstage (dark) → stage → house lights up → house
+   (cream) → curtain → out. It does not use the app's semantic tokens because
+   it does not follow the app's theme: it is always dark at the top and always
+   cream in the middle, in both light and dark mode, the same way a theatre is
+   dark whatever time you walked in from.
+
+   The three faces are bound by `lib/fonts/theatre.ts` and applied on the same
+   element as `.theatre`, so nothing outside this class ever sees them.
+   ========================================================================== */
+
+.theatre {
+  /* Surfaces */
+  --t-ink: oklch(0.13 0.015 50);
+  --t-stage: oklch(0.16 0.018 52);
+  --t-stage-card: oklch(0.2 0.02 52);
+  --t-cream: oklch(0.96 0.02 85);
+  --t-paper: oklch(0.99 0.005 85);
+  --t-paper-2: oklch(0.97 0.015 85);
+
+  /* Text */
+  --t-text: oklch(0.16 0.01 45);
+  --t-text-soft: oklch(0.18 0.01 45);
+  --t-muted-dark: oklch(0.4 0.015 55);
+  --t-muted-dark-2: oklch(0.45 0.02 55);
+  --t-muted-light: oklch(0.7 0.02 62);
+  --t-muted-light-2: oklch(0.75 0.02 62);
+  --t-muted-light-3: oklch(0.8 0.02 70);
+  --t-faint: oklch(0.55 0.02 60);
+  --t-faint-2: oklch(0.62 0.02 62);
+
+  /* Lines */
+  --t-line-dark: oklch(0.25 0.02 55);
+  --t-line-dark-2: oklch(0.3 0.03 55);
+  --t-line-dark-3: oklch(0.35 0.03 55);
+  --t-line-light: oklch(0.8 0.02 75);
+  --t-line-light-2: oklch(0.85 0.02 75);
+
+  /* Gels */
+  --t-orange: oklch(0.7 0.18 48);
+  --t-orange-deep: oklch(0.58 0.18 45);
+  --t-orange-glow: oklch(0.72 0.17 55);
+  --t-gel: oklch(0.92 0.18 100);
+
+  /* Primary button. Ink fill, cream text, acid-yellow arrow dot. */
+  --t-cta-bg: oklch(0.15 0.03 45);
+  --t-cta-fg: oklch(0.96 0.02 85);
+  --t-cta-bd: oklch(0.45 0.03 55);
+  --t-cta-dot-bg: var(--t-gel);
+  --t-cta-dot-fg: oklch(0.15 0.03 45);
+
+  /* Easing. Springy for anything a pointer touches, calm for entrances. */
+  --t-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-enter: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Faces */
+  --t-display: var(--font-theatre-display), Georgia, "Times New Roman", serif;
+  --t-body: var(--font-theatre-body), ui-sans-serif, system-ui, sans-serif;
+  --t-direction: var(--font-theatre-direction), "Courier New", Courier, monospace;
+
+  background: var(--t-ink);
+  color: var(--t-cream);
+  font-family: var(--t-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* clip, never hidden: `overflow-x: hidden` on an ancestor silently kills
+     position:sticky, and two whole sections here are sticky scroll rigs. */
+  overflow-x: clip;
+}
+
+.theatre ::selection {
+  background: var(--t-gel);
+  color: var(--t-ink);
+}
+
+/* --- Type ---------------------------------------------------------------- */
+
+.t-display {
+  font-family: var(--t-display);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+/* Stage directions. The copy is authored lowercase and parenthesised already,
+   so this deliberately does NOT apply text-transform — lowercasing in CSS
+   mangles the play titles and proper nouns that sit inside these lines. */
+.t-dir {
+  font-family: var(--t-direction);
+  font-style: italic;
+  letter-spacing: 0.08em;
+  font-size: 14px;
+  margin: 0;
+}
+
+.t-h1 {
+  margin: 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  font-size: clamp(3.2rem, 11vw, 10.5rem);
+  text-wrap: balance;
+}
+
+.t-h2 {
+  margin: 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  font-size: clamp(2.6rem, 6.5vw, 6rem);
+  text-wrap: balance;
+}
+
+/* Reveal + curtain headlines run larger than a section head. */
+.t-h2--big {
+  line-height: 0.92;
+  font-size: clamp(3rem, 9vw, 8.5rem);
+}
+
+.t-em {
+  font-style: italic;
+}
+
+/* --- Primary call to action ---------------------------------------------- */
+
+.t-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  height: 72px;
+  padding: 0 40px 0 44px;
+  border-radius: 999px;
+  background: var(--t-cta-bg);
+  color: var(--t-cta-fg);
+  border: 1.5px solid var(--t-cta-bd);
+  font-family: var(--t-body);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 20px 60px -15px oklch(0.7 0.18 48 / 0.7);
+  transition:
+    transform 0.35s var(--t-spring),
+    box-shadow 0.35s;
+}
+.t-cta:hover {
+  color: var(--t-cta-fg);
+  transform: scale(1.05) rotate(-1.5deg);
+  box-shadow: 0 30px 70px -15px oklch(0.7 0.18 48 / 0.9);
+}
+.t-cta:focus-visible {
+  outline: 3px solid var(--t-gel);
+  outline-offset: 3px;
+}
+
+/* Pricing block: same pill, a size down, no glow, rotates the other way. */
+.t-cta--mid {
+  height: 64px;
+  padding: 0 36px;
+  font-size: 18px;
+  box-shadow: none;
+}
+.t-cta--mid:hover {
+  transform: scale(1.05) rotate(2deg);
+  box-shadow: none;
+}
+
+/* Nav: smallest, and it rotates against the hero's so the two never agree. */
+.t-cta--nav {
+  height: 36px;
+  padding: 0 18px;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  gap: 0;
+  box-shadow: none;
+  transition: transform 0.3s var(--t-spring);
+}
+.t-cta--nav:hover {
+  transform: scale(1.06) rotate(-2deg);
+  box-shadow: none;
+}
+
+.t-cta__dot {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--t-cta-dot-bg);
+  color: var(--t-cta-dot-fg);
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* --- Keyframes ----------------------------------------------------------- */
+
+@keyframes t-rise {
+  from {
+    opacity: 0;
+    transform: translateY(40px) rotate(-1deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes t-flicker {
+  0%,
+  92%,
+  100% { opacity: 1; }
+  93% { opacity: 0.5; }
+  94% { opacity: 0.9; }
+  96% { opacity: 0.6; }
+  97% { opacity: 1; }
+}
+@keyframes t-marq {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes t-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9) rotate(-2deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.02) rotate(0.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes t-blink {
+  50% { opacity: 0; }
+}
+@keyframes t-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.4;
+  }
+}
+@keyframes t-wobble {
+  0%,
+  100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+@keyframes t-bob {
+  0%,
+  100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Hero entrances hang off the same clock as the house curtain, so the copy
+   rises as the velvet clears rather than behind it. `--t-d` staggers within. */
+.t-rise {
+  animation: t-rise 0.9s var(--t-enter) calc(var(--curtain-delay, 0s) + var(--t-d, 0s)) both;
+}
+
+.t-pop {
+  animation: t-pop 0.7s var(--t-spring) var(--t-d, 0s) both;
+}
+
+/* --- Reduced motion ------------------------------------------------------
+   Everything decorative stops. The two scroll rigs are handed their finished
+   state by JS (see useTheatreScroll), so the house reads fully lit and the
+   curtain fully open rather than frozen shut over the CTA. */
+@media (prefers-reduced-motion: reduce) {
+  .theatre *,
+  .theatre *::before,
+  .theatre *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
