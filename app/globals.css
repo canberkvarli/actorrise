@@ -1292,6 +1292,12 @@
   letter-spacing: -0.01em;
   white-space: nowrap;
   cursor: pointer;
+  /* A button is a thing you press, not a paragraph. Without this, dragging
+     anywhere near it drops a gel-on-orange selection block across the label,
+     and the page's own ::selection colour makes that look like a rendering
+     fault rather than a highlight. */
+  user-select: none;
+  -webkit-user-select: none;
   box-shadow: 0 20px 60px -15px oklch(0.7 0.18 48 / 0.7);
   transition:
     transform 0.35s var(--t-spring),

@@ -34,6 +34,19 @@ export const TESTIMONIALS: TestimonialItem[] = [
     },
   },
   {
+    // His own words, from the founding-actor profile he submitted (id 5).
+    // The DB holds the full two-paragraph version and /actors renders that;
+    // this is the opening, cut at a sentence end so the notice card sits at a
+    // readable height next to the others. Never edited, only shortened.
+    quote:
+      "ActorRise has become a key part of how I stay sharp and ready in an industry that doesn't wait. It's not just about practice, it's about maintaining a level of consistency and discipline, even when things go quiet. I don't have to rely on having a reader or the perfect setup, I can rehearse, refine and elevate my performances anywhere, anytime.",
+    name: "Ayush Nana",
+    descriptor: "Actor",
+    image: "/testimonials/ayush-nana/ayush-nana.jpg",
+    source: "actor",
+    slug: "ayush-nana",
+  },
+  {
     quote:
       "I'm genuinely impressed by what Canberk has built with ActorRise. It's rare to find a platform that understands the actor's struggle so well. The ability to discover unique, tailored material in seconds is exactly what the industry needs right now. I'm proud to support it!",
     name: "Timothy Miller",

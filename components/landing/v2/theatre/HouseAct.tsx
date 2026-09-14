@@ -9,12 +9,13 @@ import { useTheatreStats } from "./useTheatreStats";
 const YOUTUBE_ID = "TTZxo3bZPI4";
 
 /* The pinned-up look: each notice sits at its own angle and its own height.
-   Keyed by name so the arrangement survives a reorder of the data file. */
-const PIN: Record<string, { rot: string; mt: string }> = {
-  "Canberk Varli": { rot: "-2.5deg", mt: "0" },
-  "Timothy Miller": { rot: "1.5deg", mt: "40px" },
-  "Jeannille Ettinoffe": { rot: "-1deg", mt: "12px" },
-};
+   Positional rather than keyed by name, so swapping who is on the wall does
+   not mean editing the arrangement. */
+const PIN = [
+  { rot: "-2.5deg", mt: "0" },
+  { rot: "1.5deg", mt: "40px" },
+  { rot: "-1deg", mt: "12px" },
+];
 
 /**
  * Act III — the house, with the lights on. Cream, dark text, and the only
@@ -27,9 +28,11 @@ export function HouseAct() {
   const { barRef, searches, monologues, users } = useTheatreStats();
   const [playing, setPlaying] = useState(false);
 
-  /* Only the three real actors. The fourth row in the data file is the
-     founding-member placeholder, and that programme is retired. */
-  const notices = TESTIMONIALS.filter((t) => t.image && PIN[t.name]);
+  /* Other actors only. Canberk speaks once on this page, in the founder note
+     directly below — having his testimonial up on the wall as well made the
+     section read as one man quoting himself. Needs a headshot, because the
+     card is built around one. */
+  const notices = TESTIMONIALS.filter((t) => t.image && !t.isFounder).slice(0, PIN.length);
 
   return (
     <section
@@ -68,8 +71,8 @@ export function HouseAct() {
             className="mt-14 grid items-start gap-8"
             style={{ gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))" }}
           >
-            {notices.map((t) => {
-              const pin = PIN[t.name];
+            {notices.map((t, i) => {
+              const pin = PIN[i];
               return (
                 <figure
                   key={t.name}
