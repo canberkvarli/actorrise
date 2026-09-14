@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { IconSparkles } from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
 import { ShelfCard } from "@/components/monologue/ShelfCard";
+import { useProfileFormData } from "@/hooks/useDashboardData";
 import ProfileOnboardingFlow from "@/components/onboarding/ProfileOnboardingFlow";
 
 /**
@@ -22,6 +22,10 @@ import ProfileOnboardingFlow from "@/components/onboarding/ProfileOnboardingFlow
  */
 export function ForYouShelf() {
   const queryClient = useQueryClient();
+  /* The aside says what the shelf is picking on, in the actor's own profile
+     terms. Nothing invented: whatever of the three is actually set is shown,
+     and if none are, the aside is left off rather than filled with guesses. */
+  const { data: profile } = useProfileFormData();
   const [wizardOpen, setWizardOpen] = useState(false);
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["for-you-shelf"],
@@ -68,20 +72,32 @@ export function ForYouShelf() {
   const items = Array.isArray(data) ? data : [];
   if (isError || items.length === 0) return null;
 
+  const profileFacts = [
+    (profile as { gender?: string } | undefined)?.gender,
+    (profile as { age_range?: string } | undefined)?.age_range,
+    (profile as { preferred_tone?: string } | undefined)?.preferred_tone,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <div className="mx-auto max-w-4xl pt-2 pb-8">
-      <div className="mb-4 flex items-center gap-2 px-1">
-        <IconSparkles className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-medium uppercase tracking-[0.15em] text-muted-foreground">
-          Picked for your type
+    <div>
+      <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 className="t-shelf-title">
+          Picked for <em>your type.</em>
         </h2>
+        {profileFacts && (
+          <p className="t-dir" style={{ fontSize: 12, color: "var(--t-muted-dark-2)" }}>
+            ({profileFacts})
+          </p>
+        )}
       </div>
 
       <motion.div
         initial="hidden"
         animate="show"
         variants={{ show: { transition: { staggerChildren: 0.05 } } }}
-        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        className="flex flex-col gap-2.5"
       >
         {items.map((m) => (
           <motion.div

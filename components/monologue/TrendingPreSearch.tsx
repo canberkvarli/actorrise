@@ -1,10 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
-import { IconFlame } from "@tabler/icons-react";
 import { useTrending } from "@/hooks/useTrending";
-import type { Monologue } from "@/types/actor";
 import { ShelfCard } from "@/components/monologue/ShelfCard";
 
 /**
@@ -23,19 +20,21 @@ export function TrendingPreSearch() {
   if (items.length === 0) return null;
 
   return (
-    <div className="mx-auto max-w-4xl pt-2 pb-10">
-      <div className="mb-4 flex items-center gap-2 px-1">
-        <IconFlame className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-medium uppercase tracking-[0.15em] text-muted-foreground">
-          Trending this week
+    <div>
+      <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 className="t-shelf-title">
+          Trending <em>this week.</em>
         </h2>
+        <p className="t-dir" style={{ fontSize: 12, color: "var(--t-muted-dark-2)" }}>
+          (what the house is working on.)
+        </p>
       </div>
 
       <motion.div
         initial="hidden"
         animate="show"
         variants={{ show: { transition: { staggerChildren: 0.05 } } }}
-        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        className="flex flex-col gap-2.5"
       >
         {items.map((m) => (
           <motion.div
@@ -54,11 +53,11 @@ export function TrendingPreSearch() {
 
 function TrendingSkeleton() {
   return (
-    <div className="mx-auto max-w-4xl pt-2 pb-10">
-      <div className="mb-4 h-4 w-40 animate-pulse rounded bg-muted" />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div>
+      <div className="mb-5 h-8 w-52 animate-pulse rounded bg-muted" />
+      <div className="flex flex-col gap-2.5">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-xl bg-muted/60" />
+          <div key={i} className="h-16 animate-pulse rounded-2xl bg-muted/60" />
         ))}
       </div>
     </div>

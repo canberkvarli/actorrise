@@ -113,12 +113,15 @@ export function SearchCurtain({
   mode = "plays",
   name,
   facts,
+  onStop,
 }: {
   mode?: SearchMode;
   /** First name, shown in proper case. Only used by `for_you`. */
   name?: string | null;
   /** The profile fields the recommendation is actually keyed on. */
   facts?: string[];
+  /** Abandon the search. Same `stopSearch` the submit button calls. */
+  onStop?: () => void;
 }) {
   const beats = BEATS[mode];
   const [beat, setBeat] = useState(0);
@@ -134,13 +137,17 @@ export function SearchCurtain({
   const Sketch = pool[sketchIndex];
 
   useEffect(() => {
-    setBeat(0);
-    const id = setInterval(
+    /* The counter lives in the closure, not in a setState at the top of the
+       effect: resetting state synchronously inside an effect is the cascading
+       render the lint rule is about, and `beat` already starts at 0 on mount,
+       which is the only time it needed resetting. */
+    let i = 0;
+    const id = setInterval(() => {
       // Hold on the last beat instead of looping. Cycling back to "the house
       // goes quiet" would read as the search having started over.
-      () => setBeat((prev) => (prev < beats.length - 1 ? prev + 1 : prev)),
-      BEAT_MS,
-    );
+      i = Math.min(i + 1, beats.length - 1);
+      setBeat(i);
+    }, BEAT_MS);
     return () => clearInterval(id);
   }, [beats]);
 
@@ -152,42 +159,45 @@ export function SearchCurtain({
      interval also keeps it off the beat, so the text and the drawing never
      change in the same instant. */
   useEffect(() => {
-    setFrame(0);
-    const id = setInterval(() => setFrame((f) => f + 1), SKETCH_MS);
+    let f = 0;
+    const id = setInterval(() => setFrame(++f), SKETCH_MS);
     return () => clearInterval(id);
   }, [mode]);
 
   return (
-    // Centred in the space the results will fill, so the bulb sits where the
+    // Centred in the space the results will fill, so the lamp sits where the
     // first card is about to appear rather than floating above a void.
-    <div
+    <motion.div
       className="flex min-h-[46vh] flex-col items-center justify-center px-4 py-12"
       role="status"
+      initial={reduced ? false : { opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="relative flex h-28 w-28 items-center justify-center">
-        {/* The lamp's glow, breathing. */}
+      {/* The working light, dropped in on its cord.
+
+          This replaces the rotation of playbill sketches that used to fill the
+          wait. The note that stood here said not to use a bulb, because the
+          ghost light means "found nothing" and the two states should not look
+          alike; the design overrides that, and NoResultsState carries its own
+          glyph, so the pictures still differ. */}
+      <div className="relative flex h-32 w-32 items-center justify-center">
         {!reduced && (
           <motion.span
             aria-hidden
-            className="absolute inset-0 rounded-full bg-primary/25 blur-2xl"
-            animate={{ scale: [1, 1.18, 1], opacity: [0.3, 0.65, 0.3] }}
-            transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute inset-0 rounded-full blur-2xl"
+            style={{ background: "oklch(0.92 0.18 100 / .35)" }}
+            animate={{ scale: [1, 1.18, 1], opacity: [0.35, 0.7, 0.35] }}
+            transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
           />
         )}
-        {/* Keyed on which drawing it is, so each one mounts fresh and draws
-            itself in rather than morphing paths into the next shape. */}
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={sketchIndex}
-            initial={{ opacity: 0, scale: 0.94 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.04 }}
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="relative"
-          >
-            <Sketch size={88} className="text-foreground/70" />
-          </motion.span>
-        </AnimatePresence>
+        <motion.span
+          aria-hidden
+          className="t-curtain-bulb"
+          initial={reduced ? false : { y: -120, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.9, ease: [0.22, 1.14, 0.36, 1] }}
+        />
       </div>
 
       {/* The personal line. Deliberately NOT .stage-direction: that class
@@ -234,7 +244,8 @@ export function SearchCurtain({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="stage-direction text-sm text-muted-foreground sm:text-base"
+            className="t-dir"
+            style={{ fontSize: 16, color: "var(--t-muted-dark-2)" }}
           >
             {beats[beat]}
           </motion.p>
@@ -242,16 +253,36 @@ export function SearchCurtain({
       </div>
 
       {/* A follow spot travelling the boards. */}
-      <div className="relative mt-7 h-px w-56 overflow-hidden bg-border/60">
+      <div
+        className="relative mt-7 overflow-hidden"
+        style={{ width: 224, height: 2, background: "var(--t-line-light)" }}
+      >
         {!reduced && (
           <motion.span
             aria-hidden
-            className="absolute inset-y-0 w-20 bg-gradient-to-r from-transparent via-primary to-transparent"
-            animate={{ x: ["-5rem", "14rem"] }}
+            className="absolute inset-y-0"
+            style={{
+              width: 80,
+              background: "linear-gradient(to right, transparent, var(--acc), transparent)",
+            }}
+            animate={{ x: [-80, 224] }}
             transition={{ duration: 2.1, repeat: Infinity, ease: "easeInOut" }}
           />
         )}
       </div>
+
+      {/* Leaving is a real option, and it belongs here rather than only on a
+          submit button that now says "Looking". Same handler either way. */}
+      {onStop && (
+        <button
+          type="button"
+          onClick={onStop}
+          className="t-dir mt-6 underline underline-offset-4"
+          style={{ fontSize: 13, color: "var(--t-muted-dark-2)" }}
+        >
+          (stop.)
+        </button>
+      )}
 
       {/* One steady announcement, rather than five as the beats change. */}
       <span className="sr-only">
@@ -259,7 +290,7 @@ export function SearchCurtain({
           ? "Finding monologues that suit your profile…"
           : "Searching for monologues…"}
       </span>
-    </div>
+    </motion.div>
   );
 }
 

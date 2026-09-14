@@ -1642,3 +1642,493 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ==========================================================================
+   THEATRE SEARCH — /monologues, in the same system as the landing.
+   ==========================================================================
+   The palette and the three faces come from `.theatre-tokens`. What is new
+   here is that the page has two shelves and they are different colours, so
+   the accent is a variable rather than a constant: `--acc` and `--page` are
+   set on the page root from `searchMode` and everything downstream reads
+   them. That replaces the old approach, which hardcoded the Film & TV violet
+   in several places and swapped classes per mode.
+   ========================================================================== */
+
+.theatre-search {
+  /* Plays is the default shelf; the page root overwrites both on mode change. */
+  --acc: oklch(0.58 0.18 45);
+  --page: oklch(0.96 0.02 85);
+}
+
+/* The full-viewport wash. It sits behind the page rather than on it, so the
+   colour reaches the edges instead of stopping at the container. */
+.t-search-wash {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  background: var(--page);
+  transition: background 0.6s ease;
+  pointer-events: none;
+}
+
+/* --- Source tags ----------------------------------------------------------
+   Which shelf a piece came off, said in one pill. Derived from `source_type`
+   first (film/tv are facts about the medium) and `category` second. Never
+   mixed in with the result marks — those say why this piece matched, this
+   says where it lives. */
+.t-src {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  line-height: 1.6;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+.t-src--classical {
+  border-color: oklch(0.58 0.18 45);
+  color: oklch(0.5 0.16 45);
+  background: transparent;
+}
+.t-src--contemporary {
+  border-color: oklch(0.58 0.18 45);
+  background: oklch(0.58 0.18 45);
+  color: oklch(0.96 0.02 85);
+}
+.t-src--film {
+  border-color: oklch(0.62 0.15 300);
+  background: oklch(0.62 0.15 300);
+  color: oklch(0.98 0.01 300);
+}
+.t-src--tv {
+  border-color: oklch(0.62 0.15 300);
+  color: oklch(0.5 0.15 300);
+  background: transparent;
+}
+
+/* The legend under the quick chips, so the four pills are readable the first
+   time rather than learned by inference. */
+.t-src-legend {
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--t-faint);
+}
+.t-src-legend b {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  vertical-align: -1px;
+}
+
+/* --- Mode switch flash ----------------------------------------------------
+   The existing viewport flash, recoloured off --acc instead of two hardcoded
+   rgb() values. A hard 8px frame rather than the old inset bloom: the shelf
+   changed, and that should read as the house lights changing, not a glow. */
+@keyframes t-outline-flash {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.t-outline-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  border: 8px solid var(--acc);
+  animation: t-outline-flash 0.7s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-outline-flash { display: none; }
+  .t-search-wash { transition: none; }
+}
+
+/* "Find for me": the I-don't-know-what-I-want door. Dashed on purpose — it
+   should not read as the same commitment as typing something. */
+.t-find-for-me {
+  font-family: var(--t-body);
+  background: transparent;
+  border: 2px dashed var(--t-text);
+  color: var(--t-text);
+  transition:
+    transform 0.3s var(--t-spring),
+    background 0.25s,
+    border-color 0.25s;
+}
+.t-find-for-me:hover:not(:disabled) {
+  background: var(--t-gel);
+  border-style: solid;
+  transform: rotate(1.5deg);
+}
+
+/* --- Pre-search doors and shelves ---------------------------------------- */
+
+/* Pinned-up cards: paper on a hard ink shadow, each at its own slight angle,
+   straightening as you reach for them. */
+.t-door {
+  background: var(--t-paper);
+  border: 1.5px solid var(--t-text);
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 var(--t-text);
+  transform: rotate(var(--rot, 0deg));
+  transition:
+    transform 0.35s var(--t-spring),
+    box-shadow 0.35s;
+}
+.t-door:hover {
+  transform: rotate(0deg) translateY(-6px);
+  box-shadow: 9px 9px 0 var(--acc);
+}
+.t-door__glyph {
+  color: var(--acc);
+}
+
+.t-shelf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: var(--t-paper);
+  border: 1.5px solid var(--t-line-light);
+  transition:
+    transform 0.3s var(--t-spring),
+    border-color 0.25s;
+}
+.t-shelf-row:hover {
+  border-color: var(--t-text);
+  transform: translateX(6px);
+}
+
+/* Shelf headings: Instrument Serif with the tail in the mode accent. */
+.t-shelf-title {
+  margin: 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-shelf-title em {
+  font-style: italic;
+  color: var(--acc);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-door,
+  .t-door:hover,
+  .t-shelf-row,
+  .t-shelf-row:hover {
+    transform: none;
+  }
+}
+
+/* The working light in the search curtain. Same lamp as the landing's ghost
+   light, at the size the search design asks for. */
+.t-curtain-bulb {
+  position: relative;
+  display: block;
+  width: 44px;
+  height: 52px;
+  border-radius: 50% 50% 46% 46%;
+  background: radial-gradient(
+    circle at 50% 40%,
+    oklch(0.99 0.05 95) 0%,
+    oklch(0.92 0.18 100) 30%,
+    oklch(0.75 0.17 60) 100%
+  );
+  box-shadow:
+    0 0 30px 6px oklch(0.85 0.17 80 / 0.75),
+    0 0 90px 30px oklch(0.72 0.17 55 / 0.3);
+}
+
+/* Sections arriving and leaving. `fall` is what the pre-search block (or the
+   previous results) does on submit; `liftout` is the curtain clearing once
+   results land. Both are exit animations, so they run through AnimatePresence
+   rather than as CSS on mount. */
+@media (prefers-reduced-motion: reduce) {
+  .t-curtain-bulb {
+    box-shadow: 0 0 24px 5px oklch(0.85 0.17 80 / 0.6);
+  }
+}
+
+/* --- Result rows ----------------------------------------------------------
+   A page of sides: a reserved margin on the left holding the scene number and
+   any pencil notes, the speech in the body. The margin is reserved whether or
+   not it holds anything, which is what stops a mark appearing from shoving the
+   speech sideways. */
+.t-row {
+  grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+  gap: 24px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--t-line-light);
+}
+
+.t-row__margin {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  padding-right: 20px;
+  text-align: right;
+  border-right: 1px solid var(--t-line-light);
+}
+
+.t-row__numeral {
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 28px;
+  line-height: 1;
+  color: oklch(0.75 0.02 70);
+}
+
+.t-row__name {
+  font-family: var(--t-direction);
+  font-weight: 700;
+  font-size: clamp(20px, 2vw, 26px);
+  line-height: 1.15;
+  color: var(--t-text);
+  transition: color 0.2s;
+}
+.t-row__name:hover {
+  color: var(--t-orange-deep);
+}
+
+/* Marks land just after the row they annotate — see --mark-d, set per mark. */
+@keyframes t-markin {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: none; }
+}
+.t-mark {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  white-space: nowrap;
+  animation: t-markin 0.5s ease-out var(--mark-d, 0s) both;
+}
+.t-mark--best {
+  background: var(--t-orange-deep);
+  color: var(--t-cream);
+}
+.t-mark--lane {
+  background: var(--t-gel);
+  color: var(--t-text);
+}
+.t-mark--overdone {
+  background: var(--t-text);
+  color: var(--t-cream);
+}
+.t-mark--match {
+  border-color: var(--t-line-light);
+  color: var(--t-muted-dark-2);
+}
+
+/* Rehearse: the one filled control on a row. */
+.t-rehearse {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 6px 0 18px;
+  border-radius: 999px;
+  background: var(--t-cta-bg);
+  border: 1.5px solid oklch(0.45 0.03 55);
+  color: var(--t-cream);
+  font-family: var(--t-body);
+  font-size: 14px;
+  font-weight: 700;
+  transition: transform 0.3s var(--t-spring);
+}
+.t-rehearse:hover {
+  transform: scale(1.04) rotate(-1.5deg);
+  color: var(--t-cream);
+}
+.t-rehearse__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--t-gel);
+  color: var(--t-cta-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-mark { animation: none; }
+  .t-rehearse:hover { transform: none; }
+}
+
+/* The rule the results hang from. It draws itself left to right as the list
+   arrives, so the list reads as being set down rather than appearing. */
+@keyframes t-rule-draw {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.t-results-rule {
+  height: 2px;
+  background: var(--t-text);
+  transform-origin: left;
+  animation: t-rule-draw 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--rule-d, 0s) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-results-rule { animation: none; }
+}
+
+/* --- "Understood:" chips and Show more ----------------------------------- */
+@keyframes t-pop {
+  0% { opacity: 0; transform: translateY(10px) scale(0.94); }
+  60% { opacity: 1; transform: translateY(-2px) scale(1.01); }
+  100% { opacity: 1; transform: none; }
+}
+.t-understood {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 6px 0 12px;
+  border-radius: 999px;
+  background: var(--t-cta-bg);
+  color: var(--t-cream);
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: t-pop 0.5s var(--t-spring) var(--pop-d, 0s) both;
+}
+.t-understood__x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: oklch(0.3 0.02 55);
+  color: var(--t-gel);
+  transition: background 0.2s;
+}
+.t-understood__x:hover {
+  background: oklch(0.38 0.03 55);
+}
+
+.t-show-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 32px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-text);
+  background: transparent;
+  color: var(--t-text);
+  font-family: var(--t-body);
+  font-size: 15px;
+  font-weight: 600;
+  transition:
+    transform 0.3s var(--t-spring),
+    background 0.25s,
+    color 0.25s;
+}
+.t-show-more:hover:not(:disabled) {
+  background: var(--t-text);
+  color: var(--t-cream);
+  transform: rotate(-1deg);
+}
+.t-show-more:disabled { opacity: 0.6; }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-understood { animation: none; }
+  .t-show-more:hover:not(:disabled) { transform: none; }
+}
+
+/* --- The sides (detail drawer) -------------------------------------------
+   A skin scoped to the drawer, so MonologueDetailContent keeps working
+   unchanged on /monologue/[id], which has not been restyled yet. Only what is
+   inside `.theatre-sides` speaks the new system. */
+.theatre-sides .font-brand {
+  font-family: var(--t-display) !important;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+/* Casting facts become outlined pills rather than plain text. */
+.theatre-sides .t-fact,
+.theatre-sides [data-fact] {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-line-light);
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t-muted-dark);
+}
+
+/* The speech itself, at reading size. */
+.theatre-sides .font-typewriter {
+  font-family: var(--t-direction);
+}
+
+/* The round close, which turns a quarter on hover. */
+.t-sides-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--t-cta-bg);
+  color: var(--t-cream);
+  transition: transform 0.35s var(--t-spring);
+}
+.t-sides-close:hover {
+  transform: rotate(90deg);
+  color: var(--t-cream);
+}
+
+/* Export / Report, as outlined pills. */
+.t-sides-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-line-light);
+  background: transparent;
+  color: var(--t-muted-dark);
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 0.2s, color 0.2s;
+}
+.t-sides-action:hover {
+  border-color: var(--t-text);
+  color: var(--t-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-sides-close:hover { transform: none; }
+}
+
+/* Empty-state glyph: muted ink, never the accent — this is the one view where
+   nothing was found, and colouring it would read as a result. */
+.t-empty-glyph {
+  color: var(--t-line-light);
+}

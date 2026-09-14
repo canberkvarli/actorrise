@@ -60,24 +60,22 @@ export function ParsedConstraintChips({
   if (chips.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs text-muted-foreground">Understood:</span>
-      {chips.map(({ key, label }) => (
-        <span
-          key={key}
-          className="inline-flex items-center gap-1 border border-border bg-muted/40 px-2 py-0.5 text-xs text-foreground"
-        >
+    /* The "Understood:" label moved to the toolbar that owns this row, so it
+       is not repeated when active filter chips sit alongside. */
+    <>
+      {chips.map(({ key, label }, i) => (
+        <span key={key} className="t-understood" style={{ ["--pop-d" as string]: `${0.1 + i * 0.08}s` }}>
           {label}
           <button
             type="button"
             aria-label={`Remove ${label}`}
             onClick={() => onRemove(key)}
-            className="ml-0.5 rounded-full text-muted-foreground hover:text-foreground"
+            className="t-understood__x"
           >
-            <IconX className="h-3 w-3" />
+            <IconX className="size-2.5" />
           </button>
         </span>
       ))}
-    </div>
+    </>
   );
 }

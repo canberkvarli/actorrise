@@ -21,7 +21,7 @@ import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconEye, Ic
 
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
 import { HouseIsHunting } from "@/components/community/HouseIsHunting";
 import { ForYouShelf } from "@/components/monologue/ForYouShelf";
@@ -39,6 +39,7 @@ import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueSpeech, matchMarkIsUseful } from "@/components/monologue/MonologueSpeech";
 import { constantFacts, constantFactsLabel } from "@/lib/resultFacts";
 import { SearchFiltersSheet, getDurationLabel } from "@/components/search/SearchFiltersSheet";
+import type { SearchFiltersState } from "@/components/search/SearchFiltersSheet";
 import { accentTeal } from "@/components/search/MatchIndicatorTag";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
@@ -49,6 +50,7 @@ import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackProm
 import { extractQueryHighlights } from "@/lib/queryMatchHighlight";
 import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
 import { QuickFilterChips } from "@/components/search/QuickFilterChips";
+import { SourceTagLegend, MonologueSourceTag } from "@/components/search/SourceTag";
 import { ContentGapBanner } from "@/components/search/ContentGapBanner";
 import { RequestQueryButton } from "@/components/search/RequestQueryButton";
 import { EmotionPivots } from "@/components/search/EmotionPivots";
@@ -75,6 +77,19 @@ const MODE_TABS = [
   { mode: "film_tv" as const, label: "Film & TV", accent: "--accent-screen" },
 ];
 
+/**
+ * The two shelves are two colours, and the whole page reads them from here.
+ *
+ * `--acc` drives the H1 italic, the search box's hard shadow, the door glyphs
+ * and their hover shadow, the shelf-title italics, the best-pick mark and the
+ * mode-switch flash. `--page` is the ground. Setting two variables on the root
+ * replaced a scatter of per-mode class swaps and three hardcoded violets.
+ */
+const MODE_THEME = {
+  plays: { acc: "oklch(0.58 0.18 45)", page: "oklch(0.96 0.02 85)" },
+  film_tv: { acc: "oklch(0.62 0.15 300)", page: "oklch(0.95 0.02 300)" },
+} as const;
+
 export default function MonologuesPage() {
   return (
     <Suspense fallback={
@@ -98,21 +113,23 @@ export default function MonologuesPage() {
  */
 function SharedFactsLine({ label }: { label: string | null }) {
   if (!label) return null;
-  return (
-    <p className="stage-direction mb-5 text-sm text-muted-foreground/70">
-      (all {label}.)
-    </p>
-  );
+  /* Inline: it shares the echo line with the query now, so the header can hold
+     one height and the two asides read as one stage direction. */
+  return <span>(all {label}.)</span>;
 }
 
 function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const reducedMotion = useReducedMotion();
   const { user, isDemoUser, refreshUser } = useAuth();
   const [showSearchTour, setShowSearchTour] = useState(false);
   const [playsQuery, setPlaysQuery] = useState("");
   const [filmTvQuery, setFilmTvQuery] = useState("");
-  const [filters, setFilters] = useState({
+  /* Typed rather than inferred: source_type is optional on SearchFiltersState
+     (only Film & TV sets it) and an inferred literal would make it required
+     for every other filter object in this file. */
+  const [filters, setFilters] = useState<SearchFiltersState>({
     gender: "",
     age_range: "",
     emotion: "",
@@ -122,6 +139,7 @@ function SearchContent() {
     difficulty: "",
     author: "",
     max_duration: "",
+    source_type: "",
   });
   /** 0 = freshest only, 0.3 = fresh, 0.5 = some overdone OK, 1 = show all. Separate from filters for clearer UX. */
   const [maxOverdoneScore, setMaxOverdoneScore] = useState(1);
@@ -435,7 +453,7 @@ function SearchContent() {
           setIsFilmTvLoading(true);
           setSearchError(null);
           try {
-            const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1", source_type: "film,tv" });
+            const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1", source_type: filters.source_type || "film,tv" });
             if (urlQuery.trim()) params.set("q", urlQuery.trim());
             const res = await api.get<{ results: Monologue[]; total: number }>(`/api/monologues/search?${params.toString()}`, { signal: ctrl.signal });
             setFilmTvResults(res.data.results);
@@ -754,8 +772,11 @@ function SearchContent() {
     setRestoredFromLastSearch(false);
     try {
       const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(pageNum), source_type: "play" });
+      /* `source_type` is the Film & TV chip's field and this shelf is plays;
+         letting it through the loop below would overwrite the pin above. */
       if (searchQuery.trim()) params.set("q", searchQuery);
       Object.entries(searchFilters).forEach(([key, value]) => {
+        if (key === "source_type") return;
         if (value) params.append(key, value);
       });
       if (effectiveMaxOverdone < 1) params.set("max_overdone_score", String(effectiveMaxOverdone));
@@ -901,7 +922,7 @@ function SearchContent() {
       setSearchError(null);
       setQueryInvalidReason(null);
       try {
-        const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1", source_type: "film,tv" });
+        const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1", source_type: filters.source_type || "film,tv" });
         if (filmTvQuery.trim()) params.set("q", filmTvQuery.trim());
         // Apply the same filters as plays
         Object.entries(filters).forEach(([key, value]) => {
@@ -1504,35 +1525,77 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     [searchMode, playsQuery, filmTvQuery, router],
   );
 
-  // Portal: gentle hue-style highlight around the edges (no hard border), soft bloom
+  /* The transition choreography (handoff §5), as three named shapes so the
+     call sites cannot drift apart.
+
+     `fall` is what the outgoing block does on submit — it drops and shrinks a
+     little rather than sliding up, so it reads as scenery being struck rather
+     than the page scrolling. `liftout` is the curtain clearing once results
+     land: up and away, the opposite direction, because it is flown out rather
+     than struck. Under reduced motion both collapse to a plain swap. */
+  const FALL = reducedMotion
+    ? { opacity: 0 }
+    : { opacity: 0, y: 28, scale: 0.985, transition: { duration: 0.42, ease: [0.4, 0, 1, 1] as const } };
+  const LIFT_OUT = reducedMotion
+    ? { opacity: 0 }
+    : { opacity: 0, y: -40, scale: 0.96, transition: { duration: 0.48, ease: [0.4, 0, 1, 1] as const } };
+  const RISE_IN = reducedMotion
+    ? { opacity: 1, y: 0 }
+    : { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const } };
+
+  /* The head's two lines of copy. The row is a fixed height, so these only
+     ever change wording — never how much room they take. */
+  const headState: "searching" | "results" | "empty" = isLoading
+    ? "searching"
+    : chromeCompact
+      ? "results"
+      : "empty";
+
+  const headDirection =
+    headState === "searching"
+      ? "(the house goes quiet.)"
+      : headState === "results"
+        ? "(lights to half.)"
+        : searchMode === "film_tv"
+          ? "(film & tv. the screen shelf.)"
+          : "(the search. say it out loud.)";
+
+  const headTitle =
+    headState === "searching" ? (
+      <em className="t-em" style={{ color: "var(--acc)" }}>
+        Looking.
+      </em>
+    ) : headState === "results" ? (
+      <>
+        Here&rsquo;s what{" "}
+        <em className="t-em" style={{ color: "var(--acc)" }}>
+          came back.
+        </em>
+      </>
+    ) : (
+      <>
+        What do you{" "}
+        <em className="t-em" style={{ color: "var(--acc)" }}>
+          need
+        </em>{" "}
+        tonight?
+      </>
+    );
+
+  /* The mode-switch flash. It used to carry two hardcoded rgba() bloom
+     values, one per mode, which is exactly the kind of thing --acc exists to
+     stop: the colour now comes from the theme like everything else. */
   const outlineOverlay =
     typeof document !== "undefined" &&
     outlineFlash &&
     createPortal(
-      <AnimatePresence>
-        <motion.div
-          key={outlineFlash}
-          className="fixed inset-0 pointer-events-none rounded-none"
-          style={{
-            zIndex: 2147483647,
-            border: "none",
-            // Soft edge vignette: large inset blur/spread, stronger hue on change
-            boxShadow:
-              outlineFlash === "plays"
-                ? "inset 0 0 160px 90px rgba(251, 146, 60, 0.22), inset 0 0 70px 35px rgba(255, 180, 120, 0.14)"
-                : "inset 0 0 160px 90px rgba(167, 139, 250, 0.22), inset 0 0 70px 35px rgba(196, 181, 255, 0.14)",
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 1, 0] }}
-          transition={{
-            duration: 1.2,
-            times: [0, 0.3, 1],
-            ease: "easeInOut",
-          }}
-          onAnimationComplete={() => setOutlineFlash(null)}
-        />
-      </AnimatePresence>,
-      document.body
+      <div
+        key={outlineFlash}
+        className="t-outline-flash"
+        style={{ ["--acc" as string]: MODE_THEME[outlineFlash].acc }}
+        onAnimationEnd={() => setOutlineFlash(null)}
+      />,
+      document.body,
     );
 
   /**
@@ -1547,7 +1610,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       key="presearch"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0, y: -20 }}
+      exit={FALL}
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
     >
       {/* Directly under the search bar, and first.
@@ -1567,8 +1630,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       {/* Personalization, surfaced by default (not hidden behind "Find for
           me"): profile-havers rehearse ~1.6x more. Recruits a profile when
           there isn't one. Plays only — film/TV recs are separate. */}
-      {searchMode === "plays" && <ForYouShelf />}
-      <TrendingPreSearch />
+      {/* Two shelves, side by side where there is room. */}
+      <div
+        className="mt-10 grid gap-12"
+        style={{ gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,420px),1fr))" }}
+      >
+        {searchMode === "plays" && <ForYouShelf />}
+        <TrendingPreSearch />
+      </div>
       {/* Last, not first: the shelves are personal and current, these are the
           fallback for when nothing there catches you. */}
       <StartingPoints mode={searchMode} />
@@ -1588,342 +1657,263 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     // sprang 640px wider and re-centred while the title faded in underneath.
     // Holding the measure means a tab tap changes nothing horizontally, and the
     // opening view can arrive as a transition instead of a reload.
-    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 relative max-w-3xl">
+    <div
+      className="theatre-tokens theatre-search container relative mx-auto max-w-3xl px-4 py-4 sm:px-6 sm:py-6 md:py-8"
+      style={
+        {
+          "--acc": MODE_THEME[searchMode].acc,
+          "--page": MODE_THEME[searchMode].page,
+        } as React.CSSProperties
+      }
+    >
+      {/* Behind the page, not on it, so the shelf colour reaches the edges of
+          the viewport rather than stopping at the container. */}
+      <div aria-hidden className="t-search-wash" />
       {outlineOverlay}
 
-      {/* Hero Search Section. Once a search has run the title gets out of the
-          way and the search bar sticks to the top — otherwise the answer opens
-          below the fold and every search costs a scroll. */}
-      <div
-        className={
-          chromeCompact
-            /* top offsets clear the sticky nav, which measures 65px on mobile
-               and 81px from sm up — any less and the mode toggle tucks under it.
-               From sm up the mode toggle and the search bar sit on one line;
-               the title has animated away by then, so they're the only children. */
-            ? "sticky top-16 z-30 -mx-4 mb-4 border-b border-border/50 bg-background/90 px-4 py-2.5 backdrop-blur-md sm:top-20 sm:-mx-6 sm:px-6"
-            : "mb-4 sm:mb-6 md:mb-10"
-        }
-      >
-        <AnimatePresence initial={false}>
-          {!chromeCompact && (
-            <motion.div
-              key="hero-title"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="overflow-hidden"
+      {/* The search head.
+          
+          One height in every state, which is the whole point: the direction
+          and the H1 change wording as you search, but the row does not change
+          size, so results landing never shoves the page under the reader's
+          eye. That is why the H1 is nowrap + ellipsis rather than wrapping —
+          "What do you need tonight?" is longer than "Looking." and a wrapping
+          headline would move everything below it by a line.
+
+          This replaces the old chromeCompact behaviour, which hid the title
+          and stuck the bar to the top after a search. The fixed-height row is
+          the design's answer to the same problem. */}
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
+          <div className="min-w-0 flex-1 basis-80">
+            <p className="t-dir" style={{ color: "var(--t-muted-dark-2)" }}>
+              {headDirection}
+            </p>
+            <h1
+              className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap"
+              style={{
+                fontFamily: "var(--t-display)",
+                fontWeight: 400,
+                fontSize: "clamp(2.6rem, 6vw, 5rem)",
+                lineHeight: 0.95,
+                letterSpacing: "-0.02em",
+                color: "var(--t-text)",
+              }}
             >
-              <div className="text-center mb-3 sm:mb-4 md:mb-8">
-                <p className="hidden md:block stage-direction text-sm md:text-base text-muted-foreground/70 mb-3">
-                  (the search.)
-                </p>
-                <h1 className="font-brand font-medium leading-[1.05] text-4xl sm:text-5xl md:text-6xl">
-                  Find your next <em className="italic text-primary">piece</em>
-                </h1>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets. */}
-        <div
-          className={`flex items-center justify-center gap-2 px-1 ${
-            chromeCompact ? "mb-1.5" : "mb-3 sm:mb-4"
-          }`}
-        >
-          {/* Boxed segmented control while it's the hero; once you've searched
-              it drops to quiet text tabs so the bar reads as one thing.
-
-              Both states share one indicator that slides between the tabs
-              instead of two independently-styled buttons swapping colour. The
-              tab you left and the tab you arrive at are now visibly the same
-              object moving, which is the smallest possible statement that these
-              are two shelves and not two rooms. */}
-          <div
-            className={
-              chromeCompact
-                ? "inline-flex shrink-0 gap-1 sm:gap-0.5"
-                : "w-full max-w-sm sm:max-w-none sm:w-auto inline-flex rounded-xl border border-border bg-muted/40 p-2 gap-2 sm:p-1 sm:gap-0"
-            }
-          >
-            {MODE_TABS.map((tab) => {
-              const active = searchMode === tab.mode;
-              return (
-                <button
-                  key={tab.mode}
-                  type="button"
-                  aria-pressed={active}
-                  className={`relative ${
-                    chromeCompact
-                      ? `shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm transition-colors ${
-                          active ? "font-medium" : "text-muted-foreground hover:text-foreground"
-                        }`
-                      : `flex-1 sm:flex-none min-h-[44px] sm:min-w-0 sm:px-4 sm:py-2 rounded-lg sm:rounded-md text-sm font-medium transition-colors touch-manipulation ${
-                          active ? "" : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                        }`
-                  }`}
-                  style={active ? { color: `var(${tab.accent})` } : undefined}
-                  onClick={() => switchMode(tab.mode)}
-                >
-                  {active && (
-                    <motion.span
-                      layoutId="mode-indicator"
-                      aria-hidden
-                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                      className={`absolute inset-0 -z-10 ${
-                        chromeCompact ? "rounded-md" : "rounded-lg sm:rounded-md ring-1 ring-inset"
-                      }`}
-                      style={{
-                        backgroundColor: `color-mix(in oklch, var(${tab.accent}) 14%, transparent)`,
-                        ...(chromeCompact
-                          ? {}
-                          : { boxShadow: `inset 0 0 0 1px color-mix(in oklch, var(${tab.accent}) 35%, transparent)` }),
-                      }}
-                    />
-                  )}
-                  {tab.label}
-                </button>
-              );
-            })}
+              {headTitle}
+            </h1>
           </div>
-          {!chromeCompact && (
-            <div className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0">
-              <span className="w-10 h-10" aria-hidden />
+
+          {/* Plays vs Film & TV. Still 44px targets, still switchMode. */}
+          <div className="shrink-0">
+            <div
+              className="inline-flex gap-1 p-1"
+              style={{
+                borderRadius: 999,
+                border: "1.5px solid var(--t-text)",
+                background: "var(--t-paper)",
+              }}
+            >
+              {MODE_TABS.map((tab) => {
+                const active = searchMode === tab.mode;
+                const isFilm = tab.mode === "film_tv";
+                return (
+                  <button
+                    key={tab.mode}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => switchMode(tab.mode)}
+                    className="inline-flex min-h-[44px] items-center gap-2 px-4 text-sm font-semibold transition-transform hover:scale-[1.04]"
+                    style={{
+                      borderRadius: 999,
+                      transitionTimingFunction: "var(--t-spring)",
+                      background: active
+                        ? isFilm
+                          ? "oklch(0.62 0.15 300)"
+                          : "var(--t-text)"
+                        : "transparent",
+                      color: active
+                        ? isFilm
+                          ? "oklch(0.98 0.01 300)"
+                          : "var(--t-cream)"
+                        : "var(--t-muted-dark-2)",
+                    }}
+                  >
+                    {isFilm ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                        <rect x="2" y="4" width="20" height="13" rx="2" />
+                        <path d="M8 21h8" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                        <path d="M3 21V6a9 9 0 0 1 18 0v15" />
+                        <path d="M3 9h18" />
+                      </svg>
+                    )}
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
+            <p className="t-dir mt-2 text-right" style={{ fontSize: 12, color: "var(--t-faint)" }}>
+              {searchMode === "film_tv"
+                ? "(scenes and speeches from the screen. no era filter here.)"
+                : "(19,000 pieces. classical and contemporary.)"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        {/* The search box.
+
+            One pill on a hard shadow in the mode accent, with "Find for me"
+            beside it as a dashed twin — dashed because it is the "I don't know
+            what I want" door, and it should not look like the same commitment
+            as typing something. Every handler below is the one that was here
+            before; only the surface changed. */}
+        <div className="flex flex-wrap items-stretch gap-3">
+          <div
+            className="group relative flex min-w-0 flex-1 basis-80 items-center gap-3 px-5"
+            style={{
+              minHeight: 68,
+              borderRadius: 40,
+              background: "var(--t-paper)",
+              border: "2px solid var(--t-text)",
+              boxShadow: "8px 8px 0 var(--acc)",
+              transition: "transform .25s var(--t-spring), box-shadow .25s",
+            }}
+            onFocusCapture={(e) => {
+              e.currentTarget.style.transform = "translate(-2px,-2px)";
+              e.currentTarget.style.boxShadow = "10px 10px 0 var(--acc)";
+            }}
+            onBlurCapture={(e) => {
+              e.currentTarget.style.transform = "";
+              e.currentTarget.style.boxShadow = "8px 8px 0 var(--acc)";
+            }}
+          >
+            <IconSearch className="size-[22px] shrink-0" style={{ color: "var(--t-text)" }} aria-hidden />
+            <Input
+              id="search-input"
+              placeholder={
+                typewriterText ||
+                (searchMode === "film_tv" ? "Search scripts, scenes, speeches..." : "Search monologues...")
+              }
+              value={searchMode === "plays" ? playsQuery : filmTvQuery}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (searchMode === "plays") setPlaysQuery(v);
+                else setFilmTvQuery(v);
+                pauseTypewriter();
+                setIsTyping(true);
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 800);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              onFocus={() => {
+                pauseTypewriter();
+                noteSearchBoxFocused();
+                if (currentQuery) setIsTyping(true);
+              }}
+              onBlur={() => {
+                setTimeout(() => setIsTyping(false), 200);
+                if (!currentQuery) resumeTypewriter();
+              }}
+              className="min-h-0 flex-1 border-0 bg-transparent px-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              style={{
+                fontFamily: "var(--t-body)",
+                fontSize: "clamp(17px,1.6vw,21px)",
+                fontWeight: 500,
+                color: "var(--t-text)",
+                borderRadius: 0,
+              }}
+            />
+            {!isLoading && (searchMode === "plays" ? playsQuery : filmTvQuery) && (
+              <button
+                type="button"
+                onClick={() => (searchMode === "plays" ? setPlaysQuery("") : setFilmTvQuery(""))}
+                aria-label="Clear search"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full transition-colors"
+                style={{ background: "oklch(0.92 0.02 80)", color: "var(--t-text)" }}
+              >
+                <IconX className="size-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={isLoading ? stopSearch : handleSearch}
+              aria-label={isLoading ? "Stop search" : "Search"}
+              className="flex h-11 shrink-0 items-center gap-2.5 pl-5 pr-1.5 text-[15px] font-bold transition-transform hover:scale-[1.04] hover:-rotate-[1.5deg]"
+              style={{
+                borderRadius: 999,
+                background: "var(--t-cta-bg)",
+                border: "1.5px solid oklch(0.45 0.03 55)",
+                color: "var(--t-cream)",
+                transitionTimingFunction: "var(--t-spring)",
+              }}
+            >
+              {isLoading ? "Looking" : "Search"}
+              <span
+                className="flex size-6 items-center justify-center rounded-full"
+                style={{ background: "var(--t-gel)", color: "var(--t-cta-bg)" }}
+                aria-hidden
+              >
+                {isLoading ? (
+                  <IconLoader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                )}
+              </span>
+            </button>
+          </div>
+
+          {searchMode === "plays" && (
+            <button
+              id="search-find-for-me"
+              type="button"
+              onClick={handleFindForMe}
+              disabled={isLoading}
+              className="t-find-for-me flex shrink-0 items-center gap-2 px-6 text-[15px] font-semibold disabled:opacity-50"
+              style={{ minHeight: 68, borderRadius: 40 }}
+            >
+              <IconSparkles className="size-[18px]" />
+              Find for me
+            </button>
           )}
         </div>
-        {/* Search bar. Stacked on mobile for easier tap targets. Centred, and
-            after a search it widens to the same measure as the results, so the
-            bar, the count and the cards all share one edge and one centre. */}
-        <div className={chromeCompact ? "mx-auto w-full" : "max-w-3xl mx-auto"}>
-          <div className={chromeCompact ? "flex items-center gap-2" : ""}>
-          <div className="relative group flex-1 min-w-0">
-            {/* Ambient glow effect - subtle background */}
-            <div
-              className={`absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-primary/0 via-primary/30 to-primary/0 blur-lg transition-all duration-500 ${
-                isTyping ? "opacity-100 scale-105" : "opacity-0 scale-100"
-              }`}
+
+        {/* Quick chips. They stay after a search now: the head is a fixed
+            height and the bar no longer collapses, so there is nothing for
+            hiding them to protect. */}
+        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="min-w-0 flex-1">
+            <QuickFilterChips
+              filters={filters}
+              onToggle={(key, value) => setFilters({ ...filters, [key]: value })}
+              hideCategory={searchMode === "film_tv"}
+              mode={searchMode}
+              onOpenFilters={() => {
+                if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
+                  setShowFilters(true);
+                } else {
+                  setShowFiltersSheet(true);
+                }
+              }}
+              activeFilterCount={activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
             />
-
-            {/* Sweeping spotlight overlay */}
-            <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-              <div
-                className={`absolute inset-0 bg-gradient-to-r from-transparent ${searchMode === "film_tv" ? "via-violet-400/10" : "via-primary/10"} to-transparent transition-transform duration-700 ease-out ${
-                  isTyping ? "translate-x-full" : "-translate-x-full"
-                }`}
-              />
-            </div>
-
-            <div
-              className={`relative flex ${
-                /* stacked is roomier for a first search, but inside the sticky
-                   bar it costs a button's height of results on every phone */
-                chromeCompact
-                  ? "flex-row items-center gap-1 rounded-full border bg-muted/30 p-1 pl-1.5"
-                  : "flex-col gap-2 rounded-xl border bg-card p-2 shadow-sm"
-              } md:flex-row md:items-center transition-all duration-300 ${
-                isTyping
-                  ? searchMode === "film_tv"
-                    ? "border-violet-400/50"
-                    : "border-primary/50"
-                  : "border-border/70"
-              } ${jitter ? "search-jitter" : ""}`}
-              onAnimationEnd={() => setJitter(false)}
-            >
-              <div className="flex-1 relative min-w-0 w-full">
-                <IconSearch className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${
-                  isTyping ? (searchMode === "film_tv" ? "text-violet-400" : "text-primary") : "text-muted-foreground"
-                }`} />
-                <Input
-                  id="search-input"
-                  placeholder={typewriterText || (searchMode === "film_tv" ? "Search scripts, scenes, speeches..." : "Search monologues...")}
-                  value={searchMode === "plays" ? playsQuery : filmTvQuery}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (searchMode === "plays") setPlaysQuery(v);
-                    else setFilmTvQuery(v);
-                    pauseTypewriter();
-                    setIsTyping(true);
-                    if (typingTimeoutRef.current) {
-                      clearTimeout(typingTimeoutRef.current);
-                    }
-                    typingTimeoutRef.current = setTimeout(() => {
-                      setIsTyping(false);
-                    }, 800);
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  onFocus={() => {
-                    pauseTypewriter();
-                    noteSearchBoxFocused();
-                    if (currentQuery) setIsTyping(true);
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => setIsTyping(false), 200);
-                    if (!currentQuery) resumeTypewriter();
-                  }}
-                  /* pr clears the absolutely-positioned clear button (44px wide
-                     at right-3); pr-10 let long queries run underneath it. */
-                  className={`pl-11 pr-14 text-base border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 ${
-                    chromeCompact ? "min-h-[40px] h-10" : "min-h-[48px] md:h-12"
-                  }`}
-                />
-                {!isLoading && (searchMode === "plays" ? playsQuery : filmTvQuery) && (
-                  <button
-                    type="button"
-                    onClick={() => searchMode === "plays" ? setPlaysQuery("") : setFilmTvQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md hover:bg-muted/50 transition-colors"
-                    aria-label="Clear search"
-                  >
-                    <IconX className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-              {/* Always present. It shrinks to a round icon button once results
-                  are up (see the `chromeCompact` branch below) but it must not
-                  disappear: hiding it left Enter as the only way to re-run a
-                  search, which on a phone keyboard is not a discoverable path
-                  and on desktop reads as the search box having gone dead. */}
-              {(
-                <Button
-                  onClick={isLoading ? stopSearch : handleSearch}
-                  size="default"
-                  variant={isLoading ? "outline" : "default"}
-                  aria-label={isLoading ? "Stop search" : "Search"}
-                  className={`shrink-0 transition-all duration-300 ${
-                    chromeCompact
-                      ? "h-9 w-9 min-h-0 min-w-0 rounded-full p-0"
-                      : `min-h-[44px] min-w-[44px] md:min-h-[2.5rem] md:min-w-0 px-4 md:px-6 rounded-lg ${
-                          isLoading ? "" : isTyping ? (searchMode === "film_tv" ? "shadow-md shadow-violet-400/20" : "shadow-md shadow-primary/20") : ""
-                        }`
-                  }`}
-                >
-                  {isLoading ? (
-                    <>
-                      <IconX className="h-4 w-4" />
-                      {!chromeCompact && <span className="hidden md:inline ml-1">Stop</span>}
-                    </>
-                  ) : chromeCompact ? (
-                    /* The compact state is a 36px circle, so it needs a glyph.
-                       It was still rendering the word "Search", which spilled
-                       out of the circle — hence the button looking broken. */
-                    <IconSearch className="h-4 w-4" />
-                  ) : (
-                    "Search"
-                  )}
-                </Button>
-              )}
-            </div>
           </div>
+          <p className="t-dir shrink-0" style={{ fontSize: 12, color: "var(--t-faint)" }}>
+            {maxOverdoneScore >= 1
+              ? "(fresh picks first · showing everything)"
+              : maxOverdoneScore <= 0
+                ? "(freshest only)"
+                : "(fresh picks first)"}
+          </p>
+        </div>
 
-          {/* Filters sits beside the field, not crammed inside it */}
-          {chromeCompact && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFiltersSheet(true)}
-                className="md:hidden shrink-0 gap-1 min-h-[40px] min-w-[40px] px-2 text-muted-foreground hover:text-foreground"
-                aria-label="Filters"
-              >
-                <IconAdjustments className="h-4 w-4" />
-                {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                  <span className="tabular-nums text-xs text-primary">
-                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
-                  </span>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFilters(true)}
-                className="hidden md:inline-flex shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
-              >
-                <IconAdjustments className="h-4 w-4" />
-                Filters
-                {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                  <span className="tabular-nums text-xs text-primary">
-                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
-                  </span>
-                )}
-              </Button>
-            </>
-          )}
-          </div>
-
-          {/* Action Row - Filters (Plays or Film & TV) + Find for me (Plays only).
-              After a search these controls move inside the search bar itself,
-              so this row would just be a duplicate taking up sticky height. */}
-          <div
-            id="search-filters"
-            className={`flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
-              chromeCompact ? "hidden" : "flex mt-3 sm:mt-4"
-            }`}
-          >
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFiltersSheet(true)}
-                className="md:hidden gap-2 text-muted-foreground hover:text-foreground min-h-[44px]"
-              >
-                <IconAdjustments className="h-4 w-4" />
-                Filters
-                {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
-                  </Badge>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                className={`hidden md:flex gap-2 text-muted-foreground hover:text-foreground ${showFilters ? "text-foreground bg-muted" : ""}`}
-              >
-                <IconAdjustments className="h-4 w-4" />
-                Filters
-                {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
-                  </Badge>
-                )}
-              </Button>
-            </div>
-
-            {searchMode === "plays" && (
-              <Button
-                id="search-find-for-me"
-                onClick={handleFindForMe}
-                disabled={isLoading}
-                variant="outline"
-                size="sm"
-                /* a way in before you've searched; on a phone afterwards it's
-                   just another row between the actor and the results */
-                className={`gap-2 min-h-[44px] md:min-h-0 border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary ${
-                  chromeCompact ? "hidden md:inline-flex" : ""
-                }`}
-              >
-                <IconSparkles className="h-4 w-4" />
-                Find for me
-              </Button>
-            )}
-          </div>
-
-          {/* Quick filter chips — one-tap popular filters. They're a way in to
-              the first search; after that the parsed-constraint chips and the
-              filter panel do this job, and keeping them would fatten the
-              sticky bar. */}
-          {!chromeCompact && (
-            <div className="mt-3">
-              <QuickFilterChips
-                filters={filters}
-                onToggle={(key, value) => setFilters({ ...filters, [key]: value })}
-                hideCategory={searchMode === "film_tv"}
-              />
-            </div>
-          )}
+        <SourceTagLegend className="mt-3" />
 
           {/* Mobile: filters in sheet (SearchFiltersSheet). Desktop: expandable inline filters */}
           <SearchFiltersSheet
@@ -1976,7 +1966,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
             </DialogContent>
           </Dialog>
-        </div>
       </div>
 
       <div className="space-y-6">
@@ -2010,10 +1999,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <motion.div
                 key="film-tv-loading"
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                animate={RISE_IN}
+                exit={LIFT_OUT}
               >
-                <SearchCurtain mode="film_tv" />
+                <SearchCurtain mode="film_tv" onStop={stopSearch} />
               </motion.div>
             ) : filmTvResults.length === 0 && !filmTvHasSearched ? (
               /* Was an empty <div />. Switching to a tab you had not searched
@@ -2059,8 +2048,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 key="film-tv-results"
                 id="search-results"
                 initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                animate={RISE_IN}
+                exit={FALL}
                 transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 className="space-y-4"
               >
@@ -2148,7 +2137,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                        either. The poster thumbnail goes with the card; the
                        speech is the thing being chosen. */
                     <div>
-                      <SharedFactsLine label={constantFactsLabel(filmTvFacts)} />
+                      <p className="t-dir mb-4" style={{ color: "var(--t-muted-dark-2)" }}>
+                        {filmTvQuery && (
+                          <span style={{ color: "var(--t-text)" }}>
+                            (you said: &ldquo;{filmTvQuery}&rdquo;){" "}
+                          </span>
+                        )}
+                        <SharedFactsLine label={constantFactsLabel(filmTvFacts)} />
+                      </p>
+                      <div aria-hidden className="t-results-rule mb-2" />
                       {filmTvDisplay.map((mono, idx) => (
                         <MonologueSpeech
                           key={mono.id}
@@ -2173,8 +2170,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <motion.div
               key="plays-loading"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              animate={RISE_IN}
+              exit={LIFT_OUT}
             >
               {/* Find for me gets its own curtain. Nobody typed anything, so
                   "reading twelve thousand pages" describes the wrong act — and
@@ -2182,6 +2179,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   rather than decorative, because the wait really is the
                   profile being read. */}
               <SearchCurtain
+                onStop={stopSearch}
                 mode={isFindingForMe ? "for_you" : "plays"}
                 name={firstName}
                 facts={forYouFacts}
@@ -2245,8 +2243,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               key="plays-results"
               id="search-results"
               initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
+              animate={RISE_IN}
+              exit={FALL}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               className="space-y-4"
             >
@@ -2314,59 +2312,92 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   toolbar starts exactly where the speeches do. Left at the
                   container edge it sat 124px to the left of every character
                   name, and the gutter read as a hole rather than a margin. */}
-              <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border/50 pb-4 sm:pl-[9.5rem]">
-                {/* items-center, not items-baseline. The row around this is
-                    centre-aligned, so baseline-aligning the pair inside it hung
-                    "monologues" 4px below everything else on the line: measured
-                    mid 258 against 254 for the count, the chip and the button. */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-2xl font-semibold tabular-nums text-foreground">
-                    {/* `total` is the server's full count for paging, but it was
-                        shown even when we held no results — a page reading
-                        "11 monologues" above nothing. Never report more than we
-                        actually have to show. */}
-                    {showBookmarkedOnly
-                      ? results.filter((m) => m.is_favorited).length
-                      : results.length === 0
-                        ? 0
-                        : total > 0
-                          ? total
-                          : results.length}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {showBookmarkedOnly ? "in your collection" : "monologues"}
-                  </span>
+              {/* One toolbar: what the search understood, how many came back,
+                  and the way back to the box. Indented to the margin column so
+                  it starts exactly where the speeches do. */}
+              <div className="mb-4 sm:pl-[9.5rem]">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                    {parsedConstraints && Object.keys(parsedConstraints).length > 0 && (
+                      <span
+                        className="shrink-0 text-sm font-semibold"
+                        style={{ color: "var(--t-muted-dark)" }}
+                      >
+                        Understood:
+                      </span>
+                    )}
+                    <ParsedConstraintChips constraints={parsedConstraints} onRemove={handleRemoveConstraint} />
+                    <ActiveFilterChips
+                      filters={filters}
+                      labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
+                      onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
+                      onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "", source_type: "" })}
+                    />
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="text-sm" style={{ color: "var(--t-muted-dark)" }}>
+                      {/* `total` is the server's full count for paging, but it
+                          was shown even when we held no results — a page
+                          reading "11 monologues" above nothing. Never report
+                          more than we actually have to show. */}
+                      <b className="tabular-nums" style={{ color: "var(--t-text)" }}>
+                        {showBookmarkedOnly
+                          ? results.filter((m) => m.is_favorited).length
+                          : results.length === 0
+                            ? 0
+                            : total > 0
+                              ? total
+                              : results.length}
+                      </b>{" "}
+                      {showBookmarkedOnly ? "in your collection" : "pieces"}
+                    </span>
+                    <span aria-hidden style={{ color: "var(--t-line-light)" }}>·</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById("search-input") as HTMLInputElement | null;
+                        el?.focus();
+                        el?.select();
+                        window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+                      }}
+                      className="text-sm underline underline-offset-4"
+                      style={{ color: "var(--t-muted-dark)" }}
+                    >
+                      new search
+                    </button>
+                    <Button
+                      variant={showBookmarkedOnly ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
+                      className="shrink-0 gap-2 rounded-full"
+                    >
+                      <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
+                      <span className="hidden sm:inline">In your collection</span>
+                      <span className="sm:hidden">Collection</span>
+                    </Button>
+                  </div>
                 </div>
 
-                {/* basis-full drops the chips onto their own line on a phone,
-                    where squeezing them between the count and the button
-                    interleaved everything; inline from sm up. */}
-                {/* No flex-1 here and no ml-auto on the button below. Together
-                    they threw the count to the far left and the collection
-                    toggle to the far right with ~800px of nothing between, on a
-                    row whose three items belong to each other. They read as one
-                    group now, left aligned with the cards underneath. */}
-                <div className="order-last flex min-w-0 basis-full flex-wrap items-center gap-2 sm:order-none sm:basis-auto">
-                  <ActiveFilterChips
-                    filters={filters}
-                    labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
-                    onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
-                    onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" })}
-                  />
-                  <ParsedConstraintChips constraints={parsedConstraints} onRemove={handleRemoveConstraint} />
-                </div>
-
-                <Button
-                  variant={showBookmarkedOnly ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                  className={`gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
-                >
-                  <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                  <span className="hidden sm:inline">In your collection</span>
-                  <span className="sm:hidden">Collection</span>
-                </Button>
+                {/* The query echo and the facts every row shares, on one line.
+                    This is why the H1 never repeats the query: the head has to
+                    hold one height, so what you typed lives here instead. */}
+                <p className="t-dir mt-3" style={{ color: "var(--t-muted-dark-2)" }}>
+                  {queryUsedForResults && (
+                    <span style={{ color: "var(--t-text)" }}>
+                      (you said: &ldquo;{queryUsedForResults}&rdquo;){" "}
+                    </span>
+                  )}
+                  <SharedFactsLine label={constantFactsLabel(playsFacts)} />
+                </p>
               </div>
+
+              {/* The rule the results hang from. */}
+              <div
+                aria-hidden
+                className="t-results-rule mb-2"
+                style={{ ["--rule-d" as string]: "0.2s" }}
+              />
 
               {/* Unified results grid: Best Match + Related use same card layout; hide confidence for broad queries */}
               {(() => {
@@ -2447,7 +2478,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 );
                 return (
                   <>
-                    <SharedFactsLine label={constantFactsLabel(playsFacts)} />
                     {!showBookmarkedOnly && showConfidence && bestMatches.length > 0 && (
                       <p className="mb-6 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
                         <span aria-hidden className="inline-block h-3 w-0.5 bg-primary" />
@@ -2485,17 +2515,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               })()}
               {hasMore && !showBookmarkedOnly && (
                 <div className="flex justify-center pt-6">
-                  <Button
-                    variant="outline"
+                  <button
+                    type="button"
                     onClick={loadMore}
                     disabled={isLoadingMore}
-                    className="rounded-full px-8"
+                    className="t-show-more"
                   >
-                    {isLoadingMore ? (
-                      <IconLoader2 className="h-4 w-4 animate-spin" />
-                    ) : null}
-                    Load more
-                  </Button>
+                    {isLoadingMore ? <IconLoader2 className="size-4 animate-spin" /> : null}
+                    Show {PAGE_SIZE} more
+                  </button>
                 </div>
               )}
               {/* Ask AFTER the results, not above them. In the toolbar it was
@@ -2539,7 +2567,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               exit={{ opacity: 0 }}
               onClick={closeMonologue}
               transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-              className="fixed inset-0 z-[10000] bg-black"
+              className="fixed inset-0 z-[10000]"
+              style={{ background: "var(--t-ink)", backdropFilter: "blur(2px)" }}
             />
 
             {/* Slide-over Panel */}
@@ -2553,16 +2582,27 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ease: [0.25, 0.1, 0.25, 1],
                 opacity: { duration: 0.25 },
               }}
-              className={`fixed right-0 top-0 bottom-0 z-[10001] overflow-y-auto bg-background border-l shadow-2xl transition-[width,box-shadow] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
-                isReadingMode
-                  ? "w-full"
-                  : "w-full md:w-[600px] lg:w-[700px]"
+              className={`theatre-sides fixed bottom-0 right-0 top-0 z-[10001] overflow-y-auto transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
+                isReadingMode ? "w-full" : "w-full md:w-[600px]"
               }`}
+              style={{
+                background: "var(--t-paper)",
+                borderLeft: "2px solid var(--t-text)",
+                color: "var(--t-text)",
+              }}
             >
-              <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002] ${
-                isReadingMode ? "border-b-0" : ""
-              }`}>
-                <div className="flex items-center justify-end px-4 py-3">
+              <div
+                className="sticky top-0 z-[10002]"
+                style={{
+                  background: "color-mix(in oklab, var(--t-paper) 95%, transparent)",
+                  backdropFilter: "blur(6px)",
+                  borderBottom: isReadingMode ? "none" : "1.5px solid var(--t-line-light)",
+                }}
+              >
+                <div className="flex items-center justify-between gap-3 px-5 py-3">
+                  <p className="t-dir" style={{ fontSize: 13, color: "var(--t-muted-dark-2)" }}>
+                    (the sides.)
+                  </p>
                   <div className="flex items-center gap-1 shrink-0">
                     {/* Download button - show in both modes; 44px touch target on mobile */}
                     <div className="relative z-[10002]">
