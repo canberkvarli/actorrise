@@ -7,6 +7,7 @@ Handles:
 - Manual review notifications
 """
 
+import contextlib
 import os
 from typing import Optional
 
@@ -35,6 +36,17 @@ class ResendEmailClient:
             )
 
         resend.api_key = self.api_key
+
+    @contextlib.contextmanager
+    def batch_session(self):
+        """
+        No-op twin of SmtpEmailClient.batch_session.
+
+        Resend is stateless HTTP, so there is no connection to hold. It exists
+        so a batch loop can wrap its client without asking which transport it
+        got.
+        """
+        yield self
 
     def send_email(
         self,

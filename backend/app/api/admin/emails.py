@@ -82,6 +82,29 @@ def _get_email_client(send_via: str = "smtp"):
 
 logger = logging.getLogger(__name__)
 
+def _recount_batch(db, b) -> None:
+    """
+    Derive a batch's counters from its rows.
+
+    They used to be accumulated with `b.sent += 1` / `b.skipped += 1`, which
+    only holds if a batch is attempted exactly once. Resume runs over the same
+    batch again and keeps adding, so the ghost-light launch finished reporting
+    sent=452 / skipped=879 against a total of 791 — the two summing to 1,331.
+    The per-row statuses were right the whole time; only the summary lied.
+    """
+    from sqlalchemy import func
+
+    counts = dict(
+        db.query(EmailSend.status, func.count(EmailSend.id))
+        .filter(EmailSend.batch_id == b.id)
+        .group_by(EmailSend.status)
+        .all()
+    )
+    # "sent" is anything that left: opened/clicked are sent rows that came back.
+    b.sent = sum(c for s, c in counts.items() if s not in ("failed", "queued"))
+    b.skipped = counts.get("failed", 0)
+
+
 
 router = APIRouter(prefix="/api/admin/emails", tags=["admin", "emails"])
 
@@ -572,42 +595,42 @@ def bulk_send_email(
                 EmailSend.status == "queued",
             ).all()
 
-            for send_row in sends:
-                try:
-                    vars_copy = dict(body.variables)
-                    vars_copy["unsubscribe_url"] = build_unsubscribe_url(send_row.to_email)
-                    vars_copy["user_name"] = send_row.to_name or default_name
+            with client.batch_session():
+                for send_row in sends:
+                    try:
+                        vars_copy = dict(body.variables)
+                        vars_copy["unsubscribe_url"] = build_unsubscribe_url(send_row.to_email)
+                        vars_copy["user_name"] = send_row.to_name or default_name
 
-                    html, _, plain_text = _render_template(body.template_id, vars_copy)
+                        html, _, plain_text = _render_template(body.template_id, vars_copy)
 
-                    # Inject self-hosted open/click tracking
-                    html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
+                        # Inject self-hosted open/click tracking
+                        html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
 
-                    response = client.send_email(
-                        to=send_row.to_email,
-                        subject=subject,
-                        html=html,
-                        scheduled_at=body.scheduled_at or None,
-                        plain_text=plain_text,
-                        unsubscribe_url=build_unsubscribe_url(send_row.to_email),
-                    )
+                        response = client.send_email(
+                            to=send_row.to_email,
+                            subject=subject,
+                            html=html,
+                            scheduled_at=body.scheduled_at or None,
+                            plain_text=plain_text,
+                            unsubscribe_url=build_unsubscribe_url(send_row.to_email),
+                        )
 
-                    send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
-                    send_row.status = "sent"
-                    b.sent += 1
-                except Exception as e:
-                    send_row.status = "failed"
-                    b.skipped += 1
-                    errors = list(b.errors_json or [])
-                    errors.append(f"{send_row.to_email}: {e}")
-                    b.errors_json = errors
-                    logger.warning("Failed to send to %s: %s", send_row.to_email, e)
+                        send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
+                        send_row.status = "sent"
+                    except Exception as e:
+                        send_row.status = "failed"
+                        errors = list(b.errors_json or [])
+                        errors.append(f"{send_row.to_email}: {e}")
+                        b.errors_json = errors
+                        logger.warning("Failed to send to %s: %s", send_row.to_email, e)
 
-                db2.commit()
-                # SMTP needs more spacing to avoid Gmail throttling
-                delay = 2.0 if body.send_via == "smtp" else 0.5
-                time.sleep(delay)
+                    db2.commit()
+                    # SMTP needs more spacing to avoid Gmail throttling
+                    delay = 2.0 if body.send_via == "smtp" else 0.5
+                    time.sleep(delay)
 
+            _recount_batch(db2, b)
             b.status = "completed"
             db2.commit()
 
@@ -739,42 +762,42 @@ def resume_batch(
                 db2.commit()
                 return
 
-            for send_row in sends:
-                try:
-                    vars_copy = {
-                        "unsubscribe_url": build_unsubscribe_url(send_row.to_email),
-                        "user_name": send_row.to_name or default_name,
-                    }
+            with client.batch_session():
+                for send_row in sends:
+                    try:
+                        vars_copy = {
+                            "unsubscribe_url": build_unsubscribe_url(send_row.to_email),
+                            "user_name": send_row.to_name or default_name,
+                        }
 
-                    html = render_fn(**vars_copy)
-                    plain_text = plain_fn(**vars_copy) if plain_fn else None
+                        html = render_fn(**vars_copy)
+                        plain_text = plain_fn(**vars_copy) if plain_fn else None
 
-                    # Inject self-hosted open/click tracking
-                    html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
+                        # Inject self-hosted open/click tracking
+                        html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
 
-                    response = client.send_email(
-                        to=send_row.to_email,
-                        subject=subject,
-                        html=html,
-                        plain_text=plain_text,
-                        unsubscribe_url=build_unsubscribe_url(send_row.to_email),
-                    )
+                        response = client.send_email(
+                            to=send_row.to_email,
+                            subject=subject,
+                            html=html,
+                            plain_text=plain_text,
+                            unsubscribe_url=build_unsubscribe_url(send_row.to_email),
+                        )
 
-                    send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
-                    send_row.status = "sent"
-                    b.sent += 1
-                except Exception as e:
-                    send_row.status = "failed"
-                    b.skipped += 1
-                    errors = list(b.errors_json or [])
-                    errors.append(f"{send_row.to_email}: {e}")
-                    b.errors_json = errors
-                    logger.warning("Resume send failed for %s: %s", send_row.to_email, e)
+                        send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
+                        send_row.status = "sent"
+                    except Exception as e:
+                        send_row.status = "failed"
+                        errors = list(b.errors_json or [])
+                        errors.append(f"{send_row.to_email}: {e}")
+                        b.errors_json = errors
+                        logger.warning("Resume send failed for %s: %s", send_row.to_email, e)
 
-                db2.commit()
-                delay = 2.0 if body.send_via == "smtp" else 0.5
-                time.sleep(delay)
+                    db2.commit()
+                    delay = 2.0 if body.send_via == "smtp" else 0.5
+                    time.sleep(delay)
 
+            _recount_batch(db2, b)
             b.status = "completed"
             db2.commit()
 
@@ -843,8 +866,10 @@ def list_batches(
 
         # Auto-recover stuck batches: if no queued sends remain but status is still processing
         if b.status == "processing" and status_counts.get("queued", 0) == 0 and status_counts:
+            # This one is the read endpoint's stuck-batch recovery, not a send
+            # loop: its session is `db`, and there is no `db2` in scope here.
+            _recount_batch(db, b)
             b.status = "completed"
-            b.sent = sum(c for s, c in status_counts.items() if s not in ("failed", "queued"))
             db.commit()
 
         results.append({
@@ -1008,43 +1033,43 @@ def send_campaign_endpoint(
                 db2.commit()
                 return
 
-            for send_row in sends:
-                try:
-                    vars_copy = dict(variables)
-                    vars_copy["unsubscribe_url"] = build_unsubscribe_url(send_row.to_email)
-                    vars_copy["user_name"] = send_row.to_name or default_name
+            with client.batch_session():
+                for send_row in sends:
+                    try:
+                        vars_copy = dict(variables)
+                        vars_copy["unsubscribe_url"] = build_unsubscribe_url(send_row.to_email)
+                        vars_copy["user_name"] = send_row.to_name or default_name
 
-                    html = render_fn(**vars_copy)
-                    plain_text = plain_fn(**vars_copy) if plain_fn else None
+                        html = render_fn(**vars_copy)
+                        plain_text = plain_fn(**vars_copy) if plain_fn else None
 
-                    # Inject self-hosted open/click tracking
-                    html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
+                        # Inject self-hosted open/click tracking
+                        html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
 
-                    response = client.send_email(
-                        to=send_row.to_email,
-                        subject=subject,
-                        html=html,
-                        plain_text=plain_text,
-                        scheduled_at=body.scheduled_at or None,
-                        unsubscribe_url=build_unsubscribe_url(send_row.to_email),
-                    )
+                        response = client.send_email(
+                            to=send_row.to_email,
+                            subject=subject,
+                            html=html,
+                            plain_text=plain_text,
+                            scheduled_at=body.scheduled_at or None,
+                            unsubscribe_url=build_unsubscribe_url(send_row.to_email),
+                        )
 
-                    send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
-                    send_row.status = "sent"
-                    b.sent += 1
-                except Exception as e:
-                    send_row.status = "failed"
-                    b.skipped += 1
-                    errors = list(b.errors_json or [])
-                    errors.append(f"{send_row.to_email}: {e}")
-                    b.errors_json = errors
-                    logger.warning("Campaign send failed for %s: %s", send_row.to_email, e)
+                        send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
+                        send_row.status = "sent"
+                    except Exception as e:
+                        send_row.status = "failed"
+                        errors = list(b.errors_json or [])
+                        errors.append(f"{send_row.to_email}: {e}")
+                        b.errors_json = errors
+                        logger.warning("Campaign send failed for %s: %s", send_row.to_email, e)
 
-                db2.commit()
-                # SMTP needs more spacing to avoid Gmail throttling
-                delay = 2.0 if body.send_via == "smtp" else 0.5
-                time.sleep(delay)
+                    db2.commit()
+                    # SMTP needs more spacing to avoid Gmail throttling
+                    delay = 2.0 if body.send_via == "smtp" else 0.5
+                    time.sleep(delay)
 
+            _recount_batch(db2, b)
             b.status = "completed"
             db2.commit()
 
@@ -1493,49 +1518,48 @@ def approve_weekly_digest(
             # Build email -> recipient data map
             recipient_map = {r["email"].strip().lower(): r for r in recipients_data}
 
-            for send_row in sends:
-                try:
-                    recipient = recipient_map.get(send_row.to_email)
-                    if not recipient:
+            with client.batch_session():
+                for send_row in sends:
+                    try:
+                        recipient = recipient_map.get(send_row.to_email)
+                        if not recipient:
+                            send_row.status = "failed"
+                            continue
+
+                        vars_copy = {
+                            "user_name": recipient["name"],
+                            "character_analysis": recipient["character_analysis"],
+                            "monologue_snippet": recipient["monologue_snippet"],
+                            "monologue_url": recipient["monologue_url"],
+                            "unsubscribe_url": build_unsubscribe_url(send_row.to_email),
+                        }
+
+                        html = templates_svc.render_weekly_engagement(**vars_copy)
+                        plain_text = templates_svc.render_weekly_engagement_plain(**vars_copy)
+
+                        html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
+
+                        response = client.send_email(
+                            to=send_row.to_email,
+                            subject="This week's pick",
+                            html=html,
+                            plain_text=plain_text,
+                            unsubscribe_url=build_unsubscribe_url(send_row.to_email),
+                        )
+
+                        send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
+                        send_row.status = "sent"
+                    except Exception as e:
                         send_row.status = "failed"
-                        b.skipped += 1
-                        continue
+                        errors = list(b.errors_json or [])
+                        errors.append(f"{send_row.to_email}: {e}")
+                        b.errors_json = errors
+                        logger.warning("Weekly digest send failed for %s: %s", send_row.to_email, e)
 
-                    vars_copy = {
-                        "user_name": recipient["name"],
-                        "character_analysis": recipient["character_analysis"],
-                        "monologue_snippet": recipient["monologue_snippet"],
-                        "monologue_url": recipient["monologue_url"],
-                        "unsubscribe_url": build_unsubscribe_url(send_row.to_email),
-                    }
+                    db2.commit()
+                    time.sleep(2.0)  # SMTP throttling
 
-                    html = templates_svc.render_weekly_engagement(**vars_copy)
-                    plain_text = templates_svc.render_weekly_engagement_plain(**vars_copy)
-
-                    html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
-
-                    response = client.send_email(
-                        to=send_row.to_email,
-                        subject="This week's pick",
-                        html=html,
-                        plain_text=plain_text,
-                        unsubscribe_url=build_unsubscribe_url(send_row.to_email),
-                    )
-
-                    send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
-                    send_row.status = "sent"
-                    b.sent += 1
-                except Exception as e:
-                    send_row.status = "failed"
-                    b.skipped += 1
-                    errors = list(b.errors_json or [])
-                    errors.append(f"{send_row.to_email}: {e}")
-                    b.errors_json = errors
-                    logger.warning("Weekly digest send failed for %s: %s", send_row.to_email, e)
-
-                db2.commit()
-                time.sleep(2.0)  # SMTP throttling
-
+            _recount_batch(db2, b)
             b.status = "completed"
             db2.commit()
 
