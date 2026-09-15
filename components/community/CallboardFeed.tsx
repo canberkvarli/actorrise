@@ -9,6 +9,7 @@ import {
 } from "@/hooks/useCommunityFeed";
 import { useTrending } from "@/hooks/useTrending";
 import { useBookmarks } from "@/hooks/useBookmarks";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 
 /**
  * The Callboard — a stage manager's call sheet.
@@ -36,8 +37,12 @@ import { useBookmarks } from "@/hooks/useBookmarks";
  * arrival show any more. At roughly two real events an hour the honest source
  * of life is the clock: timestamps re-render every 20s, a caret blinks at the
  * head of the roster because a cursor means "listening", and a row that truly
- * arrived on the last poll strikes green and holds a pulse. Nothing here
+ * arrived on the last poll strikes gel and holds an orange pulse. Nothing here
  * animates to imply activity that did not happen.
+ *
+ * v2 moved the sheet from a cold near-black panel onto the Theatre Walk paper,
+ * so the two ink objects on it — the ticker, and your own call — are the lit
+ * ones. See `.callsheet` in globals.css.
  */
 
 const SHEET_DATE = new Intl.DateTimeFormat("en-GB", {
@@ -56,6 +61,33 @@ function compactTime(iso: string, now: number): string {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h`;
   return `${Math.floor(hrs / 24)}d`;
+}
+
+/* Book cloths for the spine on your own call, and faces for the roster.
+   Both are picked off a stable key — the piece's id, the actor's name — so one
+   monologue keeps one colour across visits and one actor keeps one colour down
+   the sheet. A random colour per render would make the board look like it was
+   reshuffling people who had not moved. */
+const CLOTHS = [
+  "oklch(0.32 0.055 155)",
+  "oklch(0.31 0.085 25)",
+  "oklch(0.30 0.065 255)",
+  "oklch(0.34 0.070 70)",
+  "oklch(0.31 0.045 300)",
+  "oklch(0.30 0.020 240)",
+];
+const FACES = [
+  "oklch(0.58 0.18 45)",
+  "oklch(0.35 0.06 155)",
+  "oklch(0.45 0.10 300)",
+  "oklch(0.40 0.08 255)",
+  "oklch(0.50 0.12 25)",
+];
+function pick(list: string[], seed: string | number): string {
+  const str = String(seed);
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return list[h % list.length];
 }
 
 /** Time actually passes, so the sheet should show it passing. This is the one
@@ -257,31 +289,51 @@ export function CallboardFeed() {
   const windowLabel = data.window === "today" ? "today" : "this week";
 
   return (
-    <div className="callsheet min-h-screen px-4 pb-24 pt-8 sm:px-8 sm:pt-12">
+    <div className={`callsheet theatre-tokens ${theatreFontVars} min-h-screen px-4 pb-24 pt-8 sm:px-8 sm:pt-12`}>
       <div className="mx-auto w-full max-w-5xl">
         {/* ── Header block ─────────────────────────────────────────────────
             A call sheet states the show, the date and the numbers, then gets
             out of the way. It does not have a hero. */}
         <header>
-          <p className="font-typewriter text-[11px] uppercase tracking-[0.3em] text-[var(--sheet-faint)]">
+          <p className="flex items-center gap-2.5 font-typewriter text-[11px] uppercase tracking-[0.3em] text-[var(--sheet-faint)]">
+            {/* The line claims something about right now, so the dot beside it
+                breathes. It is the page's smallest honest signal. */}
+            <span aria-hidden className="relative inline-block h-2.5 w-2.5 shrink-0">
+              <span className="sheet-breathe absolute inset-0 rounded-full bg-[var(--sheet-acc)]" />
+              <span className="absolute inset-[1.5px] rounded-full bg-[var(--sheet-acc)]" />
+            </span>
             The house, before curtain
           </p>
-          <h1 className="font-playbill mt-2 text-[clamp(3rem,11vw,6.5rem)] leading-[0.85] tracking-[-0.01em] text-[var(--sheet-ink)]">
+          <h1 className="sheet-display mt-2 text-[clamp(3rem,11vw,6.5rem)] leading-[0.85] tracking-[-0.01em] text-[var(--sheet-ink)]">
             The Callboard
           </h1>
 
           {/* The numbers sit on one ruled line, tabular, like a call sheet's
               header strip — not as four big stat tiles, which is how the
               previous version shipped a permanent prominent 0. */}
-          <div className="mt-6 border-y border-[var(--sheet-rule)] py-2.5">
-            <p className="flex flex-wrap items-baseline gap-x-7 gap-y-1.5 font-typewriter text-[13px]">
-              <div className="text-[var(--sheet-dim)]">{SHEET_DATE.format(new Date())}</div>
+          {/* Heavier rule on top than underneath, the way a printed running
+              order opens. The date and the numbers sit on it as one line.
+
+              This was a <p> with a <div> inside it, which the parser closes the
+              paragraph on — the stats were being hoisted out of their own line
+              in the DOM. */}
+          <div className="mt-6 border-b border-t-2 border-b-[var(--sheet-rule)] border-t-[var(--sheet-ink)] py-2.5">
+            <p className="flex flex-wrap items-baseline gap-x-8 gap-y-1.5 font-typewriter text-[13px]">
+              <span className="text-[var(--sheet-dim)]">{SHEET_DATE.format(new Date())}</span>
               <Stat n={data.actor_count} label={`in the house ${windowLabel}`} />
               {counts.searched > 0 && <Stat n={counts.searched} label="searches" />}
               {counts.joined > 0 && <Stat n={counts.joined} label="new faces" />}
+              <span className="ml-auto inline-flex items-center gap-2 italic text-[var(--sheet-faint)]">
+                (clock&rsquo;s running.)
+                <span aria-hidden className="sheet-caret text-[var(--sheet-acc)]">
+                  &#9646;
+                </span>
+              </span>
             </p>
           </div>
         </header>
+
+        <Ticker rows={roster} />
 
         {/* ── Your call ────────────────────────────────────────────────────
             Everything else on this sheet is other people. Without this the
@@ -304,7 +356,7 @@ export function CallboardFeed() {
             <SectionRule>Tonight&rsquo;s bill</SectionRule>
             {headline && (
               <Link href={`/monologue/${headline.id}`} className="group mt-4 block">
-                <p className="font-playbill text-[clamp(2rem,5.5vw,3.25rem)] leading-[0.95] text-[var(--sheet-ink)] transition-colors group-hover:text-primary">
+                <p className="sheet-display text-[clamp(2rem,5.5vw,3.25rem)] leading-[0.95] text-[var(--sheet-ink)] transition-colors group-hover:text-primary">
                   {headline.character_name}
                 </p>
                 <p className="mt-1.5 font-typewriter text-sm text-[var(--sheet-dim)]">
@@ -363,13 +415,18 @@ export function CallboardFeed() {
                   key={tag}
                   href={`/monologues?q=${encodeURIComponent(tag)}`}
                   style={{ "--row-delay": `${180 + i * 30}ms` } as React.CSSProperties}
-                  className={`sheet-row border px-2 py-1 font-typewriter text-[13px] capitalize transition-colors hover:border-primary hover:text-primary ${
-                    n > 2
-                      ? "border-[var(--sheet-dim)] font-semibold text-[var(--sheet-ink)]"
-                      : "border-[var(--sheet-rule)] text-[var(--sheet-dim)]"
-                  }`}
+                  className="sheet-row sheet-tag font-typewriter text-[13px] capitalize"
+                  data-strong={n > 2}
                 >
                   {tag}
+                  {/* The count is the panel. "Comedic" is a category anyone
+                      could have guessed; "comedic ×14" is a fact about
+                      tonight, and it was already being computed and thrown
+                      away. */}
+                  <span aria-hidden className="sheet-tag__n">
+                    &times;{n}
+                  </span>
+                  <span className="sr-only">, {n} asked for this</span>
                 </Link>
               ))}
             </div>
@@ -400,7 +457,7 @@ export function CallboardFeed() {
                 >
                   <Link
                     href={r.href}
-                    className="group flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2.5 font-typewriter text-[13px] sm:grid sm:grid-cols-[0.6rem_minmax(0,9rem)_5.5rem_minmax(0,1fr)_2.5rem_0.9rem] sm:items-center sm:gap-x-4 sm:gap-y-0"
+                    className="group flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2.5 font-typewriter text-[13px] sm:grid sm:grid-cols-[0.6rem_minmax(0,11rem)_5.5rem_minmax(0,1fr)_2.6rem_0.9rem] sm:items-center sm:gap-x-4 sm:gap-y-0"
                   >
                     <span className="flex h-2 w-2 shrink-0 items-center sm:w-[0.6rem]">
                       {fresh && (
@@ -418,8 +475,21 @@ export function CallboardFeed() {
                         </>
                       )}
                     </span>
-                    <span className="truncate text-[15px] font-semibold text-[var(--sheet-ink)] sm:text-[13px]">
-                      {r.name}
+                    {/* The name column carries a face now. Twelve identical
+                        monospace names read as a log; twelve coloured discs
+                        read as people, and the colour is keyed to the name so
+                        the same actor is the same disc every time. */}
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <span
+                        aria-hidden
+                        className="sheet-display sheet-avatar italic"
+                        style={{ "--face": r.name === "Someone" ? "oklch(0.60 0.02 60)" : pick(FACES, r.name) } as React.CSSProperties}
+                      >
+                        {r.name === "Someone" ? "?" : r.name[0]}
+                      </span>
+                      <span className="truncate text-[15px] font-semibold text-[var(--sheet-ink)] sm:text-[13px]">
+                        {r.name}
+                      </span>
                     </span>
                     <span className="shrink-0 uppercase tracking-[0.08em] text-[var(--sheet-faint)]">
                       {r.verb}
@@ -453,6 +523,49 @@ export function CallboardFeed() {
         </section>
 
         <VisibilityStamp />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The strip across the board.
+ *
+ * The only place on the sheet where an event may appear twice, because it is
+ * the thing you catch in the corner of your eye rather than a record — the
+ * roster below is the record. It pauses on hover so a name you half-saw is
+ * readable rather than gone.
+ *
+ * aria-hidden, and not by oversight: the run is duplicated to make the loop
+ * seamless, so a screen reader would read the whole house twice before
+ * reaching the roster that states the same facts once, in order, as links.
+ */
+function Ticker({ rows }: { rows: Row[] }) {
+  /* Four names is the floor. Below that the strip loops visibly every few
+     seconds, which reads as a broken animation rather than as a busy house —
+     and a quiet house is better said by nothing than by three names on a
+     carousel. */
+  if (rows.length < 4) return null;
+  const run = [...rows, ...rows];
+
+  return (
+    <div aria-hidden className="sheet-ticker -mx-4 mt-9 sm:-mx-8">
+      <div className="sheet-ticker__run text-sm">
+        {run.map((r, i) => (
+          <span
+            key={`${r.id}-${i}`}
+            className="inline-flex items-baseline gap-1.5 px-[18px]"
+          >
+            <span className="text-[var(--sheet-faint)]">&bull;</span>
+            <strong className="font-bold">{r.name}</strong>
+            <span className="opacity-70">{r.verb}</span>
+            {r.detail && (
+              <em className="font-typewriter not-italic text-[var(--sheet-gel)]">
+                {r.detail}
+              </em>
+            )}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -500,7 +613,7 @@ function VisibilityStamp() {
   const { shareActivity, isLoading, setShareActivity } = useShareActivity();
   if (isLoading || shareActivity === undefined) return null;
   return (
-    <div className="mt-14 border-t border-[var(--sheet-rule)] pt-4">
+    <div className="mt-14 flex flex-wrap items-center justify-between gap-2.5 border-t border-[var(--sheet-rule)] pt-4">
       <button
         type="button"
         onClick={() => setShareActivity(!shareActivity)}
@@ -510,6 +623,10 @@ function VisibilityStamp() {
           ? "You are on this sheet · take me off"
           : "You are off this sheet · put me back"}
       </button>
+      {/* Says why the control above is worth leaving on, without arguing. */}
+      <span className="font-typewriter text-xs italic tracking-[0.06em] text-[var(--sheet-faint)]">
+        (a real callboard carries the whole company&rsquo;s names. and yours.)
+      </span>
     </div>
   );
 }
@@ -518,10 +635,10 @@ function VisibilityStamp() {
     moves position when the data lands. */
 function SheetSkeleton() {
   return (
-    <div className="callsheet min-h-screen px-4 pb-24 pt-8 sm:px-8 sm:pt-12">
+    <div className={`callsheet theatre-tokens ${theatreFontVars} min-h-screen px-4 pb-24 pt-8 sm:px-8 sm:pt-12`}>
       <div className="mx-auto w-full max-w-5xl">
         <div className="h-3 w-48 bg-[var(--sheet-rule)]" />
-        <div className="mt-4 h-[clamp(3rem,11vw,6.5rem)] w-full max-w-2xl bg-[var(--sheet-raised)]" />
+        <div className="mt-4 h-[clamp(3rem,11vw,6.5rem)] w-full max-w-2xl bg-[var(--sheet-rule)]" />
         <div className="mt-6 border-y border-[var(--sheet-rule)] py-2.5">
           <div className="h-3 w-72 bg-[var(--sheet-rule)]" />
         </div>
@@ -529,7 +646,7 @@ function SheetSkeleton() {
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="border-b border-[var(--sheet-rule)] py-3.5">
               <div
-                className="h-3 bg-[var(--sheet-raised)]"
+                className="h-3 bg-[var(--sheet-rule)]"
                 style={{ width: `${34 + ((i * 13) % 46)}%` }}
               />
             </div>
@@ -560,26 +677,48 @@ function YourCall() {
   const rest = mine.length - 1;
 
   return (
-    <section className="mt-10">
+    <section className="mt-11">
       <SectionRule>Your call</SectionRule>
-      <div className="mt-3 border-t border-[var(--sheet-rule)]">
-        <div className="sheet-row sheet-row-hit border-b border-[var(--sheet-rule)]">
-          <Link
-            href={`/monologue/${current.id}`}
-            className="group flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-3 font-typewriter text-[13px]"
-          >
-            <span className="text-[15px] font-semibold text-[var(--sheet-ink)] sm:text-[13px]">
-              {current.character_name}
-            </span>
-            <span className="min-w-0 flex-1 truncate text-[var(--sheet-dim)]">
-              {subtitleFor(current.character_name, current.play_title)}
-            </span>
-            <span className="shrink-0 uppercase tracking-[0.08em] text-primary">
-              Rehearse →
-            </span>
-          </Link>
-        </div>
-      </div>
+      {/* The one lit object on a paper board.
+
+          It used to be a hairline row identical to the twelve rows of other
+          people below it, which is the whole problem stated in CSS: the line
+          addressed to you looked exactly like the lines that were not. It is a
+          panel now — ink, a gel shadow, and a spine coloured off the piece's
+          own id so the same monologue is the same colour every time you come
+          back to it. */}
+      <Link
+        href={`/monologue/${current.id}`}
+        className="sheet-call mt-3.5"
+        style={{ "--cloth": pick(CLOTHS, current.id) } as React.CSSProperties}
+      >
+        <span aria-hidden className="sheet-call__cloth" />
+        <span className="relative min-w-0 flex-1 basis-[200px]">
+          <span className="sheet-display block text-[clamp(1.8rem,3vw,2.6rem)] leading-[0.95] tracking-[-0.01em]">
+            {current.character_name}
+          </span>
+          <span className="font-typewriter mt-1 block text-[13px] text-[oklch(0.75_0.02_62)]">
+            {subtitleFor(current.character_name, current.play_title)}
+          </span>
+        </span>
+        <span className="sheet-call__go">
+          Rehearse
+          <span aria-hidden>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </span>
+        </span>
+      </Link>
       {rest > 0 && (
         <p className="mt-2.5 font-typewriter text-[13px] text-[var(--sheet-faint)]">
           <Link href="/rehearse" className="underline-offset-4 hover:text-[var(--sheet-ink)] hover:underline">

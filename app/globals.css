@@ -391,21 +391,44 @@
      stuttering; the same seven facts in aligned columns are a legible pattern
      you read down in a second. Stop writing sentences, start writing columns. */
   .callsheet {
-    /* Cold near-black, deliberately not the old board's brown. The previous
-       ground was warm enough that the orange sat inside the same family as the
-       surface and stopped reading as an accent at all. */
-    --sheet: oklch(0.165 0.006 65);
-    --sheet-raised: oklch(0.205 0.007 65);
-    --sheet-ink: oklch(0.945 0.005 85);
-    --sheet-dim: oklch(0.635 0.008 72);
-    --sheet-faint: oklch(0.435 0.008 72);
-    --sheet-rule: oklch(0.295 0.008 65);
-    /* Second accent. Orange means "go read this"; green means "this just
-       happened". Two colours carrying two meanings, not decoration. */
-    --sheet-live: oklch(0.80 0.15 152);
+    /* Paper, not a cold near-black panel.
+
+       The board used to be the one screen in the app that set its own ground,
+       a near-black sheet in a cream product. Every other v2 surface — the
+       header, the collection, search — is the Theatre Walk paper with an ink
+       bar over it, and a page that opts out of that reads as a different
+       product rather than as a different room. So the sheet is paper now and
+       the two ink objects on it (the ticker, your own call) are the things
+       that are lit.
+
+       The second accent goes with it. Green meant "this just happened" on the
+       dark ground; on paper the gel does that job, which is also what it does
+       in the bar and on the lamp. One vocabulary. */
+    --sheet: oklch(0.96 0.02 85);
+    --sheet-raised: oklch(0.99 0.005 85);
+    --sheet-ink: oklch(0.16 0.01 45);
+    --sheet-dim: oklch(0.4 0.015 55);
+    --sheet-faint: oklch(0.5 0.02 60);
+    --sheet-rule: oklch(0.8 0.02 75);
+    --sheet-acc: oklch(0.58 0.18 45);
+    --sheet-gel: oklch(0.92 0.18 100);
+    --sheet-live: var(--sheet-gel);
     position: relative;
     background-color: var(--sheet);
     color: var(--sheet-ink);
+  }
+  /* Blackout. The design gave no dark spec for the board, so this is the same
+     light/dark pairing the header handoff sets out, applied to the sheet: the
+     paper becomes the ink page, the ink becomes cream, and the accent takes
+     the brighter orange that is legible on it. */
+  :root.dark .callsheet {
+    --sheet: oklch(0.13 0.015 50);
+    --sheet-raised: oklch(0.17 0.018 52);
+    --sheet-ink: oklch(0.96 0.02 85);
+    --sheet-dim: oklch(0.7 0.02 62);
+    --sheet-faint: oklch(0.6 0.02 60);
+    --sheet-rule: oklch(0.3 0.03 55);
+    --sheet-acc: oklch(0.7 0.18 48);
   }
   /* The sheet is dark in a shell that may be in light mode, so wherever the
      content stops short of the viewport the app's pale body showed as a strip
@@ -489,12 +512,15 @@
   }
 
   /* A row that genuinely arrived on the last poll. Rare, so it is loud. */
+  /* Orange, not the gel that strikes the row behind it. A yellow dot on cream
+     is barely a dot; and the two want to read as two things — the row flashes
+     because it just landed, the dot stays because it is the newest one. */
   .sheet-live-dot {
-    background: var(--sheet-live);
+    background: var(--sheet-acc);
     animation: sheet-pulse 2.2s ease-out infinite;
   }
   @keyframes sheet-pulse {
-    0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--sheet-live) 60%, transparent); }
+    0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--sheet-acc) 60%, transparent); }
     70%  { box-shadow: 0 0 0 6px transparent; }
     100% { box-shadow: 0 0 0 0 transparent; }
   }
@@ -502,7 +528,7 @@
     animation: sheet-strike 1400ms ease-out both;
   }
   @keyframes sheet-strike {
-    0%   { background-color: color-mix(in oklab, var(--sheet-live) 20%, transparent); }
+    0%   { background-color: color-mix(in oklab, var(--sheet-live) 60%, transparent); }
     100% { background-color: transparent; }
   }
 
@@ -513,6 +539,181 @@
     .sheet-fresh {
       animation: none;
     }
+  }
+
+  /* ── The ticker ───────────────────────────────────────────────────────────
+     The one band of the sheet that moves on its own, and the only place on the
+     board where an event is allowed to appear twice — it is the strip you
+     catch out of the corner of your eye, not a record. Ink, full bleed past
+     the page gutter, so it reads as a lit sign nailed across the board rather
+     than another panel on it. */
+  .sheet-ticker {
+    display: block;
+    overflow: hidden;
+    padding: 10px 0;
+    background: oklch(0.16 0.01 45);
+    color: oklch(0.96 0.02 85);
+  }
+  .sheet-ticker__run {
+    display: flex;
+    width: max-content;
+    white-space: nowrap;
+    animation: sheet-ticker 70s linear infinite;
+  }
+  .sheet-ticker:hover .sheet-ticker__run { animation-play-state: paused; }
+  /* In blackout the strip and the page were both ink, so the one band that is
+     supposed to read as a lit sign nailed across the board had no edge. Same
+     lift the bar takes on a dark page. */
+  :root.dark .sheet-ticker {
+    background: oklch(0.19 0.02 52);
+  }
+  @keyframes sheet-ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* ── Your call ────────────────────────────────────────────────────────────
+     The actor's own line, as the one lit object on a paper board. Everything
+     else here is other people; this is the reason the page is worth opening on
+     a Tuesday, so it is the only thing that gets a panel.
+
+     The spine is a book cloth, coloured off the piece's own id so the same
+     monologue is the same colour every time you come back. */
+  .sheet-call {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 20px;
+    padding: 18px 22px;
+    border-radius: 18px;
+    background: oklch(0.13 0.015 50);
+    color: oklch(0.96 0.02 85);
+    border: 1.5px solid oklch(0.16 0.01 45);
+    box-shadow: 8px 8px 0 var(--sheet-gel);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .sheet-call:hover {
+    transform: translate(-2px, -2px);
+    color: oklch(0.96 0.02 85);
+  }
+  .sheet-call::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    pointer-events: none;
+    background: radial-gradient(
+      50% 80% at 8% 20%,
+      oklch(0.72 0.17 55 / 0.28),
+      transparent 70%
+    );
+  }
+  .sheet-call__cloth {
+    position: relative;
+    flex-shrink: 0;
+    width: 34px;
+    height: 52px;
+    border-radius: 3px;
+    background: var(--cloth, oklch(0.31 0.085 25));
+    box-shadow: 2px 2px 0 var(--sheet-gel);
+  }
+  .sheet-call__go {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    height: 48px;
+    padding: 0 6px 0 20px;
+    border-radius: 999px;
+    background: oklch(0.96 0.02 85);
+    color: oklch(0.13 0.015 50);
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .sheet-call__go span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: var(--sheet-gel);
+  }
+
+  /* The face beside a name. Coloured off the name so one actor keeps one
+     colour down the sheet and across visits. */
+  .sheet-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-radius: 999px;
+    border: 1.5px solid oklch(0.16 0.01 45);
+    background: var(--face, oklch(0.58 0.18 45));
+    color: oklch(0.96 0.02 85);
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  /* A tag the house is hunting for. The count is the whole point — "comedic"
+     is a category, "comedic ×14" is a fact about tonight. */
+  .sheet-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    border: 1.5px solid var(--sheet-rule);
+    color: var(--sheet-dim);
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .sheet-tag[data-strong="true"] {
+    border-color: var(--sheet-dim);
+    color: var(--sheet-ink);
+    font-weight: 700;
+  }
+  .sheet-tag:hover {
+    border-color: oklch(0.16 0.01 45);
+    background: var(--sheet-gel);
+    color: oklch(0.16 0.01 45);
+    transform: rotate(-1.5deg);
+  }
+  .sheet-tag__n {
+    font-size: 11px;
+    opacity: 0.55;
+  }
+
+  /* The dot beside "the house, before curtain". Breathing, because the line it
+     sits next to is a claim about right now. */
+  /* The board's titles, in the same serif the rest of v2 sets its titles in.
+     They were in Big Shoulders — a condensed grotesque — which is why the
+     Callboard read as a different product's page even before the ground
+     changed. Needs `.theatre-tokens` + `theatreFontVars` mounted on the sheet:
+     an unbound var() in font-family fails silently back to the app sans. */
+  .sheet-display {
+    /* The var ALONE. `var(--t-display), Georgia, serif` parses fine in a
+       browser and is deleted outright by the build's CSS minifier — the whole
+       rule vanished from the bundle, the headline silently kept the app sans,
+       and nothing anywhere reported an error. `--t-display` already carries
+       its own Georgia/Times fallbacks, so there was never anything to add. */
+    font-family: var(--t-display);
+    font-weight: 400;
+  }
+
+  .sheet-breathe {
+    animation: sheet-breathe 2s ease-in-out infinite;
+  }
+  @keyframes sheet-breathe {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.6); opacity: 0.95; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sheet-ticker__run { animation: none; }
+    .sheet-call:hover,
+    .sheet-tag:hover { transform: none; }
   }
 
   /* Hero headline keyword – slick neon-style emphasis (gradient + soft glow) */
