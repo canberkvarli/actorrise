@@ -17,7 +17,7 @@ export function ActiveFilterChips({ filters, labels, onRemove, onClearAll }: Act
   if (activeEntries.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 pt-1">
       <AnimatePresence mode="popLayout">
         {activeEntries.map(([key, value]) => (
           <motion.button
@@ -27,23 +27,18 @@ export function ActiveFilterChips({ filters, labels, onRemove, onClearAll }: Act
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.15 }}
             onClick={() => onRemove(key)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-2.5 py-1 text-xs text-foreground hover:bg-muted transition-colors cursor-pointer"
+            className="t-active-filter"
           >
-            <span className="text-muted-foreground">{labels[key] || key}:</span>
-            <span className="font-medium capitalize">{value}</span>
-            <IconX className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+            <span className="t-active-filter__key">{labels[key] || key}</span>
+            <span className="t-active-filter__val">{value}</span>
+            <IconX className="h-3 w-3 shrink-0 opacity-60" aria-hidden />
           </motion.button>
         ))}
       </AnimatePresence>
       {activeEntries.length > 1 && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClearAll}
-          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-        >
-          Clear all
-        </Button>
+        <button type="button" onClick={onClearAll} className="t-active-filter__clear">
+          clear all
+        </button>
       )}
     </div>
   );

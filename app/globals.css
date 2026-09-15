@@ -1926,6 +1926,81 @@
   color: var(--t-muted-dark-2);
 }
 /* The meta owns the right edge now, so it lines up down the column. */
+/* What the search is currently constrained by, each one removable.
+
+   These wore the app's semantic chrome — border-border, bg-muted/50 — inside a
+   page that owns its own palette, so they read as a control strip borrowed
+   from somewhere else and sat hard against the filter row above them. */
+.t-active-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-line-light);
+  background: transparent;
+  color: var(--t-text);
+  font-family: var(--t-direction);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s var(--t-spring);
+}
+.t-active-filter:hover {
+  border-color: var(--t-text);
+  transform: translateY(-1px);
+}
+.t-active-filter__key {
+  color: var(--t-muted-dark-2);
+}
+.t-active-filter__val {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.t-active-filter__clear {
+  height: 30px;
+  padding: 0 8px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--t-muted-dark-2);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  transition: color 0.25s;
+}
+.t-active-filter__clear:hover {
+  color: var(--t-text);
+}
+
+/* The clear-the-query mark inside the search box. It was a pale grey disc,
+   a colour from no part of this palette, sitting hard against the Search
+   button with nothing between them. Quiet outline, and real space before the
+   button it is not part of. */
+.t-clear-query {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-right: 10px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-line-light);
+  background: transparent;
+  color: var(--t-muted-dark-2);
+  cursor: pointer;
+  transition: all 0.25s var(--t-spring);
+}
+.t-clear-query:hover {
+  border-color: var(--t-text);
+  color: var(--t-text);
+  transform: rotate(90deg);
+}
+
 /* "Only what I've saved", as a mark rather than a sentence. It was a labelled
    pill sitting beside a result count and a "new search" link — three pieces of
    chrome above the results, two of which you could not act on. */
@@ -1933,8 +2008,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
+  gap: 8px;
   height: 36px;
+  padding: 0 16px 0 13px;
+  white-space: nowrap;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.06em;
   border-radius: 999px;
   border: 1.5px solid var(--t-line-light);
   background: transparent;
@@ -2201,9 +2281,15 @@
 .t-show-more {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   height: 48px;
   padding: 0 32px;
+  /* The height is fixed, so the label must never wrap. "Clear 2 filters" broke
+     onto three lines inside a 48px pill and spilled out above and below it,
+     which reads as a rendering fault, not a button. */
+  white-space: nowrap;
+  flex-shrink: 0;
   border-radius: 999px;
   border: 1.5px solid var(--t-text);
   background: transparent;
@@ -4262,4 +4348,81 @@
      the text colour — which is cream here and would put a slab under every
      spine on the shelf. */
   --t-hard-shadow: oklch(0.07 0.01 45);
+}
+
+/* ==========================================================================
+   ONBOARDING — the first-run playbill (Theatre Walk)
+
+   A card on a dark stage under one ghost light. The stage stays dark in both
+   themes, the way a house is dark whatever time you walked in from; the CARD
+   flips, because a cream slab at full brightness is the wrong thing to hand
+   somebody who chose dark mode. Same design, same tokens, dark values — the
+   pattern `.theatre-search` and `.theatre-collection` already use.
+
+   Everything the component draws reads these tokens, so there are no dark
+   rules below this block.
+   ========================================================================== */
+.theatre-onboarding {
+  --page: oklch(0.13 0.015 50);
+  --card: var(--t-cream);
+  --acc: var(--t-orange-deep);
+
+  /* The ink that reads ON the gel, in BOTH themes. --t-text flips to cream in
+     dark, and cream on the gel is the one unreadable pair on this card: it is
+     what a selected tile and the hover fill are filled with. */
+  --t-on-gel: oklch(0.15 0.03 45);
+
+  /* The design's ink pill, not `.theatre-tokens`' orange default: the card is
+     cream, so ink is the strongest thing that can sit on it. */
+  --t-cta-bg: oklch(0.15 0.03 45);
+  --t-cta-fg: var(--t-cream);
+  --t-cta-dot-bg: var(--t-gel);
+  --t-cta-dot-fg: oklch(0.15 0.03 45);
+
+  font-family: var(--t-body);
+}
+
+/* Form controls inherit no face of their own, and this card is almost entirely
+   buttons and two inputs. */
+.theatre-onboarding button,
+.theatre-onboarding input {
+  font-family: inherit;
+}
+
+.dark .theatre-onboarding {
+  /* The stage goes a shade deeper so the card still separates from it. */
+  --page: oklch(0.1 0.012 50);
+  --card: oklch(0.19 0.018 52);
+  /* orange-deep is tuned to be contrast-safe ON cream; on ink it goes muddy. */
+  --acc: var(--t-orange);
+
+  /* Surfaces: what was paper is now a raised dark tile, one step ABOVE the
+     card, so an unselected tile is still legible as a thing you can press.
+     The gap has to be bigger than it looks in numbers — 0.19 against 0.225
+     read as one flat slab on a real screen, because oklch lightness is nearly
+     flat down here (0.19 and 0.225 are Lab L* 6 and 10). */
+  --t-paper: oklch(0.25 0.02 52);
+  --t-paper-2: oklch(0.17 0.018 52);
+
+  /* Text: the dark-text tokens become the light ones. */
+  --t-text: oklch(0.95 0.02 85);
+  --t-text-soft: oklch(0.93 0.02 85);
+  --t-muted-dark: oklch(0.75 0.02 62);
+  --t-muted-dark-2: oklch(0.68 0.02 62);
+  --t-faint: oklch(0.6 0.02 60);
+
+  --t-line-light: oklch(0.38 0.03 55);
+  --t-line-light-2: oklch(0.42 0.03 55);
+
+  --t-on-text: oklch(0.15 0.03 45);
+  /* The spines' printed shadow is cast in something darker than the tile, not
+     in the text colour — which is cream here. */
+  --t-hard-shadow: oklch(0.07 0.01 45);
+
+  /* An ink pill on a dark card is invisible, so the primary inverts to cream
+     with ink on it — and the arrow dot inverts with it. */
+  --t-cta-bg: oklch(0.96 0.02 85);
+  --t-cta-fg: oklch(0.15 0.03 45);
+  --t-cta-dot-bg: oklch(0.15 0.03 45);
+  --t-cta-dot-fg: var(--t-gel);
 }

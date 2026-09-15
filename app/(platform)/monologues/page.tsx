@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { Suspense, useState, useEffect, useRef, useMemo, useCallback, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { SearchTour } from "@/components/onboarding/SearchTour";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
@@ -123,6 +123,12 @@ function SharedFactsLine({ label }: { label: string | null }) {
       (all {label}.)
     </p>
   );
+}
+
+/** Nothing to subscribe to: the hour is read once per render pass, and a page
+ *  open across midnight re-reading it is not worth a timer. */
+function subscribeNever() {
+  return () => {};
 }
 
 function SearchContent() {
@@ -1583,6 +1589,25 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       ? "results"
       : "empty";
 
+  /* "tonight?" was hardcoded. Actors audition in the morning, prepare over
+     lunch and self-tape whenever the room is quiet, and a page that insists it
+     is night to someone searching at 9am is a page that is not paying
+     attention. Read off the visitor's own clock.
+
+     Rendered through useSyncExternalStore rather than an effect, so the server
+     and the first client pass agree: the server has no clock worth trusting,
+     so it emits the neutral word and the client swaps in the right one. */
+  const whenWord = useSyncExternalStore(
+    subscribeNever,
+    () => {
+      const h = new Date().getHours();
+      if (h < 12) return "this morning";
+      if (h < 17) return "today";
+      return "tonight";
+    },
+    () => "today",
+  );
+
   const headDirection =
     headState === "searching"
       ? "(the house goes quiet.)"
@@ -1610,7 +1635,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         <em className="t-em" style={{ color: "var(--acc)" }}>
           need
         </em>{" "}
-        tonight?
+        {whenWord}?
       </>
     );
 
@@ -1838,9 +1863,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
                 transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
               >
+                {/* Short enough to hold one line in the pinned column. The
+                    long versions wrapped to two ragged right-aligned lines
+                    under the toggle. */}
                 {searchMode === "film_tv"
-                  ? "(scenes and speeches from the screen. no era filter here.)"
-                  : "(19,000 pieces. classical and contemporary.)"}
+                  ? "(film and tv.)"
+                  : "(19,000 pieces.)"}
               </motion.p>
             </AnimatePresence>
           </div>
@@ -1916,8 +1944,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 type="button"
                 onClick={() => (searchMode === "plays" ? setPlaysQuery("") : setFilmTvQuery(""))}
                 aria-label="Clear search"
-                className="flex size-9 shrink-0 items-center justify-center rounded-full transition-colors"
-                style={{ background: "oklch(0.92 0.02 80)", color: "var(--t-text)" }}
+                title="Clear"
+                className="t-clear-query"
               >
                 <IconX className="size-4" />
               </button>
@@ -2152,7 +2180,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 className="space-y-4"
               >
-                <div className="sm:pl-[9.5rem]">
+                <div className="mt-3 sm:pl-[9.5rem]">
                 <ActiveFilterChips
                   filters={filters}
                   labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
@@ -2166,16 +2194,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     prompt all went: none of them helps anyone find a piece,
                     and they were three lines you had to read before you were
                     allowed to start looking. */}
-                <div className="mb-8 flex items-center justify-end sm:pl-[9.5rem]">
+                <div className="mb-6 flex items-center justify-end sm:pl-[9.5rem]">
                   <button
                     type="button"
                     onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
                     aria-pressed={showBookmarkedOnly}
-                    aria-label={showBookmarkedOnly ? "Showing your collection — show everything" : "Show only your collection"}
                     title={showBookmarkedOnly ? "Showing your collection" : "Show only your collection"}
                     className="t-only-saved shrink-0"
                   >
-                    <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
+                    <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} aria-hidden />
+                    your collection
                   </button>
                 </div>
                 {/* Monologue cards grid */}
@@ -2391,11 +2419,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     type="button"
                     onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
                     aria-pressed={showBookmarkedOnly}
-                    aria-label={showBookmarkedOnly ? "Showing your collection — show everything" : "Show only your collection"}
                     title={showBookmarkedOnly ? "Showing your collection" : "Show only your collection"}
                     className="t-only-saved shrink-0"
                   >
-                    <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
+                    <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} aria-hidden />
+                    your collection
                   </button>
                 </div>
 

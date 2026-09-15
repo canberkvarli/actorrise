@@ -25,7 +25,7 @@ const COPY: Record<
   gibberish: {
     direction: "(line?)",
     title: "I couldn't read that one.",
-    body: "Describe what you're after — “funny monologue for a woman in her 20s” — or just name the play.",
+    body: "Describe what you're after, like “funny monologue for a woman in her 20s”, or just name the play.",
   },
   short: {
     direction: "(go on.)",
