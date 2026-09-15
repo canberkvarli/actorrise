@@ -8,11 +8,7 @@ import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import changelogData from "@/public/changelog.json";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconHelpCircle } from "@tabler/icons-react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarks";
 import { useFilmTvFavoriteCount } from "@/hooks/useFilmTvFavorites";
@@ -77,9 +73,9 @@ import {
 } from "@/lib/changelog";
 import { LastAuthProviderSync } from "@/components/auth/LastAuthProviderSync";
 import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
-import { CallboardLamp, CallboardMenuRow } from "@/components/community/CallboardLamp";
+import { CallboardLamp, CallboardSheetRow } from "@/components/community/CallboardLamp";
 import { useHeaderLight } from "@/components/layout/useHeaderLight";
-import { HouseLightsSwitch } from "@/components/layout/HouseLightsSwitch";
+import { HouseLightsRow, HouseLightsSwitch } from "@/components/layout/HouseLightsSwitch";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -109,7 +105,6 @@ export default function PlatformLayout({
   const savedCount = bookmarkCount + filmTvFavoriteCount;
   const { data: profile } = useProfile(isDemoUser);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const displayName = (mounted ? profile?.name?.trim() : null) || user?.name?.trim() || "";
   const profileLabel = displayName || "Account";
   const profileInitial = displayName
@@ -123,6 +118,23 @@ export default function PlatformLayout({
   // Use SWR hook for cached subscription data - MUST be called before any early returns
   const { subscription } = useSubscription();
   const userTier = subscription?.tier_name || "free";
+  /* The two notes in the playbill's margin. Both are real subscription data or
+     they are not rendered at all — an invented price in the account menu is a
+     support email, and this is the one screen where the number has to be the
+     number Stripe will charge. */
+  const renewalDate = subscription?.current_period_end
+    ? new Date(subscription.current_period_end)
+    : null;
+  const renewalNote =
+    renewalDate && !Number.isNaN(renewalDate.getTime())
+      ? `${subscription?.cancel_at_period_end ? "ends" : "renews"} ${renewalDate
+          .toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+          .toLowerCase()}`
+      : null;
+  const billingHint =
+    userTier !== "free" && subscription?.billing_period
+      ? `${userTier} · ${subscription.billing_period}`
+      : null;
 
   useEffect(() => setMounted(true), []);
 
@@ -145,19 +157,24 @@ export default function PlatformLayout({
     }
   }, [profileDropdownOpen]);
 
-  // Close mobile menu when clicking/tapping outside (mobile + desktop)
-  useEffect(() => {
-    const handlePointerDownOutside = (event: PointerEvent) => {
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
-        setMobileMenuOpen(false);
-      }
-    };
+  // No outside-click handler for the sheet: its scrim covers the whole screen
+  // and closes it on tap, and the menu button that opens it now sits OUTSIDE
+  // the sheet — a pointerdown-outside listener would close on the press and
+  // the button's own click would re-open it on release.
 
-    if (mobileMenuOpen) {
-      document.addEventListener("pointerdown", handlePointerDownOutside);
-      return () => document.removeEventListener("pointerdown", handlePointerDownOutside);
-    }
-  }, [mobileMenuOpen]);
+  // Escape closes the playbill and the phone sheet. Both are menus that sit
+  // over the page; leaving Escape to the outside-click handler alone means a
+  // keyboard user can open one and not get out of it.
+  useEffect(() => {
+    if (!profileDropdownOpen && !mobileMenuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setProfileDropdownOpen(false);
+      setMobileMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [profileDropdownOpen, mobileMenuOpen]);
 
   // Show welcome flow for new users who haven't seen it. Suppressed while the
   // newer full-screen OnboardingWizard is still pending (has_completed_onboarding
@@ -230,7 +247,12 @@ export default function PlatformLayout({
   /* The followspot behind the nav, and whether the bar has been scrolled past.
      Keyed on pathname so it re-measures when the route changes. Both are
      written straight to the DOM — see the hook for why neither is state. */
-  const { navRef, lightRef, barRef } = useHeaderLight(pathname);
+  /* Locked open: the bar must not slide away while the playbill or the phone
+     sheet is hanging off it. */
+  const { navRef, lightRef, barRef, shellRef } = useHeaderLight(
+    pathname,
+    profileDropdownOpen || mobileMenuOpen,
+  );
 
   const isNavActive = (item: (typeof navItems)[number]) =>
     item.match === "prefix" ? (pathname || "").startsWith(item.href) : pathname === item.href;
@@ -297,7 +319,9 @@ export default function PlatformLayout({
         as="nav"
         wash={false}
         overflowHidden={false}
-        className="dark z-[9998] flex justify-center border-0 bg-transparent px-4 pt-3.5 text-foreground"
+        ref={shellRef}
+        data-hidden="false"
+        className="t-appbar-shell dark z-[9998] flex justify-center border-0 bg-transparent px-4 pt-3.5 text-foreground"
         /* sticky, not relative: on a phone the hamburger, theme toggle and
            account menu all live up here, and a relative header scrolls them off
            screen entirely. The marketing header has always been sticky top-0.
@@ -457,12 +481,15 @@ export default function PlatformLayout({
                               Add your name & photo →
                             </Link>
                           )}
-                          <PlanBadge
-                            planName={userTier}
-                            variant="secondary"
-                            showIcon={false}
-                            className="h-5 px-2 text-[10px] font-medium uppercase tracking-wide self-start w-fit"
-                          />
+                          {/* The plan and the date it turns over, on one
+                              line. A badge on its own answered "what am I on"
+                              and left "and when does it bill" to the billing
+                              page — which is the question people actually open
+                              this menu with. */}
+                          <p className="t-playbill-menu__meta">
+                            <span className="t-playbill-menu__plan">{userTier}</span>
+                            {renewalNote}
+                          </p>
                         </div>
                       </div>
 
@@ -490,6 +517,9 @@ export default function PlatformLayout({
                       >
                         <IconBookmark className="h-4 w-4 text-muted-foreground" />
                         <span>Collection</span>
+                        {savedCount > 0 && (
+                          <span className="t-playbill-menu__hint">{savedCount} saved</span>
+                        )}
                       </Link>
 
                       <p className="t-playbill-menu__dir">(the box office.)</p>
@@ -500,6 +530,9 @@ export default function PlatformLayout({
                       >
                         <IconCreditCard className="h-4 w-4 text-muted-foreground" />
                         <span>Billing</span>
+                        {billingHint && (
+                          <span className="t-playbill-menu__hint">{billingHint}</span>
+                        )}
                       </Link>
                       <Link
                         href="/settings"
@@ -554,162 +587,27 @@ export default function PlatformLayout({
                 (three times, counting the hamburger). The header reads as empty
                 on purpose now, the thumb-reachable bar is the primary nav. */}
 
-            {/* Mobile menu: theme toggle + hamburger on far right */}
-            <div className="md:hidden flex items-center gap-0.5 shrink-0">
-              <ThemeToggle />
-              <div ref={mobileMenuRef} className="relative">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="min-h-[44px] min-w-[44px]"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            {/* Mobile: the lamp and the menu, nothing else.
+
+                The theme toggle used to sit here, which spent one of the two
+                spots a thumb can reach at the top of a phone on a control
+                nobody touches twice a month. It is a row in the sheet now, and
+                the Callboard — which has a live count and a reason to tap —
+                has the spot instead. Until this, the board had no persistent
+                handle on a phone at all. */}
+            <div className="flex shrink-0 items-center gap-1 md:hidden">
+              <CallboardLamp active={pathname === "/callboard"} />
+              <button
+                type="button"
+                className="t-burger"
+                data-open={mobileMenuOpen}
+                aria-expanded={mobileMenuOpen}
+                aria-haspopup="menu"
                 aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
-                <IconMenu className="h-5 w-5" />
-              </Button>
-
-              {/* Mobile Navigation - fixed below header so position is correct */}
-              {mobileMenuOpen && (
-            /* top/max-h track the mobile header height (h-16). This is md:hidden,
-               so only the phone value matters. */
-            <div className="fixed left-0 right-0 top-16 z-[9997] border-b border-border bg-background shadow-[0_8px_24px_rgba(0,0,0,0.25)] rounded-b-xl overflow-y-auto max-h-[calc(100dvh-4rem)] animate-in slide-in-from-top-2 duration-200 md:hidden">
-              <div className="py-3 px-3 space-y-1">
-                {/* navItems deliberately absent: every one of them is a tab in the
-                    bottom bar, one thumb away. This menu is secondary items only,
-                    which is what the comment below always claimed it was. */}
-                {user?.is_moderator && (
-                  <Button
-                    asChild
-                    variant={pathname.startsWith("/admin") ? "default" : "ghost"}
-                    size="sm"
-                    className="w-full justify-start gap-2"
-                  >
-                    <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
-                      <IconShieldCheck className="h-4 w-4" />
-                      Admin
-                    </Link>
-                  </Button>
-                )}
-
-                {/* The board's only persistent handle on a phone: the lamp
-                    beside Help is desktop-only, so without this row mobile
-                    could reach the Callboard through contextual whispers or
-                    not at all. */}
-                <CallboardMenuRow
-                  active={pathname === "/callboard"}
-                  onNavigate={() => setMobileMenuOpen(false)}
-                />
-
-                {/* Secondary links only in hamburger; Account is in bottom nav */}
-                {/* Bookmarks Link */}
-                <Button
-                  asChild
-                  variant={pathname === "/monologues" ? "default" : "ghost"}
-                  size="sm"
-                  className="w-full justify-between gap-2"
-                >
-                  <Link href="/monologues" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <IconBookmark className="h-4 w-4" />
-                      Saved
-                    </div>
-                    <span className="min-w-[1.75rem] flex justify-end">
-                      {!isLoadingBookmarks && !isLoadingFilmTvFavorites && savedCount > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {savedCount}
-                        </Badge>
-                      )}
-                    </span>
-                  </Link>
-                </Button>
-
-                {/* Billing Link */}
-                <Button
-                  asChild
-                  variant={pathname === "/billing" ? "default" : "ghost"}
-                  size="sm"
-                  className="w-full justify-start gap-2"
-                >
-                  <Link href="/billing" onClick={() => setMobileMenuOpen(false)}>
-                    <IconCreditCard className="h-4 w-4" />
-                    Billing
-                  </Link>
-                </Button>
-
-                {/* Account settings */}
-                <Button
-                  asChild
-                  variant={pathname === "/settings" ? "default" : "ghost"}
-                  size="sm"
-                  className="w-full justify-start gap-2"
-                >
-                  <Link href="/settings" onClick={() => setMobileMenuOpen(false)}>
-                    <IconSettings className="h-4 w-4" />
-                    Account settings
-                  </Link>
-                </Button>
-
-                {/* Help */}
-                <Button
-                  asChild
-                  variant={pathname === "/help" ? "default" : "ghost"}
-                  size="sm"
-                  className="w-full justify-start gap-2"
-                >
-                  <Link href="/help" onClick={() => setMobileMenuOpen(false)}>
-                    <IconHelpCircle className="h-4 w-4" />
-                    Help
-                  </Link>
-                </Button>
-
-                {/* What's New */}
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start gap-2"
-                >
-                  <Link href="/changelog" onClick={() => setMobileMenuOpen(false)}>
-                    <IconRocket className="h-4 w-4" />
-                    What&apos;s New
-                  </Link>
-                </Button>
-                {/* Contact */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start gap-2"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    setContactOpen(true);
-                  }}
-                >
-                  <IconMail className="h-4 w-4" />
-                  Contact & feedback
-                </Button>
-
-                {/* Logout Button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    void logout();
-                    setMobileMenuOpen(false);
-                  }}
-                  disabled={isLoggingOut}
-                  className="w-full justify-start gap-2"
-                >
-                  {isLoggingOut ? (
-                    <IconLoader2 className="h-4 w-4 animate-spin shrink-0" />
-                  ) : (
-                    <IconLogout className="h-4 w-4 shrink-0" />
-                  )}
-                  {isLoggingOut ? "Logging out…" : "Logout"}
-                </Button>
-              </div>
-            </div>
-              )}
-            </div>
+                <IconMenu className="size-4" />
+              </button>
             </div>
         </div>
         </div>
@@ -774,6 +672,140 @@ export default function PlatformLayout({
           </Link>
         </div>
       </nav>
+      )}
+
+      {/* The menu, as a sheet up from the bottom.
+
+          Outside the header in the DOM on purpose: the header carries a
+          transform now (it slides away as you read), and a transform makes an
+          element the containing block for anything `fixed` inside it — the old
+          dropdown would have been welded to a bar that leaves the screen. Down
+          here is also where the thumb already is.
+
+          The primary nav is deliberately absent: all four destinations are
+          tabs in the bar behind this sheet. */}
+      {!isImmersive && mobileMenuOpen && (
+        <>
+          <div
+            aria-hidden
+            className="t-sheet-scrim md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div role="menu" aria-label="Menu" className="t-sheet md:hidden">
+            <span aria-hidden className="t-sheet__handle" />
+
+            {user?.is_moderator && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="t-sheet__row"
+                data-active={pathname.startsWith("/admin")}
+              >
+                <IconShieldCheck className="size-[18px] shrink-0" />
+                Admin
+              </Link>
+            )}
+
+            <CallboardSheetRow
+              active={pathname === "/callboard"}
+              onNavigate={() => setMobileMenuOpen(false)}
+            />
+
+            <Link
+              href="/monologues"
+              onClick={() => setMobileMenuOpen(false)}
+              className="t-sheet__row"
+            >
+              <IconBookmark className="size-[18px] shrink-0" />
+              Saved
+              {!isLoadingBookmarks && !isLoadingFilmTvFavorites && savedCount > 0 && (
+                <span className="t-sheet__count">{savedCount}</span>
+              )}
+            </Link>
+
+            <Link
+              href="/billing"
+              onClick={() => setMobileMenuOpen(false)}
+              className="t-sheet__row"
+              data-active={pathname === "/billing"}
+            >
+              <IconCreditCard className="size-[18px] shrink-0" />
+              Billing
+              {billingHint && <span className="t-sheet__count">{billingHint}</span>}
+            </Link>
+
+            <Link
+              href="/settings"
+              onClick={() => setMobileMenuOpen(false)}
+              className="t-sheet__row"
+              data-active={pathname === "/settings"}
+            >
+              <IconSettings className="size-[18px] shrink-0" />
+              Account settings
+            </Link>
+
+            <Link
+              href="/help"
+              onClick={() => setMobileMenuOpen(false)}
+              className="t-sheet__row"
+              data-active={pathname === "/help"}
+            >
+              <IconHelpCircle className="size-[18px] shrink-0" />
+              Help
+            </Link>
+
+            <Link
+              href="/changelog"
+              onClick={() => setMobileMenuOpen(false)}
+              className="t-sheet__row"
+            >
+              <IconRocket className="size-[18px] shrink-0" />
+              What&apos;s new
+            </Link>
+
+            <button
+              type="button"
+              className="t-sheet__row"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setContactOpen(true);
+              }}
+            >
+              <IconMail className="size-[18px] shrink-0" />
+              Contact &amp; feedback
+            </button>
+
+            {/* The house lights live here on a phone rather than in the header
+                pill — see HouseLightsRow for why it is a row and not the
+                switch. */}
+            <HouseLightsRow onToggle={() => setMobileMenuOpen(false)} />
+
+            <button
+              type="button"
+              className="t-sheet__row"
+              disabled={isLoggingOut}
+              onClick={() => {
+                setMobileMenuOpen(false);
+                void logout();
+              }}
+            >
+              {isLoggingOut ? (
+                <IconLoader2 className="size-[18px] shrink-0 animate-spin" />
+              ) : (
+                <IconLogout className="size-[18px] shrink-0" />
+              )}
+              {isLoggingOut ? "Logging out…" : "Log out"}
+            </button>
+
+            <button
+              type="button"
+              className="t-sheet__close"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Close
+            </button>
+          </div>
+        </>
       )}
 
       <OnboardingWizard />

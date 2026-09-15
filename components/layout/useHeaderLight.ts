@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useRef } from "react";
 
 /**
- * The followspot behind the primary nav, and the bar's scroll state.
+ * The followspot behind the primary nav, and the bar's scroll behaviour: how
+ * far you have scrolled (it compresses) and which way you are going (it gets
+ * out of the way, and comes back when you scroll up).
  *
- * Neither is React state. The light's position is a measurement of the active
+ * None of it is React state. The light's position is a measurement of the active
  * tab, and "have you scrolled past 24px" is a fact about the window — both are
  * presentation, and putting them in state would re-render the whole header
  * shell on every scroll frame and every resize to move one span four pixels.
@@ -17,10 +19,15 @@ import { useCallback, useEffect, useRef } from "react";
  * width, so a single measurement on mount leaves the lamp in the wrong place
  * for the life of the page.
  */
-export function useHeaderLight(routeKey: string) {
+export function useHeaderLight(routeKey: string, locked = false) {
   const navRef = useRef<HTMLElement>(null);
   const lightRef = useRef<HTMLSpanElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLElement>(null);
+  /* Read inside the scroll handler rather than closed over, so the listener is
+     attached once for the life of the page instead of on every open/close. */
+  const lockedRef = useRef(locked);
+  const hiddenRef = useRef(false);
 
   const place = useCallback(() => {
     const nav = navRef.current;
@@ -72,16 +79,54 @@ export function useHeaderLight(routeKey: string) {
     };
   }, [place, routeKey]);
 
+  /* Something is open under the bar — the account playbill, the phone sheet.
+     Bring it back and keep it back until that closes. Sliding an open menu off
+     the top of the screen is how you lose a tap. */
+  useEffect(() => {
+    lockedRef.current = locked;
+    if (locked) {
+      hiddenRef.current = false;
+      if (shellRef.current) shellRef.current.dataset.hidden = "false";
+    }
+  }, [locked]);
+
   useEffect(() => {
     const bar = barRef.current;
-    if (!bar) return;
+    const shell = shellRef.current;
+    let lastY = window.scrollY;
+
     const onScroll = () => {
-      bar.dataset.scrolled = window.scrollY > 24 ? "true" : "false";
+      const y = window.scrollY;
+      if (bar) bar.dataset.scrolled = y > 24 ? "true" : "false";
+
+      /* Compressing was never enough on its own: a pill pinned to the top of
+         the page still sits over the first line of whatever you scrolled down
+         to read. Going down, it leaves; the moment you scroll up — which is
+         the moment you wanted the nav — it comes back.
+
+         The 4px deltas are deadzone, not decoration: without them momentum
+         scrolling on a phone flips the bar in and out every frame. The 120/80
+         thresholds keep it present at the top of the page, where there is
+         nothing to get out of the way of yet. */
+      const down = y > lastY + 4;
+      const up = y < lastY - 4;
+      lastY = y;
+
+      let next = hiddenRef.current;
+      if (lockedRef.current) next = false;
+      else if (down && y > 120) next = true;
+      else if (up || y < 80) next = false;
+
+      if (next !== hiddenRef.current) {
+        hiddenRef.current = next;
+        if (shell) shell.dataset.hidden = next ? "true" : "false";
+      }
     };
+
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  return { navRef, lightRef, barRef };
+  return { navRef, lightRef, barRef, shellRef };
 }

@@ -100,3 +100,42 @@ export function CallboardMenuRow({
     </Button>
   );
 }
+
+/**
+ * The Callboard as a row in the phone sheet.
+ *
+ * `CallboardMenuRow` above is the old dropdown's shadcn button and stays for
+ * anything still rendering that panel; this one is a plain sheet row on paper.
+ * The count is spelled out rather than reduced to a dot, because on a phone
+ * there is room for it and a number is a far better invitation than a coloured
+ * pixel.
+ */
+export function CallboardSheetRow({
+  active,
+  onNavigate,
+}: {
+  active: boolean;
+  onNavigate: () => void;
+}) {
+  const { awake, actorCount } = useHouseIsAwake();
+
+  return (
+    <Link
+      href="/callboard"
+      className="t-sheet__row"
+      data-active={active}
+      onClick={() => {
+        trackWhisperClicked("nav_lamp", { awake, surface_variant: "mobile_sheet" });
+        onNavigate();
+      }}
+    >
+      <IconUsers className="size-[18px] shrink-0" />
+      The Callboard
+      {/* Only when the house is actually awake: "0 in the house" is a worse
+          thing to say than nothing. */}
+      {awake && actorCount > 0 && (
+        <span className="t-sheet__count">{actorCount} in the house</span>
+      )}
+    </Link>
+  );
+}

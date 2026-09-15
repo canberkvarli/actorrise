@@ -16,7 +16,9 @@ import { useTheme } from "next-themes";
  */
 const NEVER_CHANGES = () => () => {};
 
-export function HouseLightsSwitch() {
+/** Shared by the bar switch and the phone sheet's row: which way the lights
+ *  are, what to call the other state, and how to throw them. */
+function useHouseLights() {
   const { setTheme, resolvedTheme } = useTheme();
   /* Hydration guard without a setState in an effect: false on the server,
      true once the client has taken over. Before that the switch renders in its
@@ -24,21 +26,32 @@ export function HouseLightsSwitch() {
   const mounted = useSyncExternalStore(NEVER_CHANGES, () => true, () => false);
 
   const dark = mounted && resolvedTheme === "dark";
-  const label = dark ? "House lights up" : "Blackout";
+
+  return {
+    dark,
+    label: dark ? "House lights up" : "Blackout",
+    toggle: () => {
+      const next = dark ? "light" : "dark";
+      /* The same view-transition wipe the shared toggle uses, where the
+         browser supports it. */
+      if (typeof document !== "undefined" && document.startViewTransition) {
+        document.startViewTransition(() => setTheme(next));
+      } else {
+        setTheme(next);
+      }
+    },
+  };
+}
+
+const LAMP_PATH = "M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z";
+
+export function HouseLightsSwitch() {
+  const { dark, label, toggle } = useHouseLights();
 
   return (
     <button
       type="button"
-      onClick={() => {
-        const next = dark ? "light" : "dark";
-        /* The same view-transition wipe the shared toggle uses, where the
-           browser supports it. */
-        if (typeof document !== "undefined" && document.startViewTransition) {
-          document.startViewTransition(() => setTheme(next));
-        } else {
-          setTheme(next);
-        }
-      }}
+      onClick={toggle}
       aria-pressed={dark}
       aria-label={label}
       title={label}
@@ -56,9 +69,48 @@ export function HouseLightsSwitch() {
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" />
+          <path d={LAMP_PATH} />
         </svg>
       </span>
+    </button>
+  );
+}
+
+/**
+ * The same switch as a row in the phone sheet.
+ *
+ * The 58px track belongs in the bar, where it sits among other ink-glass
+ * controls. In the sheet — cream paper, 44px rows, everything else a plain
+ * labelled line — it would be the one object shouting, so here the lights are
+ * a row that says which way it is about to throw them.
+ */
+export function HouseLightsRow({ onToggle }: { onToggle?: () => void }) {
+  const { dark, label, toggle } = useHouseLights();
+
+  return (
+    <button
+      type="button"
+      className="t-sheet__row"
+      aria-pressed={dark}
+      onClick={() => {
+        toggle();
+        onToggle?.();
+      }}
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <path d={LAMP_PATH} />
+      </svg>
+      {label}
     </button>
   );
 }

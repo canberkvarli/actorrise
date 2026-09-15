@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, type ComponentPropsWithoutRef, type ElementType, type ReactNode } from "react";
+import { useCallback, useRef, type ComponentPropsWithoutRef, type ElementType, type ReactNode, type Ref } from "react";
 
 type SpotlightSurfaceProps = {
   /** Element to render as (section, header, div…). Default: div. */
@@ -14,6 +14,10 @@ type SpotlightSurfaceProps = {
   /** Clip the glow to the surface bounds. Turn off for surfaces that host
    *  fixed/absolute overflow (e.g. a header with a dropdown). Default: true. */
   overflowHidden?: boolean;
+  /** Forwarded to the rendered element. React 19 passes `ref` as a plain prop,
+   *  so it rides along in `...rest`; it is declared here only so TypeScript
+   *  knows the surface can be measured and written to from outside. */
+  ref?: Ref<HTMLElement>;
 } & Omit<ComponentPropsWithoutRef<"div">, "className" | "children">;
 
 /**
