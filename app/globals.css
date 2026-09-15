@@ -1178,6 +1178,14 @@
   --t-orange-deep: oklch(0.58 0.18 45);
   --t-orange-glow: oklch(0.72 0.17 55);
   --t-gel: oklch(0.92 0.18 100);
+  /* The gel, for anything that has to be READ rather than lit.
+     --t-gel is a stage lamp: it is a light, and a light only works against
+     dark. Used as a text or hairline colour on paper it disappears — which is
+     how the character cue ("QUINCE"), the current-script spine and every
+     hover on the rehearsal room became invisible the moment that room learned
+     to go light. Surfaces that are always ink keep using --t-gel directly;
+     surfaces that flip use this. */
+  --t-gel-ink: oklch(0.58 0.14 75);
 
   /* Primary button: orange fill, ink text, ink arrow dot with a gel arrow.
      This is the design file's shipped `ctaStyle` default, and it is what the
@@ -2271,7 +2279,7 @@
   height: 20px;
   border-radius: 999px;
   background: oklch(0.3 0.02 55);
-  color: var(--t-gel);
+  color: var(--t-on-text);
   transition: background 0.2s;
 }
 .t-understood__x:hover {
@@ -2468,7 +2476,11 @@
 }
 .t-ghost-light {
   position: absolute;
-  top: 0;
+  /* Hung from below the callboard strip, not from the top of the room. The
+     cord started at the very top and ran straight down THROUGH the marquee —
+     so the one fixture in the room was threaded behind a moving bar of text,
+     which reads as a glitch rather than a lamp. */
+  top: 112px;
   right: clamp(12px, 3vw, 48px);
   z-index: -1;
   display: flex;
@@ -2536,8 +2548,8 @@
   transition: all 0.3s var(--t-spring);
 }
 .t-how-button:hover {
-  border-color: var(--t-gel);
-  color: var(--t-gel);
+  border-color: var(--t-gel-ink);
+  color: var(--t-gel-ink);
   transform: rotate(-8deg);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2635,7 +2647,7 @@
   font-size: 13px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--t-gel);
+  color: var(--t-gel-ink);
 }
 .t-cue-text {
   margin: 10px 0 0;
@@ -2717,12 +2729,12 @@
   border-color: oklch(0.6 0.03 55);
 }
 .t-shelf-script.is-current {
-  border-color: var(--t-gel);
+  border-color: var(--t-gel-ink);
   background: var(--t-paper-2);
   box-shadow: 0 0 40px -12px oklch(0.92 0.18 100 / 0.5);
 }
 .t-shelf-script.is-held {
-  border-color: var(--t-gel);
+  border-color: var(--t-gel-ink);
   background: var(--t-paper-2);
 }
 .t-shelf-script:focus-visible {
@@ -2787,7 +2799,7 @@
   background: var(--t-gel);
   color: var(--t-on-text);
   border-style: solid;
-  border-color: var(--t-gel);
+  border-color: var(--t-gel-ink);
   transform: rotate(-1.5deg);
 }
 
@@ -2818,7 +2830,7 @@
   transition: color 0.2s;
 }
 .t-back-to-stage:hover {
-  color: var(--t-gel);
+  color: var(--t-gel-ink);
 }
 
 /* --- The opened script ---------------------------------------------------- */
@@ -2880,7 +2892,7 @@
 }
 .t-script-action--quiet:hover:not(:disabled) {
   border-color: transparent;
-  color: var(--t-gel);
+  color: var(--t-gel-ink);
 }
 .t-script-action:disabled { opacity: 0.6; }
 
@@ -3019,6 +3031,7 @@
 .dark .theatre-search,
 .dark .theatre-search[data-search-mode="plays"],
 .dark .t-outline-flash[data-search-mode="plays"] {
+  --t-gel-ink: var(--t-gel);
   --page: oklch(0.15 0.015 50);
   --acc: oklch(0.7 0.18 48);
 
@@ -4370,6 +4383,7 @@
   --page: oklch(0.96 0.02 85);
 }
 .dark .theatre-stage {
+  --t-gel-ink: var(--t-gel);
   --page: oklch(0.11 0.012 50);
 
   --t-paper: oklch(0.19 0.018 52);
@@ -4393,6 +4407,7 @@
    ground either way — it is a lit surface, not a card — so it lifts a shade
    off the dark page and takes a visible rule, or it would dissolve into it. */
 .dark .theatre-collection {
+  --t-gel-ink: var(--t-gel);
   --page: oklch(0.11 0.012 50);
   --bench: oklch(0.195 0.02 52);
   --bench-bd: oklch(0.32 0.03 55);
