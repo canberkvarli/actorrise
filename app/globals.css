@@ -864,6 +864,13 @@
   z-index: 99999 !important;
 }
 
+/* The marquee's own height, held while its feed is in flight, so the page
+   below it does not jump when the notices arrive. */
+.t-marquee--waiting {
+  height: 45px;
+  opacity: 0.45;
+}
+
 /* Logging out: the house going dark, with the ghost light left on. */
 .t-curtain-out {
   position: fixed;

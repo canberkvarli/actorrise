@@ -15,11 +15,24 @@ import { EventLine } from "./eventRender";
  * On mobile the label/trailing collapse so the ticker itself gets the room.
  */
 export function CallboardMarquee() {
-  const { data } = useCommunityFeed(16);
+  const { data, isLoading } = useCommunityFeed(16);
   const mounted = useSyncExternalStore(NEVER_CHANGES, () => true, () => false);
 
   const events = data?.events ?? [];
-  if (!mounted || events.length === 0) return null;
+
+  /* This is the FIRST element on the rehearsal room, and it used to return
+     null until its feed arrived — so the entire page rendered, then jumped
+     down by the height of this rail the moment the notices landed. After a
+     login that is a full document load, which is exactly when it is most
+     visible and most annoying.
+
+     It holds its own height while the feed is in flight. Once the answer is
+     actually in and the house is quiet, it collapses — that is a real state
+     worth showing nothing for, and it happens once, not on every load. */
+  if (!mounted || (isLoading && events.length === 0)) {
+    return <div aria-hidden className="t-marquee t-marquee--waiting" />;
+  }
+  if (events.length === 0) return null;
 
   // Duplicate the run so the loop is seamless (translateX -50% == one full set).
   const run = [...events, ...events];

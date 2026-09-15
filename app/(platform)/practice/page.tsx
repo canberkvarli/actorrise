@@ -25,6 +25,29 @@ import {
  * desk. The shelf sits beside it and only takes over when you reach for a
  * script. See WhatsNext for the ladder that decides what the stage holds.
  */
+/** The room's shape, held while the scripts resolve. */
+function LibrarySkeleton() {
+  return (
+    <div aria-hidden className="grid gap-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:gap-12">
+      <div>
+        <Skeleton className="h-4 w-56 opacity-40" />
+        <Skeleton className="mt-4 h-24 w-full max-w-2xl opacity-40" />
+        <Skeleton className="mt-10 h-4 w-24 opacity-40" />
+        <Skeleton className="mt-3 h-6 w-80 max-w-full opacity-40" />
+        <Skeleton className="mt-10 h-16 w-48 rounded-full opacity-40" />
+      </div>
+      <div>
+        <Skeleton className="h-4 w-32 opacity-40" />
+        <div className="mt-5 space-y-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-[74px] w-full rounded-[14px] opacity-40" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PracticePage() {
   // Hooks must run on every render — call before any feature-flag early return.
   const { user, loading: authLoading } = useAuth();
@@ -144,7 +167,11 @@ export default function PracticePage() {
               so the bulb it is lit by was stuck behind the first card, and the
               one piece of the room that says "this is a theatre" was the one
               piece you could not see. */}
-          <Suspense fallback={null}>
+          {/* Shaped like what is coming, not null. A null fallback means the
+              whole two-column room appears out of nothing the instant its
+              data resolves, which after a login — a full document load — is
+              the jump that makes the landing feel broken. */}
+          <Suspense fallback={<LibrarySkeleton />}>
             <PracticeLibrary
               scripts={safeScripts}
               featuredScriptId={featuredScriptId}
