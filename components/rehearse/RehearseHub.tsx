@@ -121,13 +121,13 @@ export function RehearseHub() {
         <div className="t-bare">
           {/* An empty slot on the shelf, drawn rather than described. */}
           <div aria-hidden className="t-bare__slot">?</div>
-          <p className="t-dir mt-8 text-[var(--t-muted-dark-2)]">
+          <p className="t-dir mt-5 text-[var(--t-muted-dark-2)]">
             (the shelf is bare.)
           </p>
           <h2 className="t-bare__name">
             Nothing here <em>yet.</em>
           </h2>
-          <p className="mt-4 max-w-[38ch] text-[17px] text-[var(--t-muted-dark)]">
+          <p className="mt-4 max-w-[44ch] text-balance text-[17px] text-[var(--t-muted-dark)]">
             Save a monologue and it&apos;ll show up here, ready to work.
           </p>
           <Link href="/monologues" className="t-cta t-cta--bench t-cta--paper mt-8">
@@ -211,7 +211,7 @@ function EmptyShelfWhisper() {
           ? `/monologue/${latest.payload.monologue_id}`
           : "/callboard"
       }
-      className="mt-1"
+      className="mt-7"
     >
       <span className="font-medium text-foreground/90">{latest.name}</span> just saved{" "}
       <span className="font-typewriter">{latest.payload.title}</span>

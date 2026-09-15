@@ -351,7 +351,7 @@ export function CallboardFeed() {
             column of dead board — the exact failure the pinboard version was
             rebuilt to escape. Splitting "Also billed" into its own band evens
             the three heights and buys back the space. */}
-        <div className="mt-10 grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-[1.15fr_1fr_1fr]">
+        <div className="mt-10 grid gap-x-10 gap-y-10 border-b border-[var(--sheet-rule)] pb-10 sm:grid-cols-2 lg:grid-cols-[1.15fr_1fr_1fr]">
           <section>
             <SectionRule>Tonight&rsquo;s bill</SectionRule>
             {headline && (
@@ -389,12 +389,12 @@ export function CallboardFeed() {
                   >
                     <Link
                       href={`/monologue/${m.id}`}
-                      className="flex items-baseline gap-3 py-2 font-typewriter text-[13px]"
+                      className="grid grid-cols-[minmax(0,6.5rem)_minmax(0,1fr)] items-baseline gap-x-3 py-2 font-typewriter text-[13px]"
                     >
-                      <span className="shrink-0 font-semibold uppercase tracking-wide text-[var(--sheet-ink)]">
+                      <span className="truncate font-semibold uppercase tracking-wide text-[var(--sheet-ink)]">
                         {m.character_name}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-[var(--sheet-faint)]">
+                      <span className="min-w-0 truncate text-[var(--sheet-faint)]">
                         {subtitleFor(m.character_name, m.play_title)}
                       </span>
                     </Link>
@@ -436,7 +436,7 @@ export function CallboardFeed() {
         {/* ── The roster ───────────────────────────────────────────────────
             The main event, full width. Arriving is just another verb here, so
             nobody appears twice on one sheet. */}
-        <section className="mt-12">
+        <section className="mt-10">
           <SectionRule>
             In the house
             <span aria-hidden className="sheet-caret ml-2 text-primary">
@@ -675,6 +675,12 @@ function YourCall() {
 
   const current = mine[0];
   const rest = mine.length - 1;
+  const playLine = [
+    subtitleFor(current.character_name, current.play_title),
+    current.author,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <section className="mt-11">
@@ -692,14 +698,15 @@ function YourCall() {
         className="sheet-call mt-3.5"
         style={{ "--cloth": pick(CLOTHS, current.id) } as React.CSSProperties}
       >
-        <span aria-hidden className="sheet-call__cloth" />
-        <span className="relative min-w-0 flex-1 basis-[200px]">
-          <span className="sheet-display block text-[clamp(1.8rem,3vw,2.6rem)] leading-[0.95] tracking-[-0.01em]">
+        <span className="sheet-call__body">
+          <span className="sheet-display block text-[clamp(2rem,4vw,2.9rem)] leading-[0.95] tracking-[-0.01em]">
             {current.character_name}
           </span>
-          <span className="font-typewriter mt-1 block text-[13px] text-[oklch(0.75_0.02_62)]">
-            {subtitleFor(current.character_name, current.play_title)}
-          </span>
+          {/* The play, then who wrote it. subtitleFor drops a play title that
+              only repeats the character — on a title role like Othello that
+              left the line blank, which is how the old bar ended up holding a
+              name and nothing else. The author still has something to say. */}
+          {playLine && <span className="sheet-call__play block">{playLine}</span>}
         </span>
         <span className="sheet-call__go">
           Rehearse

@@ -573,57 +573,70 @@
   }
 
   /* ── Your call ────────────────────────────────────────────────────────────
-     The actor's own line, as the one lit object on a paper board. Everything
-     else here is other people; this is the reason the page is worth opening on
-     a Tuesday, so it is the only thing that gets a panel.
+     A poster, not a letterbox.
 
-     The spine is a book cloth, coloured off the piece's own id so the same
-     monologue is the same colour every time you come back. */
+     It shipped as a full-width ink slab: 1024px of black holding one short
+     title and a button pinned to the far right, with a canyon between them —
+     and on a title role, where the play line is empty, emptier still. A call is
+     ONE piece, so it wants the shape of one poster: contained, left, and in
+     that piece's own book cloth rather than in black. The cloth was a 34px
+     spine glued to the slab before; it is the whole ground now, which is also
+     what makes each call look like a different piece at a glance.
+
+     Everything else on this sheet is hairlines and paper. This is the only
+     object with a ground, a border and a shadow, because it is the only line
+     addressed to the person reading. */
   .sheet-call {
     position: relative;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px 20px;
-    padding: 18px 22px;
-    border-radius: 18px;
-    background: oklch(0.13 0.015 50);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+    width: 100%;
+    max-width: 27rem;
+    overflow: hidden;
+    padding: 22px 24px 22px;
+    border-radius: 14px;
+    background: var(--cloth, oklch(0.31 0.085 25));
     color: oklch(0.96 0.02 85);
     border: 1.5px solid oklch(0.16 0.01 45);
-    box-shadow: 8px 8px 0 var(--sheet-gel);
+    box-shadow: 10px 10px 0 var(--sheet-gel);
     transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .sheet-call:hover {
-    transform: translate(-2px, -2px);
+    transform: translate(-3px, -3px);
     color: oklch(0.96 0.02 85);
   }
+  /* One lamp, top left, the way a poster is lit in a lobby. */
   .sheet-call::before {
     content: "";
     position: absolute;
     inset: 0;
-    border-radius: 18px;
     pointer-events: none;
     background: radial-gradient(
-      50% 80% at 8% 20%,
-      oklch(0.72 0.17 55 / 0.28),
+      72% 58% at 14% 0%,
+      oklch(1 0 0 / 0.16),
       transparent 70%
     );
   }
-  .sheet-call__cloth {
+  .sheet-call__body {
     position: relative;
-    flex-shrink: 0;
-    width: 34px;
-    height: 52px;
-    border-radius: 3px;
-    background: var(--cloth, oklch(0.31 0.085 25));
-    box-shadow: 2px 2px 0 var(--sheet-gel);
+    min-width: 0;
+    width: 100%;
+  }
+  .sheet-call__play {
+    margin: 6px 0 0;
+    font-family: var(--t-direction, ui-monospace, monospace);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    color: oklch(0.96 0.02 85 / 0.72);
   }
   .sheet-call__go {
     position: relative;
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    height: 48px;
+    height: 46px;
     padding: 0 6px 0 20px;
     border-radius: 999px;
     background: oklch(0.96 0.02 85);
@@ -1792,7 +1805,7 @@
      hover on the rehearsal room became invisible the moment that room learned
      to go light. Surfaces that are always ink keep using --t-gel directly;
      surfaces that flip use this. */
-  --t-gel-ink: oklch(0.58 0.14 75);
+  --t-gel-ink: oklch(0.5 0.16 55);
 
   /* Primary button: orange fill, ink text, ink arrow dot with a gel arrow.
      This is the design file's shipped `ctaStyle` default, and it is what the
@@ -3039,7 +3052,13 @@
 .theatre-stage::before {
   content: "";
   position: absolute;
-  top: 0;
+  /* Up past the header. The bar is sticky and therefore IN FLOW, so the room
+     used to begin under it and the strip along the top of every screen — the
+     launch notice and the band the pill floats in — was the app shell's own
+     `bg-background`, which is white. A cream room with a white ceiling: a hard
+     horizontal seam right under the bar, on every page, in light mode. The
+     ground starts above the bar now and the bar floats in the room. */
+  top: -280px;
   bottom: 0;
   left: 50%;
   width: 100vw;
@@ -3177,6 +3196,26 @@
   .t-how-button:hover { transform: none; }
 }
 
+/* The same offer, said in words. A bare "?" in a ring is a support widget's
+   shape, and floating it in the top-right corner of a rehearsal room is
+   borrowing a gesture from a different kind of product — it also put the mark
+   in the one column the ghost light hung in. At the foot of the page it can
+   simply say what it opens. */
+.t-how-link {
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--t-muted-dark-2);
+  border-bottom: 1px solid var(--t-line-light);
+  padding-bottom: 2px;
+  transition: color 0.25s, border-color 0.25s;
+}
+.t-how-link:hover {
+  color: var(--t-gel-ink);
+  border-color: var(--t-gel-ink);
+}
+
 /* --- The callboard marquee ------------------------------------------------ */
 @keyframes t-breathe {
   0%, 100% { transform: scale(1); opacity: 0.55; }
@@ -3262,7 +3301,9 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background: var(--t-gel);
+  /* --t-gel is the lamp. A 2px hairline of it on paper is nothing, and this
+     rule is the thing that says which speech is yours. */
+  background: var(--t-gel-ink);
   transform-origin: top;
   animation: t-draw-down 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
 }
@@ -3289,7 +3330,7 @@
   height: 1em;
   vertical-align: -3px;
   margin-left: 2px;
-  background: var(--t-gel);
+  background: var(--t-gel-ink);
   animation: t-blink 1.1s steps(2) infinite;
 }
 
@@ -3844,21 +3885,32 @@
 :root {
   --bar: oklch(0.99 0.006 85 / 0.92);
   --bar-fg: oklch(0.16 0.01 45);
-  --bar-muted: oklch(0.45 0.02 55);
+  /* An inactive tab is still a word someone has to read. At 0.45 on paper it
+     was a grey suggestion of a label; these are navigation, not captions. */
+  --bar-muted: oklch(0.32 0.018 50);
+  /* Hover was a hardcoded gel yellow — a stage lamp, which only exists against
+     dark. On the paper bar it put L92 text on an L99 ground: the tab vanished
+     at the exact moment a pointer was on it. Colour that has to be READ on
+     paper is the deep gel, not the lamp. */
+  --bar-gel: oklch(0.55 0.17 50);
   --bar-rule: oklch(0.84 0.02 75);
   --bar-raised: oklch(0.95 0.014 82);
   --bar-active: oklch(0.16 0.01 45);
   --bar-active-fg: oklch(0.97 0.015 85);
+  /* The sheet the account playbill is printed on. */
+  --bar-sheet: oklch(0.985 0.008 85);
   --bar-shadow: 0 14px 40px -18px oklch(0.3 0.03 55 / 0.42);
 }
 :root.dark {
   --bar: oklch(0.24 0.022 52 / 0.94);
   --bar-fg: oklch(0.96 0.02 85);
-  --bar-muted: oklch(0.75 0.02 62);
+  --bar-muted: oklch(0.78 0.02 62);
+  --bar-gel: oklch(0.92 0.18 100);
   --bar-rule: oklch(0.46 0.03 55 / 0.8);
   --bar-raised: oklch(0.3 0.025 52);
   --bar-active: oklch(0.96 0.02 85);
   --bar-active-fg: oklch(0.13 0.015 50);
+  --bar-sheet: oklch(0.225 0.02 52);
   --bar-shadow:
     inset 0 1px 0 oklch(0.72 0.03 60 / 0.16),
     0 16px 48px -16px rgb(0 0 0 / 0.75);
@@ -3925,13 +3977,13 @@
   border-radius: 999px;
   font-family: var(--t-body, inherit);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--bar-muted);
   white-space: nowrap;
   transition: color 0.35s;
 }
 .t-appbar__tab:hover {
-  color: oklch(0.92 0.18 100);
+  color: var(--bar-gel);
 }
 /* Sitting on the light, so it inverts. */
 .t-appbar__tab[data-active="true"],
@@ -3966,8 +4018,8 @@
 }
 .t-lamp:hover,
 .t-lamp[data-active="true"] {
-  border-color: oklch(0.92 0.18 100);
-  color: oklch(0.92 0.18 100);
+  border-color: var(--bar-gel);
+  color: var(--bar-gel);
 }
 .t-lamp__bulb {
   position: relative;
@@ -3979,15 +4031,15 @@
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  background: oklch(0.92 0.18 100);
+  background: var(--bar-gel);
   animation: t-breathe 2s ease-in-out infinite;
 }
 .t-lamp__core {
   position: absolute;
   inset: 1px;
   border-radius: 999px;
-  background: oklch(0.92 0.18 100);
-  box-shadow: 0 0 10px 2px oklch(0.92 0.18 100 / 0.7);
+  background: var(--bar-gel);
+  box-shadow: 0 0 10px 2px color-mix(in oklch, var(--bar-gel) 70%, transparent);
 }
 /* Dark house: the bulb is there, unlit. */
 .t-lamp[data-awake="false"] .t-lamp__core {
@@ -4012,8 +4064,8 @@
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .t-help:hover {
-  border-color: oklch(0.92 0.18 100);
-  color: oklch(0.92 0.18 100);
+  border-color: var(--bar-gel);
+  color: var(--bar-gel);
   transform: rotate(-10deg);
 }
 
@@ -4026,7 +4078,7 @@
   flex-shrink: 0;
   border-radius: 999px;
   border: 1px solid var(--bar-rule);
-  background: oklch(0.92 0.18 100 / 0.25);
+  background: color-mix(in oklch, var(--bar-gel) 25%, transparent);
   cursor: pointer;
   padding: 0;
   transition: background 0.4s;
@@ -4044,9 +4096,9 @@
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  background: oklch(0.92 0.18 100);
+  background: var(--bar-gel);
   color: var(--bar-active-fg);
-  box-shadow: 0 0 14px 2px oklch(0.92 0.18 100 / 0.7);
+  box-shadow: 0 0 14px 2px color-mix(in oklch, var(--bar-gel) 70%, transparent);
   transition:
     left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
     background 0.4s,
@@ -4077,21 +4129,21 @@
 }
 .t-account[data-open="true"],
 .t-account:hover {
-  border-color: oklch(0.92 0.18 100);
+  border-color: var(--bar-gel);
   background: var(--bar-raised);
 }
 .t-account__avatar {
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  border: 2px solid oklch(0.92 0.18 100);
+  border: 2px solid var(--bar-gel);
   background: var(--bar-active);
   color: var(--bar-active-fg);
 }
 .t-account__tier {
   padding: 2px 7px;
   border-radius: 999px;
-  background: oklch(0.92 0.18 100);
+  background: var(--bar-gel);
   color: var(--bar-active-fg);
   font-family: var(--t-direction, ui-monospace, monospace);
   font-size: 10px;
@@ -4117,10 +4169,10 @@
   width: 300px;
   overflow: hidden;
   border-radius: 8px;
-  background: var(--bar-active);
-  color: oklch(0.16 0.01 45);
-  border: 1.5px solid oklch(0.16 0.01 45);
-  box-shadow: 10px 10px 0 oklch(0.92 0.18 100);
+  background: var(--bar-sheet);
+  color: var(--bar-fg);
+  border: 1.5px solid var(--bar-fg);
+  box-shadow: 10px 10px 0 var(--bar-gel);
   transform-origin: top right;
   animation: t-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
@@ -4132,7 +4184,7 @@
   font-style: italic;
   font-size: 120px;
   line-height: 1;
-  color: oklch(0.16 0.01 45 / 0.05);
+  color: color-mix(in oklch, var(--bar-fg) 6%, transparent);
   pointer-events: none;
   user-select: none;
 }
@@ -4142,7 +4194,7 @@
   align-items: center;
   gap: 14px;
   padding: 18px 18px 14px;
-  border-bottom: 1.5px solid oklch(0.16 0.01 45);
+  border-bottom: 1.5px solid var(--bar-fg);
 }
 .t-playbill-menu__avatar {
   display: flex;
@@ -4152,9 +4204,9 @@
   height: 52px;
   flex-shrink: 0;
   border-radius: 999px;
-  border: 2px solid oklch(0.16 0.01 45);
-  background: oklch(0.16 0.01 45);
-  color: oklch(0.96 0.02 85);
+  border: 2px solid var(--bar-fg);
+  background: var(--bar-fg);
+  color: var(--bar-sheet);
   font-size: 18px;
   font-weight: 600;
 }
@@ -4164,7 +4216,7 @@
   font-size: 24px;
   line-height: 1;
   letter-spacing: -0.01em;
-  color: oklch(0.16 0.01 45);
+  color: var(--bar-fg);
 }
 .t-playbill-menu__dir {
   margin: 6px 0 0;
@@ -4173,7 +4225,7 @@
   font-style: italic;
   font-size: 11px;
   letter-spacing: 0.08em;
-  color: oklch(0.5 0.02 60);
+  color: var(--bar-muted);
 }
 /* Rows slide a touch and invert, the way the landing's notices do. */
 .t-playbill-menu__row {
@@ -4184,12 +4236,12 @@
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
-  color: oklch(0.16 0.01 45);
+  color: var(--bar-fg);
   transition: background 0.2s, color 0.2s, transform 0.2s;
 }
 .t-playbill-menu__row:hover {
-  background: oklch(0.16 0.01 45);
-  color: oklch(0.96 0.02 85);
+  background: var(--bar-fg);
+  color: var(--bar-sheet);
   transform: translateX(4px);
 }
 .t-playbill-menu__row svg { color: currentColor !important; }
@@ -4201,8 +4253,8 @@
   justify-content: space-between;
   gap: 10px;
   padding: 12px 18px;
-  border-top: 1.5px dashed oklch(0.16 0.01 45 / 0.3);
-  background: oklch(0.93 0.02 85);
+  border-top: 1.5px dashed color-mix(in oklch, var(--bar-fg) 30%, transparent);
+  background: var(--bar-raised);
 }
 /* Logging out is a real exit, so it goes orange on the way rather than red. */
 .t-playbill-menu__out {
@@ -4212,9 +4264,9 @@
   height: 32px;
   padding: 0 14px;
   border-radius: 999px;
-  border: 1.5px solid oklch(0.16 0.01 45);
+  border: 1.5px solid var(--bar-fg);
   background: transparent;
-  color: oklch(0.16 0.01 45);
+  color: var(--bar-fg);
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -4258,7 +4310,7 @@
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid oklch(0.35 0.03 55 / 0.6);
   box-shadow: var(--bar-shadow);
-  color: oklch(0.96 0.02 85);
+  color: var(--bar-fg);
 }
 @media (max-width: 767.98px) {
   .t-tabbar {
@@ -4286,8 +4338,8 @@
 /* The same cream light as the desktop nav, here as a filled tab — there is no
    room to slide one lamp across four tabs on a phone. */
 .t-tabbar__tab[data-active="true"] {
-  background: oklch(0.96 0.02 85);
-  color: oklch(0.13 0.015 50);
+  background: var(--bar-active);
+  color: var(--bar-active-fg);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4343,14 +4395,14 @@
   height: 34px;
   flex-shrink: 0;
   border-radius: 999px;
-  border: 1px solid oklch(0.35 0.03 55);
+  border: 1px solid var(--bar-rule);
   background: transparent;
-  color: oklch(0.96 0.02 85);
+  color: var(--bar-fg);
   transition: border-color 0.3s, color 0.3s;
 }
 .t-burger[data-open="true"] {
-  border-color: oklch(0.92 0.18 100);
-  color: oklch(0.92 0.18 100);
+  border-color: var(--bar-gel);
+  color: var(--bar-gel);
 }
 
 /* --- The phone sheet ------------------------------------------------------
@@ -4381,9 +4433,9 @@
   overflow-y: auto;
   padding: 14px 12px 18px;
   border-radius: 28px 28px 40px 40px;
-  background: oklch(0.96 0.02 85);
-  color: oklch(0.16 0.01 45);
-  border: 1.5px solid oklch(0.16 0.01 45);
+  background: var(--bar-sheet);
+  color: var(--bar-fg);
+  border: 1.5px solid var(--bar-fg);
   box-shadow: 0 -18px 50px -20px rgb(0 0 0 / 0.55);
   animation: t-sheet-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -4409,13 +4461,13 @@
   font-size: 15px;
   font-weight: 600;
   text-align: left;
-  color: oklch(0.16 0.01 45);
+  color: var(--bar-fg);
   transition: background 0.2s, color 0.2s;
 }
 .t-sheet__row:hover,
 .t-sheet__row[data-active="true"] {
-  background: oklch(0.16 0.01 45);
-  color: oklch(0.96 0.02 85);
+  background: var(--bar-fg);
+  color: var(--bar-sheet);
 }
 .t-sheet__row:disabled { opacity: 0.7; pointer-events: none; }
 .t-sheet__row svg { color: currentColor !important; }
@@ -4433,12 +4485,12 @@
   height: 44px;
   margin-top: 8px;
   border-radius: 999px;
-  border: 1.5px solid oklch(0.16 0.01 45);
+  border: 1.5px solid var(--bar-fg);
   background: transparent;
   font-family: inherit;
   font-size: 14px;
   font-weight: 700;
-  color: oklch(0.16 0.01 45);
+  color: var(--bar-fg);
 }
 @keyframes t-sheet-up {
   from { opacity: 0; transform: translateY(16px); }
@@ -4474,13 +4526,22 @@
   font-family: var(--t-direction, ui-monospace, monospace);
   font-size: 11px;
   letter-spacing: 0.08em;
-  color: oklch(0.45 0.02 55);
+  color: var(--bar-muted);
 }
+/* The one nudge in the playbill: the account with no name on it yet. It took
+   `text-primary` — the app's orange, which the header pinned to its dark-mode
+   value, so it was a bright app-coloured link sitting on a printed sheet. */
+.t-playbill-menu__link {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bar-gel);
+}
+.t-playbill-menu__link:hover { text-decoration: underline; }
 .t-playbill-menu__plan {
   padding: 1px 7px;
   border-radius: 999px;
-  background: oklch(0.16 0.01 45);
-  color: oklch(0.92 0.18 100);
+  background: var(--bar-gel);
+  color: var(--bar-active-fg);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -5144,6 +5205,21 @@
    The paper flips; the lit things stay lit. */
 .theatre-stage {
   --page: oklch(0.96 0.02 85);
+
+  /* `--t-muted-light*` means "muted, ON A DARK GROUND" — L 0.70-0.80, written
+     when this room was ink in both themes. The room flips now, and nothing
+     remapped them, so every one of them became pale text on cream: the cue
+     name and its standing line ("QUINCE · 34 lines"), the scene panel's
+     metadata, the empty-state copy. They were not dim, they were gone.
+
+     A muted colour is still a colour someone has to read. On paper these are
+     the dark muted values; the block below hands them back their pale ones in
+     dark, where they belong. */
+  --t-muted-light: oklch(0.42 0.018 55);
+  --t-muted-light-2: oklch(0.46 0.02 55);
+  --t-muted-light-3: oklch(0.52 0.02 60);
+  --t-faint: oklch(0.5 0.02 60);
+  --t-faint-2: oklch(0.55 0.02 62);
 }
 /* In dark the bulb is a light again. */
 .dark .t-ghost-light__bulb {
@@ -5174,6 +5250,12 @@
 
   --t-line-light: oklch(0.3 0.03 55);
   --t-line-light-2: oklch(0.34 0.03 55);
+
+  /* Pale again: here there IS a dark ground under them. */
+  --t-muted-light: oklch(0.72 0.02 62);
+  --t-muted-light-2: oklch(0.77 0.02 62);
+  --t-muted-light-3: oklch(0.82 0.02 70);
+  --t-faint-2: oklch(0.62 0.02 62);
 
   --t-on-text: oklch(0.15 0.03 45);
   --t-hard-shadow: oklch(0.07 0.01 45);
