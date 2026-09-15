@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 import { IconX } from "@tabler/icons-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import {
@@ -153,38 +153,35 @@ export function TrialOfferCard({
   onDismiss,
   tone = "dark",
 }: CardProps) {
-  const dark = tone === "dark";
   return (
+    /* theatre-tokens and the faces ride on the card: both hosts (scene review,
+       the practice panel) bind neither, so without them every --t-* resolves
+       to nothing and the font-family rules are dropped whole. */
     <div
-      className={
-        dark
-          ? "relative rounded-lg border border-primary/30 bg-primary/10 p-5 text-center space-y-3"
-          : "relative rounded-lg border border-primary/25 bg-primary/5 p-5 text-center space-y-3"
-      }
+      className={`t-offer theatre-tokens ${theatreFontVars}${
+        tone === "dark" ? " t-offer--stage" : ""
+      }`}
     >
       <button
         type="button"
         onClick={onDismiss}
         aria-label="Not now"
-        className={`absolute right-2 top-2 p-1 transition-opacity hover:opacity-100 ${
-          dark ? "text-neutral-500 opacity-70" : "text-muted-foreground opacity-60"
-        }`}
+        className="t-offer__x"
       >
         <IconX className="h-4 w-4" />
       </button>
 
-      <p className={`text-base font-semibold ${dark ? "text-neutral-100" : "text-foreground"}`}>
-        {headline}
-      </p>
-      <p className={`text-sm ${dark ? "text-neutral-400" : "text-muted-foreground"}`}>{body}</p>
-      <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
-        <Link href={href} onClick={onAccept}>
+      <p className="t-offer__dir">(an offer, while you have a moment.)</p>
+      <p className="t-offer__title">{headline}</p>
+      <p className="t-offer__body">{body}</p>
+
+      <div className="t-offer__foot">
+        <Link href={href} onClick={onAccept} className="t-offer__cta">
           {cta}
         </Link>
-      </Button>
-      <p className={`text-xs ${dark ? "text-neutral-500" : "text-muted-foreground"}`}>
-        $0 today, cancel anytime before it renews.
-      </p>
+      </div>
+
+      <p className="t-offer__fine">$0 today, cancel any time before it renews.</p>
     </div>
   );
 }
@@ -207,22 +204,17 @@ export function TrialOfferBanner({
 }) {
   return (
     <div className="pointer-events-auto fixed bottom-4 left-1/2 z-[10040] w-[min(92vw,30rem)] -translate-x-1/2">
-      <div className="flex items-center gap-3 rounded-lg border border-primary/40 bg-[#191410]/95 px-4 py-3 shadow-lg backdrop-blur">
-        <p className="flex-1 text-sm text-neutral-300">{body}</p>
-        <Button
-          asChild
-          size="sm"
-          className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          <Link href={href} onClick={onAccept}>
-            2 weeks free
-          </Link>
-        </Button>
+      <div className={`t-strip theatre-tokens ${theatreFontVars}`}>
+        <p className="t-strip__body">{body}</p>
+        <Link href={href} onClick={onAccept} className="t-strip__cta shrink-0">
+          2 weeks free
+        </Link>
         <button
           type="button"
           onClick={onDismiss}
           aria-label="Not now"
-          className="shrink-0 p-1 text-neutral-500 hover:text-neutral-300"
+          className="t-offer__x shrink-0"
+          style={{ position: "static" }}
         >
           <IconX className="h-4 w-4" />
         </button>

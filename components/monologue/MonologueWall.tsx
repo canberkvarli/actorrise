@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 import { trackUpgradeModalViewed } from "@/lib/analytics";
 
 interface MonologueWallProps {
@@ -38,7 +38,12 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
   const href = `/checkout?tier=plus&period=monthly&trial=1&from=${feature}`;
 
   return (
-    <div className="mx-auto mt-2 max-w-[62ch]">
+    /* theatre-tokens and the faces ride on the wall itself. The monologue
+       route binds no theatre surface, so without both every --t-* here
+       resolves to nothing and the font-family rules are dropped whole. */
+    <div
+      className={`t-wall theatre-tokens ${theatreFontVars} mx-auto mt-2 max-w-[62ch]`}
+    >
       {/* The piece doesn't end, it goes dim. Reads as the lights going down on
           the text rather than a banner dropped on top of it. */}
       <div
@@ -46,36 +51,29 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
         className="-mt-24 h-24 bg-gradient-to-b from-transparent to-background"
       />
 
-      <div className="border-t border-border/60 pt-6">
-        <p className="font-typewriter text-sm text-muted-foreground">
-          The rest of this one is behind the curtain.
-        </p>
-        {/* No number. The cap has already moved once and copy that names it
-            goes stale silently, which is the same reason MonologuePaywallModal
-            refuses to count. */}
-        <p className="mt-2 text-base text-foreground">
-          That&rsquo;s your free reads for this month. Plus opens every piece in
-          the library, start to finish.
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Anything you&rsquo;ve already saved stays open.
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Two weeks free, card on file, cancel before it renews.
-        </p>
+      <hr className="t-wall__rule" />
+      <p className="t-wall__dir">(the rest is behind the curtain.)</p>
+      {/* No number. The cap has already moved once and copy that names it
+          goes stale silently, which is the same reason MonologuePaywallModal
+          refuses to count. */}
+      <p className="t-wall__title">That&rsquo;s your free reads for the month.</p>
+      <p className="t-wall__body">
+        Plus opens every piece in the library, start to finish. Anything
+        you&rsquo;ve already saved stays open either way.
+      </p>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button asChild>
-            <Link href={href}>Start 2 weeks free</Link>
-          </Button>
-          <Link
-            href="/pricing"
-            className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
-          >
-            What else is in it
-          </Link>
-        </div>
+      <div className="t-wall__foot">
+        <Link href={href} className="t-wall__cta">
+          Start 2 weeks free
+        </Link>
+        <Link href="/pricing" className="t-wall__quiet">
+          what else is in it
+        </Link>
       </div>
+
+      <p className="t-wall__body" style={{ marginTop: 14, fontSize: 12 }}>
+        Card on file, cancel before it renews.
+      </p>
     </div>
   );
 }

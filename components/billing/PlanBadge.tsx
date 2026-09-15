@@ -1,85 +1,68 @@
 "use client";
 
 /**
- * Plan Badge Component
+ * The tier, said once.
  *
- * Displays the user's current subscription tier with an icon.
- * Used in navigation, profile dropdown, billing dashboard, etc.
+ * This was a shadcn Badge carrying amber and violet Tailwind pairs, which are
+ * two colours the product does not otherwise own, plus a rocket or a crown.
+ * It is a label, not a button and not an achievement: sharp corners, the
+ * stage-direction face, and a gel dot to mark a paid plan. No icon.
+ *
+ * Deliberately NOT a full theatre surface. It sits inside the billing page's
+ * shadcn cards, and one theatre-styled element on an otherwise untouched page
+ * reads as a mistake rather than a direction. It borrows the faces and the gel
+ * and takes its ink from the page it is on.
  */
 
-import { Badge } from "@/components/ui/badge";
-import { IconSparkles, IconRocket, IconCrown } from "@tabler/icons-react";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 
 interface PlanBadgeProps {
   planName: string;
+  /** Kept for callers; the tag has one presentation now. */
   variant?: "default" | "outline" | "secondary";
+  /** Shows the gel dot that marks a paid plan. */
   showIcon?: boolean;
   className?: string;
 }
 
+const DISPLAY: Record<string, string> = {
+  pro: "Pro",
+  plus: "Plus",
+  elite: "Elite",
+  unlimited: "Unlimited",
+  free: "Free",
+};
+
 export function PlanBadge({
   planName,
-  variant = "outline",
   showIcon = true,
   className,
 }: PlanBadgeProps) {
-  const getIcon = () => {
-    switch (planName.toLowerCase()) {
-      case "pro":
-      case "plus":
-        return <IconRocket className="h-3 w-3" />;
-      case "elite":
-      case "unlimited":
-        return <IconCrown className="h-3 w-3" />;
-      case "free":
-      default:
-        return <IconSparkles className="h-3 w-3" />;
-    }
-  };
-
-  const getDisplayName = () => {
-    switch (planName.toLowerCase()) {
-      case "pro":
-        return "Pro";
-      case "plus":
-        return "Plus";
-      case "elite":
-        return "Elite";
-      case "unlimited":
-        return "Unlimited";
-      case "free":
-      default:
-        return "Free";
-    }
-  };
-
-  const getColorClass = () => {
-    switch (planName.toLowerCase()) {
-      case "pro":
-      case "plus":
-        return "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-600/50";
-      case "elite":
-      case "unlimited":
-        return "bg-violet-100 text-violet-800 border-violet-300 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-600/50";
-      default:
-        return "";
-    }
-  };
-
-  const colorClass = getColorClass();
-
-  const combinedClassName = [
-    showIcon ? "gap-1" : "",
-    colorClass,
-    className || "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const key = planName.toLowerCase();
+  const label = DISPLAY[key] ?? "Free";
+  const paid = key !== "free";
 
   return (
-    <Badge variant={colorClass ? "outline" : variant} className={combinedClassName}>
-      {showIcon && getIcon()}
-      {getDisplayName()}
-    </Badge>
+    <span
+      className={`theatre-tokens ${theatreFontVars} inline-flex items-center gap-2 border px-2.5 py-1 text-[11px] uppercase tracking-[0.1em] ${
+        className || ""
+      }`}
+      style={{
+        fontFamily: "var(--t-direction)",
+        borderColor: paid
+          ? "color-mix(in oklab, var(--t-gel) 55%, transparent)"
+          : "var(--border)",
+        color: "var(--muted-foreground)",
+      }}
+    >
+      {showIcon && paid && (
+        <span
+          aria-hidden
+          className="size-1.5 rounded-full"
+          style={{ background: "var(--t-gel)" }}
+        />
+      )}
+      {label}
+    </span>
   );
 }

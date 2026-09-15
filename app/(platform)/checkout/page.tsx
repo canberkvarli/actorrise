@@ -10,16 +10,19 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSubscription } from "@/hooks/useSubscription";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconRocket, IconCrown, IconArrowLeft, IconTag, IconX, IconGift } from "@tabler/icons-react";
+import { IconArrowLeft, IconX } from "@tabler/icons-react";
 import api, { API_URL } from "@/lib/api";
 import Link from "next/link";
 import { RequestPromoCodeModal } from "@/components/contact/RequestPromoCodeModal";
 import { trackBeginCheckout, getGaClientId } from "@/lib/analytics";
+import { theatreFontVars } from "@/lib/fonts/theatre";
+
+/* The (platform) layout binds no theatre surface, so the page carries the
+   tokens and the three faces itself. Without both, every --t-* below resolves
+   to nothing and the font-family declarations are dropped whole. */
+const shell = `t-box-office theatre-tokens ${theatreFontVars} container mx-auto max-w-2xl px-4 py-16`;
 
 interface PricingTier {
   id: number;
@@ -33,9 +36,10 @@ interface PricingTier {
 export default function CheckoutPage() {
   return (
     <Suspense fallback={
-      <div className="container mx-auto px-4 py-16 max-w-2xl">
-        <Skeleton className="h-12 w-64 mb-8" />
-        <Skeleton className="h-96" />
+      <div className={shell}>
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="mt-3 h-11 w-72" />
+        <Skeleton className="mt-7 h-[26rem]" />
       </div>
     }>
       <CheckoutContent />
@@ -226,244 +230,264 @@ function CheckoutContent() {
     return `$${(price / 100).toFixed(2)}/month`;
   };
 
-  const getTierIcon = () => {
-    if (tier?.name === "elite") return <IconCrown className="h-6 w-6" />;
-    return <IconRocket className="h-6 w-6" />;
-  };
-
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-2xl">
-        <Skeleton className="h-12 w-64 mb-8" />
-        <Skeleton className="h-96" />
+      <div className={shell}>
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="mt-3 h-11 w-72" />
+        <Skeleton className="mt-7 h-[26rem]" />
       </div>
     );
   }
 
   if (!tier || error) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-2xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>Something went wrong</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">
-              {error || "Unable to load checkout information."}
-            </p>
-            <Button asChild>
-              <Link href="/pricing">
-                <IconArrowLeft className="h-4 w-4" />
-                Back to Pricing
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className={shell}>
+        <p className="t-box-office__dir">(the house is dark.)</p>
+        <h1 className="t-box-office__title">Something went wrong.</h1>
+        <div className="t-ticket">
+          <p className="t-ticket__blurb">
+            {error || "I couldn't load the checkout information."}
+          </p>
+          <div className="t-ticket__foot">
+            <Link href="/pricing" className="t-ticket__cta">
+              <IconArrowLeft className="h-4 w-4" />
+              Back to pricing
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-16 max-w-2xl">
-      <div className="mb-8">
-        <h1 className="font-brand text-3xl sm:text-4xl font-semibold mb-2">Complete Your Subscription</h1>
-        <p className="text-muted-foreground">Review your order and proceed to payment</p>
-      </div>
+    <div className={shell}>
+      <p className="t-box-office__dir">(the box office.)</p>
+      <h1 className="t-box-office__title">
+        {isTrial ? (
+          <>
+            Two weeks, <em>on me.</em>
+          </>
+        ) : (
+          <>
+            Your seat, <em>held.</em>
+          </>
+        )}
+      </h1>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {getTierIcon()}
-              <CardTitle className="text-2xl">{tier.display_name} Plan</CardTitle>
-            </div>
-            <Badge variant="default" className="capitalize">
-              {period}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <p className="text-muted-foreground">{tier.description}</p>
+      <div className="t-ticket">
+        <div className="t-ticket__head">
+          <h2 className="t-ticket__plan">{tier.display_name}</h2>
+          <span className="t-ticket__tag">{period}</span>
+        </div>
+        <p className="t-ticket__blurb">{tier.description}</p>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between py-2">
-              <span className="text-muted-foreground">Billing period</span>
-              <span className="font-medium capitalize">{period}</span>
-            </div>
+        <hr className="t-ticket__rule" />
 
-            <div className="flex items-center justify-between py-2">
-              <span className="text-muted-foreground">Price</span>
-              <span className="font-medium">{calculateMonthlyPrice()}</span>
-            </div>
+        <div className="t-ticket__row">
+          <span className="t-ticket__label">Billing</span>
+          <span className="t-ticket__lead" aria-hidden />
+          <span className="t-ticket__val capitalize">{period}</span>
+        </div>
+        <div className="t-ticket__row">
+          <span className="t-ticket__label">Rate</span>
+          <span className="t-ticket__lead" aria-hidden />
+          <span className="t-ticket__val">{calculateMonthlyPrice()}</span>
+        </div>
+        <div className="t-ticket__row">
+          <span className="t-ticket__label">Due today</span>
+          <span className="t-ticket__lead" aria-hidden />
+          <span className="t-ticket__total">{formatPrice(getPrice())}</span>
+        </div>
 
-            {period === "annual" && (
-              <>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-muted-foreground">Billed today</span>
-                  <span className="text-2xl font-bold">{formatPrice(getPrice())}</span>
-                </div>
-                {(promoApplied !== "BUSINESS" && promoApplied !== "STUDENT") && (
-                  <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
-                    <p className="text-sm font-medium text-accent mb-1">Annual Savings</p>
-                    <p className="text-xs text-muted-foreground">
-                      Save{" "}
-                      {formatPrice(
-                        tier.monthly_price_cents * 12 - (tier.annual_price_cents || 0)
-                      )}{" "}
-                      per year (31% discount)
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-
-            {period === "monthly" && (
-              <div className="flex items-center justify-between py-2">
-                <span className="text-muted-foreground">Billed today</span>
-                <span className="text-2xl font-bold">{formatPrice(getPrice())}</span>
-              </div>
-            )}
-
-            {isTrial && (
-              <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
-                <p className="text-sm font-medium text-foreground mb-1">2 weeks free</p>
-                <p className="text-xs text-muted-foreground">
-                  $0 today. Card on file, nothing charged for 14 days, then $12/month. Cancel anytime before it renews.
-                </p>
-              </div>
-            )}
-
-            {/* Promo / discount codes — hidden on the free trial (no code needed). */}
-            {!isTrial && (
-            <div className="flex flex-col gap-2 pt-2 border-t">
-              {promoApplied ? (
-                <div className="flex items-center justify-between rounded-lg bg-accent/10 border border-accent/20 px-3 py-2">
-                  <span className="text-sm font-medium text-foreground flex items-center gap-2">
-                    <IconTag className="h-4 w-4 shrink-0 text-accent" />
-                    {promoApplied === "BUSINESS"
-                        ? "BUSINESS applied. 100% off for 3 months."
-                        : promoApplied === "STUDENT"
-                          ? "STUDENT applied. 100% off for 6 months."
-                          : promoApplied === "STUDENT50"
-                            ? "Student discount applied. 50% off."
-                            : "STARTUPS applied. 50% off."}
-                  </span>
-                  <Button type="button" variant="ghost" size="sm" onClick={removePromo}>
-                    <IconX className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <div className={`flex gap-2${promoShake ? " animate-shake" : ""}`}>
-                    <Input
-                      placeholder="Promo code"
-                      value={promoCode}
-                      onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null); }}
-                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyPromo())}
-                      className={`flex-1${promoError ? " border-destructive focus-visible:ring-destructive/30" : ""}`}
-                    />
-                    <Button type="button" variant="outline" onClick={() => applyPromo()}>
-                      Apply
-                    </Button>
-                  </div>
-                  {promoError && (
-                    <p className="text-sm text-destructive font-medium">{promoError}</p>
-                  )}
-                  {!isTrial && tier?.name === "plus" && (
-                    <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4">
-                      <p className="text-base font-semibold text-foreground mb-1">
-                        First time on Plus? Get 2 weeks free.
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Card required, nothing charged for 14 days, then $12/month. Cancel anytime.
-                      </p>
-                      <Button
-                        asChild
-                        size="sm"
-                        className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-                      >
-                        <Link href="/checkout?tier=plus&period=monthly&trial=1">
-                          <IconGift className="h-4 w-4" />
-                          Start 2 weeks free
-                        </Link>
-                      </Button>
-                    </div>
-                  )}
-                  <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4">
-                    <p className="text-base font-semibold text-foreground mb-1">
-                      Student or teacher / school / acting coach?
-                    </p>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Request a discount; we&apos;ll review and email you a code. Students get a lower discount; teachers and schools get a discounted rate.
-                    </p>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => { setPromoModalContext(null); setPromoModalOpen(true); }}
-                    >
-                      <IconGift className="h-4 w-4" />
-                      Request a discount
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Don&apos;t have a code yet?{" "}
-                    <button
-                      type="button"
-                      onClick={() => { setPromoModalContext("review"); setPromoModalOpen(true); }}
-                      className="underline hover:text-foreground"
-                    >
-                      Request a review
-                    </button>
-                    ; we&apos;ll get back to you.
-                  </p>
-                </>
-              )}
-            </div>
-            )}
-          </div>
-
-          {error && (
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-              <p className="text-sm text-destructive">{error}</p>
+        {period === "annual" &&
+          promoApplied !== "BUSINESS" &&
+          promoApplied !== "STUDENT" && (
+            <div className="t-ticket__note">
+              <p className="t-ticket__note-title">
+                Saves{" "}
+                {formatPrice(
+                  tier.monthly_price_cents * 12 - (tier.annual_price_cents || 0),
+                )}{" "}
+                on the year
+              </p>
+              <p className="t-ticket__note-body">
+                31% off the month-to-month rate.
+              </p>
             </div>
           )}
 
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>• You can cancel anytime from your billing settings</p>
-            <p>• All payments are secure and encrypted via Stripe</p>
-            <p>• Subscription renews automatically unless canceled</p>
+        {isTrial && (
+          <div className="t-ticket__note">
+            <p className="t-ticket__note-title">Nothing is charged today.</p>
+            <p className="t-ticket__note-body">
+              Card on file, $0 for 14 days, then $12/month. Cancel any time
+              before it renews and you are never billed.
+            </p>
           </div>
-        </CardContent>
-        <CardFooter className="flex gap-2">
-          <Button asChild variant="outline" className="flex-1">
-            <Link href="/pricing">
-              <IconArrowLeft className="h-4 w-4" />
-              Back
-            </Link>
-          </Button>
-          <Button onClick={handleCheckout} disabled={isCheckingOut} className="flex-1">
-            {isCheckingOut ? "Redirecting..." : isTrial ? "Start 2 weeks free" : "Continue to Payment"}
-          </Button>
-        </CardFooter>
-      </Card>
+        )}
 
-      <p className="text-center text-sm text-muted-foreground mt-6">
-        By subscribing, you agree to our{" "}
-        <Link href="/terms" className="underline">
-          Terms of Service
+        {/* Promo / discount codes — hidden on the free trial (no code needed). */}
+        {!isTrial && (
+          <div className="mt-5 flex flex-col gap-3">
+            {promoApplied ? (
+              <div className="t-ticket__note flex items-center justify-between gap-3">
+                <p className="t-ticket__note-title">
+                  {promoApplied === "BUSINESS"
+                    ? "BUSINESS applied. 100% off for 3 months."
+                    : promoApplied === "STUDENT"
+                      ? "STUDENT applied. 100% off for 6 months."
+                      : promoApplied === "STUDENT50"
+                        ? "Student discount applied. 50% off."
+                        : "STARTUPS applied. 50% off."}
+                </p>
+                <button
+                  type="button"
+                  onClick={removePromo}
+                  className="t-ticket__quiet shrink-0 no-underline"
+                  aria-label="Remove code"
+                >
+                  <IconX className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className={`flex gap-2${promoShake ? " animate-shake" : ""}`}>
+                  <Input
+                    placeholder="Promo code"
+                    value={promoCode}
+                    onChange={(e) => {
+                      setPromoCode(e.target.value.toUpperCase());
+                      setPromoError(null);
+                    }}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && (e.preventDefault(), applyPromo())
+                    }
+                    className="h-11 flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => applyPromo()}
+                    className="t-ticket__cta"
+                    style={{ height: 44, padding: "0 20px", fontSize: 14 }}
+                  >
+                    Apply
+                  </button>
+                </div>
+                {promoError && (
+                  <div className="t-ticket__note t-ticket__note--bad">
+                    <p className="t-ticket__note-title">{promoError}</p>
+                  </div>
+                )}
+
+                {tier?.name === "plus" && (
+                  <div className="t-ticket__note">
+                    <p className="t-ticket__note-title">
+                      First time on Plus? Take two weeks free.
+                    </p>
+                    <p className="t-ticket__note-body">
+                      Card required, nothing charged for 14 days, then $12/month.
+                    </p>
+                    <Link
+                      href="/checkout?tier=plus&period=monthly&trial=1"
+                      className="t-ticket__cta mt-3"
+                      style={{ height: 40, padding: "0 18px", fontSize: 14 }}
+                    >
+                      Start 2 weeks free
+                    </Link>
+                  </div>
+                )}
+
+                <div className="t-ticket__note">
+                  <p className="t-ticket__note-title">
+                    Student, teacher, school or coach?
+                  </p>
+                  <p className="t-ticket__note-body">
+                    Tell me who you are and I&apos;ll sort you out. Students get
+                    a discount; teachers, schools and coaches get a rate of their
+                    own.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPromoModalContext(null);
+                      setPromoModalOpen(true);
+                    }}
+                    className="t-ticket__cta mt-3"
+                    style={{ height: 40, padding: "0 18px", fontSize: 14 }}
+                  >
+                    Ask for a rate
+                  </button>
+                </div>
+
+                <p className="t-ticket__fine">
+                  No code yet?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPromoModalContext("review");
+                      setPromoModalOpen(true);
+                    }}
+                    className="t-ticket__quiet"
+                  >
+                    ask me for one
+                  </button>
+                  , and I&apos;ll get back to you.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <div className="t-ticket__note t-ticket__note--bad">
+            <p className="t-ticket__note-title">{error}</p>
+          </div>
+        )}
+
+        <div className="t-ticket__foot">
+          <button
+            type="button"
+            onClick={handleCheckout}
+            disabled={isCheckingOut}
+            className="t-ticket__cta"
+          >
+            {isCheckingOut
+              ? "Taking you to Stripe..."
+              : isTrial
+                ? "Start 2 weeks free"
+                : "Continue to payment"}
+          </button>
+          <Link href="/pricing" className="t-ticket__quiet">
+            back to the plans
+          </Link>
+        </div>
+
+        <ul className="t-ticket__fine">
+          <li>Cancel any time from billing settings.</li>
+          <li>Payment is handled by Stripe. The card never touches my server.</li>
+          <li>Renews automatically until you cancel.</li>
+        </ul>
+      </div>
+
+      <p className="t-ticket__fine" style={{ marginTop: 20 }}>
+        Subscribing means you agree to the{" "}
+        <Link href="/terms" className="t-ticket__quiet">
+          terms
         </Link>{" "}
-        and{" "}
-        <Link href="/privacy" className="underline">
-          Privacy Policy
+        and the{" "}
+        <Link href="/privacy" className="t-ticket__quiet">
+          privacy policy
         </Link>
         .
       </p>
 
       <RequestPromoCodeModal
         open={promoModalOpen}
-        onOpenChange={(open) => { setPromoModalOpen(open); if (!open) setPromoModalContext(null); }}
+        onOpenChange={(open) => {
+          setPromoModalOpen(open);
+          if (!open) setPromoModalContext(null);
+        }}
         initialType={promoModalContext === "review" ? "student" : undefined}
         initialContext={promoModalContext === "review" ? "review" : undefined}
       />

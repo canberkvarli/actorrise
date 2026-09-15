@@ -1270,6 +1270,428 @@
 }
 
 /* ==========================================================================
+   THE FREE READS RUN OUT — the wall, inline under a speech that stops.
+
+   MonologuePaywallModal is this same event in a dialog, so the wall wears the
+   same faces and the same ink. What it does NOT wear is the paper card: this
+   has to live exactly where the text ran out, and a bordered slab dropped
+   under a half-finished speech reads as an ad someone slid onto the page. The
+   speech goes dim, a rule comes in, and the ask is set in type on the page
+   itself.
+
+   Which means the wall sets NO background, so it inherits the reading page's.
+   The monologue route binds no theatre surface at all — the element carries
+   `theatre-tokens` and the faces itself, or every var() below resolves to
+   nothing and the font-family declarations are dropped whole.
+   ========================================================================== */
+.t-wall {
+  font-family: var(--t-body);
+}
+.t-wall__rule {
+  border: 0;
+  border-top: 1.5px solid var(--t-line-light);
+  margin: 0;
+}
+.t-wall__dir {
+  margin: 22px 0 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  color: var(--t-muted-dark-2);
+}
+.t-wall__title {
+  margin: 8px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-wall__body {
+  margin: 12px 0 0;
+  max-width: 46ch;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--t-muted-dark);
+}
+.t-wall__foot {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+/* The ask pill, shared by every surface that asks for money. Defined once on
+   purpose: the wall, the ticket and the modal are one decision seen in three
+   places, and three copies of this drift the moment one of them is touched.
+   `.t-modal__cta` is the same pill and joins the group below. */
+.t-wall__cta,
+.t-ticket__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-text);
+  background: var(--t-text);
+  color: var(--t-on-text);
+  font-family: var(--t-body);
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.3s var(--t-spring);
+}
+.t-wall__cta:hover,
+.t-ticket__cta:hover {
+  color: var(--t-on-text);
+  transform: scale(1.03) rotate(-1.2deg);
+}
+.t-ticket__cta:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+}
+.t-wall__quiet,
+.t-ticket__quiet {
+  font-family: var(--t-direction);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--t-muted-dark-2);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.t-wall__quiet:hover,
+.t-ticket__quiet:hover {
+  color: var(--t-text);
+}
+
+/* ==========================================================================
+   THE BOX OFFICE — /checkout.
+
+   The last screen before the card, and until now the one screen in the paid
+   path still wearing the old shadcn card: an actor went search → paywall modal
+   → a page from a different application, at the exact moment they were being
+   asked for money. It is a ticket now, because that is what it is.
+
+   Same paper and the same hard gel shadow as `.t-modal`, so arriving here from
+   the modal reads as the same object getting bigger rather than a handoff.
+   ========================================================================== */
+.t-box-office {
+  font-family: var(--t-body);
+  color: var(--t-text);
+}
+.t-box-office__dir {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  color: var(--t-muted-dark-2);
+}
+.t-box-office__title {
+  margin: 8px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(34px, 7vw, 46px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-ticket {
+  margin-top: 26px;
+  padding: 26px;
+  background: var(--t-paper);
+  border: 1.5px solid var(--t-text);
+  border-radius: 10px;
+  box-shadow: 12px 12px 0 var(--t-gel);
+}
+.t-ticket__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.t-ticket__plan {
+  margin: 0;
+  font-family: var(--t-display);
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+/* Sharp, because it is a label and not a button. */
+.t-ticket__tag {
+  padding: 5px 10px;
+  border: 1.5px solid var(--t-line-light);
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark);
+}
+.t-ticket__blurb {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--t-muted-dark);
+}
+.t-ticket__rule {
+  border: 0;
+  border-top: 1.5px solid var(--t-line-light);
+  margin: 20px 0 4px;
+}
+/* A row of a printed account: the label, the leader, the figure. */
+.t-ticket__row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 0;
+}
+.t-ticket__label {
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark-2);
+  white-space: nowrap;
+}
+.t-ticket__lead {
+  flex: 1;
+  min-width: 18px;
+  border-bottom: 1px dotted var(--t-line-light);
+  transform: translateY(-4px);
+}
+.t-ticket__val {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--t-text);
+  white-space: nowrap;
+}
+.t-ticket__total {
+  font-family: var(--t-display);
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+/* A note on the ticket, gel-tinted so it reads as written on rather than
+   bolted to it. Used for the trial terms, an applied code, and errors. */
+.t-ticket__note {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-left: 3px solid var(--t-gel-ink);
+  background: color-mix(in oklab, var(--t-gel) 14%, transparent);
+}
+.t-ticket__note-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--t-text);
+}
+.t-ticket__note-body {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--t-muted-dark);
+}
+.t-ticket__note--bad {
+  border-left-color: oklch(0.55 0.19 27);
+  background: color-mix(in oklab, oklch(0.55 0.19 27) 10%, transparent);
+}
+.t-ticket__foot {
+  margin-top: 26px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+.t-ticket__fine {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--t-muted-dark-2);
+}
+/* The promo drawer keeps the app's inputs off the ticket. */
+.t-ticket input {
+  font-family: var(--t-body) !important;
+  background: var(--t-paper-2) !important;
+  border: 1.5px solid var(--t-line-light) !important;
+  color: var(--t-text) !important;
+  border-radius: 12px !important;
+}
+.t-ticket input::placeholder {
+  color: var(--t-faint) !important;
+}
+.t-ticket input:focus,
+.t-ticket input:focus-visible {
+  border-color: var(--t-text) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.dark .t-box-office {
+  --t-paper: oklch(0.19 0.018 52);
+  --t-paper-2: oklch(0.15 0.015 52);
+  --t-text: oklch(0.95 0.02 85);
+  --t-muted-dark: oklch(0.75 0.02 62);
+  --t-muted-dark-2: oklch(0.68 0.02 62);
+  --t-faint: oklch(0.6 0.02 60);
+  --t-line-light: oklch(0.32 0.03 55);
+  --t-on-text: oklch(0.15 0.03 45);
+  --t-gel-ink: var(--t-gel);
+}
+
+/* ==========================================================================
+   THE OFFER — the trial, asked for where the work just stopped.
+
+   Two shapes. The card is for a moment that has already ended (a scene review,
+   a finished extraction) and can take the full attention. The strip is for
+   mid-rehearsal, and is deliberately quiet and out of the reading path: the
+   one thing worse than never asking is interrupting an actor who is finally
+   saying their lines.
+
+   `--stage` forces the dark values regardless of theme, because some hosts are
+   a dark stage in both. That is what the old `tone="dark"` prop meant, said in
+   tokens instead of a pile of neutral-400s.
+   ========================================================================== */
+.t-offer {
+  position: relative;
+  padding: 20px;
+  background: var(--t-paper);
+  border: 1.5px solid var(--t-line-light);
+  border-left: 3px solid var(--t-gel-ink);
+  font-family: var(--t-body);
+}
+.t-offer__dir {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  color: var(--t-muted-dark-2);
+}
+.t-offer__title {
+  margin: 6px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-offer__body {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--t-muted-dark);
+}
+.t-offer__foot {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.t-offer__fine {
+  margin: 12px 0 0;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--t-muted-dark-2);
+}
+/* The dismiss, kept findable and unemphatic. It is not the ask. */
+.t-offer__x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px;
+  color: var(--t-muted-dark-2);
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+.t-offer__x:hover {
+  opacity: 1;
+  color: var(--t-text);
+}
+
+.t-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  background: color-mix(in oklab, oklch(0.14 0.015 50) 94%, transparent);
+  border: 1.5px solid var(--t-line-light);
+  border-left: 3px solid var(--t-gel);
+  backdrop-filter: blur(6px);
+  font-family: var(--t-body);
+}
+.t-strip__body {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: oklch(0.86 0.02 70);
+}
+
+/* Both offers use the money pill at a smaller size. */
+.t-offer__cta,
+.t-strip__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-text);
+  background: var(--t-text);
+  color: var(--t-on-text);
+  font-family: var(--t-body);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.3s var(--t-spring);
+}
+.t-offer__cta:hover,
+.t-strip__cta:hover {
+  color: var(--t-on-text);
+  transform: scale(1.03) rotate(-1.2deg);
+}
+
+.dark .t-offer,
+.t-offer--stage,
+.t-strip {
+  --t-paper: oklch(0.19 0.018 52);
+  --t-text: oklch(0.95 0.02 85);
+  --t-muted-dark: oklch(0.75 0.02 62);
+  --t-muted-dark-2: oklch(0.68 0.02 62);
+  --t-line-light: oklch(0.32 0.03 55);
+  --t-on-text: oklch(0.15 0.03 45);
+  --t-gel-ink: var(--t-gel);
+}
+
+/* Same flip as .t-modal: ink goes cream so it reads on the dark reading page. */
+.dark .t-wall {
+  --t-text: oklch(0.95 0.02 85);
+  --t-muted-dark: oklch(0.75 0.02 62);
+  --t-muted-dark-2: oklch(0.68 0.02 62);
+  --t-line-light: oklch(0.32 0.03 55);
+  --t-on-text: oklch(0.15 0.03 45);
+}
+
+/* ==========================================================================
    LOGGING OUT — the curtain comes in.
 
    This drew one glowing bulb, which is the GHOST LIGHT: the lamp left burning
