@@ -2526,9 +2526,9 @@
   width: 36px;
   height: 36px;
   border-radius: 999px;
-  border: 1px solid var(--t-line-dark-3);
+  border: 1px solid var(--t-line-light);
   background: transparent;
-  color: var(--t-muted-light-2);
+  color: var(--t-muted-dark);
   font-family: var(--t-display);
   font-style: italic;
   font-size: 20px;
@@ -2600,7 +2600,7 @@
   font-size: 13px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--t-muted-light);
+  color: var(--t-muted-dark-2);
 }
 
 .t-stage-title {
@@ -2643,7 +2643,7 @@
   font-family: var(--t-direction);
   font-size: clamp(18px, 1.7vw, 23px);
   line-height: 1.7;
-  color: oklch(0.92 0.02 80);
+  color: var(--t-text-soft);
   text-wrap: balance;
 }
 .t-cue-caret {
@@ -2663,8 +2663,8 @@
   height: 64px;
   padding: 0 8px 0 28px;
   border-radius: 999px;
-  background: var(--t-cream);
-  color: var(--t-ink);
+  background: var(--t-text);
+  color: var(--t-on-text);
   font-family: var(--t-body);
   font-size: 18px;
   font-weight: 700;
@@ -2674,7 +2674,7 @@
 }
 .t-stage-action:hover {
   transform: scale(1.05) rotate(-1.5deg);
-  color: var(--t-ink);
+  color: var(--t-on-text);
 }
 .t-stage-action__dot {
   display: inline-flex;
@@ -2684,7 +2684,7 @@
   height: 44px;
   border-radius: 999px;
   background: var(--t-gel);
-  color: var(--t-ink);
+  color: var(--t-on-text);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2703,8 +2703,8 @@
   align-items: stretch;
   overflow: hidden;
   border-radius: 14px;
-  border: 1.5px solid var(--t-line-dark-2);
-  background: oklch(0.16 0.018 52);
+  border: 1.5px solid var(--t-line-light);
+  background: var(--t-paper);
   padding: 14px 16px 14px 20px;
   text-align: left;
   transition:
@@ -2718,12 +2718,12 @@
 }
 .t-shelf-script.is-current {
   border-color: var(--t-gel);
-  background: oklch(0.19 0.02 52);
+  background: var(--t-paper-2);
   box-shadow: 0 0 40px -12px oklch(0.92 0.18 100 / 0.5);
 }
 .t-shelf-script.is-held {
   border-color: var(--t-gel);
-  background: oklch(0.19 0.02 52);
+  background: var(--t-paper-2);
 }
 .t-shelf-script:focus-visible {
   outline: 2px solid var(--t-gel);
@@ -2744,12 +2744,12 @@
   font-weight: 700;
   font-size: 17px;
   line-height: 1.2;
-  color: var(--t-cream);
+  color: var(--t-text);
 }
 .t-shelf-script__author {
   font-family: var(--t-direction);
   font-size: 13px;
-  color: var(--t-muted-light);
+  color: var(--t-muted-dark-2);
 }
 .t-shelf-script__right {
   font-family: var(--t-direction);
@@ -2775,7 +2775,7 @@
   height: 38px;
   padding: 0 16px;
   border-radius: 999px;
-  border: 1.5px dashed oklch(0.55 0.03 55);
+  border: 1.5px dashed var(--t-line-light-2);
   background: transparent;
   color: var(--t-text);
   font-family: var(--t-body);
@@ -2785,7 +2785,7 @@
 }
 .t-bring-in:hover {
   background: var(--t-gel);
-  color: var(--t-ink);
+  color: var(--t-on-text);
   border-style: solid;
   border-color: var(--t-gel);
   transform: rotate(-1.5deg);
@@ -2814,7 +2814,7 @@
   font-size: 12px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--t-muted-light);
+  color: var(--t-muted-dark-2);
   transition: color 0.2s;
 }
 .t-back-to-stage:hover {
@@ -2861,17 +2861,17 @@
   height: 34px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1.5px solid var(--t-line-dark-3);
+  border: 1.5px solid var(--t-line-light);
   background: transparent;
-  color: var(--t-muted-light-3);
+  color: var(--t-muted-dark);
   font-family: var(--t-body);
   font-size: 13px;
   font-weight: 600;
   transition: border-color 0.2s, color 0.2s;
 }
 .t-script-action:hover:not(:disabled) {
-  border-color: var(--t-cream);
-  color: var(--t-cream);
+  border-color: var(--t-text);
+  color: var(--t-text);
 }
 /* Redo is destructive-adjacent, so it is the quiet one until you reach it. */
 .t-script-action--quiet {
@@ -2944,7 +2944,7 @@
   border-radius: 999px;
   border: 0;
   background: var(--t-cta-bg);
-  color: var(--t-cream);
+  color: var(--t-text);
   font-family: var(--t-body);
   font-size: 15px;
   font-weight: 700;
