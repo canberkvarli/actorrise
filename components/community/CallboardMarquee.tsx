@@ -60,7 +60,7 @@ export function CallboardMarquee() {
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: ".2em",
-            color: "var(--t-muted-light-2)",
+            color: "var(--bar-muted)",
           }}
         >
           callboard
@@ -90,13 +90,13 @@ export function CallboardMarquee() {
                 fontFamily: "var(--t-direction)",
                 fontSize: 13,
                 letterSpacing: "0.02em",
-                color: "var(--t-muted-light-2)",
+                color: "var(--bar-muted)",
               }}
             >
-              <span className="mx-3 align-baseline" style={{ color: "oklch(0.40 0.03 55)" }}>
+              <span className="mx-3 align-baseline" style={{ color: "var(--bar-rule)" }}>
                 •
               </span>
-              <span className="align-baseline font-bold" style={{ color: "var(--t-cream)" }}>
+              <span className="align-baseline font-bold" style={{ color: "var(--bar-fg)" }}>
                 {e.name}
               </span>{" "}
               <EventLine e={e} />
@@ -112,7 +112,7 @@ export function CallboardMarquee() {
           fontFamily: "var(--t-direction)",
           fontSize: 11,
           letterSpacing: ".06em",
-          color: "var(--t-muted-light-2)",
+          color: "var(--bar-muted)",
         }}
       >
         <span className="hidden sm:inline">the board</span>

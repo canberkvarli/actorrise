@@ -57,18 +57,18 @@ export function AppLaunchBar() {
     <div
       role="region"
       aria-label="Ghost Light iOS app announcement"
-      className="relative z-30 bg-primary-solid text-primary-solid-foreground"
+      className="t-launchbar relative z-30"
     >
       {/* pr-10 keeps the text clear of the close button, which is absolute so it
           stays pinned right however the sentence wraps at 320px. */}
       <div className="container mx-auto flex items-center justify-center gap-x-3 gap-y-1 px-4 py-2 pr-10 text-center sm:px-6">
-        <p className="text-[13px] font-medium leading-snug">
+        <p className="t-launchbar__line">
           Ghost Light is out on the App Store.{" "}
           <a
             href={appStoreUrl("launch_bar")}
             target="_blank"
             rel="noopener noreferrer"
-            className="whitespace-nowrap underline underline-offset-4 hover:no-underline"
+            className="t-launchbar__link"
           >
             Get it free
           </a>
@@ -79,7 +79,7 @@ export function AppLaunchBar() {
         type="button"
         onClick={dismiss}
         aria-label="Dismiss announcement"
-        className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-2 opacity-70 transition-opacity hover:opacity-100 sm:right-3"
+        className="t-launchbar__close absolute right-1 top-1/2 -translate-y-1/2 sm:right-3"
       >
         <IconX className="h-4 w-4" />
       </button>
