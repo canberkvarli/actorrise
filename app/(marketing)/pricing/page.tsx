@@ -10,9 +10,6 @@
 
 import { useState } from "react";
 import { usePricingTiers, DEFAULT_PRICING_TIERS, type PricingTier } from "@/hooks/usePricingTiers";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -20,35 +17,40 @@ import { StageHero } from "@/components/marketing/StageHero";
 
 const faqs = [
   {
-    question: "Can I switch plans anytime?",
-    answer: "Yes! You can upgrade, downgrade, or cancel your subscription at any time. Changes take effect at the end of your current billing period."
+    question: "Can I switch plans later?",
+    answer:
+      "Yes. Move up, move down or cancel whenever you like. The change lands at the end of the period you already paid for.",
   },
   {
-    question: "What happens when I reach my search limit?",
-    answer: "You'll see a friendly upgrade prompt. You can still browse monologues manually, but AI-powered searches will be paused until next month or you upgrade."
+    question: "What happens when I hit the search limit?",
+    answer:
+      "AI search pauses until the month turns over, or until you move up. Browsing the library by hand stays open either way.",
   },
   {
     question: "What counts as a ScenePartner scene?",
-    answer: "Each unique scene you start rehearsing counts as one scene. You can re-run the same scene as many times as you want without it counting again."
-  },
-  {
-    question: "Is there a student discount?",
     answer:
-      "Yes. Verified students get 50% off the Plus annual plan. Request a discount via the contact form and we'll email you a code after a quick review.",
+      "Each new scene you start counts once. Run that same scene as many times as you want and it still counts once.",
   },
   {
-    question: "Do you offer discounts for teachers, schools, or acting coaches?",
+    question: "I'm a student. Is there a discount?",
     answer:
-      "Yes. Educators and acting coaches get 30% off any paid plan. Drama schools and institutions can contact us for group/institutional pricing. Request a discount via the contact form.",
+      "Students don't pay at all. Sign up free, then have your teacher email me at canberk@actorrise.com with the addresses, and I'll open Plus for the class.",
   },
   {
-    question: "What payment methods do you accept?",
-    answer: "We accept all major credit cards (Visa, Mastercard, American Express) via Stripe. All payments are secure and encrypted."
+    question: "I teach. Can I get this for my students?",
+    answer:
+      "Yes, and for yourself. Sign up at actorrise.com, email me the address you used, and I'll switch Plus on for you, free. A month to start, and if you need longer just say so. Send your students' addresses along and I'll do the same for them.",
   },
   {
-    question: "Can I cancel anytime?",
-    answer: "Absolutely. There are no long-term commitments. Cancel anytime and you'll continue to have access until the end of your billing period. Your bookmarks and data are preserved even after cancellation."
-  }
+    question: "How do I pay?",
+    answer:
+      "Visa, Mastercard and Amex, through Stripe. The card details never touch my server.",
+  },
+  {
+    question: "Can I cancel any time?",
+    answer:
+      "Any time, no commitment. You keep access to the end of the period you paid for, and your bookmarks stay put whatever you decide.",
+  },
 ];
 
 function getFeaturesList(tier: PricingTier): string[] {
@@ -101,62 +103,54 @@ function FAQAccordion() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <div className="space-y-2">
-      {faqs.map((faq, index) => (
-        <motion.div
-          key={index}
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: index * 0.05 }}
-        >
-          <button
-            onClick={() => setOpenIndex(openIndex === index ? null : index)}
-            className="w-full text-left py-3 sm:py-4 px-4 sm:px-6 bg-muted/30 hover:bg-muted/50 transition-colors"
+    <div>
+      {faqs.map((faq, index) => {
+        const open = openIndex === index;
+        return (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: index * 0.04 }}
+            className="t-faq__row"
           >
-            <div className="flex items-center justify-between gap-4">
-              <h3 className="text-base sm:text-lg font-semibold">{faq.question}</h3>
-              <motion.div
-                animate={{ rotate: openIndex === index ? 180 : 0 }}
+            <button
+              type="button"
+              onClick={() => setOpenIndex(open ? null : index)}
+              className="t-faq__q"
+              aria-expanded={open}
+            >
+              <span>{faq.question}</span>
+              <motion.span
+                aria-hidden
+                animate={{ rotate: open ? 180 : 0 }}
                 transition={{ duration: 0.2 }}
+                className="shrink-0"
+                style={{ color: "var(--t-muted-dark-2)" }}
               >
-                <svg
-                  className="w-5 h-5 text-muted-foreground"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
-              </motion.div>
-            </div>
+              </motion.span>
+            </button>
             <motion.div
               initial={false}
-              animate={{
-                height: openIndex === index ? "auto" : 0,
-                opacity: openIndex === index ? 1 : 0,
-              }}
+              animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }}
               transition={{ duration: 0.2 }}
-              className="overflow-hidden"
+              className="t-faq__a"
             >
-              <p className="text-sm sm:text-base text-muted-foreground mt-2 sm:mt-3 pr-4 sm:pr-12">
-                {faq.answer}
-              </p>
+              <p className="pb-5 pr-6">{faq.answer}</p>
             </motion.div>
-          </button>
-        </motion.div>
-      ))}
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
 
 export default function PricingPage() {
-  // Default to annual — it's the better deal for the actor and better LTV for us,
+  // Default to annual — it's the better deal for the actor and the better LTV,
   // so lead with it (they can flip to monthly).
   const [isAnnual, setIsAnnual] = useState(true);
   const { data: tiers = DEFAULT_PRICING_TIERS, isLoading } = usePricingTiers();
@@ -175,9 +169,9 @@ export default function PricingPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-7xl">
-        <Skeleton className="h-12 w-64 mb-8 mx-auto" />
-        <div className="grid md:grid-cols-4 gap-6">
+      <div className="container mx-auto max-w-7xl px-4 py-16">
+        <Skeleton className="mx-auto mb-8 h-12 w-64" />
+        <div className="grid gap-6 md:grid-cols-4">
           <Skeleton className="h-96" />
           <Skeleton className="h-96" />
           <Skeleton className="h-96" />
@@ -189,165 +183,145 @@ export default function PricingPage() {
 
   return (
     <>
-    <StageHero
-      direction="(the ticket.)"
-      title={
-        <>
-          Your <em className="italic text-primary">craft</em>, your plan.
-        </>
-      }
-      lede="Start free, no credit card. Upgrade when you need more."
-    />
-    <div className="container mx-auto px-4 py-10 sm:py-16 max-w-7xl">
-      {/* Header */}
-      <div className="text-center mb-8 sm:mb-12">
-        {/* Founding member banner */}
-        {/* Annual/Monthly Toggle */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="flex flex-col items-center gap-2 mt-6 sm:mt-8"
-        >
-          <div className="flex items-center justify-center gap-3 sm:gap-4">
-            <Label htmlFor="billing-toggle" className={!isAnnual ? "font-semibold" : ""}>
-              Monthly
-            </Label>
-            <Switch
-              id="billing-toggle"
-              checked={isAnnual}
-              onCheckedChange={setIsAnnual}
-            />
-            <Label htmlFor="billing-toggle" className={isAnnual ? "font-semibold" : ""}>
-              Annual
-            </Label>
-          </div>
-          <div className="h-4 flex items-center justify-center">
-            {isAnnual && (
-              <motion.span
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                className="text-xs text-muted-foreground"
-              >
-                Save up to 31%
-              </motion.span>
-            )}
-          </div>
-        </motion.div>
-      </div>
+      <StageHero
+        direction="(the ticket.)"
+        title={
+          <>
+            Your <em className="italic text-primary">craft</em>, your plan.
+          </>
+        }
+        lede="Start free, no card. Move up when you need more."
+      />
 
-      {/* Pricing Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-12 sm:mb-16 items-stretch">
-        {tiers.map((tier, index) => {
-          const price =
-            isAnnual && tier.annual_price_cents
-              ? tier.annual_price_cents / 12
-              : tier.monthly_price_cents;
-
-          const savings =
-            tier.annual_price_cents && tier.monthly_price_cents
-              ? calculateSavings(tier.monthly_price_cents, tier.annual_price_cents)
-              : null;
-
-          const isHighlighted = tier.name === "plus";
-          const features = getFeaturesList(tier);
-          const isFree = tier.name === "free";
-
-          return (
-            <motion.div
-              key={tier.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.08 }}
-              className="h-full"
+      {/* `t-box-office` because that is what this page is, and because it carries
+          the dark flip for every --t-* the stubs below read. The marketing
+          layout already mounts theatre-tokens and the three faces. */}
+      <div className="t-box-office container mx-auto max-w-7xl px-4 py-10 sm:py-16">
+        <div className="mb-10 flex flex-col items-center gap-2">
+          <div className="t-switch" role="group" aria-label="Billing period">
+            <button
+              type="button"
+              className="t-switch__opt"
+              aria-pressed={!isAnnual}
+              onClick={() => setIsAnnual(false)}
             >
-              <div
-                className={`h-full flex flex-col relative border p-4 sm:p-7 ${
-                  isHighlighted
-                    ? "border-primary/40 bg-primary/[0.03]"
-                    : "border-border/50 bg-card/30"
-                }`}
+              Monthly
+            </button>
+            <button
+              type="button"
+              className="t-switch__opt"
+              aria-pressed={isAnnual}
+              onClick={() => setIsAnnual(true)}
+            >
+              Annual
+            </button>
+          </div>
+          <p className="t-box-office__dir" style={{ minHeight: 18 }}>
+            {isAnnual ? "(saves up to 31%.)" : ""}
+          </p>
+        </div>
+
+        {/* Columns follow the tiers the API actually returns. Hardcoded to four,
+            a three-tier response left a dead column and threw the row off centre.
+            Static class names, because Tailwind cannot see a computed one, and an
+            inline gridTemplateColumns would beat the responsive classes on a
+            phone and stack three stubs side by side at 390px. */}
+        <div
+          className={`mb-16 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 sm:gap-6 ${
+            tiers.length >= 4
+              ? "lg:grid-cols-4"
+              : tiers.length === 3
+                ? "lg:grid-cols-3"
+                : "lg:grid-cols-2"
+          }`}
+        >
+          {tiers.map((tier, index) => {
+            const price =
+              isAnnual && tier.annual_price_cents
+                ? tier.annual_price_cents / 12
+                : tier.monthly_price_cents;
+
+            const savings =
+              tier.annual_price_cents && tier.monthly_price_cents
+                ? calculateSavings(tier.monthly_price_cents, tier.annual_price_cents)
+                : null;
+
+            const isHighlighted = tier.name === "plus";
+            const features = getFeaturesList(tier);
+            const isFree = tier.name === "free";
+
+            return (
+              <motion.div
+                key={tier.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.08 }}
+                className="relative h-full"
               >
-                {isHighlighted && (
-                  <div className="absolute -top-2.5 left-4">
-                    <span className="bg-primary px-2 py-0.5 text-[11px] font-medium text-white">
-                      Most popular
-                    </span>
-                  </div>
-                )}
-
-                <div>
-                  <h3 className="text-lg sm:text-2xl font-semibold">{tier.display_name}</h3>
-                </div>
-
-                {price > 0 ? (
-                  <div className="mt-3 sm:mt-4">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl sm:text-4xl font-bold">{formatPrice(price)}</span>
-                      <span className="text-muted-foreground text-xs sm:text-sm">/mo</span>
-                    </div>
-                    {isAnnual && tier.annual_price_cents && tier.annual_price_cents > 0 && (
-                      <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
-                        Billed annually at {formatPrice(tier.annual_price_cents)}
-                      </p>
-                    )}
-                    {isAnnual && savings && savings.savings > 0 && (
-                      <p className="mt-1 text-[11px] sm:text-xs text-muted-foreground">
-                        Save {formatPrice(savings.savings)}/year
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="mt-3 sm:mt-4">
-                    <span className="text-2xl sm:text-4xl font-bold">$0</span>
-                    <span className="text-muted-foreground text-xs sm:text-sm">/mo</span>
-                  </div>
-                )}
-
-                <ul className="mt-4 sm:mt-5 space-y-2 sm:space-y-2.5 flex-1">
-                  {features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-1.5 sm:gap-2">
-                      <span className="text-primary text-xs sm:text-sm mt-0.5 shrink-0">&#10003;</span>
-                      <span className="text-xs sm:text-sm text-muted-foreground">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Button
-                  asChild
-                  variant={isHighlighted ? "default" : "outline"}
-                  className="mt-4 sm:mt-6 w-full"
+                <div
+                  className={`t-ticket t-ticket--stub${isHighlighted ? " t-ticket--pick" : ""}`}
                 >
+                  {isHighlighted && <span className="t-ticket__flag">Most taken</span>}
+
+                  <h3 className="t-ticket__plan" style={{ fontSize: 22 }}>
+                    {tier.display_name}
+                  </h3>
+
+                  <p className="t-ticket__price">
+                    {formatPrice(price)}
+                    <span className="t-ticket__per">/mo</span>
+                  </p>
+
+                  {isAnnual && tier.annual_price_cents && tier.annual_price_cents > 0 ? (
+                    <p className="t-ticket__fine" style={{ marginTop: 8 }}>
+                      Billed at {formatPrice(tier.annual_price_cents)} a year
+                      {savings && savings.savings > 0
+                        ? `, saving ${formatPrice(savings.savings)}`
+                        : ""}
+                      .
+                    </p>
+                  ) : null}
+
+                  <ul className="t-ticket__feats">
+                    {features.map((feature, idx) => (
+                      <li key={idx} className="t-ticket__feat">
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+
                   <Link
                     href={
                       isFree
                         ? "/signup"
                         : `/checkout?tier=${tier.name}&period=${isAnnual ? "annual" : "monthly"}`
                     }
+                    className={`t-ticket__cta mt-5 w-full${
+                      isHighlighted ? "" : " t-ticket__cta--quiet"
+                    }`}
                   >
-                    {isFree ? "Get started free" : "Subscribe"}
+                    {isFree ? "Start free" : "Take this one"}
                   </Link>
-                </Button>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
 
-      {/* FAQ Section */}
-      <div className="max-w-3xl mx-auto mt-16">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-2xl sm:text-3xl font-bold mb-8 sm:mb-12 text-center"
-        >
-          Frequently Asked Questions
-        </motion.h2>
-        <FAQAccordion />
+        <div className="mx-auto mt-16 max-w-3xl">
+          <p className="t-box-office__dir">(the back of the programme.)</p>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="t-box-office__title"
+            style={{ marginBottom: 18 }}
+          >
+            Questions, answered.
+          </motion.h2>
+          <FAQAccordion />
+        </div>
       </div>
-    </div>
     </>
   );
 }
