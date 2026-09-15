@@ -548,28 +548,59 @@
      the page gutter, so it reads as a lit sign nailed across the board rather
      than another panel on it. */
   .sheet-ticker {
+    position: relative;
     display: block;
     overflow: hidden;
     padding: 10px 0;
     background: oklch(0.16 0.01 45);
     color: oklch(0.96 0.02 85);
+    cursor: pointer;
   }
+  /* No CSS animation here any more: the strip is moved a frame at a time from
+     the component so that hovering can ease it down to a crawl instead of
+     stopping it dead. `will-change` keeps the run on its own layer, which is
+     what takes the shimmer off long names on a low-DPI screen. */
   .sheet-ticker__run {
     display: flex;
     width: max-content;
     white-space: nowrap;
-    animation: sheet-ticker 70s linear infinite;
+    will-change: transform;
+    backface-visibility: hidden;
   }
-  .sheet-ticker:hover .sheet-ticker__run { animation-play-state: paused; }
+  /* The one thing in the strip you can actually press. Sits over the names,
+     centred, and reads as a lit button on the sign rather than a browser
+     tooltip. */
+  .sheet-ticker__tip {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    background: var(--sheet-gel);
+    color: oklch(0.15 0.015 50);
+    font-family: var(--t-direction, ui-monospace, monospace);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: lowercase;
+    white-space: nowrap;
+    box-shadow: 0 2px 14px oklch(0 0 0 / 0.45);
+    transform: translate(-50%, -50%);
+    animation: sheet-tip-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sheet-ticker__tip:hover { color: oklch(0.15 0.015 50); }
+  @keyframes sheet-tip-in {
+    from { opacity: 0; transform: translate(-50%, calc(-50% + 6px)); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+  }
   /* In blackout the strip and the page were both ink, so the one band that is
      supposed to read as a lit sign nailed across the board had no edge. Same
      lift the bar takes on a dark page. */
   :root.dark .sheet-ticker {
     background: oklch(0.19 0.02 52);
-  }
-  @keyframes sheet-ticker {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
   }
 
   /* ── Your call ────────────────────────────────────────────────────────────
@@ -588,16 +619,23 @@
      addressed to the person reading. */
   .sheet-call {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 20px;
+    /* Cover down the left spanning both rows, then the title, then the way in
+       pinned to the bottom of the column beside it — a poster in a frame with
+       its card underneath, which is how this is hung in a real lobby. */
+    display: grid;
+    grid-template-columns: 8.25rem minmax(0, 1fr);
+    grid-template-rows: 1fr auto;
+    align-items: start;
+    gap: 16px 20px;
     width: 100%;
-    max-width: 27rem;
+    max-width: 31rem;
     overflow: hidden;
-    padding: 22px 24px 22px;
+    padding: 18px 20px;
     border-radius: 14px;
-    background: var(--cloth, oklch(0.31 0.085 25));
+    /* The frame is the cover's own cloth taken down into the dark: tinted by
+       the piece, but clearly behind it. At full strength the card and a printed
+       cover were the same colour and the cover disappeared into its own frame. */
+    background: color-mix(in oklab, var(--cloth, oklch(0.31 0.085 25)) 45%, oklch(0.14 0.012 45));
     color: oklch(0.96 0.02 85);
     border: 1.5px solid oklch(0.16 0.01 45);
     box-shadow: 10px 10px 0 var(--sheet-gel);
@@ -619,10 +657,39 @@
       transparent 70%
     );
   }
+  /* The cover sets the height of the whole card: 2:3 is the shape every cover
+     in the app is printed at, poster or cloth, so the call cannot end up a
+     different object from the shelf it came off. */
+  .sheet-call__cover {
+    position: relative;
+    grid-row: 1 / span 2;
+    display: block;
+    align-self: stretch;
+    width: 8.25rem;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: 5px;
+    background: oklch(0.2 0.01 45);
+    /* A hairline of light around the edge, which is what stops a cloth cover
+       from dissolving into a frame tinted with the same cloth. */
+    box-shadow:
+      0 0 0 1px oklch(1 0 0 / 0.12),
+      0 6px 20px oklch(0 0 0 / 0.4);
+  }
+  /* On a narrow phone a 132px cover leaves under 130px for a character name.
+     The cover gives up the width first — it is the thing that still reads at
+     any size. */
+  @media (max-width: 420px) {
+    .sheet-call { grid-template-columns: 6.25rem minmax(0, 1fr); gap: 14px 16px; }
+    .sheet-call__cover { width: 6.25rem; }
+  }
   .sheet-call__body {
     position: relative;
+    grid-column: 2;
+    align-self: start;
     min-width: 0;
     width: 100%;
+    padding-top: 2px;
   }
   .sheet-call__play {
     margin: 6px 0 0;
@@ -633,6 +700,9 @@
   }
   .sheet-call__go {
     position: relative;
+    grid-column: 2;
+    align-self: end;
+    justify-self: start;
     display: inline-flex;
     align-items: center;
     gap: 12px;
@@ -724,7 +794,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .sheet-ticker__run { animation: none; }
+    /* The run is transformed from JS; the component checks this query
+       itself and never starts its loop, so there is nothing to switch off
+       here. */
     .sheet-call:hover,
     .sheet-tag:hover { transform: none; }
   }
@@ -1539,6 +1611,138 @@
   border-color: var(--t-text) !important;
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* ── /pricing: the same ticket, four stubs across ────────────────────────
+   One 12px hard shadow is a flourish; four in a row is noise. The stubs go
+   flat and only the recommended one keeps the shadow, so the page has a
+   single loudest thing on it. */
+.t-ticket--stub {
+  margin-top: 0;
+  padding: 20px;
+  box-shadow: none;
+  border-color: var(--t-line-light);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.t-ticket--pick {
+  border-color: var(--t-text);
+  box-shadow: 8px 8px 0 var(--t-gel);
+}
+.t-ticket__flag {
+  position: absolute;
+  top: -11px;
+  left: 16px;
+  padding: 3px 9px;
+  background: var(--t-gel);
+  color: oklch(0.15 0.03 45);
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.t-ticket__price {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-top: 14px;
+  font-family: var(--t-display);
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-ticket__per {
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--t-muted-dark-2);
+}
+.t-ticket__feats {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  flex: 1;
+}
+.t-ticket__feat {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--t-muted-dark);
+}
+.t-ticket__feat::before {
+  content: "";
+  margin-top: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--t-gel-ink);
+  flex-shrink: 0;
+}
+/* The quiet plans get an outlined pill; only the recommended one is filled. */
+.t-ticket__cta--quiet {
+  background: transparent;
+  color: var(--t-text);
+  border-color: var(--t-line-light);
+}
+.t-ticket__cta--quiet:hover {
+  color: var(--t-text);
+  border-color: var(--t-text);
+}
+
+/* The billing switch, said as a stage direction rather than a toggle. */
+.t-switch {
+  display: inline-flex;
+  border: 1.5px solid var(--t-line-light);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+.t-switch__opt {
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark-2);
+  cursor: pointer;
+  transition: all 0.25s var(--t-spring);
+}
+.t-switch__opt[aria-pressed="true"] {
+  background: var(--t-text);
+  color: var(--t-on-text);
+}
+
+/* The back page of the programme. */
+.t-faq__row {
+  border-bottom: 1.5px solid var(--t-line-light);
+}
+.t-faq__q {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+  text-align: left;
+  font-family: var(--t-display);
+  font-size: 19px;
+  line-height: 1.2;
+  color: var(--t-text);
+  cursor: pointer;
+}
+.t-faq__a {
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--t-muted-dark);
 }
 
 .dark .t-box-office {
@@ -2880,9 +3084,14 @@
     background 0.25s,
     border-color 0.25s;
 }
+/* The gel is a LIGHT, so a thing filled with it needs ink on top, not "the
+   text colour" — which is cream in dark. The fill landed and the label went
+   with it: in dark this button read as a blank yellow pill under the pointer. */
 .t-find-for-me:hover:not(:disabled) {
   background: var(--t-gel);
   border-style: solid;
+  border-color: var(--t-gel);
+  color: oklch(0.15 0.02 50);
   transform: rotate(1.5deg);
 }
 
@@ -3794,76 +4003,268 @@
 }
 
 /* --- The shelf ------------------------------------------------------------
-   A row per playscript, bound down the left edge in its genre colour. The
-   current one is picked out in gel with a glow, because on a dark shelf a
-   border alone does not read as "this is the one you have open". */
-.t-shelf-script {
+
+   A bound playscript, not a row in a list.
+
+   It was five identical rounded slabs, each with a colour chip down the left
+   and a grey dotted grip floating half-on-top of that chip — so the one piece
+   of chrome you had to aim at read as a rendering fault. Everything on the
+   card was Courier at two sizes, which gave the title, the author, the scene
+   count and the genre the same voice, so nothing led and the shelf scanned as
+   a file listing.
+
+   What it is now is the object: a cloth binding down the spine with its
+   stitching, and a cover with a title set in the display face. The binding is
+   a real 38px edge rather than a 10px chip, which gives the grip somewhere to
+   LIVE — it is the thread in the binding, three short rules where a bound
+   script is sewn, and it never overlaps the cover it moves. The genre is a
+   letterpress stamp on the cover, the author sits under the title, and the
+   scene count is a note in the margin.
+
+   The current one is proud of the shelf: a wider binding, a gel edge and a
+   lift. On a shelf of five covers a border alone does not say "this is the one
+   you have open". */
+.t-script {
   position: relative;
   display: flex;
   align-items: stretch;
+  width: 100%;
+  min-height: 86px;
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: 4px 12px 12px 4px;
   border: 1.5px solid var(--t-line-light);
   background: var(--t-paper);
-  padding: 14px 16px 14px 20px;
   text-align: left;
   transition:
     transform 0.35s var(--t-spring),
     border-color 0.3s,
     box-shadow 0.3s;
 }
-.t-shelf-script:hover {
-  transform: translateX(6px) rotate(-0.4deg);
+.t-script:hover {
+  transform: translateX(5px);
   border-color: oklch(0.6 0.03 55);
+  box-shadow: -6px 0 0 -3px var(--spine);
 }
-.t-shelf-script.is-current {
+.t-script.is-current {
   border-color: var(--t-gel-ink);
   background: var(--t-paper-2);
-  box-shadow: 0 0 40px -12px oklch(0.92 0.18 100 / 0.5);
+  box-shadow:
+    -7px 0 0 -3px var(--spine),
+    0 10px 30px -18px var(--t-hard-shadow);
 }
-.t-shelf-script.is-held {
+.t-script.is-held {
   border-color: var(--t-gel-ink);
   background: var(--t-paper-2);
+  box-shadow: 0 16px 36px -20px var(--t-hard-shadow);
 }
-.t-shelf-script:focus-visible {
-  outline: 2px solid var(--t-gel);
-  outline-offset: 2px;
+.t-script:focus-within {
+  border-color: var(--t-gel-ink);
 }
 
-.t-shelf-script__spine {
+/* The binding. Cloth over board: the genre colour, a darker fold along the
+   inner edge, and the stitch line the grip sits on. */
+.t-script__bind {
+  position: relative;
+  flex-shrink: 0;
+  width: 24px;
+  background: var(--spine);
+  transition: width 0.35s var(--t-spring);
+}
+@media (min-width: 400px) {
+  .t-script__bind { width: 26px; }
+}
+.t-script.is-current .t-script__bind {
+  width: 32px;
+}
+/* The fold where the cloth turns onto the cover. */
+.t-script__bind::after {
+  content: "";
   position: absolute;
   inset-block: 0;
-  left: 0;
-  width: 10px;
-  border-radius: 12px 0 0 12px;
-  background: var(--spine);
+  right: 0;
+  width: 3px;
+  background: oklch(0.2 0.02 50 / 0.16);
+}
+/* The grip: the thread where a bound script is sewn. Three short rules in the
+   middle of the binding, so the control is part of the object rather than a
+   grey icon parked on top of the colour it overlaps. */
+.t-script__pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  touch-action: none;
+}
+.t-script__pin::before {
+  /* 20x26 drawn, 44x52 to hit. */
+  content: "";
+  position: absolute;
+  inset: -13px;
+}
+.t-script__pin span {
+  display: block;
+  width: 11px;
+  height: 2px;
+  border-radius: 1px;
+  background: oklch(0.2 0.02 50 / 0.42);
+  transition: background 0.2s, width 0.2s;
+}
+.t-script__pin:hover span,
+.t-script__pin:focus-visible span {
+  width: 13px;
+  background: oklch(0.15 0.02 50 / 0.85);
+}
+.t-script__pin:focus-visible {
+  outline: 2px solid var(--t-gel-ink);
+  outline-offset: 2px;
+}
+.t-script.is-held .t-script__pin {
+  cursor: grabbing;
 }
 
-.t-shelf-script__title {
-  font-family: var(--t-direction);
-  font-weight: 700;
-  font-size: 17px;
-  line-height: 1.2;
-  color: var(--t-text);
+/* The cover. */
+.t-script__face {
+  position: relative;
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 13px 38px 14px 14px;
+  text-align: left;
 }
-.t-shelf-script__author {
-  font-family: var(--t-direction);
-  font-size: 13px;
-  color: var(--t-muted-dark-2);
+.t-script__face:focus-visible {
+  outline: 2px solid var(--t-gel-ink);
+  outline-offset: -4px;
+  border-radius: 8px;
 }
-.t-shelf-script__right {
+
+/* One line under the title: who wrote it, what kind of thing it is, and how
+   much of it there is. The genre takes --spine-ink, NOT --spine: the binding
+   colours are cover stock — light, because they are a surface — and the same
+   value as a 10px word on paper is not there at all (COMEDY in lamp yellow on
+   cream). */
+.t-script__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 7px;
+}
+.t-script__byline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
   font-family: var(--t-direction);
   font-size: 12px;
-  color: oklch(0.65 0.02 62);
 }
-/* The genre reads in its own spine colour, so the word and the binding are
-   obviously the same fact said twice rather than two unrelated labels. */
-.t-shelf-script__genre {
-  font-family: var(--t-direction);
+.t-script__stamp {
+  flex-shrink: 0;
+  font-weight: 700;
   font-size: 10px;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--spine);
+  color: var(--spine-ink);
+}
+.t-script__author {
+  min-width: 0;
+  letter-spacing: 0.02em;
+  color: var(--t-muted-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The separator, drawn rather than typed, so a missing genre or an unknown
+   author never leaves a stranded mark behind. A dot, matching the slugs
+   elsewhere on this page — a rule at this size reads as an em dash. */
+.t-script__byline .t-script__stamp + .t-script__author::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  margin-right: 8px;
+  vertical-align: 0.28em;
+  background: var(--t-muted-light-2);
+}
+.t-script__count {
+  flex-shrink: 0;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--t-muted-light-2);
+}
+
+/* The title, in the display face. This is the one thing on the shelf worth
+   reading from across the desk, and it was 17px Courier bold truncated to one
+   line — which cut "A Midsummer Night's Dream" and gave a playscript the
+   typography of a filename. It wraps to two lines now. */
+.t-script__title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: 21px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--t-text);
+}
+
+/* The actions mark, top-right of the cover. */
+.t-script__more {
+  position: absolute;
+  right: 7px;
+  top: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  color: var(--t-muted-light);
+  transition: background 0.2s, color 0.2s, opacity 0.2s;
+}
+.t-script__more::before {
+  /* 24x24 drawn, 44x44 to hit. */
+  content: "";
+  position: absolute;
+  inset: -10px;
+}
+.t-script__more:hover,
+.t-script__more[data-state="open"] {
+  background: var(--t-line-light-2);
+  color: var(--t-text);
+}
+/* A phone has no hover, so this cannot be hover-revealed: that is how Delete
+   and Flag became unreachable on every phone once before. */
+@media (hover: hover) {
+  .t-script__more { opacity: 0; }
+  .t-script:hover .t-script__more,
+  .t-script__more:focus-visible,
+  .t-script__more[data-state="open"] { opacity: 1; }
+}
+
+/* Dark: the binding keeps its cover stock, and the stamp can be lit again
+   because there is something under it to read against. */
+.dark .t-script {
+  --spine-ink: var(--spine);
+}
+.dark .t-script__bind::after {
+  background: oklch(0.05 0.01 50 / 0.3);
+}
+.dark .t-script__pin span {
+  background: oklch(0.1 0.01 50 / 0.55);
 }
 
 /* "Bring in a script": dashed, like the search page's Find for me — the way
@@ -3884,8 +4285,8 @@
   transition: all 0.3s var(--t-spring);
 }
 .t-bring-in:hover {
-  background: var(--t-gel);
-  color: var(--t-on-text);
+  background: var(--t-gel-ink);
+  color: oklch(0.98 0.01 85);
   border-style: solid;
   border-color: var(--t-gel-ink);
   transform: rotate(-1.5deg);
@@ -3902,7 +4303,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .t-shelf-script:hover,
+  .t-script:hover,
   .t-bring-in:hover { transform: none; }
 }
 
@@ -4222,8 +4623,8 @@
   height: 7px;
   border-radius: 999px;
   flex-shrink: 0;
-  background: var(--t-gel, oklch(0.92 0.18 100));
-  box-shadow: 0 0 10px 2px oklch(0.92 0.18 100 / 0.55);
+  background: var(--bar-gel, oklch(0.92 0.18 100));
+  box-shadow: 0 0 10px 2px color-mix(in oklch, var(--bar-gel, oklch(0.92 0.18 100)) 45%, transparent);
 }
 .t-launchbar__link {
   white-space: nowrap;
@@ -5075,23 +5476,26 @@
 .t-bench[data-off-book="true"] .t-bench__lamp {
   opacity: 1;
 }
+/* Longer flex, bigger bulb. It hangs over a whole bench of saved pieces and
+   was drawn at 26x30 on a 44px drop — the scale of a pilot light rather than
+   of the fixture the room is named after. */
 .t-bench__flex {
   display: block;
   width: 2px;
-  height: 44px;
-  background: oklch(0.35 0.02 55);
+  height: 78px;
+  background: linear-gradient(to bottom, oklch(0.38 0.02 55), oklch(0.32 0.02 55));
 }
 .t-bench__socket {
   display: block;
-  width: 14px;
-  height: 9px;
+  width: 18px;
+  height: 12px;
   border-radius: 3px 3px 2px 2px;
   background: oklch(0.3 0.02 55);
 }
 .t-bench__bulb {
   display: block;
-  width: 26px;
-  height: 30px;
+  width: 38px;
+  height: 45px;
   border-radius: 50% 50% 46% 46%;
   background: radial-gradient(
     circle at 50% 40%,
@@ -5100,8 +5504,8 @@
     oklch(0.75 0.17 60)
   );
   box-shadow:
-    0 0 22px 5px oklch(0.85 0.17 80 / 0.75),
-    0 0 80px 30px oklch(0.72 0.17 55 / 0.25);
+    0 0 32px 8px oklch(0.85 0.17 80 / 0.75),
+    0 0 110px 42px oklch(0.72 0.17 55 / 0.25);
   animation: t-flicker 9s linear infinite;
 }
 @keyframes t-flicker {
@@ -5293,6 +5697,7 @@
 /* The two quiet moves next to it. Underlined rather than boxed: there is one
    button on this panel and it is the one you press. */
 .t-bench__quiet {
+  position: relative;
   white-space: nowrap;
   font-size: 15px;
   color: var(--t-muted-light-3);
@@ -5300,6 +5705,12 @@
   text-underline-offset: 5px;
   text-decoration-color: oklch(0.4 0.03 55);
   transition: color 0.25s;
+}
+.t-bench__quiet::before {
+  /* Drawn at ~45x24, hit at 44 tall. */
+  content: "";
+  position: absolute;
+  inset: -11px -8px;
 }
 .t-bench__quiet:hover {
   color: var(--t-gel);

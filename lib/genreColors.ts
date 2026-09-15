@@ -100,3 +100,33 @@ export function getGenreSpineColor(genre?: string | null): string {
   const key = (genre ?? "").toLowerCase().trim();
   return GENRE_SPINE[key] ?? "oklch(0.60 0.03 55)";
 }
+
+/**
+ * The same genre, in a colour that can be READ on paper.
+ *
+ * GENRE_SPINE is cover stock: those values sit at L 0.60-0.92 because they are
+ * a surface with light falling on it. Used as a 10px word on cream — which is
+ * what the shelf's genre label did — comedy's lamp yellow (L 0.92) is simply
+ * not there. Same hue, taken down to ink weight.
+ */
+const GENRE_INK: Record<string, string> = {
+  drama: "oklch(0.48 0.16 45)",
+  tragedy: "oklch(0.48 0.16 45)",
+  comedy: "oklch(0.48 0.12 85)",
+  farce: "oklch(0.48 0.12 85)",
+  satire: "oklch(0.48 0.12 85)",
+  thriller: "oklch(0.45 0.16 300)",
+  absurdist: "oklch(0.45 0.16 300)",
+  fantasy: "oklch(0.45 0.16 300)",
+  classical: "oklch(0.45 0.04 75)",
+  shakespeare: "oklch(0.45 0.04 75)",
+  historical: "oklch(0.45 0.04 75)",
+  romance: "oklch(0.48 0.16 12)",
+  musical: "oklch(0.48 0.16 12)",
+  contemporary: "oklch(0.44 0.02 60)",
+};
+
+export function getGenreInkColor(genre?: string | null): string {
+  const key = (genre ?? "").toLowerCase().trim();
+  return GENRE_INK[key] ?? "oklch(0.42 0.02 55)";
+}

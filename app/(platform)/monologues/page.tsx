@@ -1861,7 +1861,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <AnimatePresence mode="wait" initial={false}>
               <motion.p
                 key={searchMode}
-                className="t-dir mt-2 text-right"
+                /* mt-3.5, not mt-2: the caption was tucked directly under
+                   the pill's edge, close enough to read as part of the
+                   control rather than as a note about it. */
+                className="t-dir mt-3.5 text-right"
                 style={{ fontSize: 12, color: "var(--t-faint)", maxWidth: "100%" }}
                 initial={reducedMotion ? false : { opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}

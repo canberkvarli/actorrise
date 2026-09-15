@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Reorder, useDragControls, useReducedMotion } from "framer-motion";
-import { IconDots, IconFlag, IconGripVertical, IconLoader2 } from "@tabler/icons-react";
+import { IconDots, IconFlag } from "@tabler/icons-react";
 import { Trash2 } from "lucide-react";
 
 import {
@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { getGenreDotClassName, getGenreSpineColor } from "@/lib/genreColors";
+import { getGenreInkColor, getGenreSpineColor } from "@/lib/genreColors";
 import type { UserScript } from "@/hooks/useScripts";
 
 interface PracticeLibraryRailProps {
@@ -35,15 +35,16 @@ interface PracticeLibraryRailProps {
 }
 
 /**
- * The script shelf. Reads like a shelf of playscripts rather than a file list:
- * each card carries its genre spine down the binding edge.
+ * The script shelf. A bound playscript per row rather than a row in a list:
+ * a cloth binding down the spine in the genre's colour, and a cover with the
+ * title set in the display face.
  *
  * The actor arranges it. Newest-first is a filing order, and it pushed the
  * script someone is actually working toward an audition further down every
- * time they brought in anything else. Cards are dragged by the grip at the
- * binding edge rather than by the card itself, so the card stays a button, the
- * page still scrolls under a thumb, and the handle can take arrow keys for
- * anyone not using a mouse.
+ * time they brought in anything else. Cards are dragged by the thread in the
+ * binding rather than by the card itself, so the card stays a button, the page
+ * still scrolls under a thumb, and the handle can take arrow keys for anyone
+ * not using a mouse.
  *
  * Samples are not draggable and stay pinned below: they are the same rows for
  * every actor, so there is no per-actor place to keep them.
@@ -124,7 +125,7 @@ export function PracticeLibraryRail({
   });
   useEffect(() => () => flushRef.current(), []);
 
-  /** Arrow keys on the grip: move one place, and say where it went. */
+  /** Arrow keys on the thread: move one place, and say where it went. */
   const nudge = (scriptId: number, delta: number) => {
     const from = order.indexOf(scriptId);
     const to = from + delta;
@@ -137,8 +138,15 @@ export function PracticeLibraryRail({
     );
   };
 
+  /* One column, deliberately, and not the two-up grid a shelf of covers
+     invites. Two reasons, both load-bearing: the rail is ~455px on desktop, so
+     a two-up cover leaves ~130px of text measure and "A Midsummer Night's
+     Dream" clamps mid-word — and a playscript's title is the one thing on this
+     shelf worth reading. And Reorder measures along a single axis, so in a
+     grid two covers in the same row share a y and the drag has no answer for
+     which one moved. The row orientation keeps its sideways scroll. */
   const listClass = column
-    ? "flex flex-col gap-2"
+    ? "flex flex-col gap-2.5"
     : "flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
   return (
@@ -182,18 +190,15 @@ export function PracticeLibraryRail({
         </div>
       )}
 
-      {/* Samples can't be dragged, but they still line up with the cards that
-          can: without the same indent their titles start a few pixels to the
-          left and the shelf stops reading as one column. */}
+      {/* The house copies, below the actor's own. */}
       {pinned.length > 0 && (
-        <div className={`${listClass} ${column && arranged.length > 0 ? "mt-2" : ""}`}>
+        <div className={`${listClass} ${column && arranged.length > 0 ? "mt-2.5" : ""}`}>
           {pinned.map((script) => (
             <ScriptCard
               key={script.id}
               script={script}
               selected={script.id === selectedId}
               column={column}
-              indented={canArrange}
               onSelect={() => onSelect(script.id)}
               onRequestDelete={() => onRequestDelete(script)}
               onRequestReport={() => onReport(script)}
@@ -243,7 +248,7 @@ function DraggableCard({
       transition={reduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       onDragStart={() => setHeld(true)}
       onDragEnd={() => setHeld(false)}
-      className={`list-none ${column ? "w-full" : "w-44 shrink-0 sm:w-52"}`}
+      className={`list-none ${column ? "min-w-0" : "w-44 shrink-0 sm:w-52"}`}
       style={{ position: "relative", zIndex: held ? 20 : undefined }}
     >
       <ScriptCard
@@ -254,7 +259,7 @@ function DraggableCard({
         onSelect={onSelect}
         onRequestDelete={onRequestDelete}
         onRequestReport={onRequestReport}
-        handle={
+        thread={
           <button
             type="button"
             aria-label={`Reorder ${script.title}, position ${position} of ${total}. Use the arrow keys to move it.`}
@@ -274,22 +279,11 @@ function DraggableCard({
                 onNudge(event.key === back ? -1 : 1);
               }
             }}
-            className={[
-              "absolute left-1 top-1/2 z-10 inline-flex h-7 w-5 -translate-y-1/2 items-center justify-center",
-              "rounded-sm text-muted-foreground/45 transition-colors",
-              "hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              // The grip draws at 20x28 and is grabbed at 44x52. Measured at a
-              // real 390px viewport it was a 20x28 target, and this is the one
-              // control on the card you have to catch precisely rather than
-              // just land on. The pseudo-element takes no space, so nothing
-              // moves.
-              "before:absolute before:-inset-3 before:content-['']",
-              held ? "cursor-grabbing text-foreground" : "cursor-grab",
-            ].join(" ")}
-            // Without this a touch drag scrolls the page instead of moving the card.
-            style={{ touchAction: "none" }}
+            className="t-script__pin"
           >
-            <IconGripVertical className="h-4 w-4" />
+            <span aria-hidden />
+            <span aria-hidden />
+            <span aria-hidden />
           </button>
         }
       />
@@ -302,8 +296,7 @@ function ScriptCard({
   selected,
   column,
   held = false,
-  handle,
-  indented = false,
+  thread,
   onSelect,
   onRequestDelete,
   onRequestReport,
@@ -312,9 +305,8 @@ function ScriptCard({
   selected: boolean;
   column: boolean;
   held?: boolean;
-  handle?: React.ReactNode;
-  /** Leave room for a grip this card doesn't have, so it lines up with ones that do. */
-  indented?: boolean;
+  /** The drag handle, sewn into the binding. Absent on the house copies. */
+  thread?: React.ReactNode;
   onSelect: () => void;
   onRequestDelete: () => void;
   onRequestReport: () => void;
@@ -322,77 +314,54 @@ function ScriptCard({
   const isProcessing =
     script.processing_status === "processing" || script.processing_status === "pending";
   const sceneCount = script.num_scenes_extracted;
-  // The grip sits where the text would start, so the text starts further in.
-  const pad = handle || indented
-    ? column
-      ? "py-3.5 pl-7 pr-3"
-      : "py-4 pl-8 pr-4"
-    : column
-      ? "py-3.5 pl-4 pr-3"
-      : "py-4 pl-5 pr-4";
+  const note = isProcessing
+    ? "reading…"
+    : script.is_sample
+      ? "house copy"
+      : sceneCount > 0
+        ? `${sceneCount} ${sceneCount === 1 ? "scene" : "scenes"}`
+        : "";
 
   return (
     <div
-      className={`group/item relative ${handle ? "" : column ? "w-full" : "w-44 shrink-0 sm:w-52"}`}
+      className={`t-script ${held ? "is-held" : ""} ${selected ? "is-current" : ""} ${
+        column ? "" : "w-44 shrink-0 sm:w-52"
+      }`}
+      style={{
+        ["--spine" as string]: getGenreSpineColor(script.genre),
+        ["--spine-ink" as string]: getGenreInkColor(script.genre),
+      }}
     >
-      {handle}
+      {/* The binding: cloth, with the thread you move it by sewn into it. */}
+      <span className="t-script__bind">{thread}</span>
+
       <button
         type="button"
         onClick={onSelect}
         aria-current={selected ? "true" : undefined}
-        className={`t-shelf-script ${held ? "is-held" : ""} ${selected ? "is-current" : ""} ${
-          column ? "w-full" : "w-44 shrink-0 sm:w-52"
-        }`}
-        style={{ ["--spine" as string]: getGenreSpineColor(script.genre) }}
+        className="t-script__face"
       >
-        {/* the spine — a playscript's coloured binding */}
-        <span aria-hidden className="t-shelf-script__spine" />
-
-        <span className="min-w-0 flex-1">
-          <span className="flex items-baseline justify-between gap-3">
-            <span className="t-shelf-script__title truncate">{script.title}</span>
-            <span className="t-shelf-script__right shrink-0">
-              {isProcessing ? (
-                "reading…"
-              ) : script.is_sample ? (
-                "demo"
-              ) : sceneCount > 0 ? (
-                `${sceneCount} ${sceneCount === 1 ? "scene" : "scenes"}`
-              ) : (
-                ""
-              )}
-            </span>
+        <span className="t-script__title">{script.title}</span>
+        <span className="t-script__foot">
+          <span className="t-script__byline">
+            {/* No genre on file is not a genre called "—", and no author is
+                not an author called "Unknown". Either one simply is not on the
+                cover, and the rule between them is drawn by CSS so a missing
+                one never leaves a stranded separator. */}
+            {script.genre && <span className="t-script__stamp">{script.genre}</span>}
+            {script.author && script.author.toLowerCase() !== "unknown" && (
+              <span className="t-script__author">{script.author}</span>
+            )}
           </span>
-          <span className="flex items-baseline justify-between gap-3">
-            <span className="t-shelf-script__author truncate">{script.author}</span>
-            <span className="t-shelf-script__genre shrink-0">{script.genre || ""}</span>
-          </span>
+          {note && <span className="t-script__count">{note}</span>}
         </span>
       </button>
 
-      {/* actions — user scripts only, on hover */}
+      {/* actions — the actor's own scripts only */}
       {!script.is_sample && (
         <Popover>
           <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label="Script actions"
-              className={[
-                "absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center",
-                "rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground",
-                // Delete and Flag live behind this, and it used to be
-                // opacity-0 until hover. A phone has no hover, so on a phone
-                // there was no way to reach either of them: measured at a real
-                // 390px viewport it computed to opacity 0 and stayed there.
-                // Keyed on the hover capability rather than a width, because
-                // that is the actual question — a small window on a laptop
-                // still hovers, and a large tablet still does not.
-                "opacity-100 [@media(hover:hover)]:opacity-0",
-                "transition-opacity group-hover/item:opacity-100 focus:opacity-100 data-[state=open]:opacity-100",
-                // 24x24 drawn, 44x44 to hit.
-                "before:absolute before:-inset-2.5 before:content-['']",
-              ].join(" ")}
-            >
+            <button type="button" aria-label="Script actions" className="t-script__more">
               <IconDots className="h-3.5 w-3.5" />
             </button>
           </PopoverTrigger>
