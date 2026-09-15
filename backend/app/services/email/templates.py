@@ -576,7 +576,20 @@ class EmailTemplates:
                          whose client is in dark mode. This is the default and
                          the right choice for personal-feeling letters.
         """
-        dark = (theme or "auto").strip().lower() == "dark"
+        name = (theme or "auto").strip().lower()
+        if name == "paper":
+            # The app's warm paper, for sends that carry brand furniture
+            # (a wordmark, the dark stage panel) rather than reading as a
+            # plain letter. `auto` is False on purpose: base_personal's
+            # dark-mode flip goes to a neutral #121212, which fights a warm
+            # paper letter instead of becoming the theatre. Paper stays paper
+            # for every reader until there is a warm dark flip to switch to.
+            return {
+                "auto": False, "bg": "#F7F4EF", "fg": "#2C2723",
+                "muted": "#8A8175", "sig": "#5A5349", "rule": "#E4DED3",
+                "link": "#CB4B00", "btn_bg": "#CB4B00", "btn_fg": "#ffffff",
+            }
+        dark = name == "dark"
         if dark:
             return {
                 "auto": False, "bg": "#121212", "fg": "#ededed",
@@ -616,6 +629,89 @@ class EmailTemplates:
             unsubscribe_note=kwargs.get("unsubscribe_note", ""),
             c=self._palette(kwargs.get("theme")),
         )
+
+    # Default so the copy lives in one place: the admin form, the CLI and the
+    # plain-text part all fall back to the same words.
+    GHOSTLIGHT_APP_URL = (
+        "https://apps.apple.com/us/app/ghost-light-monologues/"
+        "id6804278673?ct=launch_email"
+    )
+
+    def render_ghostlight_launch(
+        self,
+        user_name: str,
+        sender_title: str = "actor, and the person who built this",
+        unsubscribe_url: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        """Ghost Light iOS launch announcement (HTML)."""
+        template = self.env.get_template('ghostlight_launch.html')
+        return template.render(
+            user_name=user_name or "there",
+            sender_title=sender_title,
+            unsubscribe_url=unsubscribe_url,
+            subject=kwargs.get("subject", ""),
+            preheader=kwargs.get("preheader", ""),
+            greeting=kwargs.get("greeting", ""),
+            app_url=kwargs.get("app_url") or self.GHOSTLIGHT_APP_URL,
+            base_url=kwargs.get("base_url") or "https://actorrise.com",
+            postscript=kwargs.get("postscript", ""),
+            # The footer link must not repeat the reply-UNSUBSCRIBE offer the
+            # body already makes, so this template overrides the default
+            # wording rather than leaving it empty.
+            unsubscribe_note=kwargs.get("unsubscribe_note") or "prefer a button? you can also",
+            c=self._palette(kwargs.get("theme") or "paper"),
+        )
+
+    def render_ghostlight_launch_plain(
+        self,
+        user_name: str,
+        sender_title: str = "actor, and the person who built this",
+        **kwargs,
+    ) -> str:
+        """Ghost Light launch as plain text.
+
+        The HTML version sells with a screenshot. Plain text cannot, so the
+        panel collapses to the one line it was illustrating plus the link.
+        """
+        name = (user_name or "there").split()[0]
+        app_url = kwargs.get("app_url") or self.GHOSTLIGHT_APP_URL
+        lines = [
+            kwargs.get("greeting") or f"hey {name},",
+            "",
+            "quick one. i made an iPhone app. it is called Ghost Light, it is "
+            "free, and it went up on the App Store this month.",
+            "",
+            "it is the library in your pocket. same search, your saved pieces, "
+            "and it reads them with no signal. that last part is the whole "
+            "reason i built it. every single time i have actually needed a "
+            "piece in front of me it has been backstage where there is no "
+            "bars, or on a train, or in a car outside a casting office with "
+            "four minutes to go.",
+            "",
+            f"the stage, in your pocket. free on iPhone: {app_url}",
+            "",
+            "there is a reading light in it for dark wings, the tone filters "
+            "came over, and it still tells you when a piece is overdone "
+            "before you spend a week on it.",
+            "",
+            "if you try it and something in it feels wrong, just tell me. i "
+            "would much rather hear it from you than read it in a review.",
+            "",
+            "Canberk",
+        ]
+        if sender_title:
+            lines.append(sender_title)
+        lines += [
+            "",
+            kwargs.get("postscript")
+            or "not interested in emails from me? reply UNSUBSCRIBE and i will "
+               "take you off the list, no hard feelings.",
+        ]
+        unsubscribe_url = kwargs.get("unsubscribe_url")
+        if unsubscribe_url:
+            lines += ["", "---", "prefer a button?", unsubscribe_url]
+        return "\n".join(lines)
 
     def render_custom_plain(
         self,

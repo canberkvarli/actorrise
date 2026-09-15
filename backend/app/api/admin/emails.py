@@ -193,6 +193,28 @@ TEMPLATES = [
         ],
     },
     {
+        "id": "ghostlight_launch",
+        "name": "Ghost Light launch",
+        "description": (
+            "iOS launch announcement. Copy is fixed and lives in the template, "
+            "so there is no body field: the only things to set are the name and "
+            "the App Store link. Carries a screenshot and the dark stage panel, "
+            "which scores more promotional than a plain letter, so send it to "
+            "engaged users and not to the whole list."
+        ),
+        "subject": "ghost light is live on the app store",
+        "variables": [
+            {"name": "user_name", "label": "Recipient name", "type": "text", "default": "there", "required": True},
+            {"name": "preheader", "label": "Inbox preview line", "type": "text", "default": "the whole library on your phone, and it reads with no signal.", "required": False},
+            {"name": "greeting", "label": "Greeting (optional, replaces \"hey <first name>,\")", "type": "text", "default": "", "required": False},
+            {"name": "app_url", "label": "App Store link (keep the ?ct= tag, it is how App Store Connect attributes the install)", "type": "url", "default": "https://apps.apple.com/us/app/ghost-light-monologues/id6804278673?ct=launch_email", "required": True},
+            {"name": "base_url", "label": "Asset host for the screenshot", "type": "url", "default": "https://actorrise.com", "required": True},
+            {"name": "sender_title", "label": "Sender title", "type": "text", "default": "actor, and the person who built this", "required": False},
+            {"name": "postscript", "label": "Postscript (the reply-to-opt-out line, below the signature)", "type": "text", "default": "not interested in emails from me? reply UNSUBSCRIBE and i will take you off the list, no hard feelings.", "required": False},
+            {"name": "unsubscribe_note", "label": "Footer opt-out wording (kept short so it does not repeat the postscript)", "type": "text", "default": "prefer a button? you can also", "required": False},
+        ],
+    },
+    {
         "id": "welcome",
         "name": "Welcome",
         "description": "Sent to new users on signup",
@@ -313,6 +335,7 @@ RENDER_MAP = {
     "custom": "render_custom",
     "welcome": "render_welcome",
     "weekly_engagement": "render_weekly_engagement",
+    "ghostlight_launch": "render_ghostlight_launch",
 }
 
 # Marketing templates prefer a plain-text part for inbox placement. A template
@@ -321,6 +344,7 @@ PLAIN_TEXT_MAP = {
     "custom": "render_custom_plain",
     "welcome": "render_welcome_plain",
     "weekly_engagement": "render_weekly_engagement_plain",
+    "ghostlight_launch": "render_ghostlight_launch_plain",
 }
 
 

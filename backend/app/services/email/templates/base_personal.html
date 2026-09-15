@@ -6,6 +6,10 @@
     <meta name="color-scheme" content="{% if c.auto %}light dark{% else %}dark{% endif %}">
     <meta name="supported-color-schemes" content="{% if c.auto %}light dark{% else %}dark{% endif %}">
     <title>{% block title %}{% endblock %}</title>
+    {# Empty by default so every existing template renders byte-identical. A
+       child only fills this when it needs something in <head> that cannot be
+       inlined, which in practice means a webfont link. #}
+    {% block head_extra %}{% endblock %}
     <style>
         a { color:{{ c.link }}; }
         /* Keep it a letter, not a newsletter: no images, no columns, no hero.

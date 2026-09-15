@@ -1,0 +1,104 @@
+{% extends "base_personal.html" %}
+
+{#
+  Ghost Light launch announcement.
+
+  Why this one breaks the "no images, no hero" rule that base_personal.html
+  sets: the ask is an App Store install, and nobody installs an app they have
+  not seen. One screenshot is the product demo. Everything else stays a letter,
+  so the extra weight buys the one thing it needs to buy.
+
+  The design is the landing page's closing section, compressed: a dark stage
+  panel with the glow behind it, the phone on top, Playfair for the title, and
+  the App Store button as the only thing worth clicking. Paper-warm letter
+  around it, dark stage in the middle. That contrast IS the brand.
+
+  Deliverability note: this will score more "promotional" than a plain letter,
+  so it belongs in a launch send and not in the lifecycle flow. If Gmail
+  Promotions placement matters more than the screenshot, send `custom.html`
+  with the same copy instead and drop the panel.
+
+  Render with the warm palette, not the default white one:
+
+      c = {
+        "auto": True, "bg": "#F7F4EF", "fg": "#2C2723",
+        "muted": "#8A8175", "sig": "#5A5349", "rule": "#E4DED3",
+        "link": "#CB4B00", "btn_bg": "#CB4B00", "btn_fg": "#ffffff",
+      }
+
+  Expected context: user_name, app_url, unsubscribe_url, unsubscribe_note.
+#}
+
+{% block title %}{{ subject or "Ghost Light is live on the App Store" }}{% endblock %}
+
+{# Playfair for the two brand lines. Apple Mail and iOS Mail load this, which
+   covers most of the list given the ask is an iPhone app. Everything else falls
+   back to Georgia, which is why Georgia is named explicitly in every stack
+   rather than left to the generic `serif`. #}
+{% block head_extra %}
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+        {# Masthead. A wordmark and a lit bulb, at the size of a signature.
+           The glow is a box-shadow: Apple Mail renders it, Gmail drops it and
+           leaves a clean orange dot, which is the same idea at lower fidelity. #}
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 30px 0;">
+            <tr>
+                <td style="padding:0 9px 0 0; line-height:0; vertical-align:middle;">
+                    <div style="width:7px; height:7px; border-radius:7px; background:#CB4B00; box-shadow:0 0 9px 2px rgba(203,75,0,0.45);">&nbsp;</div>
+                </td>
+                <td style="vertical-align:middle;">
+                    <span class="ar-brand" style="font-family:'Playfair Display', Georgia, 'Times New Roman', serif; font-size:17px; letter-spacing:0.01em; color:{{ c.fg }};">ActorRise</span>
+                </td>
+            </tr>
+        </table>
+
+        <p>{% if greeting %}{{ greeting }}{% elif user_name %}hey {{ user_name.split()[0] }},{% else %}hey,{% endif %}</p>
+
+        <p>quick one. i made an iPhone app. it is called Ghost Light, it is free, and it went up on the App Store this month.</p>
+
+        <p>it is the library in your pocket. same search, your saved pieces, and it reads them with no signal. that last part is the whole reason i built it. every single time i have actually needed a piece in front of me it has been backstage where there is no bars, or on a train, or in a car outside a casting office with four minutes to go.</p>
+
+        {# The stage. Dark panel, glow, phone, button. This is the only block in
+           the email that is doing sales, and it is doing it by showing the
+           thing rather than describing it again. #}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:32px 0;">
+            <tr>
+                <td align="center" bgcolor="#201B17" style="background:#201B17; border-radius:14px; padding:34px 24px 30px 24px;">
+                    <p style="margin:0 0 14px 0; font-family:'Playfair Display', Georgia, 'Times New Roman', serif; font-style:italic; font-size:13px; line-height:1.5; color:#9A8D7E;">(the ghost light goes home with you.)</p>
+
+                    <p style="margin:0 0 26px 0; font-family:'Playfair Display', Georgia, 'Times New Roman', serif; font-size:29px; line-height:1.25; color:#F5EFE6;">The stage, <em style="font-style:italic; color:#FF8A44;">in your pocket</em>.</p>
+
+                    {# Fixed width and height so the layout holds before the
+                       image loads and in the clients that never load it. The
+                       alt text has to survive on its own for Outlook. #}
+                    <img src="{{ base_url or 'https://actorrise.com' }}/ghostlight/read.png"
+                         width="196" height="424" alt="Ghost Light on iPhone, showing Nora's doll-wife speech on a warm paper reading surface"
+                         style="display:block; width:196px; max-width:196px; height:auto; border:0; outline:none; text-decoration:none; margin:0 auto 26px auto; border-radius:20px;">
+
+                    <a href="{{ app_url }}" style="display:inline-block; background:#CB4B00; color:#ffffff; text-decoration:none; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; line-height:1; padding:14px 28px; border-radius:999px;">Get it on the App Store</a>
+
+                    <p style="margin:16px 0 0 0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:12px; line-height:1.5; color:#8E8273;">free on iPhone.</p>
+                </td>
+            </tr>
+        </table>
+
+        <p>there is a reading light in it for dark wings, the tone filters came over, and it still tells you when a piece is overdone before you spend a week on it.</p>
+
+        <p>if you try it and something in it feels wrong, just tell me. i would much rather hear it from you than read it in a review.</p>
+
+        <div class="ar-sig" style="margin-top:28px; color:{{ c.sig }}; font-size:14px; line-height:1.5;">
+            Canberk<br>
+            {{ sender_title or "actor, and the person who built this" }}
+        </div>
+
+        {# The plain reply-to-opt-out. It sits here rather than in the footer
+           because the /unsubscribe page's "Other" reason still has no free-text
+           field, so anyone who wants to say WHY has to be able to just reply.
+           Pair this with unsubscribe_note so the footer link does not make the
+           same offer a second time. #}
+        <div class="ar-muted" style="margin-top:24px; color:{{ c.muted }}; font-size:14px; line-height:1.6;">
+            {{ postscript or "not interested in emails from me? reply UNSUBSCRIBE and i will take you off the list, no hard feelings." }}
+        </div>
+{% endblock %}
