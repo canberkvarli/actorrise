@@ -85,10 +85,13 @@ export const MEDIUMS = [
 
 // Tap 5 — "Where are you in it?" (single). Maps to experience_level + the
 // overdone-sensitivity bias (beginners tolerate warhorses, pros want fresh).
+// `sublabel` says what the choice DOES, in the onboarding tile — this is the
+// only question whose three answers look interchangeable until you know they
+// move the overdone dial.
 export const CAREER_STAGES = [
-  { id: "just_starting", label: "Just starting", experienceLevel: "Student", overdoneSensitivity: 0.2 },
-  { id: "auditioning", label: "Actively auditioning", experienceLevel: "Emerging", overdoneSensitivity: 0.5 },
-  { id: "working_pro", label: "Working pro", experienceLevel: "Professional", overdoneSensitivity: 0.8 },
+  { id: "just_starting", label: "Just starting", sublabel: "warhorses welcome", experienceLevel: "Student", overdoneSensitivity: 0.2 },
+  { id: "auditioning", label: "Actively auditioning", sublabel: "balanced", experienceLevel: "Emerging", overdoneSensitivity: 0.5 },
+  { id: "working_pro", label: "Working pro", sublabel: "fresh pieces first", experienceLevel: "Professional", overdoneSensitivity: 0.8 },
 ] as const;
 
 // How the actor is usually cast (single) — stored to profile.gender using the

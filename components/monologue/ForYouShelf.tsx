@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { IconSparkles } from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
@@ -118,38 +117,79 @@ export function ForYouShelf() {
 }
 
 
+/**
+ * The same shelf, before it can pick anything.
+ *
+ * This used to be a tinted rounded rectangle with a sparkle icon and an "Add
+ * it →" link, written in the app's semantic tokens on a page that has been
+ * Theatre Walk since the search rebuild — so the one thing asking for
+ * something was the one thing that did not look like it belonged here. It now
+ * carries the shelf's own heading, so the slot reads as this shelf waiting to
+ * be filled rather than an ad sitting where results should be.
+ */
 function ProfileNudge({ onOpen }: { onOpen: () => void }) {
   return (
-    <div className="mx-auto max-w-4xl pt-2 pb-8">
-      <button
+    <div>
+      <div className="mb-5">
+        <h2 className="t-shelf-title">
+          Picked for <em>your type.</em>
+        </h2>
+        <p className="t-dir mt-1.5" style={{ fontSize: 12, color: "var(--t-muted-dark-2)" }}>
+          (we haven&apos;t met properly.)
+        </p>
+      </div>
+
+      <motion.button
         type="button"
         onClick={onOpen}
-        className="group flex w-full items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/[0.04] p-4 text-left transition-all hover:border-primary/50"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        whileHover={{ y: -2 }}
+        className="flex w-full flex-col items-start gap-4 border-[1.5px] border-dashed p-5 text-left transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+        style={{
+          borderColor: "color-mix(in oklab, var(--t-text) 28%, transparent)",
+          background: "var(--t-paper-2)",
+          color: "var(--t-text)",
+        }}
       >
-        <div className="flex items-start gap-2.5">
-          <IconSparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              Add your type, get monologues picked for you
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              A few quick taps, and every search gets tailored to you.
-            </p>
-          </div>
-        </div>
-        <span className="shrink-0 text-sm font-medium text-primary">Add it →</span>
-      </button>
+        <span className="min-w-0">
+          <span className="block text-[15px] font-semibold leading-snug">
+            Tell me how you&apos;re cast, and this shelf fills up.
+          </span>
+          <span className="mt-1 block text-sm leading-relaxed" style={{ color: "var(--t-muted-dark)" }}>
+            Your playing age, your type, what you want to work on. Five taps, and
+            every search after this one leans your way.
+          </span>
+        </span>
+        <span
+          className="inline-flex h-11 shrink-0 items-center gap-2.5 rounded-full pl-5 pr-1.5 text-sm font-bold"
+          style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
+        >
+          Set my type
+          <span
+            className="inline-flex size-8 items-center justify-center rounded-full"
+            style={{ background: "var(--t-cta-dot-bg)", color: "var(--t-cta-dot-fg)" }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </span>
+        </span>
+      </motion.button>
     </div>
   );
 }
 
+/** Placeholders in the shape the shelf actually loads into — a column of rows,
+ *  not a three-up grid, which is what this drew until the shelf was rebuilt. */
 function ForYouSkeleton() {
   return (
-    <div className="mx-auto max-w-4xl pt-2 pb-8">
-      <div className="mb-4 h-4 w-44 animate-pulse rounded bg-muted" />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div>
+      <div className="mb-5 h-6 w-52 animate-pulse" style={{ background: "var(--t-paper-2)" }} />
+      <div className="flex flex-col gap-2.5">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-xl bg-muted/60" />
+          <div key={i} className="h-20 animate-pulse" style={{ background: "var(--t-paper-2)" }} />
         ))}
       </div>
     </div>
