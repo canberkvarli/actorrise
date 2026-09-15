@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { PlayCover, clothFor } from "@/components/monologue/PlayCover";
+import { posterAt } from "@/lib/poster";
 import {
   useCommunityFeed,
   useShareActivity,
@@ -63,19 +66,12 @@ function compactTime(iso: string, now: number): string {
   return `${Math.floor(hrs / 24)}d`;
 }
 
-/* Book cloths for the spine on your own call, and faces for the roster.
-   Both are picked off a stable key — the piece's id, the actor's name — so one
-   monologue keeps one colour across visits and one actor keeps one colour down
-   the sheet. A random colour per render would make the board look like it was
-   reshuffling people who had not moved. */
-const CLOTHS = [
-  "oklch(0.32 0.055 155)",
-  "oklch(0.31 0.085 25)",
-  "oklch(0.30 0.065 255)",
-  "oklch(0.34 0.070 70)",
-  "oklch(0.31 0.045 300)",
-  "oklch(0.30 0.020 240)",
-];
+/* Faces for the roster, picked off the actor's name so one actor keeps one
+   colour down the sheet and across visits. A random colour per render would
+   make the board look like it was reshuffling people who had not moved.
+   (The cloths that used to live here went with the spine on Your call — that
+   card carries a real cover now and takes its tint from PlayCover's own
+   clothFor, so the card and the cover cannot disagree.) */
 const FACES = [
   "oklch(0.58 0.18 45)",
   "oklch(0.35 0.06 155)",
@@ -545,12 +541,81 @@ function Ticker({ rows }: { rows: Row[] }) {
      seconds, which reads as a broken animation rather than as a busy house —
      and a quiet house is better said by nothing than by three names on a
      carousel. */
+  const runRef = useRef<HTMLDivElement>(null);
+  /* Hover does not stop the strip — a sign that halts dead under the cursor
+     reads as broken rather than as considerate. It eases down to a fifth of
+     its speed and back up, so a name can be read without the band dying. */
+  const animRef = useRef<Animation | null>(null);
+  const rampRef = useRef<number | null>(null);
+  const [tip, setTip] = useState(false);
+
+  useEffect(() => {
+    const run = runRef.current;
+    if (!run) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    /* The list is printed twice, so travelling exactly half the run and
+       starting over is invisible: the second copy is where the first one was.
+       Measured rather than assumed at -50%, because the strip is rebuilt
+       whenever the roster changes and a stale width shows as a seam.
+
+       This is a Web Animation and not a CSS one because of the ask: a CSS
+       `animation-duration` changed mid-flight re-derives progress from the new
+       duration and snaps the strip sideways, whereas updatePlaybackRate below
+       is defined to hold position and only change the rate. It also runs on
+       the compositor, which is what takes the shimmer off long names. */
+    const half = run.scrollWidth / 2;
+    if (half <= 0) return;
+    const anim = run.animate(
+      [{ transform: "translate3d(0,0,0)" }, { transform: `translate3d(${-half}px,0,0)` }],
+      { duration: (half / 46) * 1000, iterations: Infinity, easing: "linear" },
+    );
+    animRef.current = anim;
+    return () => {
+      anim.cancel();
+      animRef.current = null;
+      if (rampRef.current) window.clearInterval(rampRef.current);
+    };
+  }, [rows.length]);
+
+  /* A rate step on its own is seamless in position but abrupt in feel, so it
+     is walked to the target over a fifth of a second. Intervals, not frames:
+     twelve timers beat three hundred rAF callbacks for the same ramp. */
+  const rampTo = (target: number) => {
+    if (rampRef.current) window.clearInterval(rampRef.current);
+    rampRef.current = window.setInterval(() => {
+      const anim = animRef.current;
+      if (!anim) return;
+      const rate = anim.playbackRate + (target - anim.playbackRate) * 0.28;
+      if (Math.abs(target - rate) < 0.02) {
+        anim.updatePlaybackRate(target);
+        if (rampRef.current) window.clearInterval(rampRef.current);
+        rampRef.current = null;
+        return;
+      }
+      anim.updatePlaybackRate(rate);
+    }, 20);
+  };
+
   if (rows.length < 4) return null;
   const run = [...rows, ...rows];
 
   return (
-    <div aria-hidden className="sheet-ticker -mx-4 mt-9 sm:-mx-8">
-      <div className="sheet-ticker__run text-sm">
+    <div
+      className="sheet-ticker -mx-4 mt-9 sm:-mx-8"
+      onPointerEnter={() => rampTo(0.2)}
+      onPointerLeave={() => rampTo(1)}
+      onClick={() => setTip((v) => !v)}
+    >
+      {/* The tooltip is the only thing in here a screen reader or a keyboard
+          should reach. The strip itself is every name on the board printed a
+          second time, which the roster below already states once, in order. */}
+      {tip && (
+        <Link href="/monologues" className="sheet-ticker__tip" onClick={(e) => e.stopPropagation()}>
+          find your piece
+          <span aria-hidden>&rarr;</span>
+        </Link>
+      )}
+      <div ref={runRef} aria-hidden className="sheet-ticker__run text-sm">
         {run.map((r, i) => (
           <span
             key={`${r.id}-${i}`}
@@ -675,6 +740,7 @@ function YourCall() {
 
   const current = mine[0];
   const rest = mine.length - 1;
+  const poster = posterAt(current.poster_url, 400);
   const playLine = [
     subtitleFor(current.character_name, current.play_title),
     current.author,
@@ -696,10 +762,38 @@ function YourCall() {
       <Link
         href={`/monologue/${current.id}`}
         className="sheet-call mt-3.5"
-        style={{ "--cloth": pick(CLOTHS, current.id) } as React.CSSProperties}
+        /* The card is tinted by the cover it is holding, not by a hash of its
+           own. A play's printed cover picks its cloth off the title, so asking
+           clothFor for the same title makes the card and the cover agree; a
+           film keeps its real poster, and the card goes neutral ink rather than
+           putting an arbitrary colour next to somebody's art direction. */
+        style={
+          {
+            "--cloth": poster ? "oklch(0.17 0.012 45)" : clothFor(current.play_title ?? "").bg,
+          } as React.CSSProperties
+        }
       >
+        {/* The same cover the Collection shelf prints — the real poster for a
+            film or a series, a bound cloth cover for a play. The call used to
+            be typography alone, which meant the one piece you are actually
+            working on was the only place in the app where it had no face. */}
+        <span className="sheet-call__cover">
+          {poster ? (
+            <Image src={poster} alt="" fill unoptimized sizes="132px" className="object-cover" />
+          ) : (
+            <PlayCover
+              title={current.play_title ?? current.character_name}
+              author={current.author}
+              year={current.year}
+              genre={current.genre}
+              category={current.category}
+              themes={current.themes}
+              className="h-full w-full rounded-none"
+            />
+          )}
+        </span>
         <span className="sheet-call__body">
-          <span className="sheet-display block text-[clamp(2rem,4vw,2.9rem)] leading-[0.95] tracking-[-0.01em]">
+          <span className="sheet-display block text-[clamp(1.7rem,3.2vw,2.35rem)] leading-[0.95] tracking-[-0.01em]">
             {current.character_name}
           </span>
           {/* The play, then who wrote it. subtitleFor drops a play title that
