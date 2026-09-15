@@ -1747,8 +1747,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </h1>
           </div>
 
-          {/* Plays vs Film & TV. Still 44px targets, still switchMode. */}
-          <div className="shrink-0">
+          {/* Plays vs Film & TV. Still 44px targets, still switchMode.
+
+              The column is pinned to the toggle's width (two 124px tabs plus
+              the 1px gap and the 1px border either side). The caption beneath
+              it changes length with the shelf, and as the widest child it was
+              setting this column's width — which took 114px off the headline's
+              measure on every switch and reflowed the whole head. It wraps
+              inside a fixed box now instead of deciding one. */}
+          <div className="w-[252px] shrink-0">
             <div
               className="inline-flex gap-1 p-1"
               style={{
@@ -1766,10 +1773,18 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     type="button"
                     aria-pressed={active}
                     onClick={() => switchMode(tab.mode)}
-                    className="relative inline-flex min-h-[44px] items-center gap-2 px-4 text-sm font-semibold transition-transform hover:scale-[1.04]"
+                    className="relative inline-flex min-h-[44px] items-center justify-center gap-2 px-4 text-sm font-semibold transition-transform hover:scale-[1.04]"
                     style={{
                       borderRadius: 999,
                       transitionTimingFunction: "var(--t-spring)",
+                      /* Both tabs hold one width. "Plays" and "Film & TV" are
+                         26px apart, so the active pill resized on every switch
+                         — which changed the toggle's width, which changed the
+                         headline's width by 114px, because the two share a flex
+                         row. Nothing downstream was moving because of the
+                         chips; it was all this. Equal boxes mean the fill
+                         slides and not one other thing on the page reflows. */
+                      minWidth: 124,
                       color: active ? "var(--t-on-text)" : "var(--t-muted-dark-2)",
                     }}
                   >
@@ -1817,7 +1832,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <motion.p
                 key={searchMode}
                 className="t-dir mt-2 text-right"
-                style={{ fontSize: 12, color: "var(--t-faint)" }}
+                style={{ fontSize: 12, color: "var(--t-faint)", maxWidth: "100%" }}
                 initial={reducedMotion ? false : { opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
@@ -2145,58 +2160,23 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" })}
                 />
                 </div>
-                {/* Results header */}
-                {/* Same 7.75rem indent as Plays, so both shelves put their
-                    toolbar on the speeches' left edge. */}
-                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 mb-8 sm:pl-[9.5rem]">
-                  <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-0 min-w-0">
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="text-2xl font-semibold tabular-nums text-foreground">
-                          {showBookmarkedOnly
-                            ? filmTvResults.filter((m) => m.is_favorited).length
-                            : filmTvTotal > 0 ? filmTvTotal : filmTvResults.length}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {showBookmarkedOnly ? "in your collection" : "monologues found"}
-                        </span>
-                      </div>
-                      {!showBookmarkedOnly && queryUsedForResults && (
-                        <span className="text-xs text-muted-foreground/50">from Film & TV scripts in our library</span>
-                      )}
-                    </div>
-                    <Button
-                      variant={showBookmarkedOnly ? "secondary" : "outline"}
-                      size="sm"
-                      onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                      className={`sm:hidden gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
-                    >
-                      <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                      Collection
-                    </Button>
-                  </div>
-                  {/* Not flex-1: with the toolbar indented to the speeches'
-                      edge, stretching this to fill the row squeezed "Did this
-                      find what you needed?" into three wrapped lines. The three
-                      items no longer fit on one line at this measure, so this
-                      one takes the second line deliberately rather than
-                      bumping the collection button onto it. */}
-                  <div className="order-last flex basis-full justify-start">
-                    <ResultsFeedbackPrompt
-                      context="film_tv_search"
-                      resultsViewCount={filmTvResultsViewCount}
-                      onOpenContact={() => setContactOpen(true)}
-                    />
-                  </div>
-                  <Button
-                    variant={showBookmarkedOnly ? "secondary" : "outline"}
-                    size="sm"
+                {/* Nothing above the results but the one control that
+                    changes them. The count, the "from Film & TV scripts in our
+                    library" caption and the "Did this find what you needed?"
+                    prompt all went: none of them helps anyone find a piece,
+                    and they were three lines you had to read before you were
+                    allowed to start looking. */}
+                <div className="mb-8 flex items-center justify-end sm:pl-[9.5rem]">
+                  <button
+                    type="button"
                     onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                    className={`hidden sm:inline-flex gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
+                    aria-pressed={showBookmarkedOnly}
+                    aria-label={showBookmarkedOnly ? "Showing your collection — show everything" : "Show only your collection"}
+                    title={showBookmarkedOnly ? "Showing your collection" : "Show only your collection"}
+                    className="t-only-saved shrink-0"
                   >
                     <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                    In your collection
-                  </Button>
+                  </button>
                 </div>
                 {/* Monologue cards grid */}
                 {(() => {
@@ -2403,48 +2383,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     />
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className="text-sm" style={{ color: "var(--t-muted-dark)" }}>
-                      {/* `total` is the server's full count for paging, but it
-                          was shown even when we held no results — a page
-                          reading "11 monologues" above nothing. Never report
-                          more than we actually have to show. */}
-                      <b className="tabular-nums" style={{ color: "var(--t-text)" }}>
-                        {showBookmarkedOnly
-                          ? results.filter((m) => m.is_favorited).length
-                          : results.length === 0
-                            ? 0
-                            : total > 0
-                              ? total
-                              : results.length}
-                      </b>{" "}
-                      {showBookmarkedOnly ? "in your collection" : "pieces"}
-                    </span>
-                    <span aria-hidden style={{ color: "var(--t-line-light)" }}>·</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const el = document.getElementById("search-input") as HTMLInputElement | null;
-                        el?.focus();
-                        el?.select();
-                        window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
-                      }}
-                      className="text-sm underline underline-offset-4"
-                      style={{ color: "var(--t-muted-dark)" }}
-                    >
-                      new search
-                    </button>
-                    <Button
-                      variant={showBookmarkedOnly ? "secondary" : "outline"}
-                      size="sm"
-                      onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                      className="shrink-0 gap-2 rounded-full"
-                    >
-                      <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                      <span className="hidden sm:inline">In your collection</span>
-                      <span className="sm:hidden">Collection</span>
-                    </Button>
-                  </div>
+                  {/* The count and "new search" are gone. A count is a number
+                      you cannot act on, and "new search" pointed at a search
+                      box already on screen, unmoved, with your query still in
+                      it. */}
+                  <button
+                    type="button"
+                    onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
+                    aria-pressed={showBookmarkedOnly}
+                    aria-label={showBookmarkedOnly ? "Showing your collection — show everything" : "Show only your collection"}
+                    title={showBookmarkedOnly ? "Showing your collection" : "Show only your collection"}
+                    className="t-only-saved shrink-0"
+                  >
+                    <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
+                  </button>
                 </div>
 
                 {/* The query echo and the facts every row shares, on one line.

@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 import {
   GhostLightSketch,
   MasksSketch,
@@ -99,7 +100,16 @@ export function HowItWorksWalkthrough({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="t-playbill max-w-[460px] overflow-hidden border-0 p-0">
+      {/* `theatre-tokens` and the faces have to be ON this element. Radix
+          portals the dialog to document.body, so it lands OUTSIDE the
+          `.theatre-tokens` wrapper on the page that opened it — every
+          --t-* var resolved to nothing, which made `background: var(--t-cream)`
+          an invalid declaration (transparent) and `font-family: var(--t-display)`
+          fall back to whatever body had. The panel rendered as unreadable text
+          floating over the blurred page. */}
+      <DialogContent
+        className={`t-playbill theatre-tokens ${theatreFontVars} max-w-[460px] overflow-hidden border-0 p-0`}
+      >
         <DialogTitle className="sr-only">How ScenePartner works</DialogTitle>
         <PlaybillPages onDone={() => onOpenChange(false)} />
       </DialogContent>

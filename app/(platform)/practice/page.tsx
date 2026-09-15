@@ -133,10 +133,15 @@ export default function PracticePage() {
               below opens on a real line of dialogue, which says what this room
               is for far better than a sentence describing it. All that is left
               up here is the way in and the way to ask. */}
-          <div className="flex items-center justify-end gap-2">
+          <div className="mb-14 flex items-center justify-end gap-2 sm:mb-20">
             <HowItWorksButton onOpen={() => setWalkthroughOverride(true)} />
           </div>
 
+          {/* Dropped clear of the ghost light. The lamp hangs from the top of
+              the room on the right, which is exactly where the shelf began —
+              so the bulb it is lit by was stuck behind the first card, and the
+              one piece of the room that says "this is a theatre" was the one
+              piece you could not see. */}
           <Suspense fallback={null}>
             <PracticeLibrary
               scripts={safeScripts}
