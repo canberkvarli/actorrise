@@ -2482,7 +2482,11 @@
 .t-ghost-light__cord {
   display: block;
   width: 2px;
-  height: clamp(140px, 26vh, 260px);
+  /* Short. It used to drop 140-260px from the top of the room, which put the
+     bulb squarely in the right-hand column — the shelf — so the one fixture
+     that says "this is a theatre" was permanently behind the first card. A
+     ghost light near the ceiling is still a ghost light. */
+  height: clamp(64px, 9vh, 96px);
   background: linear-gradient(to bottom, oklch(0.3 0.02 55), oklch(0.28 0.02 55));
 }
 .t-ghost-light__socket {

@@ -133,7 +133,7 @@ export default function PracticePage() {
               below opens on a real line of dialogue, which says what this room
               is for far better than a sentence describing it. All that is left
               up here is the way in and the way to ask. */}
-          <div className="mb-14 flex items-center justify-end gap-2 sm:mb-20">
+          <div className="mb-24 flex items-center justify-end gap-2 sm:mb-28">
             <HowItWorksButton onOpen={() => setWalkthroughOverride(true)} />
           </div>
 
