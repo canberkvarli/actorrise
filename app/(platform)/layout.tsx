@@ -23,10 +23,6 @@ import { UploadProvider } from "@/components/practice/UploadProvider";
 
 // Lazy-load modals that only appear conditionally — keeps them out of the
 // platform layout's initial JS bundle and shaves first-paint cost on /practice.
-const WelcomeFlow = dynamic(
-  () => import("@/components/onboarding/WelcomeFlow").then((m) => ({ default: m.WelcomeFlow })),
-  { ssr: false },
-);
 const ChangelogModal = dynamic(
   () => import("@/components/ChangelogModal").then((m) => ({ default: m.ChangelogModal })),
   { ssr: false },
@@ -94,7 +90,6 @@ export default function PlatformLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false);
   const [showChangelogModal, setShowChangelogModal] = useState(false);
   const [changelogModalEntry, setChangelogModalEntry] = useState<ChangelogEntry | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -176,27 +171,23 @@ export default function PlatformLayout({
     return () => document.removeEventListener("keydown", onKey);
   }, [profileDropdownOpen, mobileMenuOpen]);
 
-  // Show welcome flow for new users who haven't seen it. Suppressed while the
-  // newer full-screen OnboardingWizard is still pending (has_completed_onboarding
-  // === false) so the two first-run experiences never stack.
-  useEffect(() => {
-    if (
-      !loading &&
-      user &&
-      user.has_seen_welcome === false &&
-      user.has_completed_onboarding !== false
-    ) {
-      const timer = setTimeout(() => setShowWelcome(true), 600);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, user]);
+  // The welcome flow used to sit here: three slides shown when
+  // has_seen_welcome === false and onboarding was not pending. It is gone
+  // (2026-09-15). Onboarding's persist() AND its skip both write
+  // has_seen_welcome, so the only accounts that could still reach it were ones
+  // that finished the old onboarding before that flag existed — it was three
+  // slides of the app describing itself to people who had already been using
+  // it. The onboarding card is the first run now, and it is the only one.
+  //
+  // has_seen_welcome itself STAYS: SignupTracker reads it as the marker of a
+  // fresh account, and the column is still written and served.
 
-  // Show changelog modal when user has not seen the latest feature (after welcome, 1s delay).
+  // Show changelog modal when the user has not seen the latest feature (1s delay).
   // Source of truth is user.last_seen_feature_id on the backend so it's once per actor,
   // not once per browser. localStorage is a fallback for dismisses written before the
   // server-side column existed.
   useEffect(() => {
-    if (loading || !user || showWelcome) return;
+    if (loading || !user) return;
     // Not on a working screen. Tapping Rehearse and being handed a note about
     // sign-in and Film & TV browsing is an interruption at the exact moment
     // someone came here to act. It keeps until they're back on the shelf.
@@ -221,7 +212,7 @@ export default function PlatformLayout({
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [loading, user, showWelcome, pathname]);
+  }, [loading, user, pathname]);
 
 
   // Green Room is deliberately not here. community_events records 2 "rehearsing"
@@ -820,11 +811,6 @@ export default function PlatformLayout({
       <PWARegister />
       <SignupTracker />
       <FirstRehearsalGate />
-      <AnimatePresence>
-        {showWelcome && (
-          <WelcomeFlow onDismiss={async () => { setShowWelcome(false); await refreshUser(); }} />
-        )}
-      </AnimatePresence>
       {changelogModalEntry && (
         <ChangelogModal
           open={showChangelogModal}
