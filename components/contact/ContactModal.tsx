@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,10 +85,13 @@ export function ContactModal({ open, onOpenChange, initialCategory }: ContactMod
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className={`t-modal theatre-tokens ${theatreFontVars} max-w-[30rem] border-0 p-7`}
+      >
         <DialogHeader>
-          <DialogTitle>Get in touch</DialogTitle>
-          <DialogDescription>
+          <p className="t-modal__dir">(a note to the booth.)</p>
+          <DialogTitle className="t-modal__title">Get in touch</DialogTitle>
+          <DialogDescription className="t-modal__body">
             Partnership, feedback, bugs, collaboration. I built ActorRise on my own and
             really appreciate your support. I&apos;ll reply as soon as I can.
           </DialogDescription>

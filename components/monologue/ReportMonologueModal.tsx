@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
@@ -75,7 +76,9 @@ export function ReportMonologueModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent
+        className={`t-modal theatre-tokens ${theatreFontVars} max-w-sm border-0 p-7`}
+      >
         {sent ? (
           <div className="flex flex-col items-center gap-4 py-6 text-center">
             <div className="h-12 w-12 rounded-full bg-primary/15 flex items-center justify-center">
@@ -89,7 +92,8 @@ export function ReportMonologueModal({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Report an issue</DialogTitle>
+              <p className="t-modal__dir">(a note about this piece.)</p>
+          <DialogTitle className="t-modal__title">Report an issue</DialogTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 {characterName} &middot; {playTitle}
               </p>

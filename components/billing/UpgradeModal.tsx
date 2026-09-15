@@ -1,15 +1,7 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { IconRocket, IconSparkles } from "@tabler/icons-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 import Link from "next/link";
 import { useEffect } from "react";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -66,70 +58,59 @@ export function UpgradeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <div className="flex items-center gap-2 mb-1">
-            <IconRocket className="h-5 w-5 text-primary" />
-            <DialogTitle>Upgrade to {targetLabel}</DialogTitle>
-          </div>
-          <DialogDescription>
-            {message || `${feature} is not available on your current plan.`}
-          </DialogDescription>
-        </DialogHeader>
+      {/* theatre-tokens and the faces on the dialog itself — Radix portals to
+          document.body, outside every scoped wrapper. */}
+      <DialogContent
+        className={`t-modal theatre-tokens ${theatreFontVars} max-w-[26rem] border-0 p-7`}
+      >
+        <p className="t-modal__dir">(one more seat in the house.)</p>
+        <DialogTitle className="t-modal__title">Upgrade to {targetLabel}</DialogTitle>
+        <DialogDescription className="t-modal__body">
+          {message || `${feature} is not available on your current plan.`}
+        </DialogDescription>
 
-        <div className="space-y-3 py-2">
+        <p className="t-modal__price">
           {canTrial ? (
-            <div>
-              <span className="text-2xl font-bold">2 weeks free</span>
-              <p className="text-xs text-muted-foreground mt-1">
+            <>
+              2 weeks free
+              <span className="t-modal__price-note">
                 $0 today. Then $12/month, cancel anytime before it renews.
-              </p>
-            </div>
-          ) : (
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold">{price}</span>
-              <span className="text-sm text-muted-foreground">/month</span>
-              <span className="text-xs text-muted-foreground ml-1">
-                {yearlyNote}
               </span>
-            </div>
+            </>
+          ) : (
+            <>
+              {price}
+              <span className="t-modal__price-note">per month · {yearlyNote}</span>
+            </>
           )}
-          <ul className="space-y-1.5">
-            {benefits.map((benefit) => (
-              <li
-                key={benefit}
-                className="text-sm text-muted-foreground flex items-center gap-2"
-              >
-                <IconSparkles className="h-3 w-3 text-primary flex-shrink-0" />
-                {benefit}
-              </li>
-            ))}
-          </ul>
-        </div>
+        </p>
 
-        <DialogFooter className="gap-2 sm:gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="flex-1"
+        <ul className="t-modal__list">
+          {benefits.map((benefit) => (
+            <li key={benefit} className="t-modal__item">
+              {benefit}
+            </li>
+          ))}
+        </ul>
+
+        <div className="t-modal__foot">
+          <Link
+            className="t-modal__cta"
+            href={
+              // ?from= carries the gate through to begin_checkout. Without it
+              // entry_point falls back to document.referrer and every wall in
+              // the app reports as the same undifferentiated "direct".
+              canTrial
+                ? `/checkout?tier=plus&period=monthly&trial=1&from=${encodeURIComponent(feature)}`
+                : `/checkout?tier=${targetTier}&period=monthly&from=${encodeURIComponent(feature)}`
+            }
           >
-            Maybe Later
-          </Button>
-          <Button asChild className="flex-1">
-            <Link
-              href={
-                // ?from= carries the gate through to begin_checkout. Without it
-                // entry_point falls back to document.referrer and every wall in
-                // the app reports as the same undifferentiated "direct".
-                canTrial
-                  ? `/checkout?tier=plus&period=monthly&trial=1&from=${encodeURIComponent(feature)}`
-                  : `/checkout?tier=${targetTier}&period=monthly&from=${encodeURIComponent(feature)}`
-              }
-            >
-              {canTrial ? "Start 2 weeks free" : "Upgrade Now"}
-            </Link>
-          </Button>
-        </DialogFooter>
+            {canTrial ? "Start 2 weeks free" : "Upgrade now"}
+          </Link>
+          <button type="button" onClick={() => onOpenChange(false)} className="t-modal__quiet">
+            Maybe later
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );

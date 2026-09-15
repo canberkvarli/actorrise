@@ -1072,6 +1072,190 @@
   opacity: 0.45;
 }
 
+/* ==========================================================================
+   MODALS — one treatment, shared by every dialog in the product.
+   ==========================================================================
+   The paywall, the upgrade, contact, report and the delete confirmations were
+   all raw shadcn: a white box with a bordered button and a filled button. On
+   surfaces that own their palette that reads as a dialog borrowed from a
+   different application, and two of them are the screens where somebody
+   decides whether to pay.
+
+   A modal is a playbill handed to you: paper, an ink rule, a hard gel shadow.
+   Every one of these MUST also carry `theatre-tokens` and the faces on the
+   DialogContent itself, because Radix portals to document.body and the --t-*
+   vars do not reach it otherwise.
+   ========================================================================== */
+
+.t-modal {
+  background: var(--t-paper) !important;
+  color: var(--t-text) !important;
+  border: 1.5px solid var(--t-text) !important;
+  border-radius: 10px !important;
+  box-shadow: 12px 12px 0 var(--t-gel) !important;
+  font-family: var(--t-body);
+}
+.t-modal__dir {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  color: var(--t-muted-dark-2);
+}
+.t-modal__title {
+  margin: 6px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-modal__body {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--t-muted-dark);
+}
+/* The number, given the weight it actually carries on a screen where someone
+   is deciding whether to pay. */
+.t-modal__price {
+  margin: 20px 0 0;
+  font-family: var(--t-display);
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-modal__price-note {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: var(--t-muted-dark-2);
+}
+
+.t-modal__list {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.t-modal__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--t-direction);
+  font-size: 13px;
+  color: var(--t-text);
+}
+.t-modal__item::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--t-gel-ink);
+  flex-shrink: 0;
+}
+.t-modal__foot {
+  margin-top: 26px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.t-modal__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-text);
+  background: var(--t-text);
+  color: var(--t-on-text);
+  font-family: var(--t-body);
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.3s var(--t-spring);
+}
+.t-modal__cta:hover {
+  color: var(--t-on-text);
+  transform: scale(1.03) rotate(-1.2deg);
+}
+.t-modal__quiet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-line-light);
+  background: transparent;
+  color: var(--t-muted-dark);
+  font-family: var(--t-body);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.3s var(--t-spring);
+}
+.t-modal__quiet:hover {
+  border-color: var(--t-text);
+  color: var(--t-text);
+}
+/* Form controls inside a modal. Contact and Report are forms, and their
+   inputs were the app's default bordered boxes sitting on Theatre paper. */
+.t-modal label {
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark-2);
+}
+.t-modal input,
+.t-modal textarea,
+.t-modal [role="combobox"] {
+  font-family: var(--t-body) !important;
+  background: var(--t-paper-2) !important;
+  border: 1.5px solid var(--t-line-light) !important;
+  color: var(--t-text) !important;
+  border-radius: 12px !important;
+}
+.t-modal input::placeholder,
+.t-modal textarea::placeholder {
+  color: var(--t-faint) !important;
+}
+.t-modal input:focus,
+.t-modal input:focus-visible,
+.t-modal textarea:focus,
+.t-modal textarea:focus-visible {
+  border-color: var(--t-text) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Paper goes dark with the theme. */
+.dark .t-modal {
+  --t-paper: oklch(0.19 0.018 52);
+  --t-text: oklch(0.95 0.02 85);
+  --t-muted-dark: oklch(0.75 0.02 62);
+  --t-muted-dark-2: oklch(0.68 0.02 62);
+  --t-line-light: oklch(0.32 0.03 55);
+  --t-on-text: oklch(0.15 0.03 45);
+  --t-gel-ink: var(--t-gel);
+}
+
 /* Logging out: the house going dark, with the ghost light left on. */
 .t-curtain-out {
   position: fixed;

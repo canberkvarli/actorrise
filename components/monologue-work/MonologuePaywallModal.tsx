@@ -1,16 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { IconSparkles } from "@tabler/icons-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 import Link from "next/link";
 import { useSubscription } from "@/hooks/useSubscription";
 import { trackUpgradeModalViewed } from "@/lib/analytics";
@@ -73,34 +65,37 @@ export function MonologuePaywallModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{title ?? DEFAULT_TITLE}</DialogTitle>
-          <DialogDescription>{description ?? DEFAULT_DESCRIPTION}</DialogDescription>
-        </DialogHeader>
+      {/* theatre-tokens and the faces ride on the dialog itself: Radix portals
+          to document.body, so it lands outside every scoped wrapper and the
+          --t-* vars would resolve to nothing. */}
+      <DialogContent
+        className={`t-modal theatre-tokens ${theatreFontVars} max-w-[26rem] border-0 p-7`}
+      >
+        <p className="t-modal__dir">(the house is still open.)</p>
+        <DialogTitle className="t-modal__title">{title ?? DEFAULT_TITLE}</DialogTitle>
+        <DialogDescription className="t-modal__body">
+          {description ?? DEFAULT_DESCRIPTION}
+        </DialogDescription>
 
-        <div className="space-y-3 py-2">
-          <ul className="space-y-1.5">
-            {PLUS_BENEFITS.map((benefit) => (
-              <li key={benefit} className="flex items-center gap-2 text-sm text-muted-foreground">
-                <IconSparkles className="h-3 w-3 flex-shrink-0 text-primary" />
-                {benefit}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <ul className="t-modal__list">
+          {PLUS_BENEFITS.map((benefit) => (
+            <li key={benefit} className="t-modal__item">
+              {benefit}
+            </li>
+          ))}
+        </ul>
 
-        <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+        <div className="t-modal__foot">
+          {/* begin_checkout is deliberately NOT fired here. The checkout page
+              already sends it, reading entry_point from ?from=, and firing in
+              both places would double every conversion in the funnel. */}
+          <Link href={href} className="t-modal__cta">
+            Start 2 weeks free
+          </Link>
+          <button type="button" onClick={() => onOpenChange(false)} className="t-modal__quiet">
             Maybe later
-          </Button>
-          <Button asChild className="flex-1">
-            {/* begin_checkout is deliberately NOT fired here. The checkout page
-                already sends it, reading entry_point from ?from=, and firing in
-                both places would double every conversion in the funnel. */}
-            <Link href={href}>Start 2 weeks free</Link>
-          </Button>
-        </DialogFooter>
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );
