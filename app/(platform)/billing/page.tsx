@@ -1,51 +1,77 @@
 "use client";
 
 /**
- * Billing Dashboard Page
+ * /billing — the box office.
  *
- * Shows user's current subscription, usage metrics, and billing history.
- * Allows users to manage their subscription via Stripe Customer Portal.
+ * Four facts and two actions: what plan am I on, when does it bill, how much
+ * have I used, what have I been charged; and let me change it or ask for a
+ * discount. It was five shadcn Cards stacked in a 512px column — a ribbon of
+ * boxes down the middle of a wide screen, each with a header, a title and a
+ * rule of its own, so most of the page was the furniture around the facts.
+ *
+ * It is a ticket and a ledger now. The stub carries the plan and what the plan
+ * admits you to; the ledger beside it carries the meter and the receipts.
+ * Styling lives in `.t-stub*` / `.t-bill*` / `.t-leader*` in globals.css.
  */
 
 import { useState } from "react";
-import { useAuth } from "@/lib/auth";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  IconSparkles,
-  IconCreditCard,
-  IconDownload,
-  IconArrowUpRight,
-  IconGift,
-  IconSearch,
-  IconBookmark,
-  IconScript,
-  IconUpload,
-  IconMicrophone,
-} from "@tabler/icons-react";
-import api from "@/lib/api";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { PlanBadge } from "@/components/billing/PlanBadge";
-import { useSubscription, useUsageLimits, useBillingHistory } from "@/hooks/useSubscription";
+import { toast } from "sonner";
+import {
+  IconArrowUpRight,
+  IconCreditCard,
+  IconDownload,
+  IconGift,
+  IconSparkles,
+} from "@tabler/icons-react";
+
+import api from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { Skeleton } from "@/components/ui/skeleton";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 import { RequestPromoCodeModal } from "@/components/contact/RequestPromoCodeModal";
+import {
+  useBillingHistory,
+  useSubscription,
+  useUsageLimits,
+  type UsageLimits,
+} from "@/hooks/useSubscription";
+
+/** What each tier opens. Copy only — the numbers come from the same table the
+ *  pricing page quotes, and nothing here is derived from the user's account. */
+const WHAT_IT_OPENS: Record<
+  string,
+  { label: string; value: string; unit?: string; none?: boolean }[]
+> = {
+  unlimited: [
+    { label: "searches", value: "no limit" },
+    { label: "collection", value: "no limit" },
+    { label: "scripts", value: "no limit" },
+    { label: "scenepartner", value: "100", unit: "a month" },
+    { label: "uploads", value: "no limit" },
+  ],
+  plus: [
+    { label: "searches", value: "150", unit: "a month" },
+    { label: "collection", value: "no limit" },
+    { label: "scripts", value: "10" },
+    { label: "scenepartner", value: "30", unit: "a month" },
+    { label: "uploads", value: "10" },
+  ],
+  free: [
+    { label: "searches", value: "10", unit: "a month" },
+    { label: "collection", value: "5" },
+    { label: "scripts", value: "3" },
+    { label: "scenepartner", value: "1", unit: "to try" },
+    { label: "uploads", value: "not on free", none: true },
+  ],
+};
 
 export default function BillingPage() {
   useAuth();
   const [isManagingSubscription, setIsManagingSubscription] = useState(false);
   const [promoModalOpen, setPromoModalOpen] = useState(false);
 
-  // Use SWR hooks for cached data - no more manual fetching!
   const { subscription, isLoading: subLoading, isError: subError } = useSubscription();
   const { usage, isLoading: usageLoading } = useUsageLimits();
   const { history: billingHistory, isLoading: historyLoading } = useBillingHistory();
@@ -56,45 +82,49 @@ export default function BillingPage() {
     setIsManagingSubscription(true);
     try {
       const response = await api.post<{ portal_url: string }>(
-        "/api/subscriptions/create-portal-session"
+        "/api/subscriptions/create-portal-session",
       );
       window.location.href = response.data.portal_url;
-    } catch (error: any) {
-      console.error("Failed to create portal session:", error);
-      // Show user-friendly error message
-      const errorMessage = error?.response?.data?.detail || "Unable to open subscription management. Please contact support.";
-      alert(errorMessage);
+    } catch (error: unknown) {
+      /* This was a window.alert(), which is the one dialog that cannot be
+         styled, cannot be dismissed by tapping away, and blocks the page —
+         on the screen where somebody is trying to give us money. */
+      const detail =
+        error && typeof error === "object" && "response" in error
+          ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : null;
+      toast.error(
+        typeof detail === "string"
+          ? detail
+          : "Couldn't open the billing portal. Try again, or use Contact in the menu.",
+      );
       setIsManagingSubscription(false);
     }
   };
 
-  const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+  const tier = subscription?.tier_name ?? "free";
+  const isFree = tier === "free";
+  const opens = WHAT_IT_OPENS[tier] ?? WHAT_IT_OPENS.free;
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  const shell = `theatre-tokens theatre-stage ${theatreFontVars} container relative mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8`;
 
-  const getUsagePercentage = (used: number, limit: number) => {
-    if (limit === -1) return 0; // Unlimited
-    return Math.min((used / limit) * 100, 100);
-  };
-
-  // Show error state if subscription fetch fails
   if (subError) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-lg">
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-5 text-center">
-          <p className="font-semibold mb-2">Unable to load billing information</p>
-          <p className="text-sm text-muted-foreground mb-4">
-            There was an error loading your subscription data. Please try refreshing the page.
+      <div className={shell}>
+        <Head />
+        <div className="t-bill mt-8 max-w-md">
+          <p className="t-bill__head">the window is shut</p>
+          <p className="t-stub__terms">
+            I couldn&apos;t load your plan just now. Nothing has changed on your
+            account, so refresh and it should come back.
           </p>
-          <Button onClick={() => window.location.reload()} variant="outline" size="sm">
-            Refresh Page
-          </Button>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="t-bring-in mt-5"
+          >
+            Try again
+          </button>
         </div>
       </div>
     );
@@ -102,346 +132,288 @@ export default function BillingPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-lg">
-        <Skeleton className="h-8 w-48 mb-6" />
-        <Skeleton className="h-44 mb-5" />
-        <Skeleton className="h-40" />
+      <div className={shell}>
+        <Head />
+        {/* Shaped like what is coming. A single centred bar told you nothing
+            about the page that was about to appear underneath it. */}
+        <div
+          aria-hidden
+          className="mt-8 grid gap-6 lg:grid-cols-[1.12fr_1fr] lg:gap-8"
+        >
+          <Skeleton className="h-[420px] rounded-[14px] opacity-40" />
+          <div className="space-y-6">
+            <Skeleton className="h-[180px] rounded-[14px] opacity-40" />
+            <Skeleton className="h-[150px] rounded-[14px] opacity-40" />
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-lg">
-      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <p className="stage-direction text-xs text-muted-foreground/70 mb-1">(the box office.)</p>
-        <h1 className="font-brand text-3xl sm:text-4xl font-semibold text-foreground">Billing</h1>
-        <p className="text-muted-foreground text-sm mt-0.5">
-          Manage your plan and usage.
-        </p>
-      </motion.div>
+    <div className={shell}>
+      <Head />
 
-      <div className="space-y-5">
-        {/* Current Plan Card */}
+      <div className="mt-8 grid gap-6 lg:grid-cols-[1.12fr_1fr] lg:gap-8 lg:items-start">
+        {/* --- The stub ---------------------------------------------------- */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="t-stub"
         >
-          <Card className="rounded-xl overflow-hidden">
-            <CardHeader className="py-4 px-5">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-lg">Current Plan</CardTitle>
-                <PlanBadge planName={subscription?.tier_name || "free"} />
-              </div>
-            </CardHeader>
-            <CardContent className="px-5 pb-4 pt-0 space-y-3">
-              {subscription?.tier_name !== "free" && (
+          <div className="t-stub__top">
+            <p className="t-stub__rail">
+              <span>admit one</span>
+              <span className="t-stub__serial">
+                {subscription?.status === "trialing" ? "on trial" : " "}
+              </span>
+            </p>
+
+            <h2 className="t-stub__tier">
+              {subscription?.tier_display_name ?? "Free"}
+            </h2>
+
+            <p className="t-stub__terms">
+              {isFree ? (
                 <>
-                  <div className="flex gap-6 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Billing</p>
-                      <p className="font-medium capitalize">{subscription?.billing_period}</p>
-                    </div>
-                    {subscription?.current_period_end && (
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                          {subscription.cancel_at_period_end ? "Ends" : "Renews"}
-                        </p>
-                        <p className="font-medium">{formatDate(subscription.current_period_end)}</p>
-                      </div>
-                    )}
-                  </div>
-                  {subscription?.cancel_at_period_end && (
-                    <Badge variant="secondary" className="rounded-md text-xs">
-                      Cancels at period end
-                    </Badge>
-                  )}
+                  the house seats. everything below is open to you, and the
+                  numbers are small on purpose.
+                </>
+              ) : (
+                <>
+                  {subscription?.billing_period ? `billed ${subscription.billing_period}` : null}
+                  {subscription?.billing_period && subscription?.current_period_end ? " · " : null}
+                  {subscription?.current_period_end
+                    ? `${subscription.cancel_at_period_end ? "ends" : "renews"} ${formatDate(
+                        subscription.current_period_end,
+                      )}`
+                    : null}
                 </>
               )}
+            </p>
 
-              {subscription?.tier_name === "free" && (
-                <p className="text-sm text-muted-foreground">
-                  Free plan. Upgrade for unlimited searches and bookmarks.
-                </p>
-              )}
-            </CardContent>
-            <CardFooter className="px-5 py-4 pt-0 border-t-0 flex-col items-start gap-3">
-              {subscription?.tier_name === "free" ? (
-                <div className="flex flex-col items-start gap-2 w-full">
-                  <Button asChild size="sm" className="gap-2 w-fit">
-                    <Link href="/pricing">
-                      <IconSparkles className="h-4 w-4" />
-                      Upgrade Plan
-                    </Link>
-                  </Button>
-                  {/* Self-serve free trial: deep-links checkout with the 14-day
-                      Plus trial pre-selected (2 weeks free, card on file). */}
-                  <Button asChild size="sm" variant="outline" className="gap-2 w-fit border-primary/40 text-primary hover:bg-primary/5 hover:text-primary">
-                    <Link href="/checkout?tier=plus&period=monthly&trial=1">
+            {subscription?.cancel_at_period_end && (
+              <span className="t-stub__ending">ends at the period</span>
+            )}
+
+            <div className="t-stub__actions">
+              {isFree ? (
+                <>
+                  <Link
+                    href="/checkout?tier=plus&period=monthly&trial=1"
+                    className="t-cta t-cta--paper t-cta--stub"
+                  >
+                    Two weeks of Plus, free
+                    <span className="t-cta__dot" aria-hidden>
                       <IconGift className="h-4 w-4" />
-                      Get 2 weeks of Plus, free
-                    </Link>
-                  </Button>
-                </div>
+                    </span>
+                  </Link>
+                  <Link href="/pricing" className="t-bring-in">
+                    <IconSparkles className="h-4 w-4" />
+                    See the plans
+                  </Link>
+                </>
               ) : subscription?.has_stripe_customer ? (
-                <Button
+                <button
+                  type="button"
                   onClick={handleManageSubscription}
                   disabled={isManagingSubscription}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-fit"
+                  className="t-bring-in disabled:opacity-60"
                 >
                   <IconCreditCard className="h-4 w-4" />
-                  Manage Subscription
-                </Button>
+                  {isManagingSubscription ? "Opening…" : "Manage subscription"}
+                </button>
               ) : (
-                <div className="text-sm text-muted-foreground">
-                  <p className="mb-2">You have access to <strong>{subscription?.tier_display_name}</strong> features.</p>
-                  <p className="text-xs">To manage billing, contact support or <Link href="/pricing" className="text-primary hover:underline">upgrade your plan</Link>.</p>
-                </div>
+                /* Comped accounts have no Stripe customer, so there is no
+                   portal to send them to. Saying so is kinder than a button
+                   that errors. */
+                <p className="t-stub__terms" style={{ marginTop: 0 }}>
+                  this one is on the house, so there is nothing to manage.{" "}
+                  <Link href="/pricing" className="t-note__ask">
+                    the plans
+                  </Link>
+                </p>
               )}
-            </CardFooter>
-          </Card>
-        </motion.div>
+            </div>
+          </div>
 
-        {/* Plan Quotas Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
-        >
-          <Card className="rounded-xl overflow-hidden">
-            <CardHeader className="py-4 px-5">
-              <CardTitle className="text-lg text-foreground">What&apos;s Included</CardTitle>
-              <CardDescription className="text-xs">
-                {subscription?.tier_name === "free"
-                  ? "Your free plan includes"
-                  : subscription?.tier_name === "plus"
-                  ? "Your Plus plan includes"
-                  : "Your Unlimited plan includes"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="px-5 pb-5 pt-0">
-              <div className="divide-y divide-border/50">
-                {(() => {
-                  const tier = subscription?.tier_name ?? "free";
-                  const quotas = tier === "unlimited"
-                    ? [
-                        { icon: IconSearch, label: "AI Searches", value: "Unlimited", desc: "/ mo" },
-                        { icon: IconBookmark, label: "Bookmarks", value: "Unlimited" },
-                        { icon: IconScript, label: "Scripts", value: "Unlimited" },
-                        { icon: IconMicrophone, label: "ScenePartner", value: "100", desc: "/ mo" },
-                        { icon: IconUpload, label: "Script Uploads", value: "Unlimited" },
-                      ]
-                    : tier === "plus"
-                    ? [
-                        { icon: IconSearch, label: "AI Searches", value: "150", desc: "/ mo" },
-                        { icon: IconBookmark, label: "Bookmarks", value: "Unlimited" },
-                        { icon: IconScript, label: "Scripts", value: "10" },
-                        { icon: IconMicrophone, label: "ScenePartner", value: "30", desc: "/ mo" },
-                        { icon: IconUpload, label: "Script Uploads", value: "10" },
-                      ]
-                    : [
-                        { icon: IconSearch, label: "AI Searches", value: "10", desc: "/ mo" },
-                        { icon: IconBookmark, label: "Bookmarks", value: "5" },
-                        { icon: IconScript, label: "Scripts", value: "3" },
-                        { icon: IconMicrophone, label: "ScenePartner", value: "1", desc: "trial" },
-                        { icon: IconUpload, label: "Script Uploads", value: "—", desc: "upgrade req." },
-                      ];
-                  return quotas.map(({ icon: Icon, label, value, desc }) => (
-                    <div key={label} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="text-sm">{label}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className={`text-sm font-semibold tabular-nums ${value === "Unlimited" ? "text-violet-600 dark:text-violet-400" : ""}`}>
-                          {value}
-                        </span>
-                        {desc && (
-                          <span className="text-xs text-muted-foreground">{desc}</span>
-                        )}
-                      </div>
-                    </div>
-                  ));
-                })()}
-              </div>
-              {subscription?.tier_name === "free" && (
-                <div className="mt-4 pt-3 border-t border-border/60">
-                  <p className="text-xs text-muted-foreground">
-                    Upgrade to Plus for more searches, scripts, and full ScenePartner access.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+          <div aria-hidden className="t-stub__perf" />
 
-        {/* Usage Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="rounded-xl overflow-hidden">
-            <CardHeader className="py-4 px-5">
-              <CardTitle className="text-lg text-foreground">Usage this month</CardTitle>
-              <CardDescription className="text-xs">Resets on the 1st</CardDescription>
-            </CardHeader>
-            <CardContent className="px-5 pb-5 pt-0 space-y-5">
-              <div>
-                <div className="flex items-center justify-between mb-2 text-sm">
-                  <span className="font-medium">AI Searches</span>
-                  <span className="text-muted-foreground tabular-nums">
-                    {usage?.ai_searches_used} / {usage?.ai_searches_limit === -1 ? "∞" : usage?.ai_searches_limit}
+          <div className="t-stub__bottom">
+            <p className="t-bill__head">what it opens</p>
+            <div className="mt-2">
+              {opens.map((row) => (
+                <div key={row.label} className="t-leader" data-none={row.none || undefined}>
+                  <span>{row.label}</span>
+                  <span aria-hidden className="t-leader__dots" />
+                  <span className="t-leader__value">
+                    {row.value}
+                    {row.unit && <em> {row.unit}</em>}
                   </span>
                 </div>
-                <Progress
-                  value={getUsagePercentage(
-                    usage?.ai_searches_used || 0,
-                    usage?.ai_searches_limit || 0
-                  )}
-                  className="h-2"
-                />
-              </div>
-
-              {usage && usage.scene_partner_limit > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-2 text-sm">
-                    <span className="font-medium">ScenePartner</span>
-                    <span className="text-muted-foreground tabular-nums">
-                      {usage.scene_partner_used} / {usage.scene_partner_limit}
-                    </span>
-                  </div>
-                  <Progress
-                    value={getUsagePercentage(usage.scene_partner_used, usage.scene_partner_limit)}
-                    className="h-2"
-                  />
-                </div>
-              )}
-
-              {usage && usage.craft_coach_limit > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-2 text-sm">
-                    <span className="font-medium">Craft Coach</span>
-                    <span className="text-muted-foreground tabular-nums">
-                      {usage.craft_coach_used} / {usage.craft_coach_limit}
-                    </span>
-                  </div>
-                  <Progress
-                    value={getUsagePercentage(usage.craft_coach_used, usage.craft_coach_limit)}
-                    className="h-2"
-                  />
-                </div>
-              )}
-
-              {usage &&
-                usage.ai_searches_limit !== -1 &&
-                getUsagePercentage(usage.ai_searches_used, usage.ai_searches_limit) > 80 && (
-                  <div className="bg-accent/10 border border-accent/20 rounded-lg p-4 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium">Running low on searches</p>
-                      <p className="text-xs text-muted-foreground">
-                        {Math.round(
-                          getUsagePercentage(usage.ai_searches_used, usage.ai_searches_limit)
-                        )}% used
-                      </p>
-                    </div>
-                    <Button asChild size="sm" variant="outline" className="rounded-full shrink-0">
-                      <Link href="/pricing">
-                        Upgrade
-                        <IconArrowUpRight className="h-3 w-3" />
-                      </Link>
-                    </Button>
-                  </div>
-                )}
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Request a discount */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
-          <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground leading-tight">
-                Student or teacher / school / coach?
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
-                Request a discount; we&apos;ll email you a code.
-              </p>
+              ))}
             </div>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="gap-1.5 shrink-0"
-              onClick={() => setPromoModalOpen(true)}
-            >
-              <IconGift className="h-4 w-4" />
-              Request a discount
-            </Button>
           </div>
         </motion.div>
 
-        {/* Billing History */}
-        {billingHistory.length > 0 && (
+        {/* --- The ledger --------------------------------------------------- */}
+        <div className="space-y-6">
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ duration: 0.4, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
+            className="t-bill"
           >
-            <Card className="rounded-xl overflow-hidden">
-              <CardHeader className="py-4 px-5">
-                <CardTitle className="text-lg text-foreground">Billing history</CardTitle>
-                <CardDescription className="text-xs">Invoices and payments</CardDescription>
-              </CardHeader>
-              <CardContent className="px-5 pb-5 pt-0">
-                <div className="divide-y divide-border/60">
-                  {billingHistory.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between gap-2 py-3 first:pt-0 last:pb-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{item.description || "Payment"}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(item.created_at)}</p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <p className="text-sm font-semibold tabular-nums">{formatPrice(item.amount_cents)}</p>
-                        <Badge
-                          variant={
-                            item.status === "succeeded"
-                              ? "default"
-                              : item.status === "failed"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                          className="rounded-md text-xs uppercase px-2"
-                        >
-                          {item.status}
-                        </Badge>
-                        {item.invoice_url && (
-                          <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
-                            <a href={item.invoice_url} target="_blank" rel="noopener noreferrer" title="Download invoice">
-                              <IconDownload className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <p className="t-bill__head">
+              this month
+              <span className="t-bill__aside">(resets on the 1st.)</span>
+            </p>
+
+            <div className="mt-4 space-y-4">
+              <Meter
+                label="searches"
+                used={usage?.ai_searches_used ?? 0}
+                limit={usage?.ai_searches_limit ?? 0}
+              />
+              {usage && usage.scene_partner_limit > 0 && (
+                <Meter
+                  label="scenepartner"
+                  used={usage.scene_partner_used}
+                  limit={usage.scene_partner_limit}
+                />
+              )}
+              {usage && usage.craft_coach_limit > 0 && (
+                <Meter
+                  label="craft coach"
+                  used={usage.craft_coach_used}
+                  limit={usage.craft_coach_limit}
+                />
+              )}
+            </div>
+
+            {usage && runningLow(usage) && (
+              <p className="t-note mt-5">
+                <span>running low on searches.</span>
+                <Link href="/pricing" className="t-note__ask">
+                  more of them
+                  <IconArrowUpRight className="inline h-3 w-3 align-[-1px]" />
+                </Link>
+              </p>
+            )}
           </motion.div>
-        )}
+
+          {billingHistory.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+              className="t-bill"
+            >
+              <p className="t-bill__head">receipts</p>
+              <div className="mt-3">
+                {billingHistory.map((item) => (
+                  <div key={item.id} className="t-receipt">
+                    <span className="t-receipt__what">
+                      {item.description || "Payment"}
+                      <span className="t-receipt__when">
+                        {formatDate(item.created_at)}
+                        {item.status !== "succeeded" ? ` · ${item.status}` : ""}
+                      </span>
+                    </span>
+                    <span
+                      className="t-receipt__sum"
+                      data-failed={item.status === "failed" || undefined}
+                    >
+                      {formatPrice(item.amount_cents)}
+                    </span>
+                    {item.invoice_url && (
+                      <a
+                        href={item.invoice_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Invoice for ${formatDate(item.created_at)}`}
+                        className="t-receipt__pdf"
+                      >
+                        <IconDownload className="h-4 w-4" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.18 }}
+            className="t-note px-1"
+          >
+            <span>student, teacher, coach or school?</span>
+            <button type="button" onClick={() => setPromoModalOpen(true)} className="t-note__ask">
+              ask for a discount
+            </button>
+          </motion.p>
+        </div>
       </div>
 
       <RequestPromoCodeModal open={promoModalOpen} onOpenChange={setPromoModalOpen} />
     </div>
   );
 }
+
+function Head() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+    >
+      <p className="t-slug">(the box office.)</p>
+      <h1 className="t-stage-title t-boxoffice-title">Billing</h1>
+    </motion.div>
+  );
+}
+
+/** One line of the meter. A limit of -1 is "no limit", which has no bar to
+ *  draw — a full track would read as "you are out". */
+function Meter({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const unlimited = limit === -1;
+  const pct = unlimited || limit <= 0 ? 0 : Math.min((used / limit) * 100, 100);
+  return (
+    <div>
+      <p className="t-meter__row">
+        <span>{label}</span>
+        <span className="t-meter__count">
+          {unlimited ? `${used} · no limit` : `${used} / ${limit}`}
+        </span>
+      </p>
+      {!unlimited && (
+        <div
+          className="t-meter"
+          role="progressbar"
+          aria-label={`${label} used this month`}
+          aria-valuenow={Math.round(pct)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <span className="t-meter__fill" style={{ width: `${pct}%` }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function runningLow(usage: UsageLimits) {
+  if (usage.ai_searches_limit === -1 || usage.ai_searches_limit <= 0) return false;
+  return usage.ai_searches_used / usage.ai_searches_limit > 0.8;
+}
+
+const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
+/** "14 oct 2026" — the Courier margin note, not "October 14, 2026". */
+const formatDate = (dateString: string) =>
+  new Date(dateString)
+    .toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+    .toLowerCase();

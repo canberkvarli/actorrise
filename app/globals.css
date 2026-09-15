@@ -6190,3 +6190,459 @@
   --t-cta-dot-bg: oklch(0.15 0.03 45);
   --t-cta-dot-fg: var(--t-gel);
 }
+
+/* ==========================================================================
+   MONOLOGUE v2 — the piece, three ways, with a margin
+   (design: "ActorRise Monologue v2.dc.html")
+
+   The prototype is light-only: every colour in it is a hardcoded oklch()
+   literal. Transcribing those would opt the whole page out of dark mode, which
+   is the one mistake this codebase has already made often enough to have a
+   rule about it. It does not need to be made again here, because the
+   prototype's palette IS `.theatre-tokens` — its page cream is --t-cream, its
+   ink is --t-ink, its yellow is --t-gel, its rules are --t-line-light. So the
+   components name tokens and this block decides what those tokens mean.
+   ========================================================================== */
+
+.theatre-monologue {
+  --page: var(--t-cream);
+  background: var(--page);
+  color: var(--t-text);
+}
+
+/* The paper flips; the design does not change. Same shape as the flip blocks
+   for .theatre-stage and .theatre-search above — the dark-ground text tokens
+   become the light ones, the light rules become dark ones, and the gel stops
+   being a lamp and becomes a colour you can read. */
+.dark .theatre-monologue {
+  --t-gel-ink: var(--t-gel);
+  --page: oklch(0.11 0.012 50);
+
+  --t-paper: oklch(0.19 0.018 52);
+  --t-paper-2: oklch(0.17 0.018 52);
+
+  --t-text: oklch(0.95 0.02 85);
+  --t-text-soft: oklch(0.93 0.02 85);
+  --t-muted-dark: oklch(0.75 0.02 62);
+  --t-muted-dark-2: oklch(0.68 0.02 62);
+  --t-faint: oklch(0.58 0.02 60);
+
+  --t-line-light: oklch(0.3 0.03 55);
+  --t-line-light-2: oklch(0.34 0.03 55);
+
+  --t-on-text: oklch(0.15 0.03 45);
+  --t-hard-shadow: oklch(0.07 0.01 45);
+}
+
+/* --- The one-sheet -------------------------------------------------------
+   Dark in BOTH themes, like the onboarding stage and the auth curtain. A
+   one-sheet is a lit poster, not a card, and a poster does not turn cream
+   because the room did.
+
+   It therefore redeclares the dark-ground tokens on ITSELF rather than
+   inheriting them, so `.dark .theatre-monologue` above cannot reach in and
+   flip its type to ink on ink. This is the failure that hit .theatre-stage —
+   --t-muted-light means "muted ON A DARK GROUND", and when the surface
+   under it learned to go light, five different labels stopped existing. Here
+   the ground is fixed, so the tokens can be too. */
+.t-m__sheet {
+  --t-text: oklch(0.98 0.01 85);
+  --t-text-soft: oklch(0.96 0.02 85);
+  --t-muted-dark: oklch(0.85 0.02 75);
+  --t-muted-dark-2: oklch(0.8 0.02 70);
+  --t-muted-light: oklch(0.7 0.02 62);
+  --t-muted-light-2: oklch(0.75 0.02 62);
+  --t-muted-light-3: oklch(0.8 0.02 70);
+  --t-faint: oklch(0.65 0.02 62);
+  --t-faint-2: oklch(0.5 0.02 60);
+  --t-line-light: oklch(0.35 0.03 55);
+  --t-line-light-2: oklch(0.3 0.03 55);
+  --t-gel-ink: var(--t-gel);
+  --t-hard-shadow: oklch(0.08 0.01 45);
+
+  background: var(--t-ink);
+  color: var(--t-text);
+}
+
+/* Grain. Keyed to the play's cloth underneath, so every piece gets a header of
+   its own without shipping a palette extractor. */
+.t-m__grain {
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* --- Faces ---------------------------------------------------------------
+   Written as the bare var, never `var(--x), Georgia, serif`. A font-family
+   with a var AND a fallback list is dropped whole by the build — silently, so
+   the rule simply stops existing and the element falls back to Montserrat.
+   The fallbacks live inside the token definitions instead. */
+.t-m__display { font-family: var(--t-display); font-weight: 400; letter-spacing: -0.02em; }
+.t-m__dir { font-family: var(--t-direction); font-style: italic; letter-spacing: 0.06em; }
+.t-m__mono { font-family: var(--t-direction); }
+.t-m__body { font-family: var(--t-body); }
+
+/* --- Motion --------------------------------------------------------------
+   Namespaced, because `rise` and `pop` are names a six-thousand-line
+   stylesheet is going to want again. */
+@keyframes t-m-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes t-m-pop { 0% { opacity: 0; transform: translateY(12px) scale(0.98); } 70% { opacity: 1; transform: translateY(-2px); } 100% { opacity: 1; transform: none; } }
+@keyframes t-m-flicker { 0%, 100% { opacity: 1; } 93% { opacity: 0.55; } 95% { opacity: 1; } 97% { opacity: 0.7; } }
+@keyframes t-m-breathe { 0%, 100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.3); opacity: 1; } }
+@keyframes t-m-wobble { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(-1.5deg); } }
+@keyframes t-m-barin { from { transform: translateY(120%); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.t-m-rise { animation: t-m-rise 0.6s var(--t-enter) both; }
+.t-m-pop { animation: t-m-pop 0.4s var(--t-spring) both; }
+.t-m-flicker { animation: t-m-flicker 8s linear infinite; }
+.t-m-breathe { animation: t-m-breathe 2s ease-in-out infinite; }
+.t-m-wobble { animation: t-m-wobble 8s ease-in-out infinite; }
+.t-m-barin { animation: t-m-barin 0.5s var(--t-enter) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-m-rise, .t-m-pop, .t-m-flicker, .t-m-breathe, .t-m-wobble, .t-m-barin {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+}
+
+/* --- Furniture -----------------------------------------------------------
+   Only what Tailwind cannot say without a literal. Deliberately no `display`,
+   `position` or width here: an unlayered rule outranks every Tailwind
+   utility, so a `display:flex` written at this level would beat `md:hidden`
+   and put a phone-only bar on a desktop. Layout stays in the markup. */
+
+/* The hard shadow the design casts under the working bar, the sides sheet and
+   the gate card. In ink, not in "the current text colour" — that flips. */
+.t-m__hard { box-shadow: 6px 6px 0 var(--t-hard-shadow); }
+.t-m__hard-lg { box-shadow: 8px 8px 0 var(--t-hard-shadow); }
+.t-m__hard-gel { box-shadow: 10px 10px 0 var(--t-gel); }
+
+/* The cover's gel offset plus the drop it sits in. */
+.t-m__cover { box-shadow: 8px 8px 0 var(--t-gel), 0 30px 70px -20px rgb(0 0 0 / 0.8); }
+
+/* The working bar fades the page out under itself rather than ending on a
+   rule, so a line of the piece scrolling under it dissolves. */
+.t-m__barfade {
+  background: linear-gradient(to bottom, var(--page) 82%, transparent);
+}
+
+/* The gate: the piece goes dim rather than stopping. */
+.t-m__gatefade {
+  background: linear-gradient(to bottom, transparent, var(--page) 45%);
+}
+
+.t-m__textarea {
+  font-family: var(--t-direction);
+  color: var(--t-text);
+  background: transparent;
+}
+.t-m__textarea::placeholder { color: var(--t-faint); }
+.t-m__textarea:focus { outline: none; }
+
+
+/* ==========================================================================
+   THE BOX OFFICE — /billing
+   ==========================================================================
+   It was five shadcn Cards stacked in a 512px column: a ribbon of boxes down
+   the middle of a 1440px screen, each with its own header, its own title and
+   its own rule, so the page was mostly the furniture around the four facts it
+   holds. What plan am I on, when does it bill, how much have I used, and what
+   have I been charged.
+
+   It is a ticket and a ledger now. The stub carries the plan and what the plan
+   opens; the ledger beside it carries the meter and the receipts. Two columns,
+   so nothing is stacked that does not have to be.
+   ========================================================================== */
+
+/* The page's own name, not a headline. `.t-stage-title` runs to 6rem because
+   on the rehearsal room it IS the work — here it would set "Billing" at 96px
+   over the thing you actually came to read. */
+.t-boxoffice-title {
+  font-size: clamp(2.25rem, 4.6vw, 3.25rem);
+  margin-top: 8px;
+}
+
+/* The stub. Paper on a hard ink shadow, torn across the middle the way a
+   ticket is torn: the plan above the perforation, what it admits you to
+   below. */
+.t-stub {
+  position: relative;
+  border: 1.5px solid var(--t-text);
+  border-radius: 14px;
+  background: var(--t-paper);
+  box-shadow: 7px 7px 0 var(--t-hard-shadow);
+  overflow: hidden;
+}
+.t-stub__top {
+  padding: 22px 24px 24px;
+}
+.t-stub__rail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark-2);
+}
+.t-stub__serial {
+  font-variant-numeric: tabular-nums;
+  color: var(--t-muted-light-2);
+}
+.t-stub__tier {
+  margin: 10px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(2.6rem, 7vw, 3.75rem);
+  line-height: 0.94;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-stub__terms {
+  margin: 12px 0 0;
+  font-family: var(--t-direction);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--t-muted-dark);
+}
+/* A plan that is ending is the one fact on this page someone needs to see
+   before they need anything else. */
+.t-stub__ending {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 3px 9px 2px;
+  border: 1px solid var(--t-gel-ink);
+  border-radius: 2px;
+  font-family: var(--t-direction);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--t-gel-ink);
+}
+.t-stub__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin-top: 22px;
+}
+/* The pill, at the size a ticket stub can carry. The hero's is 72px tall and
+   20px — on a panel this wide it would be the loudest thing on the page. */
+.t-cta--stub {
+  height: 52px;
+  padding: 0 7px 0 22px;
+  font-size: 15px;
+  gap: 12px;
+  box-shadow: none;
+}
+.t-cta--stub:hover {
+  box-shadow: none;
+  transform: scale(1.03) rotate(-1deg);
+}
+.t-cta--stub .t-cta__dot {
+  width: 38px;
+  height: 38px;
+}
+
+/* The tear. Two notches bitten out of the edges and a dashed line between
+   them — the whole reason this object reads as a ticket rather than a card. */
+.t-stub__perf {
+  position: relative;
+  height: 0;
+  border-top: 1.5px dashed var(--t-line-light);
+}
+.t-stub__perf::before,
+.t-stub__perf::after {
+  content: "";
+  position: absolute;
+  top: -11px;
+  width: 21px;
+  height: 21px;
+  border: 1.5px solid var(--t-text);
+  border-radius: 999px;
+  background: var(--page);
+}
+.t-stub__perf::before { left: -10px; }
+.t-stub__perf::after { right: -10px; }
+
+.t-stub__bottom {
+  padding: 20px 24px 22px;
+}
+
+/* A panel on the ledger side. Quieter than the stub: these are notes, not the
+   ticket. */
+.t-bill {
+  border: 1.5px solid var(--t-line-light);
+  border-radius: 14px;
+  background: var(--t-paper);
+  padding: 20px 22px 22px;
+}
+.t-bill__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark-2);
+}
+.t-bill__aside {
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--t-muted-light-2);
+}
+
+/* A cast list's dotted leader: label on the left, figure on the right, and the
+   run of dots that carries your eye across. This is what a programme does, and
+   it is why five quotas can sit in one block without five rows of chrome. */
+.t-leader {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+  font-family: var(--t-direction);
+  font-size: 13px;
+  color: var(--t-muted-dark);
+}
+.t-leader__dots {
+  flex: 1 1 auto;
+  min-width: 14px;
+  height: 1px;
+  transform: translateY(-3px);
+  background-image: radial-gradient(circle, var(--t-muted-light-2) 0.8px, transparent 0.9px);
+  background-size: 5px 1px;
+  background-repeat: repeat-x;
+}
+.t-leader__value {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--t-text);
+}
+.t-leader__value em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--t-muted-light-2);
+}
+/* What the plan does not include is still a fact about the plan, said quietly
+   rather than hidden. */
+.t-leader[data-none="true"] .t-leader__value {
+  font-weight: 400;
+  color: var(--t-muted-light-2);
+}
+
+/* The meter. A hairline track with the gel burning across it — a dimmer, not
+   a progress bar, and it does not flip to red at 80%: running low is
+   information, not an error. */
+.t-meter {
+  margin-top: 4px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--t-line-light-2);
+  overflow: hidden;
+}
+.t-meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--t-gel-ink);
+  transition: width 0.6s var(--t-enter);
+}
+.t-meter__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--t-direction);
+  font-size: 13px;
+  color: var(--t-muted-dark);
+}
+.t-meter__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--t-text);
+}
+
+/* A receipt. The charge is the fact; everything else is the margin. */
+.t-receipt {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px dashed var(--t-line-light-2);
+  font-family: var(--t-direction);
+  font-size: 13px;
+}
+.t-receipt:first-of-type { border-top: 0; }
+.t-receipt__what {
+  min-width: 0;
+  color: var(--t-muted-dark);
+}
+.t-receipt__when {
+  display: block;
+  font-size: 11px;
+  color: var(--t-muted-light-2);
+}
+.t-receipt__sum {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--t-text);
+}
+.t-receipt__sum[data-failed="true"] {
+  color: var(--t-gel-ink);
+}
+.t-receipt__pdf {
+  position: relative;
+  flex-shrink: 0;
+  color: var(--t-muted-light-2);
+  transition: color 0.2s;
+}
+.t-receipt__pdf::before {
+  /* 16px drawn, 44px to hit. */
+  content: "";
+  position: absolute;
+  inset: -14px;
+}
+.t-receipt__pdf:hover { color: var(--t-text); }
+
+/* The quiet offer at the foot of the page. It was a bordered card with a
+   filled button, which gave "are you a student?" the same weight as the plan
+   itself. */
+.t-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  font-family: var(--t-direction);
+  font-size: 13px;
+  color: var(--t-muted-dark);
+}
+.t-note__ask {
+  position: relative;
+  font-weight: 700;
+  color: var(--t-gel-ink);
+  border-bottom: 1px solid var(--t-gel-ink);
+  padding-bottom: 1px;
+  transition: opacity 0.2s;
+}
+.t-note__ask::before {
+  /* Drawn at ~23px tall, hit at 44. Nothing on the line moves. */
+  content: "";
+  position: absolute;
+  inset: -11px -8px;
+}
+.t-note__ask:hover { opacity: 0.72; }
+
+/* Dark: --t-hard-shadow is 0.07 against a 0.11 page, so the ticket's printed
+   offset was ink on ink and the object lost its edge. Cast darker than the
+   room instead. */
+.dark .t-stub {
+  box-shadow: 7px 7px 0 oklch(0.045 0.008 50);
+}
