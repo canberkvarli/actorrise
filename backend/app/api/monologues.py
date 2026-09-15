@@ -1568,6 +1568,56 @@ async def get_similar_monologues(
     ]
 
 
+@router.get("/{monologue_id:int}/from-play", response_model=List[MonologueResponse])
+async def get_others_from_play(
+    monologue_id: int,
+    limit: int = Query(6, le=20),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """The other speeches in this play.
+
+    Distinct from /similar, which searches the whole corpus for pieces that
+    feel alike. An actor reading Hedda is very often deciding between Hedda's
+    four speeches, not between Hedda and a Strindberg — and until now the only
+    way to see the rest of the play was to go back to search and type its name.
+
+    Ordered longest-first so the audition-length pieces lead; a two-line
+    fragment is rarely what somebody came to the play for.
+    """
+    monologue = db.query(Monologue).filter(Monologue.id == monologue_id).first()
+    if not monologue:
+        raise HTTPException(status_code=404, detail="Monologue not found")
+
+    results = (
+        db.query(Monologue)
+        .filter(
+            Monologue.play_id == monologue.play_id,
+            Monologue.id != monologue_id,
+            # Same gate the rest of the library reads through. Without it this
+            # is the one surface that hands back rows the corpus has retired.
+            Monologue.review_status.is_(None),
+        )
+        .order_by(Monologue.word_count.desc())
+        .limit(limit)
+        .all()
+    )
+
+    result_ids = [m.id for m in results]
+    favorite_ids: set[int] = set()
+    if result_ids:
+        favorites = db.query(MonologueFavorite.monologue_id).filter(
+            MonologueFavorite.user_id == current_user.id,
+            MonologueFavorite.monologue_id.in_(result_ids)
+        ).all()
+        favorite_ids = {f[0] for f in favorites}
+
+    return [
+        _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
+        for m in results
+    ]
+
+
 @router.get("/favorites/my", response_model=List[MonologueResponse])
 async def get_my_favorites(
     db: Session = Depends(get_db),

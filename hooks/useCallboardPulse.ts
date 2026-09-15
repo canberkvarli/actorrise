@@ -126,6 +126,41 @@ export function usePieceActivity(monologueId?: number | string): PieceActivity |
   }, [events, monologueId]);
 }
 
+/**
+ * The same activity as a roll, for the monologue margin's "in the house with
+ * this" — one row per actor, most recent first.
+ *
+ * Still no count. The same argument as usePieceActivity applies and applies
+ * harder to a list: naming three real people is a fact, and "48 actors have
+ * worked on this" is a number the pulse's 40-event window cannot possibly
+ * know. Deduped by person, so an actor who read a piece and then saved it is
+ * one name in the house rather than two.
+ */
+export function usePieceHouse(
+  monologueId?: number | string,
+  limit = 3,
+): FeedEvent[] {
+  const { events } = useCallboardPulse();
+  return useMemo(() => {
+    if (monologueId === undefined || monologueId === null) return [];
+    const id = Number(monologueId);
+    if (!Number.isFinite(id)) return [];
+
+    const seen = new Set<string>();
+    const roll: FeedEvent[] = [];
+    for (const e of events) {
+      if (e.payload.monologue_id !== id) continue;
+      if (!["viewed", "bookmarked", "shared"].includes(e.event_type)) continue;
+      const who = e.name || `#${e.id}`;
+      if (seen.has(who)) continue;
+      seen.add(who);
+      roll.push(e);
+      if (roll.length >= limit) break;
+    }
+    return roll;
+  }, [events, monologueId, limit]);
+}
+
 /** The most recent save by anyone — what an empty shelf is for, demonstrated by
     a real person rather than explained in instructional copy. */
 export function useLatestSave(): FeedEvent | null {

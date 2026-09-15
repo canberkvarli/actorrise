@@ -4,61 +4,52 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useParams, useRouter, notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  IconBookmark,
-  IconArrowLeft,
-  IconPlayerPlay,
-  IconEdit,
-  IconBulb,
-  IconBulbFilled,
-  IconNote,
-  IconRepeat,
-} from "@tabler/icons-react";
+import { IconExternalLink } from "@tabler/icons-react";
 import { Monologue } from "@/types/actor";
 import api from "@/lib/api";
 import { trackEvent } from "@/lib/events";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  MonologueHeader,
-  MonologueOneSheet,
-  MonologueBody,
-  MonologueFooter,
-} from "@/components/monologue/MonologueDetailContent";
 import { GhostLightSketch } from "@/components/brand/sketches";
 import { CutEditor } from "@/components/monologue/CutEditor";
-import { MonologueWall } from "@/components/monologue/MonologueWall";
-import { ExportSheet } from "@/components/monologue/ExportSheet";
 import { useSaveNotes } from "@/hooks/useCollectionMeta";
 import { useBeats, useSaveBeat } from "@/hooks/useBeats";
 import { BeatReader, BEAT_LINE_ATTR } from "@/components/monologue/BeatReader";
 import { beatUnits } from "@/lib/beatUnits";
 import { useToggleMemorized } from "@/hooks/useMemorized";
 import { useAuth } from "@/lib/auth";
-import { InstantTooltip } from "@/components/ui/instant-tooltip";
 import { EditMonologueModal } from "@/components/admin/EditMonologueModal";
 import type { EditMonologueBody } from "@/components/admin/EditMonologueModal";
 import { toast } from "sonner";
 
+import { theatreFontVars } from "@/lib/fonts/theatre";
+import { OneSheet } from "@/components/monologue/v2/OneSheet";
+import { WorkingBar, type Mode } from "@/components/monologue/v2/WorkingBar";
+import { ReadView } from "@/components/monologue/v2/ReadView";
+import { SidesSheet } from "@/components/monologue/v2/SidesSheet";
+import { MarginRail } from "@/components/monologue/v2/MarginRail";
+import { RunBar } from "@/components/monologue/v2/RunBar";
+import {
+  OthersFromPlay,
+  SameRegister,
+} from "@/components/monologue/v2/RelatedShelves";
+import { useProfileFormData } from "@/hooks/useDashboardData";
+import { computeProfileMatch } from "@/lib/profileMatch";
+import { estimateDurationSeconds } from "@/lib/estimateDuration";
+import { applyCut } from "@/lib/monologueSegments";
+
 /**
- * One piece, three ways of looking at it.
+ * One piece, three ways of looking at it — with a margin.
  *
- * This page used to stack four cards, and three of them rendered the whole
- * monologue again: once to read, once inside the cut editor, once inside the
- * export preview. On anything longer than a minute you scrolled past the same
- * speech three times to reach the bottom.
+ * v1 stacked everything in one 3xl column: the piece, then your notes, then
+ * the provenance, then nothing. Every fact about the monologue that wasn't the
+ * monologue had to queue up underneath it, which meant the two things an actor
+ * decides on — how often a room hears this, and whether to run it — sat below
+ * three screens of the speech they were deciding about.
  *
- * Reading it, cutting it, and printing it aren't separate features — they're
- * three views of the same text. So the text renders once, on one surface, and
- * the mode switch above it changes what you can do to it.
+ * So the page is a page now: the piece holds the column, and what's true about
+ * it holds the margin beside it. On a phone there is no margin, so the margin's
+ * contents fall under the piece and the one action moves to a run bar.
  */
-
-type Mode = "read" | "cut" | "copy";
-
-const MODES: { id: Mode; label: string; hint: string }[] = [
-  { id: "read", label: "Read", hint: "The piece as written" },
-  { id: "cut", label: "Cut", hint: "Trim it to an audition length" },
-  { id: "copy", label: "Copy", hint: "Print or copy your sides" },
-];
 
 export default function MonologueDetailPage() {
   const params = useParams();
@@ -72,6 +63,7 @@ export default function MonologueDetailPage() {
   const [notes, setNotes] = useState("");
   const [memorized, setMemorized] = useState(false);
   const [mode, setMode] = useState<Mode>("read");
+  const [textSize, setTextSize] = useState(1);
   const [editMonologueId, setEditMonologueId] = useState<number | null>(null);
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
   const saveNotes = useSaveNotes();
@@ -91,6 +83,32 @@ export default function MonologueDetailPage() {
     () => (monologue ? beatUnits(monologue.text, monologue.text_segments) : []),
     [monologue],
   );
+
+  /* The `your lane` mark, which until now only ever appeared in search results
+     — so a finished profile paid off on the list and then went quiet on the
+     page the actor actually reads. Same computation, same threshold. */
+  const { data: profileData } = useProfileFormData();
+  const laneMatch = useMemo(
+    () => (monologue ? computeProfileMatch(monologue, profileData) : null),
+    [monologue, profileData],
+  );
+  const inLane = Boolean(laneMatch && laneMatch.score >= 1.5 && laneMatch.reasons.length > 0);
+
+  /* What the margin's "your marks" reads from. The cut is stored as indices
+     into monologueSegments(), so the length has to be measured through
+     applyCut rather than by slicing the raw text. */
+  const fullSeconds =
+    monologue?.estimated_duration_seconds ||
+    estimateDurationSeconds(monologue?.text ?? "");
+  const hasCut =
+    monologue?.cut_start_line != null && monologue?.cut_end_line != null;
+  const cutSeconds = useMemo(() => {
+    if (!monologue || !hasCut) return fullSeconds;
+    return estimateDurationSeconds(
+      applyCut(monologue.text, monologue.cut_start_line, monologue.cut_end_line),
+    );
+  }, [monologue, hasCut, fullSeconds]);
+
   // Saving used to be a silent bookmark: 889 opens produced 45 saves, and the
   // things that turn a save into a working piece (a cut, a note) sat two scrolls
   // down where ~nobody found them. On save we now surface the next step inline,
@@ -344,217 +362,67 @@ export default function MonologueDetailPage() {
     );
   }
 
-  return (
-    /* Bottom padding clears the floating Rehearse pill. Without it the pill
-       parked on top of the notes panel, which is the last thing on the page. */
-    <div className="pb-40 lg:pb-28">
-      {/* The one-sheet runs full-bleed, so it sits outside the reading
-          container rather than inside it. Back rides on the banner — a bordered
-          button above the header would be the first thing you see, over the
-          piece it belongs to — but it is a row inside the header, not a float
-          over it. Floating meant it landed on the poster's top-left corner.
+  const annotatable = Boolean(user) && !monologue.paywalled && units.length > 0;
 
-          Plays take the one-sheet too. They have no poster, so the cover is
-          printed from the row — see PlayCover. Giving a play the plain
-          typographic header instead made every film feel like the real page
-          and every play like the fallback, which is backwards for a
-          monologue library built on plays. */}
-      <MonologueOneSheet
+  return (
+    /* theatre-tokens AND the faces on the same element. Binding the tokens
+       without theatreFontVars leaves every `font-family: var(--t-display)`
+       resolving to nothing, and the build drops the whole declaration rather
+       than falling back — which is how search silently rendered its entire
+       theatre surface in Montserrat. */
+    <div
+      className={`theatre-monologue theatre-tokens ${theatreFontVars} t-m__body min-h-screen pb-40 lg:pb-24`}
+    >
+      <OneSheet
         monologue={monologue}
-        backSlot={
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="-ml-1 inline-flex items-center gap-1.5 rounded-full px-1 py-1 text-sm text-white/70 drop-shadow transition-colors hover:text-white"
-          >
-            <IconArrowLeft className="h-4 w-4" />
-            Back
-          </button>
-        }
+        inLane={inLane}
+        laneReason={laneMatch?.reasons[0]}
+        onBack={() => router.back()}
       />
 
-      <div className="container mx-auto max-w-3xl px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      >
+      <main className="mx-auto w-full max-w-[1000px] px-5 sm:px-6">
+        <div ref={anchorRef} aria-hidden />
 
-        {/* The working bar. It follows you down the piece so the one thing you
-            came to do — run it — is never scrolled away, and so switching how
-            you're looking at the text doesn't mean scrolling back up.
-            top-16/sm:top-20 clears the platform nav (65px / 81px). */}
-        <div ref={anchorRef} aria-hidden className="mt-6" />
-        <div className="sticky top-16 z-30 -mx-4 border-y border-border/60 bg-background/95 px-4 py-2.5 backdrop-blur-md sm:top-20">
-          <div className="flex items-center justify-between gap-3">
-            <div
-              role="tablist"
-              aria-label="How to view this piece"
-              className="flex items-center gap-0.5"
-            >
-              {/* Cut and Copy work on `text`, which is a teaser once the free
-                  reads are spent. Offering them would hand the actor a
-                  forty-word "piece" to trim and export as if it were real. */}
-              {(monologue.paywalled ? MODES.filter((m) => m.id === "read") : MODES).map((m) => (
-                <button
-                  key={m.id}
-                  role="tab"
-                  aria-selected={mode === m.id}
-                  title={m.hint}
-                  onClick={() => selectMode(m.id)}
-                  className={`relative rounded-md px-3 py-1.5 text-sm transition-colors ${
-                    mode === m.id
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {mode === m.id && (
-                    <motion.span
-                      layoutId="monologue-mode-pill"
-                      className="absolute inset-0 rounded-md bg-muted"
-                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                    />
-                  )}
-                  <span className="relative">{m.label}</span>
-                </button>
-              ))}
-            </div>
+        <WorkingBar
+          mode={mode}
+          onModeChange={selectMode}
+          readOnly={monologue.paywalled}
+          noteCount={beatMap.size}
+          hasNotes={Boolean(notes.trim())}
+          onNote={openNote}
+          onMemorize={() => router.push(`/monologue/${monologue.id}/memorize`)}
+          memorized={memorized}
+          onToggleMemorized={handleToggleMemorized}
+          saved={isFavorited}
+          onToggleSaved={toggleFavorite}
+          onEdit={
+            user?.is_moderator ? () => setEditMonologueId(monologue.id) : undefined
+          }
+        />
 
-            <div className="flex flex-shrink-0 items-center gap-1.5">
-              {/* Opens a note on the line you are looking at — see openNote.
-                  This used to jump to the box at the foot of the page, which
-                  is the trip the margin was built to remove. */}
-              <InstantTooltip
-                label={
-                  beatMap.size > 0
-                    ? `Your notes · ${beatMap.size}`
-                    : "Note this line"
-                }
+        {/* The stage and the margin. 300px is the width of a margin you can
+            actually read a sentence in; below lg it collapses and the rail's
+            contents fall under the piece. */}
+        <div className="mt-7 grid items-start gap-x-14 gap-y-10 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <article className="min-w-0">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={mode}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               >
-                <button
-                  type="button"
-                  onClick={openNote}
-                  aria-label="Note this line"
-                  className={`rounded-full p-2 transition-colors hover:bg-muted ${
-                    beatMap.size > 0 || notes.trim()
-                      ? "text-foreground"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  <IconNote className="h-5 w-5" />
-                </button>
-              </InstantTooltip>
-
-              {/* Memorize, moved off the Rehearse pill. A drill is a way of
-                  working the text, which is what this row is. */}
-              {!monologue.paywalled && (
-                <InstantTooltip label="Memorize · line by line">
-                  <button
-                    type="button"
-                    onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
-                    aria-label="Memorize line by line"
-                    className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  >
-                    <IconRepeat className="h-5 w-5" />
-                  </button>
-                </InstantTooltip>
-              )}
-
-              {/* Off-book status. Distinct from the "Memorize" drill below —
-                  this one only records where you are, it doesn't go anywhere. */}
-              <InstantTooltip label={memorized ? "Off book — tap to unmark" : "Mark as off book"}>
-              <button
-                type="button"
-                onClick={handleToggleMemorized}
-                aria-pressed={memorized}
-                aria-label={memorized ? "Off book — tap to unmark" : "Mark as off book"}
-                className="rounded-full p-2 transition-colors hover:bg-muted"
-              >
-                {memorized ? (
-                  <IconBulbFilled className="h-5 w-5 text-amber-400 drop-shadow-[0_0_7px_rgba(251,191,36,0.6)]" />
-                ) : (
-                  <IconBulb className="h-5 w-5 text-muted-foreground/50 hover:text-muted-foreground" />
-                )}
-              </button>
-              </InstantTooltip>
-
-              {/* The retention lever. Savers return 2.1x more, so the collection
-                  control keeps its place right beside the primary action. */}
-              {/* Last icon in the bar, so its label hangs off the right edge of
-                  the reading column — and on a phone that edge is the screen.
-                  Right-aligned, it can only grow inwards. */}
-              <InstantTooltip
-                align="end"
-                label={isFavorited ? "In your collection" : "Save to collection"}
-              >
-              <button
-                type="button"
-                onClick={toggleFavorite}
-                aria-pressed={isFavorited}
-                aria-label={isFavorited ? "In your collection" : "Add to collection"}
-                /* Was text-accent, which is a *surface* token — the pale blue a
-                   panel is painted with in light, and a near-black warm grey in
-                   dark. So a saved bookmark was invisible in both themes for the
-                   same reason: it was drawing an icon in a background colour.
-                   Teal is what Collection already means everywhere else (the
-                   collection toggle on /monologues, the "your lane" mark), and
-                   it leaves orange to the one primary action. */
-                className={`rounded-full p-2 transition-colors hover:bg-muted ${
-                  isFavorited
-                    ? "text-teal-600 dark:text-teal-400"
-                    : "text-muted-foreground"
-                }`}
-              >
-                <IconBookmark className={`h-5 w-5 ${isFavorited ? "fill-current" : ""}`} />
-              </button>
-              </InstantTooltip>
-
-              {user?.is_moderator && (
-                <button
-                  type="button"
-                  onClick={() => setEditMonologueId(monologue.id)}
-                  className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted"
-                  aria-label="Edit monologue"
-                  title="Edit monologue"
-                >
-                  <IconEdit className="h-5 w-5" />
-                </button>
-              )}
-
-              {/* One primary action — Rehearse -> the /work stage. Self-tape entry
-                  point pulled 2026-08-27: 0 uses across 649 users, and it
-                  cluttered the core flow we lose people in. The /audition
-                  recorder + tapes API stay intact, just unlinked. */}
-              {/* Rehearse has left this strip — see the floating pill at the
-                  foot of the page. The bar was carrying three different kinds
-                  of thing at once: ways to *view* the piece (tabs), things that
-                  are *true* of it (off book, saved), and the one thing to *do*
-                  with it. Three grammars in one row, and on a phone the action
-                  was the part that got pushed off the right edge. */}
-            </div>
-          </div>
-        </div>
-
-        {/* The stage: one text, whichever way you're currently working it. */}
-        <div className="pt-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={mode}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            >
-              {mode === "read" && (
-                <>
-                  {/* Signed out, or nothing to annotate: the plain reader. The
-                      margin only appears for someone who has somewhere to put
-                      a note, and a paywalled `text` is a forty-word teaser. */}
-                  <MonologueBody
+                {mode === "read" && (
+                  <ReadView
                     monologue={monologue}
-                    measured
+                    size={textSize}
+                    onSizeChange={setTextSize}
                     textSlot={
-                      user && !monologue.paywalled && units.length > 0 ? (
+                      /* Signed out, or nothing to annotate: the plain reader.
+                         The margin only appears for someone who has somewhere
+                         to put a note, and a paywalled `text` is a teaser. */
+                      annotatable ? (
                         <div ref={beatsWrapRef}>
                           <BeatReader
                             units={units}
@@ -586,119 +454,195 @@ export default function MonologueDetailPage() {
                       ) : undefined
                     }
                   />
-                  {monologue.paywalled && <MonologueWall />}
-                </>
-              )}
+                )}
 
-              {/* Cut and Copy hold the same reading measure as Read, so the piece
-                  doesn't jump width every time you change what you're doing to it. */}
-              {mode === "cut" && (
-                <div className="mx-auto max-w-[62ch]">
-                  <CutEditor
-                    embedded
-                    monologue={monologue}
-                    onSaved={(start, end) =>
-                      setMonologue((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              cut_start_line: start ?? undefined,
-                              cut_end_line: end ?? undefined,
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-              )}
-              {mode === "copy" && (
-                <div className="mx-auto max-w-[62ch]">
-                  <ExportSheet embedded monologue={monologue} />
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+                {/* Cut and Copy hold the same reading measure as Read, so the
+                    piece doesn't jump width every time you change what you're
+                    doing to it. */}
+                {mode === "cut" && (
+                  <div className="max-w-[62ch]">
+                    <CutEditor
+                      embedded
+                      monologue={monologue}
+                      onSaved={(start, end) =>
+                        setMonologue((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                cut_start_line: start ?? undefined,
+                                cut_end_line: end ?? undefined,
+                              }
+                            : prev,
+                        )
+                      }
+                    />
+                  </div>
+                )}
+                {mode === "copy" && <SidesSheet monologue={monologue} />}
+              </motion.div>
+            </AnimatePresence>
 
-        {/* Saving is only the first half of a keepable piece. The moment it
-            lands, offer the next step — cut, note, or run — instead of leaving
-            the actor on a silent bookmark with nothing to come back for. */}
-        <AnimatePresence>
-          {justSaved && isFavorited && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-10 border-l-2 border-accent/50 bg-accent/5 p-4">
-                <p className="text-sm font-semibold">Saved to your collection.</p>
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  Make it yours — cut it to time, note your beats, or run it.
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={openCut}>
-                    Cut it to time
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={openNote}>
-                    Mark a beat
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => router.push(`/monologue/${monologue.id}/work`)}
+            {/* Saving is only the first half of a keepable piece. The moment it
+                lands, offer the next step — cut, note, or run — instead of
+                leaving the actor on a silent bookmark. */}
+            <AnimatePresence>
+              {justSaved && isFavorited && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div
+                    className="mt-9 border-l-2 px-5 py-4"
+                    style={{
+                      borderColor: "var(--t-orange-deep)",
+                      background:
+                        "color-mix(in oklab, var(--t-orange-deep) 7%, transparent)",
+                    }}
                   >
-                    Rehearse it
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    <p className="t-m__display m-0 text-[22px] leading-[1.1]">
+                      Saved to your collection.
+                    </p>
+                    <p
+                      className="m-0 mt-1 text-sm"
+                      style={{ color: "var(--t-muted-dark)" }}
+                    >
+                      Make it yours. Cut it to time, mark a beat, or run it.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={openCut}
+                        className="h-10 rounded-full border-[1.5px] px-4 text-[13px] font-bold"
+                        style={{ borderColor: "var(--t-text)" }}
+                      >
+                        Cut it to time
+                      </button>
+                      <button
+                        type="button"
+                        onClick={openNote}
+                        className="h-10 rounded-full border-[1.5px] px-4 text-[13px] font-bold"
+                        style={{ borderColor: "var(--t-text)" }}
+                      >
+                        Mark a beat
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/monologue/${monologue.id}/work`)}
+                        className="h-10 rounded-full px-4 text-[13px] font-bold"
+                        style={{
+                          background: "var(--t-cta-bg)",
+                          color: "var(--t-cta-fg)",
+                        }}
+                      >
+                        Rehearse it
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-        {/* Your marks on the piece. Not a card — it belongs to the monologue
-            above it, so it reads as margin notes rather than another feature.
-
-            Reachable from the working bar as well, which is where it is
-            actually wanted: this sits below the whole piece, so noting a beat
-            meant scrolling past every line to find it and scrolling back. */}
-        <section ref={notesSectionRef} className="mt-12 border-t border-border/60 pt-6">
-          <div className="flex items-baseline justify-between gap-3">
-            {/* Retitled once the margin existed. "Your notes" was true of both
-                and told you nothing about which one you were looking at; this
-                is the note about the piece, the margin holds the notes about
-                its lines. */}
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              On the whole piece
-            </h2>
-            {/* Was silent. It saved on blur only, so a note typed and then
-                abandoned — closing the tab, hitting Rehearse — was simply
-                lost, with nothing on screen ever having claimed otherwise. */}
-            <span
-              aria-live="polite"
-              className={`font-typewriter text-[11px] tracking-wide transition-opacity duration-300 ${
-                notesState === "idle" ? "opacity-0" : "opacity-70"
-              } ${notesState === "saved" ? "text-teal-600 dark:text-teal-400" : "text-muted-foreground"}`}
+            {/* The note that is about the piece rather than about a line. The
+                margin holds the notes about its lines. */}
+            <section
+              ref={notesSectionRef}
+              className="mt-14 border-t-[1.5px] border-dashed pt-6"
+              style={{
+                borderColor: "color-mix(in oklab, var(--t-text) 25%, transparent)",
+              }}
             >
-              {notesState === "saving" ? "saving…" : notesState === "saved" ? "saved" : ""}
-            </span>
-          </div>
-          <textarea
-            ref={notesRef}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            onFocus={noteNotesFocused}
-            onBlur={flushNotes}
-            placeholder="Who you're talking to, what you want, why now…"
-            rows={4}
-            className="mt-3 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </section>
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="t-m__display m-0 text-[26px] leading-[1.1]">
+                  On the{" "}
+                  <em className="italic" style={{ color: "var(--t-orange-deep)" }}>
+                    whole piece.
+                  </em>
+                </h2>
+                {/* Was silent. It saved on blur only, so a note typed and then
+                    abandoned — closing the tab, hitting Rehearse — was simply
+                    lost, with nothing on screen ever claiming otherwise. */}
+                <span
+                  aria-live="polite"
+                  className="t-m__dir text-[11px] transition-opacity duration-300"
+                  style={{
+                    opacity: notesState === "idle" ? 0 : 1,
+                    color:
+                      notesState === "saved"
+                        ? "var(--t-gel-ink)"
+                        : "var(--t-faint)",
+                  }}
+                >
+                  {notesState === "saving" ? "(saving.)" : notesState === "saved" ? "(saved.)" : ""}
+                </span>
+              </div>
+              <textarea
+                ref={notesRef}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                onFocus={noteNotesFocused}
+                onBlur={flushNotes}
+                placeholder="Who you're talking to, what you want, why now…"
+                rows={4}
+                className="t-m__textarea mt-3.5 w-full resize-y rounded-2xl border-[1.5px] px-4 py-3.5 text-[15px] leading-[1.7]"
+                style={{
+                  borderColor: "var(--t-line-light)",
+                  background: "var(--t-paper)",
+                }}
+              />
+            </section>
 
-        <div className="mt-10">
-          <MonologueFooter
-            monologue={monologue}
-            onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
-          />
+            {/* Provenance. Where the text came from, said plainly, because the
+                first question a working actor asks of a library is whether it
+                made any of this up. */}
+            <div
+              className="mt-7 flex flex-wrap items-center justify-between gap-x-5 gap-y-2.5 border-t pt-4 text-[13px]"
+              style={{
+                borderColor: "var(--t-line-light)",
+                color: "var(--t-muted-dark-2)",
+              }}
+            >
+              <p className="m-0 max-w-[56ch]">
+                {monologue.word_count > 0 ? `${monologue.word_count} words · ` : ""}
+                published text
+                {monologue.translator ? `, ${monologue.translator} translation` : ""}.
+                Nothing here is generated.
+              </p>
+              {monologue.source_url && (
+                <a
+                  href={monologue.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="t-m__dir inline-flex items-center gap-1 text-[12px] underline underline-offset-4"
+                >
+                  {monologue.source_type === "film" || monologue.source_type === "tv"
+                    ? "view script"
+                    : "view full play"}
+                  <IconExternalLink className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </div>
+
+            <OthersFromPlay monologue={monologue} />
+            <SameRegister monologue={monologue} />
+          </article>
+
+          {/* sticky, not fixed: a fixed child of an ancestor that gets a
+              transform anchors to the ancestor instead of the viewport, and
+              the platform header takes one when it hides on scroll. */}
+          <div className="lg:sticky lg:top-[150px]">
+            <MarginRail
+              monologue={monologue}
+              beatCount={beatMap.size}
+              memorized={memorized}
+              cutSeconds={cutSeconds}
+              fullSeconds={fullSeconds}
+              hasCut={Boolean(hasCut)}
+              outOfReads={monologue.paywalled}
+              onRehearse={() => router.push(`/monologue/${monologue.id}/work`)}
+            />
+          </div>
         </div>
 
         <EditMonologueModal
@@ -760,38 +704,10 @@ export default function MonologueDetailPage() {
           }}
           isSaving={editMonologueSaving}
         />
-      </motion.div>
-      </div>
+      </main>
 
-      {/* The one thing you came here to do, always in reach.
-          It sits above the platform's bottom nav rather than becoming a second
-          bar beside it — 88px on a phone clears the 65px tab strip, 24px on
-          desktop where there is no strip. Its own token pair: --primary stays
-          bright so orange *text* carries on a dark page, while a filled button
-          keeps the brand orange and a white label, because a large block does
-          not need the lift and a black word stamped in an orange pill is what
-          the brightened fill forces. */}
       {!monologue.paywalled && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-          className="pointer-events-none fixed inset-x-0 bottom-[88px] z-40 flex justify-center px-4 lg:bottom-6"
-        >
-          {/* One action, not two. Pairing Rehearse with Off book put a second
-              button of near-equal weight against the one thing this page is
-              for, and the two are not siblings anyway: one runs the piece out
-              loud, the other is a drill. Memorize lives in the working bar
-              with the other ways of handling the text. */}
-          <button
-            type="button"
-            onClick={() => router.push(`/monologue/${monologue.id}/work`)}
-            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-primary-solid px-6 py-3 text-sm font-semibold text-primary-solid-foreground shadow-lg shadow-black/20 transition-transform hover:scale-[1.03] active:scale-95"
-          >
-            <IconPlayerPlay className="h-4 w-4" />
-            Rehearse
-          </button>
-        </motion.div>
+        <RunBar onRehearse={() => router.push(`/monologue/${monologue.id}/work`)} />
       )}
     </div>
   );

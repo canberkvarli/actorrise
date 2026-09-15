@@ -47,7 +47,7 @@ export function BeatReader({
   onOpenChange,
 }: BeatReaderProps) {
   return (
-    <div className="mx-auto max-w-[62ch]">
+    <div className="max-w-[62ch]">
       {units.map((u) => (
         <BeatLine
           key={u.index}
@@ -87,54 +87,23 @@ function BeatLine({
     <div
       {...{ [BEAT_LINE_ATTR]: unit.index }}
       className={cn(
-        "group relative pl-11 pr-1",
+        "group relative",
         // Blocks breathe; units inside a block sit together, the way sentences
         // of one speech do on a page.
         unit.startsBlock ? "mt-5 first:mt-0" : "mt-1",
       )}
     >
-      {/* The gutter. A rule per line rather than a mark only where a note
-          already is: an empty margin has to look writable, or nobody finds it.
-          Faint until you go near it — and on touch, where there is no hover to
-          go near it with, faint but always there. */}
-      <button
-        type="button"
-        onClick={() => (open ? onClose() : onOpen())}
-        disabled={disabled}
-        aria-label={marked ? `Edit note on this line` : `Note this line`}
-        aria-expanded={open}
-        className={cn(
-          "absolute left-0 top-0 flex h-7 w-8 items-center justify-center transition-opacity",
-          disabled && "pointer-events-none opacity-0",
-        )}
-      >
-        <span
-          aria-hidden
-          className={cn(
-            "block w-[3px] rounded-full transition-all",
-            marked
-              ? "h-5 bg-primary"
-              : "h-4 bg-border opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-60",
-          )}
-        />
-        {!marked && (
-          <IconPlus
-            aria-hidden
-            className="absolute h-3 w-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-70 group-focus-within:opacity-70"
-          />
-        )}
-      </button>
-
+      <div className="flex items-start gap-3 pr-1">
       {/* The line itself stays plain text — not a button — so it can still be
           selected and copied, which is half of what people do with a side. */}
       <div
         onDoubleClick={() => !disabled && onOpen()}
         className={cn(
-          "transition-colors",
-          unit.kind === "direction" && "italic text-muted-foreground/70",
-          unit.kind === "interjection" && "text-muted-foreground",
-          marked && "text-foreground",
+          "min-w-0 flex-1 transition-colors",
+          unit.kind === "direction" && "italic opacity-70",
+          unit.kind === "interjection" && "opacity-80",
         )}
+        style={{ textWrap: "pretty" }}
       >
         {unit.kind === "interjection" && unit.speaker && (
           <span className="mr-1.5 text-sm font-semibold not-italic">
@@ -142,6 +111,34 @@ function BeatLine({
           </span>
         )}
         <MonologueText text={unit.text} />
+      </div>
+
+      {/* The mark, in the margin where a pencil would go. Faint until you go
+          near it — and on touch, where there is no hover to go near it with,
+          faint but always there. That guard is load-bearing: Tailwind wraps
+          group-hover in @media(hover:hover), so a hover-only control is a
+          control that does not exist for every phone user. */}
+      <button
+        type="button"
+        onClick={() => (open ? onClose() : onOpen())}
+        disabled={disabled}
+        aria-label={marked ? "Edit note on this line" : "Note this line"}
+        aria-expanded={open}
+        className={cn(
+          "mt-1 flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-full border-[1.5px] transition-all duration-200",
+          disabled && "pointer-events-none opacity-0",
+          !marked &&
+            !open &&
+            "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-50",
+        )}
+        style={{
+          borderColor: marked ? "var(--t-text)" : "var(--t-line-light)",
+          background: marked ? "var(--t-gel)" : "transparent",
+          color: marked ? "var(--t-text)" : "var(--t-faint)",
+        }}
+      >
+        <IconPlus aria-hidden className="h-3 w-3" strokeWidth={2.6} />
+      </button>
       </div>
 
       <AnimatePresence initial={false}>
@@ -163,7 +160,11 @@ function BeatLine({
               <button
                 type="button"
                 onClick={onOpen}
-                className="mt-1.5 block w-full border-l-2 border-primary/50 py-0.5 pl-3 text-left font-sans text-[13px] leading-relaxed text-muted-foreground transition-colors hover:text-foreground"
+                className="mt-1.5 block w-full border-l-2 py-1 pl-3 text-left font-sans text-[13px] leading-relaxed transition-colors"
+                style={{
+                  borderColor: "var(--t-gel-ink)",
+                  color: "var(--t-muted-dark)",
+                }}
               >
                 {body}
               </button>
@@ -212,7 +213,19 @@ function BeatComposer({
   };
 
   return (
-    <div className="mt-1.5 border-l-2 border-primary/50 pl-3">
+    <div
+      className="t-m-pop mt-1.5 border-l-2 px-3.5 py-2.5"
+      style={{
+        borderColor: "var(--t-gel-ink)",
+        background: "color-mix(in oklab, var(--t-gel) 14%, transparent)",
+      }}
+    >
+      <p
+        className="t-m__mono m-0 text-[11px] uppercase tracking-[0.14em]"
+        style={{ color: "var(--t-muted-dark-2)" }}
+      >
+        beat
+      </p>
       <textarea
         ref={ref}
         value={value}
@@ -237,10 +250,13 @@ function BeatComposer({
           }
         }}
         rows={1}
-        placeholder="what happens here?"
-        className="w-full resize-none bg-transparent py-0.5 font-sans text-[13px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/50"
+        placeholder="what changes here?"
+        className="t-m__textarea mt-1 w-full resize-none border-0 py-0.5 font-sans text-[13px] leading-relaxed outline-none"
       />
-      <p className="pb-1 font-sans text-[11px] text-muted-foreground/50">
+      <p
+        className="t-m__mono m-0 text-[11px]"
+        style={{ color: "var(--t-faint)" }}
+      >
         enter to keep · esc to cancel
       </p>
     </div>

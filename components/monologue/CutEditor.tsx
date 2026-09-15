@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Monologue } from "@/types/actor";
 import { useSaveCut } from "@/hooks/useCollectionMeta";
 import { estimateDurationSeconds, formatClock } from "@/lib/estimateDuration";
@@ -111,19 +110,50 @@ export function CutEditor({
     return estimateDurationSeconds(lines.slice(a, b + 1).join("\n"));
   }, [phase, hovered, start, lines]);
 
+  /* The clock is the whole point of this mode, so it is set at the size of a
+     thing you glance at from across the room rather than a caption under a
+     meter. It colours by where the cut lands against the two limits every
+     actor is actually given: green under a minute, ink under two, orange when
+     it has run long. */
+  const shown = previewSeconds ?? (hasCut ? cutSeconds : fullSeconds);
+  const clockColour =
+    shown <= 60
+      ? "var(--t-gel-ink)"
+      : shown <= 120
+        ? "var(--t-text)"
+        : "var(--t-orange-deep)";
+
   return (
-    <div className="space-y-5" onMouseLeave={() => setHovered(null)}>
+    <div className="t-m-rise space-y-5" onMouseLeave={() => setHovered(null)}>
       {!embedded && <h2 className="text-base font-semibold">Your cut</h2>}
+
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+        <p
+          className="t-m__dir m-0 min-w-0 flex-1 basis-[200px] text-[13px]"
+          style={{ color: "var(--t-muted-dark-2)" }}
+          aria-live="polite"
+        >
+          ({instruction.toLowerCase().replace(/\.$/, "")}.)
+        </p>
+        <p
+          className="t-m__display m-0 flex-shrink-0 whitespace-nowrap text-[34px] leading-none tabular-nums"
+          style={{ color: clockColour }}
+        >
+          {formatClock(shown)}
+          <span
+            className="t-m__mono ml-2 text-[12px] tracking-[0.06em]"
+            style={{ color: "var(--t-faint)" }}
+          >
+            of {formatClock(fullSeconds)}
+          </span>
+        </p>
+      </div>
 
       <CutMeter
         cutSeconds={hasCut ? cutSeconds : fullSeconds}
         fullSeconds={fullSeconds}
         previewSeconds={previewSeconds}
       />
-
-      <p className="font-typewriter text-sm text-muted-foreground" aria-live="polite">
-        {instruction}
-      </p>
 
       <div className="font-typewriter text-base leading-relaxed">
         {lines.map((line, idx) => {
@@ -162,21 +192,33 @@ export function CutEditor({
         })}
       </div>
 
-      <div className="flex items-center gap-3">
-        <Button onClick={save} disabled={!dirty || saveCut.isPending}>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <button
+          type="button"
+          onClick={save}
+          disabled={!dirty || saveCut.isPending}
+          className="h-12 rounded-full px-6 text-[15px] font-bold transition-transform duration-300 hover:scale-[1.04] hover:-rotate-1 disabled:pointer-events-none disabled:opacity-45"
+          style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
+        >
           {saveCut.isPending ? "Saving…" : "Save cut"}
-        </Button>
+        </button>
         {hasCut && (
           <button
             type="button"
             onClick={clear}
-            className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            className="t-m__dir h-12 rounded-full border-[1.5px] px-4 text-[12px] transition-colors"
+            style={{
+              borderColor: "var(--t-line-light)",
+              color: "var(--t-muted-dark-2)",
+            }}
           >
-            Clear cut
+            (clear the cut.)
           </button>
         )}
         {spokenIdx.length === 0 && (
-          <span className="text-sm text-muted-foreground">No text to cut.</span>
+          <span className="text-sm" style={{ color: "var(--t-muted-dark-2)" }}>
+            No text to cut.
+          </span>
         )}
       </div>
     </div>
