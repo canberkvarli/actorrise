@@ -477,3 +477,29 @@ email, not the saved piece, is what brings people back. Re-run after two
 weeks of sends with `lifecycle_email_sends` joined in.
 
 Query: docs/metrics/queries/h19_day2_returners.sql
+
+## H-20 Contemporary play coverage drives negative search feedback
+
+Status: OPEN, strong evidence for (2026-09-15)
+
+325 of 19,331 live monologues are contemporary plays (1.7 pct); film/TV are
+the rest of "contemporary". category=contemporary searches were weak 47 pct
+vs 23 pct overall, and 3 of 4 negative comments in the week said "not
+contemporary". The era-relaxation leak (fixed 2026-09-15, decisions.md) made
+it worse by serving classical pieces under the contemporary filter; the
+number underneath does not change with that fix.
+
+Test: tag each negative search comment by whether the search used
+category=contemporary or the query contained "contemporary"; over 4 weeks,
+above 50 pct confirms. Would change my mind: negatives hold their rate after
+the leak fix AND contemporary coverage doubles.
+
+## H-21 Named-author searches are an empty-shelf problem, not a ranking one
+
+Status: HANDLED at the product level 2026-09-08; measure (2026-09-15)
+
+named_lookup weak rate 73 pct (11/15) this week. Albee (1 play) and
+Williams (4 plays) exist with zero monologues and now get the "we have it,
+no monologues yet" card with the author prefilled; August Wilson is absent
+entirely and gets the generic banner. Test: named_lookup weak rate and
+content_requests with an author filled, over 2 weeks.

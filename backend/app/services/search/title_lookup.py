@@ -1276,17 +1276,24 @@ def match_empty_shelf(query: str, shelf: list) -> Optional[Dict[str, object]]:
         if len(nt) >= 6 and difflib.SequenceMatcher(None, nq, nt).ratio() >= _EMPTY_SHELF_TITLE_RATIO:
             return {"play": title, "author": author, "carried_but_empty": True}
 
+    # Authors. A row can name several ("Franklin Lacey, Meredith Willson");
+    # each is matched on its own. A one-word query ("odets") may match on the
+    # surname alone; a longer query must match the whole name, or "august
+    # wilson" lands on Meredith Willson because the surnames rhyme.
     for title, author in shelf:
-        na = _shelf_norm(author or "")
-        if not na or na in ("unknown", "anonymous", "various"):
-            continue
-        if difflib.SequenceMatcher(None, nq, na).ratio() >= _EMPTY_SHELF_AUTHOR_RATIO:
-            return {"play": None, "author": author, "carried_but_empty": True}
-        surname = na.split()[-1]
-        if len(surname) >= 4 and any(
-            difflib.SequenceMatcher(None, w, surname).ratio() >= _EMPTY_SHELF_AUTHOR_RATIO for w in q_words
-        ):
-            return {"play": None, "author": author, "carried_but_empty": True}
+        for name in re.split(r",|&|\band\b", author or ""):
+            na = _shelf_norm(name)
+            if not na or na in ("unknown", "anonymous", "various"):
+                continue
+            if difflib.SequenceMatcher(None, nq, na).ratio() >= _EMPTY_SHELF_AUTHOR_RATIO:
+                return {"play": None, "author": name.strip(), "carried_but_empty": True}
+            surname = na.split()[-1]
+            if (
+                len(q_words) == 1
+                and len(surname) >= 4
+                and difflib.SequenceMatcher(None, q_words[0], surname).ratio() >= _EMPTY_SHELF_AUTHOR_RATIO
+            ):
+                return {"play": None, "author": name.strip(), "carried_but_empty": True}
     return None
 
 

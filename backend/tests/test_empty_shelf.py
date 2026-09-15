@@ -11,6 +11,7 @@ SHELF = [
     ("The Spectacular Now", "Scott Neustadter"),
     ("War", "Unknown"),
     ("Test", None),
+    ("The Music Man", "Franklin Lacey, Meredith Willson"),
 ]
 
 
@@ -38,6 +39,13 @@ class MatchTests(unittest.TestCase):
 
     def test_unknown_author_is_not_a_hit(self):
         self.assertIsNone(match_empty_shelf("unknown", SHELF))
+
+    def test_rhyming_surname_does_not_match_a_full_name(self):
+        # "august wilson" is not Meredith Willson; a two-word query must match
+        # the whole name. The surname shortcut is for one-word queries only.
+        self.assertIsNone(match_empty_shelf("august wilson", SHELF))
+        self.assertEqual(match_empty_shelf("meredith willson", SHELF)["author"], "Meredith Willson")
+        self.assertEqual(match_empty_shelf("willson", SHELF)["author"], "Meredith Willson")
 
     def test_unrelated(self):
         self.assertIsNone(match_empty_shelf("rebellious teen southern", SHELF))

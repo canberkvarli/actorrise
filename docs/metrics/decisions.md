@@ -1065,3 +1065,32 @@ computable from rows dated 2026-09-13 on. Nothing before that exists; user
   `exclude_from_stats`, as the admin dashboards do.
 - `paid_invoices` status='paid' → 'succeeded': recorded 2026-08-28, again 09-10.
 - H5 (day-1 favorite predicts return) = H-19, measured 09-08, query checked in.
+
+## 2026-09-15 — The era filter is no longer relaxed; the 09-15 brief, checked
+
+- **`category` removed from RELAX_ORDER.** Confirmed the leak the brief
+  reported: under category=contemporary + plays, "Monologue about disbelief"
+  returned 20/20 classical, "alone I waited" 17/20, "humorous male 18-21" 17/20.
+  Cause: graceful relaxation dropped the era whenever fewer than
+  RELAX_THRESHOLD rows passed, which with 325 contemporary play pieces is
+  most of the time. Age, max_duration and the (halved) min_duration still relax.
+  Moves: results_count DOWN on contemporary play searches; pct_weak may move
+  either way (fewer padded strong-looking sets). `broadened` never carried
+  "era" from today.
+- **weak_match is not inconsistent.** STRONG_COSINE_SIM = 0.38. "flirty"
+  (0.256, weak=false) and "Contemporary" (0.14, weak=false) are filter-vocabulary
+  queries served by hard filters, where cosine against the text is meaningless
+  and weak is forced false on purpose; "joy" is not in that vocabulary, so it
+  read its cosine and was weak. One rule, applied consistently.
+- **Author gap already handled** (2026-09-08 empty shelf): "Edward Albee" and
+  "Tennessee Williams" (1 and 4 plays, 0 monologues) return the "we have it,
+  no monologues yet" card with the author prefilled. Found and fixed a false
+  positive today: "august wilson" matched Meredith Willson on the surname;
+  multi-word queries now need the whole name. August Wilson is a true gap.
+- **Positive feedback: code path intact, not verified by click.** The prompt
+  posts rating=positive on tap and the endpoint accepts it; 8 positives
+  lifetime, last 2026-06-29, 10 search negatives since. Not proven either way
+  without a real click on prod.
+- **The real finding is the corpus:** 325 live contemporary play monologues
+  against 13,624 classical. Every contemporary complaint this week traces to
+  that number, not to ranking.
