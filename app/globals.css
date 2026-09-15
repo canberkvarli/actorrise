@@ -4663,22 +4663,10 @@
   gap: 18px;
   background: oklch(0.11 0.012 50);
   color: oklch(0.96 0.02 85);
-}
-.t-first-scene__bulb {
-  display: block;
-  width: 26px;
-  height: 30px;
-  border-radius: 50% 50% 46% 46%;
-  background: radial-gradient(
-    circle at 50% 40%,
-    oklch(0.99 0.05 95),
-    oklch(0.92 0.18 100) 35%,
-    oklch(0.75 0.17 60)
-  );
-  box-shadow:
-    0 0 22px 5px oklch(0.85 0.17 80 / 0.7),
-    0 0 70px 26px oklch(0.72 0.17 55 / 0.22);
-  animation: t-flicker 9s linear infinite;
+
+  /* The lamp is a line drawing here too. This screen sits outside every
+     theatre-token scope, so the fixture takes its colour from this rule. */
+  --lamp-acc: oklch(0.7 0.18 48);
 }
 .t-first-scene__line {
   margin: 0;
@@ -4688,10 +4676,6 @@
   font-size: 14px;
   color: oklch(0.75 0.02 62);
 }
-@media (prefers-reduced-motion: reduce) {
-  .t-first-scene__bulb { animation: none; }
-}
-
 /* ==========================================================================
    THE BAR'S PALETTE
    ==========================================================================

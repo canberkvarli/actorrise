@@ -8,6 +8,7 @@ import api from "@/lib/api";
 import { trackEvent } from "@/lib/events";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { Glyph } from "@/components/brand/glyphs";
+import LampSketch from "@/components/onboarding/LampSketch";
 import { clothFor, emblemFor } from "@/components/monologue/PlayCover";
 import type { Monologue } from "@/types/actor";
 import {
@@ -463,37 +464,22 @@ export default function ProfileOnboardingFlow({
       className={`theatre-tokens theatre-onboarding ${theatreFontVars} fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overflow-x-clip p-6 sm:items-center`}
       style={{ background: "var(--page)" }}
     >
-      {/* The stage behind. Painted at z-0 with the card at z-10 — a negative
-          z-index here would slide under the overlay's own background and the
-          glow would be set correctly and never once be seen. */}
+      {/* The fixture, hanging in the flies. The same drawing the wait uses, so
+          the lamp the actor meets here is the lamp that draws itself in a
+          moment later — one fixture, held, rather than a new one per screen.
+          Hung already lit; only the wait animates.
+
+          Painted at z-0 with the card at z-10 — a negative z-index here would
+          slide under the overlay's own background and never once be seen. */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          background:
-            "radial-gradient(60% 50% at 50% 0%, color-mix(in oklab, var(--t-orange-glow) 30%, transparent), transparent 70%)",
-        }}
-      />
-      {/* The ghost light, hanging in the flies. */}
-      <div aria-hidden className="pointer-events-none fixed left-1/2 top-0 z-0 flex flex-col items-center">
-        <span
-          className="block w-0.5"
-          style={{
-            height: "clamp(40px, 8vh, 90px)",
-            background: "linear-gradient(to bottom, oklch(0.40 0.02 55), oklch(0.28 0.02 55))",
-          }}
-        />
-        <span className="block h-3 w-[18px] rounded-t-[4px] rounded-b-[2px]" style={{ background: "oklch(0.30 0.02 55)" }} />
-        <span
-          className="block h-[42px] w-9 animate-ghost-flicker"
-          style={{
-            borderRadius: "50% 50% 46% 46%",
-            background:
-              "radial-gradient(circle at 50% 40%, oklch(0.99 0.05 95), var(--t-gel) 35%, oklch(0.75 0.17 60))",
-            boxShadow:
-              "0 0 28px 6px color-mix(in oklab, var(--t-gel) 70%, transparent), 0 0 120px 50px color-mix(in oklab, var(--t-orange-glow) 28%, transparent)",
-          }}
-        />
+        className="pointer-events-none fixed left-1/2 top-0 z-0 -translate-x-1/2"
+        /* One ink for the whole drawing. --lamp-acc is deliberately NOT set
+           here: --t-line-light-2 is 0.85 lightness against a 0.96 page, so the
+           pool would be a correct colour that nobody ever sees. */
+        style={{ color: "var(--t-faint)" }}
+      >
+        <LampSketch size={128} />
       </div>
       <p
         aria-hidden
@@ -753,7 +739,6 @@ export default function ProfileOnboardingFlow({
  * again while the first search runs, so the two reads as one wait.
  */
 function SettingTheStage() {
-  const reduce = useReducedMotion();
   const [beat, setBeat] = useState(0);
 
   useEffect(() => {
@@ -763,49 +748,9 @@ function SettingTheStage() {
     return () => clearInterval(t);
   }, []);
 
-  const drawn = (delay: number) =>
-    reduce
-      ? {}
-      : {
-          initial: { pathLength: 0 },
-          animate: { pathLength: 1 },
-          transition: { duration: 0.9, ease: "easeInOut" as const, delay },
-        };
-
   return (
     <div className="relative px-7 pb-[60px] pt-14 text-center">
-      <svg
-        width="96"
-        height="96"
-        viewBox="0 0 64 64"
-        aria-hidden
-        className="mx-auto block"
-        style={{ color: "var(--t-text)" }}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <motion.path d="M32 4 L32 1 M27 1 L37 1" {...drawn(0.1)} />
-        <motion.path d="M27 4 L37 4 L40 13 L24 13 Z" {...drawn(0.1)} />
-        <motion.path d="M24 13 C28 15.5 36 15.5 40 13" {...drawn(0.28)} />
-        {/* The beam carries its own dashes, so it fades rather than draws:
-            framer-motion writes strokeDasharray itself to implement pathLength
-            and would stamp over the pattern. */}
-        <motion.path
-          d="M25 16 L6 52 M39 16 L58 52"
-          strokeDasharray="4 5"
-          initial={reduce ? undefined : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.46 }}
-        />
-        <motion.path
-          d="M6 52 C6 49 17.6 46.5 32 46.5 C46.4 46.5 58 49 58 52 C58 55 46.4 57.5 32 57.5 C17.6 57.5 6 55 6 52 Z"
-          style={{ color: "var(--acc)" }}
-          {...drawn(0.64)}
-        />
-      </svg>
+      <LampSketch size={96} draw className="mx-auto block" />
       <p className="mt-6 leading-none tracking-[-0.01em]" style={{ fontFamily: "var(--t-display)", fontSize: 32 }}>
         Setting your stage.
       </p>

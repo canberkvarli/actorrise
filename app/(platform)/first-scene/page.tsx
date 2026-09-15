@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import LampSketch from "@/components/onboarding/LampSketch";
 
 /**
  * /first-scene — the zero-setup first rehearsal.
@@ -116,7 +117,7 @@ export default function FirstScenePage() {
      card: the actor is on their way somewhere, and this is the hallway. */
   return (
     <div className="t-first-scene" role="status" aria-live="polite">
-      <span aria-hidden className="t-first-scene__bulb" />
+      <LampSketch size={84} />
       <p className="t-first-scene__line">(finding you something to say.)</p>
     </div>
   );

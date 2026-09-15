@@ -31,7 +31,34 @@ const IMMERSIVE_RE =
 // sessions, but it propagates through a throttled /me refresh — so within a
 // single session we also latch on sessionStorage to guarantee the gate fires
 // at most once and can never bounce the user (e.g. after "Skip").
+//
+// OnboardingWizard latches this key the moment it MOUNTS, not when the gate
+// fires — see MIN_ACCOUNT_AGE_MS below for why that matters.
 const SESSION_GUARD_KEY = "actorrise_first_scene_handled";
+
+// The gate is a permanently-mounted watcher on has_completed_onboarding, and
+// the onboarding card is the thing that FLIPS that flag. So every exit from
+// the card — "skip", "i'll explore on my own", "browse the library", "upload a
+// script" — used to refreshUser(), trip this gate a beat later, and land the
+// actor in /monologue/<whatever>/work. Four of the card's five doors opened
+// into the same room, and two of them (browse/own-sides) pushed their own
+// route first and had it overridden while the actor watched.
+//
+// The fix is not a longer SKIP_PREFIXES list, because the problem was never
+// the path — it was the moment. This gate is for a RETURNING actor who has
+// been around and never rehearsed. Someone in their first sitting has no
+// "later visit" to interrupt; they are still being onboarded. Account age
+// separates the two populations cleanly and, unlike sessionStorage, survives
+// a closed tab. The ~265 dormant accounts this was built for are all months
+// old and still qualify on their next visit.
+const MIN_ACCOUNT_AGE_MS = 6 * 60 * 60 * 1000;
+
+function isFirstSitting(createdAt: string | undefined): boolean {
+  if (!createdAt) return false; // unknown age — don't invent a reason to skip
+  const created = Date.parse(createdAt);
+  if (Number.isNaN(created)) return false;
+  return Date.now() - created < MIN_ACCOUNT_AGE_MS;
+}
 
 function alreadyHandledThisSession(): boolean {
   try {
@@ -70,7 +97,8 @@ export function FirstRehearsalGate() {
     const eligible =
       user.has_completed_onboarding === true &&
       user.has_ever_rehearsed === false &&
-      user.has_seen_first_rehearsal !== true;
+      user.has_seen_first_rehearsal !== true &&
+      !isFirstSitting(user.created_at);
     if (!eligible) return;
 
     const path = pathname || "";
