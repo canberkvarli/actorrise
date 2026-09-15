@@ -703,6 +703,19 @@ def get_batch_status(
     )
 
 
+# A row that still owes someone an email. "failed" belongs here as much as
+# "queued" does: a failure is a recipient who did not get it, and the common
+# failure is transport (the ghost-light launch lost 372 to dropped SMTP
+# connections, nothing to do with the address). Resume used to look at
+# "queued" alone, so the one batch that most needed resuming reported
+# "No queued emails to resume" and sent nothing.
+#
+# Retrying a genuinely bad address just fails again, which is harmless and
+# self-limiting. "sent"/"opened"/"clicked" are never re-selected, so nobody
+# receives a second copy.
+RESUMABLE_STATUSES = ("queued", "failed")
+
+
 class ResumeBatchRequest(BaseModel):
     send_via: str = "smtp"  # "smtp" (Google Workspace, no bulk cap) or "resend"
 
@@ -719,13 +732,15 @@ def resume_batch(
     if not batch:
         raise HTTPException(status_code=404, detail="Batch not found")
 
-    queued_count = db.query(EmailSend).filter(
+    pending_count = db.query(EmailSend).filter(
         EmailSend.batch_id == batch_id,
-        EmailSend.status == "queued",
+        EmailSend.status.in_(RESUMABLE_STATUSES),
     ).count()
 
-    if queued_count == 0:
-        raise HTTPException(status_code=400, detail="No queued emails to resume")
+    if pending_count == 0:
+        raise HTTPException(
+            status_code=400, detail="Nothing left to send: every recipient already received this."
+        )
 
     # Get template metadata
     meta = next((t for t in TEMPLATES if t["id"] == batch.template_id), None)
@@ -751,8 +766,13 @@ def resume_batch(
 
             sends = db2.query(EmailSend).filter(
                 EmailSend.batch_id == batch_id,
-                EmailSend.status == "queued",
+                EmailSend.status.in_(RESUMABLE_STATUSES),
             ).all()
+
+            # A retry starts from a clean error list, otherwise errors_json
+            # grows by a few hundred strings every attempt.
+            b.errors_json = []
+            db2.commit()
 
             render_fn = getattr(templates_svc, RENDER_MAP.get(template_id, ""), None)
             plain_fn = getattr(templates_svc, PLAIN_TEXT_MAP.get(template_id, ""), None)

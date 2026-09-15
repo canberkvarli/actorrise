@@ -1080,22 +1080,30 @@ export default function AdminEmailsPage() {
                                   {expandedSends.length} recipient{expandedSends.length !== 1 ? "s" : ""}
                                   {expandedSends.filter((s) => s.status === "queued").length > 0 && (
                                     <span className="ml-2 text-amber-600">
-                                      ({expandedSends.filter((s) => s.status === "queued").length} queued)
+                                      ({expandedSends.filter((s) => s.status === "queued").length} queued
+                                      {expandedSends.filter((s) => s.status === "failed").length > 0
+                                        ? `, ${expandedSends.filter((s) => s.status === "failed").length} failed`
+                                        : ""})
                                     </span>
                                   )}
                                 </p>
                                 {canSend && expandedSends.length > 0 && (
                                   <div className="flex flex-wrap items-center gap-1.5">
-                                    {expandedSends.filter((s) => s.status === "queued").length > 0 && (
+                                    {/* A failed row owes its recipient an email just as much as a
+                                        queued one does, and the usual cause is transport, not a bad
+                                        address. Gating this on queued alone hid the button on the one
+                                        batch that most needed it. */}
+                                    {expandedSends.filter((s) => s.status === "queued" || s.status === "failed").length > 0 && (
                                       <Button
                                         size="sm"
                                         variant="default"
                                         className="h-7 text-xs gap-1.5 bg-amber-600 hover:bg-amber-700"
                                         onClick={async (e) => {
                                           e.stopPropagation();
+                                          const pending = expandedSends.filter((s) => s.status === "queued" || s.status === "failed").length;
                                           try {
                                             await api.post(`/api/admin/emails/batch/${b.batch_id}/resume`, { send_via: sendVia });
-                                            toast.success(`Resuming ${expandedSends.filter((s) => s.status === "queued").length} queued emails...`);
+                                            toast.success(`Sending to the ${pending} who haven't got it yet...`);
                                             setTimeout(() => fetchBatchHistory(), 2000);
                                           } catch {
                                             toast.error("Failed to resume batch");
@@ -1103,7 +1111,7 @@ export default function AdminEmailsPage() {
                                         }}
                                       >
                                         <IconRefresh className="h-3.5 w-3.5" />
-                                        Resume sending
+                                        Send the rest ({expandedSends.filter((s) => s.status === "queued" || s.status === "failed").length})
                                       </Button>
                                     )}
                                     <Button
