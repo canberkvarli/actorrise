@@ -13,6 +13,7 @@ import { AuthProviderWrapper } from "@/components/providers/AuthProviderWrapper"
 import { AuthModalProvider } from "@/components/auth/AuthModalContext";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "sonner";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 import { Analytics } from "@vercel/analytics/react";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { FontLoader } from "@/components/FontLoader";
@@ -244,7 +245,13 @@ export default function RootLayout({
           <AuthProviderWrapper>
             <AuthModalProvider>{children}</AuthModalProvider>
           </AuthProviderWrapper>
+          {/* `theatre-tokens` and the faces ride on the toaster itself.
+              Sonner renders into document.body, outside every scoped wrapper
+              on the page, so without this the --t-* vars resolve to nothing
+              and the styling below is silently invalid. Same trap the help
+              panel fell into. */}
           <Toaster
+            className={`theatre-tokens ${theatreFontVars}`}
             position="bottom-center"
             richColors={false}
             toastOptions={{

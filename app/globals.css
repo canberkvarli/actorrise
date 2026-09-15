@@ -864,6 +864,128 @@
   z-index: 99999 !important;
 }
 
+/* Logging out: the house going dark, with the ghost light left on. */
+.t-curtain-out {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: oklch(0.09 0.012 50 / 0.86);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.t-curtain-out__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 34px 44px;
+  border-radius: 20px;
+  background: oklch(0.13 0.015 50);
+  border: 1.5px solid oklch(0.3 0.03 55);
+  box-shadow: 0 30px 80px -30px rgb(0 0 0 / 0.7);
+  font-family: var(--t-body);
+}
+.t-curtain-out__bulb {
+  display: block;
+  width: 26px;
+  height: 30px;
+  border-radius: 50% 50% 46% 46%;
+  background: radial-gradient(
+    circle at 50% 40%,
+    oklch(0.99 0.05 95),
+    oklch(0.92 0.18 100) 35%,
+    oklch(0.75 0.17 60)
+  );
+  box-shadow:
+    0 0 22px 5px oklch(0.85 0.17 80 / 0.7),
+    0 0 70px 26px oklch(0.72 0.17 55 / 0.22);
+  animation: t-flicker 9s linear infinite;
+}
+.t-curtain-out__line {
+  margin: 0;
+  font-family: var(--t-display);
+  font-size: 26px;
+  line-height: 1;
+  color: oklch(0.96 0.02 85);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-curtain-out__bulb { animation: none; }
+}
+
+/* The toasts.
+
+   `toastOptions.classNames` in app/layout.tsx has always named
+   `actorrise-toast` and the four variants — and none of them existed. Only
+   the bookmark one below was ever written, so every other toast in the
+   product (saved, restored, removed, every error) rendered as unstyled
+   sonner default: a white box in a page that owns its own palette.
+
+   A toast is a card of paper slid under the door: paper, an ink rule, a hard
+   shadow, and the message in the body face with the aside in Courier. */
+[data-sonner-toast].actorrise-toast {
+  background: var(--t-paper) !important;
+  color: var(--t-text) !important;
+  border: 1.5px solid var(--t-text) !important;
+  border-radius: 16px !important;
+  box-shadow: 6px 6px 0 var(--t-hard-shadow) !important;
+  padding: 14px 16px !important;
+  gap: 12px !important;
+  font-family: var(--t-body) !important;
+}
+[data-sonner-toast].actorrise-toast [data-title] {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--t-text) !important;
+}
+[data-sonner-toast].actorrise-toast [data-description] {
+  margin-top: 2px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--t-muted-dark-2) !important;
+}
+/* The action is the reason a toast is worth reading — an Undo you cannot find
+   is the same as no Undo. */
+[data-sonner-toast].actorrise-toast [data-button] {
+  height: 32px !important;
+  padding: 0 14px !important;
+  border-radius: 999px !important;
+  background: var(--t-text) !important;
+  color: var(--t-on-text) !important;
+  font-family: var(--t-body) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+/* One hairline of colour on the left edge says which kind it is, rather than
+   four differently-coloured boxes. */
+[data-sonner-toast].actorrise-toast-success {
+  border-left: 5px solid var(--t-gel-ink) !important;
+}
+[data-sonner-toast].actorrise-toast-error {
+  border-left: 5px solid var(--t-orange-deep) !important;
+}
+[data-sonner-toast].actorrise-toast-warning {
+  border-left: 5px solid var(--t-orange) !important;
+}
+[data-sonner-toast].actorrise-toast-info {
+  border-left: 5px solid var(--t-muted-dark-2) !important;
+}
+[data-sonner-toast].actorrise-toast [data-icon] {
+  color: var(--t-gel-ink) !important;
+}
+/* Paper goes dark with the theme, like every other surface in the system. */
+.dark [data-sonner-toast].actorrise-toast {
+  --t-paper: oklch(0.19 0.018 52);
+  --t-text: oklch(0.95 0.02 85);
+  --t-muted-dark-2: oklch(0.68 0.02 62);
+  --t-on-text: oklch(0.15 0.03 45);
+  --t-hard-shadow: oklch(0.07 0.01 45);
+  --t-gel-ink: var(--t-gel);
+}
+
 /* Bookmark toast: distinct saved-state style (teal accent, compact). Text must match card for light/dark. */
 [data-sonner-toast].actorrise-toast-bookmark {
   background: var(--card) !important;

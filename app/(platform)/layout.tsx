@@ -293,19 +293,26 @@ export default function PlatformLayout({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm"
+            className="t-curtain-out"
             aria-live="polite"
             aria-label="Logging out"
           >
+            {/* Leaving is the one moment the product gets to say goodbye in its
+                own voice. It used to be the app's generic card with a spinner
+                on a blurred page — the visual language of a request in flight,
+                not of a curtain coming down. */}
             <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-              className="flex flex-col items-center gap-4 rounded-2xl bg-card/90 px-8 py-6 shadow-lg border border-border/50"
+              className="t-curtain-out__card"
             >
-              <div className="h-10 w-10 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-              <p className="text-sm font-medium text-foreground">Logging out…</p>
+              <span aria-hidden className="t-curtain-out__bulb" />
+              <p className="t-dir" style={{ color: "var(--t-muted-light-2)" }}>
+                (ghost light on.)
+              </p>
+              <p className="t-curtain-out__line">See you at the next call.</p>
             </motion.div>
           </motion.div>
         )}
@@ -499,7 +506,7 @@ export default function PlatformLayout({
                         onClick={() => setProfileDropdownOpen(false)}
                         className="t-playbill-menu__row"
                       >
-                        <IconUser className="h-4 w-4 text-muted-foreground" />
+                        <IconUser className="h-4 w-4 opacity-60" />
                         <span>Edit profile</span>
                       </Link>
                       <Link
@@ -507,7 +514,7 @@ export default function PlatformLayout({
                         onClick={() => setProfileDropdownOpen(false)}
                         className="t-playbill-menu__row"
                       >
-                        <IconFileText className="h-4 w-4 text-muted-foreground" />
+                        <IconFileText className="h-4 w-4 opacity-60" />
                         <span>Résumé</span>
                       </Link>
                       <Link
@@ -515,7 +522,7 @@ export default function PlatformLayout({
                         onClick={() => setProfileDropdownOpen(false)}
                         className="t-playbill-menu__row"
                       >
-                        <IconBookmark className="h-4 w-4 text-muted-foreground" />
+                        <IconBookmark className="h-4 w-4 opacity-60" />
                         <span>Collection</span>
                         {savedCount > 0 && (
                           <span className="t-playbill-menu__hint">{savedCount} saved</span>
@@ -528,7 +535,7 @@ export default function PlatformLayout({
                         onClick={() => setProfileDropdownOpen(false)}
                         className="t-playbill-menu__row"
                       >
-                        <IconCreditCard className="h-4 w-4 text-muted-foreground" />
+                        <IconCreditCard className="h-4 w-4 opacity-60" />
                         <span>Billing</span>
                         {billingHint && (
                           <span className="t-playbill-menu__hint">{billingHint}</span>
@@ -539,7 +546,7 @@ export default function PlatformLayout({
                         onClick={() => setProfileDropdownOpen(false)}
                         className="t-playbill-menu__row"
                       >
-                        <IconSettings className="h-4 w-4 text-muted-foreground" />
+                        <IconSettings className="h-4 w-4 opacity-60" />
                         <span>Account settings</span>
                       </Link>
 
@@ -553,7 +560,7 @@ export default function PlatformLayout({
                             onClick={() => setProfileDropdownOpen(false)}
                             className="t-playbill-menu__row"
                           >
-                            <IconShieldCheck className="h-4 w-4 text-muted-foreground" />
+                            <IconShieldCheck className="h-4 w-4 opacity-60" />
                             <span>Admin</span>
                           </Link>
                         </>
