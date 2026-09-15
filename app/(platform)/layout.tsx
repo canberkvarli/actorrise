@@ -323,7 +323,7 @@ export default function PlatformLayout({
         overflowHidden={false}
         ref={shellRef}
         data-hidden="false"
-        className="t-appbar-shell dark z-[9998] flex justify-center border-0 bg-transparent px-4 pt-3.5 text-foreground"
+        className="t-appbar-shell z-[9998] flex justify-center border-0 bg-transparent px-4 pt-3.5 text-foreground"
         /* sticky, not relative: on a phone the hamburger, theme toggle and
            account menu all live up here, and a relative header scrolls them off
            screen entirely. The marketing header has always been sticky top-0.
@@ -482,7 +482,7 @@ export default function PlatformLayout({
                             <Link
                               href="/profile"
                               onClick={() => setProfileDropdownOpen(false)}
-                              className="text-xs text-primary hover:underline"
+                              className="t-playbill-menu__link"
                             >
                               Add your name & photo →
                             </Link>
@@ -631,7 +631,7 @@ export default function PlatformLayout({
         /* A floating pill under the thumb rather than a bar welded to the
            bottom edge, matching the header above it. safe-area-bottom keeps it
            clear of the home indicator. */
-        className="t-tabbar dark safe-area-bottom md:hidden"
+        className="t-tabbar safe-area-bottom md:hidden"
         style={{ ['--primary']: 'oklch(0.76 0.15 52)' } as React.CSSProperties}
       >
         <div className="flex items-stretch gap-1">

@@ -198,7 +198,7 @@ export function NothingYet() {
     <div className="flex min-w-0 flex-col">
       <Slug>from the top</Slug>
       <Title>
-        Your first <em className="italic" style={{ color: "var(--t-gel)" }}>scene</em> starts here.
+        Your first <em className="italic" style={{ color: "var(--t-gel-ink)" }}>scene</em> starts here.
       </Title>
       <p
         className="mt-6 max-w-[40ch] text-[17px] leading-relaxed"

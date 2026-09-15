@@ -109,12 +109,13 @@ export default function PracticePage() {
       <div aria-hidden className="t-stage-wash" />
       <div aria-hidden className="t-stage-grain" />
 
-      {/* Something is always on in here. */}
-      <div aria-hidden className="t-ghost-light">
-        <span className="t-ghost-light__cord" />
-        <span className="t-ghost-light__socket" />
-        <span className="t-ghost-light__bulb" />
-      </div>
+      {/* The ghost light used to hang here. It is gone from this screen.
+          A ghost light means an empty house — it is the lamp left burning when
+          nobody is working — and this is the one room that is never empty: it
+          opens on a line someone stopped on. It also occupied the top-right
+          column, which is where the shelf and the help mark live, so it spent
+          the whole rollout being shoved around by the content it was hiding.
+          It stays on the screens it means something on. */}
 
       {isLoading ? (
         <div className="space-y-8 sm:space-y-10">
@@ -145,8 +146,6 @@ export default function PracticePage() {
           transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
           className={hasOwnScript ? "space-y-8 sm:space-y-10" : "space-y-4"}
         >
-          {/* Ambient activity stays at the very top, first visit or hundredth. */}
-          <CallboardMarquee />
 
           {/* No title, no tagline.
               This used to read "ScenePartner" in Playfair over a paragraph
@@ -156,11 +155,6 @@ export default function PracticePage() {
               below opens on a real line of dialogue, which says what this room
               is for far better than a sentence describing it. All that is left
               up here is the way in and the way to ask. */}
-          {/* Nudged in from the right edge: the ghost light hangs in that column,
-              and the help mark was sitting directly under the bulb. */}
-          <div className="mb-24 flex items-center justify-end gap-2 pr-16 sm:mb-28 sm:pr-20">
-            <HowItWorksButton onOpen={() => setWalkthroughOverride(true)} />
-          </div>
 
           {/* Dropped clear of the ghost light. The lamp hangs from the top of
               the room on the right, which is exactly where the shelf began —
@@ -178,6 +172,22 @@ export default function PracticePage() {
               demoScriptId={demoScript?.id ?? null}
             />
           </Suspense>
+
+          {/* Everything ambient, under the work rather than over it.
+
+              The callboard ran across the top, so the first thing this room
+              said was what OTHER people were doing — on the one screen whose
+              whole argument is the line you stopped on. And the way to ask how
+              any of it works was a floating "?" in the top-right corner, which
+              is a help widget's position, not a theatre's. Both are down here
+              now, past the stage, where you arrive only once you are done
+              looking at your own work. */}
+          <div className="mt-16 border-t pt-6 sm:mt-20" style={{ borderColor: "var(--t-line-light)" }}>
+            <CallboardMarquee />
+            <div className="mt-5 flex justify-center">
+              <HowItWorksButton onOpen={() => setWalkthroughOverride(true)} />
+            </div>
+          </div>
         </motion.div>
       )}
 
@@ -188,14 +198,8 @@ export default function PracticePage() {
 
 function HowItWorksButton({ onOpen }: { onOpen: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label="How ScenePartner works"
-      title="How it works"
-      className="t-how-button"
-    >
-      ?
+    <button type="button" onClick={onOpen} className="t-how-link">
+      how this room works
     </button>
   );
 }
