@@ -2413,7 +2413,7 @@
 .theatre-stage {
   position: relative;
   isolation: isolate;
-  color: var(--t-cream);
+  color: var(--t-text);
   font-family: var(--t-body);
   min-height: 100vh;
 }
@@ -2432,9 +2432,9 @@
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(60% 45% at 22% 18%, oklch(0.72 0.17 55 / 0.22), transparent 70%),
-    radial-gradient(40% 40% at 85% 90%, oklch(0.92 0.18 100 / 0.06), transparent 70%),
-    var(--t-ink);
+    radial-gradient(60% 45% at 22% 18%, oklch(0.72 0.17 55 / 0.14), transparent 70%),
+    radial-gradient(40% 40% at 85% 90%, oklch(0.92 0.18 100 / 0.05), transparent 70%),
+    var(--page);
 }
 .theatre-stage button,
 .theatre-stage input,
@@ -2561,8 +2561,29 @@
 }
 /* The caps are a shade up from the strip, so the ticker reads as running
    between two fixed plates rather than fading into the page. */
+/* The two caps sit over the running notices. They were opaque blocks with a
+   hard edge, so a name was guillotined mid-word at the boundary — "Farid
+   joined ActorRise · Some|the board". A gradient edge lets the run fade into
+   the cap instead of being cut by it. */
 .t-marquee__cap {
+  position: relative;
   background: oklch(0.2 0.02 52);
+}
+.t-marquee__cap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  pointer-events: none;
+}
+.t-marquee__cap:first-child::after {
+  left: 100%;
+  background: linear-gradient(to right, oklch(0.2 0.02 52), transparent);
+}
+.t-marquee__cap:last-child::after {
+  right: 100%;
+  background: linear-gradient(to left, oklch(0.2 0.02 52), transparent);
 }
 .t-marquee__pulse {
   background: var(--t-orange);
@@ -2590,7 +2611,7 @@
   letter-spacing: -0.02em;
   font-size: clamp(3rem, 7vw, 6.5rem);
   text-wrap: balance;
-  color: var(--t-cream);
+  color: var(--t-text);
 }
 
 /* The cued line, indented the way it sits on the page it came from. */
@@ -2756,7 +2777,7 @@
   border-radius: 999px;
   border: 1.5px dashed oklch(0.55 0.03 55);
   background: transparent;
-  color: var(--t-cream);
+  color: var(--t-text);
   font-family: var(--t-body);
   font-size: 13px;
   font-weight: 700;
@@ -2777,7 +2798,7 @@
   font-size: 14px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--t-cream);
+  color: var(--t-text);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2822,7 +2843,7 @@
   font-size: 28px;
   line-height: 1;
   letter-spacing: -0.01em;
-  color: var(--t-cream);
+  color: var(--t-text);
 }
 .t-act-count {
   flex-shrink: 0;
@@ -3035,6 +3056,17 @@
 .dark .t-outline-flash[data-search-mode="film_tv"] {
   --page: oklch(0.15 0.015 50);
   --acc: oklch(0.7 0.18 48);
+}
+
+/* The filled source pills take --t-text, which is cream in dark — so `film`
+   and `contemporary` rendered as bright cream slabs, the loudest thing in a
+   column of quiet rows. On a dark ground they become outlines like the others:
+   the pill still says which shelf, without shouting it six times a screen. */
+.dark .t-src--film,
+.dark .t-src--contemporary {
+  background: transparent;
+  color: var(--t-muted-dark);
+  border-color: var(--t-line-light-2);
 }
 
 /* A few places name a literal rather than a token, because the design does. */
@@ -4324,6 +4356,36 @@
   .t-bench__bulb {
     animation: none;
   }
+}
+
+/* The rehearsal room follows the theme.
+
+   It was ink in both, on the reasoning that a rehearsal room is a dark room.
+   That is true of the STAGE — the script panel and the shelf cards are lit
+   objects and stay dark on either ground, the same way the collection's bench
+   does — but it is not true of the room, and a theme toggle that visibly does
+   nothing on a whole screen is a broken control, not a design decision.
+   The paper flips; the lit things stay lit. */
+.theatre-stage {
+  --page: oklch(0.96 0.02 85);
+}
+.dark .theatre-stage {
+  --page: oklch(0.11 0.012 50);
+
+  --t-paper: oklch(0.19 0.018 52);
+  --t-paper-2: oklch(0.17 0.018 52);
+
+  --t-text: oklch(0.95 0.02 85);
+  --t-text-soft: oklch(0.93 0.02 85);
+  --t-muted-dark: oklch(0.75 0.02 62);
+  --t-muted-dark-2: oklch(0.68 0.02 62);
+  --t-faint: oklch(0.58 0.02 60);
+
+  --t-line-light: oklch(0.3 0.03 55);
+  --t-line-light-2: oklch(0.34 0.03 55);
+
+  --t-on-text: oklch(0.15 0.03 45);
+  --t-hard-shadow: oklch(0.07 0.01 45);
 }
 
 /* --- Dark ----------------------------------------------------------------

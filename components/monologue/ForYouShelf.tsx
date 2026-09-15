@@ -82,12 +82,16 @@ export function ForYouShelf() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      {/* The caption sits under its title, not at the far edge of the
+          column. `justify-between` threw it across a 560px gap, so the
+          two shelves read as four unrelated things instead of two
+          headings with subtitles. */}
+      <div className="mb-5">
         <h2 className="t-shelf-title">
           Picked for <em>your type.</em>
         </h2>
         {profileFacts && (
-          <p className="t-dir" style={{ fontSize: 12, color: "var(--t-muted-dark-2)" }}>
+          <p className="t-dir mt-1.5" style={{ fontSize: 12, color: "var(--t-muted-dark-2)" }}>
             ({profileFacts})
           </p>
         )}

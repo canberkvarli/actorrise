@@ -1681,7 +1681,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           It is two lines tall and renders nothing when the house is quiet, so
           it costs the shelves below almost no room and never advertises the
           silence. */}
-      <div className="mb-8">
+      <div className="mt-7 mb-8">
         <HouseIsHunting />
       </div>
       {/* Personalization, surfaced by default (not hidden behind "Find for
@@ -1839,9 +1839,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           <path d="M8 21h8" />
                         </svg>
                       ) : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                          <path d="M3 21V6a9 9 0 0 1 18 0v15" />
-                          <path d="M3 9h18" />
+                        /* An open script. The old mark was a proscenium arch
+                           with a line across it, which at 16px is an ambiguous
+                           shape rather than a picture of anything — the Film &
+                           TV tab beside it is a screen and reads instantly,
+                           which is the bar. A play is a text. */
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M12 6.5C10.5 5 8.5 4.5 4 4.5v13c4.5 0 6.5.5 8 2 1.5-1.5 3.5-2 8-2v-13c-4.5 0-6.5.5-8 2z" />
+                          <path d="M12 6.5v13" />
                         </svg>
                       )}
                       {tab.label}
