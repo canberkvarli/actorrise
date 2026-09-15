@@ -1256,55 +1256,148 @@
   --t-gel-ink: var(--t-gel);
 }
 
-/* Logging out: the house going dark, with the ghost light left on. */
+/* ==========================================================================
+   LOGGING OUT — the curtain comes in.
+
+   This drew one glowing bulb, which is the GHOST LIGHT: the lamp left burning
+   on an empty stage. That is the right motif for an empty state and the wrong
+   one for a person leaving, and it is the same bulb the onboarding card hangs
+   under — so arriving and leaving looked like the same event. Leaving gets the
+   gesture that actually means it: two travelers sweeping in to meet.
+
+   Theme-independent on purpose, like `.theatre-auth`: a house is dark whatever
+   time you walked in from. Nothing here reads the app's semantic tokens.
+   ========================================================================== */
 .t-curtain-out {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: oklch(0.09 0.012 50 / 0.86);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: oklch(0.08 0.012 50);
 }
-.t-curtain-out__card {
+
+/* Velvet, in two layers, because one is always wallpaper: a broad wash for how
+   the light falls across the drop, and soft repeating folds over it. The fold
+   stops are uneven on purpose — evenly spaced hard stops read as a barcode, and
+   a fold needs a lit face, a crease and a shadowed face to read as cloth. */
+.t-curtain-out__panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 51%;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgb(0 0 0 / 0) 0px,
+      rgb(0 0 0 / 0.32) 19px,
+      rgb(0 0 0 / 0.46) 27px,
+      rgb(255 255 255 / 0.05) 41px,
+      rgb(0 0 0 / 0) 59px
+    ),
+    linear-gradient(
+      90deg,
+      oklch(0.11 0.035 25),
+      oklch(0.22 0.066 25) 55%,
+      oklch(0.135 0.042 25)
+    );
+  animation: t-traveler-in 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform;
+}
+.t-curtain-out__panel--l {
+  left: 0;
+  --from: -101%;
+  box-shadow: 16px 0 50px -10px rgb(0 0 0 / 0.8);
+}
+.t-curtain-out__panel--r {
+  right: 0;
+  --from: 101%;
+  box-shadow: -16px 0 50px -10px rgb(0 0 0 / 0.8);
+}
+/* The braid down the leading edge, the one warm line in the whole screen. */
+.t-curtain-out__panel::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(
+    to bottom,
+    oklch(0.72 0.14 80 / 0.15),
+    oklch(0.82 0.16 85 / 0.55) 45%,
+    oklch(0.72 0.14 80 / 0.15)
+  );
+}
+.t-curtain-out__panel--l::after { right: 0; }
+.t-curtain-out__panel--r::after { left: 0; }
+
+@keyframes t-traveler-in {
+  from { transform: translateX(var(--from)); }
+  to { transform: none; }
+}
+
+/* The house falls off at the edges and under the batten, so the drop reads as
+   hanging cloth rather than a flat fill. Unstacked, so the line below rides
+   over it on z-index 1. */
+.t-curtain-out::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(120% 70% at 50% 52%, rgb(0 0 0 / 0) 40%, rgb(0 0 0 / 0.5) 100%),
+    linear-gradient(
+      to bottom,
+      rgb(0 0 0 / 0.5),
+      rgb(0 0 0 / 0) 20%,
+      rgb(0 0 0 / 0) 74%,
+      rgb(0 0 0 / 0.45)
+    );
+}
+
+/* The line lands after the halves have met, not under them. */
+.t-curtain-out__say {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 34px 44px;
-  border-radius: 20px;
-  background: oklch(0.13 0.015 50);
-  border: 1.5px solid oklch(0.3 0.03 55);
-  box-shadow: 0 30px 80px -30px rgb(0 0 0 / 0.7);
+  gap: 10px;
+  padding: 0 24px;
+  text-align: center;
   font-family: var(--t-body);
+  animation: t-curtain-say 0.5s ease 0.5s both;
 }
-.t-curtain-out__bulb {
-  display: block;
-  width: 26px;
-  height: 30px;
-  border-radius: 50% 50% 46% 46%;
-  background: radial-gradient(
-    circle at 50% 40%,
-    oklch(0.99 0.05 95),
-    oklch(0.92 0.18 100) 35%,
-    oklch(0.75 0.17 60)
-  );
-  box-shadow:
-    0 0 22px 5px oklch(0.85 0.17 80 / 0.7),
-    0 0 70px 26px oklch(0.72 0.17 55 / 0.22);
-  animation: t-flicker 9s linear infinite;
+/* The braid lands exactly where the halves meet, which is exactly where the
+   words are, and a gold hairline through "next call" reads as a rendering
+   fault. A soft pool sinks the seam under the type. Negative z is safe here
+   and only here: `__say` paints no background of its own, so this goes behind
+   the words without going behind the curtain. */
+.t-curtain-out__say::before {
+  content: "";
+  position: absolute;
+  inset: -44px -64px;
+  z-index: -1;
+  background: radial-gradient(58% 58% at 50% 50%, rgb(0 0 0 / 0.62), transparent 72%);
 }
 .t-curtain-out__line {
   margin: 0;
   font-family: var(--t-display);
-  font-size: 26px;
+  font-size: clamp(26px, 6vw, 36px);
   line-height: 1;
+  letter-spacing: -0.02em;
   color: oklch(0.96 0.02 85);
 }
+@keyframes t-curtain-say {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .t-curtain-out__bulb { animation: none; }
+  /* Closed already, and the line simply there. */
+  .t-curtain-out__panel,
+  .t-curtain-out__say { animation: none; }
 }
 
 /* The toasts.
@@ -2953,9 +3046,20 @@
   margin-left: -50vw;
   z-index: -1;
   pointer-events: none;
+  /* On ink these are light falling into a room. On paper, at any opacity that
+     stays subtle, they are nothing at all — which is why the light theme read
+     as one flat sheet of beige with objects sitting on it rather than as a
+     room. Paper gets warmth instead of glow: a deeper wash off the same
+     corner, the colour of light on a wall rather than the light itself. */
   background:
-    radial-gradient(60% 45% at 22% 18%, oklch(0.72 0.17 55 / 0.14), transparent 70%),
-    radial-gradient(40% 40% at 85% 90%, oklch(0.92 0.18 100 / 0.05), transparent 70%),
+    radial-gradient(75% 55% at 18% 8%, oklch(0.88 0.055 75), transparent 72%),
+    radial-gradient(55% 45% at 88% 96%, oklch(0.93 0.035 95), transparent 70%),
+    var(--page);
+}
+.dark .theatre-stage::before {
+  background:
+    radial-gradient(60% 45% at 22% 18%, oklch(0.72 0.17 55 / 0.22), transparent 70%),
+    radial-gradient(40% 40% at 85% 90%, oklch(0.92 0.18 100 / 0.06), transparent 70%),
     var(--page);
 }
 .theatre-stage button,
@@ -3022,21 +3126,24 @@
   border-radius: 4px 4px 2px 2px;
   background: oklch(0.3 0.02 55);
 }
+/* On paper the bulb stops being a light and becomes an object: the glow has
+   nothing to glow against, so it reads as a yellow shape hanging on a string.
+   It is drawn instead — a warm amber fixture with a thin ink rule, the way the
+   rest of the light theme is drawn rather than lit. The glow comes back in
+   dark, where there is something for it to fall on. */
 .t-ghost-light__bulb {
   display: block;
   width: 36px;
   height: 42px;
   border-radius: 50% 50% 46% 46%;
   background: radial-gradient(
-    circle at 50% 40%,
-    oklch(0.99 0.05 95),
-    oklch(0.92 0.18 100) 35%,
-    oklch(0.75 0.17 60)
+    circle at 50% 38%,
+    oklch(0.95 0.1 95),
+    oklch(0.86 0.16 92) 42%,
+    oklch(0.74 0.15 70)
   );
-  box-shadow:
-    0 0 28px 6px oklch(0.85 0.17 80 / 0.75),
-    0 0 100px 40px oklch(0.72 0.17 55 / 0.28);
-  animation: t-flicker 9s linear infinite;
+  border: 1.5px solid oklch(0.5 0.1 70 / 0.5);
+  box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3075,10 +3182,14 @@
   0%, 100% { transform: scale(1); opacity: 0.55; }
   50% { transform: scale(1.2); opacity: 0.95; }
 }
+/* The callboard strip is bar furniture, so it flips with the bar: a paper
+   rail with an ink rule in light, the raised ink strip in dark. It was the
+   one black slab left lying across a cream room. */
 .t-marquee {
   border-radius: 999px;
-  border: 1px solid var(--t-line-dark-2);
-  background: oklch(0.17 0.018 52);
+  border: 1px solid var(--bar-rule);
+  background: var(--bar);
+  color: var(--bar-fg);
   transition: border-color 0.3s;
 }
 .t-marquee:hover {
@@ -3093,7 +3204,7 @@
    the cap instead of being cut by it. */
 .t-marquee__cap {
   position: relative;
-  background: oklch(0.2 0.02 52);
+  background: var(--bar-raised);
 }
 .t-marquee__cap::after {
   content: "";
@@ -3105,11 +3216,11 @@
 }
 .t-marquee__cap:first-child::after {
   left: 100%;
-  background: linear-gradient(to right, oklch(0.2 0.02 52), transparent);
+  background: linear-gradient(to right, var(--bar-raised), transparent);
 }
 .t-marquee__cap:last-child::after {
   right: 100%;
-  background: linear-gradient(to left, oklch(0.2 0.02 52), transparent);
+  background: linear-gradient(to left, var(--bar-raised), transparent);
 }
 .t-marquee__pulse {
   background: var(--t-orange);
@@ -3621,6 +3732,138 @@
    landing's nav and the marketing pill: the chrome is the building, not the
    set, and it stays the same whatever light the room is in.
    ========================================================================== */
+/* The App Store strip.
+
+   It was a band of solid brand orange across the very top of every page —
+   the most saturated thing in the product, sitting directly above a bar that
+   had just learned to be quiet, announcing a different product. A notice is
+   not a CTA: it gets the paper the rest of the chrome gets, one gel dot to
+   say it is new, and the link carries the colour instead of the whole band. */
+.t-launchbar {
+  background: var(--bar-raised);
+  color: var(--bar-fg);
+  border-bottom: 1px solid var(--bar-rule);
+  font-family: var(--t-body, ui-sans-serif, system-ui, sans-serif);
+}
+.t-launchbar__line {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+.t-launchbar__line::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: var(--t-gel, oklch(0.92 0.18 100));
+  box-shadow: 0 0 10px 2px oklch(0.92 0.18 100 / 0.55);
+}
+.t-launchbar__link {
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--t-orange-deep, oklch(0.58 0.18 45));
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.t-launchbar__link:hover {
+  text-decoration: none;
+}
+.t-launchbar__close {
+  border-radius: 999px;
+  padding: 8px;
+  color: var(--bar-muted);
+  opacity: 0.8;
+  transition: opacity 0.25s, color 0.25s;
+}
+.t-launchbar__close:hover {
+  opacity: 1;
+  color: var(--bar-fg);
+}
+:root.dark .t-launchbar__link {
+  color: oklch(0.8 0.15 60);
+}
+
+/* The hallway between signing up and your first piece. */
+.t-first-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 10040;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: oklch(0.11 0.012 50);
+  color: oklch(0.96 0.02 85);
+}
+.t-first-scene__bulb {
+  display: block;
+  width: 26px;
+  height: 30px;
+  border-radius: 50% 50% 46% 46%;
+  background: radial-gradient(
+    circle at 50% 40%,
+    oklch(0.99 0.05 95),
+    oklch(0.92 0.18 100) 35%,
+    oklch(0.75 0.17 60)
+  );
+  box-shadow:
+    0 0 22px 5px oklch(0.85 0.17 80 / 0.7),
+    0 0 70px 26px oklch(0.72 0.17 55 / 0.22);
+  animation: t-flicker 9s linear infinite;
+}
+.t-first-scene__line {
+  margin: 0;
+  font-family: var(--t-direction, ui-monospace, monospace);
+  font-style: italic;
+  letter-spacing: 0.08em;
+  font-size: 14px;
+  color: oklch(0.75 0.02 62);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-first-scene__bulb { animation: none; }
+}
+
+/* ==========================================================================
+   THE BAR'S PALETTE
+   ==========================================================================
+   The header, the phone tab bar, the account playbill and the phone sheet were
+   written as one permanently-ink object. That is right on the landing, which
+   IS ink. It is wrong in the app, where the page underneath now follows the
+   visitor's choice — a black slab across the top of a cream room reads as a
+   piece of another product parked on the page, and it is the first thing you
+   see on every screen.
+
+   The bar is paper with ink on it in light, and the lifted ink pill in dark.
+   Same object, same shape, lit from the side the room is lit from.
+   ========================================================================== */
+:root {
+  --bar: oklch(0.99 0.006 85 / 0.92);
+  --bar-fg: oklch(0.16 0.01 45);
+  --bar-muted: oklch(0.45 0.02 55);
+  --bar-rule: oklch(0.84 0.02 75);
+  --bar-raised: oklch(0.95 0.014 82);
+  --bar-active: oklch(0.16 0.01 45);
+  --bar-active-fg: oklch(0.97 0.015 85);
+  --bar-shadow: 0 14px 40px -18px oklch(0.3 0.03 55 / 0.42);
+}
+:root.dark {
+  --bar: oklch(0.24 0.022 52 / 0.94);
+  --bar-fg: oklch(0.96 0.02 85);
+  --bar-muted: oklch(0.75 0.02 62);
+  --bar-rule: oklch(0.46 0.03 55 / 0.8);
+  --bar-raised: oklch(0.3 0.025 52);
+  --bar-active: oklch(0.96 0.02 85);
+  --bar-active-fg: oklch(0.13 0.015 50);
+  --bar-shadow:
+    inset 0 1px 0 oklch(0.72 0.03 60 / 0.16),
+    0 16px 48px -16px rgb(0 0 0 / 0.75);
+}
+
 .t-appbar {
   pointer-events: auto;
   width: 100%;
@@ -3632,12 +3875,12 @@
      off" without being able to name it. */
   padding: 0 6px 0 14px;
   border-radius: 999px;
-  background: oklch(0.13 0.015 50 / 0.9);
+  background: var(--bar);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid oklch(0.35 0.03 55 / 0.6);
-  box-shadow: 0 12px 44px -14px rgb(0 0 0 / 0.55);
-  color: oklch(0.96 0.02 85);
+  border: 1px solid var(--bar-rule);
+  box-shadow: var(--bar-shadow);
+  color: var(--bar-fg);
   transform-origin: top center;
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s;
 }
@@ -3651,7 +3894,7 @@
   flex-shrink: 0;
   width: 1px;
   height: 22px;
-  background: oklch(0.35 0.03 55);
+  background: var(--bar-rule);
 }
 
 /* The followspot. Position and width come from the active tab; only this one
@@ -3664,7 +3907,7 @@
   left: 0;
   width: 0;
   border-radius: 999px;
-  background: oklch(0.96 0.02 85);
+  background: var(--bar-active);
   transition:
     left 0.45s cubic-bezier(0.34, 1.3, 0.64, 1),
     width 0.45s cubic-bezier(0.34, 1.3, 0.64, 1),
@@ -3683,7 +3926,7 @@
   font-family: var(--t-body, inherit);
   font-size: 13px;
   font-weight: 500;
-  color: oklch(0.75 0.02 62);
+  color: var(--bar-muted);
   white-space: nowrap;
   transition: color 0.35s;
 }
@@ -3694,7 +3937,7 @@
 .t-appbar__tab[data-active="true"],
 .t-appbar__tab[data-active="true"]:hover {
   font-weight: 700;
-  color: oklch(0.13 0.015 50);
+  color: var(--bar-active-fg);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3714,8 +3957,8 @@
   height: 36px;
   padding: 0 12px 0 10px;
   border-radius: 999px;
-  border: 1px solid oklch(0.35 0.03 55);
-  color: oklch(0.8 0.02 70);
+  border: 1px solid var(--bar-rule);
+  color: var(--bar-muted);
   font-family: var(--t-direction, ui-monospace, monospace);
   font-size: 12px;
   letter-spacing: 0.06em;
@@ -3760,8 +4003,8 @@
   width: 36px;
   height: 36px;
   border-radius: 999px;
-  border: 1px solid oklch(0.35 0.03 55);
-  color: oklch(0.8 0.02 70);
+  border: 1px solid var(--bar-rule);
+  color: var(--bar-muted);
   font-family: var(--t-display, Georgia, serif);
   font-style: italic;
   font-size: 20px;
@@ -3782,7 +4025,7 @@
   height: 36px;
   flex-shrink: 0;
   border-radius: 999px;
-  border: 1px solid oklch(0.35 0.03 55);
+  border: 1px solid var(--bar-rule);
   background: oklch(0.92 0.18 100 / 0.25);
   cursor: pointer;
   padding: 0;
@@ -3802,7 +4045,7 @@
   height: 28px;
   border-radius: 999px;
   background: oklch(0.92 0.18 100);
-  color: oklch(0.13 0.015 50);
+  color: var(--bar-active-fg);
   box-shadow: 0 0 14px 2px oklch(0.92 0.18 100 / 0.7);
   transition:
     left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -3812,8 +4055,8 @@
 }
 .t-lights[data-dark="true"] .t-lights__knob {
   left: 3px;
-  background: oklch(0.35 0.03 55);
-  color: oklch(0.75 0.02 62);
+  background: var(--bar-rule);
+  color: var(--bar-muted);
   box-shadow: none;
 }
 
@@ -3825,9 +4068,9 @@
   height: 40px;
   padding: 0 12px 0 3px;
   border-radius: 999px;
-  border: 1px solid oklch(0.35 0.03 55);
-  background: oklch(0.17 0.018 52);
-  color: oklch(0.96 0.02 85);
+  border: 1px solid var(--bar-rule);
+  background: var(--bar-raised);
+  color: var(--bar-fg);
   font-family: inherit;
   cursor: pointer;
   transition: all 0.3s;
@@ -3835,21 +4078,21 @@
 .t-account[data-open="true"],
 .t-account:hover {
   border-color: oklch(0.92 0.18 100);
-  background: oklch(0.2 0.02 52);
+  background: var(--bar-raised);
 }
 .t-account__avatar {
   width: 34px;
   height: 34px;
   border-radius: 999px;
   border: 2px solid oklch(0.92 0.18 100);
-  background: oklch(0.13 0.015 50);
-  color: oklch(0.96 0.02 85);
+  background: var(--bar-active);
+  color: var(--bar-active-fg);
 }
 .t-account__tier {
   padding: 2px 7px;
   border-radius: 999px;
   background: oklch(0.92 0.18 100);
-  color: oklch(0.13 0.015 50);
+  color: var(--bar-active-fg);
   font-family: var(--t-direction, ui-monospace, monospace);
   font-size: 10px;
   letter-spacing: 0.12em;
@@ -3874,7 +4117,7 @@
   width: 300px;
   overflow: hidden;
   border-radius: 8px;
-  background: oklch(0.96 0.02 85);
+  background: var(--bar-active);
   color: oklch(0.16 0.01 45);
   border: 1.5px solid oklch(0.16 0.01 45);
   box-shadow: 10px 10px 0 oklch(0.92 0.18 100);
@@ -4014,7 +4257,7 @@
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid oklch(0.35 0.03 55 / 0.6);
-  box-shadow: 0 12px 40px -12px rgb(0 0 0 / 0.7);
+  box-shadow: var(--bar-shadow);
   color: oklch(0.96 0.02 85);
 }
 @media (max-width: 767.98px) {
@@ -4083,14 +4326,7 @@
    Lifted clear of all three, with the rule and the shadow that make an edge
    legible on a dark ground: a hairline of light along the top, the way a real
    object catches the room. */
-:root.dark .t-appbar,
-:root.dark .t-tabbar {
-  background: oklch(0.24 0.022 52 / 0.94);
-  border-color: oklch(0.46 0.03 55 / 0.8);
-  box-shadow:
-    inset 0 1px 0 oklch(0.72 0.03 60 / 0.16),
-    0 16px 48px -16px rgb(0 0 0 / 0.75);
-}
+
 
 /* The bulb catches, the way a working light does. */
 .t-lamp__core {
@@ -4853,7 +5089,10 @@
 /* --- The bare shelf ------------------------------------------------------ */
 
 .t-bare {
-  min-height: 56vh;
+  /* 56vh centred its stack inside a box taller than the stack, which parked a
+     void above the slot on any tall window. The block is only ~420px of
+     content; the height only needs to stop it hugging the header. */
+  min-height: 48vh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -4875,7 +5114,7 @@
   color: var(--t-line-light);
 }
 .t-bare__name {
-  margin: 10px 0 0;
+  margin: 12px 0 0;
   font-family: var(--t-display);
   font-weight: 400;
   line-height: 0.95;
@@ -4906,6 +5145,20 @@
 .theatre-stage {
   --page: oklch(0.96 0.02 85);
 }
+/* In dark the bulb is a light again. */
+.dark .t-ghost-light__bulb {
+  background: radial-gradient(
+    circle at 50% 38%,
+    oklch(0.99 0.05 95),
+    oklch(0.92 0.18 100) 38%,
+    oklch(0.75 0.17 60)
+  );
+  border-color: transparent;
+  box-shadow:
+    0 0 26px 6px oklch(0.85 0.17 80 / 0.7),
+    0 0 90px 34px oklch(0.72 0.17 55 / 0.25);
+}
+
 .dark .theatre-stage {
   --t-gel-ink: var(--t-gel);
   --page: oklch(0.11 0.012 50);

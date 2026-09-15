@@ -20,6 +20,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageTransition } from "@/components/transition/PageTransition";
 import { UploadProvider } from "@/components/practice/UploadProvider";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 
 // Lazy-load modals that only appear conditionally — keeps them out of the
 // platform layout's initial JS bundle and shaves first-paint cost on /practice.
@@ -276,7 +277,14 @@ export default function PlatformLayout({
           it is gone everywhere. */}
       <AppLaunchBar />
 
-      {/* Logout transition overlay */}
+      {/* Logout transition overlay.
+
+          The faces have to be BOUND here, not merely asked for: the platform
+          layout carries neither `theatre-tokens` nor `theatreFontVars`, so
+          `var(--t-display)` resolved to nothing, which invalidates the whole
+          font-family declaration and makes the element inherit — the goodbye
+          has been rendering in the app's Montserrat since it shipped. Same
+          omission as /monologues (a589aa3f). */}
       <AnimatePresence>
         {isLoggingOut && (
           <motion.div
@@ -284,27 +292,23 @@ export default function PlatformLayout({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="t-curtain-out"
+            className={`t-curtain-out theatre-tokens ${theatreFontVars}`}
             aria-live="polite"
             aria-label="Logging out"
           >
-            {/* Leaving is the one moment the product gets to say goodbye in its
-                own voice. It used to be the app's generic card with a spinner
-                on a blurred page — the visual language of a request in flight,
-                not of a curtain coming down. */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-              className="t-curtain-out__card"
-            >
-              <span aria-hidden className="t-curtain-out__bulb" />
-              <p className="t-dir" style={{ color: "var(--t-muted-light-2)" }}>
-                (ghost light on.)
+            {/* Leaving is the one moment the product gets to say goodbye in
+                its own voice, and the gesture IS the goodbye — two travelers
+                sweeping in to meet, then the line. No card, no bulb: the
+                ghost light is the lamp left on an empty stage, which is an
+                empty state, not a person going home. */}
+            <span aria-hidden className="t-curtain-out__panel t-curtain-out__panel--l" />
+            <span aria-hidden className="t-curtain-out__panel t-curtain-out__panel--r" />
+            <div className="t-curtain-out__say">
+              <p className="t-dir" style={{ color: "oklch(0.72 0.03 62)" }}>
+                (curtain.)
               </p>
               <p className="t-curtain-out__line">See you at the next call.</p>
-            </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -342,7 +346,11 @@ export default function PlatformLayout({
               className="flex min-w-0 shrink-0 items-center transition-opacity hover:opacity-80"
               aria-label="ActorRise Home"
             >
-              <BrandLogo size="header" onDark />
+              {/* Not onDark any more. The bar is paper in light and ink in dark, so the
+                  wordmark has to follow it — hardcoding the light-on-dark asset
+                  printed a cream logo onto cream paper. BrandLogo already picks
+                  the right file from resolvedTheme when it is allowed to. */}
+              <BrandLogo size="header" />
             </Link>
             <span aria-hidden className="t-appbar__rule" />
 
