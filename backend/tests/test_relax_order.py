@@ -14,7 +14,12 @@ from app.services.search.semantic_search import RELAX_ORDER, relax_step
 class RelaxOrderTests(unittest.TestCase):
     def test_duration_floor_is_relaxed_last(self):
         self.assertEqual(RELAX_ORDER[-1], "min_duration")
-        self.assertEqual(set(RELAX_ORDER), {"age_range", "category", "max_duration", "min_duration"})
+        self.assertEqual(set(RELAX_ORDER), {"age_range", "max_duration", "min_duration"})
+
+    def test_era_is_never_relaxed(self):
+        # 2026-09-15: category=contemporary was being dropped on most
+        # contemporary searches and 40% of the results came back classical.
+        self.assertNotIn("category", RELAX_ORDER)
 
     def test_large_floor_is_halved_not_dropped(self):
         relaxed = {"min_duration": 120, "gender": "female"}

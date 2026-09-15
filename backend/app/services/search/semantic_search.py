@@ -215,7 +215,16 @@ def film_tv_word_gate_hides(source_type, word_count) -> bool:
 # Graceful-relaxation order: least-important first. The duration FLOOR is the
 # user's explicit intent ("2 min monologue") and goes LAST — and even then it
 # is softened, not dropped, so a 2-minute ask never surfaces 20-second clips.
-RELAX_ORDER = ("age_range", "category", "max_duration", "min_duration")
+#
+# `category` is NOT relaxable (removed 2026-09-15). It used to sit second, and
+# with only 325 contemporary play pieces in the corpus it was dropped on most
+# contemporary searches: 74 of 184 results served under category=contemporary
+# + plays in one week came from classical plays, "Monologue about disbelief"
+# returned 20 of 20 classical, and three of four negative comments that week
+# said "not contemporary". The banner said "broadened the era" and nobody read
+# it as "these are all Restoration comedy". Few honest results beat twenty
+# wrong ones; the empty state now has somewhere to go.
+RELAX_ORDER = ("age_range", "max_duration", "min_duration")
 
 
 def relax_step(relaxed: Dict, key: str) -> None:
@@ -1483,9 +1492,9 @@ class SemanticSearch:
             self._best_cosine_sim = None
 
             # Graceful relaxation: if too few rows pass ALL hard filters, relax
-            # the least-important ones (age → era → cap → duration floor, the
-            # floor softened rather than dropped) and backfill, flagging that
-            # the search was broadened so the UI can say so.
+            # the least-important ones (age → cap → duration floor, the floor
+            # softened rather than dropped; never the era) and backfill,
+            # flagging that the search was broadened so the UI can say so.
             self._search_broadened = False
             self._broadened_dropped = []
             self._broadened_ids = set()
