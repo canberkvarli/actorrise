@@ -3691,10 +3691,20 @@
 
    `:root.dark`, not `.dark`: the header shell carries a `dark` class of its
    own at every theme, so a bare `.dark` descendant selector always matches. */
+/* The bar has to read as an object floating over the page, and in dark it
+   barely did. It sat at oklch(0.19) while the grounds under it are 0.15
+   (search), 0.11 (collection) and 0.11 (the rehearsal room) — four hundredths
+   of lightness above the darkest of them, and on cream it gets ninety-five.
+   Lifted clear of all three, with the rule and the shadow that make an edge
+   legible on a dark ground: a hairline of light along the top, the way a real
+   object catches the room. */
 :root.dark .t-appbar,
 :root.dark .t-tabbar {
-  background: oklch(0.19 0.02 52 / 0.92);
-  border-color: oklch(0.42 0.03 55 / 0.7);
+  background: oklch(0.24 0.022 52 / 0.94);
+  border-color: oklch(0.46 0.03 55 / 0.8);
+  box-shadow:
+    inset 0 1px 0 oklch(0.72 0.03 60 / 0.16),
+    0 16px 48px -16px rgb(0 0 0 / 0.75);
 }
 
 /* The bulb catches, the way a working light does. */
@@ -4561,7 +4571,7 @@
 }
 
 /* ==========================================================================
-   ONBOARDING — the first-run playbill (Theatre Walk)
+   ONBOARDING + TOURS — the first-run playbill (Theatre Walk)
 
    A card on a dark stage under one ghost light. The stage stays dark in both
    themes, the way a house is dark whatever time you walked in from; the CARD
@@ -4571,8 +4581,13 @@
 
    Everything the component draws reads these tokens, so there are no dark
    rules below this block.
+   `.theatre-tour` is the same palette for the followspot cards, which land on
+   top of arbitrary app pages and so cannot borrow the page's tokens. It shares
+   this block rather than copying it — two palettes that must agree is how the
+   two halves of one flow drift apart.
    ========================================================================== */
-.theatre-onboarding {
+.theatre-onboarding,
+.theatre-tour {
   --page: oklch(0.13 0.015 50);
   --card: var(--t-cream);
   --acc: var(--t-orange-deep);
@@ -4595,11 +4610,13 @@
 /* Form controls inherit no face of their own, and this card is almost entirely
    buttons and two inputs. */
 .theatre-onboarding button,
-.theatre-onboarding input {
+.theatre-onboarding input,
+.theatre-tour button {
   font-family: inherit;
 }
 
-.dark .theatre-onboarding {
+.dark .theatre-onboarding,
+.dark .theatre-tour {
   /* The stage goes a shade deeper so the card still separates from it. */
   --page: oklch(0.1 0.012 50);
   --card: oklch(0.19 0.018 52);
