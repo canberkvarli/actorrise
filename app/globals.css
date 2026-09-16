@@ -3898,6 +3898,9 @@
   margin: 0 auto;
   max-width: 80rem;
   pointer-events: none;
+  /* Portalled out to the body, so it no longer inherits the room's face from
+     .theatre-stage and would otherwise land back on the app's Montserrat. */
+  font-family: var(--t-body);
 }
 .t-marquee-dock > * {
   pointer-events: auto;

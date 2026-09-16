@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { PracticeLibrary } from "@/components/practice/PracticeLibrary";
 import { theatreFontVars } from "@/lib/fonts/theatre";
-import { CallboardMarquee } from "@/components/community/CallboardMarquee";
+import { CallboardDock } from "@/components/community/CallboardDock";
 import {
   HowItWorksWalkthrough,
   shouldAutoOpenWalkthrough,
@@ -100,7 +100,7 @@ export default function PracticePage() {
   return (
     <div
       className={`theatre-tokens theatre-stage ${theatreFontVars} container relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${
-        hasOwnScript ? "py-8 sm:py-14" : "py-6 sm:py-8"
+        hasOwnScript ? "pb-28 pt-8 sm:pb-24 sm:pt-14" : "pb-28 pt-6 sm:pb-24 sm:pt-8"
       }`}
     >
       {/* The room it is lit from: a warm wash off the top-left corner, a gel
@@ -183,13 +183,17 @@ export default function PracticePage() {
               now, past the stage, where you arrive only once you are done
               looking at your own work. */}
           <div className="mt-16 border-t pt-6 sm:mt-20" style={{ borderColor: "var(--t-line-light)" }}>
-            <CallboardMarquee />
-            <div className="mt-5 flex justify-center">
+            <div className="flex justify-center">
               <HowItWorksButton onOpen={() => setWalkthroughOverride(true)} />
             </div>
           </div>
         </motion.div>
       )}
+
+      {/* Docked to the foot of the screen rather than parked at the foot of the
+          page. It portals itself out to the body — see CallboardDock for why a
+          plain fixed div cannot work anywhere inside a platform route. */}
+      {user && !isLoading && <CallboardDock />}
 
       <HowItWorksWalkthrough open={walkthroughOpen} onOpenChange={setWalkthroughOverride} />
     </div>
