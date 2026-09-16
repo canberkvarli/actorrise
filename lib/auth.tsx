@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "./supabase";
-import { clearFirstRunAll, clearFirstRunSession } from "@/lib/firstRun";
+import { clearFirstRunAll, clearFirstRunSession, markSignupPending } from "@/lib/firstRun";
 import api, { primeSessionCache } from "./api";
 import { setStoredLastAuthMethod } from "./last-auth-method";
 import { clearSwrCache, clearReactQueryCache, clearUserSpecificQueryCache } from "./swrCache";
@@ -222,6 +222,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // A new account on a machine that has seen the product before still gets
       // the onboarding card, the tours and the ScenePartner playbill.
       clearFirstRunAll();
+      // Claim the stage before the platform renders anything. The curtain reads
+      // this synchronously, which is the only check available in the window
+      // between "signed up" and "the API has told us who this is".
+      markSignupPending();
 
       const { data, error } = await supabase.auth.signUp({
         email,

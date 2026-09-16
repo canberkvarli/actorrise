@@ -1,30 +1,51 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/auth";
 import { theatreFontVars } from "@/lib/fonts/theatre";
+import { isSignupPending } from "@/lib/firstRun";
 
 /**
- * The house, dark, before the first-run card arrives.
+ * The house, dark, from the instant an account exists until the first-run card
+ * is done with it.
  *
  * OnboardingWizard is a dynamic() chunk with ssr:false, so it cannot render
- * until after hydration has fetched it. For the actor that meant watching the
+ * until hydration has fetched it. For the actor that meant watching the
  * dashboard assemble itself card by card, skeletons filling in, and then the
  * whole thing vanish under an onboarding takeover — the app introducing itself
  * twice, the second time contradicting the first.
  *
- * This is deliberately NOT dynamic and deliberately trivial: no framer, no
- * fonts to wait on, nothing but a filled rectangle in the flow's own page
- * colour. It costs a few bytes in the platform bundle and it holds the stage
- * until the real card lands on top of it.
+ * TWO conditions, because either alone leaves a gap:
  *
- * Only on `=== false`. While auth is loading the flag is undefined, and
- * covering the app on "not sure yet" would blank the screen for every returning
- * actor on every cold load.
+ *  - `has_completed_onboarding === false` covers a reload mid-onboarding, but
+ *    NOT the seconds right after signup, where there is no user object yet and
+ *    auth is still loading. Waiting for it is what still showed the dashboard
+ *    for a beat.
+ *  - the signup flag is known synchronously, before the platform's first
+ *    render, and covers exactly that window. It is cleared the moment the
+ *    server confirms onboarding is behind them.
+ *
+ * Read through useSyncExternalStore with a `false` server snapshot: it touches
+ * sessionStorage, which the server cannot, and rendering the curtain during SSR
+ * would black out the shell for everyone.
  */
 export function FirstRunCurtain() {
-  const { user, loading } = useAuth();
-  if (loading || !user) return null;
-  if (user.has_completed_onboarding !== false) return null;
+  const { user } = useAuth();
+
+  const signupPending = useSyncExternalStore(
+    () => () => {},
+    isSignupPending,
+    () => false,
+  );
+
+  // The server saying "finished" always wins, so a returning actor is never
+  // covered by a stale signup flag from earlier in the same tab.
+  if (user?.has_completed_onboarding === true) return null;
+
+  const needsOnboarding = user?.has_completed_onboarding === false;
+  // Note auth's `loading` is deliberately NOT consulted: that window is the
+  // gap being covered, not a reason to stand down.
+  if (!needsOnboarding && !signupPending) return null;
 
   return (
     <div

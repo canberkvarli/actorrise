@@ -21,10 +21,47 @@
 export const TOUR_LATCH_KEY = "actorrise_tour_seen";
 export const ONBOARDING_LATCH_KEY = "actorrise_onboarding_done";
 
+/**
+ * "An account was just created in this tab."
+ *
+ * Set the moment signup succeeds, cleared when the onboarding card is done
+ * with. It exists because the curtain cannot ask the user object: right after
+ * signup there IS no user yet, auth is still loading, and a curtain that waits
+ * for `has_completed_onboarding === false` is a curtain that arrives after the
+ * dashboard has already painted. This flag is known synchronously, before the
+ * first render of the platform, which is the only thing fast enough.
+ */
+export const SIGNUP_PENDING_KEY = "actorrise_signup_pending";
+
+export function markSignupPending() {
+  try {
+    sessionStorage.setItem(SIGNUP_PENDING_KEY, "1");
+  } catch {
+    /* storage unavailable — the user-object check below still covers it */
+  }
+}
+
+export function clearSignupPending() {
+  try {
+    sessionStorage.removeItem(SIGNUP_PENDING_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+export function isSignupPending(): boolean {
+  try {
+    return sessionStorage.getItem(SIGNUP_PENDING_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 /** Per-session latches: tours dismissed, onboarding finished, first scene handled. */
 const SESSION_KEYS = [
   TOUR_LATCH_KEY,
   ONBOARDING_LATCH_KEY,
+  SIGNUP_PENDING_KEY,
   "actorrise_first_scene_handled",
 ];
 

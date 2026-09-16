@@ -14,9 +14,12 @@ import { hasSeenTourThisSession } from "@/components/onboarding/TourSpotlight";
  * tour for the rest of the visit, and clicking through to another page does not
  * fix it because a client-side navigation reuses the same user object.
  */
-import { ONBOARDING_LATCH_KEY as ONBOARDING_LATCH } from "@/lib/firstRun";
+import { ONBOARDING_LATCH_KEY as ONBOARDING_LATCH, clearSignupPending } from "@/lib/firstRun";
 
 export function markOnboardingDone() {
+  // The curtain's other condition retires here: onboarding is behind them, so
+  // "an account was just created" stops meaning "hold the stage".
+  clearSignupPending();
   try {
     sessionStorage.setItem(ONBOARDING_LATCH, "1");
   } catch {

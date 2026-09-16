@@ -450,10 +450,15 @@ export default function ProfileOnboardingFlow({
    * toast about a bookmark. Anything that did not save is still in the library.
    */
   const keepPicks = useCallback(
-    async (ids: number[]) => {
-      await Promise.allSettled(
-        ids.map((id) => api.post(`/api/monologues/${id}/favorite`))
-      );
+    (ids: number[]) => {
+      // Fired, not awaited. Six POSTs took long enough that the card sat on
+      // "Putting them away…" with a dead pill while the actor watched, which
+      // turned the last beat of the flow into a loading screen. The requests
+      // are not cancelled by unmounting, so they land either way, and the
+      // collection is somewhere the actor goes next rather than right now.
+      ids.forEach((id) => {
+        void api.post(`/api/monologues/${id}/favorite`).catch(() => {});
+      });
       // No navigation. The card closes onto whatever page the actor was already
       // on, and that page's tour picks them up. Pushing a route here is what
       // made ScenePartner flash past for a beat on the way to /work, and it
@@ -858,7 +863,7 @@ function OnboardingPayoff({
 }: {
   answers: OnboardingAnswers;
   items: Monologue[];
-  onKeep: (ids: number[]) => Promise<void>;
+  onKeep: (ids: number[]) => void;
   onBrowse: () => void;
   onClose: () => void;
   onOwnSides: () => void;
@@ -869,7 +874,6 @@ function OnboardingPayoff({
      whether they want any — and an empty-by-default list makes the whole
      payoff a form to fill in. */
   const [keep, setKeep] = useState<number[]>(() => items.map((m) => m.id));
-  const [saving, setSaving] = useState(false);
 
   if (!items.length) {
     return (
@@ -981,21 +985,15 @@ function OnboardingPayoff({
       </ul>
 
       <div className="mt-5">
-        <CtaPill
-          disabled={saving}
-          onClick={async () => {
-            if (saving) return;
-            setSaving(true);
-            await onKeep(keep);
-          }}
-        >
-          {saving
-            ? "Putting them away…"
-            : keep.length === 0
-              ? "Take me to the library"
-              : keep.length === items.length
-                ? "Keep them all"
-                : `Keep ${keep.length}`}
+        {/* No pending state. The saves are fired and not awaited, so this
+            closes on the tap — a spinner here would be the card asking the
+            actor to watch it finish its own paperwork. */}
+        <CtaPill onClick={() => onKeep(keep)}>
+          {keep.length === 0
+            ? "Take me to the library"
+            : keep.length === items.length
+              ? "Keep them all"
+              : `Keep ${keep.length}`}
         </CtaPill>
       </div>
 
