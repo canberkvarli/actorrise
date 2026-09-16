@@ -6711,3 +6711,470 @@
 .dark .t-stub {
   box-shadow: 7px 7px 0 oklch(0.045 0.008 50);
 }
+
+
+/* ==========================================================================
+   THE RÉSUMÉ — /resume
+   ==========================================================================
+   A builder on the left, the document on the right. The shape was right; the
+   weighting was not. The thing being made — the one-pager an actor hands to a
+   casting director — was a plain white box in the smaller half of a 50/50
+   split, set in the UI sans, with the production title crushed into a column
+   so narrow that "A Midsummer Night's Dream" broke over four lines while the
+   role beside it sat on one. Everything around it — "Header details", "Add a
+   credit", rounded inputs, a shadcn button — was the generic app.
+
+   The sheet is the page now: letter proportions, real paper on a hard ink
+   shadow, and the typography a résumé actually uses. The builder is the
+   margin: the same form language as the rest of the theatre, quiet enough that
+   the document is what you look at.
+   ========================================================================== */
+
+/* --- The desk -------------------------------------------------------------- */
+.t-resume__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+}
+.t-resume__title {
+  margin: 8px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(2.25rem, 4.6vw, 3.25rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-resume__note {
+  margin: 10px 0 0;
+  max-width: 54ch;
+  font-family: var(--t-direction);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--t-muted-dark-2);
+}
+.t-resume__note a {
+  color: var(--t-gel-ink);
+  border-bottom: 1px solid var(--t-gel-ink);
+  padding-bottom: 1px;
+}
+
+/* --- The builder ----------------------------------------------------------- */
+/* A block of the form, headed like a section of a call sheet. */
+.t-build {
+  border-top: 1.5px solid var(--t-line-light);
+  padding-top: 16px;
+}
+.t-build__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark-2);
+}
+.t-build__aside {
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--t-muted-light-2);
+}
+
+/* Fields. Paper with a ruled underline, the way a form on paper is filled in,
+   rather than rounded boxes borrowed from the app. */
+.t-field {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 2px;
+  border: 0;
+  border-bottom: 1.5px solid var(--t-line-light);
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--t-direction);
+  font-size: 14px;
+  color: var(--t-text);
+  transition: border-color 0.25s;
+}
+.t-field::placeholder {
+  color: var(--t-muted-light-2);
+}
+.t-field:hover {
+  border-color: var(--t-muted-light-2);
+}
+.t-field:focus {
+  outline: none;
+  border-color: var(--t-gel-ink);
+}
+/* A <select> keeps the native control but loses the app's chrome. */
+select.t-field {
+  appearance: none;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 9px) 55%, calc(100% - 4px) 55%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 22px;
+}
+
+/* The medium of a credit: theatre, film, tv… One row of pills. */
+.t-medium {
+  position: relative;
+  min-height: 34px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--t-line-light);
+  background: transparent;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--t-muted-dark-2);
+  white-space: nowrap;
+  transition: all 0.25s;
+}
+.t-medium::before {
+  /* Drawn at 34px, hit at 44. */
+  content: "";
+  position: absolute;
+  inset: -5px -2px;
+}
+.t-medium:hover {
+  border-color: var(--t-text);
+  color: var(--t-text);
+}
+.t-medium[aria-pressed="true"] {
+  border-color: var(--t-text);
+  background: var(--t-text);
+  color: var(--t-on-text);
+  font-weight: 700;
+}
+
+/* A credit on the board. The grip lives inside the row's left edge rather than
+   floating over it — same correction the script shelf needed. */
+.t-credit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 8px 9px 4px;
+  border-bottom: 1px solid var(--t-line-light-2);
+  background: transparent;
+  transition: background 0.2s;
+}
+.t-credit:last-child {
+  border-bottom: 0;
+}
+.t-credit:hover {
+  background: oklch(0.2 0.02 50 / 0.035);
+}
+.t-credit[data-overlay="true"] {
+  border: 1.5px solid var(--t-text);
+  border-radius: 8px;
+  background: var(--t-paper);
+  box-shadow: 6px 6px 0 var(--t-hard-shadow);
+}
+.t-credit__grip {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5px;
+  flex-shrink: 0;
+  width: 18px;
+  padding: 8px 0;
+  cursor: grab;
+  touch-action: none;
+}
+.t-credit__grip {
+  position: relative;
+}
+.t-credit__grip::before {
+  /* 18x26 drawn, 44x44 to catch. The pseudo takes no space, so the row does
+     not move. */
+  content: "";
+  position: absolute;
+  inset: -9px -13px;
+}
+.t-credit__grip span {
+  display: block;
+  width: 10px;
+  height: 1.5px;
+  margin: 0 auto;
+  border-radius: 1px;
+  background: var(--t-muted-light-2);
+  transition: background 0.2s;
+}
+.t-credit:hover .t-credit__grip span,
+.t-credit__grip:focus-visible span {
+  background: var(--t-text);
+}
+.t-credit__body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.t-credit__title {
+  display: block;
+  font-family: var(--t-direction);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--t-text);
+}
+.t-credit__role {
+  font-weight: 400;
+  color: var(--t-muted-dark-2);
+}
+.t-credit__meta {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--t-direction);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  color: var(--t-muted-light-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.t-credit__act {
+  position: relative;
+  flex-shrink: 0;
+  color: var(--t-muted-light-2);
+  transition: color 0.2s;
+}
+.t-credit__act::before {
+  content: "";
+  position: absolute;
+  inset: -12px -8px;
+}
+.t-credit__act:hover { color: var(--t-text); }
+.t-credit__act--cut:hover { color: oklch(0.55 0.19 28); }
+/* A phone has no hover, so these can never be hover-revealed. */
+@media (hover: hover) {
+  .t-credit__act { opacity: 0; }
+  .t-credit:hover .t-credit__act,
+  .t-credit__act:focus-visible { opacity: 1; }
+}
+
+/* An empty medium, while something is being dragged. */
+.t-credit__drop {
+  padding: 12px 8px;
+  border: 1.5px dashed var(--t-line-light);
+  border-radius: 8px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  color: var(--t-muted-light-2);
+}
+.t-credit__drop[data-over="true"] {
+  border-color: var(--t-gel-ink);
+  color: var(--t-gel-ink);
+}
+
+/* A skill, as a tag on the board. */
+.t-skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border: 1px solid var(--t-line-light);
+  border-radius: 3px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  color: var(--t-text);
+}
+.t-skill button {
+  position: relative;
+  display: inline-flex;
+  color: var(--t-muted-light-2);
+  transition: color 0.2s;
+}
+.t-skill button::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+}
+.t-skill button:hover { color: oklch(0.55 0.19 28); }
+
+/* ==========================================================================
+   THE SHEET — the document itself.
+   ==========================================================================
+   Always paper, in either theme, because it is a printout: what is on screen
+   here is what comes out of the PDF, and an actor checking their résumé at
+   1am should still be checking the thing they will hand over. */
+.t-paper {
+  --pa-ink: oklch(0.18 0.01 50);
+  --pa-mid: oklch(0.42 0.012 55);
+  --pa-faint: oklch(0.58 0.012 58);
+  --pa-rule: oklch(0.84 0.008 70);
+
+  position: relative;
+  width: 100%;
+  max-width: 8.5in;
+  margin: 0 auto;
+  /* US Letter. The sheet held no proportion at all before, so it was as tall
+     as its content and never read as a page. */
+  aspect-ratio: 8.5 / 11;
+  overflow: hidden;
+  padding: clamp(26px, 4.2%, 52px) clamp(24px, 5.5%, 62px);
+  background: oklch(0.995 0.002 90);
+  border: 1px solid var(--pa-rule);
+  box-shadow: 10px 10px 0 oklch(0.2 0.02 50 / 0.1);
+  color: var(--pa-ink);
+  font-family: var(--t-body);
+}
+/* Past the fold. A one-pager is a one-pager; if the credits run past the
+   sheet, say so rather than silently cropping or growing a second page. */
+.t-paper[data-overflowing="true"]::after {
+  content: "past one page";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 26px 0 8px;
+  background: linear-gradient(to bottom, transparent, oklch(0.995 0.002 90) 55%);
+  font-family: var(--t-direction);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: center;
+  color: oklch(0.55 0.16 45);
+}
+
+.t-paper__name {
+  margin: 0;
+  text-align: center;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(26px, 4.6vw, 40px);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--pa-ink);
+}
+.t-paper__union {
+  margin: 7px 0 0;
+  text-align: center;
+  font-family: var(--t-direction);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pa-mid);
+}
+.t-paper__contact {
+  margin: 9px 0 0;
+  text-align: center;
+  font-family: var(--t-direction);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--pa-mid);
+}
+.t-paper__rule {
+  margin: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--pa-ink);
+}
+
+.t-paper__section {
+  margin-top: 16px;
+}
+.t-paper__heading {
+  margin: 0 0 5px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--pa-rule);
+  font-family: var(--t-direction);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--pa-mid);
+}
+
+/* The credit line. Three columns, and the production gets the room — it is the
+   longest thing on any actor's résumé and it was getting the narrowest column,
+   so a Shakespeare title broke into a four-line ribbon beside a one-word role.
+   The house/director/year column is the one that may sit back. */
+.t-paper__credit {
+  display: grid;
+  /* Production · Role · House/director · Year — the year in its own narrow
+     column at the right edge, which is how a printed résumé sets it. Folded
+     into the house column it was the part that got pushed onto the next line,
+     so half the credits ended in an orphaned "· 2026". Now the years line up
+     down the margin and only the house can wrap. */
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.8fr) minmax(0, 1.25fr) 4.5ch;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 2.5px 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.t-paper__prod {
+  font-weight: 600;
+  color: var(--pa-ink);
+  text-wrap: pretty;
+}
+.t-paper__role {
+  color: var(--pa-mid);
+  text-wrap: pretty;
+}
+/* House · director · year. The widest of the three in practice — "The Public
+   Theater · Sam Gold · 2026" is longer than most titles — and at 1.2fr it was
+   breaking mid-phrase onto a second right-aligned line under every credit.
+   It gets the room, and a shade less type, so it sits back without wrapping. */
+.t-paper__house {
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--pa-faint);
+  text-wrap: pretty;
+}
+.t-paper__year {
+  text-align: right;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--pa-faint);
+}
+.t-paper__body {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--pa-ink);
+}
+.t-paper__italic {
+  margin: 0;
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--pa-mid);
+}
+.t-paper__empty {
+  margin-top: 40px;
+  text-align: center;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  color: var(--pa-faint);
+}
+
+/* Under the sheet: the one thing this page exists to produce. */
+.t-paper__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 16px;
+  margin-top: 18px;
+}
+.t-paper__fine {
+  font-family: var(--t-direction);
+  font-size: 11.5px;
+  color: var(--t-muted-light-2);
+}
+
+@media (max-width: 1023.98px) {
+  /* Stacked, the sheet is a preview rather than the thing you are working on,
+     so it stops claiming a full page of height. */
+  .t-paper {
+    aspect-ratio: auto;
+    min-height: 0;
+  }
+  .t-paper[data-overflowing="true"]::after {
+    content: none;
+  }
+}

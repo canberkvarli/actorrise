@@ -2,20 +2,36 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { IconPlus, IconX, IconDownload } from "@tabler/icons-react";
+import { IconX, IconDownload } from "@tabler/icons-react";
 import { useAuth } from "@/lib/auth";
 import api, { downloadFile } from "@/lib/api";
-import { Button } from "@/components/ui/button";
 import { UNION_STATUSES } from "@/lib/profileOptions";
 import type { Credit, CreditInput } from "@/types/resume";
 import { CREDIT_CATEGORIES } from "@/types/resume";
 import ResumePreview, { type ResumeProfile } from "@/components/resume/ResumePreview";
 import CreditsBoard from "@/components/resume/CreditsBoard";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 
 interface ProfileResp extends ResumeProfile {
   name?: string | null;
   location?: string | null;
 }
+
+/* `theatre-stage`, not just `theatre-tokens`. The tokens alone are the LIGHT
+   palette: --t-text and friends only flip to cream inside a stage, so on the
+   app's dark theme this page rendered ink on ink — the title, every field
+   value, every credit title and every skill tag simply were not there, while
+   the muted greys survived and made it look like a styling accident rather
+   than an invisible layer. The stage also gives the page the same ground the
+   rehearsal room and the collection stand on.
+
+   The sheet itself is deliberately NOT part of that: it holds its own paper in
+   either theme, because it is a printout. */
+const SHELL = `theatre-tokens theatre-stage ${theatreFontVars} container relative mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8`;
+
+/* Raw <input>/<select>, not the ui primitives, so the 44px touch height is set
+   by hand in `.t-field` rather than inherited. */
+const FIELD = "t-field";
 
 const EMPTY_FORM: CreditInput = {
   category: "theatre",
@@ -210,78 +226,71 @@ export default function ResumePage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <div className="mb-6 space-y-2">
-          <div className="h-3 w-24 animate-pulse rounded bg-muted" />
-          <div className="h-8 w-40 animate-pulse rounded bg-muted" />
-          <div className="h-4 w-80 max-w-full animate-pulse rounded bg-muted/60" />
-        </div>
-        <div className="grid gap-8 lg:grid-cols-2">
-          <div className="space-y-4">
-            <div className="h-52 animate-pulse rounded-md border border-border bg-muted/30" />
-            <div className="space-y-2">
+      <div className={SHELL}>
+        <div aria-hidden>
+          <div className="h-3 w-28 animate-pulse rounded bg-muted/50" />
+          <div className="mt-3 h-11 w-52 animate-pulse rounded bg-muted/50" />
+          <div className="mt-11 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.12fr)] lg:gap-14">
+            <div className="space-y-5">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="h-14 animate-pulse rounded border border-border bg-muted/20" />
+                <div key={i} className="h-28 animate-pulse rounded bg-muted/30" />
               ))}
             </div>
-          </div>
-          <div className="lg:sticky lg:top-6 lg:self-start">
-            <div className="mx-auto w-full max-w-[8.5in] bg-white p-8 shadow-sm ring-1 ring-black/10">
-              <div className="flex items-start justify-between border-b border-neutral-200 pb-5">
-                <div className="space-y-2">
-                  <div className="h-7 w-48 animate-pulse rounded bg-neutral-200" />
-                  <div className="h-3 w-32 animate-pulse rounded bg-neutral-100" />
-                </div>
-              </div>
-              {[0, 1, 2].map((s) => (
-                <div key={s} className="mt-5 space-y-2">
-                  <div className="h-3 w-24 animate-pulse rounded bg-neutral-100" />
-                  <div className="h-3 w-full animate-pulse rounded bg-neutral-100" />
-                </div>
-              ))}
-            </div>
+            <div className="aspect-[8.5/11] w-full max-w-[8.5in] animate-pulse rounded bg-muted/30" />
           </div>
         </div>
       </div>
     );
   }
 
-  // These are raw <input>/<select>, not the ui/input primitives, so they do not
-  // inherit its 44px touch height. min-h-[44px] md:min-h-0 matches it by hand.
-  const inputCls = "w-full min-h-[44px] rounded-md border border-border bg-background px-3 py-2 text-sm md:min-h-0";
-
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <header className="mb-6">
-        <p className="font-typewriter text-xs uppercase tracking-widest text-muted-foreground">
-          (your résumé.)
-        </p>
-        <h1 className="mt-1 font-brand text-3xl sm:text-4xl font-semibold text-foreground">Résumé</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Add credits and drag to reorder — or drag between sections. Your name comes from your{" "}
-          <Link href="/profile" className="underline underline-offset-4 hover:text-foreground">
-            profile
-          </Link>
-          .
-        </p>
+    <div className={SHELL}>
+      {/* The head carries the one thing this page exists to produce. It used to
+          be a small pill tucked under the sheet with the watermark note beneath
+          it — the quietest element on a screen whose entire purpose is to hand
+          you a PDF. */}
+      <header className="t-resume__head">
+        <div className="min-w-0">
+          <p className="t-slug">(your résumé.)</p>
+          <h1 className="t-resume__title">Résumé</h1>
+          <p className="t-resume__note">
+            Drag a credit to reorder it, or across to another medium. Your name
+            comes off your <Link href="/profile">profile</Link>.
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-start gap-1.5">
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="t-cta t-cta--paper t-cta--stub disabled:opacity-60"
+          >
+            {downloading ? "Preparing…" : "Download the PDF"}
+            <span className="t-cta__dot" aria-hidden>
+              <IconDownload className="h-4 w-4" />
+            </span>
+          </button>
+          <p className="t-paper__fine">free downloads carry a small watermark.</p>
+        </div>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      {/* The document gets the larger half: it is the thing being made. */}
+      <div className="mt-11 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.12fr)] lg:gap-14">
         {/* Builder */}
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Details / header stats */}
-          <section className="border border-border bg-card p-4">
-            <h2 className="text-sm font-medium text-foreground">Header details</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Standard actor résumé stats. Age is intentionally left off.
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2.5">
+          <section className="t-build">
+            <h2 className="t-build__head">
+              <span>The header</span>
+              <span className="t-build__aside">age is left off, on purpose</span>
+            </h2>
+            <div className="mt-2 grid grid-cols-2 gap-x-5 gap-y-1">
               <input
                 defaultValue={profile?.height || ""}
                 onChange={(e) => patchProfile({ height: e.target.value })}
                 onBlur={(e) => saveProfile({ height: e.target.value })}
                 placeholder="Height (e.g. 5'9&quot;)"
-                className={inputCls}
+                className={FIELD}
               />
               <select
                 value={profile?.union_status || ""}
@@ -289,7 +298,7 @@ export default function ResumePage() {
                   patchProfile({ union_status: e.target.value });
                   saveProfile({ union_status: e.target.value });
                 }}
-                className={inputCls}
+                className={FIELD}
               >
                 <option value="">Union status</option>
                 {UNION_STATUSES.map((u) => (
@@ -301,29 +310,29 @@ export default function ResumePage() {
                 onChange={(e) => patchProfile({ hair_color: e.target.value })}
                 onBlur={(e) => saveProfile({ hair_color: e.target.value })}
                 placeholder="Hair"
-                className={inputCls}
+                className={FIELD}
               />
               <input
                 defaultValue={profile?.eye_color || ""}
                 onChange={(e) => patchProfile({ eye_color: e.target.value })}
                 onBlur={(e) => saveProfile({ eye_color: e.target.value })}
                 placeholder="Eyes"
-                className={inputCls}
+                className={FIELD}
               />
               <input
                 defaultValue={profile?.location || ""}
                 onChange={(e) => patchProfile({ location: e.target.value })}
                 onBlur={(e) => saveProfile({ location: e.target.value })}
                 placeholder="Location (city only)"
-                className={`${inputCls} col-span-2`}
+                className={`${FIELD} col-span-2`}
               />
             </div>
           </section>
 
           {/* Add / edit credit */}
-          <section className="border border-border bg-card p-4">
-            <h2 className="text-sm font-medium text-foreground">
-              {editingId != null ? "Edit credit" : "Add a credit"}
+          <section className="t-build">
+            <h2 className="t-build__head">
+              <span>{editingId != null ? "Edit the credit" : "Add a credit"}</span>
             </h2>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {CREDIT_CATEGORIES.map((c) => {
@@ -334,66 +343,59 @@ export default function ResumePage() {
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, category: c.id }))}
                     aria-pressed={active}
-                    className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border px-3 py-1 text-xs transition-colors md:min-h-0 md:min-w-0 ${
-                      active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-background text-muted-foreground hover:text-foreground"
-                    }`}
+                    className="t-medium"
                   >
                     {c.label}
                   </button>
                 );
               })}
             </div>
-            <div className="mt-3 space-y-2.5">
+            <div className="mt-3 space-y-1">
               <input
                 value={form.production}
                 onChange={(e) => setForm((f) => ({ ...f, production: e.target.value }))}
                 placeholder="Production / title *"
-                className={inputCls}
+                className={FIELD}
               />
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-x-5 gap-y-1">
                 <input
                   value={form.role}
                   onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
                   placeholder={ROLE_HINT[form.category] || "Role"}
-                  className={inputCls}
+                  className={FIELD}
                 />
                 <input
                   value={form.year}
                   onChange={(e) => setForm((f) => ({ ...f, year: e.target.value }))}
                   placeholder="Year"
-                  className={inputCls}
+                  className={FIELD}
                 />
                 <input
                   value={form.company}
                   onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
                   placeholder="Company / theatre / network"
-                  className={inputCls}
+                  className={FIELD}
                 />
                 <input
                   value={form.director}
                   onChange={(e) => setForm((f) => ({ ...f, director: e.target.value }))}
                   placeholder="Director"
-                  className={inputCls}
+                  className={FIELD}
                 />
               </div>
-              <div className="flex items-center gap-2 pt-1">
-                <Button
+              <div className="flex flex-wrap items-center gap-2 pt-3">
+                <button
+                  type="button"
                   onClick={submitCredit}
                   disabled={!form.production.trim() || saving}
-                  size="sm"
-                  className="rounded-full"
+                  className="t-medium disabled:opacity-45"
+                  aria-pressed={Boolean(form.production.trim()) || undefined}
                 >
-                  {editingId != null ? "Save" : (<><IconPlus className="size-4" />Add credit</>)}
-                </Button>
+                  {editingId != null ? "save it" : "add the credit"}
+                </button>
                 {editingId != null && (
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Cancel
+                  <button type="button" onClick={resetForm} className="t-medium">
+                    cancel
                   </button>
                 )}
               </div>
@@ -402,8 +404,8 @@ export default function ResumePage() {
 
           {/* Credits board (drag within + across categories) */}
           {credits.length === 0 ? (
-            <p className="border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
-              No credits yet. Add your first one above.
+            <p className="t-credit__drop text-center">
+              nothing on the board yet.
             </p>
           ) : (
             <CreditsBoard
@@ -416,27 +418,26 @@ export default function ResumePage() {
           )}
 
           {/* Special skills */}
-          <section className="border border-border bg-card p-4">
-            <h2 className="text-sm font-medium text-foreground">Special skills</h2>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+          <section className="t-build">
+            <h2 className="t-build__head">
+              <span>Special skills</span>
+            </h2>
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {(profile?.special_skills || []).map((s) => (
-                <span
-                  key={s}
-                  className="inline-flex items-center gap-1 border border-border bg-background px-2 py-1 text-xs text-foreground"
-                >
+                <span key={s} className="t-skill">
                   {s}
                   <button
                     type="button"
                     onClick={() => removeSkill(s)}
                     aria-label={`Remove ${s}`}
-                    className="text-muted-foreground hover:text-foreground [&_svg]:size-3"
+                    className="[&_svg]:size-3"
                   >
                     <IconX />
                   </button>
                 </span>
               ))}
             </div>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-3 flex items-end gap-3">
               <input
                 value={skillInput}
                 onChange={(e) => setSkillInput(e.target.value)}
@@ -447,27 +448,24 @@ export default function ResumePage() {
                   }
                 }}
                 placeholder="Dialects, stage combat, singing…"
-                className={`${inputCls} flex-1`}
+                className={`${FIELD} flex-1`}
               />
-              <Button onClick={addSkill} disabled={!skillInput.trim()} size="sm" variant="outline" className="rounded-full">
-                Add
-              </Button>
+              <button
+                type="button"
+                onClick={addSkill}
+                disabled={!skillInput.trim()}
+                className="t-medium mb-1 disabled:opacity-45"
+              >
+                add
+              </button>
             </div>
           </section>
         </div>
 
-        {/* Live preview */}
-        <div className="lg:sticky lg:top-6 lg:self-start">
+        {/* The document. First on a phone: it is what you came to look at, and
+            stacked below the whole builder it was a scroll away. */}
+        <div className="order-first lg:order-none lg:sticky lg:top-24 lg:self-start">
           <ResumePreview profile={previewProfile} credits={credits} email={user?.email} />
-          <div className="mt-3 flex flex-col items-center gap-1">
-            <Button onClick={handleDownload} disabled={downloading} size="sm" className="rounded-full">
-              <IconDownload className="size-4" />
-              {downloading ? "Preparing…" : "Download PDF"}
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              Free downloads include a small watermark.
-            </p>
-          </div>
         </div>
       </div>
     </div>

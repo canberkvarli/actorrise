@@ -23,7 +23,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { IconGripVertical, IconPencil, IconTrash } from "@tabler/icons-react";
+import { IconPencil, IconTrash } from "@tabler/icons-react";
 import type { Credit } from "@/types/resume";
 import { CREDIT_CATEGORIES, CATEGORY_HEADING } from "@/types/resume";
 
@@ -52,26 +52,31 @@ function CreditRow({
     <div
       ref={overlay ? undefined : setNodeRef}
       style={overlay ? undefined : style}
-      className={`flex items-center gap-2 border border-border bg-background px-2.5 py-2 ${
-        overlay ? "shadow-lg shadow-black/20" : ""
-      }`}
+      className="t-credit"
+      data-overlay={overlay || undefined}
     >
+      {/* The grip is three ruled lines inside the row's own left edge, not an
+          icon floating over it — the same correction the script shelf needed. */}
       <button
         type="button"
         aria-label="Drag to reorder or move category"
-        className="shrink-0 cursor-grab touch-none text-muted-foreground/60 hover:text-foreground active:cursor-grabbing [&_svg]:size-4"
+        className="t-credit__grip"
         {...attributes}
         {...listeners}
       >
-        <IconGripVertical />
+        <span aria-hidden />
+        <span aria-hidden />
+        <span aria-hidden />
       </button>
-      <div className="min-w-0 flex-1 text-sm">
-        <span className="font-medium text-foreground">{credit.production}</span>
-        {credit.role ? <span className="text-muted-foreground"> · {credit.role}</span> : null}
+      <div className="t-credit__body">
+        <span className="t-credit__title">
+          {credit.production}
+          {credit.role ? <span className="t-credit__role"> · {credit.role}</span> : null}
+        </span>
         {(credit.company || credit.director || credit.year) && (
-          <div className="truncate text-xs text-muted-foreground">
+          <span className="t-credit__meta">
             {[credit.company, credit.director, credit.year].filter(Boolean).join(" · ")}
-          </div>
+          </span>
         )}
       </div>
       {!overlay && (
@@ -79,16 +84,16 @@ function CreditRow({
           <button
             type="button"
             onClick={() => onEdit?.(credit)}
-            aria-label="Edit"
-            className="shrink-0 p-1 text-muted-foreground hover:text-foreground [&_svg]:size-4"
+            aria-label={`Edit ${credit.production}`}
+            className="t-credit__act [&_svg]:size-4"
           >
             <IconPencil />
           </button>
           <button
             type="button"
             onClick={() => onDelete?.(credit.id)}
-            aria-label="Delete"
-            className="shrink-0 p-1 text-muted-foreground hover:text-destructive [&_svg]:size-4"
+            aria-label={`Delete ${credit.production}`}
+            className="t-credit__act t-credit__act--cut [&_svg]:size-4"
           >
             <IconTrash />
           </button>
@@ -115,22 +120,20 @@ function CategoryColumn({
   // Hide empty categories unless a drag is in progress (then they're drop targets).
   if (rows.length === 0 && !dragging) return null;
   return (
-    <section>
-      <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        {CATEGORY_HEADING[catId]}
-        {rows.length > 0 && <span className="text-muted-foreground/60">{rows.length}</span>}
+    <section className="t-build">
+      <h3 className="t-build__head">
+        <span>{CATEGORY_HEADING[catId]}</span>
+        {rows.length > 0 && <span className="t-build__aside">{rows.length}</span>}
       </h3>
       <SortableContext items={rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
         <div
           ref={setNodeRef}
-          className={`mt-2 space-y-1.5 ${
-            rows.length === 0
-              ? `min-h-11 border border-dashed ${isOver ? "border-primary bg-primary/5" : "border-border"}`
-              : ""
-          }`}
+          className="mt-1"
         >
           {rows.length === 0 ? (
-            <p className="px-2 py-2.5 text-xs text-muted-foreground">Drop here</p>
+            <p className="t-credit__drop" data-over={isOver || undefined}>
+              drop one here
+            </p>
           ) : (
             rows.map((c) => (
               <CreditRow key={c.id} credit={c} onEdit={onEdit} onDelete={onDelete} />
@@ -264,7 +267,7 @@ export default function CreditsBoard({
         setStartCat(null);
       }}
     >
-      <div className="space-y-6">
+      <div className="space-y-5">
         {CREDIT_CATEGORIES.map(({ id: cat }) => (
           <CategoryColumn
             key={cat}
