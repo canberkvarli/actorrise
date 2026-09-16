@@ -65,6 +65,7 @@ export function Bench({
       initial={{ opacity: 0, y: 18, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.55, ease: [0.34, 1.56, 0.64, 1] }}
+      id="collection-bench"
       className="t-bench"
       data-off-book={memorized}
     >

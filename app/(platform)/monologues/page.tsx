@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useRef, useMemo, useCallback, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { SearchTour } from "@/components/onboarding/SearchTour";
+import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
@@ -135,8 +136,9 @@ function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reducedMotion = useReducedMotion();
-  const { user, isDemoUser, refreshUser } = useAuth();
-  const [showSearchTour, setShowSearchTour] = useState(false);
+  const { user, isDemoUser } = useAuth();
+  const { show: showSearchTour, dismiss: dismissSearchTour } =
+    useTourTrigger("has_seen_search_tour", { delay: 800 });
   const [playsQuery, setPlaysQuery] = useState("");
   const [filmTvQuery, setFilmTvQuery] = useState("");
   /* Typed rather than inferred: source_type is optional on SearchFiltersState
@@ -328,19 +330,11 @@ function SearchContent() {
     setIsLoadingMore(false);
   }, [searchMode]);
 
-  // Show search tour for first-time visitors — but only AFTER they've finished
-  // onboarding, so it never stacks on top of the welcome/first-rehearsal flow
-  // (especially cramped on mobile).
-  useEffect(() => {
-    if (
-      user &&
-      user.has_seen_search_tour === false &&
-      user.has_completed_onboarding === true
-    ) {
-      const timer = setTimeout(() => setShowSearchTour(true), 800);
-      return () => clearTimeout(timer);
-    }
-  }, [user]);
+  // The tour's gating moved into useTourTrigger, which adds the session latch
+  // this effect was missing: dismissing fired the flag write and then
+  // refreshUser(), and if the read beat the write the actor still carried
+  // has_seen_search_tour === false, so this effect re-fired and walked them
+  // through the whole tour a second time.
 
 
 
@@ -2874,7 +2868,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
       <AnimatePresence>
         {showSearchTour && (
-          <SearchTour onDismiss={async () => { setShowSearchTour(false); await refreshUser(); }} />
+          <SearchTour onDismiss={dismissSearchTour} />
         )}
       </AnimatePresence>
       <ContactModal

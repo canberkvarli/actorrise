@@ -42,6 +42,11 @@ class User(Base):
     has_seen_welcome = Column(Boolean, default=False, nullable=False)
     has_seen_search_tour = Column(Boolean, default=False, nullable=False)
     has_seen_profile_tour = Column(Boolean, default=False, nullable=False)
+    # The Collection tour, added 2026-09-16. ScenePartner has no flag here: its
+    # tour is HowItWorksWalkthrough, which is per-browser localStorage plus a
+    # "have they uploaded anything yet" check.
+    # Run backend/scripts/add_tour_flags.py against prod.
+    has_seen_collection_tour = Column(Boolean, default=False, nullable=False)
     has_completed_onboarding = Column(Boolean, default=False, nullable=False)
     # Distinct from the legacy flag above: set once the user finishes the
     # 5-tap profile-first onboarding that actually captures gender/age/type/

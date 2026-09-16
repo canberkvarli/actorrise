@@ -13,6 +13,37 @@ export interface TourStep {
   placement: "bottom" | "top";
 }
 
+/**
+ * Session latch for a tour that has been dismissed.
+ *
+ * The server flag is the durable record, but it is written asynchronously and
+ * the parent's trigger effect reads a `user` that may not carry it yet. This
+ * closes that window: once a tour is dismissed in this tab it stays dismissed,
+ * whatever the refresh says. sessionStorage rather than localStorage on
+ * purpose, so the server flag is still what decides on the actor's next visit
+ * and a failed PATCH does not silently cost them the tour forever.
+ */
+const TOUR_LATCH = "actorrise_tour_seen";
+
+export function markTourSeen(flag: string) {
+  try {
+    const seen = JSON.parse(sessionStorage.getItem(TOUR_LATCH) || "[]") as string[];
+    if (!seen.includes(flag)) {
+      sessionStorage.setItem(TOUR_LATCH, JSON.stringify([...seen, flag]));
+    }
+  } catch {
+    /* sessionStorage unavailable — the server flag still covers the normal case */
+  }
+}
+
+export function hasSeenTourThisSession(flag: string): boolean {
+  try {
+    return (JSON.parse(sessionStorage.getItem(TOUR_LATCH) || "[]") as string[]).includes(flag);
+  } catch {
+    return false;
+  }
+}
+
 const PAD = 10;
 const OFFSET = 14;
 const CARD_W = 330;
@@ -59,6 +90,13 @@ export function TourSpotlight({
   const dismiss = useCallback(() => {
     if (done.current) return;
     done.current = true;
+    // Latch in the session BEFORE anything async. The server write and the
+    // refreshUser() that follows it race: dismiss fired the PATCH and returned,
+    // the parent called refreshUser(), and if that read landed first the user
+    // still carried has_seen_*_tour === false — so the parent's effect re-fired
+    // and the actor was walked through the same tour a second time. `done` only
+    // guards one mount, and the second showing is a fresh mount.
+    markTourSeen(flag);
     void api.patch("/api/auth/onboarding", { [flag]: true }).catch(() => {});
     onDismiss();
   }, [flag, onDismiss]);
