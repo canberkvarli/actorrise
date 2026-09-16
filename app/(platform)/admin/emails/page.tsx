@@ -1106,11 +1106,15 @@ export default function AdminEmailsPage() {
                                             toast.success(`Sending to the ${pending} who haven't got it yet...`);
                                             setTimeout(() => fetchBatchHistory(), 2000);
                                           } catch (err) {
-                                            /* The server says WHY (wrong template, nothing left,
-                                               not permitted). Swallowing it left "Failed to resume
-                                               batch" as the only clue, which is no clue at all. */
-                                            const detail = (err as { response?: { data?: { detail?: string }; status?: number } })?.response;
-                                            toast.error(detail?.data?.detail ?? `Failed to resume batch (${detail?.status ?? "no response"})`);
+                                            /* lib/api only attaches `.response` for HTTP errors. A
+                                               network failure, timeout or 401 throws a plain Error
+                                               whose message carries the real text, so read that
+                                               first -- reading only `.response` reported "no
+                                               response" for the very cases it was meant to explain. */
+                                            const e = err as Error & { response?: { data?: { detail?: string }; status?: number } };
+                                            const status = e?.response?.status;
+                                            const detail = e?.response?.data?.detail ?? e?.message;
+                                            toast.error(status ? `${status}: ${detail}` : (detail || "Failed to resume batch"));
                                           }
                                         }}
                                       >
