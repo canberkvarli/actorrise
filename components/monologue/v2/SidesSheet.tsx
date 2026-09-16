@@ -13,8 +13,9 @@ import { applyCut } from "@/lib/monologueSegments";
  *
  * The export used to be a bordered preview box with two outline buttons over
  * it, which looked like a form. What an actor is making here is a piece of
- * paper, so it looks like one — leaning slightly, on a hard shadow, with the
- * slug line at the foot that a real side carries.
+ * paper, so it looks like one — leaning slightly, on a hard shadow. The slug
+ * line a real side carries is on the PRINTED page, not this one: on screen a
+ * URL you can't click or select only repeats the Copy link button below it.
  *
  * It exports the CUT, not the whole piece, whenever one is set.
  */
@@ -36,6 +37,17 @@ export function SidesSheet({ monologue }: { monologue: Monologue }) {
 
   const isCut =
     monologue.cut_start_line != null && monologue.cut_end_line != null;
+
+  /* The slug at the foot of a real side: where this page came from, and who
+     rendered it into English if anyone did. It belongs on PAPER — on screen
+     the URL is an unselectable duplicate of the Copy link button below, so
+     only the translator credit shows there. */
+  const translatorCredit = monologue.translator
+    ? `${monologue.translator} translation`
+    : "";
+  const slug = [`actorrise.com/monologue/${monologue.id}`, translatorCredit]
+    .filter(Boolean)
+    .join(" · ");
   const seconds = estimateDurationSeconds(cutText);
 
   const paras = useMemo(
@@ -89,10 +101,12 @@ export function SidesSheet({ monologue }: { monologue: Monologue }) {
       h1{font-size:15pt;margin:0 0 2pt}
       .src{color:#555;font-size:11pt;margin:0 0 24pt}
       pre{white-space:pre-wrap;font-family:inherit;font-size:13pt;margin:0}
+      .slug{color:#777;font-size:9pt;letter-spacing:0.04em;margin:32pt 0 0}
     </style></head><body>
       <h1>${esc(monologue.character_name || "")}</h1>
       <p class="src">${esc(source)}</p>
       <pre>${esc(cutText.trim())}</pre>
+      <p class="slug">${esc(slug)}</p>
     </body></html>`);
     w.document.close();
     w.focus();
@@ -137,13 +151,14 @@ export function SidesSheet({ monologue }: { monologue: Monologue }) {
             </p>
           ))}
         </div>
-        <p
-          className="t-m__mono m-0 mt-[18px] text-[10px] tracking-[0.06em]"
-          style={{ color: "var(--t-faint)" }}
-        >
-          actorrise.com/monologue/{monologue.id}
-          {monologue.translator ? ` · ${monologue.translator} translation` : ""}
-        </p>
+        {translatorCredit && (
+          <p
+            className="t-m__mono m-0 mt-[18px] text-[10px] tracking-[0.06em]"
+            style={{ color: "var(--t-faint)" }}
+          >
+            {translatorCredit}
+          </p>
+        )}
       </div>
 
       <div className="mt-[22px] flex flex-wrap gap-2">

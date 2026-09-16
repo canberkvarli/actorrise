@@ -57,7 +57,7 @@ function OverdoneTicks({ score }: { score: number | null | undefined }) {
             ? "You will not be the only one bringing this today."
             : "How often a casting room hears this piece."
         }
-        className="t-m__mono inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.16em]"
+        className="t-m__mono inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.16em]"
         style={{
           color: band.level >= 2 ? "var(--t-gel)" : "var(--t-muted-dark)",
         }}
@@ -66,7 +66,7 @@ function OverdoneTicks({ score }: { score: number | null | undefined }) {
           {[0, 1, 2, 3].map((i) => (
             <span
               key={i}
-              className="h-2.5 w-[3px] bg-current"
+              className="h-[11px] w-[3px] bg-current"
               style={{ opacity: i <= band.level ? 1 : 0.25 }}
             />
           ))}
@@ -200,7 +200,7 @@ export function OneSheet({
 
             {billing.length > 0 && (
               <p
-                className="t-m__mono mt-3.5 text-[15px] leading-relaxed"
+                className="t-m__mono mt-3.5 text-[17px] leading-relaxed"
                 style={{ color: "var(--t-muted-dark)" }}
               >
                 {billing.map((b, i) => (
@@ -216,7 +216,7 @@ export function OneSheet({
                 ~150px column beside the cover, where five of them wrap to four
                 lines and push the cover taller than the screen. */}
             <div
-              className="mt-3.5 hidden flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[13px] sm:flex"
+              className="mt-3.5 hidden flex-wrap items-center gap-x-3 gap-y-1.5 text-[14.5px] sm:flex"
               style={{ color: "var(--t-muted-light-2)" }}
             >
               {facts.map((f, i) => (
@@ -230,7 +230,7 @@ export function OneSheet({
 
             {monologue.scene_description && (
               <p
-                className="t-m__dir mt-[18px] hidden max-w-[56ch] border-l-2 pl-3 text-[13px] not-italic leading-[1.7] sm:block"
+                className="t-m__dir mt-[18px] hidden max-w-[56ch] border-l-2 pl-3 text-[14.5px] not-italic leading-[1.7] sm:block"
                 style={{
                   borderColor: "color-mix(in oklab, var(--t-gel) 60%, transparent)",
                   color: "var(--t-muted-dark-2)",
@@ -246,7 +246,7 @@ export function OneSheet({
         </div>
 
         <div
-          className="mt-5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[13px] sm:hidden"
+          className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[14.5px] sm:hidden"
           style={{ color: "var(--t-muted-light-2)" }}
         >
           {facts.map((f, i) => (
