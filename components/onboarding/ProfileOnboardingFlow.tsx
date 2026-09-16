@@ -491,11 +491,12 @@ export default function ProfileOnboardingFlow({
 
   return (
     <div
-      /* z above the app bar, which is z-[9998]. At z-[100] the header floated
+      /* z above the app bar (9998) AND above FirstRunCurtain (9999), which
+         holds the stage until this chunk loads. At z-[100] the header floated
          over a full-screen takeover: the actor was being asked "how did you
          find me?" under a nav offering Monologues, ScenePartner and Collection,
          which is three exits from a card that has not introduced itself yet. */
-      className={`theatre-tokens theatre-onboarding ${theatreFontVars} fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto overflow-x-clip p-6 sm:items-center`}
+      className={`theatre-tokens theatre-onboarding ${theatreFontVars} fixed inset-0 z-[10000] flex items-start justify-center overflow-y-auto overflow-x-clip p-6 sm:items-center`}
       style={{ background: "var(--page)" }}
     >
       {/* The fixture, hanging in the flies. The same drawing the wait uses, so
@@ -505,16 +506,12 @@ export default function ProfileOnboardingFlow({
 
           Painted at z-0 with the card at z-10 — a negative z-index here would
           slide under the overlay's own background and never once be seen. */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed left-1/2 top-0 z-0 -translate-x-1/2"
-        /* One ink for the whole drawing. --lamp-acc is deliberately NOT set
-           here: --t-line-light-2 is 0.85 lightness against a 0.96 page, so the
-           pool would be a correct colour that nobody ever sees. */
-        style={{ color: "var(--t-faint)" }}
-      >
-        <LampSketch size={128} />
-      </div>
+      {/* The fixture used to hang here, over the card. It is gone from this
+          screen: on a laptop it pushed the card down far enough that the
+          Continue pill met the bottom of the window, and it duplicated the lamp
+          that draws itself during the wait a few seconds later — so the same
+          fixture appeared twice in one flow, once static and once animated.
+          The wait still has it, where it is doing something. */}
       <p
         aria-hidden
         className="pointer-events-none fixed bottom-5 left-6 z-0 m-0 hidden text-xs italic tracking-[0.08em] sm:block"

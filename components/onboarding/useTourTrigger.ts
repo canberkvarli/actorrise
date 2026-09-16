@@ -14,7 +14,7 @@ import { hasSeenTourThisSession } from "@/components/onboarding/TourSpotlight";
  * tour for the rest of the visit, and clicking through to another page does not
  * fix it because a client-side navigation reuses the same user object.
  */
-const ONBOARDING_LATCH = "actorrise_onboarding_done";
+import { ONBOARDING_LATCH_KEY as ONBOARDING_LATCH } from "@/lib/firstRun";
 
 export function markOnboardingDone() {
   try {

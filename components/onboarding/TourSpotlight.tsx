@@ -23,7 +23,8 @@ export interface TourStep {
  * purpose, so the server flag is still what decides on the actor's next visit
  * and a failed PATCH does not silently cost them the tour forever.
  */
-const TOUR_LATCH = "actorrise_tour_seen";
+// Name lives in lib/firstRun so the logout/signup clear cannot drift from it.
+import { TOUR_LATCH_KEY as TOUR_LATCH } from "@/lib/firstRun";
 
 export function markTourSeen(flag: string) {
   try {

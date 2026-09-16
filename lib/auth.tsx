@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "./supabase";
+import { clearFirstRunAll, clearFirstRunSession } from "@/lib/firstRun";
 import api, { primeSessionCache } from "./api";
 import { setStoredLastAuthMethod } from "./last-auth-method";
 import { clearSwrCache, clearReactQueryCache, clearUserSpecificQueryCache } from "./swrCache";
@@ -217,6 +218,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // (e.g. from Google OAuth) doesn't bleed into the new account.
       await supabase.auth.signOut();
       setCachedUser(null);
+      // Same reasoning, for everything the first run remembers in the browser.
+      // A new account on a machine that has seen the product before still gets
+      // the onboarding card, the tours and the ScenePartner playbill.
+      clearFirstRunAll();
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -282,6 +287,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.error('Failed to clear session storage:', e);
     }
+
+    // The first-run latches are keyed to the browser, not the account, so
+    // without this the next person to sign in on this tab is told they have
+    // already seen tours they have never seen.
+    clearFirstRunSession();
 
     await supabase.auth.signOut();
     setCachedUser(null);

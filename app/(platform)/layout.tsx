@@ -34,6 +34,8 @@ const ContactModal = dynamic(
 );
 // First-run onboarding wizard. Self-gates on user.has_completed_onboarding,
 // so it's safe to mount unconditionally.
+import { FirstRunCurtain } from "@/components/onboarding/FirstRunCurtain";
+
 const OnboardingWizard = dynamic(
   () => import("@/components/onboarding/OnboardingWizard"),
   { ssr: false },
@@ -516,17 +518,10 @@ export default function PlatformLayout({
                         <IconFileText className="h-4 w-4 opacity-60" />
                         <span>Résumé</span>
                       </Link>
-                      <Link
-                        href="/rehearse"
-                        onClick={() => setProfileDropdownOpen(false)}
-                        className="t-playbill-menu__row"
-                      >
-                        <IconBookmark className="h-4 w-4 opacity-60" />
-                        <span>Collection</span>
-                        {savedCount > 0 && (
-                          <span className="t-playbill-menu__hint">{savedCount} saved</span>
-                        )}
-                      </Link>
+                      {/* Collection is a tab in the bar this menu hangs from,
+                          and a tab in the phone sheet. A third way in, one row
+                          under the account name, was the same door listed twice
+                          on one screen. */}
 
                       <p className="t-playbill-menu__dir">(the box office.)</p>
                       <Link
@@ -814,6 +809,9 @@ export default function PlatformLayout({
         </>
       )}
 
+      {/* Holds the stage while the dynamic OnboardingWizard chunk loads, so the
+          dashboard never assembles itself only to be covered a beat later. */}
+      <FirstRunCurtain />
       <OnboardingWizard />
       <ProfileBackfillCard />
       <PWARegister />
