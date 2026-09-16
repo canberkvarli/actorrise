@@ -1229,6 +1229,39 @@ def list_do_not_contact(
     return [_serialize_dnc(r) for r in rows]
 
 
+class ScanBouncesRequest(BaseModel):
+    since_days: int = 30
+    # Defaults to a preview. This writes the list that decides who never hears
+    # from ActorRise again, so seeing the addresses first is the easy path.
+    dry_run: bool = True
+
+
+@router.post("/scan-bounces")
+def scan_bounces_endpoint(
+    body: ScanBouncesRequest,
+    admin: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+):
+    """
+    Read the sending mailbox for delivery-status notices and suppress the
+    permanent failures.
+
+    Bulk mail goes via Workspace SMTP, which has no webhook, so bounces exist
+    only as mailer-daemon replies in canberk@actorrise.com. Without this a dead
+    address is re-mailed on every campaign and nothing records it.
+
+    Permanent (5.x.x + action=failed) only -- a 4.x.x is "not now", and
+    suppressing those would delete real actors from every future send.
+    """
+    from app.services.email.bounce_scan import scan_bounces
+
+    try:
+        return scan_bounces(db, since_days=body.since_days, dry_run=body.dry_run)
+    except Exception as e:
+        logger.exception("Bounce scan failed: %s", e)
+        raise HTTPException(status_code=502, detail=f"Bounce scan failed: {e}")
+
+
 @router.post("/do-not-contact")
 def add_do_not_contact(
     body: DncBulkAddRequest,
