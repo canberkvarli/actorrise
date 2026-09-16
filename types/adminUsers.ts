@@ -59,6 +59,10 @@ export interface AdminUserDetailResponse {
     has_seen_welcome: boolean;
     has_seen_search_tour: boolean;
     has_seen_profile_tour: boolean;
+    has_seen_collection_tour: boolean;
+    has_completed_onboarding: boolean;
+    has_completed_profile_onboarding: boolean;
+    has_seen_first_rehearsal: boolean;
     /** 'actor' | 'educator' | 'student'. Null = unknown/legacy, most accounts. */
     account_type: string | null;
     /** School, studio or company. Free text. */
