@@ -2,11 +2,31 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { Instagram, Mail } from "lucide-react";
+import { IconBrandX } from "@tabler/icons-react";
 import { TESTIMONIALS } from "@/data/testimonials";
 import { TheatreCta } from "./TheatreCta";
 import { useTheatreStats } from "./useTheatreStats";
 
 const YOUTUBE_ID = "TTZxo3bZPI4";
+
+/* The three ways to reach Canberk, under the founder note. Handles are written
+   the way he'd say them out loud, so the label is the handle rather than the
+   platform: an actor scanning this is looking for something to type, not for a
+   row of logos. */
+const REACH = [
+  {
+    label: "@canberk.varli",
+    href: "https://instagram.com/canberk.varli",
+    Icon: Instagram,
+  },
+  { label: "@canberkvarli", href: "https://x.com/canberkvarli", Icon: IconBrandX },
+  {
+    label: "canberk@actorrise.com",
+    href: "mailto:canberk@actorrise.com",
+    Icon: Mail,
+  },
+];
 
 /* The pinned-up look: each notice sits at its own angle and its own height.
    Positional rather than keyed by name, so swapping who is on the wall does
@@ -286,6 +306,36 @@ export function HouseAct() {
                 · founder, ActorRise
               </span>
             </p>
+
+            {/* Where to find him.
+                The note is the one place on this page Canberk speaks in his own
+                voice, so it is the honest place to put the handles: an actor who
+                has just read "I built this because I was hunting for a piece" is
+                the actor most likely to want to say something back. The footer
+                carries no socials at all, and a contact form is not the same
+                offer as a name you can DM.
+
+                "i answer" rather than "I'm friendly" on purpose. Claiming the
+                trait reads self-conscious; naming the thing you will actually do
+                is the version you can keep. */}
+            <p className="t-dir mt-7" style={{ color: "var(--t-muted-dark-2)" }}>
+              (and if you want to talk, find me anywhere. i answer.)
+            </p>
+            <div className="mt-3.5 flex flex-wrap items-center gap-x-6 gap-y-3">
+              {REACH.map(({ label, href, Icon }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target={href.startsWith("mailto:") ? undefined : "_blank"}
+                  rel={href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
+                  className="inline-flex items-center gap-2 text-[15px] transition-colors hover:[color:var(--t-orange-deep)]"
+                  style={{ color: "var(--t-muted-dark)" }}
+                >
+                  <Icon className="h-[17px] w-[17px]" aria-hidden />
+                  {label}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
 
