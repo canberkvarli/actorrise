@@ -156,6 +156,17 @@ export default function PracticePage() {
               is for far better than a sentence describing it. All that is left
               up here is the way in and the way to ask. */}
 
+          {/* The way to ask, at the head of the room rather than at the foot of
+              it. It spent a while parked under everything, which is the one
+              place a person who cannot work out how the room works will never
+              scroll to — they leave from the top of the page, not the bottom.
+              It is a line of house text on the same rule the shelf starts on,
+              not a floating "?" in the corner: this is a theatre, and the
+              corner widget was the thing that made it look like a SaaS. */}
+          <div className="flex justify-end pb-1">
+            <HowItWorksButton onOpen={() => setWalkthroughOverride(true)} />
+          </div>
+
           {/* Dropped clear of the ghost light. The lamp hangs from the top of
               the room on the right, which is exactly where the shelf began —
               so the bulb it is lit by was stuck behind the first card, and the
@@ -173,20 +184,6 @@ export default function PracticePage() {
             />
           </Suspense>
 
-          {/* Everything ambient, under the work rather than over it.
-
-              The callboard ran across the top, so the first thing this room
-              said was what OTHER people were doing — on the one screen whose
-              whole argument is the line you stopped on. And the way to ask how
-              any of it works was a floating "?" in the top-right corner, which
-              is a help widget's position, not a theatre's. Both are down here
-              now, past the stage, where you arrive only once you are done
-              looking at your own work. */}
-          <div className="mt-16 border-t pt-6 sm:mt-20" style={{ borderColor: "var(--t-line-light)" }}>
-            <div className="flex justify-center">
-              <HowItWorksButton onOpen={() => setWalkthroughOverride(true)} />
-            </div>
-          </div>
         </motion.div>
       )}
 
