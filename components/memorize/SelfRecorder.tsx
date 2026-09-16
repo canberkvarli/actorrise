@@ -105,27 +105,23 @@ export function SelfRecorder() {
     }
   };
 
-  const baseBtn =
-    "rounded-full px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer";
+  /* The rail's own button language. These were the app's generic outline
+     buttons in the UI sans, sitting under a page set in the typewriter. */
+  const baseBtn = "t-mem__toggle";
 
   return (
     <div className="flex flex-wrap items-center gap-3">
       {unavailable ? (
-        <p className="text-sm text-muted-foreground">
-          Mic unavailable on this device.
-        </p>
+        <p className="t-mem__count">no mic on this device.</p>
       ) : (
         <>
           {!recording && !audioUrl && (
             <button
               type="button"
               onClick={start}
-              className={cn(
-                baseBtn,
-                "border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50",
-              )}
+              className={baseBtn}
             >
-              Record yourself
+              hear yourself say it
             </button>
           )}
 
@@ -133,13 +129,10 @@ export function SelfRecorder() {
             <button
               type="button"
               onClick={stop}
-              className={cn(
-                baseBtn,
-                "inline-flex items-center gap-2 border border-primary text-primary hover:bg-primary/10",
-              )}
+              className={cn(baseBtn, "t-mem__toggle--go inline-flex items-center gap-2")}
             >
-              <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-              Stop
+              <span className="h-2 w-2 animate-pulse rounded-full bg-current" />
+              stop
             </button>
           )}
 
@@ -157,12 +150,9 @@ export function SelfRecorder() {
               <button
                 type="button"
                 onClick={reRecord}
-                className={cn(
-                  baseBtn,
-                  "border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                )}
+                className={baseBtn}
               >
-                Re-record
+                again
               </button>
             </>
           )}

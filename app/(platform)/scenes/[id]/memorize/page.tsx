@@ -7,6 +7,7 @@ import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MemorizeView } from "@/components/memorize/MemorizeView";
+import { theatreFontVars } from "@/lib/fonts/theatre";
 
 interface SceneDetailLine {
   line_order: number;
@@ -26,7 +27,7 @@ interface SceneDetailResponse {
 }
 
 const CONTAINER =
-  "container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-3xl";
+  `theatre-tokens ${theatreFontVars} container relative mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8`;
 
 function BackLink({ onClick }: { onClick: () => void }) {
   return (
@@ -130,11 +131,15 @@ export default function SceneMemorizePage() {
 
   return (
     <div className={CONTAINER}>
-      <BackLink onClick={() => router.back()} />
       <MemorizeView
         title={scene.title}
         subtitle={[scene.play_title, scene.play_author].filter(Boolean).join(" · ")}
         lines={lines}
+        headActions={
+          <button type="button" onClick={() => router.back()} className="t-mem__toggle">
+            back
+          </button>
+        }
       />
     </div>
   );

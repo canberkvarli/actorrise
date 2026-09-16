@@ -14,26 +14,7 @@ interface SettingsPopoverProps {
   update: (patch: Partial<MemorizePrefs>) => void;
 }
 
-function GearIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  );
-}
-
-/** Gear button that opens a calm reading-settings panel. */
+/** The reading choices: size, ground, face, spacing. */
 export function SettingsPopover({ prefs, update }: SettingsPopoverProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -65,24 +46,20 @@ export function SettingsPopover({ prefs, update }: SettingsPopoverProps) {
         aria-expanded={open}
         aria-label="Reading settings"
         onClick={() => setOpen((o) => !o)}
-        className={cn(
-          "inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors cursor-pointer hover:text-foreground hover:bg-muted/50",
-          open && "text-foreground bg-muted/50",
-        )}
+        aria-pressed={open}
+        className="t-mem__toggle"
       >
-        <GearIcon />
+        reading
       </button>
 
       {open && (
         <div
           role="dialog"
           aria-label="Reading settings"
-          className="absolute right-0 z-20 mt-2 w-72 space-y-4 rounded-xl border border-border bg-popover p-4 shadow-lg"
+          className="t-mem__panel space-y-4"
         >
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Text size
-            </p>
+            <p className="t-mem__panel-head">Text size</p>
             <Segmented
               ariaLabel="Text size"
               size="sm"
@@ -94,9 +71,7 @@ export function SettingsPopover({ prefs, update }: SettingsPopoverProps) {
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Reading theme
-            </p>
+            <p className="t-mem__panel-head">Paper</p>
             <Segmented
               ariaLabel="Reading theme"
               size="sm"
@@ -107,29 +82,29 @@ export function SettingsPopover({ prefs, update }: SettingsPopoverProps) {
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-foreground">Serif type</span>
+          <div className="t-mem__panel-row">
+            <span>Plain type</span>
             <button
               type="button"
               role="switch"
-              aria-checked={prefs.serif}
-              onClick={() => update({ serif: !prefs.serif })}
+              aria-checked={prefs.plainType}
+              onClick={() => update({ plainType: !prefs.plainType })}
               className={cn(
                 "relative h-6 w-11 rounded-full transition-colors cursor-pointer",
-                prefs.serif ? "bg-foreground" : "bg-muted-foreground/30",
+                prefs.plainType ? "bg-foreground" : "bg-muted-foreground/30",
               )}
             >
               <span
                 className={cn(
                   "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform",
-                  prefs.serif ? "translate-x-5" : "translate-x-0",
+                  prefs.plainType ? "translate-x-5" : "translate-x-0",
                 )}
               />
             </button>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-foreground">Relaxed spacing</span>
+          <div className="t-mem__panel-row">
+            <span>Relaxed spacing</span>
             <button
               type="button"
               role="switch"

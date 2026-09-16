@@ -6,15 +6,9 @@ import { CutLine, CutMeter, type CutLineState } from "@/components/monologue/Cut
 import { cn } from "@/lib/utils";
 import { maskFirstLetters } from "@/lib/memorize";
 import { trackEvent } from "@/lib/events";
-import { Segmented } from "./Segmented";
 import { SettingsPopover } from "./SettingsPopover";
 import { SelfRecorder } from "./SelfRecorder";
-import {
-  FONT_SIZE_CLASS,
-  THEME_TOKENS,
-  useMemorizePrefs,
-  type ThemeTokens,
-} from "./prefs";
+import { FONT_SIZE_CLASS, useMemorizePrefs } from "./prefs";
 
 type Level = "full" | "hints" | "blank";
 type Mode = "read" | "buildup";
@@ -40,6 +34,10 @@ export interface MemorizeViewProps {
    * Pass null to clear the cut.
    */
   onSaveCut?: (cut: { start: number; end: number } | null) => void | Promise<void>;
+  /** Rendered at the top-right of the head — the way back, the way on. */
+  headActions?: React.ReactNode;
+  /** Rendered at the foot beside the recorder — "off book". */
+  footActions?: React.ReactNode;
 }
 
 /** Rough spoken duration of a slice of lines, ~150 wpm. */
@@ -58,30 +56,36 @@ function fmtTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-const LEVELS: { value: Level; label: string }[] = [
-  { value: "full", label: "Full" },
-  { value: "hints", label: "Hints" },
-  { value: "blank", label: "Blank" },
+/* One axis, three stops: the house lights coming down on your own lines. This
+   was a `Segmented` identical to the Read / Build-up one sitting beside it, so
+   nothing said which control was the mode and which was the difficulty. The
+   lamp dims as you travel it, which is the whole explanation the control
+   needs — it replaces the sentence that used to sit under the toolbar. */
+const STOPS: { value: Level; label: string }[] = [
+  { value: "full", label: "full" },
+  { value: "hints", label: "hints" },
+  { value: "blank", label: "blank" },
 ];
 
-const MODES: { value: Mode; label: string }[] = [
-  { value: "read", label: "Read" },
-  { value: "buildup", label: "Build up" },
-];
-
-/** A subtle blank bar sized to the (hidden) line length, themed. */
-function BlankBar({ text, t }: { text: string; t: ThemeTokens }) {
-  const ch = Math.max(8, Math.min(text.length, 64));
+function Dimmer({ value, onChange }: { value: Level; onChange: (v: Level) => void }) {
   return (
-    <span
-      aria-hidden
-      className={cn(
-        "inline-block h-[1.1em] w-full max-w-full align-middle border-b-2 border-dashed",
-        t.blankFill,
-        t.blankBorder,
-      )}
-      style={{ width: `${ch}ch` }}
-    />
+    <div className="t-dim" data-level={value}>
+      <span aria-hidden className="t-dim__lamp" />
+      <div className="t-dim__stops" role="radiogroup" aria-label="How much of your lines to show">
+        {STOPS.map((s) => (
+          <button
+            key={s.value}
+            type="button"
+            role="radio"
+            aria-checked={value === s.value}
+            onClick={() => onChange(s.value)}
+            className="t-dim__stop"
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -91,6 +95,8 @@ export function MemorizeView({
   lines,
   cut = null,
   onSaveCut,
+  headActions,
+  footActions,
 }: MemorizeViewProps) {
   const { prefs, update } = useMemorizePrefs();
   const [mode, setMode] = useState<Mode>("read");
@@ -113,10 +119,12 @@ export function MemorizeView({
   // default. "Show full" reveals everything.
   const [showFull, setShowFull] = useState(false);
 
-  const t = THEME_TOKENS[prefs.theme];
   const sizeClass = FONT_SIZE_CLASS[prefs.fontSize];
-  const leading = prefs.spacious ? "leading-[2]" : "leading-relaxed";
-  const family = prefs.serif ? "font-sans" : "";
+  const leading = prefs.spacious ? "leading-[2]" : "leading-[1.75]";
+  /* The lines are the typewriter face, like monologue text everywhere else in
+     the product. `plainType` is the way out for anyone who finds a monospace
+     hard going at length. */
+  const face = prefs.plainType ? "font-sans" : "";
 
   const toggleReveal = (index: number) => {
     setRevealed((prev) => {
@@ -251,15 +259,6 @@ export function MemorizeView({
       line.speaker != null && (i === 0 || prev?.speaker !== line.speaker);
     const isPeeked = revealed.has(i);
 
-    // Trim selection state for this line (indices are absolute in `lines`).
-    const inSelection =
-      trimming &&
-      selStart != null &&
-      (selEnd != null
-        ? i >= selStart && i <= selEnd
-        : i === selStart);
-    const dimmed = trimming && hasFullSelection && !inSelection;
-
     if (trimming) {
       /* Same selection language as the Cut tab — see components/monologue/
          CutRail.tsx. This used to be its own thing: a 3px rail plus
@@ -284,16 +283,7 @@ export function MemorizeView({
 
       return (
         <div key={i}>
-          {showSpeaker && (
-            <p
-              className={cn(
-                "mb-1.5 pl-12 text-[0.7rem] font-semibold uppercase tracking-[0.14em]",
-                t.inkFaint,
-              )}
-            >
-              {line.speaker}
-            </p>
-          )}
+          {showSpeaker && <p className="t-mem__speaker pl-12">{line.speaker}</p>}
           <CutLine
             text={line.text}
             state={state}
@@ -315,281 +305,192 @@ export function MemorizeView({
             ? { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }
             : { duration: 0 }
         }
-        className={cn(
-          "relative",
-          // Actor's own line: a quiet accent rail rather than a loud border.
-          line.mine && "pl-4",
-        )}
       >
-        {line.mine && (
-          <span
-            aria-hidden
-            className={cn(
-              "absolute left-0 top-1.5 bottom-1.5 w-px rounded-full",
-              opts.newest ? "bg-primary" : "bg-primary/30",
-            )}
-          />
-        )}
-
-        {showSpeaker && (
-          <p
-            className={cn(
-              "mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em]",
-              line.mine ? "text-primary/80" : t.inkFaint,
-            )}
-          >
-            {line.speaker}
-          </p>
-        )}
+        {showSpeaker && <p className="t-mem__speaker">{line.speaker}</p>}
 
         {line.mine ? (
           <button
             type="button"
             onClick={() => toggleReveal(i)}
             aria-label={isPeeked ? "Hide this line" : "Peek at this line"}
-            className={cn(
-              "-mx-2 block w-full cursor-pointer rounded-lg px-2 py-1 text-left transition-colors",
-              t.hover,
-            )}
+            className="t-mem__peek"
           >
             {opts.masked ? (
               level === "hints" && mode === "read" ? (
-                <span
-                  className={cn(
-                    "block font-mono tracking-wide",
-                    sizeClass,
-                    leading,
-                    t.ink,
-                  )}
-                >
+                <span className={cn("t-mem__hint", sizeClass, leading)}>
                   {maskFirstLetters(line.text)}
                 </span>
               ) : (
-                <BlankBar text={line.text} t={t} />
+                /* A ruled blank the width of the words it hides, so the shape
+                   of the speech survives being covered. */
+                <span
+                  aria-hidden
+                  className="t-mem__blank"
+                  style={{ width: `${Math.max(8, Math.min(line.text.length, 64))}ch` }}
+                />
               )
             ) : (
-              <span className={cn("block", family, sizeClass, leading, t.ink)}>
-                {line.text}
-              </span>
+              <span className={cn("t-mem__line block", face, sizeClass, leading)}>{line.text}</span>
             )}
           </button>
         ) : (
           // Partner / cue lines — always full, visually quieter.
-          <p className={cn(family, sizeClass, leading, t.inkMuted)}>
-            {line.text}
-          </p>
+          <p className={cn("t-mem__line t-mem__line--cue", face, sizeClass, leading)}>{line.text}</p>
         )}
 
-        {line.stageDirection && (
-          <p className={cn("mt-1.5 text-sm italic", t.inkFaint)}>
-            [{line.stageDirection}]
-          </p>
-        )}
+        {line.stageDirection && <p className="t-mem__dir">({line.stageDirection})</p>}
       </motion.div>
     );
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      {/* Header */}
-      <header className="space-y-1.5">
-        <h1 className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
-          {title}
-        </h1>
-        {subtitle && (
-          <p className="text-sm text-muted-foreground sm:text-base">
-            {subtitle}
-          </p>
-        )}
+    <div className="t-mem" data-paper={prefs.theme}>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          {subtitle && <p className="t-mem__slug">{subtitle}</p>}
+          <h1 className="t-mem__title">{title}</h1>
+        </div>
+        {headActions && <div className="flex shrink-0 items-center gap-2">{headActions}</div>}
       </header>
 
-      {/* Toolbar */}
-      {trimming ? (
-        <div className="space-y-3">
-          {/* Same readout as the Cut tab: length against the whole piece and
-              against the limits rooms give you, rather than a bare line count.
-              "4 lines" is not a fact an actor can act on; "0:27, 0:52 trimmed"
-              is. */}
+      {/* The rail. One row, and the dimmer leads it. */}
+      <div className="t-mem__rail">
+        {trimming ? (
+          <>
+            <span className="t-mem__count" aria-live="polite">
+              {selStart == null
+                ? "tap where the cut starts"
+                : selEnd == null
+                  ? "now tap where it ends"
+                  : `${selCount} lines · ~${fmtTime(selSeconds)}`}
+            </span>
+            <div className="t-mem__rail-end">
+              {cut && (
+                <button
+                  type="button"
+                  onClick={clearCut}
+                  disabled={savingCut}
+                  className="t-mem__toggle"
+                >
+                  clear
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={cancelTrim}
+                disabled={savingCut}
+                className="t-mem__toggle"
+              >
+                cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveCut}
+                disabled={!hasFullSelection || savingCut}
+                className="t-mem__toggle t-mem__toggle--go"
+              >
+                {savingCut ? "saving…" : "save cut"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <Dimmer value={level} onChange={setLevel} />
+
+            <button
+              type="button"
+              aria-pressed={mode === "buildup"}
+              onClick={() => switchMode(mode === "buildup" ? "read" : "buildup")}
+              className="t-mem__toggle"
+            >
+              build up
+            </button>
+
+            {mode === "buildup" && (
+              <span className="t-mem__count">
+                {builtUpTo} of {viewEntries.length} standing
+              </span>
+            )}
+
+            <div className="t-mem__rail-end">
+              {canTrim && (
+                <button type="button" onClick={enterTrim} className="t-mem__toggle">
+                  {cut ? "edit cut" : "trim"}
+                </button>
+              )}
+              <SettingsPopover prefs={prefs} update={update} />
+            </div>
+          </>
+        )}
+      </div>
+
+      {trimming && (
+        <div className="mt-5">
+          {/* Length against the whole piece and against the limits rooms give
+              you, rather than a bare line count. "4 lines" is not a fact an
+              actor can act on; "0:27, 0:52 trimmed" is. */}
           <CutMeter
             cutSeconds={selCount > 0 ? selSeconds : fullSeconds}
             fullSeconds={fullSeconds}
           />
-          <p className="font-typewriter text-sm text-muted-foreground" aria-live="polite">
-            {selStart == null
-              ? "Tap where your cut starts."
-              : selEnd == null
-                ? "Now tap where it ends."
-                : "Tap any line to start a new cut."}
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            {cut && (
-              <button
-                type="button"
-                onClick={clearCut}
-                disabled={savingCut}
-                className="rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-opacity cursor-pointer hover:opacity-80 disabled:opacity-50"
-              >
-                Clear cut
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={cancelTrim}
-              disabled={savingCut}
-              className="rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-opacity cursor-pointer hover:opacity-80 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={saveCut}
-              disabled={!hasFullSelection || savingCut}
-              className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors cursor-pointer hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {savingCut ? "Saving…" : "Save cut"}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          <Segmented
-            ariaLabel="Learning mode"
-            options={MODES}
-            value={mode}
-            onChange={switchMode}
-          />
-
-          {mode === "read" && (
-            <Segmented
-              ariaLabel="Reveal level"
-              options={LEVELS}
-              value={level}
-              onChange={setLevel}
-            />
-          )}
-
-          {mode === "buildup" && (
-            <span className="text-sm tabular-nums text-muted-foreground">
-              {builtUpTo} / {viewEntries.length}
-            </span>
-          )}
-
-          <div className="ml-auto flex items-center gap-2">
-            {canTrim && (
-              <button
-                type="button"
-                onClick={enterTrim}
-                className="rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors cursor-pointer hover:text-foreground"
-              >
-                {cut ? "Edit cut" : "Trim"}
-              </button>
-            )}
-            <SettingsPopover prefs={prefs} update={update} />
-          </div>
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        {trimming
-          ? "Tap your first line, then your last line."
-          : mode === "read"
-            ? "Tap a hidden line to peek."
-            : "Recall each line from the top, then add the next. Tap a blank to peek."}
-      </p>
-
-      {/* Applied-cut banner */}
       {cut && !trimming && (
-        <div
-          className={cn(
-            "flex flex-wrap items-center justify-between gap-2 border px-4 py-2.5 text-sm",
-            t.surface,
-            t.hair,
-          )}
-        >
-          <span className={t.inkMuted}>
-            {showFull
-              ? "Showing the full piece"
-              : `Showing your cut · ~${fmtTime(cutSeconds)}`}
+        <p className="t-mem__cut">
+          <span>
+            {showFull ? "the whole piece" : `your cut · ~${fmtTime(cutSeconds)}`}
           </span>
-          <button
-            type="button"
-            onClick={toggleShowFull}
-            className="rounded-full px-3 py-1 text-sm font-semibold text-primary transition-opacity cursor-pointer hover:opacity-80"
-          >
-            {showFull ? "Show cut" : "Show full"}
+          <button type="button" onClick={toggleShowFull} className="t-mem__toggle">
+            {showFull ? "show the cut" : "show it all"}
           </button>
+        </p>
+      )}
+
+      {/* The page. */}
+      <div className={cn("t-mem__page", prefs.spacious ? "space-y-8" : "space-y-6")}>
+        {trimming || mode === "read"
+          ? viewEntries.map(({ line, index }) =>
+              renderLine(line, index, {
+                masked:
+                  !trimming && line.mine && level !== "full" && !revealed.has(index),
+              }),
+            )
+          : viewEntries.slice(0, builtUpTo).map(({ line, index }, pos) =>
+              renderLine(line, index, {
+                masked: line.mine && !revealed.has(index),
+                newest: pos === builtUpTo - 1,
+              }),
+            )}
+      </div>
+
+      {!trimming && mode === "buildup" && (
+        <div className="mt-9 flex flex-wrap items-center gap-3">
+          {atEnd ? (
+            <p className="t-mem__count">the whole piece is standing. run it from the top.</p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setBuiltUpTo((n) => Math.min(n + 1, viewEntries.length))}
+              className="t-mem__toggle t-mem__toggle--go"
+            >
+              add the next line
+            </button>
+          )}
+          {builtUpTo > 1 && (
+            <button type="button" onClick={startOver} className="t-mem__toggle">
+              start over
+            </button>
+          )}
         </div>
       )}
 
-      {/* Reading surface */}
-      <div
-        className={cn(
-          "rounded-2xl border px-5 py-8 transition-colors sm:px-10 sm:py-12",
-          t.surface,
-          t.hair,
-        )}
-      >
-        <div className={cn(prefs.spacious ? "space-y-8" : "space-y-6")}>
-          {trimming || mode === "read"
-            ? viewEntries.map(({ line, index }) =>
-                renderLine(line, index, {
-                  masked:
-                    !trimming &&
-                    line.mine &&
-                    level !== "full" &&
-                    !revealed.has(index),
-                }),
-              )
-            : viewEntries.slice(0, builtUpTo).map(({ line, index }, pos) =>
-                renderLine(line, index, {
-                  masked: line.mine && !revealed.has(index),
-                  newest: pos === builtUpTo - 1,
-                }),
-              )}
+      {!trimming && (
+        <div className="t-mem__foot">
+          {footActions}
+          <SelfRecorder />
         </div>
-
-        {!trimming && mode === "buildup" && (
-          <div className={cn("mt-8 flex flex-wrap items-center gap-3 border-t pt-6", t.hair)}>
-            {atEnd ? (
-              <p className={cn("text-sm", t.inkMuted)}>
-                You&apos;ve built the whole piece — run it from the top.
-              </p>
-            ) : (
-              <button
-                type="button"
-                onClick={() =>
-                  setBuiltUpTo((n) => Math.min(n + 1, viewEntries.length))
-                }
-                className={cn(
-                  "rounded-full border px-5 py-2 text-sm font-semibold transition-opacity cursor-pointer hover:opacity-80",
-                  t.hair,
-                  t.ink,
-                )}
-              >
-                Add next line
-              </button>
-            )}
-            {builtUpTo > 1 && (
-              <button
-                type="button"
-                onClick={startOver}
-                className={cn(
-                  "rounded-full border px-4 py-2 text-sm font-medium transition-opacity cursor-pointer hover:opacity-80",
-                  t.hair,
-                  t.inkMuted,
-                )}
-              >
-                Start over
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Recorder — tucked beneath the reading view so it stays calm. */}
-      <div className="border-t border-border pt-6">
-        <SelfRecorder />
-      </div>
+      )}
     </div>
   );
 }
