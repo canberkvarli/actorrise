@@ -99,11 +99,17 @@ export function SameRegister({ monologue }: { monologue: Monologue }) {
 
   // What these actually have in common, said in the piece's own vocabulary
   // rather than asserted. Only the facts this row really carries.
+  /* "female's roles" is not a thing anyone says. The column stores the
+     adjective; a casting breakdown uses the noun. */
+  const ROLES: Record<string, string> = {
+    female: "women's roles",
+    male: "men's roles",
+    "non-binary": "non-binary roles",
+  };
+  const gender = monologue.character_gender?.toLowerCase();
   const register = [
     monologue.tone || monologue.primary_emotion,
-    monologue.character_gender && monologue.character_gender.toLowerCase() !== "any"
-      ? `${monologue.character_gender.toLowerCase()}'s roles`
-      : null,
+    gender && gender !== "any" ? (ROLES[gender] ?? `${gender} roles`) : null,
     monologue.category,
   ]
     .filter(Boolean)
