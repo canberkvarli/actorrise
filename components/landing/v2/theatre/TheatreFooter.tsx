@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
+import { SOCIALS, externalProps } from "@/lib/socials";
 
 const LINKS = [
   { href: "/about", label: "About" },
@@ -64,6 +65,32 @@ export function TheatreFooter() {
           ))}
           <ContactModalTrigger className="!text-[var(--t-muted-light-2)] hover:!text-[var(--t-gel)]" />
           <LandingFooterAuthLink />
+
+          {/* Icons only here. The founder note spells the handles out, because
+              someone who has just read it wants something to type; this row is
+              already carrying nine links and three more words each would turn
+              it into a paragraph.
+
+              Pale tokens, not the note's dark ones: this footer is ink ground.
+              --t-muted-dark on it would be near-black on near-black, which is
+              exactly how the muted tokens have gone invisible here before. */}
+          <span
+            aria-hidden
+            className="h-4 w-px"
+            style={{ background: "var(--t-line-dark)" }}
+          />
+          {SOCIALS.map(({ name, href, Icon }) => (
+            <a
+              key={name}
+              href={href}
+              {...externalProps(href)}
+              aria-label={name}
+              title={name}
+              className="transition-colors hover:!text-[var(--t-gel)]"
+            >
+              <Icon className="h-[18px] w-[18px]" aria-hidden />
+            </a>
+          ))}
         </div>
       </div>
     </footer>
