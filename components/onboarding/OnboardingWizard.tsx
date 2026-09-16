@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import ProfileOnboardingFlow from "@/components/onboarding/ProfileOnboardingFlow";
 
@@ -31,7 +32,13 @@ export default function OnboardingWizard() {
     }
   }, [showing]);
 
-  if (!showing) return null;
-
-  return <ProfileOnboardingFlow variant="new" onClose={() => setClosed(true)} />;
+  /* Not an early `return null`: AnimatePresence has to stay mounted for the
+     card it is holding to be allowed to leave. Returning null the instant
+     `closed` flipped is what made finishing onboarding a hard cut to a black
+     curtain — the flow was deleted mid-frame and its exit never ran. */
+  return (
+    <AnimatePresence>
+      {showing && <ProfileOnboardingFlow variant="new" onClose={() => setClosed(true)} />}
+    </AnimatePresence>
+  );
 }

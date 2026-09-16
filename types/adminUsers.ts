@@ -60,6 +60,7 @@ export interface AdminUserDetailResponse {
     has_seen_search_tour: boolean;
     has_seen_profile_tour: boolean;
     has_seen_collection_tour: boolean;
+    has_seen_scenepartner_tour: boolean;
     has_completed_onboarding: boolean;
     has_completed_profile_onboarding: boolean;
     has_seen_first_rehearsal: boolean;

@@ -815,6 +815,7 @@ export default function AdminUserDetailPage() {
                   ["Search tour", data.user.has_seen_search_tour],
                   ["Profile tour", data.user.has_seen_profile_tour],
                   ["Collection tour", data.user.has_seen_collection_tour],
+                  ["ScenePartner tour", data.user.has_seen_scenepartner_tour],
                 ].map(([label, seen]) => (
                   <span
                     key={String(label)}

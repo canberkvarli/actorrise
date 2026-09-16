@@ -131,8 +131,11 @@ export function PracticeLibrary({
         }
       >
         {/* The stage. One region, two things it can hold, and the swap between
-            them is the only motion on the screen after load. */}
-        <div className="min-w-0">
+            them is the only motion on the screen after load.
+            The id is the ScenePartner tour's first anchor: it is on the region
+            rather than on WhatsNext itself so the light still has something to
+            land on while the stage is a skeleton or holding an open script. */}
+        <div id="scenepartner-stage" className="min-w-0">
           <AnimatePresence mode="wait" initial={false}>
             {selectedScript ? (
               <motion.div
@@ -224,24 +227,31 @@ export function PracticeLibrary({
             style={{ borderBottom: "1.5px solid var(--t-line-dark-2)" }}
           >
             <h2 className="t-shelf-heading">On the shelf</h2>
-            <UploadScriptButton variant="compact" className="t-bring-in">Bring in a script</UploadScriptButton>
+            <span id="scenepartner-bring-in">
+              <UploadScriptButton variant="compact" className="t-bring-in">Bring in a script</UploadScriptButton>
+            </span>
           </div>
-          <PracticeLibraryRail
-            scripts={ordered}
-            selectedId={effectiveId}
-            onSelect={setSelectedId}
-            onRequestDelete={setDeleteTarget}
-            onReport={handleReport}
-            orientation="column"
-            onReorder={(scriptIds) => {
-              // The shelf has already moved on screen. A toast here would fire
-              // on every drag; the arrangement showing up where it was dropped
-              // is the confirmation. Only a failure needs saying.
-              reorderScripts.mutate(scriptIds, {
-                onError: () => toast.error("Couldn't save the new order"),
-              });
-            }}
-          />
+          {/* The tour's third anchor is the rail alone, not the column: the
+              column already contains the "bring in a script" step's target, so
+              lighting it would show the same pill twice. */}
+          <div id="scenepartner-shelf">
+            <PracticeLibraryRail
+              scripts={ordered}
+              selectedId={effectiveId}
+              onSelect={setSelectedId}
+              onRequestDelete={setDeleteTarget}
+              onReport={handleReport}
+              orientation="column"
+              onReorder={(scriptIds) => {
+                // The shelf has already moved on screen. A toast here would fire
+                // on every drag; the arrangement showing up where it was dropped
+                // is the confirmation. Only a failure needs saying.
+                reorderScripts.mutate(scriptIds, {
+                  onError: () => toast.error("Couldn't save the new order"),
+                });
+              }}
+            />
+          </div>
         </div>
       </div>
 

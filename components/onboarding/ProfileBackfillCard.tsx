@@ -90,7 +90,11 @@ export default function ProfileBackfillCard() {
         )}
       </AnimatePresence>
 
-      {flowOpen && <ProfileOnboardingFlow variant="backfill" onClose={() => setFlowOpen(false)} />}
+      <AnimatePresence>
+        {flowOpen && (
+          <ProfileOnboardingFlow variant="backfill" onClose={() => setFlowOpen(false)} />
+        )}
+      </AnimatePresence>
     </>
   );
 }

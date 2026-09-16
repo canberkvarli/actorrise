@@ -22,6 +22,32 @@ export const TOUR_LATCH_KEY = "actorrise_tour_seen";
 export const ONBOARDING_LATCH_KEY = "actorrise_onboarding_done";
 
 /**
+ * Anyone who needs to re-render when these latches move.
+ *
+ * sessionStorage fires no event in the tab that wrote it, so a component
+ * reading it through useSyncExternalStore with a no-op subscribe only learns
+ * about a change when something ELSE re-renders it. That is exactly what kept
+ * the first-run curtain up: the onboarding card finished, cleared the signup
+ * flag, and the curtain — an opaque black rectangle over the whole app — sat
+ * there until a background refreshUser() came back and changed the user
+ * object. On a slow connection that was the last thing a brand-new account saw
+ * of their first session.
+ */
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+export function subscribeFirstRun(listener: Listener) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function notify() {
+  listeners.forEach((l) => l());
+}
+
+/**
  * "An account was just created in this tab."
  *
  * Set the moment signup succeeds, cleared when the onboarding card is done
@@ -39,6 +65,7 @@ export function markSignupPending() {
   } catch {
     /* storage unavailable — the user-object check below still covers it */
   }
+  notify();
 }
 
 export function clearSignupPending() {
@@ -46,6 +73,31 @@ export function clearSignupPending() {
     sessionStorage.removeItem(SIGNUP_PENDING_KEY);
   } catch {
     /* storage unavailable */
+  }
+  notify();
+}
+
+/**
+ * "Onboarding was finished or skipped in this tab."
+ *
+ * The durable record is the server flag, but it lands late. This is what the
+ * curtain and the tours read in the meantime, and writing it is what tells
+ * everyone watching that the house lights can come up.
+ */
+export function markOnboardingDoneLatch() {
+  try {
+    sessionStorage.setItem(ONBOARDING_LATCH_KEY, "1");
+  } catch {
+    /* sessionStorage unavailable — the server flag still covers the normal case */
+  }
+  notify();
+}
+
+export function isOnboardingDoneThisSession(): boolean {
+  try {
+    return sessionStorage.getItem(ONBOARDING_LATCH_KEY) === "1";
+  } catch {
+    return false;
   }
 }
 
@@ -75,6 +127,7 @@ export function clearFirstRunSession() {
   } catch {
     /* storage unavailable — nothing was latched either */
   }
+  notify();
 }
 
 /** On signup: a genuinely new account, so drop everything the browser remembers. */

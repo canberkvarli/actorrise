@@ -495,7 +495,7 @@ export default function ProfileOnboardingFlow({
   const numeral = isQuestion ? NUMERAL[current.key] : phase === "payoff" ? "✦" : undefined;
 
   return (
-    <div
+    <motion.div
       /* z above the app bar (9998) AND above FirstRunCurtain (9999), which
          holds the stage until this chunk loads. At z-[100] the header floated
          over a full-screen takeover: the actor was being asked "how did you
@@ -503,6 +503,19 @@ export default function ProfileOnboardingFlow({
          which is three exits from a card that has not introduced itself yet. */
       className={`theatre-tokens theatre-onboarding ${theatreFontVars} fixed inset-0 z-[10000] flex items-start justify-center overflow-y-auto overflow-x-clip p-6 sm:items-center`}
       style={{ background: "var(--page)" }}
+      /* The way out. This used to be a plain div inside a plain conditional:
+         the actor tapped the last thing in the flow and the entire takeover
+         was deleted mid-frame, which is not a transition, it is a cut — and
+         what it cut to was the first-run curtain, still up, waiting on a
+         network round trip.
+         Now the ground fades while the card leaves above it, and the curtain
+         underneath fades on the same beat, so finishing onboarding reads as
+         the house lights coming up on the room you are standing in.
+         Wrapped in <AnimatePresence> by every caller; without one, exit is
+         simply skipped and this behaves as it always did. */
+      initial={false}
+      exit={{ opacity: 0 }}
+      transition={{ duration: reduce ? 0 : 0.42, ease: [0.4, 0, 0.2, 1] }}
     >
       {/* The fixture, hanging in the flies. The same drawing the wait uses, so
           the lamp the actor meets here is the lamp that draws itself in a
@@ -531,6 +544,14 @@ export default function ProfileOnboardingFlow({
         aria-label={variant === "new" ? "Set up your profile" : "Finish your profile"}
         initial={reduce ? false : { opacity: 0, y: 28, scale: 0.97, rotate: -0.5 }}
         animate={{ opacity: 1, y: 0, scale: 1, rotate: -0.6 }}
+        /* Out the way it came in, faster and upward: the card is struck before
+           the ground it stands on fades, which is what stops the two reading as
+           one flat dissolve. */
+        exit={
+          reduce
+            ? { opacity: 0 }
+            : { opacity: 0, y: -18, scale: 0.985, rotate: -0.2, transition: { duration: 0.3, ease: [0.4, 0, 1, 1] } }
+        }
         transition={{ duration: 0.6, ease: ENTER }}
         className="relative z-10 my-auto w-full overflow-hidden rounded-lg border-[1.5px] transition-[max-width] duration-500"
         style={{
@@ -773,7 +794,7 @@ export default function ProfileOnboardingFlow({
           )}
         </AnimatePresence>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
 

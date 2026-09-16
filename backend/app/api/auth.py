@@ -35,6 +35,7 @@ class UpdateOnboardingRequest(BaseModel):
     has_seen_search_tour: bool | None = None
     has_seen_profile_tour: bool | None = None
     has_seen_collection_tour: bool | None = None
+    has_seen_scenepartner_tour: bool | None = None
     has_completed_onboarding: bool | None = None
     has_completed_profile_onboarding: bool | None = None
     has_seen_first_rehearsal: bool | None = None
@@ -285,6 +286,7 @@ def get_me(
         "has_seen_search_tour": current_user.has_seen_search_tour,
         "has_seen_profile_tour": current_user.has_seen_profile_tour,
         "has_seen_collection_tour": current_user.has_seen_collection_tour,
+        "has_seen_scenepartner_tour": current_user.has_seen_scenepartner_tour,
         "has_completed_onboarding": current_user.has_completed_onboarding,
         "has_completed_profile_onboarding": current_user.has_completed_profile_onboarding,
         "has_seen_first_rehearsal": current_user.has_seen_first_rehearsal,
@@ -352,6 +354,8 @@ def update_onboarding(
         current_user.has_seen_profile_tour = body.has_seen_profile_tour
     if body.has_seen_collection_tour is not None:
         current_user.has_seen_collection_tour = body.has_seen_collection_tour
+    if body.has_seen_scenepartner_tour is not None:
+        current_user.has_seen_scenepartner_tour = body.has_seen_scenepartner_tour
     if body.has_completed_onboarding is not None:
         current_user.has_completed_onboarding = body.has_completed_onboarding
     if body.has_completed_profile_onboarding is not None:
@@ -396,6 +400,7 @@ def update_onboarding(
         "has_seen_search_tour": current_user.has_seen_search_tour,
         "has_seen_profile_tour": current_user.has_seen_profile_tour,
         "has_seen_collection_tour": current_user.has_seen_collection_tour,
+        "has_seen_scenepartner_tour": current_user.has_seen_scenepartner_tour,
         "has_completed_onboarding": current_user.has_completed_onboarding,
         "has_completed_profile_onboarding": current_user.has_completed_profile_onboarding,
         "has_seen_first_rehearsal": current_user.has_seen_first_rehearsal,

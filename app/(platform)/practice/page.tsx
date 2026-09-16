@@ -16,6 +16,8 @@ import {
   HowItWorksWalkthrough,
   shouldAutoOpenWalkthrough,
 } from "@/components/practice/HowItWorksWalkthrough";
+import { ScenePartnerTour } from "@/components/onboarding/ScenePartnerTour";
+import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
 
 /**
  * /practice — the page that opens after login.
@@ -94,6 +96,22 @@ export default function PracticePage() {
   // override wins for the rest of the visit.
   const walkthroughOpen =
     walkthroughOverride ?? (!!user && scriptsFetched && !hasOwnScript && unseen);
+
+  /* The followspot. Every other room got one and this one — the room you land
+     in after login — got only the playbill, which points at nothing and only
+     auto-opens for an empty shelf.
+     The delay is longer than the 700ms default because the room's own entrance
+     runs for about that long, and a light that lands on a card still rising
+     measures the wrong rectangle. */
+  const { show: showTour, dismiss: dismissTour } = useTourTrigger(
+    "has_seen_scenepartner_tour",
+    { delay: 1100 },
+  );
+  /* Never on top of the playbill. Dismissing a tour BURNS the flag, so a tour
+     that runs behind a full-screen dialog is a tour the actor is never offered
+     again — and the room has to have finished resolving, or the anchors it
+     lights are still skeletons. */
+  const tourOpen = showTour && !walkthroughOpen && scriptsFetched && !isLoading;
 
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
@@ -193,6 +211,8 @@ export default function PracticePage() {
       {user && !isLoading && <CallboardDock />}
 
       <HowItWorksWalkthrough open={walkthroughOpen} onOpenChange={setWalkthroughOverride} />
+
+      {tourOpen && <ScenePartnerTour onDismiss={dismissTour} />}
     </div>
   );
 }

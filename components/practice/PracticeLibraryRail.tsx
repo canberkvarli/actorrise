@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Reorder, useDragControls, useReducedMotion } from "framer-motion";
+import { Reorder, motion, useDragControls, useReducedMotion } from "framer-motion";
 import { IconDots, IconFlag } from "@tabler/icons-react";
 import { Trash2 } from "lucide-react";
 
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/popover";
 import { getGenreInkColor, getGenreSpineColor } from "@/lib/genreColors";
 import type { UserScript } from "@/hooks/useScripts";
+import { entrance } from "@/lib/motion";
 
 interface PracticeLibraryRailProps {
   /** Ordered scripts (user scripts first, demo last). */
@@ -158,9 +159,10 @@ export function PracticeLibraryRail({
           onReorder={(next: number[]) => moveTo(next)}
           className={listClass}
         >
-          {arranged.map((script) => (
+          {arranged.map((script, i) => (
             <DraggableCard
               key={script.id}
+              index={i}
               script={script}
               selected={script.id === selectedId}
               column={column}
@@ -176,9 +178,10 @@ export function PracticeLibraryRail({
         </Reorder.Group>
       ) : (
         <div className={listClass}>
-          {arranged.map((script) => (
+          {arranged.map((script, i) => (
             <ScriptCard
               key={script.id}
+              index={i}
               script={script}
               selected={script.id === selectedId}
               column={column}
@@ -193,9 +196,10 @@ export function PracticeLibraryRail({
       {/* The house copies, below the actor's own. */}
       {pinned.length > 0 && (
         <div className={`${listClass} ${column && arranged.length > 0 ? "mt-2.5" : ""}`}>
-          {pinned.map((script) => (
+          {pinned.map((script, i) => (
             <ScriptCard
               key={script.id}
+              index={arranged.length + i}
               script={script}
               selected={script.id === selectedId}
               column={column}
@@ -216,6 +220,7 @@ export function PracticeLibraryRail({
 
 function DraggableCard({
   script,
+  index,
   selected,
   column,
   reduceMotion,
@@ -227,6 +232,7 @@ function DraggableCard({
   onRequestReport,
 }: {
   script: UserScript;
+  index: number;
   selected: boolean;
   column: boolean;
   reduceMotion: boolean;
@@ -253,6 +259,7 @@ function DraggableCard({
     >
       <ScriptCard
         script={script}
+        index={index}
         selected={selected}
         column={column}
         held={held}
@@ -293,6 +300,7 @@ function DraggableCard({
 
 function ScriptCard({
   script,
+  index = 0,
   selected,
   column,
   held = false,
@@ -302,6 +310,8 @@ function ScriptCard({
   onRequestReport,
 }: {
   script: UserScript;
+  /** Position on the shelf, for the entrance only. */
+  index?: number;
   selected: boolean;
   column: boolean;
   held?: boolean;
@@ -311,6 +321,7 @@ function ScriptCard({
   onRequestDelete: () => void;
   onRequestReport: () => void;
 }) {
+  const reduce = useReducedMotion();
   const isProcessing =
     script.processing_status === "processing" || script.processing_status === "pending";
   const sceneCount = script.num_scenes_extracted;
@@ -323,7 +334,15 @@ function ScriptCard({
         : "";
 
   return (
-    <div
+    <motion.div
+      /* The shelf fills itself, spine by spine. Every other list in the app
+         arrives on the house curve and this one — the one thing on /practice
+         that is actually the actor's own work — was simply there, fully drawn,
+         the instant the query resolved. Small travel and a capped stagger, so
+         a shelf of twelve still finishes inside a third of a second.
+         On the inner card rather than the Reorder.Item so it cannot fight the
+         drag and reorder transforms on the wrapper. */
+      {...entrance(index, { reduce, y: 8, duration: 0.4 })}
       className={`t-script ${held ? "is-held" : ""} ${selected ? "is-current" : ""} ${
         column ? "" : "w-44 shrink-0 sm:w-52"
       }`}
@@ -385,7 +404,7 @@ function ScriptCard({
           </PopoverContent>
         </Popover>
       )}
-    </div>
+    </motion.div>
   );
 }
 

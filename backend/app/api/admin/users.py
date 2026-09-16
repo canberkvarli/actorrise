@@ -133,6 +133,7 @@ class AdminProfilePatchRequest(BaseModel):
     has_seen_search_tour: bool | None = None
     has_seen_profile_tour: bool | None = None
     has_seen_collection_tour: bool | None = None
+    has_seen_scenepartner_tour: bool | None = None
     email_verified: bool | None = None
     # Most educators arrive by email, not by answering the signup question, so
     # tagging them by hand here is the primary way this column gets filled.
@@ -253,6 +254,7 @@ def _serialize_user(user: User) -> dict[str, Any]:
         "has_seen_search_tour": user.has_seen_search_tour,
         "has_seen_profile_tour": user.has_seen_profile_tour,
         "has_seen_collection_tour": user.has_seen_collection_tour,
+        "has_seen_scenepartner_tour": user.has_seen_scenepartner_tour,
         "has_completed_onboarding": user.has_completed_onboarding,
         "has_completed_profile_onboarding": user.has_completed_profile_onboarding,
         "has_seen_first_rehearsal": user.has_seen_first_rehearsal,
@@ -521,6 +523,8 @@ def patch_admin_user_profile(
         target.has_seen_profile_tour = body.has_seen_profile_tour
     if body.has_seen_collection_tour is not None:
         target.has_seen_collection_tour = body.has_seen_collection_tour
+    if body.has_seen_scenepartner_tour is not None:
+        target.has_seen_scenepartner_tour = body.has_seen_scenepartner_tour
     if body.email_verified is not None:
         target.email_verified = body.email_verified
     if "account_type" in body.model_fields_set:
@@ -817,6 +821,7 @@ def reset_admin_user_first_run(
     target.has_seen_search_tour = False
     target.has_seen_profile_tour = False
     target.has_seen_collection_tour = False
+    target.has_seen_scenepartner_tour = False
     target.has_seen_first_rehearsal = False
 
     db.flush()

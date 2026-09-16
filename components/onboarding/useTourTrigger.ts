@@ -14,25 +14,20 @@ import { hasSeenTourThisSession } from "@/components/onboarding/TourSpotlight";
  * tour for the rest of the visit, and clicking through to another page does not
  * fix it because a client-side navigation reuses the same user object.
  */
-import { ONBOARDING_LATCH_KEY as ONBOARDING_LATCH, clearSignupPending } from "@/lib/firstRun";
+import {
+  clearSignupPending,
+  isOnboardingDoneThisSession as onboardingDoneThisSession,
+  markOnboardingDoneLatch,
+} from "@/lib/firstRun";
 
 export function markOnboardingDone() {
   // The curtain's other condition retires here: onboarding is behind them, so
   // "an account was just created" stops meaning "hold the stage".
   clearSignupPending();
-  try {
-    sessionStorage.setItem(ONBOARDING_LATCH, "1");
-  } catch {
-    /* sessionStorage unavailable — the server flag still covers the normal case */
-  }
-}
-
-function onboardingDoneThisSession(): boolean {
-  try {
-    return sessionStorage.getItem(ONBOARDING_LATCH) === "1";
-  } catch {
-    return false;
-  }
+  // Both writes notify whoever is watching the latches, which is how the
+  // curtain learns to lift on the same beat the card leaves instead of waiting
+  // out a background refreshUser().
+  markOnboardingDoneLatch();
 }
 
 /**
@@ -50,7 +45,11 @@ function onboardingDoneThisSession(): boolean {
  *  - `has_completed_onboarding`, so no tour ever stacks on the first-run card
  */
 export function useTourTrigger(
-  flag: "has_seen_search_tour" | "has_seen_profile_tour" | "has_seen_collection_tour",
+  flag:
+    | "has_seen_search_tour"
+    | "has_seen_profile_tour"
+    | "has_seen_collection_tour"
+    | "has_seen_scenepartner_tour",
   opts?: { delay?: number },
 ) {
   const { user, refreshUser } = useAuth();

@@ -1339,6 +1339,7 @@
   --t-line-light: oklch(0.32 0.03 55);
   --t-on-text: oklch(0.15 0.03 45);
   --t-gel-ink: var(--t-gel);
+  --t-on-gel-ink: oklch(0.15 0.03 45);
 }
 
 /* ==========================================================================
@@ -1772,6 +1773,7 @@
   --t-line-light: oklch(0.32 0.03 55);
   --t-on-text: oklch(0.15 0.03 45);
   --t-gel-ink: var(--t-gel);
+  --t-on-gel-ink: oklch(0.15 0.03 45);
 }
 
 /* ==========================================================================
@@ -1901,6 +1903,7 @@
   --t-line-light: oklch(0.32 0.03 55);
   --t-on-text: oklch(0.15 0.03 45);
   --t-gel-ink: var(--t-gel);
+  --t-on-gel-ink: oklch(0.15 0.03 45);
 }
 
 /* Same flip as .t-modal: ink goes cream so it reads on the dark reading page. */
@@ -2125,6 +2128,7 @@
   --t-on-text: oklch(0.15 0.03 45);
   --t-hard-shadow: oklch(0.07 0.01 45);
   --t-gel-ink: var(--t-gel);
+  --t-on-gel-ink: oklch(0.15 0.03 45);
 }
 
 /* Bookmark toast: distinct saved-state style (teal accent, compact). Text must match card for light/dark. */
@@ -2449,6 +2453,13 @@
      to go light. Surfaces that are always ink keep using --t-gel directly;
      surfaces that flip use this. */
   --t-gel-ink: oklch(0.5 0.16 55);
+
+  /* The colour that reads ON --t-gel-ink, which flips the same way it does.
+     In light the gel-for-reading is a deep orange and cream sits on it; in
+     dark --t-gel-ink becomes the lamp itself — near-white on a lamp is not a
+     hover state, it is a blank pill. Every surface that FILLS with
+     --t-gel-ink must take its text from here rather than hard-coding cream. */
+  --t-on-gel-ink: oklch(0.98 0.01 85);
 
   /* Primary button: orange fill, ink text, ink arrow dot with a gel arrow.
      This is the design file's shipped `ctaStyle` default, and it is what the
@@ -3447,6 +3458,9 @@
   white-space: nowrap;
   animation: t-markin 0.5s ease-out var(--mark-d, 0s) both;
 }
+@media (prefers-reduced-motion: reduce) {
+  .t-mark { animation: none; }
+}
 /* Best pick takes the mode accent, so it is orange on the play shelf and
    violet on the screen shelf without a second rule. */
 .t-mark--best {
@@ -4351,7 +4365,10 @@
 }
 .t-bring-in:hover {
   background: var(--t-gel-ink);
-  color: oklch(0.98 0.01 85);
+  /* Not a hard-coded cream. In dark --t-gel-ink IS the lamp, so cream-on-gel
+     erased the label the moment the pill filled: "or bring your own" and
+     "Bring in a script" both went blank under the cursor. */
+  color: var(--t-on-gel-ink);
   border-style: solid;
   border-color: var(--t-gel-ink);
   transform: rotate(-1.5deg);
@@ -4465,6 +4482,34 @@
   border-radius: 8px;
   box-shadow: 14px 14px 0 var(--t-gel);
   font-family: var(--t-body);
+}
+
+/* The playbill opens and closes like a light rather than a dialog.
+   Radix's default pair is fade + zoom-95 in both directions, which reads as a
+   modal box on a page — the same motion a cookie banner uses. A playbill is
+   set down and then struck: it arrives from slightly below and leaves upward
+   and faster, so "Start rehearsing" hands you the room instead of blinking.
+   Unlayered, so it beats the animate-in/animate-out utilities on the same
+   element. */
+.t-playbill[data-state="open"] {
+  animation: t-playbill-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.t-playbill[data-state="closed"] {
+  animation: t-playbill-out 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+}
+@keyframes t-playbill-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 16px)) scale(0.975); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes t-playbill-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, calc(-50% - 14px)) scale(0.99); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-playbill[data-state="open"],
+  .t-playbill[data-state="closed"] {
+    animation-duration: 0.01ms;
+  }
 }
 .t-playbill__numeral {
   font-family: var(--t-display);
@@ -4586,6 +4631,7 @@
 .dark .theatre-search[data-search-mode="plays"],
 .dark .t-outline-flash[data-search-mode="plays"] {
   --t-gel-ink: var(--t-gel);
+  --t-on-gel-ink: oklch(0.15 0.03 45);
   --page: oklch(0.15 0.015 50);
   --acc: oklch(0.7 0.18 48);
 
@@ -6119,6 +6165,7 @@
 
 .dark .theatre-stage {
   --t-gel-ink: var(--t-gel);
+  --t-on-gel-ink: oklch(0.15 0.03 45);
   --page: oklch(0.11 0.012 50);
 
   --t-paper: oklch(0.19 0.018 52);
@@ -6149,6 +6196,7 @@
    off the dark page and takes a visible rule, or it would dissolve into it. */
 .dark .theatre-collection {
   --t-gel-ink: var(--t-gel);
+  --t-on-gel-ink: oklch(0.15 0.03 45);
   --page: oklch(0.11 0.012 50);
   --bench: oklch(0.195 0.02 52);
   --bench-bd: oklch(0.32 0.03 55);
@@ -6281,6 +6329,7 @@
    being a lamp and becomes a colour you can read. */
 .dark .theatre-monologue {
   --t-gel-ink: var(--t-gel);
+  --t-on-gel-ink: oklch(0.15 0.03 45);
   --page: oklch(0.11 0.012 50);
 
   --t-paper: oklch(0.19 0.018 52);
@@ -6323,6 +6372,7 @@
   --t-line-light: oklch(0.35 0.03 55);
   --t-line-light-2: oklch(0.3 0.03 55);
   --t-gel-ink: var(--t-gel);
+  --t-on-gel-ink: oklch(0.15 0.03 45);
   --t-hard-shadow: oklch(0.08 0.01 45);
 
   background: var(--t-ink);
@@ -7202,7 +7252,7 @@ select.t-field {
 .t-medium--go:hover:not(:disabled) {
   background: var(--t-gel-ink);
   border-color: var(--t-gel-ink);
-  color: oklch(0.98 0.01 85);
+  color: var(--t-on-gel-ink);
 }
 .t-paper__italic {
   margin: 0;

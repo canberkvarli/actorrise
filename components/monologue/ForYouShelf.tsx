@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
@@ -58,9 +58,11 @@ export function ForYouShelf() {
     return (
       <>
         <ProfileNudge onOpen={() => setWizardOpen(true)} />
-        {wizardOpen && (
-          <ProfileOnboardingFlow variant="backfill" onClose={closeWizard} />
-        )}
+        <AnimatePresence>
+          {wizardOpen && (
+            <ProfileOnboardingFlow variant="backfill" onClose={closeWizard} />
+          )}
+        </AnimatePresence>
       </>
     );
   }

@@ -1,9 +1,14 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import { theatreFontVars } from "@/lib/fonts/theatre";
-import { isSignupPending } from "@/lib/firstRun";
+import {
+  isOnboardingDoneThisSession,
+  isSignupPending,
+  subscribeFirstRun,
+} from "@/lib/firstRun";
 
 /**
  * The house, dark, from the instant an account exists until the first-run card
@@ -15,7 +20,7 @@ import { isSignupPending } from "@/lib/firstRun";
  * whole thing vanish under an onboarding takeover — the app introducing itself
  * twice, the second time contradicting the first.
  *
- * TWO conditions, because either alone leaves a gap:
+ * THREE conditions, because any one alone leaves a gap:
  *
  *  - `has_completed_onboarding === false` covers a reload mid-onboarding, but
  *    NOT the seconds right after signup, where there is no user object yet and
@@ -23,35 +28,56 @@ import { isSignupPending } from "@/lib/firstRun";
  *    for a beat.
  *  - the signup flag is known synchronously, before the platform's first
  *    render, and covers exactly that window. It is cleared the moment the
- *    server confirms onboarding is behind them.
+ *    onboarding card is done.
+ *  - the session latch lifts the curtain on the way OUT. The server flag is
+ *    written and re-read asynchronously, so `user` still said
+ *    has_completed_onboarding === false for as long as that round trip took —
+ *    and this curtain sat over the app, opaque and motionless, as the last
+ *    thing a brand-new account saw of their first session.
  *
  * Read through useSyncExternalStore with a `false` server snapshot: it touches
  * sessionStorage, which the server cannot, and rendering the curtain during SSR
- * would black out the shell for everyone.
+ * would black out the shell for everyone. The subscribe is real (see
+ * lib/firstRun) — sessionStorage fires no event in the tab that wrote it, so
+ * without it the curtain never hears that it can go.
  */
 export function FirstRunCurtain() {
   const { user } = useAuth();
+  const reduce = useReducedMotion();
 
-  const signupPending = useSyncExternalStore(
-    () => () => {},
-    isSignupPending,
+  const signupPending = useSyncExternalStore(subscribeFirstRun, isSignupPending, () => false);
+  const onboardingDone = useSyncExternalStore(
+    subscribeFirstRun,
+    isOnboardingDoneThisSession,
     () => false,
   );
 
   // The server saying "finished" always wins, so a returning actor is never
-  // covered by a stale signup flag from earlier in the same tab.
-  if (user?.has_completed_onboarding === true) return null;
-
+  // covered by a stale signup flag from earlier in the same tab. The latch says
+  // the same thing a round trip earlier.
+  const finished = user?.has_completed_onboarding === true || onboardingDone;
   const needsOnboarding = user?.has_completed_onboarding === false;
   // Note auth's `loading` is deliberately NOT consulted: that window is the
   // gap being covered, not a reason to stand down.
-  if (!needsOnboarding && !signupPending) return null;
+  const show = !finished && (needsOnboarding || signupPending);
 
   return (
-    <div
-      aria-hidden
-      className={`theatre-tokens theatre-onboarding ${theatreFontVars} fixed inset-0 z-[9999]`}
-      style={{ background: "var(--page)" }}
-    />
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          key="first-run-curtain"
+          aria-hidden
+          className={`theatre-tokens theatre-onboarding ${theatreFontVars} fixed inset-0 z-[9999]`}
+          style={{ background: "var(--page)" }}
+          initial={false}
+          /* No enter: this is the curtain that is already down when the lights
+             go out. Only the lift is animated, and it is the house coming up
+             under the card leaving above it — 0.5s against the card's 0.42s,
+             so the room is revealed rather than dropped on you. */
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduce ? 0 : 0.5, ease: [0.4, 0, 0.2, 1] }}
+        />
+      )}
+    </AnimatePresence>
   );
 }

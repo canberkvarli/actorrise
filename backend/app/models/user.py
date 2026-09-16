@@ -42,11 +42,18 @@ class User(Base):
     has_seen_welcome = Column(Boolean, default=False, nullable=False)
     has_seen_search_tour = Column(Boolean, default=False, nullable=False)
     has_seen_profile_tour = Column(Boolean, default=False, nullable=False)
-    # The Collection tour, added 2026-09-16. ScenePartner has no flag here: its
-    # tour is HowItWorksWalkthrough, which is per-browser localStorage plus a
-    # "have they uploaded anything yet" check.
+    # The Collection tour, added 2026-09-16.
     # Run backend/scripts/add_tour_flags.py against prod.
     has_seen_collection_tour = Column(Boolean, default=False, nullable=False)
+    # The ScenePartner tour. HowItWorksWalkthrough still exists and still
+    # auto-opens for someone with nothing on the shelf, but it is a playbill
+    # you read, not a light on the room: it explains the product in four acts
+    # and points at nothing. Every other surface got a followspot and
+    # ScenePartner — the room they land in most — got none, so it is a flag on
+    # the server like the rest rather than a localStorage key that a second
+    # device silently forgets.
+    # Run backend/scripts/add_tour_flags.py against prod.
+    has_seen_scenepartner_tour = Column(Boolean, default=False, nullable=False)
     has_completed_onboarding = Column(Boolean, default=False, nullable=False)
     # Distinct from the legacy flag above: set once the user finishes the
     # 5-tap profile-first onboarding that actually captures gender/age/type/

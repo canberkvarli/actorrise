@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   IconChevronDown,
   IconArrowRight,
@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getGenreBorderClassName } from "@/lib/genreColors";
+import { entrance } from "@/lib/motion";
 import { PlayCover } from "@/components/monologue/PlayCover";
 import { invalidateShelf, useScript, type UserScript } from "@/hooks/useScripts";
 import { groupScenesByAct, formatSceneDuration, type Scene } from "@/lib/scenes";
@@ -266,9 +267,13 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
                   </div>
                 )}
                 <div className="space-y-1.5">
-                  {group.scenes.map((scene) => (
+                  {group.scenes.map((scene, si) => (
                     <SceneRow
                       key={scene.id}
+                      /* Counted across the whole panel, not per act: two acts
+                         each restarting their own stagger reads as two lists
+                         that happen to be stacked. */
+                      index={groups.slice(0, gi).reduce((n, g) => n + g.scenes.length, 0) + si}
                       scene={scene}
                       accentClass={getGenreBorderClassName(script.genre ?? "")}
                       expanded={expandedSceneId === scene.id}
@@ -314,18 +319,22 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
 
 function SceneRow({
   scene,
+  index = 0,
   accentClass,
   expanded,
   onToggle,
   onOpen,
 }: {
   scene: Scene;
+  /** Position in the panel, for the entrance only. */
+  index?: number;
   /** Genre-tinted left edge (border-l-* class from genreColors). */
   accentClass: string;
   expanded: boolean;
   onToggle: () => void;
   onOpen: () => void;
 }) {
+  const reduce = useReducedMotion();
   const characters = [scene.character_1_name, scene.character_2_name].filter(Boolean);
   const duration = formatSceneDuration(scene.estimated_duration_seconds);
 
@@ -339,7 +348,12 @@ function SceneRow({
   const numeral = String(scene.scene_number ?? "").match(/\d+/)?.[0] ?? null;
 
   return (
-    <div
+    <motion.div
+      /* The scenes come in the way everything else does (lib/motion). Opening
+         a script used to swap the stage for a finished block of rows, which is
+         the one moment on this screen where something new is being handed over
+         and the only one that did not look like it. */
+      {...entrance(index, { reduce, y: 6, duration: 0.36 })}
       className={[
         "rounded-lg border border-l-2 transition-colors",
         accentClass,
@@ -424,7 +438,7 @@ function SceneRow({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 

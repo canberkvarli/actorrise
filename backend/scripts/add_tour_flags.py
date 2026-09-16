@@ -1,5 +1,5 @@
 """
-Add ``users.has_seen_collection_tour``.
+Add ``users.has_seen_collection_tour`` and ``users.has_seen_scenepartner_tour``.
 
 ``Base.metadata.create_all()`` only creates missing tables, never columns on an
 existing one, so adding these flags to a live database needs an explicit ALTER.
@@ -8,9 +8,9 @@ Idempotent (``IF NOT EXISTS``), safe to run repeatedly.
 Run once after deploying the model change:
     python backend/scripts/add_tour_flags.py
 
-Defaults FALSE, so every existing account is offered the Collection tour the
-next time they open it. That is deliberate: the tour has never run, so nobody
-has "already seen" it.
+Defaults FALSE, so every existing account is offered the Collection and
+ScenePartner tours the next time they open those rooms. That is deliberate:
+neither tour has ever run, so nobody has "already seen" it.
 """
 
 import sys
@@ -22,7 +22,7 @@ sys.path.insert(0, str(backend_dir))
 from app.core.database import SessionLocal
 from sqlalchemy import text
 
-COLUMNS = ("has_seen_collection_tour",)
+COLUMNS = ("has_seen_collection_tour", "has_seen_scenepartner_tour")
 
 
 def add_columns():

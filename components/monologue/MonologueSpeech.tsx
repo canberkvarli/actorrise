@@ -3,10 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 import { Monologue } from "@/types/actor";
 import { displayableAuthor } from "@/lib/utils";
+import { entrance } from "@/lib/motion";
 import type { ProfileMatch } from "@/lib/profileMatch";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { MonologueSourceTag } from "@/components/search/SourceTag";
@@ -217,6 +218,7 @@ export function MonologueSpeech({
       ? mono.character_age_range
       : null;
   const [open, setOpen] = useState(false);
+  const reduce = useReducedMotion();
 
   /** One word of what it sounds like. Stored on every piece and previously
    *  thrown away with the badges; as plain text next to the length it is
@@ -245,6 +247,12 @@ export function MonologueSpeech({
      remove — the same size and colour as every other label in the app. In the
      typewriter face at 10px with the letters opened up they belong to the
      page the speech is printed on. */
+  /* The marks land just behind the row they annotate, so they have to be timed
+     off the SAME curve — see lib/motion. They used to run on 0.35 + i*0.09,
+     which on an eighteen-row page put the last mark nearly two seconds in,
+     long after its own row had settled: the badge appeared to be arriving from
+     somewhere else. Rounded rather than exact because it crosses into CSS. */
+  const rowDelay = Math.min(0.04 + index * 0.045, 0.34);
   const markList = (
     <>
       {marks.map((m, k) => (
@@ -252,7 +260,7 @@ export function MonologueSpeech({
           key={m.key}
           title={m.title}
           className={`t-mark t-mark--${m.tone}`}
-          style={{ ["--mark-d" as string]: `${0.35 + index * 0.09 + k * 0.1}s` }}
+          style={{ ["--mark-d" as string]: `${(rowDelay + 0.18 + k * 0.06).toFixed(2)}s` }}
         >
           {m.label}
         </span>
@@ -262,9 +270,14 @@ export function MonologueSpeech({
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 24, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ delay: Math.min(0.15 + index * 0.07, 0.9), duration: 0.6, ease: [0.34, 1.56, 0.64, 1] }}
+      /* The house entrance (lib/motion), not a bespoke one.
+         This was 24px of travel plus a scale from 0.97 on a spring that
+         overshoots — on a block of set prose that reads as the type growing
+         past its size and settling back, and the per-row delay ran out to
+         0.9s, so the eighteenth result arrived long after the reader had
+         started on the first. It also ignored prefers-reduced-motion
+         entirely. Now the page lands as one wave inside a third of a second. */
+      {...entrance(index, { reduce, y: 14, duration: 0.5 })}
       /* Two cells: the margin, and everything else.
          An earlier version split the right side into three grid rows so a mark
          could line up with the first line of the speech. The poster then set
@@ -273,7 +286,6 @@ export function MonologueSpeech({
          a mark annotates the whole entry, and sitting beside the character
          name is where it belongs anyway. */
       className="t-row group sm:grid"
-      style={{ ["--row-d" as string]: `${0.15 + index * 0.09}s` }}
     >
       {/* Below sm the margin has nowhere to go, so the marks run as one line
           above the name rather than stealing width from the speech. */}
