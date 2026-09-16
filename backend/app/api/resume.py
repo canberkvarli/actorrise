@@ -19,7 +19,13 @@ from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
-VALID_CATEGORIES = {"theatre", "film", "tv", "commercial", "other"}
+# Must match CREDIT_CATEGORIES in types/resume.ts and _CATEGORY_ORDER in
+# services/resume/pdf.py. "voiceover" was missing from here while both of those
+# had it, and `_normalize_category` rewrites anything unrecognised to "other" —
+# silently. So picking Voiceover in the UI, filling the credit in and pressing
+# add filed it under New Media & Other: the credit you just added did not show
+# up where you put it, which from the outside is a button that does not work.
+VALID_CATEGORIES = {"theatre", "film", "tv", "commercial", "voiceover", "other"}
 
 
 class CreditIn(BaseModel):

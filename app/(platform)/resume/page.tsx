@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { IconX, IconDownload } from "@tabler/icons-react";
 import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
+
 import api, { downloadFile } from "@/lib/api";
 import { UNION_STATUSES } from "@/lib/profileOptions";
 import type { Credit, CreditInput } from "@/types/resume";
@@ -118,14 +120,42 @@ export default function ResumePage() {
         flashAt(res.data.id);
       } else {
         const res = await api.post<Credit>("/api/resume/credits", form);
+        /* The API answers 201 with the saved row. If it ever answers 2xx with
+           something else, pushing it would put a credit with no id on the
+           board — it would render, fail to delete, and vanish on reload. */
+        if (!res.data || typeof res.data.id !== "number") {
+          throw new Error("The credit saved, but came back in a shape I don't recognise.");
+        }
         setCredits((cur) => [...cur, res.data]);
         flashAt(res.data.id);
       }
       resetForm();
+    } catch (err: unknown) {
+      /* There was no catch here at all. A failed save threw out of the handler,
+         so `resetForm` never ran, the credit never appeared, and NOTHING was
+         said — the button looked broken because a broken button and a silently
+         failing one are the same thing from the outside. */
+      const detail =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : null;
+      toast.error(
+        typeof detail === "string" && detail
+          ? detail
+          : err instanceof Error && err.message
+            ? err.message
+            : "Couldn't save that credit. Try again in a moment.",
+      );
     } finally {
       setSaving(false);
     }
   }, [form, editingId, saving, resetForm, flashAt]);
+
+  /* Has the actor started filling this row in? Production is the only required
+     field, so everything else is evidence of intent without it. */
+  const rowStarted = [form.role, form.company, form.director, form.year].some(
+    (v) => (v ?? "").trim(),
+  );
 
   const editCredit = useCallback((c: Credit) => {
     setEditingId(c.id);
@@ -142,12 +172,20 @@ export default function ResumePage() {
 
   const deleteCredit = useCallback(
     async (id: number) => {
-      setCredits((cur) => cur.filter((c) => c.id !== id));
+      /* Optimistic: the row goes now. If the server refuses, put it back —
+         a credit that disappears from the board and returns on the next reload
+         is worse than one that never left. */
+      let removed: Credit | undefined;
+      setCredits((cur) => {
+        removed = cur.find((c) => c.id === id);
+        return cur.filter((c) => c.id !== id);
+      });
       if (editingId === id) resetForm();
       try {
         await api.delete(`/api/resume/credits/${id}`);
       } catch {
-        /* best-effort */
+        if (removed) setCredits((cur) => [...cur, removed as Credit]);
+        toast.error("Couldn't delete that credit. It's still on your résumé.");
       }
     },
     [editingId, resetForm]
@@ -413,6 +451,21 @@ export default function ResumePage() {
                   <button type="button" onClick={resetForm} className="t-medium">
                     cancel
                   </button>
+                )}
+                {/* Why the button is dead, said only once you've earned the
+                    question. The button disables on an empty production, which
+                    is right, but a greyed-out control that explains nothing is
+                    indistinguishable from a broken one: fill in the role and
+                    the year, press it, and the page just sits there.
+
+                    Not a permanent caption under the form. It appears only
+                    when you have actually started a row and left the one
+                    required field out, which is the only moment it tells you
+                    anything you didn't already know. */}
+                {editingId == null && !form.production.trim() && rowStarted && (
+                  <span className="t-build__aside">
+                    give it a production or title first
+                  </span>
                 )}
               </div>
             </div>
