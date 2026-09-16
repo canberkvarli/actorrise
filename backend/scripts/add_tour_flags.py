@@ -8,9 +8,23 @@ Idempotent (``IF NOT EXISTS``), safe to run repeatedly.
 Run once after deploying the model change:
     python backend/scripts/add_tour_flags.py
 
-Defaults FALSE, so every existing account is offered the Collection and
-ScenePartner tours the next time they open those rooms. That is deliberate:
-neither tour has ever run, so nobody has "already seen" it.
+Defaults FALSE, which is what makes a NEW signup eligible for a tour.
+
+The two columns were then treated differently on purpose, and the difference
+is not visible from this file alone:
+
+  - has_seen_collection_tour was left FALSE everywhere, so the Collection tour
+    was offered to every account that already existed.
+  - has_seen_scenepartner_tour was backfilled to TRUE for all 1054 accounts
+    that existed on 2026-09-17, so the ScenePartner tour only ever meets
+    people who sign up after it shipped. Canberk's call: a followspot walking
+    1054 people through a room they have been using for months is an
+    interruption, not an introduction.
+
+So re-running this script does NOT re-offer the ScenePartner tour to anyone —
+ADD COLUMN IF NOT EXISTS leaves the existing values alone. To offer it to an
+individual account (to see it yourself, say), the admin's "reset first run"
+on /admin/users/<id> sets every tour flag back to FALSE.
 """
 
 import sys

@@ -45,14 +45,17 @@ class User(Base):
     # The Collection tour, added 2026-09-16.
     # Run backend/scripts/add_tour_flags.py against prod.
     has_seen_collection_tour = Column(Boolean, default=False, nullable=False)
-    # The ScenePartner tour. HowItWorksWalkthrough still exists and still
-    # auto-opens for someone with nothing on the shelf, but it is a playbill
-    # you read, not a light on the room: it explains the product in four acts
-    # and points at nothing. Every other surface got a followspot and
-    # ScenePartner — the room they land in most — got none, so it is a flag on
-    # the server like the rest rather than a localStorage key that a second
+    # The ScenePartner tour, added 2026-09-17. HowItWorksWalkthrough still
+    # exists and still auto-opens for someone with nothing on the shelf, but it
+    # is a playbill you read, not a light on the room: it explains the product
+    # in four acts and points at nothing. Every other surface got a followspot
+    # and ScenePartner — the room they land in most — got none, so it is a flag
+    # on the server like the rest rather than a localStorage key that a second
     # device silently forgets.
-    # Run backend/scripts/add_tour_flags.py against prod.
+    #
+    # Column is live, and unlike the Collection tour above it was backfilled to
+    # TRUE for all 1054 accounts that already existed: this one introduces
+    # itself to new signups only. See backend/scripts/add_tour_flags.py.
     has_seen_scenepartner_tour = Column(Boolean, default=False, nullable=False)
     has_completed_onboarding = Column(Boolean, default=False, nullable=False)
     # Distinct from the legacy flag above: set once the user finishes the
