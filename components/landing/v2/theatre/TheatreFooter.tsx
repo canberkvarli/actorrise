@@ -31,8 +31,8 @@ export function TheatreFooter() {
             <Image
               src="/transparent_textlogo.png"
               alt="ActorRise"
-              width={150}
-              height={36}
+              width={2000}
+              height={600}
               className="block h-9 w-auto"
             />
           </Link>

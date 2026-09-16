@@ -58,8 +58,9 @@ export function TheatreNav({
           <Image
             src="/transparent_textlogo.png"
             alt="ActorRise"
-            width={140}
-            height={34}
+            /* The file's real size. See BrandLogo for why this matters. */
+            width={2000}
+            height={600}
             priority
             className="block h-[34px] w-auto"
           />
@@ -92,19 +93,41 @@ export function TheatreNav({
   );
 }
 
-/** "Practice" once you are in, "Sign in" before that. */
+/**
+ * "Practice" once you are in, "Sign in" before that.
+ *
+ * It used to render nothing at all while auth resolved, then appear — which
+ * widens the pill and slides everything in it sideways, a second or so after
+ * the page has settled. The pill is centred, so a width change moves the logo
+ * AND the CTA, not just the thing that appeared.
+ *
+ * The slot is held from the first paint instead: the element is always in the
+ * layout, just not yet legible, and it is wide enough for either word so that
+ * resolving to "Practice" rather than "Sign in" does not move anything either.
+ */
 function TheatreNavAuthLink() {
   const { user, loading } = useAuth();
   const authModal = useAuthModal();
 
-  if (loading) return null;
-
+  /* 74px is "Practice" at this size in the loaded face, measured rather than
+     guessed; "Sign in" is 66. The slot has to fit the WIDER of the two or the
+     link still resizes when it resolves — the first version of this used 62
+     and moved the pill by 8px in exactly the way it was meant to prevent. */
   const cls =
-    "hidden whitespace-nowrap px-2.5 py-1.5 text-[13px] font-medium transition-colors hover:!text-[var(--t-gel)] sm:block";
+    "hidden min-w-[74px] whitespace-nowrap px-2.5 py-1.5 text-center text-[13px] font-medium transition-[color,opacity] hover:!text-[var(--t-gel)] sm:block";
+  const style = { color: "var(--t-muted-light-2)" };
+
+  if (loading) {
+    return (
+      <span aria-hidden className={cls} style={{ ...style, opacity: 0 }}>
+        Practice
+      </span>
+    );
+  }
 
   if (user) {
     return (
-      <Link href="/practice" className={cls} style={{ color: "var(--t-muted-light-2)" }}>
+      <Link href="/practice" className={cls} style={style}>
         Practice
       </Link>
     );
@@ -114,7 +137,7 @@ function TheatreNavAuthLink() {
       type="button"
       onClick={() => authModal?.openAuthModal("login")}
       className={cls}
-      style={{ color: "var(--t-muted-light-2)" }}
+      style={style}
     >
       Sign in
     </button>
