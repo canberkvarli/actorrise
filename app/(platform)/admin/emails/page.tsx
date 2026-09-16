@@ -1093,14 +1093,14 @@ export default function AdminEmailsPage() {
                                         queued one does, and the usual cause is transport, not a bad
                                         address. Gating this on queued alone hid the button on the one
                                         batch that most needed it. */}
-                                    {expandedSends.filter((s) => s.status === "queued" || s.status === "failed").length > 0 && (
+                                    {expandedSends.filter((s) => s.status === "queued" || s.status === "failed" || s.status === "sending").length > 0 && (
                                       <Button
                                         size="sm"
                                         variant="default"
                                         className="h-7 text-xs gap-1.5 bg-amber-600 hover:bg-amber-700"
                                         onClick={async (e) => {
                                           e.stopPropagation();
-                                          const pending = expandedSends.filter((s) => s.status === "queued" || s.status === "failed").length;
+                                          const pending = expandedSends.filter((s) => s.status === "queued" || s.status === "failed" || s.status === "sending").length;
                                           try {
                                             await api.post(`/api/admin/emails/batch/${b.batch_id}/resume`, { send_via: sendVia });
                                             toast.success(`Sending to the ${pending} who haven't got it yet...`);
@@ -1119,7 +1119,7 @@ export default function AdminEmailsPage() {
                                         }}
                                       >
                                         <IconRefresh className="h-3.5 w-3.5" />
-                                        Send the rest ({expandedSends.filter((s) => s.status === "queued" || s.status === "failed").length})
+                                        Send the rest ({expandedSends.filter((s) => s.status === "queued" || s.status === "failed" || s.status === "sending").length})
                                       </Button>
                                     )}
                                     <Button

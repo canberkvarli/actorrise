@@ -45,7 +45,16 @@ class EmailSend(Base):
     resend_email_id = Column(String, nullable=True, index=True)
     to_email = Column(String, nullable=False, index=True)
     to_name = Column(String, default="")
-    status = Column(String, default="queued")  # queued | sent | delivered | opened | clicked | bounced | failed
+    # queued | sending | sent | delivered | opened | clicked | bounced | failed
+    #
+    # "sending" is a claim, not a result: a worker flips rows to it in one
+    # atomic UPDATE before it starts, so a second concurrent resume finds
+    # nothing to take and cannot mail the same person twice.
+    status = Column(String, default="queued")
+    # When the claim was taken. A worker that dies mid-batch leaves rows in
+    # "sending" forever, and a state that resume ignores is how recipients go
+    # missing, so a claim older than STALE_CLAIM_MINUTES is reclaimable.
+    claimed_at = Column(DateTime(timezone=True), nullable=True)
     opened_at = Column(DateTime(timezone=True), nullable=True)
     clicked_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))

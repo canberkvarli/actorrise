@@ -101,7 +101,9 @@ def _recount_batch(db, b) -> None:
         .all()
     )
     # "sent" is anything that left: opened/clicked are sent rows that came back.
-    b.sent = sum(c for s, c in counts.items() if s not in ("failed", "queued"))
+    # "sending" is a claim in flight, not a delivery — counting it here would
+    # report people as mailed before Gmail had accepted anything.
+    b.sent = sum(c for s, c in counts.items() if s not in ("failed", "queued", "sending"))
     b.skipped = counts.get("failed", 0)
 
 
@@ -703,6 +705,62 @@ def get_batch_status(
     )
 
 
+STALE_CLAIM_MINUTES = 15
+
+
+def _claim_sends(db, batch_id: int) -> list[int]:
+    """
+    Atomically take every row that still owes someone an email.
+
+    One UPDATE flips them to "sending" and returns their ids, so two concurrent
+    resumes cannot both take the same row: the second one's WHERE clause no
+    longer matches and it gets an empty list. Before this, a double-tap on
+    "Send the rest" — which a toast that wrongly reported failure actively
+    invited — would run two loops over the same recipients and mail each of
+    them twice.
+
+    A claim older than STALE_CLAIM_MINUTES is taken back, so a worker killed
+    mid-batch (a Render redeploy does exactly that) does not strand its rows in
+    a state nothing ever looks at again.
+    """
+    from sqlalchemy import text as _sql
+
+    rows = db.execute(
+        _sql(
+            """
+            update email_sends
+               set status = 'sending', claimed_at = now()
+             where batch_id = :bid
+               and (
+                     status in ('queued', 'failed')
+                     or (status = 'sending'
+                         and claimed_at < now() - make_interval(mins => :stale))
+                   )
+         returning id
+            """
+        ),
+        {"bid": batch_id, "stale": STALE_CLAIM_MINUTES},
+    ).fetchall()
+    db.commit()
+    return [r[0] for r in rows]
+
+
+def _release_claims(db, ids: list[int]) -> None:
+    """Hand back rows a worker claimed but never got to, so resume sees them."""
+    if not ids:
+        return
+    from sqlalchemy import text as _sql
+
+    db.execute(
+        _sql(
+            "update email_sends set status='queued', claimed_at=null "
+            "where id = any(:ids) and status='sending'"
+        ),
+        {"ids": ids},
+    )
+    db.commit()
+
+
 # A row that still owes someone an email. "failed" belongs here as much as
 # "queued" does: a failure is a recipient who did not get it, and the common
 # failure is transport (the ghost-light launch lost 372 to dropped SMTP
@@ -736,6 +794,9 @@ def resume_batch(
         EmailSend.batch_id == batch_id,
         EmailSend.status.in_(RESUMABLE_STATUSES),
     ).count()
+    # A live worker holds its rows as "sending", so this reads 0 while one is
+    # running — which is the point: the second caller is told to wait instead
+    # of starting a duplicate run.
 
     if pending_count == 0:
         raise HTTPException(
@@ -764,10 +825,14 @@ def resume_batch(
             client = _get_email_client(body.send_via)
             templates_svc = EmailTemplates()
 
-            sends = db2.query(EmailSend).filter(
-                EmailSend.batch_id == batch_id,
-                EmailSend.status.in_(RESUMABLE_STATUSES),
-            ).all()
+            # Claim first, then read. Anything this worker holds is invisible to
+            # a second resume, so a double-tap cannot double-send.
+            claimed_ids = _claim_sends(db2, batch_id)
+            if not claimed_ids:
+                b.status = "completed"
+                db2.commit()
+                return
+            sends = db2.query(EmailSend).filter(EmailSend.id.in_(claimed_ids)).all()
 
             # A retry starts from a clean error list, otherwise errors_json
             # grows by a few hundred strings every attempt.
@@ -777,6 +842,9 @@ def resume_batch(
             render_fn = getattr(templates_svc, RENDER_MAP.get(template_id, ""), None)
             plain_fn = getattr(templates_svc, PLAIN_TEXT_MAP.get(template_id, ""), None)
             if not render_fn:
+                # Give the rows back rather than leaving 372 people parked in a
+                # state no later resume would ever look at.
+                _release_claims(db2, claimed_ids)
                 b.status = "failed"
                 b.errors_json = list(b.errors_json or []) + [f"Unknown template: {template_id}"]
                 db2.commit()
@@ -823,6 +891,12 @@ def resume_batch(
 
         except Exception as e:
             logger.exception("Resume batch %s failed: %s", batch_id, e)
+            # Hand back anything claimed but unsent, so the next resume sees it
+            # instead of it sitting in "sending" until the stale timer expires.
+            try:
+                _release_claims(db2, locals().get("claimed_ids") or [])
+            except Exception:
+                pass
             try:
                 b = db2.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
                 if b:
