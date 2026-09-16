@@ -7178,3 +7178,140 @@ select.t-field {
     content: none;
   }
 }
+
+
+/* ==========================================================================
+   THE PROFILE — /profile
+   ==========================================================================
+   The call sheet at the top of this page is the best thing on it: the name in
+   the display face, and under it a line of Courier with dotted blanks where
+   the answers are missing — a form you can read as a sentence. Everything
+   below it was a different product: a bordered card repeating the heading the
+   tab had just said, rounded pill selects, sans labels each with a small info
+   circle, one field to a 1000px row.
+
+   The form is the call sheet's own language now. Ruled fields you fill in
+   rather than boxes, Courier for the questions, and the panel chrome gone so
+   the page reads as one document instead of a header with a settings form
+   stapled underneath.
+
+   Scoped to `.t-profile` on purpose: these override shadcn primitives (Input,
+   SelectTrigger, Label) that the rest of the product still uses as they are.
+   ========================================================================== */
+
+.t-profile {
+  --pf-rule: var(--t-line-light);
+}
+
+/* The question. Courier, because on this page a label is a line on a form. */
+.t-profile label {
+  font-family: var(--t-direction);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--t-muted-dark-2);
+}
+
+/* Every text input and every select trigger, ruled rather than boxed. The
+   `:where()` keeps specificity at zero so a one-off className on a field still
+   wins without !important. */
+.t-profile :where(input[type="text"], input[type="email"], input[type="url"], input:not([type]), textarea),
+.t-profile :where(button[role="combobox"]) {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 2px;
+  border: 0;
+  border-bottom: 1.5px solid var(--pf-rule);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--t-direction);
+  font-size: 14px;
+  color: var(--t-text);
+  transition: border-color 0.25s;
+}
+.t-profile :where(textarea) {
+  min-height: 92px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.t-profile :where(input, textarea)::placeholder,
+.t-profile :where(button[role="combobox"]) [data-placeholder],
+.t-profile :where(button[role="combobox"] > span:first-child) {
+  color: var(--t-muted-light-2);
+}
+.t-profile :where(input, textarea, button[role="combobox"]):hover {
+  border-color: var(--t-muted-light-2);
+}
+.t-profile :where(input, textarea, button[role="combobox"]):focus,
+.t-profile :where(input, textarea, button[role="combobox"]):focus-visible,
+.t-profile :where(button[role="combobox"][data-state="open"]) {
+  outline: none;
+  border-color: var(--t-gel-ink);
+}
+/* The select's chevron, at the weight of a mark on paper. */
+.t-profile :where(button[role="combobox"]) svg {
+  opacity: 0.45;
+  width: 15px;
+  height: 15px;
+}
+
+/* The "why are you asking" mark. It was an info circle on every label; at
+   eleven labels that is eleven small icons down one column. It is the label's
+   own underline now — dotted, the way the call sheet's blanks are. */
+.t-profile__why {
+  position: relative;
+  border-bottom: 1px dotted var(--t-muted-light-2);
+  color: var(--t-muted-dark-2);
+  transition: color 0.2s, border-color 0.2s;
+}
+.t-profile__why::before {
+  content: "";
+  position: absolute;
+  inset: -12px -6px;
+}
+.t-profile__why:hover,
+.t-profile__why:focus-visible {
+  color: var(--t-gel-ink);
+  border-color: var(--t-gel-ink);
+}
+
+/* A group of questions, headed the way the call sheet heads a block. */
+.t-profile__group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--t-muted-light-2);
+}
+.t-profile__group span:last-child {
+  height: 1px;
+  flex: 1 1 auto;
+  background: var(--pf-rule);
+}
+
+/* The panel the questions sit in. No border, no fill, no repeated title: the
+   tab directly above already said which one this is. All that is left is the
+   aside — the reason the section exists. */
+.t-profile__panel {
+  padding-top: 4px;
+}
+.t-profile__aside {
+  margin: 0 0 22px;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--t-muted-light-2);
+}
+
+/* Validation, in the gel rather than the app's red: this form is not an error
+   state, it is an unfinished one. */
+.t-profile [class*="text-destructive"] {
+  font-family: var(--t-direction);
+  font-size: 12px;
+  color: var(--t-gel-ink) !important;
+}

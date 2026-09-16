@@ -1,5 +1,7 @@
 "use client";
 
+import { theatreFontVars } from "@/lib/fonts/theatre";
+
 import { ActorProfileForm } from "@/components/profile/ActorProfileForm";
 import { ProfilePrivacyCard } from "@/components/profile/ProfilePrivacyCard";
 import { ProfileTour } from "@/components/onboarding/ProfileTour";
@@ -14,7 +16,9 @@ export default function ProfilePage() {
     useTourTrigger("has_seen_profile_tour", { delay: 600 });
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div
+      className={`t-profile theatre-tokens theatre-stage ${theatreFontVars} container relative mx-auto max-w-4xl px-4 py-8 sm:py-12`}
+    >
       {/* No page title. The call sheet below opens with the actor's own name as
           the h1, and "(your dressing room.)" over "Your profile" over "your
           name" was three possessives stacked in four inches. */}

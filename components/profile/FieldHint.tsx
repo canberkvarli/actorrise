@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { IconInfoCircle } from "@tabler/icons-react";
 
 import { Label } from "@/components/ui/label";
 import {
@@ -33,33 +32,44 @@ export function FieldLabel({
   hint?: ReactNode;
   className?: string;
 }) {
+  /* The hint hangs off the LABEL rather than off an icon beside it.
+     An info circle per label meant eleven small circles down one column, which
+     reads as eleven warnings; and the thing you had to hit was 14px wide. The
+     question itself is the target now, marked by a dotted underline — the same
+     mark the call sheet above uses for a blank waiting to be filled — with a
+     44px hit area that takes no layout space. */
+  if (!hint) {
+    return (
+      <div className={className}>
+        <Label htmlFor={htmlFor}>{children}</Label>
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex items-center gap-1.5 ${className}`}>
-      <Label htmlFor={htmlFor} className="text-sm font-medium">
-        {children}
-      </Label>
-      {hint && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              // Not aria-label="info" — a screen reader user should hear which
-              // field the explanation belongs to.
-              aria-label={
-                typeof children === "string"
-                  ? `Why ${children.toLowerCase()} is asked`
-                  : "Why this is asked"
-              }
-              className="inline-flex cursor-help items-center rounded-sm text-muted-foreground/60 transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            >
-              <IconInfoCircle className="h-3.5 w-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-[17rem]">
-            <p className="text-sm leading-relaxed">{hint}</p>
-          </TooltipContent>
-        </Tooltip>
-      )}
+    <div className={className}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            // Not aria-label="info" — a screen reader user should hear which
+            // field the explanation belongs to.
+            aria-label={
+              typeof children === "string"
+                ? `Why ${children.toLowerCase()} is asked`
+                : "Why this is asked"
+            }
+            className="t-profile__why cursor-help focus:outline-none"
+          >
+            <Label htmlFor={htmlFor} className="pointer-events-none cursor-help">
+              {children}
+            </Label>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[17rem]">
+          <p className="text-sm leading-relaxed">{hint}</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }

@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -100,34 +99,33 @@ function Field({ children, className = "" }: { children: React.ReactNode; classN
   );
 }
 
-function SectionHead({
-  sketch: Sketch,
-  title,
-  aside,
-}: {
-  sketch: typeof MasksSketch;
-  title: string;
-  aside: string;
-}) {
+/**
+ * The reason a section exists, and nothing else.
+ *
+ * It used to be a 40px sketch beside the section's name in a bordered header —
+ * directly under the tab that had just said the same three words. "Who you
+ * are" over "Who you are", sixty pixels apart. The tab is the title; this is
+ * the aside it did not have room for.
+ *
+ * `title` is still taken and still used, as the accessible name for the panel:
+ * a screen-reader user moving by heading should not lose the structure just
+ * because the sighted one is carried by the tab.
+ */
+function SectionHead({ title, aside }: { title: string; aside: string }) {
   return (
-    <div className="flex items-center gap-4 border-b border-border/60 px-6 py-5">
-      <Sketch size={40} className="shrink-0 text-muted-foreground/55" />
-      <div className="min-w-0">
-        <h2 className="font-brand text-xl font-medium text-foreground">{title}</h2>
-        <p className="stage-direction mt-0.5 text-xs text-muted-foreground/70">{aside}</p>
-      </div>
-    </div>
+    <>
+      <h2 className="sr-only">{title}</h2>
+      <p className="t-profile__aside">{aside}</p>
+    </>
   );
 }
 
 /** The quiet rule that separates "we need this" from "this helps". */
 function GroupRule({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 pt-2">
-      <span className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground/70">
-        {children}
-      </span>
-      <span className="h-px flex-1 bg-border/70" />
+    <div className="t-profile__group pt-2">
+      <span>{children}</span>
+      <span aria-hidden />
     </div>
   );
 }
@@ -805,19 +803,19 @@ export function ActorProfileForm() {
   if (!mounted || isFetching) {
     return (
       <div className="space-y-6">
-        <Card>
-          <CardContent className="pt-6">
-            <Skeleton className="h-4 w-32 mb-4" />
-            <Skeleton className="h-2 w-full" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </CardContent>
-        </Card>
+        {/* Shaped like the call sheet and the ruled questions under it, not
+            like the two cards this page no longer has. */}
+        <Skeleton className="h-4 w-44 opacity-40" />
+        <Skeleton className="h-12 w-72 opacity-40" />
+        <Skeleton className="h-3 w-full max-w-xl opacity-40" />
+        <div className="grid gap-x-10 gap-y-7 pt-6 sm:grid-cols-2">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="space-y-2.5">
+              <Skeleton className="h-3 w-24 opacity-40" />
+              <Skeleton className="h-px w-full opacity-40" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -936,9 +934,8 @@ export function ActorProfileForm() {
           <div>
             <TabsContent value="basic" className="mt-6">
               <motion.div initial="hidden" animate="show" variants={RISE_LIST}>
-                  <Card className="overflow-hidden">
+                  <div className="t-profile__panel">
                     <SectionHead
-                      sketch={MasksSketch}
                       title="Who you are"
                       aside={
                         isEducator
@@ -946,7 +943,7 @@ export function ActorProfileForm() {
                           : "(what a casting office reads before you open your mouth.)"
                       }
                     />
-                    <CardContent className="space-y-6 pt-6">
+                    <div className="space-y-6">
                       <GroupRule>Needed to match you</GroupRule>
                       <Field className="max-w-sm">
                         <FieldLabel
@@ -1230,20 +1227,19 @@ export function ActorProfileForm() {
                       </>
                       )}
 
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </motion.div>
               </TabsContent>
 
             <TabsContent value="acting" className="mt-6">
               <motion.div initial="hidden" animate="show" variants={RISE_LIST}>
-                  <Card className="overflow-hidden">
+                  <div className="t-profile__panel">
                     <SectionHead
-                      sketch={StageDoorSketch}
                       title="How you work"
                       aside="(where you came up, and what you walk into.)"
                     />
-                    <CardContent className="space-y-6 pt-6">
+                    <div className="space-y-6">
                       <GroupRule>Needed to match you</GroupRule>
                       <Field>
                         <FieldLabel
@@ -1450,20 +1446,19 @@ export function ActorProfileForm() {
                           />
                         )}
                       </Field>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </motion.div>
               </TabsContent>
 
             <TabsContent value="preferences" className="mt-6">
               <motion.div initial="hidden" animate="show" variants={RISE_LIST}>
-                  <Card className="overflow-hidden">
+                  <div className="t-profile__panel">
                     <SectionHead
-                      sketch={SpotlightSketch}
                       title="What you see"
                       aside="(how hard the search leans on all of the above.)"
                     />
-                    <CardContent className="space-y-6 pt-6">
+                    <div className="space-y-6">
                       <Field>
                         <div className="flex items-start justify-between gap-6 rounded-lg border border-border/60 bg-muted/40 p-4">
                           <div className="min-w-0">
@@ -1542,8 +1537,8 @@ export function ActorProfileForm() {
                           <span>anything familiar</span>
                         </div>
                       </Field>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </motion.div>
               </TabsContent>
           </div>

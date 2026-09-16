@@ -223,7 +223,7 @@ export function ProfilePayoff({ signature, ready, because }: Props) {
       </div>
 
       {!ready ? (
-        <div className="mt-6 flex flex-col items-center gap-3 border border-dashed border-border/70 px-4 py-10 text-center">
+        <div className="t-credit__drop mt-6 flex flex-col items-center gap-3 px-4 py-10 text-center">
           <ScriptPagesSketch size={56} className="text-muted-foreground/50" />
           <p className="max-w-sm text-sm text-muted-foreground">
             Give me an age range and what you act in, and pieces picked for you

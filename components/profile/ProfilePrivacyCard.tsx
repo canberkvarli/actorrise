@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useShareActivity } from "@/hooks/useCommunityFeed";
@@ -21,11 +20,14 @@ export function ProfilePrivacyCard() {
   const on = shareActivity !== false;
 
   return (
-    <Card className="mt-6">
-      <CardContent className="p-6">
-        <h2 className="text-lg font-semibold text-foreground">Privacy</h2>
+    /* The last card on the page, and the only box left once the form became a
+       document. It is a headed block like the rest now. */
+    <section className="t-build mt-12">
+      <h2 className="t-build__head">
+        <span>Privacy</span>
+      </h2>
 
-        <div className="mt-4 flex items-start justify-between gap-6">
+      <div className="mt-4 flex items-start justify-between gap-6">
           <div className="min-w-0">
             <Label
               htmlFor="share-activity"
@@ -33,7 +35,7 @@ export function ProfilePrivacyCard() {
             >
               Show my activity on the callboard
             </Label>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted-foreground">
               Other actors can see your first name, city, and photo next to
               pieces you read, save, or rehearse. What you type into search is
               never shown to anyone.
@@ -53,8 +55,7 @@ export function ProfilePrivacyCard() {
             onCheckedChange={(next) => setShareActivity(next)}
             aria-label="Show my activity on the callboard"
           />
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
