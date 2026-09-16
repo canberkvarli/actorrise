@@ -24,6 +24,8 @@ interface PracticeLibraryProps {
   featuredScriptId: number | null;
   /** System sample id. */
   demoScriptId: number | null;
+  /** Opens the playbill. Sits beside the way in, not floating in a corner. */
+  onHowItWorks?: () => void;
 }
 
 /**
@@ -38,6 +40,7 @@ export function PracticeLibrary({
   scripts,
   featuredScriptId,
   demoScriptId,
+  onHowItWorks,
 }: PracticeLibraryProps) {
   const userScripts = scripts.filter((s) => !s.is_sample);
   const demoScripts = scripts.filter((s) => s.is_sample);
@@ -224,7 +227,26 @@ export function PracticeLibrary({
             style={{ borderBottom: "1.5px solid var(--t-line-dark-2)" }}
           >
             <h2 className="t-shelf-heading">On the shelf</h2>
-            <UploadScriptButton variant="compact" className="t-bring-in">Bring in a script</UploadScriptButton>
+            {/* The way in, and the way to ask about it, in one place. The help
+                mark used to float alone in the top-right corner of the room —
+                a support widget's position, and the one column the ghost light
+                hung in. Beside the upload button it has something to be next
+                to, and the pair reads as "here is how you add to this, and
+                here is what this is". */}
+            <div className="flex shrink-0 items-center gap-2">
+              <UploadScriptButton variant="compact" className="t-bring-in">Bring in a script</UploadScriptButton>
+              {onHowItWorks && (
+                <button
+                  type="button"
+                  onClick={onHowItWorks}
+                  aria-label="How ScenePartner works"
+                  title="How it works"
+                  className="t-how-button"
+                >
+                  ?
+                </button>
+              )}
+            </div>
           </div>
           <PracticeLibraryRail
             scripts={ordered}

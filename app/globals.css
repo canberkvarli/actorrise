@@ -1157,6 +1157,45 @@
   opacity: 0.45;
 }
 
+/* The callboard, docked to the foot of the window.
+
+   It has been three places this week: across the top of the rehearsal room,
+   where the first thing the screen said was what OTHER people were doing; then
+   at the bottom of the page, which meant you only ever saw it by scrolling
+   past your own work to the end. A callboard is a board on a wall. It stays
+   where it is and you glance at it. So it is fixed now, and it follows the
+   window rather than the document.
+
+   Above the phone tab bar rather than under it: that pill is fixed at 14px
+   with z-index 9998, so anything sharing the bottom edge on a phone is simply
+   behind it. */
+.t-callboard-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  padding: 0 12px;
+  pointer-events: none;
+}
+@media (min-width: 768px) {
+  .t-callboard-dock {
+    bottom: 14px;
+    padding: 0 16px;
+  }
+}
+.t-callboard-dock > * {
+  display: flex;
+  max-width: 1160px;
+  margin: 0 auto;
+  pointer-events: auto;
+}
+/* The waiting placeholder holds height in the flow; docked, it would be an
+   invisible strip sitting over the page and taking taps. */
+.t-callboard-dock > .t-marquee--waiting {
+  display: none;
+}
+
 /* ==========================================================================
    MODALS — one treatment, shared by every dialog in the product.
    ==========================================================================
@@ -3806,10 +3845,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
   border-radius: 999px;
-  border: 1px solid var(--t-line-light);
+  /* Dashed, matching the "Bring in a script" pill it now stands beside: both
+     are ways in rather than things on the shelf. */
+  border: 1.5px dashed var(--t-line-light-2);
   background: transparent;
   color: var(--t-muted-dark);
   font-family: var(--t-display);

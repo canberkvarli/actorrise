@@ -51,7 +51,7 @@ export function CallboardMarquee() {
       <div className="t-marquee__cap z-10 flex shrink-0 items-center gap-2.5 py-2.5 pl-[18px] pr-3.5 sm:pr-4">
         <span className="relative flex h-2 w-2">
           <span className="t-marquee__pulse absolute inline-flex h-full w-full rounded-full" />
-          <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: "var(--t-gel)" }} />
+          <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: "var(--bar-gel)" }} />
         </span>
         <span
           className="hidden sm:inline"

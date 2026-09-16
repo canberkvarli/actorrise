@@ -92,8 +92,19 @@ export default function PracticePage() {
   // Derived rather than fired from an effect, so opening it is not a second
   // render pass — and once the actor opens or dismisses it themselves, the
   // override wins for the rest of the visit.
+  //
+  // THIRD gate, added 2026-09-16: onboarding must be finished. This room is
+  // where the first-run card is shown, and both of these are modals — so a
+  // brand-new actor could have the playbill open itself underneath the
+  // onboarding card and meet two introductions at once. This is the ScenePartner
+  // tour; it does not need a spotlight tour of its own on top of it.
   const walkthroughOpen =
-    walkthroughOverride ?? (!!user && scriptsFetched && !hasOwnScript && unseen);
+    walkthroughOverride ??
+    (!!user &&
+      user.has_completed_onboarding === true &&
+      scriptsFetched &&
+      !hasOwnScript &&
+      unseen);
 
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
@@ -101,7 +112,7 @@ export default function PracticePage() {
     <div
       className={`theatre-tokens theatre-stage ${theatreFontVars} container relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${
         hasOwnScript ? "py-8 sm:py-14" : "py-6 sm:py-8"
-      }`}
+      } pb-28 sm:pb-24`}
     >
       {/* The room it is lit from: a warm wash off the top-left corner, a gel
           bloom in the far one, and the grain the hero uses. Fixed, so the
@@ -170,36 +181,22 @@ export default function PracticePage() {
               scripts={safeScripts}
               featuredScriptId={featuredScriptId}
               demoScriptId={demoScript?.id ?? null}
+              onHowItWorks={() => setWalkthroughOverride(true)}
             />
           </Suspense>
 
-          {/* Everything ambient, under the work rather than over it.
-
-              The callboard ran across the top, so the first thing this room
-              said was what OTHER people were doing — on the one screen whose
-              whole argument is the line you stopped on. And the way to ask how
-              any of it works was a floating "?" in the top-right corner, which
-              is a help widget's position, not a theatre's. Both are down here
-              now, past the stage, where you arrive only once you are done
-              looking at your own work. */}
-          <div className="mt-16 border-t pt-6 sm:mt-20" style={{ borderColor: "var(--t-line-light)" }}>
-            <CallboardMarquee />
-            <div className="mt-5 flex justify-center">
-              <HowItWorksButton onOpen={() => setWalkthroughOverride(true)} />
-            </div>
-          </div>
         </motion.div>
       )}
 
+      {/* A callboard is a board on a wall: it stays put and you glance at it.
+          Docked to the foot of the window rather than sitting in the document,
+          where it was either the first thing the room said (top) or a thing you
+          only met by scrolling past your own work (bottom). */}
+      <div className="t-callboard-dock">
+        <CallboardMarquee />
+      </div>
+
       <HowItWorksWalkthrough open={walkthroughOpen} onOpenChange={setWalkthroughOverride} />
     </div>
-  );
-}
-
-function HowItWorksButton({ onOpen }: { onOpen: () => void }) {
-  return (
-    <button type="button" onClick={onOpen} className="t-how-link">
-      how this room works
-    </button>
   );
 }
