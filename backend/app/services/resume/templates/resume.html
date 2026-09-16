@@ -61,20 +61,49 @@
       td.role { color: #444; padding-right: 12px; }
       td.meta { color: #666; text-align: right; white-space: nowrap; }
       .body-text { margin-top: 4px; }
-      .watermark {
+      /* The free-tier mark.
+
+         It was "actorrise.com" at 46pt, rotated -30 degrees, laid across the
+         middle of the page — behind the credits, so it greyed the exact text
+         an actor is handing to a casting director, and it read as TRIAL
+         VERSION rather than as a mark of where the page came from.
+
+         It is a colophon now: a rule at the foot of the sheet with a ghost
+         light and one line of small caps. It crosses nothing, it says the same
+         thing, and it is legible enough to actually be read — which is the
+         only way a mark like this does us any good. */
+      .colophon {
         position: fixed;
-        top: 45%;
-        left: 15%;
-        transform: rotate(-30deg);
-        font-size: 46pt;
-        font-weight: 700;
-        color: rgba(203, 75, 0, 0.08);
-        letter-spacing: 0.05em;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7pt;
+        padding-top: 7pt;
+        border-top: 0.5pt solid rgba(30, 26, 22, 0.18);
+        font-size: 7.5pt;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(30, 26, 22, 0.42);
+      }
+      .colophon .bulb {
+        display: inline-block;
+        width: 5pt;
+        height: 6pt;
+        border-radius: 50% 50% 45% 45%;
+        background: rgba(203, 75, 0, 0.55);
       }
     </style>
   </head>
   <body>
-    {% if watermark %}<div class="watermark">actorrise.com</div>{% endif %}
+    {% if watermark %}
+      <div class="colophon">
+        <span class="bulb"></span>
+        <span>set on actorrise.com</span>
+      </div>
+    {% endif %}
 
     <div class="header">
       <p class="name">{{ name }}</p>

@@ -7138,6 +7138,72 @@ select.t-field {
   line-height: 1.55;
   color: var(--pa-ink);
 }
+
+/* --- The sheet answers you ------------------------------------------------
+   A credit only reached the page when you pressed a button, so typing one felt
+   like typing into nothing and the button read as broken — it was not, it just
+   had no visible consequence until after it was pressed.
+
+   The line you are writing is ON the sheet as you write it, held in the margin
+   by a gel rule and set a shade back, so it is plainly not filed yet. Press add
+   and the rule retracts, the row settles to full ink, and the sheet lights for
+   a moment where the change landed. */
+.t-paper__credit {
+  position: relative;
+  border-radius: 2px;
+  transition: opacity 0.3s, color 0.3s;
+}
+.t-paper__credit[data-draft="true"] {
+  opacity: 0.62;
+}
+.t-paper__credit[data-draft="true"]::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: -11px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--t-gel-ink);
+  animation: t-pen 1.7s ease-in-out infinite;
+}
+@keyframes t-pen {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* The moment it lands. A wash that blooms and clears — no movement, because
+   this is a page settling rather than a thing arriving. */
+[data-lit="true"] {
+  animation: t-land 1.05s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes t-land {
+  0% {
+    background-color: color-mix(in oklch, var(--t-gel-ink) 26%, transparent);
+    box-shadow: 0 0 0 5px color-mix(in oklch, var(--t-gel-ink) 26%, transparent);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 5px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-paper__credit[data-draft="true"]::before { animation: none; opacity: 1; }
+  [data-lit="true"] { animation-duration: 0.01ms; }
+}
+
+/* The add button is the one action in the builder, so it reads as one. */
+.t-medium--go {
+  border-color: var(--t-gel-ink);
+  color: var(--t-gel-ink);
+  font-weight: 700;
+}
+.t-medium--go:hover:not(:disabled) {
+  background: var(--t-gel-ink);
+  border-color: var(--t-gel-ink);
+  color: oklch(0.98 0.01 85);
+}
 .t-paper__italic {
   margin: 0;
   font-style: italic;

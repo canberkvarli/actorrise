@@ -63,6 +63,13 @@ export default function ResumePage() {
   const [saving, setSaving] = useState(false);
   const [skillInput, setSkillInput] = useState("");
   const [downloading, setDownloading] = useState(false);
+  /* A token that changes whenever something lands on the sheet, so the preview
+     can light where it landed. Not the data itself: the sheet re-renders on
+     every keystroke, and a flash that fires on every render is a strobe. */
+  const [flash, setFlash] = useState<string | number | null>(null);
+  const flashAt = useCallback((what: string | number) => {
+    setFlash(`${what}:${Date.now()}`);
+  }, []);
 
   const creditsRef = useRef<Credit[]>([]);
   useEffect(() => {
@@ -108,15 +115,17 @@ export default function ResumePage() {
       if (editingId != null) {
         const res = await api.put<Credit>(`/api/resume/credits/${editingId}`, form);
         setCredits((cur) => cur.map((c) => (c.id === editingId ? res.data : c)));
+        flashAt(res.data.id);
       } else {
         const res = await api.post<Credit>("/api/resume/credits", form);
         setCredits((cur) => [...cur, res.data]);
+        flashAt(res.data.id);
       }
       resetForm();
     } finally {
       setSaving(false);
     }
-  }, [form, editingId, saving, resetForm]);
+  }, [form, editingId, saving, resetForm, flashAt]);
 
   const editCredit = useCallback((c: Credit) => {
     setEditingId(c.id);
@@ -174,14 +183,22 @@ export default function ResumePage() {
   const patchProfile = useCallback((patch: Partial<ProfileResp>) => {
     setProfile((p) => (p ? { ...p, ...patch } : p));
   }, []);
-  const saveProfile = useCallback((patch: Record<string, unknown>) => {
-    api.post("/api/profile", patch).catch(() => {});
-  }, []);
+  const saveProfile = useCallback(
+    (patch: Record<string, unknown>) => {
+      api.post("/api/profile", patch).catch(() => {});
+      flashAt("header");
+    },
+    [flashAt],
+  );
 
-  const saveSkills = useCallback(async (next: string[]) => {
-    setProfile((p) => (p ? { ...p, special_skills: next } : p));
-    await api.post("/api/profile", { special_skills: next });
-  }, []);
+  const saveSkills = useCallback(
+    async (next: string[]) => {
+      setProfile((p) => (p ? { ...p, special_skills: next } : p));
+      flashAt("skills");
+      await api.post("/api/profile", { special_skills: next });
+    },
+    [flashAt],
+  );
   const addSkill = useCallback(() => {
     const s = skillInput.trim();
     if (!s) return;
@@ -388,8 +405,7 @@ export default function ResumePage() {
                   type="button"
                   onClick={submitCredit}
                   disabled={!form.production.trim() || saving}
-                  className="t-medium disabled:opacity-45"
-                  aria-pressed={Boolean(form.production.trim()) || undefined}
+                  className="t-medium t-medium--go disabled:opacity-45"
                 >
                   {editingId != null ? "save it" : "add the credit"}
                 </button>
@@ -465,7 +481,14 @@ export default function ResumePage() {
         {/* The document. First on a phone: it is what you came to look at, and
             stacked below the whole builder it was a scroll away. */}
         <div className="order-first lg:order-none lg:sticky lg:top-24 lg:self-start">
-          <ResumePreview profile={previewProfile} credits={credits} email={user?.email} />
+          <ResumePreview
+            profile={previewProfile}
+            credits={credits}
+            email={user?.email}
+            draft={form}
+            draftReplacesId={editingId}
+            flash={flash}
+          />
         </div>
       </div>
     </div>

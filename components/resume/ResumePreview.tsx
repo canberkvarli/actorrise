@@ -29,14 +29,36 @@ export interface ResumeProfile {
  * whether the résumé is one page; the old preview could not tell you that
  * because it simply got taller.
  */
+/** A credit being typed, before it has been committed. */
+export interface CreditDraft {
+  category: string;
+  production: string;
+  role?: string;
+  company?: string;
+  director?: string;
+  year?: string;
+}
+
+/** A row on the sheet: a saved credit, or the one currently being written. */
+type Row = Credit & { draft?: boolean };
+
 export default function ResumePreview({
   profile,
   credits,
   email,
+  draft = null,
+  draftReplacesId = null,
+  flash = null,
 }: {
   profile: ResumeProfile;
   credits: Credit[];
   email?: string | null;
+  /** Shown on the sheet as you type it, so the page answers every keystroke. */
+  draft?: CreditDraft | null;
+  /** When editing, the credit the draft stands in for rather than adds to. */
+  draftReplacesId?: number | null;
+  /** Changes when something lands. The sheet lights briefly where it landed. */
+  flash?: string | number | null;
 }) {
   const contact = [profile.location, email].filter(Boolean).join("  ·  ");
   const stats = [
@@ -49,6 +71,19 @@ export default function ResumePreview({
   /* Whether the content has run past the sheet. Measured rather than counted:
      a credit's height depends on how its title wraps, so "more than N rows" is
      not the question — "taller than the page" is. */
+  /* The sheet lights for a moment wherever the change landed, then settles.
+     Keyed off a token that changes on each commit rather than off the data, so
+     re-rendering for any other reason does not re-fire it. */
+  const [lit, setLit] = useState<string | null>(null);
+  useEffect(() => {
+    if (flash == null) return;
+    /* The token is "<what>:<timestamp>" — the timestamp is only there to make
+       the value change when the same thing lands twice in a row. */
+    setLit(String(flash).split(":")[0]);
+    const t = setTimeout(() => setLit(null), 1100);
+    return () => clearTimeout(t);
+  }, [flash]);
+
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const inkRef = useRef<HTMLDivElement | null>(null);
   const [overflowing, setOverflowing] = useState(false);
@@ -65,11 +100,12 @@ export default function ResumePreview({
     ro.observe(sheet);
     ro.observe(ink);
     return () => ro.disconnect();
-  }, [credits, profile, email]);
+  }, [credits, profile, email, draft]);
 
   return (
     <div ref={sheetRef} className="t-paper" data-overflowing={overflowing || undefined}>
       <div ref={inkRef}>
+        <div data-lit={lit === "header" ? "true" : undefined}>
         <h2 className="t-paper__name">{profile.name?.trim() || "Your Name"}</h2>
         {profile.union_status && <p className="t-paper__union">{profile.union_status}</p>}
         {(contact || stats.length > 0) && (
@@ -80,9 +116,30 @@ export default function ResumePreview({
           </p>
         )}
         <hr className="t-paper__rule" />
+        </div>
 
         {CREDIT_CATEGORIES.map(({ id, heading }) => {
-          const rows = credits.filter((c) => c.category === id);
+          const typing = Boolean(draft && draft.production.trim());
+
+          let rows: Row[] = credits.filter((c) => c.category === id);
+
+          if (draftReplacesId != null) {
+            // Editing: the draft stands in for the row it came from, and
+            // follows it if the medium changes — so re-filing a credit moves it
+            // on the sheet as you pick the new one.
+            rows = rows.filter((r) => r.id !== draftReplacesId);
+            if (typing && draft!.category === id) {
+              const original = credits.find((c) => c.id === draftReplacesId);
+              const at = credits.filter((c) => c.category === id)
+                .findIndex((c) => c.id === draftReplacesId);
+              const merged: Row = { ...(original as Credit), ...draft, draft: true } as Row;
+              if (at >= 0) rows.splice(at, 0, merged);
+              else rows.push(merged);
+            }
+          } else if (typing && draft!.category === id) {
+            rows = [...rows, { id: -1, position: 9999, ...draft, draft: true } as unknown as Row];
+          }
+
           if (rows.length === 0) return null;
 
           // Commercials are never listed — industry convention.
@@ -99,7 +156,12 @@ export default function ResumePreview({
             <section key={id} className="t-paper__section">
               <h3 className="t-paper__heading">{heading}</h3>
               {rows.map((c) => (
-                <div key={c.id} className="t-paper__credit">
+                <div
+                  key={c.id}
+                  className="t-paper__credit"
+                  data-draft={c.draft || undefined}
+                  data-lit={lit != null && lit === String(c.id) ? "true" : undefined}
+                >
                   <span className="t-paper__prod">{c.production}</span>
                   <span className="t-paper__role">{c.role || ""}</span>
                   <span className="t-paper__house">
@@ -126,7 +188,9 @@ export default function ResumePreview({
         {skills.length > 0 && (
           <section className="t-paper__section">
             <h3 className="t-paper__heading">Special Skills</h3>
-            <p className="t-paper__body">{skills.join(", ")}</p>
+            <p className="t-paper__body" data-lit={lit === "skills" ? "true" : undefined}>
+              {skills.join(", ")}
+            </p>
           </section>
         )}
       </div>
