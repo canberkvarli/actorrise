@@ -1,10 +1,36 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
 
 import { HELP_VIDEOS, type HelpVideo } from "@/lib/help-videos";
 import { HelpVideoDialog } from "@/components/help/HelpVideoDialog";
+import { theatreFontVars } from "@/lib/fonts/theatre";
+
+/**
+ * /help — the prompt book.
+ *
+ * One video exists. It was rendering into a three-column grid, so the page was
+ * a single small card in the left third of an empty row, under a line naming
+ * three films that do not exist yet: mostly gap, mostly promise.
+ *
+ * The film that exists is billed like a film. The rest of the page stops
+ * promising and starts pointing — at the walkthrough already in the product,
+ * and at the way to reach a person. The unfilmed list stays, because saying
+ * "this is coming" is honest; it just is not the page any more.
+ */
+
+/** Real places an actor can already get unstuck. Nothing here is aspirational. */
+const WAYS: { what: string; where: string; href: string }[] = [
+  {
+    what: "How ScenePartner works",
+    where: "the (?) on ScenePartner",
+    href: "/practice",
+  },
+  { what: "What your plan includes", where: "billing", href: "/billing" },
+  { what: "Anything else", where: "ask me", href: "/contact" },
+];
 
 export default function HelpPage() {
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
@@ -13,35 +39,54 @@ export default function HelpPage() {
   const unfilmed = HELP_VIDEOS.filter((v) => !v.youtubeId);
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
-      <header className="space-y-2">
-        <p className="stage-direction text-xs text-muted-foreground/70">
-          (the prompt book.)
-        </p>
-        <h1 className="font-brand text-3xl sm:text-4xl font-semibold">
-          Quick guides
-        </h1>
+    <div
+      className={`theatre-tokens theatre-stage ${theatreFontVars} container relative mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8`}
+    >
+      <header>
+        <p className="t-slug">(the prompt book.)</p>
+        <h1 className="t-resume__title">Quick guides</h1>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {ready.map((video) => (
-          <ReadyCard
-            key={video.slug}
-            video={video}
-            onPlay={() => setActiveSlug(video.slug)}
-          />
-        ))}
-      </div>
+      {/* The films. One today, and it is billed like one — a grid of three
+          columns holding a single card is a page telling you what it is
+          missing. Two or more and they sit side by side. */}
+      {ready.length > 0 && (
+        <div className={ready.length > 1 ? "mt-12 grid gap-12 lg:grid-cols-2" : "mt-12"}>
+          {ready.map((video, i) => (
+            <Guide
+              key={video.slug}
+              video={video}
+              billing={ready.length > 1 ? "on film" : i === 0 ? "the one on film" : "on film"}
+              onPlay={() => setActiveSlug(video.slug)}
+            />
+          ))}
+        </div>
+      )}
 
-      {/* Unfilmed guides used to render as full "COMING SOON" cards, four of
-          them against one real video. A page that is four fifths placeholder
-          reads as abandoned rather than forthcoming. They are one quiet line
-          until they exist, and each one becomes a card the moment its YouTube
-          id is filled in. */}
+      <section className="mt-16">
+        <h2 className="t-build__head">
+          <span>Other ways in</span>
+        </h2>
+        <div className="mt-3 max-w-2xl">
+          {WAYS.map((d) => (
+            <Link key={d.what} href={d.href} className="t-way">
+              <span className="t-way__what">{d.what}</span>
+              <span aria-hidden className="t-way__dots" />
+              <span className="t-way__where">{d.where}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {unfilmed.length > 0 && (
-        <p className="text-sm text-muted-foreground/70">
-          Still filming: {unfilmed.map((v) => v.title.toLowerCase()).join(", ")}.
-        </p>
+        <section className="mt-14">
+          <h2 className="t-build__head">
+            <span>Still to film</span>
+          </h2>
+          <p className="t-guide__pending mt-3">
+            {unfilmed.map((v) => v.title.toLowerCase()).join(" · ")}
+          </p>
+        </section>
       )}
 
       <HelpVideoDialog
@@ -54,42 +99,35 @@ export default function HelpPage() {
   );
 }
 
-function ReadyCard({
+function Guide({
   video,
+  billing,
   onPlay,
 }: {
   video: HelpVideo;
+  billing: string;
   onPlay: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onPlay}
-      className="group overflow-hidden rounded-lg border border-border text-left transition-shadow hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <div className="relative aspect-video bg-muted">
+    <button type="button" onClick={onPlay} className="t-guide">
+      <span className="t-guide__still">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/0" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
-            <IconPlayerPlayFilled className="ml-0.5 h-5 w-5" />
-          </div>
-        </div>
-        {/* Non-interactive badge: sharp corners */}
-        <span className="absolute bottom-2 right-2 bg-black/70 px-1.5 py-0.5 text-[11px] font-medium text-white">
-          {video.durationLabel}
+        <span className="t-guide__play">
+          <span>
+            <IconPlayerPlayFilled className="ml-0.5 h-6 w-6" />
+          </span>
         </span>
-      </div>
-      <div className="p-4">
-        <h2 className="font-medium">{video.title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{video.description}</p>
-      </div>
+        <span className="t-guide__runtime">{video.durationLabel}</span>
+      </span>
+      <span className="block">
+        <span className="t-guide__billing block">{billing}</span>
+        <span className="t-guide__title block">{video.title}</span>
+        <span className="t-guide__line block">{video.description}</span>
+      </span>
     </button>
   );
 }
-

@@ -7315,3 +7315,199 @@ select.t-field {
   font-size: 12px;
   color: var(--t-gel-ink) !important;
 }
+
+
+/* ==========================================================================
+   THE PROMPT BOOK — /help
+   ==========================================================================
+   One video exists. It was rendering into a three-column grid, so the page was
+   a single small card sitting in the left third of an empty row, under a line
+   that named three films that do not exist yet. A page that is mostly gap and
+   mostly promise reads as abandoned.
+
+   So: the film that exists gets billed like a film, and the rest of the page
+   stops promising and starts pointing — at the walkthrough that is already in
+   the product and at the way to ask a person. The unfilmed list stays, because
+   saying "this is coming" is honest; it just stops being the page.
+   ========================================================================== */
+
+.t-guide {
+  display: grid;
+  gap: 20px 32px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+}
+@media (min-width: 768px) {
+  .t-guide {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 40px;
+  }
+}
+
+/* The still. Paper mount, hard ink shadow, the same printed object the rest of
+   the product uses — not a rounded card with a drop shadow. */
+.t-guide__still {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1.5px solid var(--t-text);
+  border-radius: 4px;
+  background: var(--t-line-light-2);
+  box-shadow: 8px 8px 0 var(--t-hard-shadow);
+  transition: transform 0.35s var(--t-spring), box-shadow 0.35s;
+}
+.t-guide:hover .t-guide__still {
+  transform: translate(-2px, -2px);
+  box-shadow: 11px 11px 0 var(--t-hard-shadow);
+}
+.t-guide__still img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* The mark you press. Gel on ink, the product's own lit button. */
+.t-guide__play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: oklch(0.13 0.015 50 / 0.28);
+  transition: background 0.3s;
+}
+.t-guide:hover .t-guide__play {
+  background: oklch(0.13 0.015 50 / 0.12);
+}
+.t-guide__play span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 999px;
+  background: var(--t-gel);
+  color: oklch(0.15 0.02 50);
+  box-shadow: 0 0 34px 6px oklch(0.85 0.17 80 / 0.45);
+  transition: transform 0.35s var(--t-spring);
+}
+.t-guide:hover .t-guide__play span {
+  transform: scale(1.07);
+}
+/* The running time, stamped in the corner of the still. */
+.t-guide__runtime {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 7px 2px;
+  background: oklch(0.13 0.015 50 / 0.82);
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: oklch(0.96 0.02 85);
+}
+
+.t-guide__billing {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--t-muted-light-2);
+}
+.t-guide__title {
+  margin: 10px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+  line-height: 1.04;
+  letter-spacing: -0.015em;
+  color: var(--t-text);
+}
+.t-guide__line {
+  margin: 12px 0 0;
+  max-width: 44ch;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--t-muted-dark);
+}
+
+/* A way to get unstuck that is not a film. Named `.t-way`, not `.t-door`:
+   that one is already taken by the search page's pinned-up cards, and reusing
+   it gave these rows a rounded paper card with a hard shadow and a rotate on
+   hover. */
+/* (was: A way to get unstuck that is not a film. Each is a real thing already in the
+   product, said in one line, with a leader out to where it lives.) */
+.t-way {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--t-line-light-2);
+  font-family: var(--t-direction);
+  font-size: 13.5px;
+  color: var(--t-muted-dark);
+  transition: color 0.2s;
+}
+.t-way:last-child {
+  border-bottom: 0;
+}
+.t-way:hover {
+  color: var(--t-text);
+}
+.t-way__what {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--t-text);
+}
+.t-way__dots {
+  flex: 1 1 auto;
+  min-width: 18px;
+  height: 1px;
+  transform: translateY(-3px);
+  background-image: radial-gradient(circle, var(--t-muted-light-2) 0.8px, transparent 0.9px);
+  background-size: 5px 1px;
+  background-repeat: repeat-x;
+}
+.t-way__where {
+  flex-shrink: 0;
+  color: var(--t-gel-ink);
+}
+/* A leader needs room on both sides of it. At 390px "the (?) on ScenePartner"
+   does not fit beside its label, and because both ends are flex-shrink: 0 it
+   ran off the side of the screen rather than wrapping. Narrow, the row stacks
+   and the dots go: they were only ever there to carry the eye across a gap
+   that no longer exists. */
+@media (max-width: 559.98px) {
+  .t-way {
+    display: block;
+    padding: 10px 0;
+  }
+  .t-way__dots {
+    display: none;
+  }
+  .t-way__where {
+    display: block;
+    margin-top: 3px;
+    font-size: 12.5px;
+  }
+}
+
+/* Still to film. One line, in the margin's voice. */
+.t-guide__pending {
+  margin: 0;
+  max-width: 62ch;
+  font-family: var(--t-direction);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--t-muted-light-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-guide:hover .t-guide__still,
+  .t-guide:hover .t-guide__play span {
+    transform: none;
+  }
+}
