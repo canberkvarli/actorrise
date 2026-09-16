@@ -127,6 +127,14 @@ function CheckoutContent() {
     // no longer exists to someone already holding a dead code.
     if (["FOUNDER", "FOUNDER3", "FOUNDER6", "FOUNDER12"].includes(code)) {
       triggerShake("That code has retired. Start the 2-week free trial instead.");
+    } else if (code === "STXQ5NU4" || code === "STUDENT50") {
+      // Retired 2026-09-16. Students no longer get a percentage off; schools and
+      // studios come in as an organisation and I open Plus for the class. Kept
+      // in the list so a remembered code gets an answer and a next step rather
+      // than "invalid coupon".
+      triggerShake(
+        "That code has retired. If you're with a school or a studio, email canberk@actorrise.com and I'll set your class up.",
+      );
     } else if (code === "STARTUPS" || code === "STARTUPS24") {
       setPromoApplied("STARTUPS");
       setPromoError(null);
@@ -135,9 +143,6 @@ function CheckoutContent() {
       setPromoError(null);
     } else if (code === "STUDENT" || code === "STUDENTACTOR26") {
       setPromoApplied("STUDENT");
-      setPromoError(null);
-    } else if (code === "STXQ5NU4" || code === "STUDENT50") {
-      setPromoApplied("STUDENT50");
       setPromoError(null);
     } else if (code) {
       triggerShake("Invalid promo code.");
@@ -182,11 +187,7 @@ function CheckoutContent() {
           success_url: `${window.location.origin}/billing/success`,
           cancel_url: `${window.location.origin}/pricing`,
           trial: isTrial,
-          promo_code: isTrial
-            ? undefined
-            : promoApplied === "STUDENT50"
-              ? "STXQ5NU4"
-              : promoApplied || undefined,
+          promo_code: isTrial ? undefined : promoApplied || undefined,
           // Rides through Stripe metadata so the webhook can fire trial_started
           // against this same GA4 user rather than an anonymous new one.
           ga_client_id: getGaClientId() ?? undefined,
@@ -214,7 +215,7 @@ function CheckoutContent() {
       period === "annual" && tier.annual_price_cents
         ? tier.annual_price_cents
         : tier.monthly_price_cents;
-    if (promoApplied === "STARTUPS" || promoApplied === "STUDENT50") return Math.round(base * 0.5);
+    if (promoApplied === "STARTUPS") return Math.round(base * 0.5);
     return base;
   };
 
@@ -337,9 +338,7 @@ function CheckoutContent() {
                     ? "BUSINESS applied. 100% off for 3 months."
                     : promoApplied === "STUDENT"
                       ? "STUDENT applied. 100% off for 6 months."
-                      : promoApplied === "STUDENT50"
-                        ? "Student discount applied. 50% off."
-                        : "STARTUPS applied. 50% off."}
+                      : "STARTUPS applied. 50% off."}
                 </p>
                 <button
                   type="button"
