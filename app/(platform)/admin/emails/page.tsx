@@ -1105,8 +1105,12 @@ export default function AdminEmailsPage() {
                                             await api.post(`/api/admin/emails/batch/${b.batch_id}/resume`, { send_via: sendVia });
                                             toast.success(`Sending to the ${pending} who haven't got it yet...`);
                                             setTimeout(() => fetchBatchHistory(), 2000);
-                                          } catch {
-                                            toast.error("Failed to resume batch");
+                                          } catch (err) {
+                                            /* The server says WHY (wrong template, nothing left,
+                                               not permitted). Swallowing it left "Failed to resume
+                                               batch" as the only clue, which is no clue at all. */
+                                            const detail = (err as { response?: { data?: { detail?: string }; status?: number } })?.response;
+                                            toast.error(detail?.data?.detail ?? `Failed to resume batch (${detail?.status ?? "no response"})`);
                                           }
                                         }}
                                       >
