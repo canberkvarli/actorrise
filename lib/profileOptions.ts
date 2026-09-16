@@ -69,11 +69,21 @@ export const PREFERRED_GENRES = [
 
 // Tap 3 — "What do you want to work on?" (multi). `kind` says whether the choice
 // filters by the monologue's tone or by the play's era (category).
+// Every `id` here is sent STRAIGHT to the search API as `tone` or `category`,
+// so it has to be a value the API actually filters on. The tones are the eight
+// in SearchFiltersSheet; `category` only ever has two values, classical and
+// contemporary, which is why there is no Shakespeare or Musical tile (neither
+// is a category, and a tile that silently filters nothing is worse than no
+// tile). `genre` is the coarser profile preference and comes from GENRES.
 export const WORK_ON = [
   { id: "dramatic", label: "Dramatic", kind: "tone", genre: "Drama" },
   { id: "comedic", label: "Comedic", kind: "tone", genre: "Comedy" },
   { id: "classical", label: "Classical", kind: "era", genre: "Classical" },
   { id: "contemporary", label: "Contemporary", kind: "era", genre: "Contemporary" },
+  { id: "defiant", label: "Defiant", kind: "tone", genre: "Drama" },
+  { id: "dark", label: "Dark", kind: "tone", genre: "Drama" },
+  { id: "romantic", label: "Romantic", kind: "tone", genre: "Drama" },
+  { id: "philosophical", label: "Searching", kind: "tone", genre: "Drama" },
 ] as const;
 
 // Tap 4 — "Which mediums?" (multi). `sourceType` matches Play.source_type.

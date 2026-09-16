@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import api from "@/lib/api";
 import { trackEvent } from "@/lib/events";
 import { theatreFontVars } from "@/lib/fonts/theatre";
+import { markOnboardingDone } from "@/components/onboarding/useTourTrigger";
 import { Glyph } from "@/components/brand/glyphs";
 import LampSketch from "@/components/onboarding/LampSketch";
 import { clothFor, emblemFor } from "@/components/monologue/PlayCover";
@@ -82,7 +83,10 @@ type QuestionKey =
   | typeof PROFILE_QUESTIONS[number]["key"];
 
 // Two-column tiles for the short-label questions; the rest read better stacked.
-const TWO_COLUMN_KEYS = new Set<QuestionKey>(["referral", "ageRange", "mediums"]);
+/* `workOn` joined these when it went from four tiles to eight: in one column
+   that is an eight-row stack taller than the card, and the Continue pill ends
+   up below the fold on a laptop. */
+const TWO_COLUMN_KEYS = new Set<QuestionKey>(["referral", "ageRange", "mediums", "workOn"]);
 
 /* The stage direction over each question, and the act it belongs to.
  *
@@ -196,6 +200,12 @@ function Tile({
 }
 
 /** The card's primary pill: label left, gel arrow dot right. */
+/** Add or drop an id in a multi-select list. Shared by the question tiles
+ *  (string ids) and the payoff's keep list (monologue ids). */
+function toggle<T>(arr: T[], id: T): T[] {
+  return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
+}
+
 function CtaPill({
   children,
   onClick,
@@ -332,9 +342,6 @@ export default function ProfileOnboardingFlow({
     [casting, ageRange, workOn, mediums, stage]
   );
 
-  const toggle = (arr: string[], id: string) =>
-    arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
-
   // Keyed off the question, not its index: the index shifts with `variant`,
   // and shifting positions by hand is how the wrong question ends up gating
   // the wrong answer.
@@ -379,6 +386,11 @@ export default function ProfileOnboardingFlow({
   // Close the flow immediately, then sync the client user in the background so
   // the rest of the app sees the new flags/profile.
   const endFlow = useCallback(() => {
+    // Latch BEFORE the refresh, and on every exit including skip. The refresh
+    // is deliberately not awaited so closing stays instant, which means the
+    // in-memory user can still read has_completed_onboarding === false when the
+    // next surface's tour asks. This is what the tours actually gate on now.
+    markOnboardingDone();
     onClose();
     void refreshUser();
   }, [onClose, refreshUser]);
@@ -423,14 +435,32 @@ export default function ProfileOnboardingFlow({
     }
   }, [submitting, variant, endFlow]);
 
-  const rehearse = useCallback(
-    (id: number) => {
+  /**
+   * Take the picks into the collection and leave them ON the platform.
+   *
+   * This used to drop straight into /monologue/<id>/work, which got somebody
+   * rehearsing a piece thirty seconds after signing up, before they had seen
+   * the library the piece came from. It also meant the payoff could only ever
+   * bank ONE of the picks; the other two were thrown away by the act of
+   * choosing. Saving is the cheaper commitment and the reversible one, so the
+   * payoff banks as many as they want and hands them the library to look
+   * around in, with a collection that already has something in it.
+   *
+   * Failures are swallowed on purpose: a first run must not end on an error
+   * toast about a bookmark. Anything that did not save is still in the library.
+   */
+  const keepPicks = useCallback(
+    async (ids: number[]) => {
+      await Promise.allSettled(
+        ids.map((id) => api.post(`/api/monologues/${id}/favorite`))
+      );
+      // No navigation. The card closes onto whatever page the actor was already
+      // on, and that page's tour picks them up. Pushing a route here is what
+      // made ScenePartner flash past for a beat on the way to /work, and it
+      // also decided for them where to go next on their first minute.
       endFlow();
-      // /work = the audio-first rehearsal flow (richer than /memorize); this is
-      // the payoff's whole point — drop them straight into rehearsing.
-      router.push(`/monologue/${id}/work`);
     },
-    [endFlow, router]
+    [endFlow]
   );
 
   // Every step is skippable, including this one.
@@ -461,7 +491,11 @@ export default function ProfileOnboardingFlow({
 
   return (
     <div
-      className={`theatre-tokens theatre-onboarding ${theatreFontVars} fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto overflow-x-clip p-6 sm:items-center`}
+      /* z above the app bar, which is z-[9998]. At z-[100] the header floated
+         over a full-screen takeover: the actor was being asked "how did you
+         find me?" under a nav offering Monologues, ScenePartner and Collection,
+         which is three exits from a card that has not introduced itself yet. */
+      className={`theatre-tokens theatre-onboarding ${theatreFontVars} fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto overflow-x-clip p-6 sm:items-center`}
       style={{ background: "var(--page)" }}
     >
       {/* The fixture, hanging in the flies. The same drawing the wait uses, so
@@ -649,15 +683,23 @@ export default function ProfileOnboardingFlow({
                   }}
                 >
                   <p className="m-0 text-sm leading-normal" style={{ color: "var(--t-text)" }}>
+                    {/* "Plus" meant nothing to anyone here: this is the third
+                        screen of a first run, and the plan names live on a
+                        pricing page they have not seen. Say what it opens, then
+                        name it. */}
                     {accountType === "educator" ? (
                       <>
-                        Then it&apos;s on me. Plus is free for you and for your students. Email me at{" "}
+                        Then it&apos;s on me. The whole library, unlimited searches
+                        and the AI scene partner, free for you and for your
+                        students. That&apos;s the paid plan, Plus. Email me at{" "}
                         <strong className="font-semibold" style={{ color: "var(--acc)" }}>canberk@actorrise.com</strong>{" "}
                         with their addresses and I&apos;ll set the whole class up at once.
                       </>
                     ) : (
                       <>
-                        Plus is free for students. Get your teacher to email me at{" "}
+                        Students don&apos;t pay. The whole library, unlimited
+                        searches and the AI scene partner, which is the paid plan,
+                        Plus. Get your teacher to email me at{" "}
                         <strong className="font-semibold" style={{ color: "var(--acc)" }}>canberk@actorrise.com</strong>{" "}
                         and I&apos;ll do your whole class together.
                       </>
@@ -720,7 +762,7 @@ export default function ProfileOnboardingFlow({
               <OnboardingPayoff
                 answers={answers}
                 items={picks}
-                onRehearse={rehearse}
+                onKeep={keepPicks}
                 onClose={endFlow}
                 onBrowse={() => { endFlow(); router.push("/monologues"); }}
                 onOwnSides={() => { endFlow(); router.push("/practice"); }}
@@ -789,14 +831,17 @@ function Spine({ m }: { m: Monologue }) {
 /** The picks for the payoff. Never throws: an empty list is a real answer here. */
 async function fetchPicks(answers: OnboardingAnswers): Promise<Monologue[]> {
   try {
+    // Six, not three. The payoff is a collection-building moment now rather
+    // than a pick-one, and three rows where every row is worth keeping is a
+    // thin start to a collection.
     let res = await api.get<{ results: Monologue[]; total: number }>(
-      `/api/monologues/search?${buildPayoffParams(answers)}`
+      `/api/monologues/search?${buildPayoffParams(answers, { limit: 6 })}`
     );
     let list = res.data.results ?? [];
     if (!list.length) {
       // Thin-results fallback: drop the narrowing filters, keep gender+age.
       res = await api.get<{ results: Monologue[]; total: number }>(
-        `/api/monologues/search?${buildPayoffParams(answers, { broad: true })}`
+        `/api/monologues/search?${buildPayoffParams(answers, { limit: 6, broad: true })}`
       );
       list = res.data.results ?? [];
     }
@@ -809,19 +854,25 @@ async function fetchPicks(answers: OnboardingAnswers): Promise<Monologue[]> {
 function OnboardingPayoff({
   answers,
   items,
-  onRehearse,
+  onKeep,
   onBrowse,
   onClose,
   onOwnSides,
 }: {
   answers: OnboardingAnswers;
   items: Monologue[];
-  onRehearse: (id: number) => void;
+  onKeep: (ids: number[]) => Promise<void>;
   onBrowse: () => void;
   onClose: () => void;
   onOwnSides: () => void;
 }) {
   const summary = describeAnswers(answers);
+  /* Everything starts selected. These are the pieces the actor just described
+     to me in five taps, so the question is which ones they DON'T want, not
+     whether they want any — and an empty-by-default list makes the whole
+     payoff a form to fill in. */
+  const [keep, setKeep] = useState<number[]>(() => items.map((m) => m.id));
+  const [saving, setSaving] = useState(false);
 
   if (!items.length) {
     return (
@@ -857,6 +908,10 @@ function OnboardingPayoff({
         {count} {items.length === 1 ? "piece" : "pieces"}{" "}
         <em className="italic" style={{ color: "var(--acc)" }}>for you.</em>
       </h2>
+      <p className="mt-2 text-sm leading-normal" style={{ color: "var(--t-muted-dark)" }}>
+        Keeping them puts them in your collection. Nothing to read yet, they
+        just wait for you there.
+      </p>
 
       <ul className="mt-5 flex list-none flex-col gap-2.5 p-0">
         {items.map((m, i) => {
@@ -884,26 +939,68 @@ function OnboardingPayoff({
                   {meta}
                 </span>
               </span>
-              <motion.button
-                type="button"
-                onClick={() => onRehearse(m.id)}
-                whileHover={{ scale: 1.04, rotate: -1.5 }}
-                transition={{ duration: 0.3, ease: SPRING }}
-                className="inline-flex h-[38px] shrink-0 items-center gap-2 rounded-full pl-3.5 pr-1.5 text-[13px] font-bold"
-                style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
-              >
-                Rehearse
-                <span
-                  className="inline-flex size-[26px] items-center justify-center rounded-full"
-                  style={{ background: "var(--t-cta-dot-bg)", color: "var(--t-cta-dot-fg)" }}
-                >
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M7 4v16l13-8z" /></svg>
-                </span>
-              </motion.button>
+              {/* Selected is the gel fill, which is the same "this one is
+                  chosen" the question tiles use, so the payoff reads in the
+                  vocabulary the last five screens taught. --t-on-gel, never
+                  --t-text: cream ink on gel yellow is the one unreadable pair
+                  on this card. */}
+              {(() => {
+                const on = keep.includes(m.id);
+                return (
+                  /* A mark, not a labelled pill. Everything starts kept, so six
+                     filled gel pills down the card put the loudest colour on
+                     the screen six times and left the actual decision, the CTA,
+                     competing with them. A tick is the same vocabulary at a
+                     sixth of the weight. */
+                  <motion.button
+                    type="button"
+                    onClick={() => setKeep((cur) => toggle(cur, m.id))}
+                    aria-pressed={on}
+                    aria-label={on ? `Keeping ${m.character_name || m.title}` : `Keep ${m.character_name || m.title}`}
+                    whileHover={{ scale: 1.08 }}
+                    transition={{ duration: 0.3, ease: SPRING }}
+                    className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-full border-[1.5px]"
+                    style={
+                      on
+                        ? { background: "var(--t-gel)", color: "var(--t-on-gel)", borderColor: "var(--t-on-gel)" }
+                        : { background: "transparent", color: "var(--t-faint)", borderColor: "var(--t-line-light)" }
+                    }
+                  >
+                    {on ? (
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden>
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                    )}
+                  </motion.button>
+                );
+              })()}
             </motion.li>
           );
         })}
       </ul>
+
+      <div className="mt-5">
+        <CtaPill
+          disabled={saving}
+          onClick={async () => {
+            if (saving) return;
+            setSaving(true);
+            await onKeep(keep);
+          }}
+        >
+          {saving
+            ? "Putting them away…"
+            : keep.length === 0
+              ? "Take me to the library"
+              : keep.length === items.length
+                ? "Keep them all"
+                : `Keep ${keep.length}`}
+        </CtaPill>
+      </div>
 
       {/* The other job entirely, and the one the product is actually for: they
           have sides for a real audition. Until now nothing in the new-user path
