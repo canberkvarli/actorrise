@@ -419,7 +419,9 @@ function CheckoutContent() {
                   </button>
                 </div>
 
-                <p className="t-ticket__fine">
+                {/* A sentence with a control in it: same flex trap as the
+                    terms line below, so it takes the note treatment too. */}
+                <p className="t-ticket__fine t-ticket__fine--note">
                   No code yet?{" "}
                   <button
                     type="button"
@@ -469,7 +471,7 @@ function CheckoutContent() {
         </ul>
       </div>
 
-      <p className="t-ticket__fine" style={{ marginTop: 20 }}>
+      <p className="t-ticket__fine t-ticket__fine--note" style={{ marginTop: 20 }}>
         Subscribing means you agree to the{" "}
         <Link href="/terms" className="t-ticket__quiet">
           terms

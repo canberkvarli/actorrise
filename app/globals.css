@@ -1595,6 +1595,23 @@
   line-height: 1.5;
   color: var(--t-muted-dark-2);
 }
+/* The same fine print as a SENTENCE rather than a list.
+   The terms line borrowed the class above, which is a flex column built for
+   the <ul> of bullets — and in a flex container every inline child becomes its
+   own flex line. So "Subscribing means you agree to the", "terms", "and the",
+   "privacy policy" and "." each got a line of their own, five deep. It is a
+   paragraph, so it lays out as one. */
+.t-ticket__fine--note {
+  display: block;
+  max-width: 56ch;
+  text-wrap: pretty;
+}
+/* The inline links are 13px against the note's 12px, which rides them a shade
+   large mid-sentence. In running text they take the sentence's size. */
+.t-ticket__fine--note .t-ticket__quiet {
+  font-size: inherit;
+  letter-spacing: inherit;
+}
 /* The promo drawer keeps the app's inputs off the ticket. */
 .t-ticket input {
   font-family: var(--t-body) !important;
@@ -3855,6 +3872,51 @@
 /* The callboard strip is bar furniture, so it flips with the bar: a paper
    rail with an ink rule in light, the raised ink strip in dark. It was the
    one black slab left lying across a cream room. */
+/* The marquee, docked to the foot of the window on ScenePartner.
+
+   It is a fixture of the building rather than a paragraph of the page: it
+   hangs at the bottom of the screen and you catch it on the way past. Held to
+   the same width as the room above it so it lines up with the content rather
+   than running the full bleed of a wide monitor, and inset the way the header
+   bar and the phone tab bar are inset — this is a floating pill, not a
+   status bar welded to the edge.
+
+   NOT a child of anything transformed. A transformed ancestor becomes the
+   containing block for a fixed element, which would dock this to that element
+   instead of to the window; the page renders it at the root for that reason.
+
+   z-index sits under the tab bar (9998) and the header shell (9999): if they
+   ever overlap, the thing you navigate with wins. */
+.t-marquee-dock {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  /* Clear of the phone tab bar, which is a pill 14px off the bottom edge and
+     about 64px tall, plus whatever the home indicator takes. */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 86px);
+  z-index: 40;
+  margin: 0 auto;
+  max-width: 80rem;
+  pointer-events: none;
+}
+.t-marquee-dock > * {
+  pointer-events: auto;
+}
+@media (min-width: 768px) {
+  .t-marquee-dock {
+    left: 20px;
+    right: 20px;
+    bottom: 18px;
+  }
+}
+/* The dock hangs over the room, so the strip cannot be semi-transparent the
+   way it was when it sat in the page flow with paper behind it. */
+.t-marquee-dock .t-marquee {
+  box-shadow: var(--bar-shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
 .t-marquee {
   border-radius: 999px;
   border: 1px solid var(--bar-rule);
