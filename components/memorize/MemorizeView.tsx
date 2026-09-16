@@ -32,6 +32,21 @@ export interface MemorizeViewProps {
   title: string;
   subtitle?: string;
   lines: MemorizeLine[];
+  /**
+   * Which furniture this view is standing in.
+   *
+   * "app" is the original: shadcn tokens, its own bold header, a bordered
+   * card. "theatre" is the language the monologue pages speak (see
+   * `.t-mem__*` in globals.css) — the page owns the title, so the internal
+   * header stands down, and the controls become the same pill-on-a-hard-
+   * shadow the working bar uses.
+   *
+   * Deliberately chrome ONLY. The reading surface itself still belongs to the
+   * actor's own theme (default / sepia / dark, see prefs.ts): the one part of
+   * this screen someone has chosen for themselves is not the part a redesign
+   * gets to take back.
+   */
+  chrome?: "app" | "theatre";
   /** A saved audition cut (line indices into `lines`), or null when none. */
   cut?: { start: number; end: number } | null;
   /**
@@ -85,13 +100,47 @@ function BlankBar({ text, t }: { text: string; t: ThemeTokens }) {
   );
 }
 
+/** The chrome around the reading surface, in each of the two languages. */
+const CHROME = {
+  app: {
+    root: "mx-auto max-w-3xl space-y-8",
+    header: true,
+    bar: "flex flex-wrap items-center gap-3",
+    hint: "text-xs text-muted-foreground",
+    trimHint: "font-typewriter text-sm text-muted-foreground",
+    ghost:
+      "rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors cursor-pointer hover:text-foreground",
+    go: "rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors cursor-pointer hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50",
+    count: "text-sm tabular-nums text-muted-foreground",
+    banner: "flex flex-wrap items-center justify-between gap-2 border px-4 py-2.5 text-sm",
+    bannerAction:
+      "rounded-full px-3 py-1 text-sm font-semibold text-primary transition-opacity cursor-pointer hover:opacity-80",
+    recorder: "border-t border-border pt-6",
+  },
+  theatre: {
+    root: "space-y-7",
+    header: false,
+    bar: "t-mem__bar flex flex-wrap items-center gap-3",
+    hint: "t-m__dir m-0 text-[12px]",
+    trimHint: "t-m__dir m-0 text-[13px]",
+    ghost: "t-mem__ghost",
+    go: "t-mem__go",
+    count: "t-m__mono text-[12px] tabular-nums",
+    banner: "t-mem__banner flex flex-wrap items-center justify-between gap-2",
+    bannerAction: "t-mem__link",
+    recorder: "t-mem__foot pt-6",
+  },
+} as const;
+
 export function MemorizeView({
   title,
   subtitle,
   lines,
   cut = null,
   onSaveCut,
+  chrome = "app",
 }: MemorizeViewProps) {
+  const c = CHROME[chrome];
   const { prefs, update } = useMemorizePrefs();
   const [mode, setMode] = useState<Mode>("read");
   const [level, setLevel] = useState<Level>("full");
@@ -390,18 +439,23 @@ export function MemorizeView({
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      {/* Header */}
-      <header className="space-y-1.5">
-        <h1 className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
-          {title}
-        </h1>
-        {subtitle && (
-          <p className="text-sm text-muted-foreground sm:text-base">
-            {subtitle}
-          </p>
-        )}
-      </header>
+    <div className={c.root}>
+      {/* The title. Only when this view is the whole screen — in the theatre
+          chrome the page has already said what piece this is, in the display
+          face, and a second bold heading under it is the same sentence twice
+          in two different voices. */}
+      {c.header && (
+        <header className="space-y-1.5">
+          <h1 className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-sm text-muted-foreground sm:text-base">
+              {subtitle}
+            </p>
+          )}
+        </header>
+      )}
 
       {/* Toolbar */}
       {trimming ? (
@@ -414,7 +468,7 @@ export function MemorizeView({
             cutSeconds={selCount > 0 ? selSeconds : fullSeconds}
             fullSeconds={fullSeconds}
           />
-          <p className="font-typewriter text-sm text-muted-foreground" aria-live="polite">
+          <p className={c.trimHint} aria-live="polite">
             {selStart == null
               ? "Tap where your cut starts."
               : selEnd == null
@@ -427,7 +481,7 @@ export function MemorizeView({
                 type="button"
                 onClick={clearCut}
                 disabled={savingCut}
-                className="rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-opacity cursor-pointer hover:opacity-80 disabled:opacity-50"
+                className={c.ghost}
               >
                 Clear cut
               </button>
@@ -436,7 +490,7 @@ export function MemorizeView({
               type="button"
               onClick={cancelTrim}
               disabled={savingCut}
-              className="rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-opacity cursor-pointer hover:opacity-80 disabled:opacity-50"
+              className={c.ghost}
             >
               Cancel
             </button>
@@ -444,19 +498,20 @@ export function MemorizeView({
               type="button"
               onClick={saveCut}
               disabled={!hasFullSelection || savingCut}
-              className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors cursor-pointer hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className={c.go}
             >
               {savingCut ? "Saving…" : "Save cut"}
             </button>
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className={c.bar}>
           <Segmented
             ariaLabel="Learning mode"
             options={MODES}
             value={mode}
             onChange={switchMode}
+            tone={chrome}
           />
 
           {mode === "read" && (
@@ -465,31 +520,28 @@ export function MemorizeView({
               options={LEVELS}
               value={level}
               onChange={setLevel}
+              tone={chrome}
             />
           )}
 
           {mode === "buildup" && (
-            <span className="text-sm tabular-nums text-muted-foreground">
+            <span className={c.count}>
               {builtUpTo} / {viewEntries.length}
             </span>
           )}
 
           <div className="ml-auto flex items-center gap-2">
             {canTrim && (
-              <button
-                type="button"
-                onClick={enterTrim}
-                className="rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors cursor-pointer hover:text-foreground"
-              >
+              <button type="button" onClick={enterTrim} className={c.ghost}>
                 {cut ? "Edit cut" : "Trim"}
               </button>
             )}
-            <SettingsPopover prefs={prefs} update={update} />
+            <SettingsPopover prefs={prefs} update={update} tone={chrome} />
           </div>
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">
+      <p className={c.hint}>
         {trimming
           ? "Tap your first line, then your last line."
           : mode === "read"
@@ -501,12 +553,13 @@ export function MemorizeView({
       {cut && !trimming && (
         <div
           className={cn(
-            "flex flex-wrap items-center justify-between gap-2 border px-4 py-2.5 text-sm",
-            t.surface,
-            t.hair,
+            c.banner,
+            chrome === "app" && "text-sm",
+            chrome === "app" && t.surface,
+            chrome === "app" && t.hair,
           )}
         >
-          <span className={t.inkMuted}>
+          <span className={chrome === "app" ? t.inkMuted : undefined}>
             {showFull
               ? "Showing the full piece"
               : `Showing your cut · ~${fmtTime(cutSeconds)}`}
@@ -514,7 +567,7 @@ export function MemorizeView({
           <button
             type="button"
             onClick={toggleShowFull}
-            className="rounded-full px-3 py-1 text-sm font-semibold text-primary transition-opacity cursor-pointer hover:opacity-80"
+            className={c.bannerAction}
           >
             {showFull ? "Show cut" : "Show full"}
           </button>
@@ -587,7 +640,7 @@ export function MemorizeView({
       </div>
 
       {/* Recorder — tucked beneath the reading view so it stays calm. */}
-      <div className="border-t border-border pt-6">
+      <div className={c.recorder}>
         <SelfRecorder />
       </div>
     </div>

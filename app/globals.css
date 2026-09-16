@@ -6414,6 +6414,25 @@
 .t-m-wobble { animation: t-m-wobble 8s ease-in-out infinite; }
 .t-m-barin { animation: t-m-barin 0.5s var(--t-enter) both; }
 
+/* The quiet door out of the piece: line-by-line drill, under Rehearse.
+   Outlined at rest so it cannot compete with the orange CTA above it, and it
+   fills with the ink on hover rather than growing — the loud one leans and
+   scales, this one just turns over. --t-on-text, not a hard-coded cream:
+   --t-text is ink in light and cream in dark, and a fixed foreground here is
+   exactly the bug that blanked the shelf's "bring in a script" pill. */
+.t-m-drill {
+  border-color: var(--t-text);
+  color: var(--t-text);
+}
+.t-m-drill:hover {
+  background: var(--t-text);
+  color: var(--t-on-text);
+}
+.t-m-drill:focus-visible {
+  outline: 2px solid var(--t-gel-ink);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .t-m-rise, .t-m-pop, .t-m-flicker, .t-m-breathe, .t-m-wobble, .t-m-barin {
     animation-duration: 0.01ms;
@@ -6429,6 +6448,132 @@
 
 /* The hard shadow the design casts under the working bar, the sides sheet and
    the gate card. In ink, not in "the current text colour" — that flips. */
+/* --- The memorize room ----------------------------------------------------
+   /monologue/[id]/memorize used to be a different product: a shadcn container,
+   a ghost "Back" button, two grey pills and a bold sans heading — the one
+   screen you reach FROM the piece and the only one that did not look like it.
+   The chrome here speaks the same language as the working bar on the piece
+   itself; the reading surface below it still belongs to the actor's own theme
+   (default / sepia / dark), which is the one thing they chose themselves. */
+
+/* The controls, on the same pill-on-a-hard-shadow as the working bar. */
+.t-mem__bar {
+  border: 1.5px solid var(--t-text);
+  border-radius: 999px;
+  background: var(--t-paper);
+  box-shadow: 6px 6px 0 var(--t-hard-shadow);
+  padding: 6px;
+}
+@media (max-width: 640px) {
+  /* A pill that wraps to three rows is not a pill. Below sm it squares off. */
+  .t-mem__bar { border-radius: 18px; padding: 10px; }
+}
+
+/* The mode tabs, matching the piece's Read / Cut / Copy. */
+.t-mem__seg {
+  border: 1.5px solid var(--t-line-light);
+  background: transparent;
+}
+.t-mem__seg-btn {
+  color: var(--t-muted-dark-2);
+}
+.t-mem__seg-btn[data-active="true"] {
+  background: var(--t-text);
+  /* Flips with the ground. Cream here would be ink-on-ink in dark, which is
+     the failure --t-on-text exists to stop. */
+  color: var(--t-on-text);
+}
+.t-mem__seg-btn:hover:not([data-active="true"]) {
+  color: var(--t-text);
+}
+
+/* The quiet controls: trim, cancel, start over. */
+.t-mem__ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-line-light);
+  color: var(--t-muted-dark-2);
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s var(--t-enter);
+}
+.t-mem__ghost:hover:not(:disabled) {
+  border-color: var(--t-text);
+  color: var(--t-text);
+}
+.t-mem__ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+/* The gear: the same pill, squared to a circle. `.t-mem__ghost` is unlayered
+   CSS, so its 16px of padding beats any w-9 utility on the same element — the
+   width has to be said here or the button comes out 68px wide. */
+.t-mem__ghost--icon {
+  width: 36px;
+  padding: 0;
+}
+.t-mem__ghost[data-open="true"] {
+  border-color: var(--t-text);
+  color: var(--t-text);
+}
+
+/* The one committing action in the room (save cut, add the next line). */
+.t-mem__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-text);
+  background: var(--t-text);
+  color: var(--t-on-text);
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.25s var(--t-enter), opacity 0.25s;
+}
+.t-mem__go:hover:not(:disabled) { transform: translateY(-1px); }
+.t-mem__go:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* "Showing your cut · 0:52" — a note in the margin, not a system banner. */
+.t-mem__banner {
+  border-left: 3px solid var(--t-gel-ink);
+  padding: 10px 16px;
+  background: color-mix(in oklab, var(--t-gel-ink) 7%, transparent);
+  font-family: var(--t-body);
+  font-size: 13px;
+  color: var(--t-muted-dark);
+}
+.t-mem__link {
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--t-text);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.t-mem__foot { border-top: 1.5px solid var(--t-line-light); }
+
+/* The head of the room: back to the piece, then what you are learning. */
+.t-mem__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  font-style: italic;
+  letter-spacing: 0.08em;
+  color: var(--t-muted-dark-2);
+  transition: color 0.2s;
+}
+.t-mem__back:hover { color: var(--t-gel-ink); }
+
 .t-m__hard { box-shadow: 6px 6px 0 var(--t-hard-shadow); }
 .t-m__hard-lg { box-shadow: 8px 8px 0 var(--t-hard-shadow); }
 .t-m__hard-gel { box-shadow: 10px 10px 0 var(--t-gel); }

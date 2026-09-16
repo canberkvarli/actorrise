@@ -12,6 +12,13 @@ import {
 interface SettingsPopoverProps {
   prefs: MemorizePrefs;
   update: (patch: Partial<MemorizePrefs>) => void;
+  /**
+   * The trigger's language. The panel keeps the app's tokens either way — it
+   * is a settings sheet floating over the page, not part of the room — but a
+   * shadcn-bordered circle sitting inside the theatre's control pill reads as
+   * a control borrowed from somewhere else.
+   */
+  tone?: "app" | "theatre";
 }
 
 function GearIcon() {
@@ -34,7 +41,7 @@ function GearIcon() {
 }
 
 /** Gear button that opens a calm reading-settings panel. */
-export function SettingsPopover({ prefs, update }: SettingsPopoverProps) {
+export function SettingsPopover({ prefs, update, tone = "app" }: SettingsPopoverProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -66,9 +73,15 @@ export function SettingsPopover({ prefs, update }: SettingsPopoverProps) {
         aria-label="Reading settings"
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors cursor-pointer hover:text-foreground hover:bg-muted/50",
-          open && "text-foreground bg-muted/50",
+          "inline-flex items-center justify-center rounded-full transition-colors cursor-pointer",
+          tone === "theatre"
+            ? "t-mem__ghost t-mem__ghost--icon"
+            : cn(
+                "h-9 w-9 border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                open && "text-foreground bg-muted/50",
+              ),
         )}
+        data-open={tone === "theatre" ? open : undefined}
       >
         <GearIcon />
       </button>

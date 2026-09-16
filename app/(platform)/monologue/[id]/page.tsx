@@ -390,7 +390,6 @@ export default function MonologueDetailPage() {
           noteCount={beatMap.size}
           hasNotes={Boolean(notes.trim())}
           onNote={openNote}
-          onMemorize={() => router.push(`/monologue/${monologue.id}/memorize`)}
           memorized={memorized}
           onToggleMemorized={handleToggleMemorized}
           saved={isFavorited}
@@ -641,6 +640,7 @@ export default function MonologueDetailPage() {
               hasCut={Boolean(hasCut)}
               outOfReads={monologue.paywalled}
               onRehearse={() => router.push(`/monologue/${monologue.id}/work`)}
+              onMemorize={() => router.push(`/monologue/${monologue.id}/memorize`)}
             />
           </div>
         </div>

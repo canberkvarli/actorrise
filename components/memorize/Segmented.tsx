@@ -17,6 +17,13 @@ interface SegmentedProps<T extends string> {
   size?: "default" | "sm";
   /** Stretch to fill the container with equal-width segments. */
   fullWidth?: boolean;
+  /**
+   * Which language to wear. "app" is the shadcn control; "theatre" is the
+   * mode tabs from the monologue working bar — an ink pill that slides under
+   * the active label — so the memorize screen's controls and the piece's own
+   * controls are recognisably the same object.
+   */
+  tone?: "app" | "theatre";
   className?: string;
 }
 
@@ -29,8 +36,10 @@ export function Segmented<T extends string>({
   ariaLabel,
   size = "default",
   fullWidth = false,
+  tone = "app",
   className,
 }: SegmentedProps<T>) {
+  const theatre = tone === "theatre";
   return (
     <div
       role="radiogroup"
@@ -41,7 +50,8 @@ export function Segmented<T extends string>({
          segmented control that reflows is not one; it scrolls, and the scrollbar
          is hidden because the row is short enough to be obviously draggable. */
       className={cn(
-        "items-center gap-1 rounded-full border border-border bg-muted/50 p-1",
+        "items-center gap-1 rounded-full p-1",
+        theatre ? "t-mem__seg" : "border border-border bg-muted/50",
         fullWidth ? "flex w-full" : "inline-flex max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
@@ -56,13 +66,19 @@ export function Segmented<T extends string>({
             aria-checked={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "rounded-full font-medium transition-colors cursor-pointer whitespace-nowrap",
+              "rounded-full transition-colors cursor-pointer whitespace-nowrap",
               size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm sm:px-4",
               fullWidth ? "flex-1 text-center" : "shrink-0",
-              active
-                ? "bg-background text-primary shadow-sm ring-1 ring-primary/25"
-                : "text-muted-foreground hover:text-foreground",
+              theatre
+                ? "t-mem__seg-btn font-bold"
+                : cn(
+                    "font-medium",
+                    active
+                      ? "bg-background text-primary shadow-sm ring-1 ring-primary/25"
+                      : "text-muted-foreground hover:text-foreground",
+                  ),
             )}
+            data-active={theatre ? active : undefined}
           >
             {opt.label}
           </button>

@@ -8,7 +8,6 @@ import {
   IconBulbFilled,
   IconEdit,
   IconNote,
-  IconRepeat,
 } from "@tabler/icons-react";
 
 import { InstantTooltip } from "@/components/ui/instant-tooltip";
@@ -24,6 +23,12 @@ import { InstantTooltip } from "@/components/ui/instant-tooltip";
  * row is furniture the actor handles, and it should sit ON the page rather
  * than be ruled off from it. The page fades out underneath it (`t-m__barfade`)
  * so a line scrolling under dissolves instead of being guillotined.
+ *
+ * Everything in the right-hand cluster acts ON THIS PAGE and leaves you on it:
+ * note a line, mark it off book, save it. "Memorize · line by line" did not —
+ * it was a fourth identical 40px circle that navigated to another screen, so
+ * one of four indistinguishable icons quietly took the page away. It lives in
+ * the margin now, under "Rehearse this", with the other way out of this page.
  */
 
 export type Mode = "read" | "cut" | "copy";
@@ -42,7 +47,6 @@ interface WorkingBarProps {
   noteCount: number;
   hasNotes: boolean;
   onNote: () => void;
-  onMemorize: () => void;
   memorized: boolean;
   onToggleMemorized: () => void;
   saved: boolean;
@@ -98,7 +102,6 @@ export const WorkingBar = forwardRef<HTMLDivElement, WorkingBarProps>(
       noteCount,
       hasNotes,
       onNote,
-      onMemorize,
       memorized,
       onToggleMemorized,
       saved,
@@ -171,14 +174,8 @@ export const WorkingBar = forwardRef<HTMLDivElement, WorkingBarProps>(
               <IconNote className="h-[18px] w-[18px]" />
             </BarButton>
 
-            {!readOnly && (
-              <BarButton label="Memorize · line by line" onClick={onMemorize}>
-                <IconRepeat className="h-[18px] w-[18px]" />
-              </BarButton>
-            )}
-
-            {/* Off-book status. Distinct from the Memorize drill beside it —
-                this one only records where you are, it doesn't go anywhere. */}
+            {/* Off-book status: a record of where you are, not a way to get
+                there. The drill it used to sit beside is in the margin. */}
             <BarButton
               label={memorized ? "Off book — tap to unmark" : "Mark as off book"}
               onClick={onToggleMemorized}

@@ -1,6 +1,6 @@
 "use client";
 
-import { IconPlayerPlay } from "@tabler/icons-react";
+import { IconPlayerPlay, IconRepeat } from "@tabler/icons-react";
 
 import { Monologue } from "@/types/actor";
 import { overdoneBand } from "@/lib/poster";
@@ -130,6 +130,7 @@ export function MarginRail({
   fullSeconds,
   hasCut,
   onRehearse,
+  onMemorize,
   outOfReads,
 }: {
   monologue: Monologue;
@@ -139,6 +140,8 @@ export function MarginRail({
   fullSeconds: number;
   hasCut: boolean;
   onRehearse: () => void;
+  /** To the line-by-line drill — another room, like Rehearse. */
+  onMemorize: () => void;
   /** The reads are spent. Said plainly; never as a count we can't see. */
   outOfReads?: boolean;
 }) {
@@ -173,6 +176,25 @@ export function MarginRail({
         </div>
       )}
 
+      {/* The other way out of this page.
+          It used to be the third of four identical circles in the working bar,
+          between "note this line" and "mark off book" — controls that act on
+          the page you are standing on and leave you there. This one takes the
+          page away, so it belongs with Rehearse: the two doors out, one loud
+          and one quiet, told apart by weight rather than by hovering an icon.
+          Not hidden on phones the way Rehearse is: the run bar at the foot of
+          the screen carries Rehearse there, and it carries nothing else. */}
+      {!outOfReads && (
+        <button
+          type="button"
+          onClick={onMemorize}
+          className="t-m-drill inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-full border-[1.5px] text-[14px] font-bold transition-all duration-300"
+        >
+          <IconRepeat className="h-[18px] w-[18px]" />
+          {memorized ? "Run the lines again" : "Learn it line by line"}
+        </button>
+      )}
+
       <OverdoneMeter score={monologue.overdone_score} />
 
       {/* Your marks */}
@@ -195,6 +217,19 @@ export function MarginRail({
               value={memorized ? "yes" : "not yet"}
               tone={memorized ? "var(--t-orange-deep)" : undefined}
             />
+            {!memorized && !outOfReads && (
+              /* The one mark on this list you can do something about from
+                 here. A line, not a second button: the drill already has one
+                 above, and two of it would be the working bar's mistake again. */
+              <button
+                type="button"
+                onClick={onMemorize}
+                className="t-m__dir m-0 self-start text-[12px] underline underline-offset-4 transition-colors"
+                style={{ color: "var(--t-faint)" }}
+              >
+                (learn it line by line.)
+              </button>
+            )}
           </div>
           {outOfReads && (
             <p
