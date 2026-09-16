@@ -100,7 +100,7 @@ export function RequestPromoCodeModal({ open, onOpenChange, initialType = null, 
             Request a discount
           </DialogTitle>
           <DialogDescription className="text-base">
-            We’ll review your request and email you a code. No codes are shown on the site ;  you’ll get yours by email after approval.
+            Tell me who you are and I’ll sort it out by email. Teachers, coaches and their students don’t pay at all; I open Plus by hand.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-0">
@@ -120,7 +120,7 @@ export function RequestPromoCodeModal({ open, onOpenChange, initialType = null, 
                 >
                   <IconUsers className="h-7 w-7 sm:h-8 sm:w-8" />
                 <span className="font-semibold text-xs sm:text-sm">Teacher / School / Coach</span>
-                <span className="text-[10px] sm:text-xs">Discounted rate</span>
+                <span className="text-[10px] sm:text-xs">Free Plus</span>
               </button>
               <button
                 type="button"
@@ -134,7 +134,7 @@ export function RequestPromoCodeModal({ open, onOpenChange, initialType = null, 
               >
                 <IconSchool className="h-7 w-7 sm:h-8 sm:w-8" />
                 <span className="font-semibold text-xs sm:text-sm">Student</span>
-                <span className="text-[10px] sm:text-xs">50% off</span>
+                <span className="text-[10px] sm:text-xs">Free, via your teacher</span>
               </button>
             </div>
           </div>

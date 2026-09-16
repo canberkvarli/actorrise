@@ -1,5 +1,8 @@
 "use client";
 
+import { CollectionTour } from "@/components/onboarding/CollectionTour";
+import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
+
 import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -52,6 +55,7 @@ function BenchSkeleton() {
  * page leads with that piece at working size and says the answer once.
  */
 export function RehearseHub() {
+  const { show: showTour, dismiss: dismissTour } = useTourTrigger("has_seen_collection_tour");
   const queryClient = useQueryClient();
   // The collection is client-only data; render loading until mounted so SSR
   // and the first client pass agree. Read as an external store rather than
@@ -188,6 +192,12 @@ export function RehearseHub() {
       {showContent && !isEmpty && <ShelfOverlapWhisper items={all} />}
 
       {showContent && <RecentlyRemoved />}
+
+      {/* Only once there is something on the shelf. TourSpotlight dismisses
+          itself when no target resolves, and dismissing BURNS the flag — so
+          firing this on a bare collection would spend the tour on a room the
+          actor cannot see yet, and they would never be offered it again. */}
+      {showContent && !isEmpty && showTour && <CollectionTour onDismiss={dismissTour} />}
     </motion.div>
   );
 }

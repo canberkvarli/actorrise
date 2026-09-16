@@ -92,6 +92,7 @@ export default function AdminUserDetailPage() {
   const [grantDurationKey, setGrantDurationKey] = useState<string>("365");
   const [grantCustomDays, setGrantCustomDays] = useState("30");
   const [grantNote, setGrantNote] = useState("");
+  const [firstRunNote, setFirstRunNote] = useState("");
   const [grantAccountType, setGrantAccountType] = useState("");
   const [grantNotify, setGrantNotify] = useState(true);
 
@@ -208,6 +209,17 @@ export default function AdminUserDetailPage() {
       setGrantNote("");
     },
     onError: (err: Error) => toast.error(err.message || "Failed to revoke comp"),
+  });
+
+  const resetFirstRunMutation = useMutation({
+    mutationFn: async (note: string) =>
+      api.post(`/api/admin/users/${userId}/reset-first-run`, { note }),
+    onSuccess: () => {
+      invalidate();
+      toast.success("First run reset. Their next load starts at the onboarding card.");
+      setFirstRunNote("");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to reset first run"),
   });
 
   const deleteMutation = useMutation({
@@ -349,6 +361,14 @@ export default function AdminUserDetailPage() {
       return;
     }
     revokeGrantMutation.mutate(grantNote.trim());
+  };
+
+  const runResetFirstRun = () => {
+    if (!firstRunNote.trim()) {
+      toast.error("Add a note before resetting");
+      return;
+    }
+    resetFirstRunMutation.mutate(firstRunNote.trim());
   };
 
   const runBenefitPatch = () => {
@@ -767,6 +787,56 @@ export default function AdminUserDetailPage() {
                   </Button>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">First run</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Puts this account back to its first minute: the onboarding card
+                and every tour run again. Flags only, so their type, playing age
+                and preferences survive until the card is answered a second
+                time, which overwrites them.
+              </p>
+              {/* Said out loud because it is the one piece an admin cannot fix
+                  from here, and its absence looks like the reset half-worked. */}
+              <p className="text-sm text-muted-foreground">
+                The ScenePartner playbill is not included: it lives in the
+                browser&apos;s localStorage, not on the server, and it only
+                opens for someone with no uploaded scripts. To replay that one,
+                clear site data for the origin.
+              </p>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {[
+                  ["Onboarding", data.user.has_completed_onboarding],
+                  ["Search tour", data.user.has_seen_search_tour],
+                  ["Profile tour", data.user.has_seen_profile_tour],
+                  ["Collection tour", data.user.has_seen_collection_tour],
+                ].map(([label, seen]) => (
+                  <span
+                    key={String(label)}
+                    className="border px-2 py-0.5"
+                    title={seen ? "Already seen" : "Not seen yet"}
+                  >
+                    {String(label)}: {seen ? "seen" : "pending"}
+                  </span>
+                ))}
+              </div>
+              <Input
+                value={firstRunNote}
+                onChange={(e) => setFirstRunNote(e.target.value)}
+                placeholder="Reason (e.g. retesting the onboarding change)"
+              />
+              <Button
+                variant="outline"
+                onClick={runResetFirstRun}
+                disabled={resetFirstRunMutation.isPending}
+              >
+                {resetFirstRunMutation.isPending ? "Resetting..." : "Reset first run"}
+              </Button>
             </CardContent>
           </Card>
 

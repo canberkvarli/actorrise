@@ -910,7 +910,7 @@ def resume_batch(
     t = threading.Thread(target=_resume_batch, daemon=True)
     t.start()
 
-    return {"batch_id": batch_id, "status": "resuming", "queued": queued_count}
+    return {"batch_id": batch_id, "status": "resuming", "queued": pending_count}
 
 
 @router.get("/batches")

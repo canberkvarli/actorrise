@@ -64,7 +64,13 @@ export function buildPayoffParams(a: OnboardingAnswers, opts?: { limit?: number;
   if (!opts?.broad) {
     const sources = MEDIUMS.filter((m) => a.mediums.includes(m.id)).map((m) => m.sourceType);
     if (sources.length) p.set("source_type", sources.join(","));
-    // `category` and `tone` are single-valued; only send when the actor picked exactly one.
+    // `category` and `tone` are single-valued on the API, so they only go out
+    // when the actor picked exactly one. With eight WORK_ON tiles that happens
+    // less often than it did with four: pick two tones and the tone filter
+    // drops entirely rather than narrowing to one of them. The answer is not
+    // lost, it still lands in `preferred_genres` on the profile, but the payoff
+    // itself will not be tone-filtered. Widening this needs a multi-valued
+    // `tone` on GET /api/monologues/search.
     const eras = WORK_ON.filter((w) => a.workOn.includes(w.id) && w.kind === "era").map((w) => w.id);
     if (eras.length === 1) p.set("category", eras[0]);
     const tones = WORK_ON.filter((w) => a.workOn.includes(w.id) && w.kind === "tone").map((w) => w.id);

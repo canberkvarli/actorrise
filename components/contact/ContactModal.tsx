@@ -24,8 +24,8 @@ const CATEGORIES = [
   { value: "collaboration", label: "Collaboration" },
   { value: "support", label: "Support" },
   { value: "business_discount", label: "Business discount" },
-  { value: "teacher_school_coach_discount", label: "Teacher / school / coach discount" },
-  { value: "student_discount", label: "Student discount" },
+  { value: "teacher_school_coach_discount", label: "Teacher / school / coach access" },
+  { value: "student_discount", label: "Student access" },
   { value: "other", label: "Other" },
 ] as const;
 

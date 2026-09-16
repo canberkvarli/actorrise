@@ -13,9 +13,20 @@ const LOGO_WITH_TEXT_DARK = "/transparent_textlogo_dark.png";
 
 type Size = "header" | "auth";
 
-/* Icon: square (e.g. 273x273). Same asset used for auth and for other platforms (social, etc.). */
-const LOGO_ICON_ASPECT = { w: 273, h: 273 };
-const LOGO_TEXT_ASPECT = { w: 320, h: 80 };
+/* The files' TRUE intrinsic sizes, which is the only thing these numbers are
+   for: every wordmark here is rendered at a fixed height with `w-auto`, so the
+   browser reserves width from this ratio and then reflows to the real one the
+   moment the PNG decodes.
+
+   transparent_textlogo.png is 2000x600 (3.333), and it was declared 320x80
+   (4.0) here, 140x34 (4.12) in the landing nav and 150x36 (4.17) in both
+   footers and the auth shell. Nobody had measured it. At the landing nav's
+   34px height that is 140px reserved for a 113px image: the pill lays out
+   27px too wide, then snaps narrower a second later and drags every item in
+   it sideways. That is the flicker on the header — the elements really are
+   finding their position, because the first position was wrong. */
+const LOGO_ICON_ASPECT = { w: 200, h: 200 };
+const LOGO_TEXT_ASPECT = { w: 2000, h: 600 };
 
 /* Larger logo, mobile-friendly: prominent on small screens so header isn't just "dropdown on the left". */
 const sizes: Record<Size, { iconClass: string; fullLogoClass: string }> = {

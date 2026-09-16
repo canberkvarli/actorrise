@@ -132,6 +132,7 @@ class AdminProfilePatchRequest(BaseModel):
     has_seen_welcome: bool | None = None
     has_seen_search_tour: bool | None = None
     has_seen_profile_tour: bool | None = None
+    has_seen_collection_tour: bool | None = None
     email_verified: bool | None = None
     # Most educators arrive by email, not by answering the signup question, so
     # tagging them by hand here is the primary way this column gets filled.
@@ -251,6 +252,10 @@ def _serialize_user(user: User) -> dict[str, Any]:
         "has_seen_welcome": user.has_seen_welcome,
         "has_seen_search_tour": user.has_seen_search_tour,
         "has_seen_profile_tour": user.has_seen_profile_tour,
+        "has_seen_collection_tour": user.has_seen_collection_tour,
+        "has_completed_onboarding": user.has_completed_onboarding,
+        "has_completed_profile_onboarding": user.has_completed_profile_onboarding,
+        "has_seen_first_rehearsal": user.has_seen_first_rehearsal,
         "account_type": user.account_type,
         "organization": user.organization,
         "created_at": user.created_at.isoformat() if user.created_at else None,
@@ -514,6 +519,8 @@ def patch_admin_user_profile(
         target.has_seen_search_tour = body.has_seen_search_tour
     if body.has_seen_profile_tour is not None:
         target.has_seen_profile_tour = body.has_seen_profile_tour
+    if body.has_seen_collection_tour is not None:
+        target.has_seen_collection_tour = body.has_seen_collection_tour
     if body.email_verified is not None:
         target.email_verified = body.email_verified
     if "account_type" in body.model_fields_set:
@@ -768,6 +775,57 @@ def revoke_admin_user_grant(
         actor_admin_id=admin.id,
         target_user_id=target.id,
         action_type="admin.user.membership_revoke",
+        before_json=before,
+        after_json=after,
+        note=body.note,
+    )
+    db.commit()
+    return after
+
+
+@router.post("/{user_id}/reset-first-run")
+def reset_admin_user_first_run(
+    user_id: int,
+    body: AdminGrantRevokeRequest,
+    admin: User = Depends(require_sensitive_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Put a user back to their first minute: the onboarding card and every tour.
+
+    Testing a first-run change otherwise means making a throwaway account for
+    each pass, because the flags are one-way and there is no product path back.
+
+    NOT reset, because the server does not own it: the ScenePartner playbill
+    (HowItWorksWalkthrough) is per-browser localStorage, and it also only
+    auto-opens for someone with no uploaded scripts. To replay that one, clear
+    site data for the origin.
+
+    Only flags. No profile answers are touched, so the actor keeps the type,
+    playing age and preferences they already gave — re-running the card
+    overwrites those with whatever is answered the second time.
+    """
+    target = db.query(User).filter(User.id == user_id).first()
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    before = _serialize_user(target)
+
+    target.has_completed_onboarding = False
+    target.has_completed_profile_onboarding = False
+    target.has_seen_welcome = False
+    target.has_seen_search_tour = False
+    target.has_seen_profile_tour = False
+    target.has_seen_collection_tour = False
+    target.has_seen_first_rehearsal = False
+
+    db.flush()
+    after = _serialize_user(target)
+    _create_audit_log(
+        db,
+        actor_admin_id=admin.id,
+        target_user_id=target.id,
+        action_type="admin.user.first_run_reset",
         before_json=before,
         after_json=after,
         note=body.note,

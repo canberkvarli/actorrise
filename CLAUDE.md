@@ -84,7 +84,7 @@ Reference example of Canberk's actual voice: user memory `email-voice.md`.
 
 ## Opt-out requirement (current-user emails)
 
-Any marketing email sent to existing platform users (not cold outreach) must include a plain reply-to-opt-out option in the body or sign-off, not just the unsubscribe link. Reason: the /unsubscribe page's "Other" feedback reason has no free-text field (bug, not yet fixed as of 2026-07-09), so users who want to explain why they're leaving get stuck and end up emailing instead.
+Any marketing email sent to existing platform users (not cold outreach) must include a plain reply-to-opt-out option in the body or sign-off, not just the unsubscribe link. Reason: some people would rather tell a human than click a form, and a reply keeps the conversation open. (The original reason, the /unsubscribe page's "Other" reason having no free-text field, was fixed in commit 40baad8c on 2026-08-19 and is live: the page now shows a comment box for every reason and forwards it to canberk@actorrise.com via POST /unsubscribe-feedback. Verified 2026-09-16, do not re-fix.)
 
 Standard line, place near the sign-off:
 "reply UNSUBSCRIBE and I'll take you off the list, no hard feelings"

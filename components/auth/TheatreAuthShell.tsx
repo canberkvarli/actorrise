@@ -72,8 +72,8 @@ export function TheatreAuthShell({
             <Image
               src="/transparent_textlogo.png"
               alt="ActorRise"
-              width={150}
-              height={36}
+              width={2000}
+              height={600}
               priority
               className="h-9 w-auto"
             />

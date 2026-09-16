@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:oklch(0.96 0.02 85);color:oklch(0.16 0.01 45);font-family:'Bricolage Grotesque',ui-sans-serif,system-ui,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:clip}
+a{color:inherit;text-decoration:none}a:hover{color:oklch(0.58 0.18 45)}
+*{box-sizing:border-box}
+::selection{background:oklch(0.92 0.18 100);color:oklch(0.13 0.015 50)}
+textarea{font-family:inherit;color:inherit}textarea::placeholder{color:oklch(0.55 0.02 60)}textarea:focus{outline:none;border-color:oklch(0.16 0.01 45)!important}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{opacity:0;transform:translateY(12px) scale(.98)}70%{opacity:1;transform:translateY(-2px)}100%{opacity:1;transform:none}}
+@keyframes flicker{0%,100%{opacity:1}93%{opacity:.55}95%{opacity:1}97%{opacity:.7}}
+@keyframes breathe{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.3);opacity:1}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes barin{from{transform:translateY(120%);opacity:0}to{transform:none;opacity:1}}
+@keyframes wobble{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(-1.5deg)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;flex-direction:column">
+<header style="position:sticky;top:0;z-index:40;display:flex;justify-content:center;padding:14px 16px 0;pointer-events:none">
+  <div style="pointer-events:auto;width:100%;max-width:1000px;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 14px;border-radius:999px;background:oklch(0.13 0.015 50 / .9);backdrop-filter:blur(14px);border:1px solid oklch(0.35 0.03 55 / .6);box-shadow:0 10px 40px -12px rgb(0 0 0/.45);color:oklch(0.96 0.02 85)">
+    <a href="#" aria-label="ActorRise" style="display:flex;align-items:center;margin-right:6px"><img src="public/transparent_textlogo.png" alt="ActorRise" style="height:32px;width:auto;display:block"></a>
+    <span style="width:1px;height:20px;background:oklch(0.35 0.03 55)"></span>
+    <nav style="display:flex;align-items:center;gap:2px;flex:1;min-width:0;overflow:auto">
+      <a href="#" style="padding:7px 12px;border-radius:999px;font-size:13px;font-weight:700;background:oklch(0.96 0.02 85);color:oklch(0.13 0.015 50);white-space:nowrap" style-hover="color:oklch(0.13 0.015 50)">Monologues</a>
+      <a href="#" style="padding:7px 12px;font-size:13px;font-weight:500;color:oklch(0.75 0.02 62);white-space:nowrap" style-hover="color:oklch(0.92 0.18 100)">ScenePartner</a>
+      <a href="#" style="padding:7px 12px;font-size:13px;font-weight:500;color:oklch(0.75 0.02 62);white-space:nowrap" style-hover="color:oklch(0.92 0.18 100)">Collection</a>
+    </nav>
+    <span aria-label="Callboard · 9 in the house" style="display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 12px 0 10px;border-radius:999px;border:1px solid oklch(0.35 0.03 55);color:oklch(0.80 0.02 70);font-family:'Courier Prime',Courier,monospace;font-size:12px"><span style="width:9px;height:9px;border-radius:999px;background:oklch(0.92 0.18 100);box-shadow:0 0 10px 2px oklch(0.92 0.18 100 / .7);animation:flicker 8s linear infinite"></span>9</span>
+    <span role="img" aria-label="Your profile" style="width:36px;height:36px;border-radius:999px;border:2px solid oklch(0.92 0.18 100);background:url('public/testimonials/canberk/canberk.jpg') center top/cover"></span>
+  </div>
+</header>
+
+<!-- ONE-SHEET (dark, keyed to the play's cloth) -->
+<section data-screen-label="One-sheet" style="position:relative;isolation:isolate;overflow:hidden;background:oklch(0.13 0.015 50);color:oklch(0.96 0.02 85);margin-top:-66px;padding:104px 24px 64px">
+  <div aria-hidden="true" style="position:absolute;inset:0;z-index:-1;background:radial-gradient(120% 90% at 22% 0%,{{ m.cloth }},transparent 70%)"></div>
+  <div aria-hidden="true" style="position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.07;mix-blend-mode:overlay;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E&quot;)"></div>
+  <div style="max-width:1000px;margin:0 auto">
+    <a href="#" style="display:inline-flex;align-items:center;gap:8px;font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:13px;letter-spacing:.06em;color:oklch(0.70 0.02 62);animation:rise .5s both" style-hover="color:oklch(0.92 0.18 100)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>(back to the results.)</a>
+    <div style="margin-top:28px;display:flex;align-items:flex-end;gap:clamp(20px,4vw,40px);animation:rise .6s cubic-bezier(.22,1,.36,1) .05s both">
+      <!-- cover -->
+      <div aria-hidden="true" style="flex-shrink:0;width:clamp(120px,22vw,190px);aspect-ratio:2/3;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:14px 10px;text-align:center;background:{{ m.cloth }};color:oklch(0.94 0.02 90);box-shadow:8px 8px 0 oklch(0.92 0.18 100),0 30px 70px -20px rgb(0 0 0/.8);transform:rotate(-2deg);animation:wobble 8s ease-in-out infinite"><span style="font-family:'Courier Prime',Courier,monospace;font-size:9px;letter-spacing:.24em;opacity:.65">{{ m.year }}</span><span style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(28px,5vw,44px);line-height:1">{{ m.emblem }}</span><span style="font-family:'Instrument Serif',Georgia,serif;font-size:clamp(13px,1.8vw,17px);line-height:1.05;text-wrap:balance">{{ m.play }}<span style="display:block;margin-top:6px;font-family:'Courier Prime',Courier,monospace;font-size:8px;letter-spacing:.18em;text-transform:uppercase;opacity:.65">{{ m.author }}</span></span></div>
+      <!-- billing -->
+      <div style="min-width:0;flex:1;padding-bottom:6px">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px">
+          <span style="font-family:'Courier Prime',Courier,monospace;font-size:11px;letter-spacing:.08em;padding:3px 10px;border-radius:999px;border:1.5px solid {{ tag.border }};background:{{ tag.bg }};color:{{ tag.fg }};white-space:nowrap">{{ tag.label }}</span>
+          <sc-if value="{{ inLane }}" hint-placeholder-val="{{ true }}"><span title="Matches your type" style="font-family:'Courier Prime',Courier,monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:oklch(0.92 0.18 100);color:oklch(0.16 0.01 45);white-space:nowrap">your lane</span></sc-if>
+          <span style="font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:13px;letter-spacing:.06em;color:oklch(0.65 0.02 62)">from {{ m.play }}</span>
+        </div>
+        <h1 style="margin:12px 0 0;font-family:'Instrument Serif',Georgia,serif;font-weight:400;line-height:.9;letter-spacing:-.025em;font-size:clamp(3rem,9vw,7rem);color:oklch(0.98 0.01 85)">{{ m.who }}</h1>
+        <p style="margin:14px 0 0;font-family:'Courier Prime',Courier,monospace;font-size:15px;line-height:1.6;color:oklch(0.85 0.02 75)">{{ m.author }}<span style="color:oklch(0.50 0.02 60)"> · </span>{{ m.year }}<span style="color:oklch(0.50 0.02 60)"> · </span>{{ m.actScene }}</p>
+        <div style="margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:13px;color:oklch(0.75 0.02 62)">
+          <sc-for list="{{ facts }}" as="f" hint-placeholder-count="5"><span style="display:inline-flex;align-items:center;gap:10px"><sc-if value="{{ f.notFirst }}" hint-placeholder-val="{{ false }}"><span style="color:oklch(0.45 0.02 60)">·</span></sc-if>{{ f.v }}</span></sc-for>
+          <span style="display:inline-flex;align-items:center;gap:10px"><span style="color:oklch(0.45 0.02 60)">·</span><span title="{{ od.title }}" style="display:inline-flex;align-items:center;gap:6px;font-family:'Courier Prime',Courier,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:{{ od.dark }}"><span style="display:inline-flex;gap:2px"><sc-for list="{{ od.ticks }}" as="t" hint-placeholder-count="4"><span style="width:3px;height:10px;background:currentColor;opacity:{{ t }}"></span></sc-for></span>{{ od.label }}</span></span>
+        </div>
+        <p style="margin:18px 0 0;max-width:56ch;padding-left:12px;border-left:2px solid oklch(0.92 0.18 100 / .6);font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:13px;line-height:1.7;color:oklch(0.80 0.02 70)">{{ m.context }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<main style="flex:1;width:100%;max-width:1000px;margin:0 auto;padding:0 24px 160px">
+  <!-- WORKING BAR -->
+  <div ref="{{ barRef }}" data-screen-label="Working bar" style="position:sticky;top:0;z-index:30;margin:0 -24px;padding:76px 24px 10px;background:linear-gradient(to bottom,oklch(0.96 0.02 85) 82%,oklch(0.96 0.02 85 / 0));pointer-events:none">
+    <div style="pointer-events:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px;border-radius:999px;border:1.5px solid oklch(0.16 0.01 45);background:oklch(0.99 0.005 85);box-shadow:6px 6px 0 oklch(0.16 0.01 45)">
+      <div role="tablist" aria-label="How to view this piece" style="display:inline-flex;gap:2px">
+        <sc-for list="{{ modes }}" as="md" hint-placeholder-count="3"><button role="tab" aria-selected="{{ md.on }}" title="{{ md.hint }}" onClick="{{ md.pick }}" style="height:40px;padding:0 16px;border-radius:999px;border:0;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;background:{{ md.bg }};color:{{ md.fg }};transition:all .3s cubic-bezier(.34,1.3,.64,1)" style-hover="transform:scale(1.04)">{{ md.label }}</button></sc-for>
+      </div>
+      <div style="display:inline-flex;align-items:center;gap:2px">
+        <button title="Note this line" aria-label="Note this line" style="width:40px;height:40px;border-radius:999px;border:0;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:oklch(0.45 0.02 55)" style-hover="background:oklch(0.92 0.02 80);color:oklch(0.16 0.01 45)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z M9 12h6M9 16h4"></path></svg></button>
+        <a href="#" title="Memorize · line by line" aria-label="Memorize line by line" style="width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:oklch(0.45 0.02 55)" style-hover="background:oklch(0.92 0.02 80);color:oklch(0.16 0.01 45)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"></path></svg></a>
+        <button onClick="{{ toggleOffBook }}" aria-pressed="{{ offBook }}" title="{{ offBookTitle }}" aria-label="{{ offBookTitle }}" style="width:40px;height:40px;border-radius:999px;border:0;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:{{ offBookColor }};transition:color .3s" style-hover="background:oklch(0.92 0.02 80)"><svg width="18" height="18" viewBox="0 0 24 24" fill="{{ offBookFill }}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"></path></svg></button>
+        <button onClick="{{ save }}" aria-pressed="{{ saved }}" title="{{ saveTitle }}" aria-label="{{ saveTitle }}" style="width:40px;height:40px;border-radius:999px;border:0;background:{{ saveBg }};cursor:pointer;display:flex;align-items:center;justify-content:center;color:oklch(0.16 0.01 45);transition:all .3s cubic-bezier(.34,1.56,.64,1)" style-hover="background:oklch(0.92 0.18 100)"><svg width="18" height="18" viewBox="0 0 24 24" fill="{{ saveFill }}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"></path></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:28px;display:grid;grid-template-columns:{{ cols }};gap:40px 56px;align-items:start">
+    <!-- THE STAGE -->
+    <article data-screen-label="Sides" style="min-width:0;animation:rise .6s cubic-bezier(.22,1,.36,1) both">
+      <!-- READ -->
+      <sc-if value="{{ isRead }}" hint-placeholder-val="{{ true }}">
+        <div style="animation:rise .3s cubic-bezier(.22,1,.36,1) both">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <p style="margin:0;font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:13px;letter-spacing:.08em;color:oklch(0.45 0.02 55)">{{ m.direction }}</p>
+            <div style="display:inline-flex;gap:2px;padding:3px;border-radius:999px;border:1.5px solid oklch(0.80 0.02 75);background:oklch(0.99 0.005 85)">
+              <sc-for list="{{ sizes }}" as="s" hint-placeholder-count="3"><button onClick="{{ s.pick }}" aria-pressed="{{ s.on }}" title="{{ s.title }}" style="height:28px;padding:0 10px;border-radius:999px;border:0;cursor:pointer;font-family:'Courier Prime',Courier,monospace;font-size:{{ s.fs }};background:{{ s.bg }};color:{{ s.fg }}">A</button></sc-for>
+            </div>
+          </div>
+          <div style="position:relative;margin-top:22px">
+            <div style="font-family:'Courier Prime',Courier,monospace;font-size:{{ textSize }};line-height:1.9;color:oklch(0.18 0.01 45);max-width:62ch;transition:font-size .3s">
+              <sc-for list="{{ paras }}" as="p" hint-placeholder-count="3">
+                <div style="position:relative;display:flex;gap:12px;align-items:flex-start;margin:0 0 1.2em">
+                  <p style="margin:0;flex:1;text-wrap:pretty;animation:rise .5s cubic-bezier(.22,1,.36,1) both;animation-delay:{{ p.delay }}">{{ p.t }}</p>
+                  <button onClick="{{ p.note }}" aria-label="Note this line" title="Note this line" style="flex-shrink:0;width:26px;height:26px;margin-top:6px;border-radius:999px;border:1.5px solid {{ p.noteBorder }};background:{{ p.noteBg }};cursor:pointer;display:flex;align-items:center;justify-content:center;color:{{ p.noteFg }};opacity:{{ p.noteOp }};transition:all .25s" style-hover="opacity:1;border-color:oklch(0.16 0.01 45);color:oklch(0.16 0.01 45)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+                </div>
+                <sc-if value="{{ p.open }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin:-.6em 0 1.4em;padding:12px 14px;border-left:2px solid oklch(0.92 0.18 100);background:oklch(0.92 0.18 100 / .14);animation:pop .3s cubic-bezier(.34,1.3,.64,1) both">
+                    <p style="margin:0;font-family:'Courier Prime',Courier,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:oklch(0.45 0.02 55)">beat</p>
+                    <textarea value="{{ p.beat }}" onChange="{{ p.setBeat }}" rows="2" placeholder="What changes here?" style="margin-top:6px;width:100%;resize:vertical;border:0;border-bottom:1.5px dashed oklch(0.16 0.01 45 / .3);background:transparent;padding:4px 0;font-family:'Courier Prime',Courier,monospace;font-size:14px;line-height:1.6"></textarea>
+                  </div>
+                </sc-if>
+              </sc-for>
+            </div>
+            <!-- read gate -->
+            <sc-if value="{{ gated }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:0;right:0;bottom:0;height:62%;background:linear-gradient(to bottom,transparent,oklch(0.96 0.02 85) 45%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px">
+                <div style="width:100%;max-width:460px;padding:24px 26px;border-radius:8px;background:oklch(0.99 0.005 85);border:1.5px solid oklch(0.16 0.01 45);box-shadow:10px 10px 0 oklch(0.92 0.18 100);transform:rotate(-.8deg);text-align:center;animation:pop .5s cubic-bezier(.34,1.3,.64,1) both">
+                  <p style="margin:0;font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:12px;letter-spacing:.08em;color:oklch(0.45 0.02 55)">(that's your fifth read this month.)</p>
+                  <p style="margin:8px 0 0;font-family:'Instrument Serif',Georgia,serif;font-size:28px;line-height:1.05;letter-spacing:-.01em">The rest of the speech is on Plus.</p>
+                  <p style="margin:10px 0 0;font-size:14px;color:oklch(0.40 0.015 55)">Unlimited reads and searches, more time with ScenePartner. $12 a month. Students and teachers rehearse free.</p>
+                  <div style="margin-top:16px;display:flex;flex-wrap:wrap;justify-content:center;gap:8px">
+                    <a href="#" style="display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 6px 0 20px;border-radius:999px;background:oklch(0.15 0.03 45);color:oklch(0.96 0.02 85);font-size:15px;font-weight:700;transition:transform .3s cubic-bezier(.34,1.56,.64,1)" style-hover="transform:scale(1.04) rotate(-1.5deg);color:oklch(0.96 0.02 85)">Unlock with Plus<span style="display:inline-flex;width:34px;height:34px;border-radius:999px;background:oklch(0.92 0.18 100);color:oklch(0.15 0.03 45);align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></a>
+                    <button onClick="{{ ungate }}" style="height:48px;padding:0 16px;border-radius:999px;border:1.5px solid oklch(0.80 0.02 75);background:transparent;cursor:pointer;font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:12px;letter-spacing:.06em;color:oklch(0.45 0.02 55)" style-hover="border-color:oklch(0.16 0.01 45);color:oklch(0.16 0.01 45)">(preview: unlock)</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+          <sc-if value="{{ open }}" hint-placeholder-val="{{ true }}">
+            <div style="margin-top:8px;display:flex;justify-content:center"><svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true" style="color:oklch(0.16 0.01 45 / .3)" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M32 60V30M20 60h24" pathLength="1" style="stroke-dasharray:1;stroke-dashoffset:1;animation:draw .8s ease-in-out .2s forwards"></path><path d="M32 6a10 10 0 0 1 10 10c0 5-3 7-4 10h-12c-1-3-4-5-4-10A10 10 0 0 1 32 6z" pathLength="1" style="stroke-dasharray:1;stroke-dashoffset:1;animation:draw .8s ease-in-out .5s forwards"></path></svg></div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- CUT -->
+      <sc-if value="{{ isCut }}" hint-placeholder-val="{{ false }}">
+        <div style="animation:rise .3s cubic-bezier(.22,1,.36,1) both">
+          <div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px">
+            <p style="margin:0;flex:1 1 200px;min-width:0;font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:13px;letter-spacing:.08em;color:oklch(0.45 0.02 55)">(tap the first line you keep, then the last.)</p>
+            <p style="margin:0;flex-shrink:0;white-space:nowrap;font-family:'Instrument Serif',Georgia,serif;font-size:34px;line-height:1;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:{{ cutClockColor }}">{{ cutClock }}<span style="font-family:'Courier Prime',Courier,monospace;font-size:12px;letter-spacing:.06em;color:oklch(0.50 0.02 60);margin-left:8px">of 1:40</span></p>
+          </div>
+          <div style="margin-top:22px;max-width:62ch;font-family:'Courier Prime',Courier,monospace;font-size:16px;line-height:1.9">
+            <sc-for list="{{ cutParas }}" as="p" hint-placeholder-count="3">
+              <button onClick="{{ p.pick }}" style="display:flex;gap:14px;align-items:flex-start;width:100%;text-align:left;margin:0 0 .8em;padding:8px 12px 8px 0;border:0;border-left:3px solid {{ p.rail }};background:{{ p.bg }};cursor:pointer;font:inherit;color:{{ p.fg }};text-decoration:{{ p.deco }};transition:all .25s" style-hover="background:oklch(0.92 0.18 100 / .18)"><span style="flex-shrink:0;width:28px;text-align:right;font-size:12px;color:oklch(0.55 0.02 60);padding-top:4px">{{ p.n }}</span><span style="flex:1;text-wrap:pretty">{{ p.t }}</span></button>
+            </sc-for>
+          </div>
+          <div style="margin-top:18px;display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+            <button onClick="{{ saveCut }}" style="height:48px;padding:0 22px;border-radius:999px;border:0;background:oklch(0.15 0.03 45);color:oklch(0.96 0.02 85);cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;opacity:{{ cutOp }};transition:transform .3s cubic-bezier(.34,1.56,.64,1)" style-hover="transform:scale(1.04) rotate(-1.5deg)">{{ cutSaveLabel }}</button>
+            <button onClick="{{ clearCut }}" style="height:48px;padding:0 16px;border-radius:999px;border:1.5px solid oklch(0.80 0.02 75);background:transparent;cursor:pointer;font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:12px;letter-spacing:.06em;color:oklch(0.45 0.02 55)" style-hover="border-color:oklch(0.16 0.01 45);color:oklch(0.16 0.01 45)">(clear the cut.)</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- COPY -->
+      <sc-if value="{{ isCopy }}" hint-placeholder-val="{{ false }}">
+        <div style="animation:rise .3s cubic-bezier(.22,1,.36,1) both">
+          <p style="margin:0;font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:13px;letter-spacing:.08em;color:oklch(0.45 0.02 55)">(your sides. {{ copyScope }})</p>
+          <div style="margin-top:18px;max-width:62ch;padding:32px 36px;background:oklch(0.99 0.005 85);border:1.5px solid oklch(0.16 0.01 45);box-shadow:8px 8px 0 oklch(0.16 0.01 45);transform:rotate(-.4deg)">
+            <p style="margin:0;font-family:'Courier Prime',Courier,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:oklch(0.45 0.02 55)">{{ m.play }} · {{ m.author }}</p>
+            <p style="margin:6px 0 0;font-family:'Courier Prime',Courier,monospace;font-weight:700;font-size:18px">{{ m.who }}</p>
+            <div style="margin-top:18px;padding-top:16px;border-top:1px solid oklch(0.80 0.02 75);font-family:'Courier Prime',Courier,monospace;font-size:14px;line-height:1.85;color:oklch(0.20 0.01 45)"><sc-for list="{{ copyParas }}" as="p" hint-placeholder-count="3"><p style="margin:0 0 1em">{{ p }}</p></sc-for></div>
+            <p style="margin:18px 0 0;font-family:'Courier Prime',Courier,monospace;font-size:10px;letter-spacing:.06em;color:oklch(0.55 0.02 60)">actorrise.com/m/35008 · {{ m.edition }}</p>
+          </div>
+          <div style="margin-top:22px;display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ exports }}" as="e" hint-placeholder-count="3"><button style="height:48px;padding:0 18px;border-radius:999px;border:1.5px solid oklch(0.16 0.01 45);background:{{ e.bg }};color:{{ e.fg }};cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;display:inline-flex;align-items:center;gap:10px;transition:all .3s cubic-bezier(.34,1.56,.64,1)" style-hover="transform:translateY(-2px) rotate(-1deg)">{{ e.label }}<span style="font-family:'Courier Prime',Courier,monospace;font-size:11px;letter-spacing:.06em;opacity:.7">{{ e.sub }}</span></button></sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- just saved -->
+      <sc-if value="{{ justSaved }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:36px;padding:18px 22px;border-left:2px solid oklch(0.58 0.18 45);background:oklch(0.58 0.18 45 / .07);animation:pop .4s cubic-bezier(.34,1.3,.64,1) both">
+          <p style="margin:0;font-family:'Instrument Serif',Georgia,serif;font-size:22px;line-height:1.1">Saved to your collection.</p>
+          <p style="margin:4px 0 0;font-size:14px;color:oklch(0.40 0.015 55)">Make it yours. Cut it to time, mark a beat, or run it.</p>
+          <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
+            <button onClick="{{ goCut }}" style="height:40px;padding:0 16px;border-radius:999px;border:1.5px solid oklch(0.16 0.01 45);background:transparent;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700" style-hover="background:oklch(0.92 0.18 100)">Cut it to time</button>
+            <button onClick="{{ goNote }}" style="height:40px;padding:0 16px;border-radius:999px;border:1.5px solid oklch(0.16 0.01 45);background:transparent;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700" style-hover="background:oklch(0.92 0.18 100)">Mark a beat</button>
+            <a href="#" style="height:40px;padding:0 16px;border-radius:999px;background:oklch(0.15 0.03 45);color:oklch(0.96 0.02 85);display:inline-flex;align-items:center;font-size:13px;font-weight:700" style-hover="color:oklch(0.96 0.02 85)">Rehearse it</a>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- notes on the whole piece -->
+      <section style="margin-top:56px;padding-top:24px;border-top:1.5px dashed oklch(0.16 0.01 45 / .25)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+          <h2 style="margin:0;font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:26px;line-height:1.1;letter-spacing:-.01em">On the <em style="font-style:italic;color:oklch(0.58 0.18 45)">whole piece.</em></h2>
+          <span aria-live="polite" style="font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:11px;letter-spacing:.06em;color:oklch(0.50 0.02 60);opacity:{{ noteOp }};transition:opacity .3s">{{ noteState }}</span>
+        </div>
+        <textarea value="{{ notes }}" onChange="{{ setNotes }}" rows="4" placeholder="Who you're talking to, what you want, why now…" style="margin-top:14px;width:100%;resize:vertical;padding:14px 16px;border-radius:14px;border:1.5px solid oklch(0.80 0.02 75);background:oklch(0.99 0.005 85);font-family:'Courier Prime',Courier,monospace;font-size:15px;line-height:1.7"></textarea>
+      </section>
+
+      <!-- provenance -->
+      <div style="margin-top:28px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px;padding-top:18px;border-top:1px solid oklch(0.80 0.02 75);font-size:13px;color:oklch(0.45 0.02 55)">
+        <p style="margin:0;max-width:56ch">{{ m.words }} words · published text, {{ m.edition }}. Nothing here is generated.</p>
+        <div style="display:flex;gap:16px;font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:12px;letter-spacing:.06em"><a href="#" style="text-decoration:underline;text-underline-offset:4px">view full play ↗</a><button style="background:transparent;border:0;padding:0;cursor:pointer;font:inherit;color:inherit;text-decoration:underline;text-underline-offset:4px" style-hover="color:oklch(0.16 0.01 45)">report an issue</button></div>
+      </div>
+
+      <!-- OTHERS FROM THE PLAY -->
+      <section style="margin-top:72px">
+        <div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px"><h2 style="margin:0;font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:32px;line-height:1.1;letter-spacing:-.01em;text-wrap:balance">Others from <em style="font-style:italic;color:oklch(0.58 0.18 45)">{{ m.play }}.</em></h2><a href="#" style="font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:12px;letter-spacing:.06em;color:oklch(0.50 0.02 60);text-decoration:underline;text-underline-offset:4px;white-space:nowrap">(the whole play →)</a></div>
+        <div style="margin-top:18px;border-top:1px solid oklch(0.80 0.02 75)">
+          <sc-for list="{{ fromPlay }}" as="r" hint-placeholder-count="3">
+            <a href="#" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 4px;border-bottom:1px solid oklch(0.80 0.02 75);transition:all .3s cubic-bezier(.34,1.56,.64,1);color:inherit" style-hover="transform:translateX(6px);color:inherit">
+              <span style="min-width:0"><span style="display:block;font-family:'Courier Prime',Courier,monospace;font-weight:700;font-size:17px;line-height:1.2">{{ r.who }}</span><span style="display:block;margin-top:3px;font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:16px;color:oklch(0.40 0.015 55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">“{{ r.line }}”</span></span>
+              <span style="flex-shrink:0;font-size:12px;font-weight:600;color:oklch(0.45 0.02 55);font-variant-numeric:tabular-nums;white-space:nowrap">{{ r.meta }}</span>
+            </a>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- SAME REGISTER -->
+      <section style="margin-top:64px">
+        <h2 style="margin:0;font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:32px;line-height:1.1;letter-spacing:-.01em">Same <em style="font-style:italic;color:oklch(0.58 0.18 45)">register.</em></h2>
+        <p style="margin:6px 0 0;font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:12px;letter-spacing:.06em;color:oklch(0.50 0.02 60)">(cold fury · women · under two minutes.)</p>
+        <div style="margin-top:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px">
+          <sc-for list="{{ similar }}" as="p" hint-placeholder-count="3">
+            <a href="#" style="display:flex;gap:14px;align-items:center;padding:14px;border-radius:16px;border:1.5px solid oklch(0.80 0.02 75);background:oklch(0.99 0.005 85);transition:all .35s cubic-bezier(.34,1.56,.64,1);color:inherit" style-hover="border-color:oklch(0.16 0.01 45);transform:translateY(-4px) rotate(-.6deg);color:inherit">
+              <span aria-hidden="true" style="width:34px;height:50px;flex-shrink:0;border-radius:3px;background:{{ p.cloth }};box-shadow:2px 2px 0 oklch(0.16 0.01 45);display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:16px;color:oklch(0.94 0.02 90)">{{ p.emblem }}</span>
+              <span style="min-width:0"><span style="display:block;font-family:'Courier Prime',Courier,monospace;font-weight:700;font-size:15px;line-height:1.2">{{ p.who }}</span><span style="display:block;margin-top:2px;font-family:'Courier Prime',Courier,monospace;font-size:12px;color:oklch(0.45 0.02 55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.play }}</span><span style="display:block;margin-top:6px;font-size:12px;color:oklch(0.50 0.02 60)">{{ p.meta }}</span></span>
+            </a>
+          </sc-for>
+        </div>
+      </section>
+    </article>
+
+    <!-- THE MARGIN -->
+    <aside data-screen-label="Margin" style="position:{{ asidePos }};top:150px;display:flex;flex-direction:column;gap:18px;animation:rise .6s cubic-bezier(.22,1,.36,1) .1s both">
+      <a href="#" style="display:inline-flex;align-items:center;justify-content:space-between;gap:12px;height:60px;padding:0 8px 0 24px;border-radius:999px;background:oklch(0.15 0.03 45);color:oklch(0.96 0.02 85);font-size:17px;font-weight:700;transition:transform .3s cubic-bezier(.34,1.56,.64,1)" style-hover="transform:scale(1.03) rotate(-1deg);color:oklch(0.96 0.02 85)">Rehearse this<span style="display:inline-flex;width:42px;height:42px;border-radius:999px;background:oklch(0.92 0.18 100);color:oklch(0.15 0.03 45);align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"></path></svg></span></a>
+      <p style="margin:-8px 0 0;text-align:center;font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:12px;letter-spacing:.06em;color:oklch(0.50 0.02 60)">(scenepartner reads {{ m.partner }}. you read {{ m.who }}.)</p>
+
+      <!-- overdone -->
+      <div style="padding-top:18px;border-top:1.5px solid oklch(0.16 0.01 45)">
+        <p style="margin:0;font-family:'Courier Prime',Courier,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:oklch(0.45 0.02 55)">how often a room hears this</p>
+        <p style="margin:6px 0 0;font-family:'Instrument Serif',Georgia,serif;font-size:30px;line-height:1.05;letter-spacing:-.01em;color:{{ od.color }}">{{ od.big }}</p>
+        <div style="margin-top:10px;display:flex;gap:3px"><sc-for list="{{ od.cells }}" as="c" hint-placeholder-count="10"><span style="flex:1;height:6px;border-radius:2px;background:{{ c }}"></span></sc-for></div>
+        <p style="margin:8px 0 0;font-size:13px;line-height:1.5;color:oklch(0.40 0.015 55)">{{ od.note }}</p>
+      </div>
+
+      <!-- your marks -->
+      <div style="padding-top:18px;border-top:1px solid oklch(0.80 0.02 75)">
+        <p style="margin:0;font-family:'Courier Prime',Courier,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:oklch(0.45 0.02 55)">your marks</p>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;font-size:13px">
+          <p style="margin:0;display:flex;justify-content:space-between;gap:8px"><span style="color:oklch(0.40 0.015 55)">beats noted</span><strong>{{ beatCount }}</strong></p>
+          <p style="margin:0;display:flex;justify-content:space-between;gap:8px"><span style="color:oklch(0.40 0.015 55)">cut</span><strong>{{ cutSummary }}</strong></p>
+          <p style="margin:0;display:flex;justify-content:space-between;gap:8px"><span style="color:oklch(0.40 0.015 55)">off book</span><strong style="color:{{ offBookColor }}">{{ offBookLabel }}</strong></p>
+        </div>
+        <p style="margin:12px 0 0;font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:12px;letter-spacing:.06em;color:oklch(0.50 0.02 60)">{{ readsLine }}</p>
+      </div>
+
+      <!-- who else -->
+      <div style="padding-top:18px;border-top:1px solid oklch(0.80 0.02 75)">
+        <p style="margin:0;display:flex;align-items:center;gap:8px;font-family:'Courier Prime',Courier,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:oklch(0.45 0.02 55)"><span style="width:7px;height:7px;border-radius:999px;background:oklch(0.58 0.18 45);animation:breathe 2s ease-in-out infinite"></span>in the house with this</p>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ house }}" as="h" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px"><span role="img" aria-label="{{ h.name }}" style="width:28px;height:28px;border-radius:999px;flex-shrink:0;border:1.5px solid oklch(0.16 0.01 45);background:{{ h.bg }};display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:14px;color:oklch(0.96 0.02 85)">{{ h.init }}</span><span style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><strong>{{ h.name }}</strong><span style="color:oklch(0.45 0.02 55)"> · {{ h.city }} · {{ h.did }}</span></span><span style="margin-left:auto;flex-shrink:0;font-family:'Courier Prime',Courier,monospace;font-size:11px;color:oklch(0.55 0.02 60)">{{ h.when }}</span></div>
+          </sc-for>
+        </div>
+        <p style="margin:12px 0 0;font-family:'Courier Prime',Courier,monospace;font-style:italic;font-size:11px;letter-spacing:.06em;color:oklch(0.55 0.02 60)">(48 actors have worked on this. 3 this week.)</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<!-- MOBILE RUN BAR -->
+<sc-if value="{{ narrow }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:0;right:0;bottom:0;z-index:45;padding:10px 12px 14px;background:linear-gradient(to top,oklch(0.96 0.02 85) 60%,transparent);animation:barin .5s cubic-bezier(.22,1,.36,1) both">
+    <div style="display:flex;gap:8px;max-width:560px;margin:0 auto">
+      <a href="#" style="flex:1;display:inline-flex;align-items:center;justify-content:space-between;gap:12px;height:56px;padding:0 8px 0 20px;border-radius:999px;background:oklch(0.15 0.03 45);color:oklch(0.96 0.02 85);font-size:16px;font-weight:700;box-shadow:0 14px 40px -12px rgb(0 0 0/.5)" style-hover="color:oklch(0.96 0.02 85)">Rehearse this<span style="display:inline-flex;width:40px;height:40px;border-radius:999px;background:oklch(0.92 0.18 100);color:oklch(0.15 0.03 45);align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"></path></svg></span></a>
+    </div>
+  </div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;readGate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Preview&quot;},&quot;overdone&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:0.22,&quot;min&quot;:0,&quot;max&quot;:1,&quot;step&quot;:0.01,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Preview&quot;}}">
+class NavBase extends DCLogic {
+  componentDidMount() { this._ly = 0; this._hd = false; this._onScroll = () => { const h = document.querySelector("header"); if (!h) return; const y = scrollY, down = y > this._ly + 4, up = y < this._ly - 4; this._ly = y; const hd = down && y > 120 ? true : (up || y < 80) ? false : this._hd; if (hd !== this._hd) { this._hd = hd; h.style.transition = "transform .45s cubic-bezier(.22,1,.36,1)"; h.style.transform = hd ? "translateY(-120%)" : "translateY(0)"; } }; addEventListener("scroll", this._onScroll, { passive: true }); }
+  componentWillUnmount() { removeEventListener("scroll", this._onScroll); }
+}
+class Component extends NavBase {
+  state = { mode: "read", saved: false, justSaved: false, offBook: false, size: 1, gated: null, wide: true, beats: {}, openBeat: null, notes: "", noteState: "", cutStart: null, cutEnd: null, cutSaved: null };
+  barRef = React.createRef(); timers = [];
+  M = { who: "Hedda", play: "Hedda Gabler", author: "Henrik Ibsen", year: "1891", actScene: "Act II", cloth: "oklch(0.31 0.085 25)", emblem: "⚘", partner: "Thea", words: "212", edition: "Gosse & Archer translation (1907), public domain", context: "Thea Elvsted has just confided that she left her husband to follow Løvborg to town, and that she has never been so happy. Hedda, who married Tesman for safety and is bored to the point of cruelty, is alone with her for the first time.", direction: "(hedda. alone with thea. the afternoon light is going.)", text: "Oh, if you could only understand how poor I am. And fate has made you so rich!\n\nI think I shall burn your hair off after all. No. I'm not serious. Sit down. You said you'd never been so happy. Say it again. I want to hear how it sounds in this room.\n\nDo you know what I want? I want, for once in my life, to have power over a human destiny. Not yours, Thea. Not his. Someone's. Anyone's. And I never have. Never. I have been a spectator at my own life, with good seats, and a programme, and nothing on the stage that I chose.\n\nYou walked out of a house. You simply walked out. I have never once done a thing that was not expected of me, and I am so tired I could sleep for a year.\n\nThere. Don't look at me like that. Drink your punch." };
+  CLOTHS = ["oklch(0.32 0.055 155)", "oklch(0.31 0.085 25)", "oklch(0.30 0.065 255)", "oklch(0.34 0.070 70)", "oklch(0.31 0.045 300)", "oklch(0.30 0.020 240)"];
+  componentDidMount() { super.componentDidMount(); this.ro = new ResizeObserver(() => { const w = document.body.clientWidth >= 880; if (w !== this.state.wide) this.setState({ wide: w }); }); this.ro.observe(document.body); }
+  componentWillUnmount() { super.componentWillUnmount(); this.ro && this.ro.disconnect(); this.timers.forEach(clearTimeout); }
+  setMode(mode) { this.setState({ mode }); const b = this.barRef.current; if (b && b.getBoundingClientRect().top < 0) scrollTo({ top: b.offsetTop, behavior: "smooth" }); }
+  renderVals() {
+    const s = this.state, m = this.M, gated = s.gated == null ? (this.props.readGate ?? false) : s.gated;
+    const overdone = this.props.overdone ?? 0.22, level = overdone < 0.25 ? 0 : overdone < 0.5 ? 1 : overdone < 0.75 ? 2 : 3;
+    const odLabels = ["fresh", "recognizable", "common", "warhorse"], odBig = ["Rarely.", "Now and then.", "Often.", "Constantly."];
+    const odColor = ["oklch(0.50 0.12 155)", "oklch(0.30 0.01 50)", "oklch(0.58 0.18 45)", "oklch(0.16 0.01 45)"][level];
+    const odDark = ["oklch(0.80 0.10 155)", "oklch(0.85 0.02 75)", "oklch(0.85 0.15 80)", "oklch(0.75 0.15 30)"][level];
+    const odNote = ["Auditors don't see this one much. You'll have the room to yourself.", "Seen now and then. A strong choice still lands.", "Auditors know this one. Walk in knowing that.", "Everyone brings this. Walk in knowing that, or pick the one below it."][level];
+    const all = m.text.split("\n\n"), secs = 100, per = secs / all.length;
+    const cs = s.cutStart, ce = s.cutEnd, hasCut = cs != null && ce != null, inCut = (i) => !hasCut ? true : i >= cs && i <= ce;
+    const cutSecs = hasCut ? Math.round((ce - cs + 1) * per) : secs, clock = (n) => Math.floor(n / 60) + ":" + String(n % 60).padStart(2, "0");
+    const paras = (gated ? all.slice(0, 3) : all).map((t, i) => { const open = s.openBeat === i, has = !!(s.beats[i] || "").trim(); return { t, delay: (0.05 + i * 0.06) + "s", open, beat: s.beats[i] || "", noteBorder: has ? "oklch(0.16 0.01 45)" : "oklch(0.80 0.02 75)", noteBg: has ? "oklch(0.92 0.18 100)" : "transparent", noteFg: has ? "oklch(0.16 0.01 45)" : "oklch(0.55 0.02 60)", noteOp: has || open ? 1 : 0.55, note: () => this.setState({ openBeat: open ? null : i }), setBeat: (e) => this.setState({ beats: Object.assign({}, s.beats, { [i]: e.target.value }) }) }; });
+    const sizes = [["15px", "smaller", "11px"], ["17px", "default", "13px"], ["20px", "bigger, for the wings", "15px"]];
+    const facts = [["1:40"], ["20s–30s"], ["women's roles"], ["cold fury"], ["classical"]].map(([v], i) => ({ v, notFirst: i > 0 }));
+    const beatCount = Object.values(s.beats).filter(b => b.trim()).length;
+    const noteIt = () => { this.timers.forEach(clearTimeout); this.setState({ noteState: "(saving.)" }); this.timers = [setTimeout(() => this.setState({ noteState: "(saved.)" }), 800), setTimeout(() => this.setState({ noteState: "" }), 2600)]; };
+    const copyParas = all.filter((_, i) => inCut(i));
+    return {
+      cols: s.wide ? "minmax(0,1fr) 300px" : "1fr", asidePos: s.wide ? "sticky" : "static", narrow: !s.wide, barRef: this.barRef,
+      m, inLane: true, facts,
+      tag: { label: "classical", border: "oklch(0.70 0.16 45)", bg: "transparent", fg: "oklch(0.85 0.12 60)" },
+      od: { label: odLabels[level], big: odBig[level], color: odColor, dark: odDark, note: odNote, title: level >= 2 ? "You will not be the only one bringing this today." : "How often a casting room hears this piece.", ticks: [0, 1, 2, 3].map(i => i <= level ? 1 : 0.25), cells: Array.from({ length: 10 }, (_, i) => i < Math.round(overdone * 10) ? odColor : "oklch(0.85 0.02 75)") },
+      modes: [["read", "Read", "The piece as written"], ["cut", "Cut", "Trim it to an audition length"], ["copy", "Copy", "Print or copy your sides"]].filter(([id]) => !gated || id === "read").map(([id, label, hint]) => ({ label, hint, on: s.mode === id, bg: s.mode === id ? "oklch(0.16 0.01 45)" : "transparent", fg: s.mode === id ? "oklch(0.96 0.02 85)" : "oklch(0.45 0.02 55)", pick: () => this.setMode(id) })),
+      isRead: s.mode === "read", isCut: s.mode === "cut", isCopy: s.mode === "copy",
+      sizes: sizes.map(([px, title, fs], i) => ({ fs, title, on: s.size === i, bg: s.size === i ? "oklch(0.16 0.01 45)" : "transparent", fg: s.size === i ? "oklch(0.96 0.02 85)" : "oklch(0.45 0.02 55)", pick: () => this.setState({ size: i }) })),
+      textSize: sizes[s.size][0], paras, gated, open: !gated, ungate: () => this.setState({ gated: false }),
+      cutParas: all.map((t, i) => { const kept = inCut(i), isStart = i === cs, pending = cs != null && ce == null; return { t, n: i + 1, rail: kept && hasCut ? "oklch(0.58 0.18 45)" : isStart ? "oklch(0.92 0.18 100)" : "oklch(0.85 0.02 75)", bg: isStart && pending ? "oklch(0.92 0.18 100 / .25)" : "transparent", fg: kept ? "oklch(0.18 0.01 45)" : "oklch(0.60 0.02 60)", deco: kept ? "none" : "line-through", pick: () => { if (cs == null || ce != null) this.setState({ cutStart: i, cutEnd: null }); else this.setState({ cutStart: Math.min(cs, i), cutEnd: Math.max(cs, i) }); } }; }),
+      cutClock: clock(cutSecs), cutClockColor: cutSecs <= 60 ? "oklch(0.50 0.12 155)" : cutSecs <= 120 ? "oklch(0.16 0.01 45)" : "oklch(0.58 0.18 45)",
+      cutOp: hasCut ? 1 : 0.45, cutSaveLabel: s.cutSaved && s.cutSaved[0] === cs && s.cutSaved[1] === ce ? "Cut saved" : "Save cut", saveCut: () => hasCut && this.setState({ cutSaved: [cs, ce] }), clearCut: () => this.setState({ cutStart: null, cutEnd: null, cutSaved: null }),
+      cutSummary: s.cutSaved ? clock(Math.round((s.cutSaved[1] - s.cutSaved[0] + 1) * per)) + " of 1:40" : "full piece",
+      copyScope: hasCut ? "your cut, " + clock(cutSecs) + "." : "the full piece, 1:40.", copyParas,
+      exports: [{ label: "Print PDF", sub: "letter · 14pt", bg: "oklch(0.15 0.03 45)", fg: "oklch(0.96 0.02 85)" }, { label: "Copy text", sub: "for notes", bg: "transparent", fg: "oklch(0.16 0.01 45)" }, { label: "Copy link", sub: "/m/35008", bg: "transparent", fg: "oklch(0.16 0.01 45)" }],
+      saved: s.saved, save: () => this.setState({ saved: !s.saved, justSaved: !s.saved }), saveTitle: s.saved ? "In your collection" : "Save to collection", saveBg: s.saved ? "oklch(0.92 0.18 100)" : "transparent", saveFill: s.saved ? "currentColor" : "none", justSaved: s.justSaved && s.saved,
+      goCut: () => this.setMode("cut"), goNote: () => { this.setMode("read"); this.setState({ openBeat: 0 }); },
+      offBook: s.offBook, toggleOffBook: () => this.setState({ offBook: !s.offBook }), offBookTitle: s.offBook ? "Off book. Tap to unmark" : "Mark as off book", offBookColor: s.offBook ? "oklch(0.58 0.18 45)" : "oklch(0.45 0.02 55)", offBookFill: s.offBook ? "oklch(0.92 0.18 100)" : "none", offBookLabel: s.offBook ? "yes" : "not yet",
+      beatCount: String(beatCount),
+      notes: s.notes, setNotes: (e) => { this.setState({ notes: e.target.value }); noteIt(); }, noteState: s.noteState, noteOp: s.noteState ? 1 : 0,
+      readsLine: gated ? "(0 free reads left this month. plus is unlimited.)" : "(2 free reads left this month.)",
+      house: [{ name: "Maya", city: "NYC", did: "rehearsed", when: "2h", init: "M", bg: this.CLOTHS[2] }, { name: "Jordan", city: "Chicago", did: "saved", when: "yesterday", init: "J", bg: this.CLOTHS[0] }, { name: "Priya", city: "LA", did: "read", when: "3d", init: "P", bg: this.CLOTHS[4] }],
+      fromPlay: [{ who: "Hedda", line: "I am burning your child, Thea! Burning it, curly-locks!", meta: "Act III · 1:05" }, { who: "Løvborg", line: "I have torn my own life to pieces. So I may as well tear my life-work too.", meta: "Act III · 1:30" }, { who: "Tesman", line: "Hedda, think of it. Suppose it were true. Suppose I were to be passed over.", meta: "Act II · 0:50" }],
+      similar: [{ who: "Julie", play: "Miss Julie · Strindberg", meta: "1:55 · wounded pride", emblem: "✂", cloth: this.CLOTHS[3] }, { who: "Hilde", play: "The Master Builder · Ibsen", meta: "1:20 · electric", emblem: "♜", cloth: this.CLOTHS[0] }, { who: "Nora", play: "A Doll's House · Ibsen", meta: "1:35 · steel", emblem: "❁", cloth: this.CLOTHS[2] }],
+    };
+  }
+}
+</script>
+</body>
+</html>

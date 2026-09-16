@@ -26,7 +26,13 @@ const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
-  preload: false,
+  /* The one face here that is preloaded. It sets every label in the landing
+     nav, and `display: swap` means the pill is first measured in the fallback
+     and then re-measured when the real file lands — which moves the CTA, and
+     because the pill is centred, moves the logo with it. Preloading collapses
+     that window. The display and Courier faces stay unpreloaded: neither is
+     used for anything whose width decides a layout. */
+  preload: true,
 });
 
 /** Stage directions only. Always italic, always lowercase, always in parens. */
