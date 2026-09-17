@@ -1030,10 +1030,15 @@
   .stage-mote { animation: none; opacity: 0; }
 }
 
-/* Slow breathing aura behind the app-teaser phones */
+/* Slow breathing aura behind the app-teaser phones.
+   Scale only. The element centres itself with `-translate-x-1/2
+   -translate-y-1/2`, which in Tailwind v4 is the standalone `translate`
+   property — restating that centering in `transform` composes with it rather
+   than replacing it, and the aura sat a full half-width up and to the left of
+   the phones it is supposed to be behind. */
 @keyframes glow-breathe {
-  0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(1); }
-  50%      { opacity: 1;    transform: translate(-50%, -50%) scale(1.06); }
+  0%, 100% { opacity: 0.75; scale: 1; }
+  50%      { opacity: 1;    scale: 1.06; }
 }
 .animate-glow-breathe {
   animation: glow-breathe 6s ease-in-out infinite;
@@ -4497,13 +4502,19 @@
 .t-playbill[data-state="closed"] {
   animation: t-playbill-out 0.26s cubic-bezier(0.4, 0, 1, 1) both;
 }
+/* These animate the DELTA only — never the centering.
+   Tailwind v4 centres the dialog with `translate: -50% -50%`, which is the
+   standalone `translate` property, NOT `transform`. The two COMPOSE, so
+   keyframes that helpfully re-stated `translate(-50%, -50%)` in `transform`
+   moved the playbill a full -100%/-100% and parked it in the top-left corner.
+   Leave centering to `translate` and put only the travel here. */
 @keyframes t-playbill-in {
-  from { opacity: 0; transform: translate(-50%, calc(-50% + 16px)) scale(0.975); }
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  from { opacity: 0; transform: translateY(16px) scale(0.975); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes t-playbill-out {
-  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  to { opacity: 0; transform: translate(-50%, calc(-50% - 14px)) scale(0.99); }
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-14px) scale(0.99); }
 }
 @media (prefers-reduced-motion: reduce) {
   .t-playbill[data-state="open"],
