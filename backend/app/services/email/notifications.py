@@ -193,15 +193,27 @@ def send_submission_notification(
         raise
 
 
+def _date_label(when) -> Optional[str]:
+    """A date a reader can check, not a duration. None passes straight through."""
+    if when is None:
+        return None
+    return f"{when.day} {when.strftime('%B %Y')}"
+
+
 def send_upgrade_notification(
     user_name: str,
     user_email: str,
     tier_display_name: str,
     billing_period: str,
+    trial_end=None,
 ) -> dict:
     """
-    Send upgrade notification to admin when a user upgrades to a paid tier.
-    Fire-and-forget — never raises.
+    Tell me when somebody reaches a paid tier. Fire-and-forget — never raises.
+
+    ``trial_end`` set means they started a TRIAL and have paid nothing yet. That
+    distinction has to survive into the subject line: this mail fires from
+    checkout.session.completed, which is where a 14-day trial begins, and
+    calling that "New upgrade" reported a sale that had not happened.
     """
     if not os.getenv("RESEND_API_KEY"):
         print("Warning: RESEND_API_KEY not set. Upgrade notification disabled.")
@@ -213,13 +225,29 @@ def send_upgrade_notification(
         client = ResendEmailClient()
         templates = EmailTemplates()
         timestamp = datetime.now().strftime("%B %d, %Y at %I:%M %p UTC")
-        subject = f"New upgrade: {user_name or user_email} -> {tier_display_name}"
+        who = user_name or user_email
+        trial_end_label = _date_label(trial_end)
+        if trial_end_label:
+            subject = f"Trial started: {who} -> {tier_display_name} (converts {trial_end_label})"
+            headline = "New trial started"
+            lede = (
+                f"{who} started a {tier_display_name} trial. Card on file, "
+                f"nothing charged yet. It converts on {trial_end_label} "
+                "unless they cancel first."
+            )
+        else:
+            subject = f"New paid subscriber: {who} -> {tier_display_name}"
+            headline = "New paid subscriber"
+            lede = f"{who} went straight to a paid {tier_display_name} plan."
         html = templates.render_upgrade_notification(
             user_name=user_name or "Unknown",
             user_email=user_email,
             tier_display_name=tier_display_name,
             billing_period=billing_period,
             timestamp=timestamp,
+            headline=headline,
+            lede=lede,
+            trial_end_label=trial_end_label,
         )
         return client.send_email(
             to="canberk@actorrise.com",
@@ -228,4 +256,82 @@ def send_upgrade_notification(
         )
     except Exception as e:
         print(f"Error sending upgrade notification: {e}")
+        return {"id": "error", "status": "failed"}
+
+
+def send_trial_ending_notification(
+    user_name: str,
+    user_email: str,
+    tier_display_name: str,
+    trial_end=None,
+) -> dict:
+    """Stripe's 3-day warning, forwarded to me. Fire-and-forget — never raises."""
+    if not os.getenv("RESEND_API_KEY"):
+        print("Warning: RESEND_API_KEY not set. Trial-ending notification disabled.")
+        return {"id": "mock_trial_ending_id", "status": "disabled"}
+
+    try:
+        client = ResendEmailClient()
+        templates = EmailTemplates()
+        who = user_name or user_email
+        trial_end_label = _date_label(trial_end) or "in 3 days"
+        subject = f"Trial ends {trial_end_label}: {who} ({tier_display_name})"
+        html = templates.render_trial_ending_notification(
+            user_name=user_name or "Unknown",
+            user_email=user_email,
+            tier_display_name=tier_display_name,
+            trial_end_label=trial_end_label,
+        )
+        return client.send_email(to="canberk@actorrise.com", subject=subject, html=html)
+    except Exception as e:
+        print(f"Error sending trial-ending notification: {e}")
+        return {"id": "error", "status": "failed"}
+
+
+#: Outcome word -> how the mail should read. Anything unmapped is reported
+#: verbatim rather than guessed at, because a wrong label here is worse than
+#: an unfamiliar one.
+_TRIAL_OUTCOME_COPY = {
+    "converted": ("Trial converted", "The first charge went through."),
+    "cancelled": ("Trial cancelled", "They left before being charged."),
+    "past_due": (
+        "Trial ended, payment failed",
+        "The card was declined at the end of the trial. Worth a look in Stripe.",
+    ),
+}
+
+
+def send_trial_ended_notification(
+    user_name: str,
+    user_email: str,
+    tier_display_name: str,
+    outcome: str,
+    stripe_status: str = "",
+) -> dict:
+    """Tell me how a trial finished. Fire-and-forget — never raises."""
+    if not os.getenv("RESEND_API_KEY"):
+        print("Warning: RESEND_API_KEY not set. Trial-ended notification disabled.")
+        return {"id": "mock_trial_ended_id", "status": "disabled"}
+
+    try:
+        client = ResendEmailClient()
+        templates = EmailTemplates()
+        who = user_name or user_email
+        headline, lede = _TRIAL_OUTCOME_COPY.get(
+            outcome,
+            (f"Trial ended: {outcome}", f"Stripe moved it to {stripe_status or outcome}."),
+        )
+        subject = f"{headline}: {who} ({tier_display_name})"
+        html = templates.render_trial_ended_notification(
+            user_name=user_name or "Unknown",
+            user_email=user_email,
+            tier_display_name=tier_display_name,
+            headline=headline,
+            lede=lede,
+            outcome=outcome,
+            stripe_status=stripe_status or outcome,
+        )
+        return client.send_email(to="canberk@actorrise.com", subject=subject, html=html)
+    except Exception as e:
+        print(f"Error sending trial-ended notification: {e}")
         return {"id": "error", "status": "failed"}
