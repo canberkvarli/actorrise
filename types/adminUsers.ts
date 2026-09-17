@@ -77,6 +77,16 @@ export interface AdminUserDetailResponse {
     tier_name: string;
     tier_display_name: string;
     status: string;
+    /**
+     * Which kind of membership this is, because `status` cannot say.
+     * 'comp'   — granted by hand, no card; trial_end is when access switches off
+     * 'trial'  — Stripe trial, card on file; trial_end is when it CHARGES
+     * 'stripe' — a paying Stripe subscription
+     */
+    kind: "comp" | "trial" | "stripe";
+    is_comp: boolean;
+    source: string | null;
+    stripe_subscription_id: string | null;
     billing_period: string;
     current_period_start: string | null;
     current_period_end: string | null;

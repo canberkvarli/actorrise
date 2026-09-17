@@ -299,6 +299,11 @@ class EmailTemplates:
             trial_end_label=trial_end_label,
         )
 
+    def render_comp_expiry_notification(self, items: list) -> str:
+        """Render the comped-membership expiry digest (sent to admin)."""
+        template = self.env.get_template('comp_expiry_notification.html')
+        return template.render(items=items)
+
     def render_trial_ended_notification(
         self,
         user_name: str,

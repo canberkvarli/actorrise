@@ -672,10 +672,18 @@ export default function AdminUserDetailPage() {
                 <p className="text-sm">
                   Current: <span className="font-medium">{data.subscription.tier_display_name}</span>
                   {" · "}
-                  {data.subscription.status}
+                  {/* A comp and a Stripe trial are both status "trialing" but end
+                      in opposite ways, and this line used to call both of them
+                      "expires" — so a trial about to charge a card read as a
+                      freebie running out. The backend now says which it is. */}
+                  {data.subscription.kind === "comp" ? "comped" : data.subscription.status}
                   {data.subscription.trial_end
-                    ? ` · expires ${new Date(data.subscription.trial_end).toLocaleDateString()}`
-                    : ""}
+                    ? data.subscription.kind === "trial"
+                      ? ` · charges ${new Date(data.subscription.trial_end).toLocaleDateString()}`
+                      : ` · expires ${new Date(data.subscription.trial_end).toLocaleDateString()}`
+                    : data.subscription.kind === "comp"
+                      ? " · no expiry"
+                      : ""}
                 </p>
               )}
 

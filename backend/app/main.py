@@ -1,7 +1,9 @@
 import logging
+import os
 import threading
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from app.api.account import router as account_router
 from app.api.admin.feedback import router as admin_feedback_router
@@ -272,6 +274,54 @@ def _start_rehearsal_sweep_scheduler() -> None:
     logger.info("Rehearsal session sweep started (hourly)")
 
 
+def _start_comp_expiry_scheduler() -> None:
+    """Daily digest of comped memberships about to lapse.
+
+    A Stripe trial gets three days' warning from Stripe itself. A comp gets
+    nothing — there is no subscription behind it to fire a webhook — so it ends
+    in silence and the teacher finds out when their class cannot log in.
+
+    Daily rather than hourly, and silent when nothing is expiring: a digest that
+    arrives every day saying "nothing" is a digest you stop opening. Rides the
+    existing web dyno like the other schedulers rather than adding a paid Render
+    Cron Job.
+    """
+
+    send_hour = int(os.getenv("COMP_EXPIRY_DIGEST_HOUR", "16"))  # 16:00 UTC ≈ 9am PT
+    sent_on: dict[str, bool] = {}
+
+    def loop() -> None:
+        # Offset again from the other three so four threads don't wake together.
+        time.sleep(150)
+        while True:
+            try:
+                now = datetime.now(timezone.utc)
+                today = now.strftime("%Y-%m-%d")
+                # The date guard is in-process, so a restart inside the send
+                # hour can repeat the digest once. A duplicate email is a far
+                # cheaper failure than a missed expiry, so it stays this simple
+                # rather than growing a table to remember one boolean.
+                if now.hour == send_hour and not sent_on.get(today):
+                    from app.core.database import SessionLocal
+                    from app.services.comp_expiry import send_comp_expiry_digest
+
+                    _db = SessionLocal()
+                    try:
+                        count = send_comp_expiry_digest(_db)
+                        sent_on.clear()
+                        sent_on[today] = True
+                        if count:
+                            logger.info("comp expiry digest: reported %s comp(s)", count)
+                    finally:
+                        _db.close()
+            except Exception as e:  # noqa: BLE001
+                logger.warning("comp expiry digest failed (non-fatal): %s", e)
+            time.sleep(max(60, 3600 - (time.time() % 3600)))
+
+    threading.Thread(target=loop, daemon=True).start()
+    logger.info("Comp expiry digest scheduler started (daily at %02d:00 UTC)", send_hour)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _init_db()
@@ -285,6 +335,7 @@ async def lifespan(app: FastAPI):
     _start_saved_piece_reminder_scheduler()
     _start_lifecycle_email_scheduler()
     _start_rehearsal_sweep_scheduler()
+    _start_comp_expiry_scheduler()
     yield
 
 

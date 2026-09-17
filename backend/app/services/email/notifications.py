@@ -301,6 +301,48 @@ _TRIAL_OUTCOME_COPY = {
 }
 
 
+def send_comp_expiry_notification(rows: list) -> dict:
+    """Digest of comped memberships ending soon. Fire-and-forget — never raises.
+
+    Comps have no Stripe subscription, so no webhook can announce them; without
+    this they lapse in silence and the teacher finds out when their class
+    cannot log in.
+    """
+    if not os.getenv("RESEND_API_KEY"):
+        print("Warning: RESEND_API_KEY not set. Comp expiry notification disabled.")
+        return {"id": "mock_comp_expiry_id", "status": "disabled"}
+
+    try:
+        client = ResendEmailClient()
+        templates = EmailTemplates()
+        items = []
+        for r in rows:
+            if r.get("expired"):
+                when = "expired"
+            elif r.get("days_left", 0) <= 0:
+                when = "today"
+            elif r["days_left"] == 1:
+                when = "tomorrow"
+            else:
+                when = f"in {r['days_left']} days"
+            items.append({**r, "when": when, "date": _date_label(r.get("trial_end")) or ""})
+
+        expired = sum(1 for r in rows if r.get("expired"))
+        soon = len(rows) - expired
+        if expired and soon:
+            subject = f"{soon} comp{'s' if soon > 1 else ''} ending, {expired} just lapsed"
+        elif expired:
+            subject = f"{expired} comp{'s' if expired > 1 else ''} just lapsed"
+        else:
+            subject = f"{soon} comp{'s' if soon > 1 else ''} ending soon"
+
+        html = templates.render_comp_expiry_notification(items=items)
+        return client.send_email(to="canberk@actorrise.com", subject=subject, html=html)
+    except Exception as e:
+        print(f"Error sending comp expiry notification: {e}")
+        return {"id": "error", "status": "failed"}
+
+
 def send_trial_ended_notification(
     user_name: str,
     user_email: str,
