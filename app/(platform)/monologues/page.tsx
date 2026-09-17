@@ -31,7 +31,13 @@ import { SearchCurtain } from "@/components/monologue/SearchCurtain";
 // A ticket stub for "nothing on this bill" — the masks were already doing duty
 // as the gibberish/short empty state and as a starting-point tile, so film & TV
 // coming back empty looked identical to two other things.
-import { ScriptPagesSketch, SpotlightSketch, TicketSketch } from "@/components/brand/sketches";
+import {
+  ClapperSketch,
+  MasksSketch,
+  ScriptPagesSketch,
+  SpotlightSketch,
+  TicketSketch,
+} from "@/components/brand/sketches";
 import { SearchFiltersPanel } from "@/components/monologue/SearchFiltersPanel";
 import { NoResultsState } from "@/components/monologue/NoResultsState";
 import { StartingPoints } from "@/components/monologue/StartingPoints";
@@ -277,7 +283,16 @@ function SearchContent() {
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  /* An empty submit used to set this and nothing else: `jitter` was never
+     read, so the `.search-jitter` class in globals.css was never applied to
+     anything and pressing Search with an empty box did literally nothing. It
+     shakes the bar, focuses it, and says what it wants. */
   const [jitter, setJitter] = useState(false);
+  const emptyPromptRef = useRef<HTMLInputElement | null>(null);
+  const nudgeEmpty = useCallback(() => {
+    setJitter(true);
+    emptyPromptRef.current?.focus();
+  }, []);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchAbortRef = useRef<AbortController | null>(null);
   const filmTvAbortRef = useRef<AbortController | null>(null);
@@ -915,7 +930,7 @@ function SearchContent() {
     if (searchMode === "film_tv") {
       const hasQueryOrFilters = filmTvQuery.trim() !== "" || Object.entries(filters).some(([, v]) => v !== "") || maxOverdoneScore < 1;
       if (!hasQueryOrFilters) {
-        setJitter(true);
+        nudgeEmpty();
         return;
       }
       // Cancel any in-flight search
@@ -1007,7 +1022,7 @@ function SearchContent() {
     }
     const hasQueryOrFilters = playsQuery.trim() !== "" || Object.entries(filters).some(([, v]) => v !== "") || maxOverdoneScore < 1;
     if (!hasQueryOrFilters) {
-      setJitter(true);
+      nudgeEmpty();
       return;
     }
     await performSearch(playsQuery, filters);
@@ -1603,7 +1618,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   );
 
   const headDirection =
-    headState === "searching"
+    /* The shake alone says "no", not "no, because". The direction line is
+       already the page's voice; it holds the answer until the box has one. */
+    jitter
+      ? "(give me something. a feeling, a play, a name.)"
+      : headState === "searching"
       ? "(the house goes quiet.)"
       : headState === "results"
         ? "(lights to half.)"
@@ -1732,19 +1751,41 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
           <div className="min-w-0 flex-1 basis-80">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.p
-                key={headDirection}
-                className="t-dir"
-                style={{ color: "var(--t-muted-dark-2)" }}
-                initial={reducedMotion ? false : { opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
-                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-              >
-                {headDirection}
-              </motion.p>
-            </AnimatePresence>
+            <div className="flex items-center gap-3">
+              {/* Which shelf you are on, drawn. The tab and the caption both
+                  say it in words; this says it at a glance, and redrawing on
+                  every switch is what makes the press feel like an event. */}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={searchMode}
+                  className="t-shelf-mark"
+                  aria-hidden
+                  initial={reducedMotion ? false : { opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  {searchMode === "film_tv" ? (
+                    <ClapperSketch size={30} eager />
+                  ) : (
+                    <MasksSketch size={30} eager />
+                  )}
+                </motion.span>
+              </AnimatePresence>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.p
+                  key={headDirection}
+                  className="t-dir"
+                  style={{ color: "var(--t-muted-dark-2)" }}
+                  initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  {headDirection}
+                </motion.p>
+              </AnimatePresence>
+            </div>
             <h1
               className="mt-2"
               style={{
@@ -1887,7 +1928,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             before; only the surface changed. */}
         <div className="flex flex-wrap items-stretch gap-3">
           <div
-            className="group relative flex min-w-0 flex-1 basis-80 items-center gap-3 px-5"
+            className={`group relative flex min-w-0 flex-1 basis-80 items-center gap-3 px-5${
+              jitter ? " search-jitter" : ""
+            }`}
+            onAnimationEnd={() => setJitter(false)}
             style={{
               minHeight: 68,
               borderRadius: 40,
@@ -1922,6 +1966,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
                 typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 800);
               }}
+              ref={emptyPromptRef}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               onFocus={() => {
                 pauseTypewriter();
