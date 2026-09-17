@@ -7,6 +7,16 @@ to the database.
 
 ---
 
+> **Decision, 2026-09-17, after this survey was written.** Canberk's call: go
+> the bounded fair-use excerpt route now rather than waiting on a signature,
+> matching what the platform already does for 5,505 film and TV rows. 150 to 400
+> words, attribution and a link back to source on every piece, never the whole
+> script. `backend/scripts/scrape_contemporary_plays.py` implements that posture.
+> The licensing path below is not cancelled; it becomes the way to lift the
+> 400-word cap and get titles that are not posted publicly anywhere. The
+> recommendation to approach Stage Partners first still stands, and the drafted
+> emails are still unsent.
+
 ## The answer, plainly
 
 **No scrapeable source exists. This has to be a licensing deal.**

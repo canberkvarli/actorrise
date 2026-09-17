@@ -1,0 +1,14 @@
+{
+  "_README": {
+    "year": 0,
+    "source": "NOT A PLAY. This key documents the file and is ignored by loaders that filter on a real title.",
+    "note": "Verified first-production or first-publication years, keyed by play title. This file is the ONLY source of `year_written` for scrape_contemporary_plays.py. A year here must come from a checked source about the PLAY itself: a publisher catalogue page, a premiere record, a Playbill/IBDB entry. It must NEVER be taken from a page label, an anthology or collection title, a 'Time Period' sidebar, or the word 'contemporary' appearing on the source page. That last mistake is what H-20 documents: 325 plays from 1892-1926 were labelled contemporary because the word appeared on a 1920 anthology cover. A title absent from this file gets year_written=NULL and is not categorised contemporary, however obviously modern it looks. Unknown is the safe answer; a guess is not."
+  },
+
+  "Melancholy Play": {
+    "year": 2002,
+    "source": "Premiered 28 June 2002, Piven Theatre, Evanston IL. Second-hand via web search; confirm against the publisher catalogue before a --write run.",
+    "author": "Sarah Ruhl",
+    "verified": false
+  }
+}
