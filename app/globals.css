@@ -6627,6 +6627,61 @@
 }
 .t-mem__foot { border-top: 1.5px solid var(--t-line-light); }
 
+/* --- The rehearsal room ---------------------------------------------------
+   The same palette as `.theatre-stage`, and DELIBERATELY none of its layout.
+
+   `.theatre-stage` carries `position: relative`, `min-height: 100vh`,
+   `isolation: isolate` and a full-bleed `::before` — all correct for a page,
+   all wrong for the rehearsal room, which is a `fixed inset-0 z-[10050]`
+   overlay. Unlayered CSS beats Tailwind's utilities, so putting that class on
+   the root would have overridden `fixed` with `relative` and dropped the whole
+   screen back into the document flow.
+
+   So this is the token half on its own. It mirrors the two blocks that define
+   `.theatre-stage`'s palette; if either of those changes, change this too. */
+.theatre-rehearsal {
+  --page: oklch(0.96 0.02 85);
+  --t-muted-light: oklch(0.42 0.018 55);
+  --t-muted-light-2: oklch(0.46 0.02 55);
+  --t-muted-light-3: oklch(0.52 0.02 60);
+  --t-faint: oklch(0.5 0.02 60);
+  --t-faint-2: oklch(0.55 0.02 62);
+  font-family: var(--t-body);
+}
+.dark .theatre-rehearsal {
+  --t-gel-ink: var(--t-gel);
+  --t-on-gel-ink: oklch(0.15 0.03 45);
+  --page: oklch(0.11 0.012 50);
+
+  --t-paper: oklch(0.19 0.018 52);
+  --t-paper-2: oklch(0.17 0.018 52);
+
+  --t-text: oklch(0.95 0.02 85);
+  --t-text-soft: oklch(0.93 0.02 85);
+  --t-muted-dark: oklch(0.75 0.02 62);
+  --t-muted-dark-2: oklch(0.68 0.02 62);
+  --t-faint: oklch(0.58 0.02 60);
+
+  --t-line-light: oklch(0.3 0.03 55);
+  --t-line-light-2: oklch(0.34 0.03 55);
+
+  --t-muted-light: oklch(0.72 0.02 62);
+  --t-muted-light-2: oklch(0.77 0.02 62);
+  --t-muted-light-3: oklch(0.82 0.02 70);
+  --t-faint-2: oklch(0.62 0.02 62);
+
+  --t-on-text: oklch(0.15 0.03 45);
+  --t-hard-shadow: oklch(0.07 0.01 45);
+}
+/* Controls do not inherit a face from the UA sheet; without this every button
+   in the room keeps the app's Montserrat while the type around it moves. */
+.theatre-rehearsal button,
+.theatre-rehearsal input,
+.theatre-rehearsal select,
+.theatre-rehearsal textarea {
+  font-family: inherit;
+}
+
 /* --- The scene preview ----------------------------------------------------
    Sides, and the two decisions you make before a run. Everything here is on
    --t-* so the page flips with the theme like the piece pages do. */

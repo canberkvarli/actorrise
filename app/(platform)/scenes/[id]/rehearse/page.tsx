@@ -55,6 +55,7 @@ import { AudioWaveform } from '@/components/scenepartner/AudioWaveform';
 import { parseUpgradeError } from '@/lib/upgradeError';
 import { UpgradeModal } from '@/components/billing/UpgradeModal';
 import { cn } from '@/lib/utils';
+import { theatreFontVars } from '@/lib/fonts/theatre';
 import { ownsLine, sessionRoles } from '@/lib/character-roles';
 import { tokenize, alignWords, wordMatchScore } from '@/lib/word-match';
 import { shouldAdvance, MIN_QUIET_MS } from '@/lib/advance-rule';
@@ -380,14 +381,44 @@ const WATCHER_INTERVAL_MS = Math.floor(MIN_QUIET_MS / 3);
  * rehearsal root, which pinned the whole screen to dark whatever the actor had
  * chosen — the toggle in the platform header simply did nothing in here.
  */
-const STAGE_SURFACE = 'bg-[#f2ece2] text-neutral-900 dark:bg-[#191410] dark:text-neutral-100';
+/* The rehearsal room joins the rest of the theatre.
+ *
+ * The colours here were hand-picked hexes that approximated the design's
+ * palette — #f2ece2 for the room, #191410 for blackout, #faf7f1 for the page —
+ * and they drifted from it, because nothing tied them to it. Worse, the whole
+ * screen was set in the app's sans while every other surface an actor passes
+ * through on the way here (the shelf, the scene preview, the piece) is set in
+ * the theatre's three faces.
+ *
+ * So the surface carries the scope: `theatre-tokens theatre-rehearsal` plus
+ * the faces, on the same constant every full-screen root already uses.
+ * `theatre-rehearsal`, not `theatre-stage`: that class also carries
+ * `position: relative` and a full-bleed ::before, and unlayered CSS beats
+ * Tailwind's `fixed` — it would have dropped this whole overlay back into the
+ * document flow. See globals.css. One change,
+ * and the room, the page, the type and the rules all come from the same place
+ * as the rest of the product — and keep following the theme toggle, which is
+ * what these constants existed to guarantee in the first place.
+ */
+const THEATRE = `theatre-tokens theatre-rehearsal ${theatreFontVars}`;
+
+const STAGE_SURFACE = `${THEATRE} bg-[var(--page)] text-[var(--t-text)]`;
 
 /** Same room, used where only the background is being painted. */
-const STAGE_BG = 'bg-[#f2ece2] dark:bg-[#191410]';
+const STAGE_BG = `${THEATRE} bg-[var(--page)]`;
 
 /**
  * The page the script is printed on — always lighter than the room around it,
  * in both themes, so the eye goes to the words.
+ *
+ * Deliberately NOT on --t-paper, unlike everything above. --t-paper flips with
+ * the theme, and this surface must not: it is a sheet of paper under a light,
+ * and every rule, name and line inside it states its own dark ink
+ * (text-neutral-900, text-black, border-neutral-200). Handing it a token that
+ * goes dark in blackout would leave black type on a dark panel — the same
+ * always-lit-surface problem `.t-m__sheet` solves by fixing its own tokens.
+ * The values are the theatre's light paper and ink, written out because they
+ * are constants here rather than variables.
  */
 const SCRIPT_SURFACE = 'bg-white dark:bg-[#faf7f1] text-neutral-900';
 
@@ -406,14 +437,17 @@ const SCRIPT_SURFACE = 'bg-white dark:bg-[#faf7f1] text-neutral-900';
  */
 const CHROME_DARK = 'dark';
 
+/* Type and rules, from the tokens rather than from the neutral ramp. Each of
+   these already flips with the theme; they just flip to the theatre's values
+   now, which are warm where the neutrals were grey. */
 /** Type on the stage, in either theme. */
-const STAGE_INK = 'text-neutral-900 dark:text-neutral-100';
+const STAGE_INK = 'text-[var(--t-text)]';
 /** A step back from the type: names, secondary lines. */
-const STAGE_INK_SOFT = 'text-neutral-600 dark:text-neutral-400';
+const STAGE_INK_SOFT = 'text-[var(--t-muted-dark)]';
 /** Furthest back: labels, hints, counts. */
-const STAGE_INK_FAINT = 'text-neutral-500 dark:text-neutral-500';
+const STAGE_INK_FAINT = 'text-[var(--t-faint)]';
 /** Rules and outlines drawn on the stage. */
-const STAGE_RULE = 'border-neutral-300 dark:border-neutral-700';
+const STAGE_RULE = 'border-[var(--t-line-light)]';
 
 /**
  * How much of the AI's line may remain when the microphone starts.
@@ -2736,13 +2770,20 @@ function RehearsalPageInner() {
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div
           className={cn("max-w-4xl mx-auto rounded-xl border border-black/5 px-4 sm:px-8 py-5 sm:py-7 shadow-[0_24px_70px_-24px_rgba(203,75,0,0.28),0_10px_34px_-14px_rgba(0,0,0,0.55)]", SCRIPT_SURFACE)}
-          style={{ fontFamily: '"Courier New", Courier, monospace' }}
+          /* The theatre's typewriter, not the browser's. Courier Prime is the
+             face every other script surface in the product is set in — the
+             sides on the scene preview, the cue on the shelf — and the fallback
+             chain stays for the moment before it loads. */
+          style={{ fontFamily: 'var(--t-direction), "Courier New", Courier, monospace' }}
         >
           {sceneWithLines ? (
             <>
               {/* Script header */}
               <div className="text-center mb-6 pb-5 border-b border-neutral-200">
-                <h1 className="text-2xl sm:text-3xl font-bold uppercase tracking-wider text-neutral-900">
+                <h1
+                  className="text-[30px] sm:text-[38px] leading-[1.05] tracking-[-0.02em] text-neutral-900"
+                  style={{ fontFamily: 'var(--t-display)', fontWeight: 400 }}
+                >
                   {sceneWithLines.title}
                 </h1>
                 {sceneWithLines.description?.trim() && (
