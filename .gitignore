@@ -108,3 +108,9 @@ data-gym-cache/
 # out of the repo. Root-anchored so a new file at the top level still shows
 # up in git status instead of vanishing into an ignore rule.
 /notes/
+
+# Editor swap and backup files. app/.globals.css.swp was committed once from a
+# live Vim session; nothing stopped it.
+*.swp
+*.swo
+*~
