@@ -10,12 +10,8 @@
                         <tr><td style="padding:6px 0; font-size:15px; font-weight:600; color:#292929; width:120px;">Name</td><td style="padding:6px 0; font-size:15px; color:#374151;">{{ user_name }}</td></tr>
                         <tr><td style="padding:6px 0; font-size:15px; font-weight:600; color:#292929; width:120px;">Email</td><td style="padding:6px 0; font-size:15px; color:#374151;">{{ user_email }}</td></tr>
                         <tr><td style="padding:6px 0; font-size:15px; font-weight:600; color:#292929; width:120px;">Tier</td><td style="padding:6px 0; font-size:15px; color:#374151;">{{ tier_display_name }}</td></tr>
-                        <tr><td style="padding:6px 0; font-size:15px; font-weight:600; color:#292929; width:120px;">Billing</td><td style="padding:6px 0; font-size:15px; color:#374151;">{{ billing_period }}</td></tr>
-                        {% if trial_end_label %}
-                        <tr><td style="padding:6px 0; font-size:15px; font-weight:600; color:#292929; width:120px;">Charges on</td><td style="padding:6px 0; font-size:15px; color:#374151;">{{ trial_end_label }}</td></tr>
-                        <tr><td style="padding:6px 0; font-size:15px; font-weight:600; color:#292929; width:120px;">Paid so far</td><td style="padding:6px 0; font-size:15px; color:#374151;">Nothing</td></tr>
-                        {% endif %}
-                        <tr><td style="padding:6px 0; font-size:15px; font-weight:600; color:#292929; width:120px;">Time</td><td style="padding:6px 0; font-size:15px; color:#374151;">{{ timestamp }}</td></tr>
+                        <tr><td style="padding:6px 0; font-size:15px; font-weight:600; color:#292929; width:120px;">Outcome</td><td style="padding:6px 0; font-size:15px; color:#374151;">{{ outcome }}</td></tr>
+                        <tr><td style="padding:6px 0; font-size:15px; font-weight:600; color:#292929; width:120px;">Stripe status</td><td style="padding:6px 0; font-size:15px; color:#374151;">{{ stripe_status }}</td></tr>
                     </table>
                 </div>
 {% endblock %}

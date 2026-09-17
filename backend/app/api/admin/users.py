@@ -203,12 +203,30 @@ class AdminRolesPatchRequest(BaseModel):
 def _serialize_subscription(subscription: UserSubscription | None, tier: PricingTier | None) -> dict[str, Any] | None:
     if not subscription:
         return None
+    # `status = 'trialing'` means two opposite things: a Stripe trial that ENDS
+    # BY CHARGING a card, and a comp that ends by switching off. The page showed
+    # both as "trialing · expires <date>", so a trial about to take money read
+    # as a freebie running out. `stripe_subscription_id` is what actually tells
+    # them apart — a comp grant detaches it — so say so here rather than making
+    # every reader of this endpoint work it out again.
+    is_comp = subscription.stripe_subscription_id is None
+    if subscription.status == "trialing":
+        kind = "comp" if is_comp else "trial"
+    else:
+        kind = "comp" if is_comp and subscription.status == "active" else "stripe"
     return {
         "id": subscription.id,
         "tier_id": subscription.tier_id,
         "tier_name": tier.name if tier else "free",
         "tier_display_name": tier.display_name if tier else "Free",
         "status": subscription.status,
+        # comp  — granted by hand, no card, ends by switching off (or never)
+        # trial — Stripe trial, card on file, ends by charging
+        # stripe— a paying Stripe subscription
+        "kind": kind,
+        "is_comp": is_comp,
+        "source": subscription.source,
+        "stripe_subscription_id": subscription.stripe_subscription_id,
         "billing_period": subscription.billing_period,
         "current_period_start": subscription.current_period_start.isoformat() if subscription.current_period_start else None,
         "current_period_end": subscription.current_period_end.isoformat() if subscription.current_period_end else None,
