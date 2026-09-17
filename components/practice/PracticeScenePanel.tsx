@@ -229,10 +229,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
       {/* The scenes */}
       <div className="mt-8 min-w-0 md:mt-0">
         {isProcessing ? (
-          <StatusNote>
-            <IconLoader2 className="h-4 w-4 animate-spin" />
-            Still pulling scenes out of this script. Hang tight.
-          </StatusNote>
+          <ScenesComingIn />
         ) : isLoading && scenes.length === 0 ? (
           <div className="space-y-2">
             {[1, 2, 3, 4].map((i) => (
@@ -581,23 +578,121 @@ function NothingCameBack({
   );
 }
 
-function StatusNote({
-  children,
-  tone = "muted",
-}: {
-  children: React.ReactNode;
-  tone?: "muted" | "error";
-}) {
+/**
+ * The scenes, arriving.
+ *
+ * This was a dashed box with a spinner and "Still pulling scenes out of this
+ * script. Hang tight." — one static sentence for a wait that is the entire
+ * reason the actor uploaded anything, and the moment the product is doing its
+ * most impressive work. Nothing on screen suggested anything was being built.
+ *
+ * So the panel shows the scenes being cut: ghost rows that draw themselves in,
+ * in order, one after another, and start again — the shape of the list that is
+ * about to exist, filling in. Same row geometry as a real scene row, so when
+ * the actual scenes land they arrive into the shape their placeholders were
+ * holding rather than replacing a spinner with a list.
+ */
+function ScenesComingIn() {
+  const reduce = useReducedMotion();
+  const ghosts = [0, 1, 2, 3, 4];
+
   return (
-    <div
-      className={[
-        "flex items-center justify-center gap-2 border border-dashed px-4 py-8 text-sm text-center",
-        tone === "error"
-          ? "border-destructive/30 text-destructive"
-          : "border-border/60 text-muted-foreground",
-      ].join(" ")}
-    >
-      {children}
+    <div>
+      <p
+        className="m-0 flex items-center gap-2.5 text-[12px] italic tracking-[0.06em]"
+        style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}
+      >
+        {!reduce && (
+          <motion.span
+            aria-hidden
+            className="inline-block h-[7px] w-[7px] rounded-full"
+            style={{ background: "var(--t-gel-ink)" }}
+            animate={{ opacity: [0.3, 1, 0.3], scale: [0.85, 1.15, 0.85] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          />
+        )}
+        (cutting it into scenes.)
+      </p>
+
+      <div className="mt-4 space-y-1.5" aria-hidden>
+        {ghosts.map((i) => (
+          <motion.div
+            key={i}
+            className="relative overflow-hidden rounded-lg border border-l-2"
+            style={{ borderColor: "var(--t-line-light)", height: 52 }}
+            initial={reduce ? false : { opacity: 0.25 }}
+            animate={
+              reduce
+                ? { opacity: 0.4 }
+                : {
+                    opacity: [0.25, 0.75, 0.25],
+                    borderLeftColor: [
+                      "var(--t-line-light)",
+                      "var(--t-gel-ink)",
+                      "var(--t-line-light)",
+                    ],
+                  }
+            }
+            transition={
+              reduce
+                ? { duration: 0 }
+                : {
+                    duration: 2.6,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: i * 0.34,
+                  }
+            }
+          >
+            {/* The row filling in: a numeral, a title, a line of facts. */}
+            <div className="flex h-full items-center gap-3 px-4">
+              <span
+                className="text-[13px] tabular-nums"
+                style={{ fontFamily: "var(--t-direction)", color: "var(--t-faint)" }}
+              >
+                {i + 1}
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <motion.span
+                  className="block h-[9px] rounded-full"
+                  style={{ background: "var(--t-line-light)" }}
+                  initial={reduce ? false : { width: "18%" }}
+                  animate={reduce ? { width: "58%" } : { width: ["18%", "58%", "18%"] }}
+                  transition={
+                    reduce
+                      ? { duration: 0 }
+                      : { duration: 2.6, repeat: Infinity, ease: "easeInOut", delay: i * 0.34 }
+                  }
+                />
+                <motion.span
+                  className="block h-[6px] rounded-full"
+                  style={{ background: "var(--t-line-light)", opacity: 0.6 }}
+                  initial={reduce ? false : { width: "10%" }}
+                  animate={reduce ? { width: "34%" } : { width: ["10%", "34%", "10%"] }}
+                  transition={
+                    reduce
+                      ? { duration: 0 }
+                      : {
+                          duration: 2.6,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          delay: i * 0.34 + 0.12,
+                        }
+                  }
+                />
+              </span>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      <p
+        className="m-0 mt-4 text-[13px]"
+        style={{ color: "var(--t-muted-dark)" }}
+      >
+        This can take a few minutes on a full play. You can leave this page —
+        it keeps going without you.
+      </p>
     </div>
   );
 }

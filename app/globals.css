@@ -6627,6 +6627,100 @@
 }
 .t-mem__foot { border-top: 1.5px solid var(--t-line-light); }
 
+/* --- Theatre forms --------------------------------------------------------
+   The two script modals (Add a scene, Edit details) were plain shadcn forms —
+   grey Labels, default Inputs, a "Add Scene" title in the sans face — opened
+   from a room built out of --t-*. These are the pieces they share: a sheet of
+   paper with a hard gel shadow, courier labels, and fields that look like
+   something typed on rather than filled in. */
+.t-sheet {
+  background: var(--t-paper) !important;
+  color: var(--t-text);
+  border: 1.5px solid var(--t-text) !important;
+  border-radius: 10px;
+  box-shadow: 12px 12px 0 var(--t-gel), 0 40px 100px -30px rgb(0 0 0 / 0.55) !important;
+  font-family: var(--t-body);
+}
+.t-sheet__slug {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--t-muted-dark-2);
+}
+.t-sheet__title {
+  margin: 6px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-sheet__rule {
+  border: 0;
+  border-top: 1.5px dashed color-mix(in oklab, var(--t-text) 22%, transparent);
+  margin: 0;
+}
+
+/* A label is a note in the margin, not a form caption. */
+.t-field__label {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark-2);
+}
+.t-field__label em {
+  font-style: italic;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--t-faint);
+}
+
+/* Typed on, not filled in. */
+.t-field__input,
+.t-field__area {
+  width: 100%;
+  padding: 10px 13px;
+  border-radius: 8px;
+  border: 1.5px solid var(--t-line-light);
+  background: var(--t-paper-2);
+  color: var(--t-text);
+  font-family: var(--t-body);
+  font-size: 15px;
+  line-height: 1.5;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.t-field__area {
+  font-family: var(--t-direction);
+  font-size: 14px;
+  line-height: 1.7;
+  resize: vertical;
+}
+.t-field__input::placeholder,
+.t-field__area::placeholder { color: var(--t-faint); }
+.t-field__input:focus,
+.t-field__area:focus {
+  outline: none;
+  border-color: var(--t-text);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--t-gel-ink) 22%, transparent);
+}
+.t-field__input[data-invalid="true"],
+.t-field__area[data-invalid="true"] {
+  border-color: var(--t-orange-deep);
+}
+.t-field__error {
+  margin: 5px 0 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--t-orange-deep);
+}
+
 /* The head of the room: back to the piece, then what you are learning. */
 .t-mem__back {
   display: inline-flex;
