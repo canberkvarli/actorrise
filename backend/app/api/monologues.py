@@ -834,6 +834,15 @@ async def search_monologues(
                     ),
                     best_cosine=best_cosine,
                     match_strategy=match_strategy,
+                    # Only meaningful on an empty page. A search that ended up
+                    # with rows (pre-pass, attribute fallback) may still carry a
+                    # reason from the vector leg it ran first, and logging that
+                    # would read as a failure it wasn't.
+                    empty_reason=(
+                        getattr(search_service, "_empty_reason", None)
+                        if total == 0
+                        else None
+                    ),
                     is_repeat=compute_is_repeat(db, int(current_user.id), q),
                     query_type=classify_query(
                         q,

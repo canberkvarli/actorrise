@@ -2998,15 +2998,54 @@
 .theatre-search textarea {
   font-family: inherit;
 }
-/* Film & TV used to recolour the whole page violet. It is the same library on
-   a different shelf, not a different room, and a full-page hue change on a tab
-   press was the loudest thing on the screen. Both shelves now share one ground
-   and one accent; the tabs, the caption and the source pills are what say
-   which shelf you are on. */
+/* Film & TV used to recolour the WHOLE page violet, which on a tab press was
+   the loudest thing on the screen. That got flattened to "both shelves share
+   one accent", and flattened is the other failure: pressing the tab changed a
+   pill and nothing else, so the switch read as a no-op.
+
+   The ground stays shared — it is the same library on a different shelf, not a
+   different room — and the ACCENT carries the difference. --acc is already
+   what drives the headline's italic, the search box's hard shadow and the door
+   glyphs, so moving it to violet changes the three things you are actually
+   looking at and nothing you are not.
+
+   Both values are chosen against the ground they sit on: 0.52 reads on cream,
+   0.72 reads on ink. The light one was the only one defined when this was a
+   full-page wash, which is why violet text went muddy in light mode. */
 .theatre-search[data-search-mode="film_tv"],
 .t-outline-flash[data-search-mode="film_tv"] {
-  --acc: oklch(0.58 0.18 45);
+  --acc: oklch(0.52 0.19 293);
   --page: oklch(0.96 0.02 85);
+}
+/* The dark values for both shelves live in the dark block further down, with
+   the rest of the dark tokens — putting a second set here just loses to it on
+   source order, which is exactly the trap this pass walked into first. */
+
+/* The submit takes the shelf's accent too. It is the biggest coloured object
+   on the page, and leaving it brand-orange on the screen shelf put orange and
+   violet side by side on the same control — which reads as a clash rather than
+   as a shelf. On plays --acc IS the orange, so nothing changes there. */
+.theatre-search[data-search-mode="film_tv"] {
+  --t-cta-bg: var(--acc);
+  --t-cta-fg: oklch(0.98 0.01 300);
+  --t-cta-dot-bg: oklch(0.98 0.01 300);
+  --t-cta-dot-fg: var(--acc);
+}
+.dark .theatre-search[data-search-mode="film_tv"] {
+  /* The dark violet is light enough to need ink on it, not cream. */
+  --t-cta-fg: oklch(0.16 0.03 300);
+  --t-cta-dot-bg: oklch(0.16 0.03 300);
+  --t-cta-dot-fg: var(--acc);
+}
+
+/* The shelf's own mark, drawn beside the headline. A colour change alone is
+   still only a colour change; this is the thing that says WHICH shelf without
+   reading a word. It redraws itself on every switch, which is the motion that
+   makes the tab feel like it did something. */
+.t-shelf-mark {
+  flex-shrink: 0;
+  color: var(--acc);
+  opacity: 0.9;
 }
 
 /* The full-viewport wash. It sits behind the page rather than on it, so the
@@ -4675,11 +4714,16 @@
 }
 
 /* Film & TV keeps its violet in dark, lifted off the deep end of the scale so
-   the wash reads as a shelf change rather than a bruise. */
+   it reads as a shelf change rather than a bruise.
+
+   This comment has said "keeps its violet" the whole time while the value
+   underneath said `oklch(0.7 0.18 48)` — the plays orange. When the accent was
+   flattened the number was changed and the sentence above it was not, so dark
+   mode had no shelf distinction at all and the file claimed otherwise. */
 .dark .theatre-search[data-search-mode="film_tv"],
 .dark .t-outline-flash[data-search-mode="film_tv"] {
   --page: oklch(0.15 0.015 50);
-  --acc: oklch(0.7 0.18 48);
+  --acc: oklch(0.74 0.15 293);
 }
 
 /* The filled source pills take --t-text, which is cream in dark — so `film`

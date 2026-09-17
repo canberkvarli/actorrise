@@ -73,6 +73,17 @@ class SearchLog(Base):
     # it entirely). NULL for anonymous searches, which have no session to compare
     # against. Set at write time by log_search_row(); see H-17.
     is_repeat = Column(Boolean, nullable=True)
+    # Why a search returned nothing. NULL whenever results_count > 0.
+    #   no_candidates     the hard filters matched no row with an embedding —
+    #                     an empty FILTER SET, not a failed query
+    #   below_floor       candidates existed, all below the relevance floor
+    #   embedding_failed  the query embedding could not be generated
+    #   vector_error      the pgvector query raised; text fallback found nothing
+    #   cached_empty      an earlier empty result served from cache
+    # Added 2026-09-17: results_count=0 with best_cosine NULL was logged
+    # identically by all four, so a blank screen could not be triaged from the
+    # table. Log-only; nothing reads it back into ranking.
+    empty_reason = Column(String(24), nullable=True)
     # Parenthesised like ContentRequest's: valid Postgres either way, and the
     # bare form is a DDL syntax error on SQLite, which the tests build this
     # table on. Prod columns are created by hand-written migration scripts, so
@@ -84,6 +95,13 @@ class SearchLog(Base):
         Index("ix_search_logs_user_id", "user_id"),
         Index("ix_search_logs_query_type", "query_type", "created_at"),
         Index("ix_search_logs_match_strategy", "match_strategy", "created_at"),
+        # Partial: only empty searches carry a reason, and they are ~2% of rows.
+        Index(
+            "ix_search_logs_empty_reason",
+            "empty_reason",
+            "created_at",
+            postgresql_where=sql_text("empty_reason IS NOT NULL"),
+        ),
     )
 
 
