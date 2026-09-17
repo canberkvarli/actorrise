@@ -330,6 +330,87 @@ re-running the scraper against itself, which `text_fingerprint` catches exactly.
 
 ---
 
+## Verified against the live site, 2026-09-17 (later the same day)
+
+The session above had no outbound network. This one did, so everything below
+replaces a guess with a measurement.
+
+**Stage Partners is not a teaser site.** This was the question that mattered,
+because StageAgent looked fine and returned 191 rows of 35-word synopsis. 25
+PDFs were opened and read end to end: every one carries the whole speech,
+156-560 words, never cut mid-sentence. The source is good.
+
+**But the speech is not in the HTML, and the earlier parser would have scraped
+the synopsis.** The index page holds no speech at all. It holds one link per
+monologue, and under each link a ~30-word logline. `_parse_generic` looked for
+`<article>`/`<section>` — the page has zero of either — and had it found
+anything, it would have found those loglines. That is the StageAgent failure
+exactly, reached by a different route.
+
+The real shape is two-stage, now implemented as `discover_pdf_links` +
+`extract_speech`:
+
+    index page  ->  <a href=".../media/wysiwyg/PDF/....pdf" title="Character, TITLE by Author">
+    that PDF    ->  4-line masthead / TITLE by Author / setup / CHARACTER / speech / masthead repeat / sell sheet
+
+Four things in that PDF cost real yield before they were handled, and all four
+were defects on our side rather than problems with the source:
+
+1. **The footer shortens the title.** "GAME NIGHT (HUMANS ONLY, PLEASE)" in the
+   header returns as "GAME NIGHT by Laura Neill" at the foot, so an end test
+   matching on the title misses the repeat and the masthead is read as the
+   speech's last line. Matching on the *author* is stable. This one fault was
+   most of `truncated_end` (10 of 20) and most of `caps_residue` (8 of 20) — the
+   all-caps title words were being counted as flattened cues.
+2. **Multi-page PDFs put "Pg. 1 of 2" in the middle of the speech**, not at the
+   end, so it has to be dropped rather than used as a boundary.
+3. **Line breaks are not paragraph breaks.** Treating each PDF line as a
+   paragraph turned a flowing speech into two dozen one-line stubs, which is
+   precisely what `has_flattened_scene` rejects. Paragraphs are now rebuilt from
+   the vertical gaps between lines, which matches the corpus (97% of stored
+   monologues are one prose paragraph).
+4. **A trailing "(Exit SISTER and ASSISTANT.)"** ends the speech on stage
+   management and reads to the gate as a second speaker.
+
+Yield after those four fixes, over the whole source: **94 monologues found
+(109 links, 15 of them the same speech listed under two genres), 91 extracted
+cleanly, 30 would insert, 61 rejected.** On the fixed 30-item sample used while
+iterating it went from 5 of 20 to 15 of 30. The three extraction failures are
+all `no_character_cue`, where the PDF's cue line does not match the name in the
+link.
+
+What is left is the gate making real editorial calls, not extraction noise:
+`flattened_scene` (21), `bracket_cue` (17) and `interleaved_speaker` (9) on
+pieces that genuinely interleave another character's lines; `too_long` and
+`no_rights_basis` (13 each, the same 13 speeches) on excerpts over the 400-word
+fair-use ceiling, which is the ceiling working as designed; `direction_heavy`
+(8) and `too_short` (8) on pieces that really are. None of those should be
+answered by loosening the shared gate.
+
+So the honest expectation is roughly **30 stage monologues from Stage Partners**,
+not 109. That is still 30 more post-1980 stage pieces than the corpus has today,
+which is zero — but only once the years file below is populated, because every
+one of those 30 currently carries `year_written=None`.
+
+**The CDN blocks us, and that is a decision for a person.** Stage Partners sits
+behind CloudFront, which answers 403 to every non-browser User-Agent, the honest
+`ActorRise/1.0` one included. It is a blanket bot shield, not a block aimed at
+us: robots.txt explicitly permits both paths the script reads (`/resources/` and
+`/media/wysiwyg/PDF/`). The script therefore keeps identifying itself, stops on
+the 403, and prints the options rather than quietly dressing up as Chrome.
+`--user-agent` exists and has no default. Dressing up as a browser to get past a
+filter that is deliberately excluding non-browsers is a choice about a publisher
+we want a relationship with, and the draft email in
+`docs/licensing/draft-stage-partners-email.md` is the better first move.
+
+**YouthPLAYS was removed from `SOURCES`, unverified.** Its index carries no
+per-monologue PDFs (one PDF link on the whole page) and no speech text, so the
+Stage Partners parser does not transfer. Whether its detail pages carry whole
+speeches was not established. It needs its own check before it is worth a
+parser; it is not recorded here as a teaser, only as unknown.
+
+---
+
 ## Pipeline changes needed (described, not made)
 
 Two blockers. Neither was touched this session.
@@ -349,7 +430,13 @@ inside a script. A publisher monologue page delivers one already-extracted
 speech of roughly 200 words, which is about 1,200 characters, so every single
 one would be refused as "no usable full text" before the gate ever sees it.
 
-This needs a second entry point, something like
+**DONE 2026-09-17.** `ingest_monologue()` now exists in `pipeline.py` and the
+scraper's `--write` path calls it. It takes `year_written` and refuses a missing
+`category` outright rather than defaulting one, since that column is NOT NULL and
+a default is how 321 rows came to be mislabelled. `ingest_play` still has neither
+parameter; blocker 1 above is untouched.
+
+The original description, for the record: a second entry point, something like
 `ingest_monologue(db, *, play_title, author, character, text, rights...)`, that
 skips the parser and the length floor but keeps everything that matters: the
 `may_store_text` check first, `assess_monologue_quality`, `find_duplicate`,
