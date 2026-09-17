@@ -3907,19 +3907,26 @@
    borrowing a gesture from a different kind of product — it also put the mark
    in the one column the ghost light hung in. At the foot of the page it can
    simply say what it opens. */
+/* It sits on the shelf's own rule now, beside "Bring in a script", so it is
+   sized to sit next to a 38px pill rather than to hold a row by itself. The
+   underline went with the row: two rules a few pixels apart, one under the
+   heading and one under this, read as a mistake. */
 .t-how-link {
+  flex-shrink: 0;
   font-family: var(--t-direction);
   font-style: italic;
-  font-size: 13px;
-  letter-spacing: 0.06em;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
   color: var(--t-muted-dark-2);
-  border-bottom: 1px solid var(--t-line-light);
-  padding-bottom: 2px;
-  transition: color 0.25s, border-color 0.25s;
+  transition: color 0.25s;
+}
+@media (max-width: 420px) {
+  /* The pill and the heading have first claim on a phone. */
+  .t-how-link { display: none; }
 }
 .t-how-link:hover {
   color: var(--t-gel-ink);
-  border-color: var(--t-gel-ink);
 }
 
 /* --- The callboard marquee ------------------------------------------------ */
@@ -4147,12 +4154,17 @@
    The current one is proud of the shelf: a wider binding, a gel edge and a
    lift. On a shelf of five covers a border alone does not say "this is the one
    you have open". */
+/* Density. The shelf read as five slabs adrift on a wide column: 86px tall
+   with 14px of padding and 10px between them, so five scripts filled the
+   viewport and the eye had to travel between every row. A shelf is a stack —
+   the whole point is that the spines are touching. Every number here came
+   down; nothing about the design changed. */
 .t-script {
   position: relative;
   display: flex;
   align-items: stretch;
   width: 100%;
-  min-height: 86px;
+  min-height: 66px;
   overflow: hidden;
   border-radius: 4px 12px 12px 4px;
   border: 1.5px solid var(--t-line-light);
@@ -4164,7 +4176,7 @@
     box-shadow 0.3s;
 }
 .t-script:hover {
-  transform: translateX(5px);
+  transform: translateX(4px);
   border-color: oklch(0.6 0.03 55);
   box-shadow: -6px 0 0 -3px var(--spine);
 }
@@ -4260,7 +4272,7 @@
   display: block;
   flex: 1 1 auto;
   min-width: 0;
-  padding: 13px 38px 14px 14px;
+  padding: 9px 34px 10px 12px;
   text-align: left;
 }
 .t-script__face:focus-visible {
@@ -4278,8 +4290,8 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 7px;
+  gap: 10px;
+  margin-top: 4px;
 }
 .t-script__byline {
   display: flex;
@@ -4337,8 +4349,8 @@
   overflow: hidden;
   font-family: var(--t-display);
   font-weight: 400;
-  font-size: 21px;
-  line-height: 1.1;
+  font-size: 19px;
+  line-height: 1.05;
   letter-spacing: -0.01em;
   color: var(--t-text);
 }

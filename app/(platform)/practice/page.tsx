@@ -181,9 +181,6 @@ export default function PracticePage() {
               It is a line of house text on the same rule the shelf starts on,
               not a floating "?" in the corner: this is a theatre, and the
               corner widget was the thing that made it look like a SaaS. */}
-          <div className="flex justify-end pb-1">
-            <HowItWorksButton onOpen={() => setWalkthroughOverride(true)} />
-          </div>
 
           {/* Dropped clear of the ghost light. The lamp hangs from the top of
               the room on the right, which is exactly where the shelf began —
@@ -199,6 +196,7 @@ export default function PracticePage() {
               scripts={safeScripts}
               featuredScriptId={featuredScriptId}
               demoScriptId={demoScript?.id ?? null}
+              onOpenWalkthrough={() => setWalkthroughOverride(true)}
             />
           </Suspense>
 
@@ -217,10 +215,3 @@ export default function PracticePage() {
   );
 }
 
-function HowItWorksButton({ onOpen }: { onOpen: () => void }) {
-  return (
-    <button type="button" onClick={onOpen} className="t-how-link">
-      how this room works
-    </button>
-  );
-}

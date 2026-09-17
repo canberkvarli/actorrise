@@ -146,9 +146,11 @@ export function PracticeLibraryRail({
      shelf worth reading. And Reorder measures along a single axis, so in a
      grid two covers in the same row share a y and the drag has no answer for
      which one moved. The row orientation keeps its sideways scroll. */
+  /* 6px between spines, not 10. A shelf is a stack of things leaning on each
+     other; at 10px with 86px cards the column read as five unrelated slabs. */
   const listClass = column
-    ? "flex flex-col gap-2.5"
-    : "flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+    ? "flex flex-col gap-1.5"
+    : "flex gap-2.5 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
   return (
     <nav aria-label="Your scripts">
@@ -195,7 +197,7 @@ export function PracticeLibraryRail({
 
       {/* The house copies, below the actor's own. */}
       {pinned.length > 0 && (
-        <div className={`${listClass} ${column && arranged.length > 0 ? "mt-2.5" : ""}`}>
+        <div className={`${listClass} ${column && arranged.length > 0 ? "mt-1.5" : ""}`}>
           {pinned.map((script, i) => (
             <ScriptCard
               key={script.id}

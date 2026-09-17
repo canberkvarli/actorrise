@@ -24,6 +24,8 @@ interface PracticeLibraryProps {
   featuredScriptId: number | null;
   /** System sample id. */
   demoScriptId: number | null;
+  /** Opens the playbill. Lives on the shelf's header row — see below. */
+  onOpenWalkthrough?: () => void;
 }
 
 /**
@@ -38,6 +40,7 @@ export function PracticeLibrary({
   scripts,
   featuredScriptId,
   demoScriptId,
+  onOpenWalkthrough,
 }: PracticeLibraryProps) {
   const userScripts = scripts.filter((s) => !s.is_sample);
   const demoScripts = scripts.filter((s) => s.is_sample);
@@ -222,14 +225,26 @@ export function PracticeLibrary({
               list it was the last thing on the page and moved further down with
               every script added, so the more you used ScenePartner the harder
               it got to add to it. */}
+          {/* "how this room works" used to have a full-width row of its own
+              above this whole grid, which bought one line of house text an
+              entire band of the page and pushed the stage and the shelf down
+              by it. It is a footnote, so it sits on the line that is already
+              here — the shelf's rule — beside the thing it explains. */}
           <div
-            className="mb-4 flex items-center justify-between gap-3 pb-3.5"
+            className="mb-3 flex items-center justify-between gap-3 pb-3"
             style={{ borderBottom: "1.5px solid var(--t-line-dark-2)" }}
           >
             <h2 className="t-shelf-heading">On the shelf</h2>
-            <span id="scenepartner-bring-in">
-              <UploadScriptButton variant="compact" className="t-bring-in">Bring in a script</UploadScriptButton>
-            </span>
+            <div className="flex items-center gap-3">
+              {onOpenWalkthrough && (
+                <button type="button" onClick={onOpenWalkthrough} className="t-how-link">
+                  how this room works
+                </button>
+              )}
+              <span id="scenepartner-bring-in">
+                <UploadScriptButton variant="compact" className="t-bring-in">Bring in a script</UploadScriptButton>
+              </span>
+            </div>
           </div>
           {/* The tour's third anchor is the rail alone, not the column: the
               column already contains the "bring in a script" step's target, so
