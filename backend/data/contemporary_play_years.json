@@ -4,11 +4,82 @@
     "source": "NOT A PLAY. This key documents the file and is ignored by loaders that filter on a real title.",
     "note": "Verified first-production or first-publication years, keyed by play title. This file is the ONLY source of `year_written` for scrape_contemporary_plays.py. A year here must come from a checked source about the PLAY itself: a publisher catalogue page, a premiere record, a Playbill/IBDB entry. It must NEVER be taken from a page label, an anthology or collection title, a 'Time Period' sidebar, or the word 'contemporary' appearing on the source page. That last mistake is what H-20 documents: 325 plays from 1892-1926 were labelled contemporary because the word appeared on a 1920 anthology cover. A title absent from this file gets year_written=NULL and is not categorised contemporary, however obviously modern it looks. Unknown is the safe answer; a guess is not."
   },
-
   "Melancholy Play": {
     "year": 2002,
     "source": "Premiered 28 June 2002, Piven Theatre, Evanston IL. Second-hand via web search; confirm against the publisher catalogue before a --write run.",
     "author": "Sarah Ruhl",
     "verified": false
+  },
+  "#VIRAL": {
+    "year": 2016,
+    "source": "Open Library edition record /books/OL48936828M: the Stage Partners acting edition, publish_date 2016. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
+    "author": "Maria McConville",
+    "verified": true
+  },
+  "101 Breakups": {
+    "year": 2015,
+    "source": "Open Library edition record /books/OL49611955M: the Stage Partners acting edition, publish_date 2015. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
+    "author": "Jason Pizzarello",
+    "verified": true
+  },
+  "12 ANGRY VILLAINS": {
+    "year": 2015,
+    "source": "Open Library edition record /books/OL49294533M: the Stage Partners acting edition, publish_date 2015. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
+    "author": "Jason Pizzarello",
+    "verified": true
+  },
+  "ANTIGONE: 3021": {
+    "year": 2021,
+    "source": "Open Library edition record /books/OL49327798M: the Stage Partners acting edition, publish_date 2021. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
+    "author": "Nina Mansfield",
+    "verified": true
+  },
+  "HEART OF SNOW": {
+    "year": 2023,
+    "source": "Open Library edition record /books/OL49612604M: the Stage Partners acting edition, publish_date 2023. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
+    "author": "Adam Szymkowicz",
+    "verified": true
+  },
+  "Instructions for Hugs": {
+    "year": 2018,
+    "source": "Open Library edition record /books/OL51136330M: the Stage Partners acting edition, publish_date 2018. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
+    "author": "Patrick Greene",
+    "verified": true
+  },
+  "OUR MONOPOLY TOWN: A PARODY": {
+    "year": 2026,
+    "source": "Open Library edition record /books/OL62122024M: the Stage Partners acting edition, publish_date 2026. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
+    "author": "Ian McWethy",
+    "verified": true
+  },
+  "TOO MANY DETECTIVES AT THE MURDER MANSION (FULL-LENGTH)": {
+    "year": 2024,
+    "source": "Open Library edition record /books/OL52630512M: the Stage Partners acting edition, publish_date 2024. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
+    "author": "Ian McWethy",
+    "verified": true
+  },
+  "Tuck Everlasting": {
+    "year": 2019,
+    "source": "Open Library edition record /books/OL48508363M: the Stage Partners acting edition, publish_date 2019. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
+    "author": "Mark Frattaroli",
+    "verified": true
+  },
+  "Who Put Bella in the Wych Elm?": {
+    "year": 2023,
+    "source": "Open Library edition record /books/OL49783022M: the Stage Partners acting edition, publish_date 2023. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
+    "author": "Katherine Vondy",
+    "verified": true
+  },
+  "Wild Waves Whist": {
+    "year": 2018,
+    "source": "Open Library edition record /books/OL49605359M: the Stage Partners acting edition, publish_date 2018. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
+    "author": "Patty MacMullen",
+    "verified": true
+  },
+  "You Cannot Undo This Action": {
+    "year": 2022,
+    "source": "Open Library edition record /books/OL49323206M: the Stage Partners acting edition, publish_date 2022. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
+    "author": "Conor Eifler",
+    "verified": true
   }
 }
