@@ -6627,6 +6627,254 @@
 }
 .t-mem__foot { border-top: 1.5px solid var(--t-line-light); }
 
+/* --- The scene preview ----------------------------------------------------
+   Sides, and the two decisions you make before a run. Everything here is on
+   --t-* so the page flips with the theme like the piece pages do. */
+
+/* Casting: who you are, who I read. One block, one rule down the middle. */
+.t-prev__casting {
+  display: grid;
+  gap: 18px;
+  padding: 18px 20px;
+  border: 1.5px solid var(--t-line-light);
+  border-radius: 14px;
+  background: var(--t-paper);
+}
+@media (min-width: 720px) {
+  .t-prev__casting {
+    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1.25fr);
+    gap: 24px;
+    align-items: start;
+  }
+}
+.t-prev__casting-rule { display: none; }
+@media (min-width: 720px) {
+  .t-prev__casting-rule {
+    display: block;
+    align-self: stretch;
+    background: var(--t-line-light);
+  }
+}
+.t-prev__label {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark-2);
+}
+
+/* The parts. Picking one is the loudest thing on this block. */
+.t-prev__role {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-line-light);
+  background: transparent;
+  color: var(--t-muted-dark);
+  font-family: var(--t-direction);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s var(--t-enter);
+}
+.t-prev__role:hover { border-color: var(--t-text); color: var(--t-text); }
+.t-prev__role[data-on="true"] {
+  background: var(--t-text);
+  color: var(--t-on-text);
+  border-color: var(--t-text);
+}
+
+.t-prev__them {
+  font-family: var(--t-direction);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--t-text);
+}
+.t-prev__voice {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-line-light);
+  background: var(--t-paper-2);
+  color: var(--t-text);
+  font-family: var(--t-direction);
+  font-size: 12px;
+  cursor: pointer;
+  max-width: 220px;
+}
+.t-prev__voice:focus { outline: 2px solid var(--t-gel-ink); outline-offset: 1px; }
+.t-prev__hear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1.5px dashed var(--t-line-light);
+  color: var(--t-muted-dark-2);
+  font-family: var(--t-direction);
+  font-size: 12px;
+  font-style: italic;
+  cursor: pointer;
+  transition: all 0.25s var(--t-enter);
+}
+.t-prev__hear:hover { border-style: solid; border-color: var(--t-text); color: var(--t-text); }
+.t-prev__hear[data-on="true"] {
+  border-style: solid;
+  border-color: var(--t-gel-ink);
+  background: var(--t-gel-ink);
+  color: var(--t-on-gel-ink);
+}
+
+/* The sides. A page, with the dialogue set the way sides are set. */
+.t-prev__paper {
+  padding: 26px 22px 22px;
+  border: 1.5px solid var(--t-text);
+  border-radius: 6px;
+  background: var(--t-paper);
+  box-shadow: 8px 8px 0 var(--t-hard-shadow);
+}
+@media (min-width: 720px) {
+  .t-prev__paper { padding: 32px 40px 28px; }
+}
+.t-prev__papertop {
+  margin: 0 0 22px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--t-line-light);
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark-2);
+}
+.t-prev__line { margin-bottom: 18px; }
+.t-prev__line:last-of-type { margin-bottom: 0; }
+.t-prev__who {
+  margin: 0 0 3px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark);
+}
+/* Your lines carry the gel down the margin — the same mark the rehearsal room
+   uses for "this one is yours". */
+.t-prev__line[data-mine="true"] {
+  padding-left: 14px;
+  border-left: 2px solid var(--t-gel-ink);
+  margin-left: -16px;
+}
+.t-prev__line[data-mine="true"] .t-prev__who { color: var(--t-text); }
+.t-prev__yours {
+  margin-left: 9px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--t-gel);
+  color: var(--t-on-gel, oklch(0.15 0.03 45));
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+.t-prev__dir {
+  margin: 0 0 3px;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--t-faint);
+}
+.t-prev__text {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--t-text);
+}
+.t-prev__more {
+  margin: 24px 0 0;
+  padding-top: 14px;
+  border-top: 1px dashed var(--t-line-light);
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--t-faint);
+}
+
+/* The dock. The page asks one question; the answer is always on screen. */
+.t-prev__dock {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--page) 62%, transparent);
+  pointer-events: none;
+}
+@media (max-width: 767px) {
+  /* Clear of the phone tab bar. */
+  .t-prev__dock { bottom: 64px; }
+}
+.t-prev__dockinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  max-width: 880px;
+  margin: 0 auto;
+  pointer-events: auto;
+}
+.t-prev__go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  height: 58px;
+  padding: 0 8px 0 26px;
+  border-radius: 999px;
+  background: var(--t-cta-bg);
+  color: var(--t-cta-fg);
+  font-family: var(--t-body);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 18px 44px -14px rgb(0 0 0 / 0.45);
+  transition: transform 0.3s var(--t-enter);
+}
+.t-prev__go:hover:not(:disabled) { transform: scale(1.03) rotate(-1deg); }
+.t-prev__go:disabled { opacity: 0.55; cursor: not-allowed; }
+.t-prev__godot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: var(--t-cta-dot-bg);
+  color: var(--t-cta-dot-fg);
+}
+.t-prev__edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--t-muted-dark-2);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.t-prev__edit:hover { color: var(--t-gel-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-prev__go:hover:not(:disabled) { transform: none; }
+}
+
 /* --- Theatre forms --------------------------------------------------------
    The two script modals (Add a scene, Edit details) were plain shadcn forms —
    grey Labels, default Inputs, a "Add Scene" title in the sans face — opened

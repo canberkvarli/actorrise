@@ -602,8 +602,10 @@ function RehearsalPageInner() {
   const firstRun = searchParams.get('firstRun') === '1';
   const [prepDone, setPrepDone] = useState(!coldRead);
 
+  // The preview, not the editor: it is where the run was started from, and it
+  // carries both ways on — run it again, or go in and change it.
   const backUrl = scriptId
-    ? `/practice/${scriptId}/scenes/${sceneId}/edit`
+    ? `/practice/${scriptId}/scenes/${sceneId}`
     : '/rehearse';
 
   /* ── Core state ─────────────────────────────────────────────────── */

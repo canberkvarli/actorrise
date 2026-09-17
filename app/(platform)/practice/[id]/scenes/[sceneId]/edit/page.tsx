@@ -70,6 +70,16 @@ import {
   setRehearsalSettings as persistRehearsalSettings,
   type RehearsalSettings,
 } from "@/lib/scenepartnerStorage";
+/* One voice list, one storage format. These lived here AND, once the scene
+   preview needed them, would have lived there too — two copies of the cast of
+   voices and of the localStorage shape the rehearsal page reads. */
+import {
+  AI_VOICES,
+  DEFAULT_VOICE_CYCLE,
+  getCharacterVoices,
+  setCharacterVoices,
+  type CharacterVoices,
+} from "@/lib/scenePrefs";
 import { renderTextWithStageDirections } from "@/lib/stageDirections";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
@@ -264,29 +274,11 @@ type UndoEntry =
 // OpenAI TTS voice options
 // ---------------------------------------------------------------------------
 
-const AI_VOICES = [
-  { id: "ash", label: "Ash", desc: "Warm, deep", gender: "male", color: "bg-blue-600" },
-  { id: "echo", label: "Echo", desc: "Smooth, neutral", gender: "male", color: "bg-blue-500" },
-  { id: "fable", label: "Fable", desc: "Expressive, British", gender: "male", color: "bg-indigo-500" },
-  { id: "onyx", label: "Onyx", desc: "Deep, authoritative", gender: "male", color: "bg-blue-800" },
-  { id: "coral", label: "Coral", desc: "Warm, expressive", gender: "female", color: "bg-rose-500" },
-  { id: "nova", label: "Nova", desc: "Bright, energetic", gender: "female", color: "bg-pink-500" },
-  { id: "sage", label: "Sage", desc: "Calm, measured", gender: "female", color: "bg-rose-600" },
-  { id: "shimmer", label: "Shimmer", desc: "Light, youthful", gender: "female", color: "bg-pink-400" },
-  { id: "alloy", label: "Alloy", desc: "Balanced, clear", gender: "neutral", color: "bg-slate-500" },
-  { id: "ballad", label: "Ballad", desc: "Melodic, theatrical", gender: "neutral", color: "bg-violet-600" },
-] as const;
 
 // ---------------------------------------------------------------------------
 // Voice storage helpers (localStorage, keyed by scene ID)
 // ---------------------------------------------------------------------------
 
-const VOICE_STORAGE_KEY = "scene_partner_voices_v3";
-
-// Map from character name → voice ID
-type CharacterVoices = Record<string, string | null>;
-
-const DEFAULT_VOICE_CYCLE = ["coral", "ash", "ballad", "sage", "onyx", "nova", "fable", "shimmer", "alloy", "echo"];
 
 /** The width of the page itself, and of every bar that has to line up with it:
     the cast summary above, the cast panel, and the action bar at the foot.
@@ -306,29 +298,6 @@ const DEFAULT_VOICE_CYCLE = ["coral", "ash", "ballad", "sage", "onyx", "nova", "
     60rem at 70 — the top of the comfortable range, and the reason it stops
     there instead of filling the viewport. */
 const PAPER_WIDTH = "max-w-[46rem] lg:max-w-[54rem] xl:max-w-[60rem]";
-
-function getCharacterVoices(sceneId: number): CharacterVoices {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(VOICE_STORAGE_KEY);
-    if (!raw) return {};
-    const all = JSON.parse(raw) as Record<string, CharacterVoices>;
-    return all[String(sceneId)] ?? {};
-  } catch {
-    return {};
-  }
-}
-
-function setCharacterVoices(sceneId: number, voices: CharacterVoices): void {
-  try {
-    const raw = localStorage.getItem(VOICE_STORAGE_KEY);
-    const all = raw ? (JSON.parse(raw) as Record<string, CharacterVoices>) : {};
-    all[String(sceneId)] = voices;
-    localStorage.setItem(VOICE_STORAGE_KEY, JSON.stringify(all));
-  } catch {
-    // ignore
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Reorder line item wrapper (needs useDragControls hook)

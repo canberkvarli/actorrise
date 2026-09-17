@@ -49,6 +49,7 @@ interface PracticeScenePanelProps {
  */
 export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
   const router = useRouter();
+  const reduce = useReducedMotion();
   const queryClient = useQueryClient();
   const { data, isLoading } = useScript(script.id) as {
     data: ScriptWithScenes | undefined;
@@ -59,6 +60,9 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [redoing, setRedoing] = useState(false);
+  /* The scene being opened. Holds for one beat so the room can take its light
+     off everything else first — see `openScene`. */
+  const [openingId, setOpeningId] = useState<number | null>(null);
   const [confirmRedo, setConfirmRedo] = useState(false);
   const [cost, setCost] = useState<{ scenes: number; sessions: number } | null>(null);
 
@@ -135,7 +139,35 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
   if (script.num_scenes_extracted > 0)
     metaParts.push(`${script.num_scenes_extracted} scene${script.num_scenes_extracted !== 1 ? "s" : ""}`);
 
-  const sceneHref = (sceneId: number) => `/practice/${script.id}/scenes/${sceneId}/edit`;
+  /* The preview, not the editor.
+     Tapping a scene used to land on four thousand lines of line-editing, which
+     is what made that screen read as a confusing "preview". The preview is its
+     own page now; "edit the scene" is a link on it. */
+  const sceneHref = (sceneId: number) => `/practice/${script.id}/scenes/${sceneId}`;
+
+  /**
+   * Into the scene.
+   *
+   * A plain router.push cut from a list of rows to a full page of sides with
+   * nothing in between, which is the jump this pass was asked to fix. So the
+   * room answers first: the chosen row takes the light, everything around it
+   * goes down, and the navigation happens on the far side of that beat. The
+   * preview then opens on its own staggered entrance, so the two read as one
+   * move rather than a cut.
+   *
+   * 190ms — long enough to see the light change, short enough that nobody
+   * waiting to rehearse would call it a delay. Reduced motion goes straight
+   * there.
+   */
+  const openScene = (sceneId: number) => {
+    if (openingId) return;
+    if (reduce) {
+      router.push(sceneHref(sceneId));
+      return;
+    }
+    setOpeningId(sceneId);
+    window.setTimeout(() => router.push(sceneHref(sceneId)), 190);
+  };
 
   return (
     // The selected script, opened like a playbook: title page on the left,
@@ -278,7 +310,9 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
                         setExpandedSceneId((cur) => (cur === scene.id ? null : scene.id));
                         router.prefetch(sceneHref(scene.id));
                       }}
-                      onOpen={() => router.push(sceneHref(scene.id))}
+                      onOpen={() => openScene(scene.id)}
+                      opening={openingId === scene.id}
+                      dimmed={openingId !== null && openingId !== scene.id}
                     />
                   ))}
                 </div>
@@ -321,6 +355,8 @@ function SceneRow({
   expanded,
   onToggle,
   onOpen,
+  opening = false,
+  dimmed = false,
 }: {
   scene: Scene;
   /** Position in the panel, for the entrance only. */
@@ -330,8 +366,13 @@ function SceneRow({
   expanded: boolean;
   onToggle: () => void;
   onOpen: () => void;
+  /** This is the one being opened: it takes the light. */
+  opening?: boolean;
+  /** Another one is being opened: stand down. */
+  dimmed?: boolean;
 }) {
   const reduce = useReducedMotion();
+  const ent = entrance(index, { reduce, y: 6, duration: 0.36 });
   const characters = [scene.character_1_name, scene.character_2_name].filter(Boolean);
   const duration = formatSceneDuration(scene.estimated_duration_seconds);
 
@@ -350,7 +391,28 @@ function SceneRow({
          a script used to swap the stage for a finished block of rows, which is
          the one moment on this screen where something new is being handed over
          and the only one that did not look like it. */
-      {...entrance(index, { reduce, y: 6, duration: 0.36 })}
+      /* Spread would not do here: `transition={undefined}` in the normal case
+         overrides the entrance's own delay and kills the stagger. The two are
+         merged by hand instead. */
+      initial={ent.initial}
+      /* The beat before the page turns. The chosen row comes up and forward,
+         everything else goes down, and the navigation lands on the far side of
+         it — see openScene in the panel. */
+      animate={
+        opening
+          ? { opacity: 1, y: 0, scale: 1.015 }
+          : dimmed
+            ? { opacity: 0.35, y: 0, scale: 1 }
+            : ent.animate
+      }
+      transition={
+        opening || dimmed ? { duration: 0.19, ease: [0.22, 1, 0.36, 1] } : ent.transition
+      }
+      style={
+        opening
+          ? { boxShadow: "0 0 0 1.5px var(--t-gel-ink), 0 14px 34px -14px rgb(0 0 0 / 0.4)" }
+          : undefined
+      }
       className={[
         "rounded-lg border border-l-2 transition-colors",
         accentClass,

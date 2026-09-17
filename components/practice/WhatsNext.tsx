@@ -90,7 +90,7 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
       ? `/scenes/${scene.id}/rehearse?session=${data.session_id}` +
         (script ? `&script=${script.id}` : "")
       : scene && script
-        ? `/practice/${script.id}/scenes/${scene.id}/edit`
+        ? `/practice/${script.id}/scenes/${scene.id}`
         : "#";
 
   // The label under the title. Says who you are in the scene and where you
