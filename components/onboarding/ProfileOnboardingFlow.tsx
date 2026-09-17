@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import api from "@/lib/api";
@@ -251,7 +252,15 @@ export default function ProfileOnboardingFlow({
 }) {
   const { refreshUser } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const reduce = useReducedMotion();
+  /* The favourite POSTs, still in the air. Keeping fires them without awaiting
+     so the card answers on the tap, which is right — but "Open my collection"
+     is now a button the actor can hit a second later, and landing on a shelf
+     that is still empty because six requests have not finished is a worse lie
+     than a moment's wait. Held here so that one destination can wait for them;
+     nothing else does. */
+  const keepsInFlight = useRef<Promise<unknown>[]>([]);
 
   const questions = useMemo(
     // Backfill gets the account-type question too, unlike referral. How you
@@ -449,24 +458,46 @@ export default function ProfileOnboardingFlow({
    * Failures are swallowed on purpose: a first run must not end on an error
    * toast about a bookmark. Anything that did not save is still in the library.
    */
-  const keepPicks = useCallback(
-    (ids: number[]) => {
-      // Fired, not awaited. Six POSTs took long enough that the card sat on
-      // "Putting them away…" with a dead pill while the actor watched, which
-      // turned the last beat of the flow into a loading screen. The requests
-      // are not cancelled by unmounting, so they land either way, and the
-      // collection is somewhere the actor goes next rather than right now.
-      ids.forEach((id) => {
-        void api.post(`/api/monologues/${id}/favorite`).catch(() => {});
-      });
-      // No navigation. The card closes onto whatever page the actor was already
-      // on, and that page's tour picks them up. Pushing a route here is what
-      // made ScenePartner flash past for a beat on the way to /work, and it
-      // also decided for them where to go next on their first minute.
-      endFlow();
-    },
-    [endFlow]
-  );
+  const keepPicks = useCallback((ids: number[]) => {
+    // Fired, not awaited. Six POSTs took long enough that the card sat on
+    // "Putting them away…" with a dead pill while the actor watched, which
+    // turned the last beat of the flow into a loading screen. The requests
+    // are not cancelled by unmounting, so they land either way, and the
+    // collection is somewhere the actor goes next rather than right now.
+    keepsInFlight.current = ids.map((id) =>
+      api.post(`/api/monologues/${id}/favorite`).catch(() => {}),
+    );
+    // Deliberately does NOT close the card any more. Keeping used to be the
+    // last thing that could happen here: the actor tapped "Keep them all" and
+    // the whole flow vanished, taking with it the three ways on that were
+    // printed directly underneath — browse the library, bring your own sides,
+    // and the collection they had just filled. Two of those are the product.
+    // So keeping is now a thing that happens TO the card rather than the end
+    // of it, and the actor picks where they go afterwards. See
+    // OnboardingPayoff's `kept` state; endFlow is still what every exit runs.
+  }, []);
+
+  /**
+   * Into the collection they just filled.
+   *
+   * Waits on the keeps rather than racing them, and drops the bookmarks cache
+   * on the way so RehearseHub reads the shelf fresh instead of rendering a
+   * list it fetched before any of this happened. Without this, the one
+   * destination that promises "the pieces you just kept" is the one most
+   * likely to open on "the shelf is bare".
+   *
+   * The wait is capped: a hung request must not strand someone on a card they
+   * have finished with, and the shelf refetches on arrival anyway.
+   */
+  const goToCollection = useCallback(async () => {
+    await Promise.race([
+      Promise.allSettled(keepsInFlight.current),
+      new Promise((r) => setTimeout(r, 2500)),
+    ]);
+    await queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+    endFlow();
+    router.push("/rehearse");
+  }, [queryClient, endFlow, router]);
 
   // Every step is skippable, including this one.
   //
@@ -789,6 +820,7 @@ export default function ProfileOnboardingFlow({
                 onClose={endFlow}
                 onBrowse={() => { endFlow(); router.push("/monologues"); }}
                 onOwnSides={() => { endFlow(); router.push("/practice"); }}
+                onCollection={goToCollection}
               />
             </motion.div>
           )}
@@ -881,13 +913,16 @@ function OnboardingPayoff({
   onBrowse,
   onClose,
   onOwnSides,
+  onCollection,
 }: {
   answers: OnboardingAnswers;
   items: Monologue[];
+  /** Saves the picks. Does NOT close the card — see `kept` below. */
   onKeep: (ids: number[]) => void;
   onBrowse: () => void;
   onClose: () => void;
   onOwnSides: () => void;
+  onCollection: () => void;
 }) {
   const summary = describeAnswers(answers);
   /* Everything starts selected. These are the pieces the actor just described
@@ -895,6 +930,36 @@ function OnboardingPayoff({
      whether they want any — and an empty-by-default list makes the whole
      payoff a form to fill in. */
   const [keep, setKeep] = useState<number[]>(() => items.map((m) => m.id));
+  /* Has the actor banked them yet?
+     Keeping used to close the whole flow on the tap, which threw away the two
+     things printed directly under the pill — browse the library, and bring
+     your own sides — at the exact moment the actor had finished deciding and
+     was free to read them. It also meant the pieces they had just chosen
+     flashed out of existence rather than being visibly put somewhere.
+     Now the card stays up and turns into the question that actually follows
+     "these are yours": where do you want to go? */
+  const [kept, setKept] = useState(false);
+
+  /* Frozen at the moment of keeping: the list stops being editable once it has
+     been banked, so the count must stop moving with it. */
+  const [keptCount, setKeptCount] = useState(0);
+
+  const bank = () => {
+    onKeep(keep);
+    setKeptCount(keep.length);
+    setKept(true);
+  };
+
+  /* Which way out is in flight. Only the collection can actually wait on
+     anything (it holds for the keeps to land), but a tap that does nothing
+     visible for a second reads as a dead button whatever the reason, so every
+     destination reports for itself. */
+  const [going, setGoing] = useState<string | null>(null);
+  const leave = (id: string, go: () => void) => () => {
+    if (going) return;
+    setGoing(id);
+    go();
+  };
 
   if (!items.length) {
     return (
@@ -924,17 +989,51 @@ function OnboardingPayoff({
   return (
     <div className="relative px-7 pb-[26px] pt-[22px]">
       <p className="m-0 text-[13px] italic tracking-[0.08em]" style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}>
-        (picked for {summary || "you"}.)
+        {kept ? "(on your shelf.)" : `(picked for ${summary || "you"}.)`}
       </p>
-      <h2 className="mt-2 font-normal leading-none tracking-[-0.02em]" style={{ fontFamily: "var(--t-display)", fontSize: "clamp(1.9rem, 4.5vw, 2.6rem)" }}>
-        {count} {items.length === 1 ? "piece" : "pieces"}{" "}
-        <em className="italic" style={{ color: "var(--acc)" }}>for you.</em>
-      </h2>
+      {kept ? (
+        <h2 className="mt-2 font-normal leading-none tracking-[-0.02em]" style={{ fontFamily: "var(--t-display)", fontSize: "clamp(1.9rem, 4.5vw, 2.6rem)" }}>
+          {keptCount} {keptCount === 1 ? "piece is" : "pieces are"}{" "}
+          <em className="italic" style={{ color: "var(--acc)" }}>waiting.</em>
+        </h2>
+      ) : (
+        <h2 className="mt-2 font-normal leading-none tracking-[-0.02em]" style={{ fontFamily: "var(--t-display)", fontSize: "clamp(1.9rem, 4.5vw, 2.6rem)" }}>
+          {count} {items.length === 1 ? "piece" : "pieces"}{" "}
+          <em className="italic" style={{ color: "var(--acc)" }}>for you.</em>
+        </h2>
+      )}
       <p className="mt-2 text-sm leading-normal" style={{ color: "var(--t-muted-dark)" }}>
-        Keeping them puts them in your collection. Nothing to read yet, they
-        just wait for you there.
+        {kept
+          ? "They're in your collection whenever you want them. Where do you want to start?"
+          : "Keeping them puts them in your collection. Nothing to read yet, they just wait for you there."}
       </p>
 
+      {/* Banked: the six rows collapse to the spines themselves.
+          Leaving the full list up would push the three destinations below the
+          fold on a laptop — the actor would have kept their pieces and then
+          had to scroll past them to find out where they could go, which is the
+          same disappearing act in slower motion. The spines are the receipt;
+          they are also the nicest thing on the card. */}
+      {kept ? (
+        <div
+          className="mt-5 flex flex-wrap items-center gap-2.5 rounded-2xl border-[1.5px] px-4 py-3.5"
+          style={{ borderColor: "var(--t-line-light)", background: "var(--t-paper)" }}
+        >
+          {items
+            .filter((m) => keep.includes(m.id))
+            .map((m, i) => (
+              <motion.span
+                key={m.id}
+                initial={{ opacity: 0, y: 10, rotate: -4 }}
+                animate={{ opacity: 1, y: 0, rotate: i % 2 ? 1.5 : -1.5 }}
+                transition={{ duration: 0.45, ease: SPRING, delay: i * 0.05 }}
+                className="inline-flex"
+              >
+                <Spine m={m} />
+              </motion.span>
+            ))}
+        </div>
+      ) : (
       <ul className="mt-5 flex list-none flex-col gap-2.5 p-0">
         {items.map((m, i) => {
           const mins = Math.max(1, Math.round((m.estimated_duration_seconds || 0) / 60));
@@ -1004,58 +1103,183 @@ function OnboardingPayoff({
           );
         })}
       </ul>
+      )}
 
-      <div className="mt-5">
-        {/* No pending state. The saves are fired and not awaited, so this
-            closes on the tap — a spinner here would be the card asking the
-            actor to watch it finish its own paperwork. */}
-        <CtaPill onClick={() => onKeep(keep)}>
-          {keep.length === 0
-            ? "Take me to the library"
-            : keep.length === items.length
-              ? "Keep them all"
-              : `Keep ${keep.length}`}
-        </CtaPill>
-      </div>
+      {!kept && (
+        <div className="mt-5">
+          {/* No pending state. The saves are fired and not awaited, so this
+              lands on the tap — a spinner here would be the card asking the
+              actor to watch it finish its own paperwork. */}
+          <CtaPill
+            onClick={keep.length === 0 ? onBrowse : bank}
+          >
+            {keep.length === 0
+              ? "Take me to the library"
+              : keep.length === items.length
+                ? "Keep them all"
+                : `Keep ${keep.length}`}
+          </CtaPill>
+        </div>
+      )}
 
-      {/* The other job entirely, and the one the product is actually for: they
-          have sides for a real audition. Until now nothing in the new-user path
-          pointed here, which is most of why 10 people have ever uploaded. */}
-      <div
-        className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 border-t-[1.5px] border-dashed pt-4"
-        style={{ borderColor: "color-mix(in oklab, var(--t-text) 25%, transparent)" }}
-      >
-        <p className="m-0 text-sm">Or bring sides you&apos;re already working on.</p>
-        <motion.button
-          type="button"
-          onClick={onOwnSides}
-          whileHover={{ rotate: 1.5 }}
-          transition={{ duration: 0.3, ease: SPRING }}
-          className="inline-flex h-[38px] items-center gap-2 rounded-full border-[1.5px] border-dashed px-3.5 text-[13px] font-bold transition-colors hover:border-solid"
-          style={{ borderColor: "var(--t-text)", color: "var(--t-text)" }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--t-gel)";
-            e.currentTarget.style.color = "var(--t-on-gel)";
-            e.currentTarget.style.borderColor = "var(--t-on-gel)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.color = "var(--t-text)";
-            e.currentTarget.style.borderColor = "var(--t-text)";
-          }}
+      {/* The ways on.
+          These three used to be footnotes under a pill that closed the card,
+          so the actor read them only if they hesitated — tap "Keep them all"
+          and the library, the upload and the collection all disappeared
+          together. After keeping they ARE the card: three destinations, one
+          per line, because "where do you want to start" is a real question
+          with three real answers and none of them is obviously first. */}
+      {kept ? (
+        <div className="mt-6 flex flex-col gap-2.5">
+          <WayOn
+            onClick={leave("collection", onCollection)}
+            busy={going === "collection"}
+            dimmed={!!going && going !== "collection"}
+            title="Open my collection"
+            note={`${keptCount === 1 ? "The piece you just kept" : "The pieces you just kept"}, on the shelf.`}
+            icon={
+              <path d="M6 4h12a1 1 0 0 1 1 1v15l-7-4-7 4V5a1 1 0 0 1 1-1z" />
+            }
+          />
+          <WayOn
+            onClick={leave("library", onBrowse)}
+            busy={going === "library"}
+            dimmed={!!going && going !== "library"}
+            title="Browse the library"
+            note="Everything else, with search already leaning your way."
+            icon={<><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>}
+          />
+          <WayOn
+            onClick={leave("sides", onOwnSides)}
+            busy={going === "sides"}
+            dimmed={!!going && going !== "sides"}
+            title="Bring your own sides"
+            note="A real audition script. I'll read every role that isn't yours."
+            icon={<path d="M12 16V4M6 10l6-6 6 6M4 20h16" />}
+          />
+        </div>
+      ) : (
+        /* The other job entirely, and the one the product is actually for: they
+           have sides for a real audition. Until now nothing in the new-user path
+           pointed here, which is most of why 10 people have ever uploaded. */
+        <div
+          className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 border-t-[1.5px] border-dashed pt-4"
+          style={{ borderColor: "color-mix(in oklab, var(--t-text) 25%, transparent)" }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M12 16V4M6 10l6-6 6 6M4 20h16" />
-          </svg>
-          Upload a script
-        </motion.button>
-      </div>
+          <p className="m-0 text-sm">Or bring sides you&apos;re already working on.</p>
+          <motion.button
+            type="button"
+            onClick={onOwnSides}
+            whileHover={{ rotate: 1.5 }}
+            transition={{ duration: 0.3, ease: SPRING }}
+            className="inline-flex h-[38px] items-center gap-2 rounded-full border-[1.5px] border-dashed px-3.5 text-[13px] font-bold transition-colors hover:border-solid"
+            style={{ borderColor: "var(--t-text)", color: "var(--t-text)" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--t-gel)";
+              e.currentTarget.style.color = "var(--t-on-gel)";
+              e.currentTarget.style.borderColor = "var(--t-on-gel)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "var(--t-text)";
+              e.currentTarget.style.borderColor = "var(--t-text)";
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 16V4M6 10l6-6 6 6M4 20h16" />
+            </svg>
+            Upload a script
+          </motion.button>
+        </div>
+      )}
 
       <div className="mt-4 flex justify-between gap-3 text-xs italic tracking-[0.06em]" style={{ fontFamily: "var(--t-direction)", color: "var(--t-faint)" }}>
-        <FootLink onClick={onBrowse}>browse the library</FootLink>
-        <FootLink onClick={onClose}>i&apos;ll explore on my own</FootLink>
+        {kept ? <span /> : <FootLink onClick={onBrowse}>browse the library</FootLink>}
+        <FootLink onClick={onClose}>
+          {kept ? "close this" : "i'll explore on my own"}
+        </FootLink>
       </div>
     </div>
+  );
+}
+
+/**
+ * One destination on the "where do you want to start" card.
+ *
+ * A row rather than a pill: three pills of equal weight is a decision with no
+ * shape, and each of these needs a line saying what is actually behind it —
+ * "Collection" alone does not tell a person who signed up ninety seconds ago
+ * what they would find there.
+ */
+function WayOn({
+  onClick,
+  title,
+  note,
+  icon,
+  busy = false,
+  dimmed = false,
+}: {
+  onClick: () => void;
+  title: string;
+  note: string;
+  icon: React.ReactNode;
+  /** This one is on its way — see `leave` in the payoff. */
+  busy?: boolean;
+  /** Another one is on its way; this is no longer the live choice. */
+  dimmed?: boolean;
+}) {
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      disabled={busy || dimmed}
+      whileHover={busy || dimmed ? undefined : { x: 4 }}
+      transition={{ duration: 0.3, ease: SPRING }}
+      className="flex w-full items-center gap-3.5 rounded-2xl border-[1.5px] py-3 pl-3.5 pr-4 text-left transition-all"
+      style={{
+        borderColor: busy ? "var(--t-text)" : "var(--t-line-light)",
+        background: "var(--t-paper)",
+        opacity: dimmed ? 0.45 : 1,
+      }}
+      onMouseEnter={(e) => {
+        if (!busy && !dimmed) e.currentTarget.style.borderColor = "var(--t-text)";
+      }}
+      onMouseLeave={(e) => {
+        if (!busy) e.currentTarget.style.borderColor = "var(--t-line-light)";
+      }}
+    >
+      <span
+        aria-hidden
+        className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-full border-[1.5px]"
+        style={{ borderColor: "var(--t-line-light)", color: "var(--t-text)" }}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          {icon}
+        </svg>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-base font-bold leading-tight" style={{ fontFamily: "var(--t-direction)" }}>
+          {title}
+        </span>
+        <span className="mt-0.5 block text-xs" style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}>
+          {note}
+        </span>
+      </span>
+      <span aria-hidden style={{ color: busy ? "var(--t-text)" : "var(--t-faint)" }}>
+        {busy ? (
+          <motion.span
+            className="block size-4 rounded-full border-[2px] border-current"
+            style={{ borderTopColor: "transparent" }}
+            animate={{ rotate: 360 }}
+            transition={{ duration: 0.7, ease: "linear", repeat: Infinity }}
+          />
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        )}
+      </span>
+    </motion.button>
   );
 }
 

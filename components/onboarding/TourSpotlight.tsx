@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import api from "@/lib/api";
@@ -50,6 +51,14 @@ const OFFSET = 14;
 const CARD_W = 330;
 const CARD_H = 210;
 const EDGE = 16;
+/* The app bar floats at the top of every platform route, and the launch strip
+   can sit above it. A card placed at `top: 24` slides straight under both — the
+   ScenePartner tour's first step opened with its title behind the nav pill.
+   Nothing is placed above this line. */
+const TOP_SAFE = 108;
+
+/** No document.body to portal into until the client has taken over. */
+const NEVER_CHANGES = () => () => {};
 
 /* "(one of three.)" rather than "1 OF 5". Same information, and it is the
    only register the rest of the first-run flow speaks in. */
@@ -83,6 +92,7 @@ export function TourSpotlight({
   flag: string;
   onDismiss: () => void;
 }) {
+  const mounted = useSyncExternalStore(NEVER_CHANGES, () => true, () => false);
   const [live, setLive] = useState<TourStep[] | null>(null);
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -157,25 +167,54 @@ export function TourSpotlight({
     const s: React.CSSProperties = {
       position: "fixed",
       width: w,
-      zIndex: 10002,
+      zIndex: 10062,
       left: Math.max(EDGE, Math.min(centerX, window.innerWidth - w - EDGE)),
     };
     const below = window.innerHeight - (rect.bottom + OFFSET);
     const above = rect.top - OFFSET;
+    /* The band the card is allowed to live in: under the app bar, over the tab
+       bar. Everything below is clamped into it. */
+    const lowest = window.innerHeight - CARD_H - bottomSafe;
+
     const useBottom =
       current.placement === "bottom" ? below >= CARD_H || below >= above : above < CARD_H && below >= CARD_H;
+
     if (useBottom) {
-      s.top = Math.max(24, Math.min(rect.bottom + OFFSET, window.innerHeight - CARD_H - bottomSafe));
+      s.top = Math.min(Math.max(rect.bottom + OFFSET, TOP_SAFE), Math.max(TOP_SAFE, lowest));
+    } else if (above - TOP_SAFE >= CARD_H) {
+      // Sits above the target, and still clears the bar.
+      s.top = Math.max(TOP_SAFE, rect.top - OFFSET - CARD_H);
     } else {
-      s.bottom = Math.max(bottomSafe, Math.min(window.innerHeight - rect.top + OFFSET, window.innerHeight - CARD_H - 24));
+      /* Neither side has room — which is the normal case for a target that is
+         most of the page, like ScenePartner's stage. Rather than shoving the
+         card off the top under the nav, it rides at the foot of the window,
+         over the lit area. The light still says which thing is being talked
+         about; the card only has to be readable. */
+      s.top = Math.max(TOP_SAFE, lowest);
     }
     return s;
   }, [rect, current]);
 
-  if (!live || !current || !rect) return null;
+  if (!mounted || !live || !current || !rect) return null;
 
-  return (
-    <div className={`theatre-tokens theatre-tour ${theatreFontVars} fixed inset-0 z-[10000]`} style={{ pointerEvents: "none" }}>
+  /* PORTALLED, and this is the whole reason the tour stopped being visible.
+     Every platform route renders inside PageTransition's motion wrapper, which
+     carries a transform — and a transformed ancestor both becomes the
+     containing block for its fixed descendants AND opens a stacking context
+     the whole page subtree is sealed inside. So `z-[10000]` on a card in the
+     page was never competing with the app bar's 9998: it was competing with
+     its own siblings, inside a context that sits under the bar. The
+     ScenePartner tour opened with its title behind the nav pill, which is what
+     put this on the list. Same trap CallboardDock documents; document.body is
+     the only parent in this app guaranteed to be untransformed.
+
+     It also leaves the page's tokens behind, so it carries `theatre-tokens`
+     and the faces itself. */
+  return createPortal(
+    <div
+      className={`theatre-tokens theatre-tour ${theatreFontVars} fixed inset-0 z-[10060]`}
+      style={{ pointerEvents: "none" }}
+    >
       {/* The followspot. One element: the ring is the light, the 9999px spread
           is the house going dark around it. */}
       <motion.div
@@ -183,7 +222,7 @@ export function TourSpotlight({
         className="pointer-events-none rounded-2xl"
         style={{
           position: "fixed",
-          zIndex: 10001,
+          zIndex: 10061,
           boxShadow:
             "0 0 0 2px var(--t-gel), 0 0 28px 4px color-mix(in oklab, var(--t-gel) 45%, transparent), 0 0 0 9999px oklch(0.08 0.01 50 / 0.72)",
         }}
@@ -265,7 +304,8 @@ export function TourSpotlight({
           </div>
         </motion.div>
       </AnimatePresence>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
