@@ -503,3 +503,112 @@ Williams (4 plays) exist with zero monologues and now get the "we have it,
 no monologues yet" card with the author prefilled; August Wilson is absent
 entirely and gets the generic banner. Test: named_lookup weak rate and
 content_requests with an author filled, over 2 weeks.
+
+### H-20 update: the servable number is 4, not 325 (2026-09-17)
+
+CONFIRMED, and worse than written above by a factor of 80. 325 is the LABEL
+count. The era-year correction in `era_year_clause` (semantic_search.py) then
+drops 321 of those 325, because their plays carry a real `year_written` before
+1980 — 66 plays mislabelled "contemporary" in the catalogue, correctly excluded
+by the year clause. What a contemporary-play search can actually return is 4
+monologues out of 19,351, from 2 plays ("MARCUS! COME BACK!" and "Ian and
+Nathan"), both by "Unknown", both undated.
+
+    select count(*) from monologues m join plays p on p.id = m.play_id
+    where m.embedding_vector is not null and p.source_type='play'
+      and p.category ilike '%contemporary%'
+      and (p.year_written >= 1980
+           or (p.year_written is null
+               and coalesce(p.copyright_status,'') <> 'public_domain'));
+
+Cost in the 30 days to 2026-09-17: 97 searches from 38 users carried
+category=contemporary + source_type=play. 35 came back weak, 8 blank — 44 pct
+of them failed. That is the same two taps in every one of the four
+zero-result-null-cosine searches the 2026-09-17 brief flagged as a broken code
+path (see H-22).
+
+Two separate fixes, and they are not alternatives:
+  - Data: 66 plays are labelled contemporary and dated pre-1980. Either the
+    label or the year is wrong on each; whichever it is, the catalogue is
+    lying about its own era in both directions.
+  - Product: the Contemporary filter is offered on the Plays tab with 4 pieces
+    behind it. Until coverage exists, offering it is offering a blank screen.
+
+## H-22 A blank search screen was untriageable from search_logs
+
+Status: RESOLVED 2026-09-17 (instrumented, not yet a hypothesis about users)
+
+The 2026-09-17 brief read `results_count=0 AND best_cosine IS NULL` as "a code
+path failing, not a content gap". It was neither: no exception fired. Four
+distinct exits in `SemanticSearch.search` return nothing and all four logged
+the identical row — embedding failure, pgvector error, an empty hard-filter
+set, and a cached empty result. `below_floor` is the only empty that carries a
+cosine. The four flagged searches were all `no_candidates`: an empty filter set
+(H-20), not a failed query.
+
+`search_logs.empty_reason` now names the exit. Triage is one query:
+
+    select empty_reason, count(*) from search_logs
+    where results_count = 0 and created_at > now() - interval '30 days'
+    group by 1 order by 2 desc;
+
+Two defects found alongside it, NOT yet fixed:
+  - An empty result set is written to the search cache like any other
+    (`encode_search_cache` wraps it in a truthy dict), so one blank screen is
+    replayed for the whole TTL to that user+filter key.
+  - The text-search supplement at the end of `search()` is unreachable: it
+    requires `len(top_results) == 0 and not no_semantic_match`, and every path
+    that empties `top_results` either sets `no_semantic_match` or returns
+    early. The blank-screen fallback has not run since the guard was added.
+
+### H-3 (2026-09-17 brief) is DISCONFIRMED
+
+The positive rating is not broken. `result_feedback` holds 8 positive rows,
+first 2026-02-18, last 2026-06-29; negatives continue through 2026-09-12. The
+widget worked and stopped. Zero-in-30-days is a regression with a date on it,
+so bisect the search-results UI around late June rather than re-testing the
+endpoint.
+
+### H-20 audit, 2026-09-17: the label is wrong, the years are right
+
+The 66 plays were audited. Verdict: every year is right (or right to the era);
+the era LABEL is wrong on all 66, and it came from a book cover.
+
+57 of the 66 carry a year_written of exactly 1920 (42 plays, 272 monologues)
+or exactly 1922 (15 plays, 36 monologues). Those are anthology PUBLICATION
+years, not composition years. The 1920 set is Shay & Loving's *Fifty
+Contemporary One-Act Plays* — Trifles, Aria da Capo, Ile, The Boor, The
+Workhouse Ward, Literature, Helena's Husband are all in that table of
+contents. The 1922 set is its American companion (Kreymborg, Percy MacKaye,
+Paul Green, Jeannette Marks). The ingest read the word "Contemporary" off the
+title and wrote it to plays.category. Contemporary to 1920.
+
+The other 9 are individually ingested, correctly dated, identically
+mislabelled: Charley's Aunt (1892), Candida (1897), The Devil's Disciple
+(1900), The Admirable Crichton (1902), How He Lied to Her Husband (1911),
+Heartbreak House (1919), Anna Christie (1921), Hay Fever (1925), Easy Virtue
+(1926).
+
+THE NUMBER UNDERNEATH IS ZERO. Not 4, not 325:
+
+    select count(distinct p.id) from plays p join monologues m on m.play_id=p.id
+    where m.embedding_vector is not null and p.source_type='play'
+      and p.year_written >= 1980;     -- 0
+
+Not one play in the catalogue is dated 1980 or later. 733 plays, 13,969
+monologues, none of them contemporary. The 4 pieces that survive the era
+clause do so only through the undated branch, and they are
+copyright_status='user_uploaded' — two scripts a user uploaded themselves
+("MARCUS! COME BACK!", "Ian and Nathan", both by "Unknown"). ActorRise's
+entire contemporary-play offering is two user uploads.
+
+So there is no hidden reserve to recover by fixing data. Relabelling is
+honesty, not supply: scripts/fix_anthology_era_labels.py sets the 66 to
+'modern' (the era their year already proves) and changes no search result,
+because era_year_clause corrects on year and 'modern' is a YEAR_ONLY_ERA that
+never reads the label. What it fixes is the catalogue lying to its own admin
+counts, era lanes and recommender.
+
+Acquisition is the only path to contemporary plays. Until then the filter has
+nothing behind it, and 38 users a month find that out one blank screen at a
+time.

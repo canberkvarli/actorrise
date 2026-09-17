@@ -784,6 +784,13 @@ class SemanticSearch:
         overall_start = time.time()
         self._debug_timing: Dict[str, Any] = {"start": overall_start}
 
+        # Why an empty result set came back. A blank screen is currently
+        # indistinguishable in telemetry from a below-floor result, a filter
+        # combination that matches nothing, and an outright failure: all three
+        # log results_count=0 with best_cosine NULL. Set at every exit that can
+        # return nothing, read only by the search logger (monologues.py).
+        self._empty_reason: Optional[str] = None
+
         # Normalize query for caching (conservative canonicalization)
         canonical_query = _canonicalize_query_for_cache(query)
 
@@ -1105,6 +1112,11 @@ class SemanticSearch:
                 quote_types = {
                     item[0]: item[2] for item in rows if len(item) >= 3 and item[2]
                 }
+            if not ordered_with_scores:
+                # An empty result set is cached like any other, so one blank
+                # screen is replayed for the whole TTL. Worth seeing separately
+                # from a fresh empty: the cause is in the cached run, not here.
+                self._empty_reason = "cached_empty"
             return (ordered_with_scores[:limit], quote_types)
 
         # Retrieve embedding from early parallel fetch or cache (started before AI parsing)
@@ -1158,6 +1170,8 @@ class SemanticSearch:
             fallback = self._fallback_text_search(
                 query, limit, hard_filters, explicit_filters
             )
+            if not fallback:
+                self._empty_reason = "embedding_failed"
             return ([(m, 0.0) for m in fallback], {})
 
         # Hybrid search: run text search for direct play/character/title matches and merge on top.
@@ -1551,6 +1565,13 @@ class SemanticSearch:
                 results_with_scores.append((mono, similarity))
             if similarities:
                 self._best_cosine_sim = max(similarities)
+            else:
+                # Nothing to rank: the hard filters matched no row with an
+                # embedding. Not a ranking failure and not a content gap in the
+                # query — the FILTER SET is empty, and relaxation cannot fix it
+                # because era and source_type are never relaxed. Recorded so the
+                # dashboard can name the filter pair instead of guessing.
+                self._empty_reason = "no_candidates"
 
             logger.debug(
                 "pgvector returned %s candidates (cosine-based scoring)", len(similarities)
@@ -1567,6 +1588,8 @@ class SemanticSearch:
             fallback_monologues = self._fallback_text_search(
                 query, limit, hard_filters, explicit_filters
             )
+            if not fallback_monologues:
+                self._empty_reason = "vector_error"
             return ([(m, 0.0) for m in fallback_monologues], {})
 
         # IMPROVED: Apply all boosts using multiplicative scoring (prevents saturation)
@@ -1741,6 +1764,11 @@ class SemanticSearch:
                     best_score,
                     relevance_floor,
                 )
+                # Candidates existed and every one of them was too far away.
+                # best_cosine is set here, so this is the one empty result the
+                # log can already explain; named anyway so "no reason" always
+                # means "not instrumented", never "below the floor".
+                self._empty_reason = "below_floor"
                 return ([], {})
             top_results = banded
 

@@ -56,7 +56,11 @@ PROFILE_AGE_TO_CORPUS: Dict[str, Tuple[str, ...]] = {
 
 # Genres the profile can store, and which Play column each actually lives in.
 #
-# `plays.category` holds ONLY "classical" and "contemporary". The dramatic
+# `plays.category` holds ONLY "classical" and "contemporary" — and "modern"
+# once scripts/fix_anthology_era_labels.py has run, which moves the 66 plays
+# that a 1920 anthology title mislabelled as contemporary into the era their
+# year_written already proves. Era searches are unaffected either way: 'modern'
+# is a YEAR_ONLY_ERA and never consults this label. The dramatic
 # genre is in `plays.genre`. Filtering the profile's genres against `category`
 # alone — which is what the recommender did — matched zero plays for Drama and
 # Comedy, the two most common preferences on the platform.
