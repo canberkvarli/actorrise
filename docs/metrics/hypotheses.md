@@ -568,3 +568,47 @@ first 2026-02-18, last 2026-06-29; negatives continue through 2026-09-12. The
 widget worked and stopped. Zero-in-30-days is a regression with a date on it,
 so bisect the search-results UI around late June rather than re-testing the
 endpoint.
+
+### H-20 audit, 2026-09-17: the label is wrong, the years are right
+
+The 66 plays were audited. Verdict: every year is right (or right to the era);
+the era LABEL is wrong on all 66, and it came from a book cover.
+
+57 of the 66 carry a year_written of exactly 1920 (42 plays, 272 monologues)
+or exactly 1922 (15 plays, 36 monologues). Those are anthology PUBLICATION
+years, not composition years. The 1920 set is Shay & Loving's *Fifty
+Contemporary One-Act Plays* — Trifles, Aria da Capo, Ile, The Boor, The
+Workhouse Ward, Literature, Helena's Husband are all in that table of
+contents. The 1922 set is its American companion (Kreymborg, Percy MacKaye,
+Paul Green, Jeannette Marks). The ingest read the word "Contemporary" off the
+title and wrote it to plays.category. Contemporary to 1920.
+
+The other 9 are individually ingested, correctly dated, identically
+mislabelled: Charley's Aunt (1892), Candida (1897), The Devil's Disciple
+(1900), The Admirable Crichton (1902), How He Lied to Her Husband (1911),
+Heartbreak House (1919), Anna Christie (1921), Hay Fever (1925), Easy Virtue
+(1926).
+
+THE NUMBER UNDERNEATH IS ZERO. Not 4, not 325:
+
+    select count(distinct p.id) from plays p join monologues m on m.play_id=p.id
+    where m.embedding_vector is not null and p.source_type='play'
+      and p.year_written >= 1980;     -- 0
+
+Not one play in the catalogue is dated 1980 or later. 733 plays, 13,969
+monologues, none of them contemporary. The 4 pieces that survive the era
+clause do so only through the undated branch, and they are
+copyright_status='user_uploaded' — two scripts a user uploaded themselves
+("MARCUS! COME BACK!", "Ian and Nathan", both by "Unknown"). ActorRise's
+entire contemporary-play offering is two user uploads.
+
+So there is no hidden reserve to recover by fixing data. Relabelling is
+honesty, not supply: scripts/fix_anthology_era_labels.py sets the 66 to
+'modern' (the era their year already proves) and changes no search result,
+because era_year_clause corrects on year and 'modern' is a YEAR_ONLY_ERA that
+never reads the label. What it fixes is the catalogue lying to its own admin
+counts, era lanes and recommender.
+
+Acquisition is the only path to contemporary plays. Until then the filter has
+nothing behind it, and 38 users a month find that out one blank screen at a
+time.

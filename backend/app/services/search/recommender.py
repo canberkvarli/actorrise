@@ -25,7 +25,13 @@ def _genre_conditions(preferred_genres: List[str]):
     """
     A profile's preferred genres live in two different columns.
 
-    `plays.category` holds only "classical" (626) and "contemporary" (1,860).
+    `plays.category` holds only "classical" (626) and "contemporary" (1,860),
+    plus "modern" once scripts/fix_anthology_era_labels.py has run. Note that
+    the contemporary count is not a count of contemporary work: no play in the
+    catalogue carries a year of 1980 or later, and 321 of those monologues are
+    1892-1926 pieces scraped from an anthology called *Fifty Contemporary
+    One-Act Plays*. Matching a profile's "contemporary" preference against this
+    label alone returns Chekhov.
     The dramatic genre — drama, comedy, crime — is in `plays.genre`. This
     matched `category` alone, so the two most popular preferences on the whole
     platform, Comedy (260 users) and Drama (275), matched zero plays and the
