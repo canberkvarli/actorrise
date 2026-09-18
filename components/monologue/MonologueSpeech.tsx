@@ -318,7 +318,7 @@ export function MonologueSpeech({
       {/* The rule is what makes the empty column read as a margin rather than a
           hole. It runs the height of the entry because this is one cell. */}
       <div className="min-w-0">
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
           <h3 className="min-w-0">
             <button
               type="button"
@@ -330,7 +330,10 @@ export function MonologueSpeech({
           </h3>
           {/* Length and who it is for: facts about the piece, so they sit with
               the title rather than drifting into the row of things you can do. */}
-          <span className="shrink-0 text-[13px] tabular-nums" style={{ color: "var(--t-muted-dark)" }}>
+          <span
+            className="shrink-0 text-[12px] tabular-nums sm:text-[13px]"
+            style={{ color: "var(--t-muted-dark)" }}
+          >
             {[length, age, colour].filter(Boolean).join(" · ")}
           </span>
         </div>
@@ -344,8 +347,17 @@ export function MonologueSpeech({
             className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1"
             style={{ fontFamily: "var(--t-direction)", fontSize: 14, color: "var(--t-muted-dark-2)" }}
           >
-            <span className="truncate">{source}</span>
-            {era && <span className="shrink-0 text-[13px]">{era}</span>}
+            {/* Wraps on a phone rather than truncating. The play's name is
+                what an actor screens on, and `truncate` on a 360px row cut it
+                to "A Midsummer Night'…" — the one thing on the line that had
+                to survive. It gets two lines here and its old one-line
+                treatment from sm up, where it fits. */}
+            <span className="min-w-0 break-words sm:truncate">{source}</span>
+            {/* The era used to be printed here as plain text AND again as the
+                pill below, so every classical row said "classical" twice on
+                one line. The pill is the better of the two — it is the same
+                object the quick chips and the shelf rows use — so the text
+                goes and `era` now only decides whether this line exists. */}
             {/* Which shelf it is off, after the source line — the same pill the
                 quick chips and the shelf rows use. */}
             <MonologueSourceTag monologue={mono} />

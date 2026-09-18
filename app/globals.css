@@ -6981,13 +6981,28 @@
   margin: 0 auto;
   pointer-events: auto;
 }
-@media (max-width: 420px) {
-  /* "Rehearse this scene" plus "edit the scene" side by side is ~330px of
-     content before padding; at 360 it either overflowed or squeezed the pill
-     until its label wrapped. The run takes the width, the quiet link sits
-     under it. */
-  .t-prev__dockinner { flex-direction: column; gap: 8px; }
-  .t-prev__go { width: 100%; height: 54px; font-size: 15px; }
+@media (max-width: 767.98px) {
+  /* The dock on a phone.
+     Side by side, "Rehearse this scene" and "edit the scene" came to ~330px
+     before padding, so at 360 the pill squeezed until its label wrapped and
+     the quiet link ended up jammed against it — two actions of nearly equal
+     weight fighting over one line. Stacked instead, and the run is not a
+     58px pill down here: it is a normal-height bar across the width, with
+     the edit link as a small line under it where it cannot be mistaken for
+     the main thing. */
+  .t-prev__dockinner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .t-prev__go {
+    width: 100%;
+    height: 50px;
+    padding: 0 6px 0 20px;
+    font-size: 15px;
+  }
+  .t-prev__godot { width: 38px; height: 38px; }
+  .t-prev__edit { justify-content: center; font-size: 12px; padding: 2px 0; }
 }
 .t-prev__go {
   display: inline-flex;

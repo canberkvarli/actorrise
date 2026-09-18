@@ -1960,28 +1960,31 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             before; only the surface changed. */}
         <div className="flex flex-wrap items-stretch gap-3">
           <div
-            className={`group relative flex min-w-0 flex-1 basis-80 items-center gap-3 px-5${
+            className={`group relative flex min-w-0 flex-1 basis-80 items-center gap-2.5 px-3.5 sm:gap-3 sm:px-5${
               jitter ? " search-jitter" : ""
             }`}
             onAnimationEnd={() => setJitter(false)}
             style={{
-              minHeight: 68,
-              borderRadius: 40,
+              /* 68px of pill, a 68px twin beside it and an 8px hard shadow is
+                 a lot of a phone's first screen to spend before any result.
+                 The shape is the same; it is just sized for the room. */
+              minHeight: isPhone ? 52 : 68,
+              borderRadius: isPhone ? 26 : 40,
               background: "var(--t-paper)",
               border: "2px solid var(--t-text)",
-              boxShadow: "8px 8px 0 var(--acc)",
+              boxShadow: isPhone ? "5px 5px 0 var(--acc)" : "8px 8px 0 var(--acc)",
               transition: "transform .25s var(--t-spring), box-shadow .25s",
             }}
             onFocusCapture={(e) => {
               e.currentTarget.style.transform = "translate(-2px,-2px)";
-              e.currentTarget.style.boxShadow = "10px 10px 0 var(--acc)";
+              e.currentTarget.style.boxShadow = isPhone ? "7px 7px 0 var(--acc)" : "10px 10px 0 var(--acc)";
             }}
             onBlurCapture={(e) => {
               e.currentTarget.style.transform = "";
-              e.currentTarget.style.boxShadow = "8px 8px 0 var(--acc)";
+              e.currentTarget.style.boxShadow = isPhone ? "5px 5px 0 var(--acc)" : "8px 8px 0 var(--acc)";
             }}
           >
-            <IconSearch className="size-[22px] shrink-0" style={{ color: "var(--t-text)" }} aria-hidden />
+            <IconSearch className="size-[19px] shrink-0 sm:size-[22px]" style={{ color: "var(--t-text)" }} aria-hidden />
             <Input
               id="search-input"
               placeholder={
@@ -2035,7 +2038,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               type="button"
               onClick={isLoading ? stopSearch : handleSearch}
               aria-label={isLoading ? "Stop search" : "Search"}
-              className="flex h-11 shrink-0 items-center gap-2.5 pl-5 pr-1.5 text-[15px] font-bold transition-transform hover:scale-[1.04] hover:-rotate-[1.5deg]"
+              className="flex h-9 shrink-0 items-center gap-1.5 pl-3.5 pr-1 text-[13px] font-bold transition-transform hover:scale-[1.04] hover:-rotate-[1.5deg] sm:h-11 sm:gap-2.5 sm:pl-5 sm:pr-1.5 sm:text-[15px]"
               style={{
                 borderRadius: 999,
                 background: "var(--t-cta-bg)",
@@ -2069,8 +2072,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               type="button"
               onClick={handleFindForMe}
               disabled={isLoading}
-              className="t-find-for-me flex shrink-0 items-center gap-2 px-6 text-[15px] font-semibold disabled:opacity-50"
-              style={{ minHeight: 68, borderRadius: 40 }}
+              className="t-find-for-me flex shrink-0 items-center justify-center gap-2 px-4 text-[13px] font-semibold disabled:opacity-50 max-sm:w-full sm:px-6 sm:text-[15px]"
+              style={{ minHeight: isPhone ? 46 : 68, borderRadius: isPhone ? 23 : 40 }}
             >
               <IconSparkles className="size-[18px]" />
               Find for me
