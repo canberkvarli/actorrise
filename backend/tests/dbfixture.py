@@ -5,7 +5,7 @@ elsewhere stop it — so tests name the tables they need and get those. Three
 things are Postgres-only and stand down for the duration: server_default=now(),
 which SQLite refuses as DDL; onupdate=now(), which it refuses on every UPDATE
 ("no such function: now") and so only shows up in a test that changes a row;
-and ARRAY columns, which it has no type for. All three live on the column
+and ARRAY columns, which it has no type for. All four live on the column
 objects, which are module-level shared state, so restore() puts them back.
 
 Foreign keys are switched on deliberately. SQLite ignores them by default, and
@@ -50,7 +50,12 @@ def memory_db(models):
             if col.onupdate is not None and "now(" in onupdate_sql:
                 saved.append((col, "onupdate", col.onupdate))
                 col.onupdate = None
-            if type(col.type).__name__ == "ARRAY":
+            # ARRAY has no SQLite type at all. JSONB does not either, but only
+            # when it is declared bare: most models write
+            # `JSON().with_variant(JSONB(), "postgresql")`, which already falls
+            # back on its own. search_logs declares JSONB outright, which is why
+            # no test could create that table until this line existed.
+            if type(col.type).__name__ in ("ARRAY", "JSONB"):
                 saved.append((col, "type", col.type))
                 col.type = JSON()
 
