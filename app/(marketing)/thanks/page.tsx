@@ -66,7 +66,8 @@ function PartnerCard({ partner }: { partner: PartnerItem }) {
               loading="lazy"
               // dark:invert: supplied marks are black on transparent and vanish
               // against the dark shell; inverting reads them as white there.
-              className="max-h-12 w-auto max-w-full object-contain dark:invert"
+              // A fullColor mark already reads on dark, so it is left alone.
+              className={`max-h-12 w-auto max-w-full object-contain ${partner.fullColor ? "" : "dark:invert"}`}
             />
           ) : (
             <span

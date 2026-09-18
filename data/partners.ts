@@ -35,6 +35,12 @@ export interface PartnerItem {
   blurb?: string;
   /** "chapter" | "theater" | "newsletter" | "studio" | "school" */
   category: string;
+  /**
+   * Set when the mark is a full-color illustration rather than black on transparent.
+   * The views skip dark:invert for these, since inverting a green-and-orange mark
+   * turns it magenta rather than readable.
+   */
+  fullColor?: boolean;
   /** false until they have explicitly approved logo use. Only true entries render. */
   approved: boolean;
 }
@@ -48,6 +54,18 @@ export const PARTNERS: PartnerItem[] = [
     blurb: "Lists ActorRise for its member teachers and actors.",
     category: "chapter",
     // Approved in writing by VTA's conference manager on 2026-09-13, logo file supplied.
+    approved: true,
+  },
+  {
+    name: "Nothing Bogus",
+    url: "https://nothingbogus.substack.com",
+    logo: "/partners/nothing-bogus.webp",
+    blurb: "Max Cea's indie film newsletter. Listed ActorRise in the July 2026 listings.",
+    category: "newsletter",
+    fullColor: true,
+    // Max Cea OK'd pulling the wordmark off the site on 2026-09-08 ("That's fine").
+    // Web copy is a cropped, background-removed cut of the Substack header
+    // (source: substack-post-media.s3.amazonaws.com/public/images/6f16266d-cd46-48d0-b791-e4ea95f5f674_1344x256.png).
     approved: true,
   },
 ];

@@ -86,7 +86,8 @@ function PartnerMark({
           loading="lazy"
           // dark:invert: the marks arrive as black on transparent, which disappears
           // entirely against the dark shell. Inverting reads them as white there.
-          className={`${height} w-auto ${solo ? "max-w-[200px]" : "max-w-[150px]"} object-contain ${rest} transition duration-300 ease-out dark:invert group-hover:grayscale-0 group-hover:opacity-100`}
+          // A fullColor mark already reads on dark, so it is left alone.
+          className={`${height} w-auto ${solo ? "max-w-[200px]" : "max-w-[150px]"} object-contain ${rest} transition duration-300 ease-out ${partner.fullColor ? "" : "dark:invert"} group-hover:grayscale-0 group-hover:opacity-100`}
         />
       ) : (
         <span
