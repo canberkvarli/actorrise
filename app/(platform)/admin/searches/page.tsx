@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import { ContentRequestsTab } from "@/components/admin/searches/ContentRequestsTab";
+import { useMarkSeen } from "@/hooks/useMarkSeen";
+
 import { DemandTab } from "@/components/admin/searches/DemandTab";
 import { PeopleTab } from "@/components/admin/searches/PeopleTab";
 import { ProblemsTab } from "@/components/admin/searches/ProblemsTab";
@@ -24,12 +25,13 @@ const TABS = [
   { id: "demand", label: "What they want", hint: "Top queries and gaps" },
   { id: "people", label: "Who's searching", hint: "Per-actor behaviour" },
   { id: "recent", label: "Recent activity", hint: "The raw feed" },
-  { id: "requests", label: "Requests", hint: "Titles to add" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
 export default function AdminSearchesPage() {
+  useMarkSeen("searches");
+
   const [tab, setTab] = useState<TabId>("problems");
   const [filters, setFilters] = useState<LogFilters>(EMPTY_FILTERS);
 
@@ -83,7 +85,6 @@ export default function AdminSearchesPage() {
         />
       )}
 
-      {tab === "requests" && <ContentRequestsTab />}
     </div>
   );
 }

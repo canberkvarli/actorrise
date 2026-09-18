@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+
+import { useMarkSeen } from "@/hooks/useMarkSeen";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -511,6 +513,8 @@ function exportStatsToCsv(stats: AdminStats) {
 }
 
 export default function AdminOverviewPage() {
+  useMarkSeen("revenue");
+
   const [rangePreset, setRangePreset] = useState<"7" | "30">("30");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");

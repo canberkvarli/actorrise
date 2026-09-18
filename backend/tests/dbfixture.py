@@ -65,11 +65,36 @@ def memory_db(models):
     def _fk_on(conn, _record):
         conn.execute("PRAGMA foreign_keys=ON")
 
+    # Same reason as in restore(): the mappers must see the stripped columns
+    # rather than a memoization taken before they were stripped.
+    _reset_mapper_memoizations()
+
     for model in models:
         model.__table__.create(engine)
     return sessionmaker(bind=engine)(), saved
 
 
+def _reset_mapper_memoizations():
+    """Make the mappers look at the columns again.
+
+    Putting the column attributes back is not enough. A mapper memoizes which of
+    its columns have a server default the first time it builds an INSERT, and it
+    never re-derives that. So a module that strips now(), inserts once and then
+    restores leaves every later module with a mapper that still believes the
+    column has no default -- and SQLAlchemy duly sends an explicit NULL into a
+    NOT NULL column.
+
+    It surfaced as test_content_requests failing only when it ran after another
+    module, and passing alone. Cheap to reset, and it keeps `restore` honest
+    about what it claims to undo.
+    """
+    from app.core.database import Base
+
+    for mapper in Base.registry.mappers:
+        mapper._reset_memoizations()
+
+
 def restore(saved):
     for col, attr, value in saved:
         setattr(col, attr, value)
+    _reset_mapper_memoizations()
