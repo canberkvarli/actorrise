@@ -266,8 +266,11 @@ class EmailTemplates:
         tier_display_name: str,
         billing_period: str,
         timestamp: str,
+        headline: str = "New paid subscriber",
+        lede: str = "A user just upgraded to a paid plan.",
+        trial_end_label: Optional[str] = None,
     ) -> str:
-        """Render upgrade notification email (sent to admin)."""
+        """Render upgrade / trial-started notification email (sent to admin)."""
         template = self.env.get_template('upgrade_notification.html')
         return template.render(
             user_name=user_name,
@@ -275,6 +278,52 @@ class EmailTemplates:
             tier_display_name=tier_display_name,
             billing_period=billing_period,
             timestamp=timestamp,
+            headline=headline,
+            lede=lede,
+            trial_end_label=trial_end_label,
+        )
+
+    def render_trial_ending_notification(
+        self,
+        user_name: str,
+        user_email: str,
+        tier_display_name: str,
+        trial_end_label: str,
+    ) -> str:
+        """Render the 3-days-until-charge notification (sent to admin)."""
+        template = self.env.get_template('trial_ending_notification.html')
+        return template.render(
+            user_name=user_name,
+            user_email=user_email,
+            tier_display_name=tier_display_name,
+            trial_end_label=trial_end_label,
+        )
+
+    def render_comp_expiry_notification(self, items: list) -> str:
+        """Render the comped-membership expiry digest (sent to admin)."""
+        template = self.env.get_template('comp_expiry_notification.html')
+        return template.render(items=items)
+
+    def render_trial_ended_notification(
+        self,
+        user_name: str,
+        user_email: str,
+        tier_display_name: str,
+        headline: str,
+        lede: str,
+        outcome: str,
+        stripe_status: str,
+    ) -> str:
+        """Render the trial-outcome notification (sent to admin)."""
+        template = self.env.get_template('trial_ended_notification.html')
+        return template.render(
+            user_name=user_name,
+            user_email=user_email,
+            tier_display_name=tier_display_name,
+            headline=headline,
+            lede=lede,
+            outcome=outcome,
+            stripe_status=stripe_status,
         )
 
     def render_weekly_engagement(

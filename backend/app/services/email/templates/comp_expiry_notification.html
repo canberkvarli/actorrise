@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Comped memberships ending{% endblock %}
+
+{% block content %}
+                <h1>Comped memberships ending</h1>
+                <p>
+                    These are comps, not trials: nothing is charged, access just
+                    switches off on the date. Extending one is a grant in the
+                    admin, or a reply to say how much longer they need.
+                </p>
+                <div class="accent-box accent-box-green">
+                    <table style="width:100%; border-collapse:collapse;">
+                        <tr>
+                            <td style="padding:6px 0; font-size:13px; font-weight:600; color:#292929; text-transform:uppercase; letter-spacing:0.04em;">Who</td>
+                            <td style="padding:6px 0; font-size:13px; font-weight:600; color:#292929; text-transform:uppercase; letter-spacing:0.04em;">Type</td>
+                            <td style="padding:6px 0; font-size:13px; font-weight:600; color:#292929; text-transform:uppercase; letter-spacing:0.04em;">Ends</td>
+                        </tr>
+                        {% for item in items %}
+                        <tr>
+                            <td style="padding:8px 0; font-size:15px; color:#374151; border-top:1px solid #e5e7eb;">
+                                {{ item.name or item.email }}<br>
+                                <span style="font-size:13px; color:#6b7280;">{{ item.email }}</span>
+                                {% if item.organization %}<br><span style="font-size:13px; color:#6b7280;">{{ item.organization }}</span>{% endif %}
+                            </td>
+                            <td style="padding:8px 0; font-size:15px; color:#374151; border-top:1px solid #e5e7eb;">{{ item.account_type or '—' }}</td>
+                            <td style="padding:8px 0; font-size:15px; color:#374151; border-top:1px solid #e5e7eb;">
+                                <strong>{{ item.when }}</strong><br>
+                                <span style="font-size:13px; color:#6b7280;">{{ item.date }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+{% endblock %}

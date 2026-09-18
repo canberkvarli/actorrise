@@ -19,7 +19,9 @@ export type UserEventName =
   | "memorized_toggled"
   | "beat_saved"
   | "beat_cleared"
-  | "monologue_work_finished";
+  | "monologue_work_finished"
+  | "rehearsal_input_mode"
+  | "rehearsal_voice_advanced";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

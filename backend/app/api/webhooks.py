@@ -11,7 +11,7 @@ import json
 import logging
 import os
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 
 import stripe
 from app.core.database import get_db
@@ -73,6 +73,10 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             handle_subscription_updated(
                 event_data, db, previous_attributes=event["data"].get("previous_attributes")
             )
+        elif event_type == "customer.subscription.trial_will_end":
+            # Stripe fires this 3 days before the card is charged — the last
+            # window in which a word from me can still change the outcome.
+            handle_trial_will_end(event_data, db)
         elif event_type == "customer.subscription.deleted":
             handle_subscription_deleted(event_data, db)
         else:
@@ -91,6 +95,42 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 # ============================================================================
 # Event Handlers
 # ============================================================================
+
+
+def _sync_from_stripe_subscription(subscription: UserSubscription, stripe_sub: dict) -> None:
+    """Copy Stripe's own view of a subscription onto our row.
+
+    Checkout used to hardcode `status = "active"`, so a 14-day trial was stored
+    as a paying customer from the moment the card was saved, with `trial_end`
+    left NULL. Nothing downstream could then tell a trial from a subscription —
+    not the admin page (which renders these fields faithfully), not the revenue
+    counts, not a founder looking at the table. Stripe already knows all of it,
+    so ask it rather than guess.
+
+    Never raises: a telemetry-shaped failure must not 500 a webhook and make
+    Stripe retry a grant we have already applied.
+    """
+    try:
+        if stripe_sub.get("status"):
+            subscription.status = stripe_sub["status"]
+        for field, key in (
+            ("trial_end", "trial_end"),
+            ("current_period_start", "current_period_start"),
+            ("current_period_end", "current_period_end"),
+        ):
+            ts = stripe_sub.get(key)
+            if ts is None and key.startswith("current_period"):
+                # Stripe moved the period fields onto the subscription ITEM in
+                # recent API versions; the subscription still carries them on
+                # older ones. Read whichever is present.
+                items = (stripe_sub.get("items") or {}).get("data") or []
+                ts = items[0].get(key) if items else None
+            if ts:
+                setattr(subscription, field, datetime.fromtimestamp(ts, timezone.utc))
+        if stripe_sub.get("cancel_at_period_end") is not None:
+            subscription.cancel_at_period_end = stripe_sub["cancel_at_period_end"]
+    except Exception as e:  # pragma: no cover - defensive
+        print(f"Warning: could not sync subscription from Stripe: {e}")
 
 
 def handle_checkout_completed(session: dict, db: Session):
@@ -159,6 +199,18 @@ def handle_checkout_completed(session: dict, db: Session):
     subscription.stripe_customer_id = session["customer"]
     subscription.stripe_subscription_id = session["subscription"]
 
+    # A checkout that opens a trial is NOT a paying customer yet. Ask Stripe what
+    # this subscription actually is (trialing vs active, and until when) instead
+    # of leaving the "active" above standing. Falls back to it if the retrieve
+    # fails, which is the old behaviour and never worse than it.
+    trial_end_dt = None
+    try:
+        _stripe_sub = stripe.Subscription.retrieve(session["subscription"])
+        _sync_from_stripe_subscription(subscription, _stripe_sub)
+        trial_end_dt = subscription.trial_end
+    except Exception as e:
+        print(f"Warning: could not read Stripe subscription at checkout: {e}")
+
     db.commit()
 
     # No community event here. "Maya went Plus" was social proof for the paywall,
@@ -224,7 +276,11 @@ def handle_checkout_completed(session: dict, db: Session):
                     db.commit()
                     print(f"✅ Auto-added {email_addr} to do-not-contact (paid subscriber)")
 
-            # Send upgrade notification to admin (fire-and-forget)
+            # Send upgrade notification to admin (fire-and-forget).
+            # trial_end is passed so the mail can say "trial started, converts
+            # on the 1st" rather than "New upgrade" for somebody who has paid
+            # nothing yet — the subject line that made a 14-day trial read as a
+            # sale.
             from app.services.email.notifications import send_upgrade_notification
 
             threading.Thread(
@@ -234,6 +290,7 @@ def handle_checkout_completed(session: dict, db: Session):
                     "user_email": user.email,
                     "tier_display_name": tier.display_name,
                     "billing_period": billing_period,
+                    "trial_end": trial_end_dt,
                 },
                 daemon=True,
             ).start()
@@ -417,9 +474,10 @@ def handle_subscription_updated(
         print(f"⚠️  No subscription found for Stripe subscription {stripe_subscription['id']}")
         return
 
-    # Update subscription status
-    subscription.status = stripe_subscription["status"]
-    subscription.cancel_at_period_end = stripe_subscription["cancel_at_period_end"]
+    # Update subscription status, and the dates alongside it: a row that says
+    # "trialing" with a NULL trial_end is no more readable than one that lied
+    # about the status.
+    _sync_from_stripe_subscription(subscription, stripe_subscription)
 
     if stripe_subscription.get("canceled_at"):
         subscription.canceled_at = datetime.fromtimestamp(stripe_subscription["canceled_at"])
@@ -437,15 +495,83 @@ def handle_subscription_updated(
         if prev_status == "trialing" and new_status and new_status != "trialing":
             from app.services.events import record_trial_ended, trial_outcome
 
+            outcome = trial_outcome(new_status)
             record_trial_ended(
                 db,
                 subscription.user_id,
                 stripe_subscription.get("id"),
-                trial_outcome(new_status),
+                outcome,
                 stripe_status=new_status,
             )
+
+            # Tell me. A conversion used to arrive in silence — invoice.paid
+            # notifies nobody — so the only money event that matters was the
+            # one event I never heard about.
+            user = db.query(User).filter(User.id == subscription.user_id).first()
+            tier = (
+                db.query(PricingTier)
+                .filter(PricingTier.id == subscription.tier_id)
+                .first()
+            )
+            if user:
+                from app.services.email.notifications import (
+                    send_trial_ended_notification,
+                )
+
+                threading.Thread(
+                    target=send_trial_ended_notification,
+                    kwargs={
+                        "user_name": user.name or "",
+                        "user_email": user.email,
+                        "tier_display_name": tier.display_name if tier else "Plus",
+                        "outcome": outcome,
+                        "stripe_status": new_status,
+                    },
+                    daemon=True,
+                ).start()
     except Exception as e:
         print(f"Warning: trial_ended not recorded: {e}")
+
+
+def handle_trial_will_end(stripe_subscription: dict, db: Session):
+    """Stripe's 3-day warning before a trial converts.
+
+    Notification only — nothing about the subscription changes here, and the
+    trial may still convert, cancel or fail. The point is the window: three days
+    is long enough to ask an actor how it is going, and after the charge the
+    same message reads as an apology.
+    """
+    subscription = (
+        db.query(UserSubscription)
+        .filter(UserSubscription.stripe_subscription_id == stripe_subscription["id"])
+        .first()
+    )
+    if not subscription:
+        print(f"⚠️  trial_will_end for unknown subscription {stripe_subscription['id']}")
+        return
+
+    # Keep the stored dates honest while we are here.
+    _sync_from_stripe_subscription(subscription, stripe_subscription)
+    db.commit()
+
+    user = db.query(User).filter(User.id == subscription.user_id).first()
+    tier = db.query(PricingTier).filter(PricingTier.id == subscription.tier_id).first()
+    if not user:
+        return
+
+    from app.services.email.notifications import send_trial_ending_notification
+
+    threading.Thread(
+        target=send_trial_ending_notification,
+        kwargs={
+            "user_name": user.name or "",
+            "user_email": user.email,
+            "tier_display_name": tier.display_name if tier else "Plus",
+            "trial_end": subscription.trial_end,
+        },
+        daemon=True,
+    ).start()
+    print(f"✅ trial_will_end notified for user {subscription.user_id}")
 
 
 def handle_subscription_deleted(stripe_subscription: dict, db: Session):

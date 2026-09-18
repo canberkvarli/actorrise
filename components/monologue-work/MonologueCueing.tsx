@@ -44,6 +44,24 @@ const STALL_MS = 3000;
 /** Typewriter face — reserved for the monologue TEXT itself (never titles/UI). */
 const SCRIPT = "var(--font-typewriter), 'Courier Prime', 'Courier New', monospace";
 
+/**
+ * Which device this is, for the input-mode telemetry only.
+ *
+ * iPadOS 13+ reports itself as a Mac and is separable only by touch points —
+ * without that check an iPad counts as a desktop, which is exactly the platform
+ * whose speech support we are trying to tell apart. Deliberately a copy of the
+ * check in GhostLightModal rather than a shared import: that one feeds a
+ * download prompt and answers "none" for Android, which would be wrong here.
+ */
+function detectPlatform(): string {
+  if (typeof navigator === "undefined") return "unknown";
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) return "android";
+  const isIpadOS = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  if (/iPad|iPhone|iPod/.test(ua) || isIpadOS) return "ios";
+  return "desktop";
+}
+
 /** Auto-scale a line's font to its length so long lines fit and the dock stays visible. */
 function lineFontSize(len: number): string {
   if (len > 170) return "clamp(0.95rem, 2.1vw, 1.4rem)";
@@ -240,6 +258,57 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   // requirement, so the whole feature works on every device.
   const tapToAdvance = !isSupported || micDead || listenExhausted;
 
+  /**
+   * Which mode the run actually settled into, and why it moved if it moved.
+   *
+   * The fallback above is invisible after the fact: a session the tap mode
+   * rescued and one where the actor sat watching "Listening" until they gave up
+   * both land in rehearsal_sessions as `timed_out` with two lines delivered.
+   * Every iOS session on record has finished zero times, and without this there
+   * is no way to tell whether the fallback is failing to engage or engaging and
+   * arriving too late.
+   *
+   * Fires on the mode the run starts in, and again on each change — keyed on
+   * mode+reason so a re-render cannot repeat one. `reason` is sent as "none"
+   * rather than null because the event sanitiser drops null values, and a
+   * missing key would be indistinguishable from an older client.
+   */
+  const modeReportedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!started || completed) return;
+    const mode = tapToAdvance ? "tap" : "voice";
+    const reason = !isSupported
+      ? "unsupported"
+      : micDead
+        ? "mic_error"
+        : listenExhausted
+          ? "listen_exhausted"
+          : "none";
+    const key = `${mode}:${reason}`;
+    if (modeReportedRef.current === key) return;
+    modeReportedRef.current = key;
+    trackEvent("rehearsal_input_mode", {
+      mode,
+      reason,
+      error: speechError || "none",
+      platform: detectPlatform(),
+      monologue_id: monologue.id,
+    });
+  }, [
+    started,
+    completed,
+    tapToAdvance,
+    isSupported,
+    micDead,
+    listenExhausted,
+    speechError,
+    monologue.id,
+  ]);
+
+  /** Latched so the "voice actually worked" event is one row per run, not one
+   *  per line. Cleared by resetRun along with the rest of the run state. */
+  const voiceAdvancedRef = useRef(false);
+
   // Reset the live transcript when we move to a new line so highlighting is fresh.
   const goToLineAndReset = useCallback(
     (next: number) => {
@@ -286,9 +355,29 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     if (wordCount === 0) return;
     const inOrder = spokenPrefixCount(current, transcript, 4);
     if (inOrder >= wordCount * MATCH_THRESHOLD || wordMatchScore(current, transcript) >= 0.9) {
+      // Proof the mic is genuinely working on this device: the actor's own
+      // words moved the piece on. "mode: voice" only says we committed to
+      // voice; this says it was heard. Once per run.
+      if (!voiceAdvancedRef.current) {
+        voiceAdvancedRef.current = true;
+        trackEvent("rehearsal_voice_advanced", {
+          platform: detectPlatform(),
+          line_index: activeIndex,
+          monologue_id: monologue.id,
+        });
+      }
       goToLineAndReset(activeIndex + 1);
     }
-  }, [transcript, activeIndex, started, completed, tapToAdvance, lines, goToLineAndReset]);
+  }, [
+    transcript,
+    activeIndex,
+    started,
+    completed,
+    tapToAdvance,
+    lines,
+    goToLineAndReset,
+    monologue.id,
+  ]);
 
   // Keep the active line centered as the spotlight moves down the piece.
   useEffect(() => {
@@ -342,6 +431,10 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     setActiveIndex(0);
     restartsRef.current = 0;
     setListenExhausted(false);
+    // A restart is a fresh run: both telemetry latches clear, so a second
+    // attempt reports its own mode and its own first spoken line.
+    voiceAdvancedRef.current = false;
+    modeReportedRef.current = null;
   }, [resetTranscript]);
 
   const begin = useCallback(async () => {
