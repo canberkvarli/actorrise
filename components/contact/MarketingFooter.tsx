@@ -1,50 +1,12 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ContactModal } from "./ContactModal";
-import changelogData from "@/public/changelog.json";
 import { APPROVED_PARTNERS } from "@/data/partners";
-import { getLatestModalEntry, getLastSeenId } from "@/lib/changelog";
-import type { ChangelogEntry } from "@/lib/changelog";
 
 const linkCls = "shrink-0 transition-colors hover:!text-[var(--t-gel)]";
-
-/** Nothing republishes the changelog mid-session, so there is nothing to
-    subscribe to; the store is read once on the client and never changes. */
-const NO_UPDATES = () => () => {};
-
-function readHasUnseen(): boolean {
-  const updates = (changelogData as { updates?: ChangelogEntry[] }).updates;
-  if (!updates?.length) return false;
-  const latest = getLatestModalEntry(updates);
-  return !!(latest && latest.id !== getLastSeenId());
-}
-
-function WhatsNewLink() {
-  // Bundled at build time rather than fetched. The file is 1.5KB and it sits in
-  // the footer of every marketing page, so the runtime fetch was buying 4.6k
-  // edge requests a week to decide whether to draw one dot.
-  //
-  // Read through useSyncExternalStore rather than an effect: getLastSeenId
-  // touches localStorage, which the server cannot, and the server snapshot of
-  // `false` is also the honest pre-hydration answer — no dot until we know.
-  const hasUnseen = useSyncExternalStore(NO_UPDATES, readHasUnseen, () => false);
-
-  return (
-    <Link href="/changelog" className={`${linkCls} inline-flex items-center gap-1.5`}>
-      What&apos;s New
-      {hasUnseen && (
-        <span
-          className="h-2 w-2 shrink-0 rounded-full"
-          style={{ background: "var(--t-orange)" }}
-          aria-label="New updates"
-        />
-      )}
-    </Link>
-  );
-}
 
 const LINKS = [
   { href: "/monologue-finder", label: "Monologue finder" },
@@ -115,7 +77,6 @@ export function MarketingFooter() {
               style={{ color: "var(--t-muted-light-2)" }}
               aria-label="Footer links"
             >
-              <WhatsNewLink />
               {LINKS.map((l) => (
                 <Link key={l.href} href={l.href} className={linkCls}>
                   {l.label}

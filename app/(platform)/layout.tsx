@@ -6,7 +6,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import changelogData from "@/public/changelog.json";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconHelpCircle } from "@tabler/icons-react";
 import { useState, useEffect, useRef, Suspense } from "react";
@@ -24,10 +23,6 @@ import { theatreFontVars } from "@/lib/fonts/theatre";
 
 // Lazy-load modals that only appear conditionally — keeps them out of the
 // platform layout's initial JS bundle and shaves first-paint cost on /practice.
-const ChangelogModal = dynamic(
-  () => import("@/components/ChangelogModal").then((m) => ({ default: m.ChangelogModal })),
-  { ssr: false },
-);
 const ContactModal = dynamic(
   () => import("@/components/contact/ContactModal").then((m) => ({ default: m.ContactModal })),
   { ssr: false },
@@ -64,12 +59,6 @@ const PWARegister = dynamic(
   () => import("@/components/system/PWARegister"),
   { ssr: false },
 );
-import {
-  getLatestModalEntry,
-  getLastSeenId,
-  markAsSeen,
-  type ChangelogEntry,
-} from "@/lib/changelog";
 import { LastAuthProviderSync } from "@/components/auth/LastAuthProviderSync";
 import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
 import { CallboardLamp, CallboardSheetRow } from "@/components/community/CallboardLamp";
@@ -93,8 +82,6 @@ export default function PlatformLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
-  const [showChangelogModal, setShowChangelogModal] = useState(false);
-  const [changelogModalEntry, setChangelogModalEntry] = useState<ChangelogEntry | null>(null);
   const [mounted, setMounted] = useState(false);
   const [headshotFailed, setHeadshotFailed] = useState(false);
   const [minLoadReady] = useState(true); // No artificial delay — auth resolves fast
@@ -185,37 +172,6 @@ export default function PlatformLayout({
   // has_seen_welcome itself STAYS: SignupTracker reads it as the marker of a
   // fresh account, and the column is still written and served.
 
-  // Show changelog modal when the user has not seen the latest feature (1s delay).
-  // Source of truth is user.last_seen_feature_id on the backend so it's once per actor,
-  // not once per browser. localStorage is a fallback for dismisses written before the
-  // server-side column existed.
-  useEffect(() => {
-    if (loading || !user) return;
-    // Not on a working screen. Tapping Rehearse and being handed a note about
-    // sign-in and Film & TV browsing is an interruption at the exact moment
-    // someone came here to act. It keeps until they're back on the shelf.
-    if (IS_A_WORKING_SCREEN.test(pathname ?? "")) return;
-
-    let cancelled = false;
-    // Bundled at build time, not fetched: 1.5KB of JSON is cheaper to ship in
-    // the chunk than to request on every page view.
-    const timeoutId = setTimeout(() => {
-      const updates = (changelogData as { updates?: ChangelogEntry[] }).updates;
-      if (cancelled || !updates?.length) return;
-      const latest = getLatestModalEntry(updates);
-      if (!latest) return;
-      const seenServer = user.last_seen_feature_id ?? null;
-      const seenLocal = getLastSeenId();
-      if (latest.id === seenServer || latest.id === seenLocal) return;
-      setChangelogModalEntry(latest);
-      setShowChangelogModal(true);
-    }, 1000);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeoutId);
-    };
-  }, [loading, user, pathname]);
 
 
   // Green Room is deliberately not here. community_events records 2 "rehearsing"
@@ -731,6 +687,59 @@ export default function PlatformLayout({
           <div role="menu" aria-label="Menu" className="t-sheet md:hidden">
             <span aria-hidden className="t-sheet__handle" />
 
+            {/* The same playbill the desktop menu prints, at thumb height.
+                It was a flat list of eight rows — Callboard, Saved, Billing,
+                settings, Help, What's new, Contact, theme, log out — with no
+                head, no grouping, and four entries that are either a tab in
+                the bar directly behind this sheet or absent from the desktop
+                menu entirely. Same head, same section directions, same order
+                as the playbill now, so the two are one menu at two widths. */}
+            <div className="t-sheet__head">
+              <span className="t-sheet__avatar">
+                {headshotUrl ? (
+                  <Image
+                    src={headshotUrl}
+                    alt=""
+                    width={44}
+                    height={44}
+                    className="h-full w-full rounded-full object-cover"
+                    unoptimized
+                    onError={() => setHeadshotFailed(true)}
+                  />
+                ) : (
+                  profileInitial
+                )}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="t-sheet__name">{displayName || "Your account"}</span>
+                {userTier && <span className="t-sheet__plan">{userTier}</span>}
+              </span>
+            </div>
+
+            <p className="t-sheet__dir">(you.)</p>
+
+            <Link
+              href="/profile"
+              onClick={() => setMobileMenuOpen(false)}
+              className="t-sheet__row"
+              data-active={pathname.startsWith("/profile")}
+            >
+              <IconUser className="size-[18px] shrink-0" />
+              Edit profile
+            </Link>
+
+            <Link
+              href="/resume"
+              onClick={() => setMobileMenuOpen(false)}
+              className="t-sheet__row"
+              data-active={pathname.startsWith("/resume")}
+            >
+              <IconFileText className="size-[18px] shrink-0" />
+              Résumé
+            </Link>
+
+            <p className="t-sheet__dir">(the box office.)</p>
+
             {user?.is_moderator && (
               <Link
                 href="/admin"
@@ -742,23 +751,6 @@ export default function PlatformLayout({
                 Admin
               </Link>
             )}
-
-            <CallboardSheetRow
-              active={pathname === "/callboard"}
-              onNavigate={() => setMobileMenuOpen(false)}
-            />
-
-            <Link
-              href="/monologues"
-              onClick={() => setMobileMenuOpen(false)}
-              className="t-sheet__row"
-            >
-              <IconBookmark className="size-[18px] shrink-0" />
-              Saved
-              {!isLoadingBookmarks && !isLoadingFilmTvFavorites && savedCount > 0 && (
-                <span className="t-sheet__count">{savedCount}</span>
-              )}
-            </Link>
 
             <Link
               href="/billing"
@@ -781,6 +773,11 @@ export default function PlatformLayout({
               Account settings
             </Link>
 
+            <p className="t-sheet__dir">(the house.)</p>
+
+            {/* Help stays, unlike the rows above it: the desktop bar carries a
+                "?" of its own and the phone bar has no room for one, so this
+                sheet is the only way to it on a phone. */}
             <Link
               href="/help"
               onClick={() => setMobileMenuOpen(false)}
@@ -791,31 +788,12 @@ export default function PlatformLayout({
               Help
             </Link>
 
-            <Link
-              href="/changelog"
-              onClick={() => setMobileMenuOpen(false)}
-              className="t-sheet__row"
-            >
-              <IconRocket className="size-[18px] shrink-0" />
-              What&apos;s new
-            </Link>
-
-            <button
-              type="button"
-              className="t-sheet__row"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setContactOpen(true);
-              }}
-            >
-              <IconMail className="size-[18px] shrink-0" />
-              Contact &amp; feedback
-            </button>
-
             {/* The house lights live here on a phone rather than in the header
                 pill — see HouseLightsRow for why it is a row and not the
                 switch. */}
             <HouseLightsRow onToggle={() => setMobileMenuOpen(false)} />
+
+            <p className="t-sheet__dir">(curtain call.)</p>
 
             <button
               type="button"
@@ -853,22 +831,6 @@ export default function PlatformLayout({
       <PWARegister />
       <SignupTracker />
       <FirstRehearsalGate />
-      {changelogModalEntry && (
-        <ChangelogModal
-          open={showChangelogModal}
-          onOpenChange={(open) => {
-            if (!open) {
-              void markAsSeen(changelogModalEntry.id).then(() => refreshUser());
-            }
-            setShowChangelogModal(open);
-          }}
-          entry={changelogModalEntry}
-          onDismiss={() => {
-            void markAsSeen(changelogModalEntry.id).then(() => refreshUser());
-            setShowChangelogModal(false);
-          }}
-        />
-      )}
       {contactOpen && <ContactModal open={contactOpen} onOpenChange={setContactOpen} />}
     </div>
     </UploadProvider>
