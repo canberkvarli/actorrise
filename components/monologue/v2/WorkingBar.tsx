@@ -81,7 +81,7 @@ function BarButton({
         onClick={onClick}
         aria-pressed={pressed}
         aria-label={label}
-        className="flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300"
+        className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300 sm:h-10 sm:w-10"
         style={{
           background: filled ? "var(--t-gel)" : "transparent",
           color: active || filled ? "var(--t-text)" : "var(--t-muted-dark-2)",
@@ -128,7 +128,7 @@ export const WorkingBar = forwardRef<HTMLDivElement, WorkingBarProps>(
         className="t-m__barfade pointer-events-none sticky top-0 z-30 -mx-5 px-5 pb-2.5 pt-[72px] sm:-mx-6 sm:px-6 sm:pt-[88px]"
       >
         <div
-          className="t-m__hard pointer-events-auto flex items-center justify-between gap-3 rounded-full border-[1.5px] p-1.5"
+          className="t-m__hard pointer-events-auto flex items-center justify-between gap-1.5 rounded-full border-[1.5px] p-1 sm:gap-3 sm:p-1.5"
           style={{
             borderColor: "var(--t-text)",
             background: "var(--t-paper)",
@@ -146,7 +146,7 @@ export const WorkingBar = forwardRef<HTMLDivElement, WorkingBarProps>(
                 aria-selected={mode === m.id}
                 title={m.hint}
                 onClick={() => onModeChange(m.id)}
-                className="relative h-10 rounded-full px-4 text-sm font-bold transition-transform duration-300 hover:scale-[1.04]"
+                className="relative h-10 rounded-full px-2.5 text-[13px] font-bold transition-transform duration-300 hover:scale-[1.04] sm:px-4 sm:text-sm"
                 style={{
                   color: mode === m.id ? "var(--t-on-text)" : "var(--t-muted-dark-2)",
                 }}
@@ -207,10 +207,14 @@ export const WorkingBar = forwardRef<HTMLDivElement, WorkingBarProps>(
               />
             </BarButton>
 
+            {/* Moderator-only, and moderating happens at a desk. It was the
+                fifth control in a row that already did not fit a phone. */}
             {onEdit && (
-              <BarButton label="Edit monologue" onClick={onEdit}>
-                <IconEdit className="h-[18px] w-[18px]" />
-              </BarButton>
+              <span className="hidden sm:inline-flex">
+                <BarButton label="Edit monologue" onClick={onEdit}>
+                  <IconEdit className="h-[18px] w-[18px]" />
+                </BarButton>
+              </span>
             )}
           </div>
         </div>

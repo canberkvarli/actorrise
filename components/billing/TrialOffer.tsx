@@ -203,7 +203,10 @@ export function TrialOfferBanner({
   onDismiss: () => void;
 }) {
   return (
-    <div className="pointer-events-auto fixed bottom-4 left-1/2 z-[10040] w-[min(92vw,30rem)] -translate-x-1/2">
+    <div /* bottom-4 put this behind the phone tab bar — the trial offer, the one
+         strip in the product whose whole job is to be seen. Clears the bar on a
+         phone and keeps its original inset from md up. */
+      className="pointer-events-auto fixed left-1/2 z-[10040] w-[min(92vw,30rem)] -translate-x-1/2 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:bottom-4">
       <div className={`t-strip theatre-tokens ${theatreFontVars}`}>
         <p className="t-strip__body">{body}</p>
         <Link href={href} onClick={onAccept} className="t-strip__cta shrink-0">

@@ -16,7 +16,10 @@ import { IconPlayerPlay } from "@tabler/icons-react";
 export function RunBar({ onRehearse }: { onRehearse: () => void }) {
   return (
     <div
-      className="t-m-barin fixed inset-x-0 bottom-[76px] z-40 px-3 pb-3 pt-2.5 lg:hidden"
+      /* Clears the tab bar and the home indicator together. At a flat 76px it
+         overlapped the bar's own 14+64, and on an iPhone it landed on the home
+         indicator as well. */
+      className="t-m-barin fixed inset-x-0 z-40 px-3 pb-3 pt-2.5 lg:hidden bottom-[calc(84px+env(safe-area-inset-bottom,0px))]"
       style={{
         background:
           "linear-gradient(to top, var(--page) 60%, transparent)",

@@ -54,7 +54,8 @@ export default function ProfileBackfillCard() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
             transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-            className="fixed bottom-4 right-4 z-40 w-[min(20rem,calc(100vw-2rem))] border border-border bg-card p-4 shadow-xl shadow-black/30"
+            /* Same trap as the trial strip: bottom-4 is inside the tab bar's band. */
+            className="fixed right-4 z-40 w-[min(20rem,calc(100vw-2rem))] border border-border bg-card p-4 shadow-xl shadow-black/30 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:bottom-4"
           >
             <button
               type="button"

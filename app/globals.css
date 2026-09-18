@@ -5301,7 +5301,12 @@
   position: fixed;
   left: 12px;
   right: 12px;
-  bottom: 14px;
+  /* The home indicator. Without env() the bar sits ON it on every iPhone
+     since the X, which both looks wrong and puts the tab targets where the
+     system swipe lives. Everything that has to clear this bar — the toaster,
+     the scene preview's dock, the run bar — adds the same env() so the whole
+     stack moves together. */
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   z-index: 9998;
   display: none;
   padding: 6px;
