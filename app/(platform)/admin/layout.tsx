@@ -7,73 +7,11 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import {
-  IconChartBar,
-  IconFileSearch,
-  IconUsers,
-  IconMail,
-  IconSearch,
-  IconMicrophone,
-  IconMessageReport,
-  IconClipboardCheck,
-  IconBuilding,
-} from "@tabler/icons-react";
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: typeof IconChartBar;
-  badgeKey?: "feedback" | "review";
-};
-
-type NavGroup = { title: string; items: NavItem[] };
-
-// Ordered by what actually gets used. Search + Sessions + Feedback are the daily
-// drivers, so they sit at the top under Pulse. Moderation was removed — retired,
-// not hidden.
-//
-// The monologue review queue is back. It was retired while it sat empty, but the
-// interleaved-dialogue and flattened-scene passes now route anything they cannot
-// repair safely into it instead of guessing, so there is real work in there and
-// it needs a way in. The badge is the point: a queue with no counter is a queue
-// nobody opens.
-const GROUPS: NavGroup[] = [
-  {
-    title: "Pulse",
-    items: [
-      { href: "/admin", label: "Overview", icon: IconChartBar },
-      { href: "/admin/searches", label: "Search", icon: IconSearch },
-      { href: "/admin/sessions", label: "Sessions", icon: IconMicrophone },
-      { href: "/admin/feedback", label: "Feedback", icon: IconMessageReport, badgeKey: "feedback" },
-    ],
-  },
-  {
-    title: "People",
-    items: [
-      { href: "/admin/users", label: "Users", icon: IconUsers },
-      { href: "/admin/organizations", label: "Organizations", icon: IconBuilding },
-    ],
-  },
-  {
-    title: "Library",
-    items: [
-      { href: "/admin/content", label: "Content", icon: IconFileSearch },
-      {
-        href: "/admin/monologues/review",
-        label: "Review",
-        icon: IconClipboardCheck,
-        badgeKey: "review",
-      },
-    ],
-  },
-  {
-    title: "Comms",
-    items: [{ href: "/admin/emails", label: "Emails", icon: IconMail }],
-  },
-];
-
-function isActive(pathname: string, href: string): boolean {
-  return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
-}
+  ADMIN_NAV,
+  isActive,
+  type BadgeKey,
+  type NavItem,
+} from "@/lib/adminNav";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -91,26 +29,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [user, loading, router]);
 
-  // Unread negative-feedback count → nav badge. Polls so a fresh complaint shows
-  // up without a reload. Cheap (single COUNT), only runs for moderators.
-  const { data: fb } = useQuery({
-    queryKey: ["admin-feedback-badge"],
+  // Every nav badge in one poll. Five separate counters would have meant five
+  // requests a minute for five COUNTs that could travel together.
+  const { data: pulse } = useQuery({
+    queryKey: ["admin-pulse"],
     queryFn: async () => {
-      const res = await api.get<{ unread: number }>("/api/admin/feedback/summary");
-      return res.data;
-    },
-    enabled: !!user?.is_moderator,
-    refetchInterval: 60_000,
-    staleTime: 30_000,
-  });
-  // Flagged-monologue count → nav badge, same shape as the feedback one. Single
-  // COUNT, moderators only.
-  const { data: rv } = useQuery({
-    queryKey: ["admin-review-badge"],
-    queryFn: async () => {
-      const res = await api.get<{ count: number }>(
-        "/api/admin/monologues/review/count"
-      );
+      const res = await api.get<Record<BadgeKey, number>>("/api/admin/pulse");
       return res.data;
     },
     enabled: !!user?.is_moderator,
@@ -118,7 +42,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     staleTime: 30_000,
   });
 
-  const badges = { feedback: fb?.unread ?? 0, review: rv?.count ?? 0 };
+  // A failed poll shows no badge rather than an error in the nav.
+  const badgeFor = (key?: BadgeKey) => (key ? pulse?.[key] ?? 0 : 0);
 
   if (loading) {
     return (
@@ -139,7 +64,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const renderLink = (item: NavItem, layout: "side" | "strip") => {
     const Icon = item.icon;
     const active = isActive(pathname, item.href);
-    const count = item.badgeKey ? badges[item.badgeKey] : 0;
+    const count = badgeFor(item.badgeKey);
     return (
       <Link
         key={item.href}
@@ -189,7 +114,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Link>
           </div>
           <nav className="flex-1 space-y-6 px-3 pb-8">
-            {GROUPS.map((group) => (
+            {ADMIN_NAV.map((group) => (
               <div key={group.title}>
                 <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
                   {group.title}
@@ -211,7 +136,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <div className="-mx-0 overflow-x-auto scrollbar-hide px-4 py-3">
             <div className="flex gap-1.5 w-max">
-              {GROUPS.flatMap((g) => g.items).map((item) => renderLink(item, "strip"))}
+              {ADMIN_NAV.flatMap((g) => g.items).map((item) => renderLink(item, "strip"))}
             </div>
           </div>
         </div>

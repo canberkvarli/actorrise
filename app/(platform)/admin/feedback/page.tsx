@@ -89,7 +89,7 @@ export default function AdminFeedbackPage() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["admin-feedback"] });
     queryClient.invalidateQueries({ queryKey: ["admin-feedback-summary"] });
-    queryClient.invalidateQueries({ queryKey: ["admin-feedback-badge"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-pulse"] });
   };
 
   const markRead = useMutation({

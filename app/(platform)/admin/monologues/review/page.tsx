@@ -71,7 +71,7 @@ function ReviewCard({ item }: { item: ReviewItem }) {
 
   const done = () => {
     qc.invalidateQueries({ queryKey: ["admin-review-queue"] });
-    qc.invalidateQueries({ queryKey: ["admin-review-badge"] });
+    qc.invalidateQueries({ queryKey: ["admin-pulse"] });
   };
 
   const save = useMutation({
