@@ -57,6 +57,20 @@ CLIENT_EVENT_NAMES = frozenset(
         # line was already known — it fires trackRehearsalCompleted to GA4 —
         # and was thrown away rather than kept where the funnel could join it.
         "monologue_work_finished",  # {monologue_id, lines}
+        # Why a rehearsal stalls. 13 of 24 sessions in the 30 days to 2026-09-17
+        # timed out after 1.7 lines of 6, and every iOS session on record — 7 of
+        # them — has finished zero times. The cause is already known (iOS Safari
+        # exposes webkitSpeechRecognition and then fails at start()), and
+        # MonologueCueing falls back to tap-to-advance when it detects that. What
+        # nothing records is whether the fallback ACTUALLY engaged, so a session
+        # the fallback rescued and one where the actor sat watching "Listening"
+        # look identical afterwards.
+        "rehearsal_input_mode",  # {mode: voice|tap, reason, error, platform}
+        # Voice genuinely worked: the transcript advanced a line. Fired once per
+        # run, on the first such advance, so the volume is one row per session
+        # rather than one per line. Without it "mode: voice" only means we
+        # committed to voice, not that the actor was ever heard.
+        "rehearsal_voice_advanced",  # {platform, line_index}
     }
 )
 
