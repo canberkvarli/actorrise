@@ -4943,6 +4943,23 @@
   box-shadow: 0 10px 34px -16px rgb(0 0 0 / 0.5);
 }
 
+/* The room's name, phone only. Set in the direction face at label size so it
+   reads as the bar's own caption rather than as a heading competing with the
+   page's. Truncates rather than wrapping — the bar is a fixed height. */
+.t-appbar__where {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--t-direction, ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bar-muted);
+}
+
 .t-appbar__rule {
   flex-shrink: 0;
   width: 1px;
@@ -6970,7 +6987,13 @@
    from a room built out of --t-*. These are the pieces they share: a sheet of
    paper with a hard gel shadow, courier labels, and fields that look like
    something typed on rather than filled in. */
-.t-sheet {
+/* NOT `.t-sheet`. That name was already taken by the phone's bottom-sheet menu
+   (see above), and this block sits later in the file, so it was winning: the
+   menu's background became `var(--t-paper)`, which is undefined outside a
+   theatre scope, which makes the declaration invalid — and an invalid
+   background computes to transparent. The whole phone menu went invisible.
+   Named for what it is instead: the sheet of paper a form is printed on. */
+.t-formsheet {
   background: var(--t-paper) !important;
   color: var(--t-text);
   border: 1.5px solid var(--t-text) !important;
@@ -6978,7 +7001,7 @@
   box-shadow: 12px 12px 0 var(--t-gel), 0 40px 100px -30px rgb(0 0 0 / 0.55) !important;
   font-family: var(--t-body);
 }
-.t-sheet__slug {
+.t-formsheet__slug {
   margin: 0;
   font-family: var(--t-direction);
   font-style: italic;
@@ -6986,7 +7009,7 @@
   letter-spacing: 0.08em;
   color: var(--t-muted-dark-2);
 }
-.t-sheet__title {
+.t-formsheet__title {
   margin: 6px 0 0;
   font-family: var(--t-display);
   font-weight: 400;
@@ -6995,7 +7018,7 @@
   letter-spacing: -0.02em;
   color: var(--t-text);
 }
-.t-sheet__rule {
+.t-formsheet__rule {
   border: 0;
   border-top: 1.5px dashed color-mix(in oklab, var(--t-text) 22%, transparent);
   margin: 0;

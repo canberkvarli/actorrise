@@ -178,7 +178,7 @@ export function AddSceneToScriptModal({
       }}
     >
       <DialogContent
-        className={`t-sheet theatre-tokens ${theatreFontVars} max-w-[620px] gap-0 border-0 p-0`}
+        className={`t-formsheet theatre-tokens ${theatreFontVars} max-w-[620px] gap-0 border-0 p-0`}
       >
         <DialogTitle className="sr-only">Add a scene</DialogTitle>
 
@@ -212,8 +212,8 @@ export function AddSceneToScriptModal({
         </AnimatePresence>
 
         <div className="max-h-[68vh] overflow-y-auto px-7 pb-5 pt-7 sm:px-8">
-          <p className="t-sheet__slug">(written in by hand.)</p>
-          <h2 className="t-sheet__title">Add a scene</h2>
+          <p className="t-formsheet__slug">(written in by hand.)</p>
+          <h2 className="t-formsheet__title">Add a scene</h2>
 
           <div className="mt-6 space-y-4">
             <div>
@@ -411,7 +411,7 @@ export function AddSceneToScriptModal({
           </div>
         </div>
 
-        <hr className="t-sheet__rule" />
+        <hr className="t-formsheet__rule" />
 
         <div className="flex items-center justify-between gap-3 px-7 py-4 sm:px-8">
           <p

@@ -238,6 +238,26 @@ export default function PlatformLayout({
     // fix was to give desktop the tab, not to take the tab off the phone.
     { href: "/rehearse", label: "Collection", icon: IconBookmark, match: "exact" as const },
   ];
+  /* Which room the phone bar names. Derived from the same nav config, with the
+     rooms that are not tabs spelled out, so it never says nothing. */
+  const currentLabel =
+    navItems.find((n) =>
+      n.match === "exact" ? pathname === n.href : pathname.startsWith(n.href),
+    )?.label ??
+    (pathname.startsWith("/profile")
+      ? "Profile"
+      : pathname.startsWith("/settings")
+        ? "Settings"
+        : pathname.startsWith("/billing")
+          ? "Billing"
+          : pathname.startsWith("/callboard")
+            ? "Callboard"
+            : pathname.startsWith("/monologue")
+              ? "The piece"
+              : pathname.startsWith("/help")
+                ? "Help"
+                : "");
+
   /* The followspot behind the nav, and whether the bar has been scrolled past.
      Keyed on pathname so it re-measures when the route changes. Both are
      written straight to the DOM — see the hook for why neither is state. */
@@ -352,9 +372,25 @@ export default function PlatformLayout({
                   wordmark has to follow it — hardcoding the light-on-dark asset
                   printed a cream logo onto cream paper. BrandLogo already picks
                   the right file from resolvedTheme when it is allowed to. */}
-              <BrandLogo size="header" />
+              {/* The wordmark is the widest thing in the bar and the least
+                  useful: on a phone you are already inside the app, so it is
+                  spending ~110px to tell you the name of the product you are
+                  looking at. The mark alone from below md; the full lockup
+                  from md up, where there is room for it. */}
+              <span className="inline-flex md:hidden">
+                <BrandLogo size="header" iconOnly />
+              </span>
+              <span className="hidden md:inline-flex">
+                <BrandLogo size="header" />
+              </span>
             </Link>
             <span aria-hidden className="t-appbar__rule" />
+
+            {/* What the freed width is for. With the wordmark gone the phone bar
+                was a mark on the left and two controls on the right with a hole
+                between them; this says which room you are in, which is the one
+                thing the bar can tell you that the tab bar below cannot fit. */}
+            <span className="t-appbar__where md:hidden">{currentLabel}</span>
 
             {/* Desktop navigation.
 

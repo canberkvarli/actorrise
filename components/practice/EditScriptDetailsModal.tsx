@@ -87,13 +87,13 @@ export function EditScriptDetailsModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={`t-sheet theatre-tokens ${theatreFontVars} max-w-[560px] gap-0 border-0 p-0`}
+        className={`t-formsheet theatre-tokens ${theatreFontVars} max-w-[560px] gap-0 border-0 p-0`}
       >
         <DialogTitle className="sr-only">Edit script details</DialogTitle>
 
         <div className="px-7 pb-6 pt-7 sm:px-8">
-          <p className="t-sheet__slug">(the binding.)</p>
-          <h2 className="t-sheet__title">Edit details</h2>
+          <p className="t-formsheet__slug">(the binding.)</p>
+          <h2 className="t-formsheet__title">Edit details</h2>
 
           <div className="mt-6 flex gap-6">
             {/* The cover, restitching itself. Hidden on a phone, where the
@@ -183,7 +183,7 @@ export function EditScriptDetailsModal({
           </div>
         </div>
 
-        <hr className="t-sheet__rule" />
+        <hr className="t-formsheet__rule" />
 
         <div className="flex items-center justify-end gap-2.5 px-7 py-4 sm:px-8">
           <button type="button" className="t-mem__ghost" onClick={() => onOpenChange(false)}>
