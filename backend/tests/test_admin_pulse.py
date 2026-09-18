@@ -181,5 +181,84 @@ class UnseenCountTests(unittest.TestCase):
         self.assertEqual(unseen_conversions(self.db, self.cutoff), 0)
 
 
+from fastapi import HTTPException
+
+from app.api.admin.pulse import admin_pulse, mark_surface_seen
+from app.models.actor import Monologue, Play
+from app.models.feedback import ResultFeedback
+
+
+class EndpointTests(unittest.TestCase):
+    def setUp(self):
+        self.db, self.saved = memory_db(
+            [
+                Organization,
+                User,
+                AdminSeen,
+                ContentRequest,
+                SearchLog,
+                UserEvent,
+                Play,
+                Monologue,
+                ResultFeedback,
+            ]
+        )
+        self.admin = User(
+            email="mod@actorrise.com",
+            hashed_password="x",
+            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        )
+        self.db.add(self.admin)
+        self.db.commit()
+
+    def tearDown(self):
+        self.db.close()
+        restore(self.saved)
+
+    def test_unknown_surface_is_rejected(self):
+        with self.assertRaises(HTTPException) as caught:
+            mark_surface_seen("dashboard", db=self.db, _mod=self.admin)
+        self.assertEqual(caught.exception.status_code, 422)
+
+    def test_marking_a_surface_clears_its_count(self):
+        self.db.add(
+            ContentRequest(
+                play_title="Witch",
+                request_count=1,
+                first_requested_at=datetime(2026, 9, 17, tzinfo=timezone.utc),
+                last_requested_at=datetime(2026, 9, 17, tzinfo=timezone.utc),
+            )
+        )
+        self.db.commit()
+
+        before = admin_pulse(db=self.db, _mod=self.admin)
+        self.assertEqual(before["requests"], 1)
+
+        mark_surface_seen("requests", db=self.db, _mod=self.admin)
+
+        after = admin_pulse(db=self.db, _mod=self.admin)
+        self.assertEqual(after["requests"], 0)
+
+    def test_first_visit_counts_from_account_creation_not_epoch(self):
+        """A never-visited surface must not report the whole history."""
+        self.db.add(
+            ContentRequest(
+                play_title="Death of a Salesman",
+                request_count=1,
+                first_requested_at=datetime(2025, 5, 1, tzinfo=timezone.utc),
+                last_requested_at=datetime(2025, 5, 1, tzinfo=timezone.utc),
+            )
+        )
+        self.db.commit()
+        self.assertEqual(admin_pulse(db=self.db, _mod=self.admin)["requests"], 0)
+
+    def test_pulse_carries_every_badge_key(self):
+        pulse = admin_pulse(db=self.db, _mod=self.admin)
+        self.assertEqual(
+            set(pulse),
+            {"feedback", "review", "requests", "searches", "revenue"},
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
