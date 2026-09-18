@@ -113,7 +113,7 @@ if __name__ == "__main__":
 - [ ] **Step 2: Run it and watch it fail**
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests/test_admin_pulse.py -v
+cd backend && .venv/bin/python -m unittest tests.test_admin_pulse
 ```
 
 Expected: `ModuleNotFoundError: No module named 'app.models.admin_seen'`
@@ -212,7 +212,7 @@ from app.models.admin_seen import AdminSeen
 - [ ] **Step 5: Run the tests and watch them pass**
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests/test_admin_pulse.py -v
+cd backend && .venv/bin/python -m unittest tests.test_admin_pulse
 ```
 
 Expected: 4 passed.
@@ -422,7 +422,7 @@ class UnseenCountTests(unittest.TestCase):
 - [ ] **Step 2: Run them and watch them fail**
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests/test_admin_pulse.py -v
+cd backend && .venv/bin/python -m unittest tests.test_admin_pulse
 ```
 
 Expected: `ModuleNotFoundError: No module named 'app.api.admin.pulse'`
@@ -515,7 +515,7 @@ def unseen_conversions(db: Session, since: datetime) -> int:
 - [ ] **Step 4: Run them and watch them pass**
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests/test_admin_pulse.py -v
+cd backend && .venv/bin/python -m unittest tests.test_admin_pulse
 ```
 
 Expected: 12 passed.
@@ -717,7 +717,7 @@ app.include_router(admin_pulse_router)
 - [ ] **Step 5: Run the tests and watch them pass**
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests/test_admin_pulse.py -v
+cd backend && .venv/bin/python -m unittest tests.test_admin_pulse
 ```
 
 Expected: 16 passed.
@@ -1181,7 +1181,7 @@ note it in the task's commit message.
 
 ```bash
 npx tsc --noEmit && npx vitest run lib/adminNav.test.ts
-cd backend && .venv/bin/python -m pytest tests/test_admin_pulse.py tests/test_content_requests.py -v
+cd backend && .venv/bin/python -m unittest tests.test_admin_pulse tests.test_content_requests
 ```
 
 Expected: `tsc` clean, 6 vitest passed, backend suites passed.
@@ -1265,3 +1265,36 @@ Per `memory/no-prs-solo-dev.md`: commit and push to the branch, no PR.
   fallback (drop the revenue badge) is spelled out rather than left to judgement.
 - The staff-exclusion requirement is not in the spec. It is recorded as an
   explicit amendment at the top of this plan.
+
+
+---
+
+## What actually happened
+
+Executed 2026-09-18 on `feat/admin-unseen-badges`. Every task landed. Five
+deviations from the plan as written, all discovered by running it:
+
+1. **`pytest` is not in `backend/.venv`.** The suite is `unittest` throughout.
+   Commands above corrected. 22 test modules import pytest and cannot run in
+   this venv at all — pre-existing, untouched by this work.
+2. **`memory_db` needs `Organization` alongside `User`.** `users.organization_id`
+   is a foreign key and the fixture enforces them.
+3. **The fixture could not create `search_logs`.** It stood `ARRAY` down for
+   SQLite but not bare `JSONB`, which `search_logs` declares outright. Now it
+   does both, and the docstring says four things rather than three.
+4. **`restore()` did not undo everything it claimed to.** A mapper memoizes
+   which columns carry a server default the first time it builds an INSERT and
+   never re-derives it, so stripping `now()`, inserting, and restoring left
+   later modules sending an explicit NULL into a NOT NULL column. It showed up
+   as `test_content_requests` passing alone and failing after this module.
+   `restore` and `memory_db` now reset the mapper memoizations.
+5. **`last_seen_at` normalises to UTC-aware.** Postgres returns aware from
+   TIMESTAMPTZ, SQLite naive, and callers compare against an aware `now()`.
+   Task 8's fallback branch was not needed: Overview is already a client
+   component.
+
+Verified against prod: requests 18 → 0 after opening the page, 492 unseen bad
+searches, 1 conversion. `feedback` and `review` match the existing endpoints
+exactly. The 348 my predicate counts over 30 days against the dashboard's 382
+is correct: 382 is "33 empty + 349 poor" added together and those sets overlap,
+which `searches.py` already warns about; the 358 → 348 gap is staff exclusion.
