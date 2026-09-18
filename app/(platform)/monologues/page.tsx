@@ -68,6 +68,7 @@ import { useProfileStats, useProfileFormData } from "@/hooks/useDashboardData";
 import { computeProfileMatch, type ProfileMatch } from "@/lib/profileMatch";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBookmarks } from "@/hooks/useBookmarks";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import {
   Dialog,
   DialogContent,
@@ -297,22 +298,53 @@ function SearchContent() {
   const searchAbortRef = useRef<AbortController | null>(null);
   const filmTvAbortRef = useRef<AbortController | null>(null);
 
-  // Typewriter placeholder examples
-  const PLAYS_EXAMPLES = useMemo(() => [
-    "funny monologue for a 20 year old, under 2 min",
-    "dramatic classical piece for a woman",
-    "comedic monologue about love",
-    "angry male monologue, contemporary",
-    "audition piece for drama school",
-    "Shakespeare monologue for a young man",
-  ], []);
-  const FILM_TV_EXAMPLES = useMemo(() => [
-    "courtroom drama, intense closing argument",
-    "breakup scene, emotional",
-    "villain monologue, intimidating",
-    "comedy, awkward first date scene",
-    "war film, motivational speech",
-  ], []);
+  /* Typewriter placeholder examples.
+     Two sets, because a placeholder that does not fit is worse than a short
+     one: at 360px the long versions ran past the input and truncated mid-word
+     while they typed themselves out, so the one thing this control does —
+     teach you that you can ask in plain English — was the thing a phone could
+     not read. The short set says the same in half the characters. */
+  const isPhone = useIsPhone();
+  const PLAYS_EXAMPLES = useMemo(
+    () =>
+      isPhone
+        ? [
+            "funny, under 2 minutes",
+            "dramatic classical",
+            "comedic, about love",
+            "angry, contemporary",
+            "for drama school",
+            "Shakespeare, young man",
+          ]
+        : [
+            "funny monologue for a 20 year old, under 2 min",
+            "dramatic classical piece for a woman",
+            "comedic monologue about love",
+            "angry male monologue, contemporary",
+            "audition piece for drama school",
+            "Shakespeare monologue for a young man",
+          ],
+    [isPhone],
+  );
+  const FILM_TV_EXAMPLES = useMemo(
+    () =>
+      isPhone
+        ? [
+            "courtroom, intense",
+            "breakup scene",
+            "villain monologue",
+            "awkward first date",
+            "motivational speech",
+          ]
+        : [
+            "courtroom drama, intense closing argument",
+            "breakup scene, emotional",
+            "villain monologue, intimidating",
+            "comedy, awkward first date scene",
+            "war film, motivational speech",
+          ],
+    [isPhone],
+  );
 
   const queryHighlights = useMemo(() => extractQueryHighlights(queryUsedForResults || playsQuery), [queryUsedForResults, playsQuery]);
 
@@ -1954,7 +1986,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               id="search-input"
               placeholder={
                 typewriterText ||
-                (searchMode === "film_tv" ? "Search scripts, scenes, speeches..." : "Search monologues...")
+                (searchMode === "film_tv"
+                  ? isPhone ? "Search scripts…" : "Search scripts, scenes, speeches..."
+                  : isPhone ? "Search monologues…" : "Search monologues...")
               }
               value={searchMode === "plays" ? playsQuery : filmTvQuery}
               onChange={(e) => {

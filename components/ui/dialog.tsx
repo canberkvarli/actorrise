@@ -39,7 +39,16 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-[10071] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-lg",
+        /* Phone first, because every dialog in the app inherits this line.
+         `w-full` meant edge-to-edge on a 360px screen — no gutter, the rounded
+         corners cut off by the viewport. And there was no max-height at all,
+         so any dialog taller than the screen simply ran off the top and bottom
+         with nothing to scroll: the onboarding backfill card, Add a scene, the
+         recut confirm and the upgrade modal were all unusable on a phone in
+         landscape, and several in portrait.
+         100dvh, not vh: vh ignores the browser chrome on iOS and hides the
+         last ~90px of the sheet under Safari's own bar. */
+        "fixed left-[50%] top-[50%] z-[10071] grid w-[calc(100%-1.5rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-5 sm:p-6 shadow-lg duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-lg",
         className
       )}
       {...props}

@@ -532,7 +532,7 @@ export default function ProfileOnboardingFlow({
          over a full-screen takeover: the actor was being asked "how did you
          find me?" under a nav offering Monologues, ScenePartner and Collection,
          which is three exits from a card that has not introduced itself yet. */
-      className={`theatre-tokens theatre-onboarding ${theatreFontVars} fixed inset-0 z-[10000] flex items-start justify-center overflow-y-auto overflow-x-clip p-6 sm:items-center`}
+      className={`theatre-tokens theatre-onboarding ${theatreFontVars} fixed inset-0 z-[10000] flex items-start justify-center overflow-y-auto overflow-x-clip p-3.5 sm:p-6 sm:items-center`}
       style={{ background: "var(--page)" }}
       /* The way out. This used to be a plain div inside a plain conditional:
          the actor tapped the last thing in the flow and the entire takeover
@@ -599,7 +599,10 @@ export default function ProfileOnboardingFlow({
             className="pointer-events-none absolute -right-2 -top-[18px] select-none italic leading-none"
             style={{
               fontFamily: "var(--t-display)",
-              fontSize: 170,
+              /* 170px of numeral on a 312px-wide card is most of the card.
+                 It is decoration behind the question, so it scales with the
+                 room rather than sitting on top of it. */
+              fontSize: "clamp(104px, 34vw, 170px)",
               color: "color-mix(in oklab, var(--t-text) 5%, transparent)",
             }}
           >
@@ -608,7 +611,7 @@ export default function ProfileOnboardingFlow({
         )}
 
         {/* Top strip: the act dots, and the way out. */}
-        <div className="relative flex items-center justify-between gap-3 px-5 pt-4">
+        <div className="relative flex items-center justify-between gap-3 px-4 pt-3.5 sm:px-5 sm:pt-4">
           <div className="flex items-center gap-[5px]" aria-hidden>
             {questions.map((q, i) => (
               <span
@@ -650,7 +653,7 @@ export default function ProfileOnboardingFlow({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: direction * -28 }}
               transition={stepTransition}
-              className="relative px-7 pb-7 pt-[22px]"
+              className="relative px-5 pb-6 pt-[18px] sm:px-7 sm:pb-7 sm:pt-[22px]"
             >
               <p
                 className="m-0 text-[13px] italic tracking-[0.08em]"
@@ -846,7 +849,7 @@ function SettingTheStage() {
   }, []);
 
   return (
-    <div className="relative px-7 pb-[60px] pt-14 text-center">
+    <div className="relative px-5 pb-[48px] pt-12 text-center sm:px-7 sm:pb-[60px] sm:pt-14">
       <LampSketch size={96} draw className="mx-auto block" />
       <p className="mt-6 leading-none tracking-[-0.01em]" style={{ fontFamily: "var(--t-display)", fontSize: 32 }}>
         Setting your stage.
@@ -963,7 +966,7 @@ function OnboardingPayoff({
 
   if (!items.length) {
     return (
-      <div className="relative px-7 pb-[26px] pt-[22px]">
+      <div className="relative px-5 pb-[22px] pt-[18px] sm:px-7 sm:pb-[26px] sm:pt-[22px]">
         <p className="m-0 text-[13px] italic tracking-[0.08em]" style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}>
           (the profile is set.)
         </p>
@@ -987,7 +990,7 @@ function OnboardingPayoff({
   const count = COUNT_WORD[items.length] ?? String(items.length);
 
   return (
-    <div className="relative px-7 pb-[26px] pt-[22px]">
+    <div className="relative px-5 pb-[22px] pt-[18px] sm:px-7 sm:pb-[26px] sm:pt-[22px]">
       <p className="m-0 text-[13px] italic tracking-[0.08em]" style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}>
         {kept ? "(on your shelf.)" : `(picked for ${summary || "you"}.)`}
       </p>

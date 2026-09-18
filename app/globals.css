@@ -1114,6 +1114,22 @@
 [data-sonner-toast] {
   border-radius: var(--radius-lg);
 }
+/* On a phone the toaster sits bottom-centre and the tab bar is ALSO parked
+   there — 14px up, ~64px tall — so every toast in the product was rendering
+   underneath it. "Saved", "Couldn't reach the prompt desk", "Scene added":
+   all of them, invisible, on the device most people use. Lifted clear of the
+   bar, and given side gutters so a long message does not run to both edges. */
+@media (max-width: 767.98px) {
+  [data-sonner-toaster][data-y-position="bottom"] {
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+  }
+  [data-sonner-toast] {
+    width: 100% !important;
+  }
+}
 /* Success toast: neutral (not orange) so it doesn't look clickable */
 [data-sonner-toast][data-type="success"] {
   background: var(--card) !important;
@@ -6763,6 +6779,10 @@
   font-size: 12px;
   cursor: pointer;
   max-width: 220px;
+  /* It has to be allowed to shrink. At a fixed 220 the name, the select and
+     "hear" came to more than a 360px screen has and the row broke apart. */
+  min-width: 0;
+  flex: 1 1 auto;
 }
 .t-prev__voice:focus { outline: 2px solid var(--t-gel-ink); outline-offset: 1px; }
 .t-prev__hear {
@@ -6871,9 +6891,10 @@
   background: linear-gradient(to top, var(--page) 62%, transparent);
   pointer-events: none;
 }
-@media (max-width: 767px) {
-  /* Clear of the phone tab bar. */
-  .t-prev__dock { bottom: 64px; }
+@media (max-width: 767.98px) {
+  /* Clear of the phone tab bar, which is 14px up and ~64px tall — at 64 the
+     dock sat ON it. Same clearance the toaster uses. */
+  .t-prev__dock { bottom: calc(82px + env(safe-area-inset-bottom, 0px)); padding-bottom: 8px; }
 }
 .t-prev__dockinner {
   display: flex;
@@ -6883,6 +6904,14 @@
   max-width: 880px;
   margin: 0 auto;
   pointer-events: auto;
+}
+@media (max-width: 420px) {
+  /* "Rehearse this scene" plus "edit the scene" side by side is ~330px of
+     content before padding; at 360 it either overflowed or squeezed the pill
+     until its label wrapped. The run takes the width, the quiet link sits
+     under it. */
+  .t-prev__dockinner { flex-direction: column; gap: 8px; }
+  .t-prev__go { width: 100%; height: 54px; font-size: 15px; }
 }
 .t-prev__go {
   display: inline-flex;
