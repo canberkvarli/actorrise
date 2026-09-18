@@ -93,3 +93,75 @@ describe('shouldAdvance — fallbacks', () => {
     }))).toBe(false);
   });
 });
+
+describe('shouldAdvance — the noisy-room deadlock', () => {
+  /* The bug this covers: silenceThreshold is a fixed level on a 0–255 scale,
+     and a phone's noise floor can sit above it permanently. msSinceVoice then
+     never grows, the quiet guard never opens, and an actor who has finished
+     their line watches every word turn green while the screen says
+     "Recording…" for ever. */
+  it('advances a finished line when the level meter never goes quiet', () => {
+    expect(
+      shouldAdvance(
+        state({
+          msSinceVoice: 0, // the room is never quiet
+          score: 1,
+          lastWordMatched: true,
+          heardAnySpeech: true,
+          msSinceProgress: 1500,
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('still waits while the transcript is gaining words', () => {
+    expect(
+      shouldAdvance(
+        state({
+          msSinceVoice: 0,
+          score: 1,
+          lastWordMatched: true,
+          heardAnySpeech: true,
+          msSinceProgress: 200, // a word landed 200ms ago — they are mid-flow
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it('does not fire on a half-read line, however still it is', () => {
+    expect(
+      shouldAdvance(
+        state({
+          msSinceVoice: 0,
+          score: 0.3,
+          lastWordMatched: false,
+          heardAnySpeech: true,
+          msSinceProgress: 10_000,
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it('never fires before the actor has said anything', () => {
+    expect(
+      shouldAdvance(
+        state({
+          msSinceVoice: 0,
+          score: 1,
+          lastWordMatched: true,
+          heardAnySpeech: false,
+          msSinceProgress: 10_000,
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it('is unaffected when the caller cannot measure progress', () => {
+    // msSinceProgress omitted: the rule falls back to exactly its old behaviour.
+    expect(
+      shouldAdvance(
+        state({ msSinceVoice: 0, score: 1, lastWordMatched: true, heardAnySpeech: true }),
+      ),
+    ).toBe(false);
+  });
+});

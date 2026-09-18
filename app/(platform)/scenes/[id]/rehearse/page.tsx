@@ -1804,17 +1804,31 @@ function RehearsalPageInner() {
     // waited on is the actor *stopping*, and silence produces no events. The
     // microphone knows within a frame; recognition takes the better part of a
     // second. See lib/advance-rule.ts for the rule itself.
+    /* When the transcript last gained a word. The advance rule needs this to
+       break a deadlock the microphone alone cannot: on a phone the level can
+       sit above the voice threshold permanently (AGC, a fan, a hand on the
+       case), and then msSinceVoice never grows and a finished line waits for
+       ever on "Recording…". See lib/advance-rule.ts. */
+    let lastMatchCount = -1;
+    let lastProgressAt = Date.now();
+
     const watcher = setInterval(() => {
       if (srAdvancedRef.current) return;
       const read = liveReadRef.current;
       const score = expectedWords.length > 0 ? read.matched.size / expectedWords.length : 1;
       const lastWordMatched = expectedWords.length > 0 && read.matched.has(expectedWords.length - 1);
 
+      if (read.matched.size !== lastMatchCount) {
+        lastMatchCount = read.matched.size;
+        lastProgressAt = Date.now();
+      }
+
       if (!shouldAdvance({
         msSinceVoice: msSinceVoice(),
         score,
         lastWordMatched,
         heardAnySpeech: heardAnySpeech(),
+        msSinceProgress: Date.now() - lastProgressAt,
       })) return;
 
       srAdvancedRef.current = true;

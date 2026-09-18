@@ -23,6 +23,22 @@ export interface AdvanceState {
   lastWordMatched: boolean;
   /** Has any speech at all been heard during this take? */
   heardAnySpeech: boolean;
+  /**
+   * Milliseconds since the match score last went UP.
+   *
+   * The deadlock this exists to break: `msSinceVoice` comes from a fixed
+   * microphone threshold, and on a phone — AGC, a fan, a hand on the case —
+   * the level can sit above that threshold permanently. When it does,
+   * msSinceVoice never grows, the quiet guard below never opens, and the take
+   * can never advance: the actor finishes their line, watches every word go
+   * green, and the screen sits on "Recording…" forever. That is the one state
+   * this rule must not be able to reach.
+   *
+   * So when the transcript says the line is finished and nothing new has
+   * matched for a good while, we believe the transcript over the level meter.
+   * Optional: callers that cannot measure it are unaffected.
+   */
+  msSinceProgress?: number;
 }
 
 /**
@@ -44,6 +60,16 @@ const DROPPED_TAIL_MIN_SCORE = 0.75;
 const TRAILED_OFF_QUIET_MS = 2500;
 
 /**
+ * How long a FINISHED line may sit with no new words matched before the rule
+ * stops waiting on the microphone.
+ *
+ * Long enough that it never fires while someone is still speaking their line —
+ * by definition the last word has already matched — and short enough that a
+ * noisy room costs a beat rather than the session.
+ */
+const FINISHED_LINE_GRACE_MS = 1200;
+
+/**
  * Should the scene move to the next line?
  *
  * Ordered from the common case to the safety nets. Silence with no speech at all
@@ -55,10 +81,24 @@ export function shouldAdvance({
   score,
   lastWordMatched,
   heardAnySpeech,
+  msSinceProgress,
 }: AdvanceState): boolean {
+  if (!heardAnySpeech) return false;
+
+  /* The line is demonstrably finished and the transcript has been still for
+     more than a beat. Checked BEFORE the quiet guard on purpose: this is the
+     one case where the level meter can be wrong for ever, and holding the
+     invariant here is what strands the actor. Every word of their line has
+     already matched, so there is nothing left to interrupt. */
+  const finishedAndStill =
+    lastWordMatched &&
+    score >= ENDING_MIN_SCORE &&
+    msSinceProgress !== undefined &&
+    msSinceProgress >= FINISHED_LINE_GRACE_MS;
+  if (finishedAndStill) return true;
+
   // The invariant: never interrupt someone who is still making sound.
   if (msSinceVoice < MIN_QUIET_MS) return false;
-  if (!heardAnySpeech) return false;
 
   // They reached the end of the line and stopped. Go, immediately.
   if (lastWordMatched && score >= ENDING_MIN_SCORE) return true;
