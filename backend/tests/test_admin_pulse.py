@@ -52,6 +52,7 @@ from app.api.admin.pulse import (
     unseen_bad_searches,
     unseen_requests,
 )
+from app.models.actor import FilmTvReference, Monologue, Play
 from app.models.content_request import ContentRequest
 from app.models.search_log import SearchLog
 from app.models.user_event import UserEvent
@@ -60,12 +61,30 @@ from app.models.user_event import UserEvent
 class UnseenCountTests(unittest.TestCase):
     def setUp(self):
         self.db, self.saved = memory_db(
-            [Organization, User, AdminSeen, ContentRequest, SearchLog, UserEvent]
+            [Organization, User, AdminSeen, ContentRequest, SearchLog, UserEvent,
+             FilmTvReference, Play, Monologue]
         )
         self.actor = User(email="actor@gmail.com", hashed_password="x")
         self.staff = User(email="canberkvarli@gmail.com", hashed_password="x")
         self.db.add_all([self.actor, self.staff])
         self.db.commit()
+
+        # A title the library really holds, so a failed search for it is a
+        # search BUG and must badge. The catalogue is module-level state, so it
+        # is reset around every test in this class.
+        from app.services.search.title_lookup import reset_catalogue_cache
+        play = Play(title="Tech Bro", author="", source_type="play",
+                    genre="drama", category="contemporary",
+                    copyright_status="public_domain")
+        self.db.add(play)
+        self.db.flush()
+        self.db.add(Monologue(play_id=play.id, title="Tech Bro 1",
+                              character_name="Someone", text="word " * 120,
+                              word_count=120, estimated_duration_seconds=60))
+        self.db.commit()
+        reset_catalogue_cache()
+        self.addCleanup(reset_catalogue_cache)
+
         self.cutoff = datetime(2026, 9, 1, tzinfo=timezone.utc)
         self.before = self.cutoff - timedelta(days=1)
         self.after = self.cutoff + timedelta(days=1)
@@ -101,6 +120,29 @@ class UnseenCountTests(unittest.TestCase):
             )
         self.db.commit()
         self.assertEqual(unseen_requests(self.db, self.cutoff), 0)
+
+    def test_only_failures_we_could_have_answered_badge(self):
+        """A content gap is a backlog, not an event. Badging it is how a badge
+        stops meaning anything -- the Search badge read 99+.
+
+        The cache reset is load-bearing: the catalogue is module-level state, so
+        a catalogue loaded by an earlier test would leak in here and make
+        "hamlet" resolve, and the test would pass or fail on run order.
+        """
+        from app.services.search.title_lookup import reset_catalogue_cache
+        reset_catalogue_cache()
+        self.addCleanup(reset_catalogue_cache)
+
+        self.db.add_all([
+            SearchLog(query="fantasy setting", results_count=0, weak_match=True,
+                      user_id=self.actor.id, created_at=self.after),
+            SearchLog(query="hamlet", results_count=0, weak_match=True,
+                      user_id=self.actor.id, created_at=self.after),
+        ])
+        self.db.commit()
+        # Neither title is in this fixture's catalogue, so both classify as
+        # missing and neither badges.
+        self.assertEqual(unseen_bad_searches(self.db, self.cutoff), 0)
 
     def test_requests_ignores_untouched_rows(self):
         self.db.add(
@@ -157,7 +199,7 @@ class UnseenCountTests(unittest.TestCase):
         """A logged-out actor is a real actor, not a test account."""
         self.db.add(
             SearchLog(
-                query="crazy birds",
+                query="tech bro",
                 results_count=0,
                 user_id=None,
                 created_at=self.after,
@@ -165,6 +207,19 @@ class UnseenCountTests(unittest.TestCase):
         )
         self.db.commit()
         self.assertEqual(unseen_bad_searches(self.db, self.cutoff), 1)
+
+    def test_a_failure_we_could_not_have_answered_does_not_badge(self):
+        """The other half of the contract, stated explicitly."""
+        self.db.add(
+            SearchLog(
+                query="crazy birds",
+                results_count=0,
+                user_id=None,
+                created_at=self.after,
+            )
+        )
+        self.db.commit()
+        self.assertEqual(unseen_bad_searches(self.db, self.cutoff), 0)
 
     def test_conversions_count_trial_converted_only(self):
         self.db.add_all(

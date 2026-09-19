@@ -23,6 +23,7 @@ from app.models.search_log import SearchLog
 from app.models.user import User
 from app.models.user_event import UserEvent
 from app.services.admin_filters import test_user_filter
+from app.services.search_diagnosis import HAVE_IT, classify_query
 from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
@@ -64,22 +65,45 @@ def unseen_requests(db: Session, since: datetime) -> int:
 
 
 def unseen_bad_searches(db: Session, since: datetime) -> int:
-    """Searches since `since` that came back empty or weak.
+    """Searches since `since` that failed AND that we could have answered.
 
-    The predicate mirrors the raw SQL in `admin/searches.py::_compute_summary`
-    ("results_count = 0 OR weak_match IS TRUE"). One count, not zero plus weak
-    added together: rows that are both must be counted once.
+    The failure predicate mirrors the raw SQL in
+    `admin/searches.py::_compute_summary` ("results_count = 0 OR weak_match IS
+    TRUE"). One count, not zero plus weak added together: rows that are both
+    must be counted once.
+
+    Then narrowed to what can be acted on. A content gap is a backlog, not an
+    event, and badging one is how this badge came to read 99+ -- a number you
+    learn to ignore. The gaps are still on the diagnosis page; they are just not
+    an interruption.
+
+    Classifies only the queries newer than `since`, and memoises per distinct
+    query within the call. This endpoint is polled every 60 seconds by every
+    open admin tab, so the full pass belongs to /searches/diagnosis, which is
+    fetched once when the page opens.
 
     `user_id IS NULL` is an anonymous search -- a real logged-out actor, counted.
     """
     staff = _staff_ids(db)
-    q = db.query(func.count(SearchLog.id)).filter(
+    q = db.query(SearchLog.query).filter(
         SearchLog.created_at > since,
         or_(SearchLog.results_count == 0, SearchLog.weak_match.is_(True)),
     )
     if staff:
         q = q.filter(or_(SearchLog.user_id.is_(None), SearchLog.user_id.notin_(staff)))
-    return q.scalar() or 0
+
+    seen: dict[str, bool] = {}
+    actionable = 0
+    for (text,) in q.all():
+        key = (text or "").strip().lower()
+        if not key:
+            continue
+        if key not in seen:
+            verdict, _resolves_to = classify_query(db, key)
+            seen[key] = verdict == HAVE_IT
+        if seen[key]:
+            actionable += 1
+    return actionable
 
 
 def unseen_conversions(db: Session, since: datetime) -> int:
