@@ -127,7 +127,7 @@ function SharedFactsLine({ label }: { label: string | null }) {
   /* It used to share a line with a query echo. The echo is gone — it repeated
      the search box verbatim — so this stands on its own. */
   return (
-    <p className="t-dir mt-3" style={{ color: "var(--t-muted-dark-2)" }}>
+    <p className="t-dir mt-4" style={{ color: "var(--t-muted-dark-2)" }}>
       (all {label}.)
     </p>
   );
@@ -2264,7 +2264,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 className="space-y-4"
               >
-                <div className="mt-3 sm:pl-[9.5rem]">
+                <div className="mt-5 sm:pl-[9.5rem]">
                 <ActiveFilterChips
                   filters={filters}
                   labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
@@ -2278,7 +2278,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     prompt all went: none of them helps anyone find a piece,
                     and they were three lines you had to read before you were
                     allowed to start looking. */}
-                <div className="mb-6 flex items-center justify-end sm:pl-[9.5rem]">
+                <div className="mb-7 mt-4 flex items-center justify-end sm:pl-[9.5rem]">
                   <button
                     type="button"
                     onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
@@ -2483,7 +2483,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {/* One toolbar: what the search understood, how many came back,
                   and the way back to the box. Indented to the margin column so
                   it starts exactly where the speeches do. */}
-              <div className="mb-4 sm:pl-[9.5rem]">
+              <div className="mb-7 mt-1 sm:pl-[9.5rem]">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
                   <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                     <ParsedConstraintChips constraints={parsedConstraints} onRemove={handleRemoveConstraint} />
