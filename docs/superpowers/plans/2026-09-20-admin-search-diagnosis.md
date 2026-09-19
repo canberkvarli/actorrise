@@ -1264,9 +1264,16 @@ PY
 ```
 
 Expected: `sums: True`, total around 1,250, short around 347, and the missing
-side clearly larger than the have-it side. `kill bill` must NOT appear on the
-have-it list — the subtitle-head fix (5fbdf392) resolved it, and its absence is
-the self-cleaning property working.
+side clearly larger than the have-it side. Measured 2026-09-20: 903 found, 347
+short, 273 missing against 74 have-it.
+
+`kill bill` DOES appear on the have-it list, and that is correct. An earlier
+draft of this plan expected it to have vanished, which misread how the
+self-cleaning works: those searches really did fail inside the window, and we
+really do hold the piece. The property works forward — a `kill bill` search run
+today succeeds, so it never enters the failed set — and the historical failures
+age out with the window. The list is a record of what failed, not a claim that
+it would fail again now.
 
 If `short` comes back near 382, the predicate is adding zero and weak instead of
 counting the union. Stop and reconcile against `_compute_summary`.
