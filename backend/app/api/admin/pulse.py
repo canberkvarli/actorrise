@@ -17,6 +17,7 @@ from app.core.database import get_db
 from app.models.actor import Monologue
 from app.models.admin_seen import SURFACES, last_seen_at, mark_seen
 from app.models.content_request import ContentRequest
+from app.services.content_request_resolution import OPEN_STATUSES
 from app.models.feedback import ResultFeedback
 from app.models.search_log import SearchLog
 from app.models.user import User
@@ -46,10 +47,17 @@ def unseen_requests(db: Session, since: datetime) -> int:
     already counted once and has now been asked for again is new information,
     and burying it because the row is old is the exact failure this badge exists
     to fix.
+
+    Only OPEN rows count. A row that has been answered or turned down is not
+    work, and a badge that a closed row can hold up is a badge you learn to
+    ignore -- which is the failure this whole thing exists to fix.
     """
     return (
         db.query(func.count(ContentRequest.id))
-        .filter(ContentRequest.last_requested_at > since)
+        .filter(
+            ContentRequest.last_requested_at > since,
+            ContentRequest.status.in_(OPEN_STATUSES),
+        )
         .scalar()
         or 0
     )

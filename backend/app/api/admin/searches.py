@@ -12,6 +12,10 @@ from app.models.email_do_not_contact import EmailDoNotContact
 from app.models.search_log import SearchLog
 from app.models.user import User
 from app.services.admin_filters import test_user_filter
+from app.services.content_request_resolution import (
+    resolve_finished_requests,
+    title_is_live,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import desc, func, or_, text as sa_text
@@ -509,7 +513,15 @@ def get_content_requests(
     db: Session = Depends(get_db),
     _mod: User = Depends(require_moderator),
 ) -> dict[str, Any]:
-    """All content requests, most-demanded first, freshest breaking the tie."""
+    """All content requests, most-demanded first, freshest breaking the tie.
+
+    Closes anything the library can now answer before listing. Rows never closed
+    themselves, so the queue became an archive of search bugs already fixed: on
+    2026-09-19, 4 of 18 rows were titles cross-tab recovery had found since
+    2026-09-07. Doing it here means the queue is correct wherever it is read
+    from, with no job to schedule and nothing to remember to run.
+    """
+    resolve_finished_requests(db)
     requests = (
         db.query(ContentRequest)
         .order_by(desc(ContentRequest.request_count), desc(ContentRequest.last_requested_at))
@@ -545,31 +557,15 @@ def _waiting_counts(db: Session, request_ids: list[int]) -> dict[int, int]:
 
 
 def _title_resolves(db: Session, requests: list[ContentRequest]) -> dict[int, bool]:
-    """True when the requested title now exists in the catalogue with a piece
-    an actor can actually open.
+    """True when the requested title now exists with a piece an actor can open.
 
-    This is the whole gate on the "tell them" button, and it is why the queue
-    cleans itself: about half of it is vibes rather than titles ("High stakes",
-    "monologues for women", "Power dynamics"). Those never resolve, so they
-    never light up and never need triaging.
+    Gates the "tell them" button. Shares `title_is_live` with the auto-close, so
+    the queue cannot show a notify button on a row the resolver disagrees about.
     """
-    out: dict[int, bool] = {}
-    for r in requests:
-        title = (r.play_title or "").strip()
-        if not title:
-            out[r.id] = False
-            continue
-        hit = (
-            db.query(Monologue.id)
-            .join(Play, Play.id == Monologue.play_id)
-            .filter(
-                func.lower(Play.title) == title.lower(),
-                Monologue.review_status.is_(None),
-            )
-            .first()
-        )
-        out[r.id] = hit is not None
-    return out
+    return {
+        r.id: title_is_live(db, r.play_title or "", author=r.author)
+        for r in requests
+    }
 
 
 VALID_STATUSES = ("requested", "planned", "added", "rejected")

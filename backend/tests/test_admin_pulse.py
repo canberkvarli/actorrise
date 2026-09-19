@@ -87,6 +87,21 @@ class UnseenCountTests(unittest.TestCase):
         self.db.commit()
         self.assertEqual(unseen_requests(self.db, self.cutoff), 1)
 
+    def test_closed_requests_do_not_badge(self):
+        """A resolved or rejected row is not work. It must not hold the badge up."""
+        for status in ("added", "rejected"):
+            self.db.add(
+                ContentRequest(
+                    play_title=f"Done {status}",
+                    request_count=1,
+                    status=status,
+                    first_requested_at=self.after,
+                    last_requested_at=self.after,
+                )
+            )
+        self.db.commit()
+        self.assertEqual(unseen_requests(self.db, self.cutoff), 0)
+
     def test_requests_ignores_untouched_rows(self):
         self.db.add(
             ContentRequest(
