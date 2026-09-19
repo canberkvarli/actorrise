@@ -114,6 +114,22 @@ PREFILLED-EMAIL RULE (critical, do not skip): when someone replies CURTAIN, send
 
 Note: CURTAIN is now the trial SIGN-UP word only. Marketing/re-engagement opt-outs use a separate, plain word: UNSUBSCRIBE (see the Opt-out requirement section above). The two no longer overlap, so a CURTAIN reply always means "sign me up for the trial" and an UNSUBSCRIBE reply always means "take me off the list." No context-guessing needed. (Changed 2026-08-17: opt-out was previously also CURTAIN, which was too appealing and got over-used.)
 
+## Gmail-connector link wrapping (verified 2026-09-18)
+
+The Gmail MCP `create_draft` tool rewrites EVERY URL at draft-creation time into a
+`https://www.google.com/url?q=...&source=gmail&ust=...&sa=E` redirect. Tested and
+confirmed: `<a href>` in htmlBody, a bare `https://actorrise.com` in body, and even
+the plain text `actorrise.com` (auto-linked, and as http) all get wrapped. This is
+NOT the template and NOT Gmail's web UI; the wrapper is already in the stored draft
+(ust = creation time + 24h). Every nudge sent from a connector-made draft since at
+least 2026-09-01 went out with wrapped links.
+
+Workaround that produces a clean draft: pass `htmlBody` ONLY (no `body`), and write
+the domain as `actorrise<span>.</span>com` so nothing is auto-linked. The recipient
+sees plain "actorrise.com" text with no link. If a real clickable link is needed,
+leave it out of the draft and have Canberk insert it in Gmail before sending (links
+added in the Gmail UI are not wrapped). Never put a URL of any kind in `body`.
+
 ## Educators & students free-access offer (added 2026-08-19)
 
 Educators, teachers, coaches, teaching artists, and their students do NOT get the Stripe trial and do NOT get the CURTAIN CTA. They get free Plus directly. The mechanism to give in emails:

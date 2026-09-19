@@ -414,3 +414,220 @@ def ingest_play(
 
     logger.info("ingested %s: %s", title, report.summary())
     return report
+
+
+def ingest_monologue(
+    db: Session,
+    *,
+    play_title: str,
+    author: str,
+    character: str,
+    text: str,
+    copyright_status: str,
+    license_type: Optional[str],
+    source_url: Optional[str] = None,
+    year_written: Optional[int] = None,
+    category: Optional[str] = None,
+    genre: str = "drama",
+    source_type: str = "play",
+    language: str = "en",
+    min_words: int = DEFAULT_MIN_WORDS,
+    max_words: Optional[int] = None,
+    apply: bool = False,
+    analyzer: Any = None,
+    embed: Optional[Callable] = None,
+) -> IngestReport:
+    """Store ONE already-extracted speech, e.g. a publisher's monologue page.
+
+    The sibling of :func:`ingest_play`, for the case that function cannot serve:
+    the input is a single ~200-word speech, not a script. `ingest_play` runs
+    `PlainTextParser` to find speeches inside a document and refuses anything
+    under 2,000 characters, so a lone excerpt is thrown out before the quality
+    gate ever sees it.
+
+    What is skipped is only the finding: the parser and the length floor. Every
+    guarantee that decides whether a row is legal, good and unique is kept, in
+    the same order `ingest_play` applies it — rights first, then English, then
+    the quality gate, the rejection memory, the duplicate check, and
+    `text_segments = None` on the way in.
+
+    Written as a separate entry point rather than a flag on `ingest_play` so
+    that rights stay REQUIRED arguments, and so the 2,000-character floor is not
+    loosened for the whole-script sources that legitimately need it.
+
+    ``category`` is refused when empty. The column is NOT NULL, and defaulting it
+    is how 321 rows came to be labelled contemporary on the strength of a word
+    printed on a 1920 anthology cover. Callers derive it from a verified
+    ``year_written`` or do not call.
+    """
+    report = IngestReport()
+
+    # --- rights, before anything else -------------------------------------
+    # Checked twice on purpose. Once here with no word count, to reject a source
+    # with no basis at all before we spend anything on it; and again below with
+    # the real count, because `fair_use` is bounded by length and this function
+    # exists to store excerpts.
+    if not may_store_text(copyright_status, license_type):
+        report.refused = (
+            f"no basis to store text: copyright_status={copyright_status!r} "
+            f"license_type={license_type!r}"
+        )
+        logger.info("ingest refused for %s: %s", play_title, report.refused)
+        return report
+
+    display = (text or "").strip()
+    if not display:
+        report.refused = "no text"
+        return report
+
+    if looks_non_english(display):
+        report.refused = "source is not English"
+        return report
+
+    character = (character or "").strip()
+    if not character:
+        report.refused = "no character"
+        return report
+    if character.lower() in GROUP_CUES:
+        report.refused = "group_cue"
+        return report
+
+    if not category:
+        report.refused = "no era basis: category is required and must come from a verified year"
+        return report
+
+    if apply and (analyzer is None or embed is None):
+        raise ValueError("apply=True needs both analyzer and embed")
+
+    if max_words is None:
+        max_words = max_words_for(copyright_status, license_type)
+
+    # `display` is what the actor reads, directions kept; `spoken` is what they
+    # say, which is what the floor and the duration measure.
+    spoken = strip_artifacts(to_display_text(display))
+    word_count = len(spoken.split())
+
+    # The bounded rights check. An "excerpt" longer than the fair-use ceiling is
+    # not an excerpt, and the licensing module is what says so.
+    if not may_store_text(copyright_status, license_type, word_count=word_count):
+        report.refused = f"excerpt too long for its rights basis: {word_count} words"
+        return report
+
+    report.candidates = 1
+
+    # Already turned this exact text down? One indexed lookup, and it saves the
+    # gate, the analyser and the embedding.
+    if was_rejected(db, display):
+        report.already_rejected = 1
+        return report
+
+    # No `cast` to pass: a single speech arrives with no knowledge of the other
+    # characters in its play, so the gate's cue-confusion check has nothing to
+    # compare against and is correctly skipped.
+    verdict = assess_monologue_quality(
+        display, spoken=spoken, min_words=min_words, max_words=max_words
+    )
+    if not verdict.ok:
+        for reason in verdict.reasons:
+            report._bump(reason)
+        if apply:
+            record_rejection(
+                db, display, verdict.reasons[0],
+                word_count=verdict.word_count,
+                character_name=character, play_title=play_title,
+                source_url=source_url,
+            )
+            db.commit()
+        return report
+
+    if not apply:
+        return report
+
+    # --- write ------------------------------------------------------------
+    play = (
+        db.query(Play)
+        .filter(Play.title == play_title, Play.author == author)
+        .first()
+    )
+    if play is None:
+        play = Play(
+            title=play_title, author=author, category=category, genre=genre,
+            source_type=source_type, language=language,
+            copyright_status=copyright_status, license_type=license_type,
+            source_url=source_url, year_written=year_written,
+        )
+        db.add(play)
+        db.flush()
+        report.play_created = True
+    else:
+        # Identical to `ingest_play`: an existing row keeps its OWN rights
+        # unless it has no valid basis at all, in which case it is broken rather
+        # than authoritative and a caller that can state one repairs it. See the
+        # long note there for the 87 rows this rule was written for.
+        if not may_store_text(play.copyright_status, play.license_type):
+            logger.warning(
+                "play %s (%r) had unservable rights %s/%s; adopting %s/%s from "
+                "this ingest", play.id, play_title, play.copyright_status,
+                play.license_type, copyright_status, license_type,
+            )
+            play.copyright_status = copyright_status
+            play.license_type = license_type
+        elif (play.copyright_status != copyright_status
+                or play.license_type != license_type):
+            logger.warning(
+                "play %s (%r) is recorded %s/%s but this ingest declares %s/%s; "
+                "keeping the stored rights",
+                play.id, play_title, play.copyright_status, play.license_type,
+                copyright_status, license_type,
+            )
+        # A year learned later is worth filling in, but a stored one is never
+        # overwritten from a scrape.
+        if play.year_written is None and year_written is not None:
+            play.year_written = year_written
+    report.play_id = play.id
+
+    if find_duplicate(db, display):
+        report.duplicates = 1
+        db.commit()
+        return report
+
+    analysis = analyzer.analyze_monologue(
+        text=display, character=character, play_title=play_title, author=author,
+    )
+    vectors = embed([display], model="text-embedding-3-large", dimensions=1536)
+    vector = vectors[0] if vectors else None
+    if not vector:
+        report.refused = "no embedding"
+        db.commit()
+        return report
+
+    meta = resolve_metadata({}, analysis)
+    mono = Monologue(
+        play_id=play.id,
+        title=f"{character}, {play_title}",
+        character_name=character,
+        text=display,
+        character_gender=meta.values.get("character_gender"),
+        character_age_range=meta.values.get("character_age_range"),
+        tone=meta.values.get("tone"),
+        # Describes the text we STORE, or the next resync_word_counts.py run
+        # rewrites it. Duration is timed on the spoken words.
+        word_count=len(display.split()),
+        estimated_duration_seconds=estimate_duration_seconds(spoken),
+        difficulty_level=analysis.get("difficulty_level"),
+        primary_emotion=analysis.get("primary_emotion"),
+        emotion_scores=analysis.get("emotion_scores"),
+        themes=analysis.get("themes"),
+        embedding_vector=vector,
+        search_tags=analyzer.generate_search_tags(analysis, display, character),
+        # Written fresh, so there is no stale second copy to serve.
+        text_segments=None,
+    )
+    db.add(mono)
+    db.flush()
+    report.inserted_ids.append(mono.id)
+    db.commit()
+
+    logger.info("ingested monologue %s / %s: %s",
+                character, play_title, report.summary())
+    return report
