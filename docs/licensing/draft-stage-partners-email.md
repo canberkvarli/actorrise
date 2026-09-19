@@ -2,9 +2,27 @@
 
 Two drafts, Stage Partners first and YouthPLAYS second. Same ask, same week.
 
-Neither has been sent. Both need one fact checked before they go: whether their
-free monologue pages carry any terms that already cover third party
-redistribution. I could not open those pages from this session.
+Neither has been sent.
+
+**The open question is now answered: no. Checked 2026-09-19.** Neither
+publisher's free pages grant a third party anything. Both emails are still
+required, and the ask in them is still the right ask.
+
+- **YouthPLAYS** (page read in full): "Monologues for **classroom** and
+  **audition** use are absolutely free. (Just credit the plays and the
+  authors.)" Competitions need one purchased script; showcases need a script
+  plus a Single Scene-Monologue Showcase Royalty. Every grant on that page runs
+  to the PERFORMER. There is no reproduction, redistribution or third-party
+  hosting term anywhere on it.
+- **Stage Partners**: still unreadable. Their CloudFront shield answers 403 to
+  every non-browser client, exactly as `scrape_contemporary_plays.py` documents,
+  and this session did not dress up as a browser to get past it. Their terms as
+  quoted in search results follow the same shape as YouthPLAYS: an actor may
+  perform a monologue and post a self-tape with credit. Again a grant to the
+  performer, not to a redistributor. **Canberk should open
+  yourstagepartners.com/resources/free-monologues in a real browser and confirm
+  before sending**, but nothing found suggests a term that would make the email
+  unnecessary.
 
 Also: do not send either of these alongside the current
 `concord-evidence-contemporary-demand-2026-09-14.md` until its rights claim is
