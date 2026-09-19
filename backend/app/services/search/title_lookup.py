@@ -489,9 +489,23 @@ def _lookup_over_plays(db, title_norm: Optional[str], filters: dict,
 
     params: Dict[str, object] = {}
     if title_norm is not None:
-        expr = "regexp_replace(lower(p.title), '[^\\w\\s]', '', 'g')"
-        expr = f"regexp_replace({expr}, '^(the|a|an)\\s+', '')"
-        sql = f"SELECT p.id FROM plays p WHERE {expr} = :n"
+        def _norm(inner: str) -> str:
+            e = f"regexp_replace(lower({inner}), '[^\\w\\s]', '', 'g')"
+            e = f"regexp_replace({e}, '^(the|a|an)\\s+', '')"
+            return f"btrim(regexp_replace({e}, '\\s+', ' ', 'g'))"
+
+        expr = _norm("p.title")
+        # The same title with its subtitle cut off. Detection resolves a head
+        # covering ONE work to that work's full stored title, so this branch is
+        # only reached by a franchise head -- "Kill Bill" has to return both
+        # volumes, "Star Wars" all three episodes. Matching one and calling it
+        # the answer would be worse than the weak page this replaces.
+        head_expr = _norm("regexp_replace(p.title, '[:;].*$', '')")
+        # PARENTHESISED. Every filter below is appended with AND, and AND binds
+        # tighter than OR, so an unbracketed "A OR B AND source_type = ..." lets
+        # the exact-title branch escape the tab filter entirely -- "mean girls"
+        # came back with its seven film pieces while the Plays tab was active.
+        sql = f"SELECT p.id FROM plays p WHERE ({expr} = :n OR {head_expr} = :n)"
         params["n"] = title_norm
     else:
         # Author lookup. The author predicate below is not optional here — the
@@ -694,6 +708,7 @@ _CATALOGUE_TTL_SECONDS = 6 * 3600
 _catalogue_cache: Optional[Dict[str, tuple]] = None
 _catalogue_squashed_cache: Dict[str, tuple] = {}
 _catalogue_numeric_cache: Dict[str, tuple] = {}
+_catalogue_head_cache: Dict[str, tuple] = {}
 _catalogue_loaded_at: float = 0.0
 
 # Character-name lookup, sibling to the title catalogue. Naming a CHARACTER is
@@ -728,6 +743,16 @@ _GENERIC_ROLE_WORDS = frozenset({
 })
 
 
+#: Subtitle separators. A work filed as "Ivanoff: A Play" or "Chushingura; Or,
+#: The Treasury of Loyal Retainers" is searched for by the part before these.
+_SUBTITLE_SPLIT = re.compile(r"[:;]")
+
+
+def _title_head(title: str) -> str:
+    """The part of a stored title before its subtitle, normalised."""
+    return _normalise_title(_SUBTITLE_SPLIT.split(title, 1)[0])
+
+
 def _load_catalogue(db) -> Dict[str, tuple]:
     """normalised title -> (title, source_type), for plays that have monologues.
 
@@ -736,7 +761,7 @@ def _load_catalogue(db) -> Dict[str, tuple]:
     promoting one of those would reorder results around nothing.
     """
     global _catalogue_cache, _catalogue_squashed_cache, _catalogue_numeric_cache
-    global _catalogue_loaded_at
+    global _catalogue_head_cache, _catalogue_loaded_at
     now = time.time()
     if _catalogue_cache is not None and now - _catalogue_loaded_at < _CATALOGUE_TTL_SECONDS:
         return _catalogue_cache
@@ -752,6 +777,8 @@ def _load_catalogue(db) -> Dict[str, tuple]:
     catalogue: Dict[str, tuple] = {}
     squashed: Dict[str, tuple] = {}
     numeric: Dict[str, tuple] = {}
+    heads: Dict[str, tuple] = {}
+    head_groups: Dict[str, list] = {}
     collisions: set[str] = set()
     numeric_collisions: set[str] = set()
     for title, source_type in rows:
@@ -783,6 +810,39 @@ def _load_catalogue(db) -> Dict[str, tuple]:
                 numeric.pop(k, None)
             else:
                 numeric[k] = (title, source_type)
+        # Fourth index: the name before the subtitle. 117 works are unreachable
+        # by the name an actor types -- "Ivanoff" is stored "Ivanoff: A Play",
+        # "Kill Bill" is "Kill Bill: Vol. 2". Generic descriptors already work
+        # because _TITLE_FILLER strips "a comedy"/"a tragedy" out of the QUERY;
+        # anything else falls through to the vector path, and cross-tab
+        # recovery never fires either, because it can only rescue a title that
+        # was detected.
+        #
+        # Deliberately NOT collision-dropping, unlike the two indexes above. A
+        # head shared by several stored titles is a franchise, and those are
+        # the four most-searched cases there are: star wars, the lord of the
+        # rings, spider-man, kill bill. The value stored is the HEAD itself
+        # rather than one of the volumes, so retrieval expands it back to every
+        # matching title instead of picking a winner.
+        #
+        # A head covering exactly ONE stored title resolves to that full stored
+        # title, because detection's contract is to hand find_title_monologues
+        # something it can match exactly. A head covering several resolves to
+        # the head itself, and retrieval expands it back out.
+        h = _title_head(title)
+        if len(h) >= _MIN_TITLE_CHARS and h != n:
+            head_groups.setdefault(h, []).append((title, source_type))
+    for h, group in head_groups.items():
+        # A head must never shadow a work actually filed under that name:
+        # "hamlet" is the play, not the head of "Hamlet: A Modern Retelling".
+        if h in catalogue:
+            continue
+        if len(group) == 1:
+            heads[h] = group[0]
+        else:
+            label = _SUBTITLE_SPLIT.split(group[0][0], 1)[0].strip()
+            heads[h] = (label, group[0][1])
+    _catalogue_head_cache = heads
     _catalogue_cache = catalogue
     _catalogue_squashed_cache = squashed
     _catalogue_numeric_cache = numeric
@@ -793,10 +853,12 @@ def _load_catalogue(db) -> Dict[str, tuple]:
 def reset_catalogue_cache() -> None:
     """Drop the cached title + character lists (tests, and after an ingest run)."""
     global _catalogue_cache, _catalogue_squashed_cache, _catalogue_numeric_cache
-    global _catalogue_loaded_at, _character_cache, _character_loaded_at
+    global _catalogue_head_cache, _catalogue_loaded_at
+    global _character_cache, _character_loaded_at
     _catalogue_cache = None
     _catalogue_squashed_cache = {}
     _catalogue_numeric_cache = {}
+    _catalogue_head_cache = {}
     _catalogue_loaded_at = 0.0
     _character_cache = None
     _character_loaded_at = 0.0
@@ -1143,6 +1205,15 @@ def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
             and k in _catalogue_numeric_cache
         ):
             title, medium = _catalogue_numeric_cache[k]
+            return {"title": title, "medium": medium}
+
+    # Subtitle head: "ivanoff" -> the stored "Ivanoff: A Play", "kill bill" ->
+    # both volumes. Matched against the WHOLE query only, exactly like the
+    # indexes above, which is what keeps a one-word head ("Waste") from
+    # hijacking "monologue about waste and regret".
+    for candidate in (nq, stripped):
+        if candidate and candidate in _catalogue_head_cache:
+            title, medium = _catalogue_head_cache[candidate]
             return {"title": title, "medium": medium}
 
     # Phrase match: only multi-word titles of real length, longest wins.
