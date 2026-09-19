@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+import api from "@/lib/api";
 
 import { useMarkSeen } from "@/hooks/useMarkSeen";
 
-import { DemandTab } from "@/components/admin/searches/DemandTab";
-import { PeopleTab } from "@/components/admin/searches/PeopleTab";
-import { ProblemsTab } from "@/components/admin/searches/ProblemsTab";
+import { DiagnosisTab } from "@/components/admin/searches/DiagnosisTab";
 import { SearchLogsTable } from "@/components/admin/searches/SearchLogsTable";
 import { BRAND, EMPTY_FILTERS, type LogFilters } from "@/components/admin/searches/shared";
 
@@ -21,10 +22,8 @@ import { BRAND, EMPTY_FILTERS, type LogFilters } from "@/components/admin/search
  */
 
 const TABS = [
-  { id: "problems", label: "What's broken", hint: "Failed and weak searches" },
-  { id: "demand", label: "What they want", hint: "Top queries and gaps" },
-  { id: "people", label: "Who's searching", hint: "Per-actor behaviour" },
-  { id: "recent", label: "Recent activity", hint: "The raw feed" },
+  { id: "diagnosis", label: "Diagnosis", hint: "What's failing, and whose fault it is" },
+  { id: "searches", label: "Searches", hint: "Every search, filterable" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -32,14 +31,21 @@ type TabId = (typeof TABS)[number]["id"];
 export default function AdminSearchesPage() {
   useMarkSeen("searches");
 
-  const [tab, setTab] = useState<TabId>("problems");
-  const [filters, setFilters] = useState<LogFilters>(EMPTY_FILTERS);
+  const [tab, setTab] = useState<TabId>("diagnosis");
 
-  /** Jump from an aggregate straight to the rows that produced it. */
-  const drillInto = (patch: Partial<LogFilters>) => {
-    setFilters({ ...EMPTY_FILTERS, ...patch });
-    setTab("recent");
-  };
+  // Read from the same place the nav badge reads, so the two can never
+  // disagree about what you came here for. useMarkSeen invalidates this on
+  // mount, so the line states the count at the moment of arrival and then
+  // clears -- it tells you what you came for, once.
+  const { data: pulse } = useQuery({
+    queryKey: ["admin-pulse"],
+    queryFn: async () => {
+      const res = await api.get<Record<string, number>>("/api/admin/pulse");
+      return res.data;
+    },
+    staleTime: 30_000,
+  });
+  const [filters, setFilters] = useState<LogFilters>(EMPTY_FILTERS);
 
   return (
     <div className="space-y-4 p-3 sm:p-4 md:p-6">
@@ -48,6 +54,13 @@ export default function AdminSearchesPage() {
         <p className="mt-0.5 text-sm text-muted-foreground">
           What actors are looking for, and whether they&apos;re finding it.
         </p>
+        {(pulse?.searches ?? 0) > 0 && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            <strong className="tabular-nums text-foreground">{pulse?.searches}</strong>{" "}
+            {pulse?.searches === 1 ? "search" : "searches"} since you last looked
+            found nothing, and we hold the piece.
+          </p>
+        )}
       </header>
 
       <nav className="flex gap-1 overflow-x-auto border-b border-border">
@@ -71,13 +84,18 @@ export default function AdminSearchesPage() {
         })}
       </nav>
 
-      {tab === "problems" && <ProblemsTab />}
+      {tab === "diagnosis" && (
+        <DiagnosisTab
+          onDrillIntoQuery={(next) => {
+            setFilters(next);
+            setTab("searches");
+          }}
+        />
+      )}
 
-      {tab === "demand" && <DemandTab onDrillIntoQuery={(q) => drillInto({ q })} />}
 
-      {tab === "people" && <PeopleTab onDrillIntoUser={(user) => drillInto({ user })} />}
 
-      {tab === "recent" && (
+      {tab === "searches" && (
         <SearchLogsTable
           filters={filters}
           onFiltersChange={setFilters}
