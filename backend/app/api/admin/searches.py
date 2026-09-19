@@ -12,6 +12,7 @@ from app.models.email_do_not_contact import EmailDoNotContact
 from app.models.search_log import SearchLog
 from app.models.user import User
 from app.services.admin_filters import test_user_filter
+from app.services.search_diagnosis import diagnose_window
 from app.services.content_request_resolution import (
     resolve_finished_requests,
     title_is_live,
@@ -373,6 +374,54 @@ def get_search_logs_summary(
     fresh aggregates without re-fetching the paginated rows."""
     start_dt, end_dt = _date_range(from_date, to_date)
     return _compute_summary(start_dt, end_dt, db)
+
+
+@router.get("/searches/diagnosis")
+def get_search_diagnosis(
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date: Optional[str] = Query(None, alias="to"),
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, Any]:
+    """The funnel behind the Diagnosis tab.
+
+    Everything the page needs in one call: how many searches, how many came up
+    short, and the two lists that split them. Fetched once when the page opens,
+    which is why the full classification lives here and not in `/pulse` -- that
+    one is polled every 60 seconds by every open admin tab.
+    """
+    start_dt, end_dt = _date_range(from_date, to_date)
+    out = diagnose_window(db, start_dt, end_dt)
+    out["struggling_actors"] = _struggling_actor_count(db, start_dt, end_dt)
+    return out
+
+
+def _struggling_actor_count(db: Session, start: datetime, end: datetime) -> int:
+    """Actors who searched three or more times and mostly came up short.
+
+    The whole of the retired People tab worth keeping. A ranked table of every
+    actor is browsing; knowing which ones are quietly failing is something to
+    act on before they go quiet.
+    """
+    rows = (
+        db.query(
+            SearchLog.user_id,
+            func.count(SearchLog.id).label("n"),
+            func.count(SearchLog.id)
+            .filter(or_(SearchLog.results_count == 0, SearchLog.weak_match.is_(True)))
+            .label("bad"),
+        )
+        .filter(
+            SearchLog.created_at >= start,
+            SearchLog.created_at < end,
+            SearchLog.user_id.isnot(None),
+            SearchLog.user_id.notin_(_staff_ids(db)),
+        )
+        .group_by(SearchLog.user_id)
+        .having(func.count(SearchLog.id) >= 3)
+        .all()
+    )
+    return sum(1 for _uid, n, bad in rows if bad * 2 > n)
 
 
 @router.get("/searches/by-user")

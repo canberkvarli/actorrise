@@ -150,3 +150,23 @@ class TestDiagnoseWindow:
         out = diagnose_window(self.db, self.start, self.end)
         assert out["total"] == 0 and out["short"] == 0
         assert out["missing"]["queries"] == []
+
+
+def test_the_endpoint_returns_the_whole_funnel():
+    from app.api.admin.searches import get_search_diagnosis
+
+    db, saved = memory_db(
+        [Organization, User, FilmTvReference, Play, Monologue, SearchLog]
+    )
+    try:
+        mod = User(email="mod@actorrise.com", hashed_password="x")
+        db.add(mod)
+        db.commit()
+        out = get_search_diagnosis(from_date=None, to_date=None, db=db, _mod=mod)
+        assert set(out) == {
+            "total", "found", "short", "have_it", "missing",
+            "most_asked", "struggling_actors",
+        }
+    finally:
+        db.close()
+        restore(saved)
