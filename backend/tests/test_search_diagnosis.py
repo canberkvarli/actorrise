@@ -69,6 +69,26 @@ def test_an_unjudgeable_query_falls_to_missing():
     assert classify_query(BrokenDB(), "mean girls") == ("missing", None)
 
 
+def test_a_bare_word_that_merely_appears_in_the_catalogue_is_missing(monkeypatch):
+    """`term_is_in_catalogue` answers a different question and must not be used.
+
+    It asks whether a word appears anywhere in the catalogue, which grounding
+    uses to decide whether a query is servable at all. It is NOT part of the
+    retrieval path. The library holds a character literally named "War" (one
+    piece, in Numantia), so routing "war" through that helper put it on the
+    "search to fix" list -- claiming search should have surfaced a speech
+    nobody asking about war wants. Only the title and character pre-passes
+    actually retrieve, so only they may say have_it.
+
+    Forced True here, because the verdict must not depend on it either way.
+    """
+    from app.services.search import title_lookup
+
+    monkeypatch.setattr(title_lookup, "term_is_in_catalogue", lambda *a, **k: True)
+    db = FakeDB(titles=[("Numantia", "play")], characters=[])
+    assert classify_query(db, "war") == ("missing", None)
+
+
 def test_an_empty_query_is_missing():
     assert classify_query(FakeDB(), "   ") == ("missing", None)
 

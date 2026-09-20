@@ -43,9 +43,15 @@ def classify_query(db: Session, query: str) -> Tuple[str, Optional[str]]:
     # Imported here rather than at module scope: title_lookup pulls in the
     # search stack, and the admin API should not pay that at import time.
     from app.services.search.title_lookup import (detect_catalogue_character,
-                                                  detect_catalogue_title,
-                                                  term_is_in_catalogue)
+                                                  detect_catalogue_title)
 
+    # ONLY the two pre-passes that actually retrieve. `term_is_in_catalogue`
+    # was here and answers a different question -- whether a word appears
+    # anywhere in the catalogue, which grounding uses to judge whether a query
+    # is servable at all. The library holds a character named "War" (one piece,
+    # in Numantia), so "war" was landing on the "search to fix" list, claiming
+    # search should have surfaced a speech nobody asking about war wants. Same
+    # for "clifford" via H. Clifford McBride in Ad Astra.
     try:
         hit = detect_catalogue_title(db, query)
         if hit:
@@ -54,9 +60,6 @@ def classify_query(db: Session, query: str) -> Tuple[str, Optional[str]]:
         character = detect_catalogue_character(db, query)
         if character:
             return HAVE_IT, str(character.get("character") or "").strip() or None
-
-        if term_is_in_catalogue(db, query):
-            return HAVE_IT, None
     except Exception:
         return MISSING, None
 

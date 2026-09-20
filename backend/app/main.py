@@ -145,10 +145,15 @@ def _start_saved_piece_reminder_scheduler():
     """
     import os
 
-    if os.getenv("ENVIRONMENT", "").strip().lower() != "production":
-        return
-    if os.getenv("SAVED_PIECE_REMINDER_ENABLED", "true").strip().lower() == "false":
-        logger.info("Saved-piece reminder scheduler disabled by env flag")
+    from app.services.scheduler_gate import scheduler_status
+
+    status = scheduler_status(
+        "saved_piece_reminder",
+        environment=os.getenv("ENVIRONMENT"),
+        flag=os.getenv("SAVED_PIECE_REMINDER_ENABLED"),
+    )
+    if not status.will_run:
+        logger.warning(status.reason)
         return
 
     def loop():
@@ -203,10 +208,18 @@ def _start_lifecycle_email_scheduler() -> None:
     """
     import os
 
-    if os.getenv("ENVIRONMENT", "").strip().lower() != "production":
-        return
-    if os.getenv("LIFECYCLE_EMAILS_ENABLED", "true").strip().lower() == "false":
-        logger.info("Lifecycle email scheduler disabled by env flag")
+    from app.services.scheduler_gate import scheduler_status
+
+    status = scheduler_status(
+        "lifecycle",
+        environment=os.getenv("ENVIRONMENT"),
+        flag=os.getenv("LIFECYCLE_EMAILS_ENABLED"),
+    )
+    if not status.will_run:
+        # WARNING, not a bare return. This scheduler was enabled in
+        # app_settings for two weeks and sent nothing, with 34 actors inside
+        # the eligible window, and no line anywhere said why.
+        logger.warning(status.reason)
         return
 
     def loop() -> None:
@@ -224,16 +237,25 @@ def _start_lifecycle_email_scheduler() -> None:
                     enabled = app_settings.get_bool(_db, app_settings.LIFECYCLE_EMAILS_ENABLED, default=False)
                 finally:
                     _db.close()
-                if enabled:
-                    hour = datetime.now(timezone.utc).hour
+                hour = datetime.now(timezone.utc).hour
+                if not enabled:
+                    logger.info(
+                        "lifecycle: skipped, app_settings %s is off (hour %s UTC)",
+                        app_settings.LIFECYCLE_EMAILS_ENABLED, hour,
+                    )
+                else:
+                    # Logged every hour, including eligible=0. Before this, a
+                    # working scheduler with nothing to do and a thread that had
+                    # died produced the same output: none.
                     for stats in run_all(send=True, active_hour=hour):
-                        if stats["eligible"]:
-                            logger.info(
-                                "lifecycle %s: eligible %s sent %s failed %s (hour %s UTC)",
-                                stats["touch"], stats["eligible"], stats["sent"], stats["failed"], hour,
-                            )
+                        logger.info(
+                            "lifecycle %s: eligible %s sent %s failed %s (hour %s UTC)",
+                            stats["touch"], stats["eligible"], stats["sent"], stats["failed"], hour,
+                        )
             except Exception as e:  # noqa: BLE001
-                logger.warning("lifecycle email scheduler run failed (non-fatal): %s", e)
+                # ERROR, not warning: this loop going quiet is how two weeks of
+                # return emails went unsent without anyone noticing.
+                logger.error("lifecycle email scheduler run FAILED: %s", e, exc_info=True)
             time.sleep(max(60, 3600 - (time.time() % 3600)))
 
     threading.Thread(target=loop, daemon=True).start()
