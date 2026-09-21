@@ -460,6 +460,51 @@ async def search_monologues(
         if st_list and all(s in ('film', 'tv') for s in st_list):
             filters.pop('category', None)
 
+    # The same rule pointed the other way: an era the library cannot satisfy for
+    # a name the actor just typed. "Shakespeare" with Contemporary on returned
+    # nothing while 1,608 Shakespeare pieces sat in the library, 0 of them
+    # contemporary. Graceful relaxation cannot reach this -- 14 pieces DO exist
+    # under contemporary+play, so it never triggers, and those 14 are scored and
+    # correctly dropped by the relevance floor at best_cosine 0.196.
+    #
+    # Costs one COUNT, and only when an era is set and the query names something.
+    if filters.get('category') and q and q.strip():
+        try:
+            from sqlalchemy import text as sa_text
+
+            from app.services.search.era_guard import era_contradicts
+            _named = q.strip()
+            # Scoped to the tab the actor is standing on. Without it the count
+            # is inflated by the other shelf: "Shakespeare" under contemporary
+            # found 1 piece, and it was the 1998 FILM "Shakespeare in Love",
+            # which the Plays tab excludes anyway. The guard then declined to
+            # fire on the very search it was written for.
+            _src = filters.get('source_type')
+            _src_list = _src if isinstance(_src, list) else ([_src] if _src else [])
+            _src_clause = (
+                " AND COALESCE(p.source_type,'play') = ANY(:src)" if _src_list else ""
+            )
+            _params = {"era": filters['category'], "like": f"%{_named}%"}
+            if _src_list:
+                _params["src"] = _src_list
+            _overall, _under = db.execute(
+                sa_text(
+                    "SELECT count(*) FILTER (WHERE TRUE), "
+                    "       count(*) FILTER (WHERE p.category = :era) "
+                    "FROM monologues m JOIN plays p ON p.id = m.play_id "
+                    "WHERE m.review_status IS NULL "
+                    "  AND (p.author ILIKE :like OR p.title ILIKE :like)"
+                    + _src_clause
+                ),
+                _params,
+            ).first()
+            if era_contradicts(held_under_era=int(_under or 0),
+                               held_overall=int(_overall or 0)):
+                filters.pop('category', None)
+        except Exception:
+            # A failed guard must leave the search exactly as it was.
+            pass
+
     # Pre-validate query before running search
     if q and q.strip():
         is_valid, invalid_reason = validate_query(q.strip())

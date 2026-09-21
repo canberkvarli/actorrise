@@ -226,6 +226,27 @@ def film_tv_word_gate_hides(source_type, word_count) -> bool:
 # wrong ones; the empty state now has somewhere to go.
 RELAX_ORDER = ("age_range", "max_duration", "min_duration")
 
+#: Tried ONLY when the ordinary relaxation above still leaves zero candidates.
+#:
+#: `category=contemporary` + `source_type=play` is 14 plays. Any second
+#: constraint empties it, and all 8 of the zero-result-never-scored searches in
+#: the 30 days to 2026-09-20 carried exactly that pair -- "Shakespeare" among
+#: them, with 1,608 Shakespeare pieces in the library and 0 of them
+#: contemporary. RELAX_ORDER says "never the era", so the single filter that
+#: empties the shelf was the one filter relaxation could not touch.
+#:
+#: Ordered by how little of the actor's intent is given up. An actor who typed
+#: "sad" can live with a piece the corpus tagged differently more easily than
+#: with the wrong era. Gender is absent on purpose: casting is not a
+#: preference, and a female actor handed a male speech got a worse answer than
+#: none at all.
+LAST_RESORT_RELAX_ORDER = ("emotion", "tone", "category")
+
+
+def last_resort_keys(filters: Dict) -> list:
+    """Which last-resort filters are actually set, in the order to drop them."""
+    return [k for k in LAST_RESORT_RELAX_ORDER if k in filters]
+
 
 def relax_step(relaxed: Dict, key: str) -> None:
     """Apply one relaxation step in place."""
@@ -1526,6 +1547,23 @@ class SemanticSearch:
                         candidate_ids = candidate_ids + more
                     if len(candidate_ids) >= relax_target:
                         break
+
+                # Last resort, and only at ZERO. An empty shelf answered with an
+                # empty screen is the worst outcome available: the actor learns
+                # nothing and leaves. Broadening past their era is worse than
+                # their filters but better than nothing, and the UI says which
+                # kinds were relaxed (_label already maps category -> "era").
+                if not candidate_ids:
+                    for key in last_resort_keys(relaxed):
+                        relax_step(relaxed, key)
+                        more = fetch_ids(relaxed, candidate_ids, VECTOR_CANDIDATES)
+                        if more:
+                            self._broadened_dropped.append(key)
+                            self._broadened_ids.update(more)
+                            candidate_ids = candidate_ids + more
+                        if candidate_ids:
+                            break
+
                 self._search_broadened = bool(self._broadened_ids)
 
             logger.debug(
