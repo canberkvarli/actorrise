@@ -694,6 +694,43 @@ async def search_monologues(
             #
             # Only runs when everything else came back empty, so it can never
             # dilute a search that already worked.
+            # Still an empty stage, and the FILTERS are why, not the query.
+            #
+            # The pre-scoring relaxation in semantic_search cannot reach this.
+            # It triggers on an empty CANDIDATE set, and here candidates existed
+            # and were simply all irrelevant: "contemporary dramatic piece with
+            # sadness" left 2 pieces on the contemporary+play shelf, both scored
+            # 0.247, and the relevance floor correctly binned them. Two is not
+            # zero, so nothing relaxed.
+            #
+            # So the trigger is the empty PAGE. Give up the least of the actor's
+            # intent first: a piece the corpus tagged differently is easier to
+            # live with than the wrong era. Gender is never given up -- casting
+            # is not a preference.
+            if not all_results_with_scores and search_q:
+                _retry = {k: v for k, v in (filters or {}).items()}
+                for _key in ("emotion", "tone", "category"):
+                    if _key not in _retry:
+                        continue
+                    _retry.pop(_key)
+                    _rows, _ = search_service.search(
+                        search_q,
+                        limit=fetch_limit,
+                        filters=_retry,
+                        user_id=cast(int, current_user.id),
+                        actor_profile=actor_profile_for_search,
+                    )
+                    if _rows:
+                        all_results_with_scores = _rows
+                        has_scores = True
+                        # Reuse the existing broadened channel so the page says
+                        # which kinds were relaxed; _label already maps
+                        # category -> "era".
+                        search_service._search_broadened = True
+                        _prev = list(getattr(search_service, "_broadened_dropped", []) or [])
+                        search_service._broadened_dropped = _prev + [_key]
+                        break
+
             if not all_results_with_scores:
                 attr_rows, attribute_match = attribute_search(
                     db, search_q, filters=filters, limit=fetch_limit
