@@ -383,6 +383,7 @@ async def get_lead_magnet_monologues(
 
 @router.get("/search", response_model=SearchResponse)
 async def search_monologues(
+    request: Request,
     q: Optional[str] = Query(None, max_length=500, description="Search query (omit for discover/random)"),
     gender: Optional[str] = None,
     age_range: Optional[str] = None,
@@ -776,6 +777,10 @@ async def search_monologues(
             )
             for m, score in results_with_scores
         ]
+        _apply_list_wall(
+            monologue_responses, db=db, user=current_user,
+            request=request, favorite_ids=favorite_ids,
+        )
 
         if monologue_responses:
             record_total_search(current_user.id, db)
@@ -1391,6 +1396,70 @@ async def get_trending(
 _TEASER_MAX_WORDS = 40
 
 _SENTENCE_END = re.compile(r"(?<=[.!?…])\s+")
+
+
+def _apply_list_wall(
+    responses: list,
+    *,
+    db,
+    user,
+    request,
+    favorite_ids: set,
+) -> None:
+    """Teaser every piece in a LIST that this reader has no allowance for.
+
+    In place, because the alternative is rebuilding every response object at
+    four call sites. Costs two queries per request regardless of page size.
+
+    The wall was on the detail endpoint only, so search shipped the full text of
+    every result to a reader who had spent their allowance. The web panel opens
+    with the search object and swaps in the gated one a moment later -- the
+    "opens fully, then truncates" report. The full text really was on screen,
+    and it was in the payload whether or not anything rendered it.
+    """
+    try:
+        from app.models.search_log import MonologueView
+        from app.services.read_wall import should_wall
+
+        client = normalise_client(request.headers.get("x-client")) if request else None
+        device = normalise_device(request.headers.get("x-device-id")) if request else None
+
+        if _user_has_unlimited_reads(int(user.id), db, getattr(user, "email", None)):
+            return
+
+        limit = free_read_limit(client)
+        reads_used = distinct_reads(int(user.id), db, client=client, device_id=device)
+        if reads_used < limit:
+            return  # nothing to wall; skip the second query entirely
+
+        ids = [r.id for r in responses]
+        already_read = {
+            row[0]
+            for row in db.query(MonologueView.monologue_id)
+            .filter(
+                MonologueView.user_id == int(user.id),
+                MonologueView.monologue_id.in_(ids),
+            )
+            .all()
+        }
+
+        for r in responses:
+            if should_wall(
+                monologue_id=r.id,
+                reads_used=reads_used,
+                limit=limit,
+                unlimited=False,
+                already_read=already_read,
+                favorited=favorite_ids,
+            ):
+                r.text = _teaser(r.text)
+                r.text_segments = None
+                r.paywalled = True
+    except Exception:
+        # A failed wall must never take the search down with it. It fails OPEN
+        # on purpose: a reader seeing one extra piece is a smaller harm than a
+        # 500 on the busiest surface in the product.
+        pass
 
 
 def _teaser(text: str, lines: int = 2) -> str:
