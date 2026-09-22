@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { gateMayFire } from "@/lib/firstRunGate";
 
 /**
  * Zero-setup first rehearsal — the activation move.
@@ -19,13 +20,9 @@ import { useAuth } from "@/lib/auth";
 
 // Routes we must never yank someone out of: an in-progress rehearsal/edit, the
 // interstitial itself, or auth/checkout flows.
-const SKIP_PREFIXES = ["/first-scene", "/checkout", "/billing", "/auth"];
-// has_ever_rehearsed only counts scene_partner sessions, so someone who just
-// chose a monologue still reads as eligible. Without /monologue here the gate
-// fired on arrival and yanked them straight back out of the thing they picked,
-// at the exact moment a brand new actor had shown the most intent.
-const IMMERSIVE_RE =
-  /^\/scenes\/[^/]+\/rehearse|^\/practice\/[^/]+\/scenes\/[^/]+\/edit|^\/monologue\/[^/]+\/(work|memorize)/;
+// The rule lives in lib/firstRunGate so a test can hold it. It used to be
+// inline here, and the missing /practice entry cost a real actor a hijacked
+// session on 2026-09-23.
 
 // Durable one-shot guard. The backend flag is the source of truth across
 // sessions, but it propagates through a throttled /me refresh — so within a
@@ -101,9 +98,7 @@ export function FirstRehearsalGate() {
       !isFirstSitting(user.created_at);
     if (!eligible) return;
 
-    const path = pathname || "";
-    if (SKIP_PREFIXES.some((p) => path.startsWith(p))) return;
-    if (IMMERSIVE_RE.test(path)) return;
+    if (!gateMayFire(pathname || "")) return;
 
     firedRef.current = true;
     markHandledThisSession();
