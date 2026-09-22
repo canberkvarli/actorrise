@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}New teachers{% endblock %}
+
+{% block content %}
+                <h1>New teachers</h1>
+                <p>
+                    Accounts tagged educator in the last day. Nobody has offered
+                    them anything yet unless the comp column says so. The move is
+                    a personal email with the free-Plus offer, then Educator · 1
+                    month in the admin once they reply.
+                </p>
+                <div class="accent-box accent-box-green">
+                    <table style="width:100%; border-collapse:collapse;">
+                        <tr>
+                            <td style="padding:6px 0; font-size:13px; font-weight:600; color:#292929; text-transform:uppercase; letter-spacing:0.04em;">Who</td>
+                            <td style="padding:6px 0; font-size:13px; font-weight:600; color:#292929; text-transform:uppercase; letter-spacing:0.04em;">Found us via</td>
+                            <td style="padding:6px 0; font-size:13px; font-weight:600; color:#292929; text-transform:uppercase; letter-spacing:0.04em;">Comp</td>
+                        </tr>
+                        {% for item in items %}
+                        <tr>
+                            <td style="padding:8px 0; font-size:15px; color:#374151; border-top:1px solid #e5e7eb;">
+                                <a href="https://actorrise.com/admin/users/{{ item.user_id }}" style="color:#CB4B00; text-decoration:none;">{{ item.name or item.email }}</a><br>
+                                <span style="font-size:13px; color:#6b7280;">{{ item.email }}</span>
+                                {% if item.organization %}<br><span style="font-size:13px; color:#6b7280;">{{ item.organization }}</span>{% endif %}
+                            </td>
+                            <td style="padding:8px 0; font-size:15px; color:#374151; border-top:1px solid #e5e7eb;">{{ item.how or '—' }}<br><span style="font-size:13px; color:#6b7280;">{{ item.date }}</span></td>
+                            <td style="padding:8px 0; font-size:15px; color:#374151; border-top:1px solid #e5e7eb;">{% if item.has_comp %}yes{% else %}<strong>none</strong>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+{% endblock %}

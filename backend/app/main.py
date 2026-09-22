@@ -327,14 +327,22 @@ def _start_comp_expiry_scheduler() -> None:
                 if now.hour == send_hour and not sent_on.get(today):
                     from app.core.database import SessionLocal
                     from app.services.comp_expiry import send_comp_expiry_digest
+                    from app.services.educator_signups import send_educator_signup_digest
 
                     _db = SessionLocal()
                     try:
                         count = send_comp_expiry_digest(_db)
+                        # Same slot, separate email: teachers who made an account
+                        # in the last day and have not been offered the comp yet.
+                        # Both functions swallow their own errors, so one failing
+                        # never blocks the other.
+                        teachers = send_educator_signup_digest(_db)
                         sent_on.clear()
                         sent_on[today] = True
                         if count:
                             logger.info("comp expiry digest: reported %s comp(s)", count)
+                        if teachers:
+                            logger.info("educator signup digest: reported %s teacher(s)", teachers)
                     finally:
                         _db.close()
             except Exception as e:  # noqa: BLE001

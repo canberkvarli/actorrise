@@ -343,6 +343,43 @@ def send_comp_expiry_notification(rows: list) -> dict:
         return {"id": "error", "status": "failed"}
 
 
+def send_educator_signup_notification(rows: list) -> dict:
+    """Digest of teachers who made an account today. Fire-and-forget — never raises.
+
+    The educator funnel starts with a personal email from the founder, and that
+    email only goes out if he knows the teacher exists. This is how he knows.
+    """
+    if not os.getenv("RESEND_API_KEY"):
+        print("Warning: RESEND_API_KEY not set. Educator signup notification disabled.")
+        return {"id": "mock_educator_signup_id", "status": "disabled"}
+
+    try:
+        client = ResendEmailClient()
+        templates = EmailTemplates()
+        items = []
+        for r in rows:
+            source = r.get("referral_source") or ""
+            detail = r.get("referral_detail") or ""
+            # "other: California Thespians email" reads better than two columns.
+            how = f"{source}: {detail}" if source and detail else (detail or source or "")
+            items.append({**r, "how": how, "date": _date_label(r.get("created_at")) or ""})
+
+        waiting = sum(1 for r in rows if not r.get("has_comp"))
+        n = len(rows)
+        if waiting == n:
+            subject = f"{n} new teacher{'s' if n > 1 else ''}, no comp yet"
+        elif waiting:
+            subject = f"{n} new teacher{'s' if n > 1 else ''}, {waiting} without a comp"
+        else:
+            subject = f"{n} new teacher{'s' if n > 1 else ''} (all comped)"
+
+        html = templates.render_educator_signup_notification(items=items)
+        return client.send_email(to="canberk@actorrise.com", subject=subject, html=html)
+    except Exception as e:
+        print(f"Error sending educator signup notification: {e}")
+        return {"id": "error", "status": "failed"}
+
+
 def send_trial_ended_notification(
     user_name: str,
     user_email: str,

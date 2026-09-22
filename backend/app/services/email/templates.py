@@ -304,6 +304,11 @@ class EmailTemplates:
         template = self.env.get_template('comp_expiry_notification.html')
         return template.render(items=items)
 
+    def render_educator_signup_notification(self, items: list) -> str:
+        """Render the new-educator-accounts digest (sent to admin)."""
+        template = self.env.get_template('educator_signup_notification.html')
+        return template.render(items=items)
+
     def render_trial_ended_notification(
         self,
         user_name: str,
