@@ -708,10 +708,10 @@ async def search_monologues(
             # live with than the wrong era. Gender is never given up -- casting
             # is not a preference.
             if not all_results_with_scores and search_q:
+                from app.services.search.empty_page_retry import retry_keys
+
                 _retry = {k: v for k, v in (filters or {}).items()}
-                for _key in ("emotion", "tone", "category"):
-                    if _key not in _retry:
-                        continue
+                for _key in retry_keys(_retry):
                     _retry.pop(_key)
                     _rows, _ = search_service.search(
                         search_q,
@@ -876,7 +876,12 @@ async def search_monologues(
         # by dropping the least-important filters. Surface which kinds were relaxed.
         broadened = None
         if getattr(search_service, '_search_broadened', False):
-            _label = {"min_duration": "length", "max_duration": "length", "age_range": "age", "category": "era"}
+            _label = {
+                "min_duration": "length", "max_duration": "length",
+                "age_range": "age", "category": "era",
+                # The tab is a place, not a property, so it gets its own word.
+                "source_type": "tab",
+            }
             relaxed: list[str] = []
             for k in getattr(search_service, '_broadened_dropped', []) or []:
                 lab = _label.get(k, k)
