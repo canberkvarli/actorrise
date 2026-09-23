@@ -1176,6 +1176,7 @@ async def search_demo(
 
 @router.get("/recommendations", response_model=List[MonologueResponse])
 async def get_recommendations(
+    request: Request,
     limit: int = Query(20, le=100),
     fast: bool = Query(False, description="Use SQL-only for faster response (e.g. dashboard)"),
     source_type: Optional[str] = Query(
@@ -1212,10 +1213,13 @@ async def get_recommendations(
     favorite_ids = {f[0] for f in favorites}
 
     # Format response
-    return [
+    _out = [
         _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
         for m in results
     ]
+    _apply_list_wall(_out, db=db, user=current_user, request=request,
+                     favorite_ids=favorite_ids)
+    return _out
 
 
 class FirstPieceResponse(BaseModel):
@@ -1335,6 +1339,7 @@ def get_first_rehearsal_monologue(
 
 @router.get("/discover", response_model=List[MonologueResponse])
 async def discover_monologues(
+    request: Request,
     limit: int = Query(10, le=50),
     category: Optional[str] = None,
     difficulty: Optional[str] = None,
@@ -1360,14 +1365,18 @@ async def discover_monologues(
     ).all()
     favorite_ids = {f[0] for f in favorites}
 
-    return [
+    _out = [
         _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
         for m in results
     ]
+    _apply_list_wall(_out, db=db, user=current_user, request=request,
+                     favorite_ids=favorite_ids)
+    return _out
 
 
 @router.get("/trending", response_model=List[MonologueResponse])
 async def get_trending(
+    request: Request,
     limit: int = Query(20, le=50),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -1385,10 +1394,13 @@ async def get_trending(
     ).all()
     favorite_ids = {f[0] for f in favorites}
 
-    return [
+    _out = [
         _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
         for m in results
     ]
+    _apply_list_wall(_out, db=db, user=current_user, request=request,
+                     favorite_ids=favorite_ids)
+    return _out
 
 
 #: Roughly what two lines of verse or a couple of prose sentences come to. The
@@ -1704,6 +1716,7 @@ async def update_favorite_notes(
 
 @router.get("/{monologue_id:int}/similar", response_model=List[MonologueResponse])
 async def get_similar_monologues(
+    request: Request,
     monologue_id: int,
     limit: int = Query(10, le=50),
     db: Session = Depends(get_db),
@@ -1727,14 +1740,18 @@ async def get_similar_monologues(
     ).all()
     favorite_ids = {f[0] for f in favorites}
 
-    return [
+    _out = [
         _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
         for m in results
     ]
+    _apply_list_wall(_out, db=db, user=current_user, request=request,
+                     favorite_ids=favorite_ids)
+    return _out
 
 
 @router.get("/{monologue_id:int}/from-play", response_model=List[MonologueResponse])
 async def get_others_from_play(
+    request: Request,
     monologue_id: int,
     limit: int = Query(6, le=20),
     db: Session = Depends(get_db),
@@ -1777,10 +1794,13 @@ async def get_others_from_play(
         ).all()
         favorite_ids = {f[0] for f in favorites}
 
-    return [
+    _out = [
         _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
         for m in results
     ]
+    _apply_list_wall(_out, db=db, user=current_user, request=request,
+                     favorite_ids=favorite_ids)
+    return _out
 
 
 @router.get("/favorites/my", response_model=List[MonologueResponse])
