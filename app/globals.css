@@ -6942,10 +6942,40 @@
 }
 .t-prev__text {
   margin: 0;
+  /* A measure, not the width of the paper. The column is 880px and the paper
+     pads to about 800 of it, which at 16px runs near 100 characters a line.
+     The longest speech in the library is 2,194 characters and 35 lines are over
+     400, so without this a monologue inside a scene is a wall. */
+  max-width: 62ch;
   font-family: var(--t-direction);
   font-size: 16px;
   line-height: 1.75;
   color: var(--t-text);
+}
+
+/* Fix it where you read it.
+   Hidden until hover ONLY where hovering exists. Tailwind wraps group-hover in
+   @media (hover: hover), so `opacity-0 group-hover:opacity-100` never turns
+   back on for a touch device: the control is invisible forever, which is how
+   Delete and Flag were lost on the shelf for every phone user. Default is
+   visible; the desktop quiet is the special case. */
+.t-prev__edit {
+  margin-left: 8px;
+  vertical-align: middle;
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--t-muted-dark);
+  text-underline-offset: 2px;
+}
+.t-prev__edit:hover,
+.t-prev__edit:focus-visible {
+  text-decoration: underline;
+}
+@media (hover: hover) {
+  .t-prev__edit { opacity: 0; transition: opacity 0.15s; }
+  .t-prev__line:hover .t-prev__edit,
+  .t-prev__edit:focus-visible { opacity: 1; }
 }
 .t-prev__more {
   margin: 24px 0 0;

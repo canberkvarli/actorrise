@@ -406,8 +406,11 @@ export default function ScenePreviewPage() {
               return (
                 <motion.div
                   key={line.id}
-                  {...entrance(Math.min(i, 5), { reduce, y: 8, duration: 0.4 })}
-                  className="t-prev__line group/line"
+                  /* Only the top of the scene arrives. The longest scene in
+                     the library is 106 lines; animating all of them costs a
+                     hundred transforms to decorate text nobody can see yet. */
+                  {...(i < 8 ? entrance(i, { reduce, y: 8, duration: 0.4 }) : {})}
+                  className="t-prev__line"
                   data-mine={isMine}
                 >
                   {editingId === line.id ? (
@@ -422,7 +425,7 @@ export default function ScenePreviewPage() {
                         value={draft.text}
                         onChange={(e) => setDraft((d) => ({ ...d, text: e.target.value }))}
                         aria-label="Line"
-                        rows={Math.min(8, Math.max(2, Math.ceil(draft.text.length / 60)))}
+                        rows={Math.min(18, Math.max(2, Math.ceil(draft.text.length / 60)))}
                         className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm leading-relaxed"
                       />
                       <div className="flex items-center gap-2">
@@ -454,7 +457,7 @@ export default function ScenePreviewPage() {
                           type="button"
                           onClick={() => beginEdit(line)}
                           aria-label={`Edit ${line.character_name}'s line`}
-                          className="ml-2 align-middle text-[11px] text-muted-foreground opacity-0 transition-opacity focus:opacity-100 group-hover/line:opacity-100 underline-offset-2 hover:underline"
+                          className="t-prev__edit"
                         >
                           edit
                         </button>
