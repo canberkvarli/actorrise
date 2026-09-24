@@ -6,7 +6,6 @@ import useSWR from "swr";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   IconArrowLeft,
-  IconPencil,
   IconPlayerPlay,
   IconPlayerStopFilled,
   IconVolume,
@@ -92,7 +91,7 @@ export default function ScenePreviewPage() {
   const sceneId = Number(params.sceneId);
   const reduce = useReducedMotion();
 
-  const { data: scene, isLoading } = useSWR<SceneDetail>(
+  const { data: scene, isLoading, mutate } = useSWR<SceneDetail>(
     Number.isFinite(sceneId) ? `/api/scenes/${sceneId}` : null,
     () => api.get<SceneDetail>(`/api/scenes/${sceneId}`).then((r) => r.data),
     { revalidateOnFocus: false },
@@ -109,11 +108,13 @@ export default function ScenePreviewPage() {
   const [voicesPicked, setVoicesPicked] = useState<CharacterVoices | null>(null);
   const [auditioning, setAuditioning] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
-  /* Leaving for the editor. "edit the scene" sat next to a Rehearse button with
-     a full lit hand-off and was a bare router.push, so one door dissolved and
-     the one beside it cut. Same idiom as the panel's openScene: set the state,
-     let it settle, then go. */
-  const [leaving, setLeaving] = useState(false);
+  /* Fixing a line where you read it. Deliberately small: across the whole
+     library exactly 4 scenes have ever had their text changed, 3 a character
+     renamed. This does not need undo, reorder or bulk-reset -- it needs to not
+     make you leave the page to correct a typo. */
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [draft, setDraft] = useState<{ who: string; text: string }>({ who: "", text: "" });
+  const [savingLine, setSavingLine] = useState(false);
   const [upgrade, setUpgrade] = useState<{ open: boolean; message: string }>({
     open: false,
     message: "",
@@ -188,16 +189,29 @@ export default function ScenePreviewPage() {
     void tts.speak(text.slice(0, 220), fullVoices[character] ?? "coral");
   };
 
-  /** Hand off to the editor with the same settle the rest of the room uses. */
-  const openEditor = useCallback(() => {
-    const href = `/practice/${scriptId}/scenes/${sceneId}/edit`;
-    if (reduce) {
-      router.push(href);
-      return;
+  const beginEdit = (line: { id: number; character_name: string; text: string }) => {
+    setEditingId(line.id);
+    setDraft({ who: line.character_name, text: line.text });
+  };
+
+  const saveLine = useCallback(async () => {
+    if (editingId == null || savingLine) return;
+    setSavingLine(true);
+    try {
+      await api.put(
+        `/api/scripts/${scriptId}/scenes/${sceneId}/lines/${editingId}`,
+        { character_name: draft.who.trim(), text: draft.text.trim() },
+      );
+      // Refetch rather than patch in place: the server owns line_order and the
+      // word counts that drive the duration under the title.
+      await mutate();
+      setEditingId(null);
+    } catch {
+      toast.error("Could not save that line.");
+    } finally {
+      setSavingLine(false);
     }
-    setLeaving(true);
-    window.setTimeout(() => router.push(href), 190);
-  }, [reduce, router, scriptId, sceneId]);
+  }, [editingId, savingLine, scriptId, sceneId, draft, mutate]);
 
   const rehearse = useCallback(async () => {
     if (!scene || !mine || starting) return;
@@ -252,16 +266,19 @@ export default function ScenePreviewPage() {
   /* The top of the scene, which is what a preview is for. Enough to recognise
      it and to feel the temperature; not the whole thing, or this is the
      rehearsal page with the sound off. */
-  const opening = scene.lines.slice(0, 6);
-  const rest = Math.max(0, scene.line_count - opening.length);
+  /* The whole scene, not the first six lines.
+     36 people opened the 4,018-line editor and 4 of them changed anything: 32
+     of 36 edit snapshots are identical to the scene as extracted. They were not
+     repairing it, they were READING it, because this page only ever showed six
+     lines and the editor was the only place the rest of the script existed.
+     Showing it here is what those visits were for, and it retires the
+     role-aware excerpt problem outright: there is no excerpt left to miss your
+     character's lines. */
+  const sides = scene.lines;
 
   return (
     <div className={shell}>
-      <motion.div
-        className={column}
-        animate={leaving && !reduce ? { opacity: 0.25, y: -6 } : { opacity: 1, y: 0 }}
-        transition={{ duration: 0.19, ease: [0.22, 1, 0.36, 1] }}
-      >
+      <div className={column}>
         <button
           type="button"
           onClick={() => router.push(`/practice?script=${scriptId}`)}
@@ -384,34 +401,79 @@ export default function ScenePreviewPage() {
             <p className="t-prev__papertop">
               {scene.setting ? scene.setting : `${scene.play_title}${scene.play_author ? ` · ${scene.play_author}` : ""}`}
             </p>
-            {opening.map((line, i) => {
+            {sides.map((line, i) => {
               const isMine = roles.includes(line.character_name);
               return (
                 <motion.div
                   key={line.id}
-                  {...entrance(i, { reduce, y: 8, duration: 0.4 })}
-                  className="t-prev__line"
+                  {...entrance(Math.min(i, 5), { reduce, y: 8, duration: 0.4 })}
+                  className="t-prev__line group/line"
                   data-mine={isMine}
                 >
-                  <p className="t-prev__who">
-                    {line.character_name}
-                    {isMine && <span className="t-prev__yours">you</span>}
-                  </p>
-                  {line.stage_direction && (
-                    <p className="t-prev__dir">({line.stage_direction})</p>
+                  {editingId === line.id ? (
+                    <div className="space-y-2">
+                      <input
+                        value={draft.who}
+                        onChange={(e) => setDraft((d) => ({ ...d, who: e.target.value }))}
+                        aria-label="Character name"
+                        className="w-full max-w-[22ch] rounded border border-border bg-background px-2 py-1 text-xs uppercase tracking-[0.14em]"
+                      />
+                      <textarea
+                        value={draft.text}
+                        onChange={(e) => setDraft((d) => ({ ...d, text: e.target.value }))}
+                        aria-label="Line"
+                        rows={Math.min(8, Math.max(2, Math.ceil(draft.text.length / 60)))}
+                        className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm leading-relaxed"
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={saveLine}
+                          disabled={savingLine || !draft.text.trim()}
+                          className="rounded-md bg-primary px-3 h-8 text-xs font-medium text-primary-foreground disabled:opacity-60"
+                        >
+                          {savingLine ? "saving…" : "save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                        >
+                          cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="t-prev__who">
+                        {line.character_name}
+                        {isMine && <span className="t-prev__yours">you</span>}
+                        {/* Fix it where you read it. The editor was the only
+                            way to correct a typo and it cost a full page. */}
+                        <button
+                          type="button"
+                          onClick={() => beginEdit(line)}
+                          aria-label={`Edit ${line.character_name}'s line`}
+                          className="ml-2 align-middle text-[11px] text-muted-foreground opacity-0 transition-opacity focus:opacity-100 group-hover/line:opacity-100 underline-offset-2 hover:underline"
+                        >
+                          edit
+                        </button>
+                      </p>
+                      {line.stage_direction && (
+                        <p className="t-prev__dir">({line.stage_direction})</p>
+                      )}
+                      <p className="t-prev__text">{line.text}</p>
+                    </>
                   )}
-                  <p className="t-prev__text">{line.text}</p>
                 </motion.div>
               );
             })}
-            {rest > 0 && (
-              <p className="t-prev__more">
-                …and {rest} more line{rest === 1 ? "" : "s"}. The rest comes when you run it.
-              </p>
-            )}
+            <p className="t-prev__more">
+              (end of the scene.)
+            </p>
           </div>
         </motion.section>
-      </motion.div>
+      </div>
 
       {/* The way on. Docked, so it is on screen however far down the sides you
           have read — this is the one thing the page is asking. */}
@@ -427,15 +489,6 @@ export default function ScenePreviewPage() {
             <span aria-hidden className="t-prev__godot">
               <IconPlayerPlay className="h-4 w-4 fill-current" />
             </span>
-          </button>
-          <button
-            type="button"
-            onClick={openEditor}
-            disabled={leaving}
-            className="t-prev__edit"
-          >
-            <IconPencil className="h-3.5 w-3.5" />
-            {leaving ? "opening the script…" : "edit the scene"}
           </button>
         </div>
       </div>
