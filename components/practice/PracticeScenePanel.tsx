@@ -31,6 +31,7 @@ import { entrance } from "@/lib/motion";
 import { PlayCover } from "@/components/monologue/PlayCover";
 import { invalidateShelf, useScript, type UserScript } from "@/hooks/useScripts";
 import { groupScenesByAct, formatSceneDuration, type Scene } from "@/lib/scenes";
+import { sceneListShape } from "@/lib/sceneListShape";
 import { EditScriptDetailsModal } from "@/components/practice/EditScriptDetailsModal";
 import { AddSceneToScriptModal } from "@/components/scenepartner/AddSceneToScriptModal";
 
@@ -68,6 +69,12 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
 
   const scenes = data?.scenes ?? [];
   const groups = groupScenesByAct(scenes);
+  /* One layout served every script, and the common case fared worst: 11 of 20
+     scripts hold exactly ONE scene, 6 hold several without acts, and only 3
+     have acts at all. A numeral labelling a list of one, a chevron marooned at
+     the right of a 1,420px row, and an act heading above the only act are all
+     furniture for a choice the actor does not have. */
+  const shape = sceneListShape(scenes);
   const existingActs = [...new Set(scenes.map((s) => s.act).filter((a): a is string => !!a))];
   const canManage = !script.is_sample;
   const isProcessing =
@@ -281,10 +288,22 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
             onAdd={() => setAddOpen(true)}
           />
         ) : (
-          <div className="space-y-8">
-            {groups.map((group, gi) => (
+          /* Capped, like the shelf. The panel is 1fr in a max-w-7xl page, so a
+             scene row ran about 1,420px with the title at one end and the
+             chevron at the other. Capped here rather than on a container
+             because this panel is mounted from more than one place. */
+          <div className="max-w-2xl space-y-8">
+            {shape === "solo" && scenes[0] ? (
+              <SoloScene
+                scene={scenes[0]}
+                accentClass={getGenreBorderClassName(script.genre ?? "")}
+                onOpen={() => openScene(scenes[0].id)}
+                opening={openingId === scenes[0].id}
+              />
+            ) : (
+            groups.map((group, gi) => (
               <div key={group.act ?? `g${gi}`} className="space-y-3">
-                {group.act && (
+                {group.act && shape === "grouped" && (
                   <div
                     className="flex items-baseline justify-between gap-3 pb-2.5"
                     style={{ borderBottom: "1.5px solid var(--t-line-dark-2)" }}
@@ -317,7 +336,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
                   ))}
                 </div>
               </div>
-            ))}
+            )))}
           </div>
         )}
       </div>
@@ -347,6 +366,64 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
     </div>
   );
 }
+
+/**
+ * The whole script, when the whole script is one scene.
+ *
+ * 11 of 20 scripts in the library hold exactly one. The list gave that case a
+ * numeral (labelling a list of one), a disclosure chevron marooned at the far
+ * right of a 1,420px row, and a synopsis folded away behind it — three controls
+ * for a choice the actor does not have. Here the scene IS the page: what it is,
+ * who is in it, how long, what happens, and one way in.
+ */
+function SoloScene({
+  scene,
+  accentClass,
+  onOpen,
+  opening = false,
+}: {
+  scene: Scene;
+  accentClass: string;
+  onOpen: () => void;
+  opening?: boolean;
+}) {
+  const characters = [scene.character_1_name, scene.character_2_name].filter(Boolean) as string[];
+  const facts = [
+    characters.join(" & ") || null,
+    scene.line_count > 0 ? `${scene.line_count} lines` : null,
+    formatSceneDuration(scene.estimated_duration_seconds),
+  ].filter(Boolean) as string[];
+
+  return (
+    <div
+      className={[
+        "rounded-lg border border-l-2 border-border/70 px-5 py-5",
+        accentClass,
+      ].join(" ")}
+    >
+      <h3 className="font-typewriter font-semibold text-base text-foreground">{scene.title}</h3>
+      {facts.length > 0 && (
+        <p className="mt-1 text-xs text-muted-foreground">{facts.join("  ·  ")}</p>
+      )}
+
+      {/* Open, not folded. There is nothing to compare it against, so hiding it
+          behind a chevron only adds a tap between the actor and the thing. */}
+      <p className="mt-4 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
+        {scene.description?.trim() || "No synopsis for this scene yet."}
+      </p>
+
+      <button
+        type="button"
+        onClick={onOpen}
+        disabled={opening}
+        className="mt-5 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 h-10 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+      >
+        {opening ? "Curtain up…" : "Open the scene"}
+      </button>
+    </div>
+  );
+}
+
 
 function SceneRow({
   scene,
