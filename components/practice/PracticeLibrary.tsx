@@ -219,8 +219,16 @@ export function PracticeLibrary({
           </AnimatePresence>
         </div>
 
-        {/* The shelf */}
-        <div className="min-w-0">
+        {/* The shelf.
+
+            Capped. The column is 1fr inside a max-w-7xl page, so on a wide
+            desktop a shelf row ran about 1730px: the title sat at the far left
+            and "1 scene" at the far right with a third of the row empty between
+            them, and .t-script__foot's space-between had nothing to push
+            against but the viewport. A list you scan should not be wider than
+            you can read across. The rule above the rows caps with them, or the
+            header floats free of the shelf it belongs to. */}
+        <div className="min-w-0 max-w-2xl">
           {/* The way in sits at the top of the shelf, not under it. Below the
               list it was the last thing on the page and moved further down with
               every script added, so the more you used ScenePartner the harder
