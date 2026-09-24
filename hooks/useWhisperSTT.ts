@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { API_URL } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { SilenceDetector } from '@/lib/silence-detector';
+import { VoiceGate, speechBandLevelDb } from '@/lib/voice-gate';
 
 interface UseWhisperSTTOptions {
   /** Called with final transcript when recording stops and Whisper responds */
@@ -12,12 +13,6 @@ interface UseWhisperSTTOptions {
   onEnd?: () => void;
   /** Called on mic/transcription error */
   onError?: (msg: string) => void;
-  /**
-   * Volume level (0–255) below which audio is considered silence.
-   * Lower = more sensitive (picks up quieter speech before stopping).
-   * Default: 10
-   */
-  silenceThreshold?: number;
   /**
    * How long continuous silence must last before recording auto-stops.
    * Only counted once the speaker has actually started (see SilenceDetector).
@@ -44,7 +39,6 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     onResult,
     onEnd,
     onError,
-    silenceThreshold = 10,
     silenceTimeoutMs = 3500,
     prompt,
     deviceId,
@@ -60,6 +54,10 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
   const detectorRef = useRef<SilenceDetector | null>(null);
+  // One gate for the whole session: the room it has learned carries from take
+  // to take, so the actor's first word on a new line is judged against a floor
+  // that already exists rather than against a fresh analyser still warming up.
+  const gateRef = useRef<VoiceGate | null>(null);
   const stoppedRef = useRef(false); // prevent double-stop
   const mimeTypeRef = useRef<string>('audio/webm');
   const recordingStartRef = useRef<number>(0); // for minimum recording time guard
@@ -233,37 +231,36 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     analyser.smoothingTimeConstant = 0.7;
     source.connect(analyser);
     analyserRef.current = analyser;
-    const freqData = new Uint8Array(analyser.frequencyBinCount);
+    const spectrum = new Float32Array(analyser.frequencyBinCount);
+
+    // Voice is judged against the room, not against a fixed level: a laptop
+    // mic with auto gain reads far above any absolute threshold even in a
+    // quiet room, which is how a take used to run to its cap without ever
+    // seeing silence — see lib/voice-gate.ts.
+    const gate = gateRef.current ?? (gateRef.current = new VoiceGate());
 
     // Arming needs a sustained run of voiced frames, and a take needs a minimum
     // of real speech before silence may end it. Without both, the AI partner's
     // audio tail or a breath armed the timer and the take was cut ~2s later with
     // nothing in it — see lib/silence-detector.ts.
-    const detector = new SilenceDetector({
-      threshold: silenceThreshold,
-      silenceTimeoutMs,
-    });
+    const detector = new SilenceDetector({ silenceTimeoutMs });
     detectorRef.current = detector;
     detector.start(Date.now());
 
     const checkSilence = () => {
       if (stoppedRef.current) return;
-      analyser.getByteFrequencyData(freqData);
-
-      let peak = 0;
-      for (let i = 0; i < freqData.length; i++) {
-        if (freqData[i] > peak) peak = freqData[i];
-      }
+      const now = Date.now();
+      const voiced = gate.frame(now, speechBandLevelDb(analyser, spectrum, audioCtx.sampleRate));
 
       // Sound right now means the actor is mid-word. Advancing here is exactly
       // the interruption this tracking exists to prevent.
-      if (peak >= silenceThreshold) {
-        lastVoiceAtRef.current = Date.now();
+      if (voiced) {
+        lastVoiceAtRef.current = now;
         heardAnySpeechRef.current = true;
       }
 
       // The minimum-recording guard stays: a take shorter than this is a misfire.
-      if (detector.frame(Date.now(), peak) === 'stop' && Date.now() - recordingStartRef.current >= 400) {
+      if (detector.frame(now, voiced) === 'stop' && now - recordingStartRef.current >= 400) {
         stopRecording();
         return;
       }
@@ -275,7 +272,11 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     // the AudioContext — getByteFrequencyData returns all zeros, the silence
     // timer fires immediately, and recording stops before the user speaks.
     const startSilenceLoop = () => {
-      if (!stoppedRef.current) rafRef.current = requestAnimationFrame(checkSilence);
+      if (stoppedRef.current) return;
+      // Resumed here, not above: the gate's warm-up window has to cover the
+      // analyser's first frames, and those only begin once the context runs.
+      gate.resume(Date.now());
+      rafRef.current = requestAnimationFrame(checkSilence);
     };
     if (audioCtx.state === 'running') {
       startSilenceLoop();
@@ -306,7 +307,7 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     recorder.start(100); // 100ms chunks
     recordingStartRef.current = Date.now();
     setIsRecording(true);
-  }, [isRecording, isTranscribing, silenceThreshold, silenceTimeoutMs, stopRecording, transcribeBlob, cleanup]);
+  }, [isRecording, isTranscribing, silenceTimeoutMs, stopRecording, transcribeBlob, cleanup]);
 
   /** Snapshot current recorded chunks into a Blob (for playback/storage). */
   const getRecordedBlob = useCallback((): Blob | null => {

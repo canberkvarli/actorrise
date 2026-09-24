@@ -2,7 +2,9 @@
  * Decides when a spoken take has ended.
  *
  * Split out of useWhisperSTT so the decision is pure and testable — the hook
- * only feeds it analyser peaks and acts on the verdict.
+ * only tells it whether each frame was voiced (see lib/voice-gate.ts, which
+ * decides that against the room rather than an absolute level) and acts on
+ * the verdict.
  *
  * The old inline version armed its silence timer the instant ANY frame crossed
  * the threshold, then stopped the take 2s later. A single stray frame — the tail
@@ -17,8 +19,6 @@
  */
 
 export interface SilenceDetectorOptions {
-  /** Frequency-domain peak (0–255) at or above which a frame counts as voiced. */
-  threshold?: number;
   /** Continuous silence that ends the take, once the speaker has actually started. */
   silenceTimeoutMs?: number;
   /** Voiced audio must run this long UNBROKEN before the speaker counts as started. */
@@ -36,7 +36,6 @@ export interface SilenceDetectorOptions {
 export type SilenceVerdict = 'recording' | 'stop';
 
 const DEFAULTS: Required<SilenceDetectorOptions> = {
-  threshold: 10,
   silenceTimeoutMs: 3500,
   armAfterVoicedMs: 300,
   minVoicedMs: 700,
@@ -75,16 +74,16 @@ export class SilenceDetector {
 
   /**
    * Feeds one analyser frame.
-   * @param peak Loudest frequency bin this frame (0–255).
+   * @param voiced Whether the frame carried voice, per the VoiceGate.
    * @returns whether the take should keep running or stop now.
    */
-  frame(now: number, peak: number): SilenceVerdict {
+  frame(now: number, voiced: boolean): SilenceVerdict {
     const delta = Math.max(0, now - this.lastFrameAt);
     this.lastFrameAt = now;
 
     if (now - this.startedAt >= this.opts.maxDurationMs) return 'stop';
 
-    if (peak >= this.opts.threshold) {
+    if (voiced) {
       this.voicedMs += delta;
       this.voicedRunMs += delta;
       this.silenceStartedAt = null;

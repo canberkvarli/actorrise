@@ -515,24 +515,20 @@ function renderLineTokens(text: string, classForWord: (indices: number[]) => str
 }
 
 /**
- * The actor's own line, coloured by what the microphone caught.
+ * The actor's own line, underlined where the microphone caught it.
  *
- * Three states, not two. A word that was passed over gets a dotted underline
- * rather than staying dim: with only "matched" and "not yet", a word the mic
- * missed looks exactly like a word you haven't reached, and there's no way to
- * tell whether the app is behind you or lost.
+ * One mark, not three. A word the mic heard gets an underline; everything
+ * else is left exactly as printed. The earlier version recoloured heard words
+ * and dotted the ones it had passed over, which turned the line into a report
+ * card the actor read mid-speech ("oh, I missed a word"). The mic does not need
+ * every word, and the line should never look like it is grading the read.
  */
 function renderLineWithWordHighlights(text: string, result: WordMatchResult) {
-  const lastMatched = result.words.reduce((acc, w, i) => (w.matched ? i : acc), -1);
-
-  return renderLineTokens(text, (indices) => {
-    if (indices.some(i => result.words[i]?.matched)) return 'text-primary';
-    // Behind the furthest word heard, so the actor has already moved past it.
-    if (indices.every(i => i < lastMatched)) {
-      return 'text-foreground/60 underline decoration-dotted underline-offset-4';
-    }
-    return 'opacity-40';
-  });
+  return renderLineTokens(text, (indices) =>
+    indices.some(i => result.words[i]?.matched)
+      ? 'underline decoration-primary/70 decoration-[1.5px] underline-offset-[5px] transition-[text-decoration-color] duration-150'
+      : '',
+  );
 }
 
 /**
@@ -866,7 +862,6 @@ function RehearsalPageInner() {
     streamRef: whisperStreamRef,
     audioCtxRef: whisperAudioCtxRef,
   } = useWhisperSTT({
-    silenceThreshold: 10,
     // Actors take beats mid-line, and cold readers pause to scan ahead. 2s cut
     // people off mid-thought; the detector also now needs sustained speech before
     // this timer can run at all.
@@ -915,10 +910,10 @@ function RehearsalPageInner() {
         // Jitter animation to signal failed match
         setShouldShake(true);
         setTimeout(() => setShouldShake(false), 600);
-        // Toast notification — tell user to run the full line
+        // Ask for the line again without counting what was missed. A tally
+        // reads as a grade, and the read is not being graded.
         if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-        const missedCount = words.filter(w => !w.matched).length;
-        setToast(missedCount === 1 ? 'Missed a word — run the full line again' : `Missed ${missedCount} words — run the full line again`);
+        setToast("Didn't catch that. Once more.");
         toastTimerRef.current = setTimeout(() => setToast(null), 3500);
         // Auto-retry after 2s — reset gate so auto-listen fires
         if (pendingRetryRef.current) clearTimeout(pendingRetryRef.current);
@@ -2201,9 +2196,9 @@ function RehearsalPageInner() {
   const statusInfo = (() => {
     if (isLoadingAI) return { text: 'Generating voice', color: 'bg-amber-400', pulse: true };
     if (anySpeaking) return { text: `${session?.ai_character ?? 'Partner'} speaking`, color: 'bg-amber-400', pulse: true };
-    if (isTranscribing) return { text: 'Transcribing', color: 'bg-blue-400', pulse: true };
-    if (isListening) return { text: 'Recording', color: 'bg-green-400', pulse: true };
-    if (isProcessing) return { text: 'Processing', color: 'bg-blue-400', pulse: true };
+    if (isTranscribing) return { text: 'One moment', color: 'bg-blue-400', pulse: true };
+    if (isListening) return { text: 'Listening', color: 'bg-green-400', pulse: true };
+    if (isProcessing) return { text: 'One moment', color: 'bg-blue-400', pulse: true };
     if (isUserTurn) return { text: 'Your turn', color: 'bg-orange-400', pulse: false };
     return { text: 'Waiting', color: 'bg-neutral-500', pulse: false };
   })();
@@ -3079,10 +3074,13 @@ function RehearsalPageInner() {
             }
           </button>
 
-          {/* Status indicator — fixed width on desktop; shrinks + truncates on mobile */}
-          <div className="flex items-center gap-1.5 min-w-0 sm:w-[140px]">
-            <div className={cn('w-2 h-2 rounded-full shrink-0', statusInfo.color, statusInfo.pulse && 'animate-pulse')} />
-            <span className="text-[11px] text-neutral-400 whitespace-nowrap truncate">{statusInfo.text}</span>
+          {/* Status: one dot. The words it used to carry ("Recording",
+              "Transcribing") were the pipeline narrating itself. An actor only
+              needs to know whose turn it is, and the colour says that. The
+              text stays for screen readers. */}
+          <div className="flex items-center shrink-0 px-1" role="status" aria-live="polite">
+            <div className={cn('w-2.5 h-2.5 rounded-full', statusInfo.color, statusInfo.pulse && 'animate-pulse')} />
+            <span className="sr-only">{statusInfo.text}</span>
           </div>
 
           {/* Progress: line counter + bar */}
