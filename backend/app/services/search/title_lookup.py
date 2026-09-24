@@ -1156,6 +1156,36 @@ def _fuzzy_catalogue_match(nq: str, catalogue: Dict[str, tuple]) -> Optional[Dic
     return None
 
 
+#: A title lookup may give up at most this many trailing words, and never leave
+#: fewer than this many behind. Two, because "nina black swan carmy" is not a
+#: thing anyone types, and a looser strip turns every attribute search into a
+#: title lookup.
+_MAX_TRAILING_STRIP = 2
+_MIN_WORDS_AFTER_STRIP = 2
+
+
+def strip_trailing_words(query: str) -> list:
+    """The query with its trailing words removed, longest surviving form first.
+
+    An actor naming a show and then its character -- "nina black swan", "the
+    bear sydney", "never can tell valentine" -- is still naming the show, but
+    the extra word breaks detection two different ways. "you never can tell" is
+    not a phrase inside "never can tell valentine" because the query is missing
+    a word of it, and "The Bear" normalises to four characters, under the floor
+    that stops one-word titles hijacking attribute searches. That floor must
+    stay, so the query is shortened instead of the rules being loosened.
+
+    The full query is not offered back: the caller has already tried it.
+    """
+    words = (query or "").split()
+    out = []
+    for drop in range(1, _MAX_TRAILING_STRIP + 1):
+        if len(words) - drop < _MIN_WORDS_AFTER_STRIP:
+            break
+        out.append(" ".join(words[: len(words) - drop]))
+    return out
+
+
 def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
     """Return {"title", "medium"} when the query names a title we actually carry.
 

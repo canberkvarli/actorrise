@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { SearchTour } from "@/components/onboarding/SearchTour";
 import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
+import { MonologueWall } from "@/components/monologue/MonologueWall";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/events";
@@ -2892,11 +2893,22 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </p>
                     </div>
 
-                    {/* Monologue Text - Large and Centered */}
+                    {/* Monologue Text - Large and Centered.
+
+                        The wall goes UNDER the text, not over it. The server
+                        returns a teaser when the allowance is spent, so without
+                        this the panel showed a paragraph that simply stopped
+                        with nothing on screen saying why — which is what "it
+                        opens fully then truncates" looked like from the outside.
+                        A modal would be dismissable and leave the same fragment;
+                        see MonologueWall. */}
                     <div className="bg-background p-8 rounded-lg">
                       <p className="text-xl leading-relaxed font-typewriter max-w-3xl mx-auto text-center">
                         <MonologueText text={selectedMonologue.text} />
                       </p>
+                      {selectedMonologue.paywalled && (
+                        <MonologueWall feature="monologue_read_panel" />
+                      )}
                     </div>
                       </motion.div>
                     ) : (
@@ -2907,6 +2919,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
                       >
+                  {selectedMonologue.paywalled && (
+                    <MonologueWall feature="monologue_read_panel" />
+                  )}
                   <MonologueDetailContent
                     monologue={selectedMonologue}
                     onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}

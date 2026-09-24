@@ -40,6 +40,7 @@ from app.services.search.title_lookup import (compute_content_gap,
                                               find_character_monologues,
                                               find_author_monologues,
                                               find_title_monologues,
+                                              strip_trailing_words,
                                               promote_title_matches)
 from app.services.search.scene_intent import detect_two_person_scene_intent
 from app.services.search.recommender import Recommender
@@ -555,6 +556,18 @@ async def search_monologues(
             # Barber of Fleet Street", so it belongs after, as the fallback that
             # names uncarried titles for the content-gap banner (Beetlejuice).
             title_hit = detect_catalogue_title(db, search_q) or detect_title_lookup(search_q)
+            # "nina black swan", "the bear sydney", "never can tell valentine":
+            # a show's name with its character's name after it is still naming
+            # the show, and the bare titles all resolve. The extra word breaks
+            # it two ways -- "you never can tell" is not a phrase inside a query
+            # missing a word of it, and "The Bear" normalises to four characters,
+            # under the floor that stops one-word titles hijacking attribute
+            # searches. The floor stays; the query is shortened instead.
+            if not title_hit:
+                for _shorter in strip_trailing_words(search_q):
+                    title_hit = detect_catalogue_title(db, _shorter)
+                    if title_hit:
+                        break
             # find_title_monologues decides for itself whether it can honour
             # the active filters, and returns nothing when it cannot.
             title_rows: list[Monologue] = []
