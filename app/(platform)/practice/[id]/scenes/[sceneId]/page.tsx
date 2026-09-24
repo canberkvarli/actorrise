@@ -109,6 +109,11 @@ export default function ScenePreviewPage() {
   const [voicesPicked, setVoicesPicked] = useState<CharacterVoices | null>(null);
   const [auditioning, setAuditioning] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  /* Leaving for the editor. "edit the scene" sat next to a Rehearse button with
+     a full lit hand-off and was a bare router.push, so one door dissolved and
+     the one beside it cut. Same idiom as the panel's openScene: set the state,
+     let it settle, then go. */
+  const [leaving, setLeaving] = useState(false);
   const [upgrade, setUpgrade] = useState<{ open: boolean; message: string }>({
     open: false,
     message: "",
@@ -183,6 +188,17 @@ export default function ScenePreviewPage() {
     void tts.speak(text.slice(0, 220), fullVoices[character] ?? "coral");
   };
 
+  /** Hand off to the editor with the same settle the rest of the room uses. */
+  const openEditor = useCallback(() => {
+    const href = `/practice/${scriptId}/scenes/${sceneId}/edit`;
+    if (reduce) {
+      router.push(href);
+      return;
+    }
+    setLeaving(true);
+    window.setTimeout(() => router.push(href), 190);
+  }, [reduce, router, scriptId, sceneId]);
+
   const rehearse = useCallback(async () => {
     if (!scene || !mine || starting) return;
     setStarting(true);
@@ -241,7 +257,11 @@ export default function ScenePreviewPage() {
 
   return (
     <div className={shell}>
-      <div className={column}>
+      <motion.div
+        className={column}
+        animate={leaving && !reduce ? { opacity: 0.25, y: -6 } : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.19, ease: [0.22, 1, 0.36, 1] }}
+      >
         <button
           type="button"
           onClick={() => router.push(`/practice?script=${scriptId}`)}
@@ -391,7 +411,7 @@ export default function ScenePreviewPage() {
             )}
           </div>
         </motion.section>
-      </div>
+      </motion.div>
 
       {/* The way on. Docked, so it is on screen however far down the sides you
           have read — this is the one thing the page is asking. */}
@@ -410,11 +430,12 @@ export default function ScenePreviewPage() {
           </button>
           <button
             type="button"
-            onClick={() => router.push(`/practice/${scriptId}/scenes/${sceneId}/edit`)}
+            onClick={openEditor}
+            disabled={leaving}
             className="t-prev__edit"
           >
             <IconPencil className="h-3.5 w-3.5" />
-            edit the scene
+            {leaving ? "opening the script…" : "edit the scene"}
           </button>
         </div>
       </div>
