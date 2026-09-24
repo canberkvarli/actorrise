@@ -71,6 +71,15 @@ CLIENT_EVENT_NAMES = frozenset(
         # rather than one per line. Without it "mode: voice" only means we
         # committed to voice, not that the actor was ever heard.
         "rehearsal_voice_advanced",  # {platform, line_index}
+        # One row per delivered scene line, carrying what the microphone made
+        # of it. Found necessary on 2026-09-24: three sessions in a row failed
+        # on the founder's own laptop and nothing recorded whether the take
+        # ever heard voice, how long it ran, or which rule finally moved the
+        # line. `via` is sr_finished | sr_dropped_tail | sr_trailed_off |
+        # whisper | silent_skip | manual; sr_match is the fraction of the line
+        # the live recogniser matched; voiced_ms and floor_db come from the
+        # level gate (lib/voice-gate.ts).
+        "scene_line_delivered",  # {via, line_index, take_ms, voiced_ms, floor_db, sr_match, whisper_score}
     }
 )
 

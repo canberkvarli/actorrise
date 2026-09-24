@@ -373,11 +373,23 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
   /** Has the mic heard any speech at all during this take? */
   const heardAnySpeech = useCallback((): boolean => heardAnySpeechRef.current, []);
 
+  /**
+   * What the current (or last) take measured, for telemetry. The only way to
+   * learn what the microphone made of a real room is to ship the numbers
+   * with the line: voiced audio in ms, and the room floor the gate settled on.
+   */
+  const takeStats = useCallback(() => ({
+    voiced_ms: Math.round(detectorRef.current?.capturedVoicedMs ?? 0),
+    take_ms: recordingStartRef.current ? Date.now() - recordingStartRef.current : 0,
+    floor_db: gateRef.current ? Math.round(gateRef.current.noiseFloorDb) : null,
+  }), []);
+
   return {
     startListening: startRecording,   // drop-in replacement API
     stopListening: stopRecording,
     msSinceVoice,                     // voice activity, for the advance rule
     heardAnySpeech,
+    takeStats,                        // voiced ms + room floor, for the delivery event
     cancelTranscription,              // abort pending Whisper so auto-listen isn't blocked
     getRecordedBlob,                  // snapshot audio for playback in session review
     prewarmStream,                    // pre-acquire mic stream before first recording

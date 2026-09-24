@@ -60,6 +60,7 @@ import { ownsLine, sessionRoles } from '@/lib/character-roles';
 import { tokenize, alignWords, wordMatchScore } from '@/lib/word-match';
 import { shouldAdvance, MIN_QUIET_MS } from '@/lib/advance-rule';
 import { buildWordTimings, spokenWordIndex } from '@/lib/speech-timing';
+import { trackEvent } from '@/lib/events';
 import { useTheme } from 'next-themes';
 
 /** Pure dialogue for TTS — strips both [bracket] and (paren) stage directions. */
@@ -466,6 +467,15 @@ interface WordMatchResult {
   willAdvance: boolean;
 }
 
+/** Which rule moved a line on. Recorded with every delivery, see handleDeliverLine. */
+type DeliverVia =
+  | 'sr_finished'      // live recogniser matched the last word, actor went quiet
+  | 'sr_dropped_tail'  // most of the line matched, quiet for a beat
+  | 'sr_trailed_off'   // some of the line matched, long quiet
+  | 'whisper'          // take ended on silence, Whisper transcript matched
+  | 'silent_skip'      // skip-if-silent timer, nothing heard
+  | 'manual';          // Skip line / Enter
+
 /**
  * Renders a line token by token, letting the caller colour each word.
  *
@@ -836,6 +846,12 @@ function RehearsalPageInner() {
   const liveRecognitionRef = useRef<any>(null);
   // Prevents double-advance when SR final result fires before Whisper returns
   const srAdvancedRef = useRef(false);
+  // Which line the running take was recorded for. A Whisper result is only
+  // ever an answer to that line: the skip path stopped the recorder and the
+  // transcript came back seconds later, during the partner's next line, and
+  // was delivered against THAT line — so the scene rolled straight past the
+  // actor's own next cue.
+  const takeLineIndexRef = useRef<number | null>(null);
   // Gate for Whisper: only allow transcription when SR has matched words from the line
   const whisperGateRef = useRef(false);
   // Latest read of the current line, written by recognition and read by the
@@ -858,6 +874,7 @@ function RehearsalPageInner() {
     resetTranscript,
     msSinceVoice,
     heardAnySpeech,
+    takeStats,
     analyserRef,
     streamRef: whisperStreamRef,
     audioCtxRef: whisperAudioCtxRef,
@@ -871,6 +888,9 @@ function RehearsalPageInner() {
     prompt: currentUserLineText ? stripStageDirections(currentUserLineText) : undefined,
     onResult: (text) => {
       if (srAdvancedRef.current) return; // SR already advanced this line — ignore late Whisper result
+      // The take this transcript belongs to is over. Whatever line is active
+      // now, this is not a read of it.
+      if (takeLineIndexRef.current !== activeLineIndexRef.current) return;
       gotResultRef.current = true;
       setSpeechError(null);
       const expected = currentUserLineText ? stripStageDirections(currentUserLineText) : '';
@@ -901,7 +921,7 @@ function RehearsalPageInner() {
         pendingAdvanceRef.current = setTimeout(() => {
           pendingAdvanceRef.current = null;
           setWordMatchResult(null);
-          handleDeliverLine(text);
+          handleDeliverLine(text, 'whisper', score);
           resetTranscript();
         }, 700);
       } else {
@@ -1190,7 +1210,7 @@ function RehearsalPageInner() {
 
   /* ── Deliver user's line (API for tracking + local advancement) ── */
 
-  const handleDeliverLine = async (text: string) => {
+  const handleDeliverLine = async (text: string, via: DeliverVia = 'manual', whisperScore?: number) => {
     const toSend = text.trim();
     const sess = sessionRef.current;
     const currentIdx = activeLineIndexRef.current ?? 0;
@@ -1207,6 +1227,21 @@ function RehearsalPageInner() {
     if (blob) lineAudioBlobsRef.current.set(currentIdx, blob);
     lineTranscriptsRef.current.set(currentIdx, toSend);
 
+    // What the microphone made of this line. Read before the recorder is
+    // stopped below, while the take's numbers are still the take's.
+    {
+      const expected = orderedLinesRef.current[currentIdx]?.text ?? '';
+      const expectedCount = expected ? tokenize(stripStageDirections(expected)).length : 0;
+      const matched = liveReadRef.current.matched.size;
+      trackEvent('scene_line_delivered', {
+        via,
+        line_index: currentIdx,
+        sr_match: expectedCount > 0 ? Math.round((matched / expectedCount) * 100) / 100 : null,
+        whisper_score: whisperScore != null ? Math.round(whisperScore * 100) / 100 : null,
+        ...takeStats(),
+      });
+    }
+
     // The real activation moment: not loading the page, but opening your mouth.
     // seconds_to_first_line covers mic permission, the audio check and the
     // countdown, so a bad number here points at setup friction, not the scene.
@@ -1221,6 +1256,9 @@ function RehearsalPageInner() {
     }
 
     if (isListening) stopListening();
+    // Stopping the recorder hands its audio to Whisper. This line is done, so
+    // that transcript would only ever arrive late and land on the next one.
+    cancelTranscription();
     resetTranscript();
 
     // Advance locally IMMEDIATELY for snappy UX
@@ -1699,6 +1737,7 @@ function RehearsalPageInner() {
 
     setAutoListenLineKey(activeUserLineKey);
     gotResultRef.current = false;
+    takeLineIndexRef.current = activeLineIndexRef.current;
     // Fire immediately — no delay needed since we gate on !anySpeaking
     startListeningRef.current();
   }, [
@@ -1836,7 +1875,8 @@ function RehearsalPageInner() {
 
       // One frame, so the completed line paints before it moves. Not a delay —
       // the old 400ms timer here was a third of the perceived lag.
-      requestAnimationFrame(() => handleDeliverLineRef.current(read.transcript));
+      const via: DeliverVia = lastWordMatched ? 'sr_finished' : score >= 0.75 ? 'sr_dropped_tail' : 'sr_trailed_off';
+      requestAnimationFrame(() => handleDeliverLineRef.current(read.transcript, via));
     }, WATCHER_INTERVAL_MS);
 
     return () => {
@@ -1971,7 +2011,10 @@ function RehearsalPageInner() {
     const sec = rehearsalSettings.skipAfterSeconds * 1000;
     skipSilentTimerRef.current = setTimeout(() => {
       skipSilentTimerRef.current = null;
-      handleDeliverLine(currentUserLineText);
+      // "If silent" means it. An actor mid-line is not silent, and skipping
+      // them because the words haven't matched yet is the app cutting them off.
+      if (heardAnySpeech()) return;
+      handleDeliverLine(currentUserLineText, 'silent_skip');
     }, sec);
     return () => {
       if (skipSilentTimerRef.current) {
@@ -2130,7 +2173,7 @@ function RehearsalPageInner() {
   const handleManualAdvance = useCallback(() => {
     if (!currentUserLineText || isProcessing) return;
     if (isListening) stopListening();
-    handleDeliverLine(currentUserLineText);
+    handleDeliverLine(currentUserLineText, 'manual');
   }, [currentUserLineText, isProcessing, isListening, stopListening]);
 
   /* ── Go back to previous line ───────────────────────────────────── */

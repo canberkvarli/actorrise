@@ -21,7 +21,8 @@ export type UserEventName =
   | "beat_cleared"
   | "monologue_work_finished"
   | "rehearsal_input_mode"
-  | "rehearsal_voice_advanced";
+  | "rehearsal_voice_advanced"
+  | "scene_line_delivered";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 
