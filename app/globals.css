@@ -6959,23 +6959,30 @@
    back on for a touch device: the control is invisible forever, which is how
    Delete and Flag were lost on the shelf for every phone user. Default is
    visible; the desktop quiet is the special case. */
-.t-prev__edit {
+/* Its own name. `.t-prev__edit` already belonged to the retired "edit the
+   scene" button, declared LATER in this file, so it won and this was styled by
+   a rule written for something else -- which is how a shared stylesheet
+   punishes a reused name.
+
+   Always visible. It was hidden until hover, and hover does not exist on a
+   phone; but the deciding fact is that Canberk could not find it on a desktop
+   either. A control nobody can see is a control nobody has. */
+.t-prev__lineedit {
   margin-left: 8px;
   vertical-align: middle;
   font-family: var(--t-direction);
   font-size: 11px;
   letter-spacing: 0.06em;
-  color: var(--t-muted-dark);
-  text-underline-offset: 2px;
-}
-.t-prev__edit:hover,
-.t-prev__edit:focus-visible {
+  color: var(--t-muted-dark-2);
   text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  cursor: pointer;
+  transition: color 0.15s;
 }
-@media (hover: hover) {
-  .t-prev__edit { opacity: 0; transition: opacity 0.15s; }
-  .t-prev__line:hover .t-prev__edit,
-  .t-prev__edit:focus-visible { opacity: 1; }
+.t-prev__lineedit:hover,
+.t-prev__lineedit:focus-visible {
+  color: var(--t-gel-ink);
 }
 .t-prev__more {
   margin: 24px 0 0;
@@ -7032,7 +7039,6 @@
     font-size: 15px;
   }
   .t-prev__godot { width: 38px; height: 38px; }
-  .t-prev__edit { justify-content: center; font-size: 12px; padding: 2px 0; }
 }
 .t-prev__go {
   display: inline-flex;
@@ -7063,18 +7069,6 @@
   background: var(--t-cta-dot-bg);
   color: var(--t-cta-dot-fg);
 }
-.t-prev__edit {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--t-direction);
-  font-style: italic;
-  font-size: 13px;
-  color: var(--t-muted-dark-2);
-  cursor: pointer;
-  transition: color 0.2s;
-}
-.t-prev__edit:hover { color: var(--t-gel-ink); }
 
 @media (prefers-reduced-motion: reduce) {
   .t-prev__go:hover:not(:disabled) { transform: none; }

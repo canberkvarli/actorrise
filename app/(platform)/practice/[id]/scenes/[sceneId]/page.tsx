@@ -457,7 +457,7 @@ export default function ScenePreviewPage() {
                           type="button"
                           onClick={() => beginEdit(line)}
                           aria-label={`Edit ${line.character_name}'s line`}
-                          className="t-prev__edit"
+                          className="t-prev__lineedit"
                         >
                           edit
                         </button>
