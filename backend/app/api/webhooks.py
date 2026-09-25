@@ -67,6 +67,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             handle_invoice_paid(event_data, db)
         elif event_type == "invoice.payment_failed":
             handle_payment_failed(event_data, db)
+        elif event_type == "customer.subscription.created":
+            handle_subscription_created(event["data"]["object"], db)
+
         elif event_type == "customer.subscription.updated":
             # previous_attributes is how Stripe says "the trial just ended":
             # status was trialing, now it is something else.
@@ -452,6 +455,101 @@ def handle_payment_failed(invoice: dict, db: Session):
     db.commit()
 
     print(f"❌ Payment failed for user {subscription.user_id}")
+
+
+def handle_subscription_created(stripe_subscription: dict, db: Session):
+    """A subscription appeared in Stripe that this app has never seen.
+
+    Stripe has been sending this event all along -- it is in the endpoint's
+    enabled_events -- and the elif chain had no branch for it, so it fell
+    through and returned 200. Every one counted as delivered.
+
+    It matters for subscriptions made OUTSIDE checkout, which is how a comp is
+    granted from the Stripe dashboard: there is no checkout.session, so
+    handle_checkout_completed never runs and no row is ever written. Chloe Chan
+    and Louis Cunningham were both active in Stripe and missing here for four
+    months; Chloe read as FREE in the product throughout.
+
+    Idempotent: checkout fires this event too, and whichever lands second must
+    not write a twin.
+    """
+    from app.models.user import User
+    from app.services.stripe_sync import resolve_subscription_owner
+
+    sub_id = stripe_subscription.get("id")
+    existing = (
+        db.query(UserSubscription)
+        .filter(UserSubscription.stripe_subscription_id == sub_id)
+        .first()
+    )
+    if existing:
+        _sync_from_stripe_subscription(existing, stripe_subscription)
+        db.commit()
+        print(f"✅ subscription.created: {sub_id} already known, synced")
+        return
+
+    customer_id = stripe_subscription.get("customer")
+
+    # Whoever we have already seen paying under this customer id.
+    by_customer_id = {
+        row[0]: row[1]
+        for row in db.query(
+            UserSubscription.stripe_customer_id, UserSubscription.user_id
+        ).filter(UserSubscription.stripe_customer_id.isnot(None)).all()
+    }
+
+    # Falling back to the email on the Stripe customer, as the payment-link
+    # branch of handle_checkout_completed already does.
+    customer_email = None
+    try:
+        import stripe as _stripe
+
+        customer_email = (_stripe.Customer.retrieve(customer_id) or {}).get("email")
+    except Exception as exc:  # noqa: BLE001
+        print(f"⚠️  subscription.created: could not read customer {customer_id}: {exc}")
+
+    by_email = {}
+    if customer_email:
+        u = (
+            db.query(User)
+            .filter(_func.lower(User.email) == customer_email.strip().lower())
+            .first()
+        )
+        if u:
+            by_email[customer_email.strip().lower()] = u.id
+
+    user_id = resolve_subscription_owner(
+        customer_id=customer_id,
+        customer_email=customer_email,
+        by_customer_id=by_customer_id,
+        by_email=by_email,
+    )
+    if user_id is None:
+        # Deliberately loud and deliberately does nothing else. Attaching a
+        # subscription to a guessed account hands a stranger someone's
+        # membership.
+        print(
+            f"⚠️  subscription.created: no account for {sub_id} "
+            f"(customer={customer_id}, email={customer_email!r}); no row written"
+        )
+        return
+
+    plus_tier = db.query(PricingTier).filter(PricingTier.name == "plus").first()
+    if not plus_tier:
+        print("⚠️  subscription.created: no 'plus' tier configured; no row written")
+        return
+
+    row = UserSubscription(
+        user_id=user_id,
+        tier_id=plus_tier.id,
+        stripe_customer_id=customer_id,
+        stripe_subscription_id=sub_id,
+        status=stripe_subscription.get("status", "active"),
+    )
+    _sync_from_stripe_subscription(row, stripe_subscription)
+    db.add(row)
+    db.commit()
+    print(f"✅ subscription.created: wrote row for user {user_id} ({sub_id})")
 
 
 def handle_subscription_updated(
