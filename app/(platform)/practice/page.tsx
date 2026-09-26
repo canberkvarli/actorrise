@@ -18,6 +18,8 @@ import {
 } from "@/components/practice/HowItWorksWalkthrough";
 import { ScenePartnerTour } from "@/components/onboarding/ScenePartnerTour";
 import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
+import { GuidedInvitation } from "@/components/practice/GuidedInvitation";
+import { shouldInvite } from "@/lib/guided-invite";
 
 /**
  * /practice — the page that opens after login.
@@ -52,7 +54,7 @@ function LibrarySkeleton() {
 
 export default function PracticePage() {
   // Hooks must run on every render — call before any feature-flag early return.
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isDemoUser } = useAuth();
   const { data: scripts, isLoading: scriptsLoading, isFetched: scriptsFetched } = useScripts();
 
   /* Whether this browser has been shown the playbill. Read through
@@ -66,7 +68,7 @@ export default function PracticePage() {
   /* null = nobody has opened or dismissed it yet, so the data decides. */
   const [walkthroughOverride, setWalkthroughOverride] = useState<boolean | null>(null);
 
-  const { demoScript, featuredScriptId, safeScripts, hasOwnScript } = useMemo(() => {
+  const { demoScript, featuredScriptId, safeScripts, hasOwnScript, ownScriptCount } = useMemo(() => {
     const safeScripts = scripts ?? [];
     const userScripts = safeScripts.filter((s) => !s.is_sample);
     const demoScript = safeScripts.find((s) => s.is_sample) ?? null;
@@ -78,8 +80,18 @@ export default function PracticePage() {
       [...userScripts].sort((a, b) =>
         (b.created_at ?? "").localeCompare(a.created_at ?? ""),
       )[0]?.id ?? null;
-    return { demoScript, featuredScriptId, safeScripts, hasOwnScript: userScripts.length > 0 };
+    return {
+      demoScript,
+      featuredScriptId,
+      safeScripts,
+      hasOwnScript: userScripts.length > 0,
+      ownScriptCount: userScripts.length,
+    };
   }, [scripts]);
+
+  // The guided first scene replaces the library for an actor who has never
+  // rehearsed. It is a different page, not a redirect: see lib/guided-invite.
+  const invite = !!user && scriptsFetched && shouldInvite(user, ownScriptCount, isDemoUser);
 
   const hasCachedData = scriptsFetched || safeScripts.length > 0;
   const isLoading = (authLoading && !user) || (scriptsLoading && !hasCachedData);
@@ -95,7 +107,7 @@ export default function PracticePage() {
   // render pass — and once the actor opens or dismisses it themselves, the
   // override wins for the rest of the visit.
   const walkthroughOpen =
-    walkthroughOverride ?? (!!user && scriptsFetched && !hasOwnScript && unseen);
+    walkthroughOverride ?? (!!user && scriptsFetched && !hasOwnScript && unseen && !invite);
 
   /* The followspot. Every other room got one and this one — the room you land
      in after login — got only the playbill, which points at nothing and only
@@ -111,7 +123,7 @@ export default function PracticePage() {
      that runs behind a full-screen dialog is a tour the actor is never offered
      again — and the room has to have finished resolving, or the anchors it
      lights are still skeletons. */
-  const tourOpen = showTour && !walkthroughOpen && scriptsFetched && !isLoading;
+  const tourOpen = showTour && !walkthroughOpen && scriptsFetched && !isLoading && !invite;
 
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
@@ -191,14 +203,18 @@ export default function PracticePage() {
               whole two-column room appears out of nothing the instant its
               data resolves, which after a login — a full document load — is
               the jump that makes the landing feel broken. */}
-          <Suspense fallback={<LibrarySkeleton />}>
-            <PracticeLibrary
-              scripts={safeScripts}
-              featuredScriptId={featuredScriptId}
-              demoScriptId={demoScript?.id ?? null}
-              onOpenWalkthrough={() => setWalkthroughOverride(true)}
-            />
-          </Suspense>
+          {invite ? (
+            <GuidedInvitation />
+          ) : (
+            <Suspense fallback={<LibrarySkeleton />}>
+              <PracticeLibrary
+                scripts={safeScripts}
+                featuredScriptId={featuredScriptId}
+                demoScriptId={demoScript?.id ?? null}
+                onOpenWalkthrough={() => setWalkthroughOverride(true)}
+              />
+            </Suspense>
+          )}
 
         </motion.div>
       )}

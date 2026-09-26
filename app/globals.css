@@ -4456,6 +4456,92 @@
   color: var(--t-text);
 }
 
+/* --- The guided first scene's invitation -----------------------------------
+   The partner's first line, said at you. A cue in the direction face, the line
+   in the display serif, one control. Tokens flip it with the theme. */
+.t-invite {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 42rem;
+  padding: clamp(24px, 8vh, 72px) 0 0;
+}
+.t-invite__cue {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark);
+}
+.t-invite__line {
+  margin: 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(44px, 9vw, 92px);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-invite__house {
+  margin: 14px 0 0;
+  font-family: var(--t-body);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--t-muted-dark);
+}
+.t-invite__answer {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 22px;
+  height: 60px;
+  padding: 0 34px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-cta-bd);
+  background: var(--t-cta-bg);
+  color: var(--t-cta-fg);
+  font-family: var(--t-body);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: 0 20px 60px -15px oklch(0.7 0.18 48 / 0.7);
+  transition: transform 0.3s var(--t-spring), box-shadow 0.3s;
+}
+.t-invite__answer:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 26px 70px -15px oklch(0.7 0.18 48 / 0.8);
+}
+.t-invite__answer:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+.t-invite__alt {
+  margin-top: 18px;
+}
+
+/* The guided scene's one line of house text, above the script. Reserved
+   height so the parchment does not jump when it goes quiet. */
+.t-coach {
+  min-height: 1.6em;
+  margin: 0 0 12px;
+  text-align: center;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: var(--t-muted-dark);
+  transition: color 0.25s;
+}
+.t-coach[data-state="nudge"],
+.t-coach[data-state="tap_mode"] {
+  color: var(--t-orange);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .t-script:hover,
   .t-bring-in:hover { transform: none; }
