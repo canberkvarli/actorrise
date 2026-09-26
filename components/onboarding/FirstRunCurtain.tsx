@@ -1,8 +1,10 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
+import { onboardingIsQuietOn } from "@/lib/onboarding-routes";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import {
   isOnboardingDoneThisSession,
@@ -43,6 +45,7 @@ import {
  */
 export function FirstRunCurtain() {
   const { user } = useAuth();
+  const pathname = usePathname();
   const reduce = useReducedMotion();
 
   const signupPending = useSyncExternalStore(subscribeFirstRun, isSignupPending, () => false);
@@ -59,7 +62,10 @@ export function FirstRunCurtain() {
   const needsOnboarding = user?.has_completed_onboarding === false;
   // Note auth's `loading` is deliberately NOT consulted: that window is the
   // gap being covered, not a reason to stand down.
-  const show = !finished && (needsOnboarding || signupPending);
+  // Where the card stays quiet the curtain must too, or it sits over the
+  // ScenePartner hub waiting for a card that never comes (2026-09-26: a
+  // brand-new account saw a black /practice).
+  const show = !finished && !onboardingIsQuietOn(pathname) && (needsOnboarding || signupPending);
 
   return (
     <AnimatePresence>
