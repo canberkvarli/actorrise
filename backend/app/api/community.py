@@ -171,14 +171,13 @@ class CommunityLibraryResponse(BaseModel):
     ready: bool  # False → show the "still gathering scripts" cold-start state
 
 
-@router.get("/scripts", response_model=CommunityLibraryResponse)
-def get_community_scripts(
-    limit: int = Query(60, ge=1, le=100),
-    db: Session = Depends(get_db),
-):
-    """Scripts in the Green Room community library — actor-shared plus the system
-    demo scripts (labeled), so the shelf is never empty. Public, semi-anon owner."""
-    rows = (
+def community_scripts_query(db: Session):
+    """Shared scripts plus the demos, real shares first, newest within each.
+
+    The guided first scene is a demo that belongs to the hub, not the
+    community shelf, so it is filtered here as it is on the actor's own shelf.
+    """
+    return (
         db.query(UserScript, User, ActorProfile)
         .outerjoin(User, UserScript.user_id == User.id)
         .outerjoin(ActorProfile, ActorProfile.user_id == User.id)
@@ -186,16 +185,24 @@ def get_community_scripts(
             or_(
                 UserScript.shared_with_community.is_(True),
                 UserScript.is_sample.is_(True),
-            )
+            ),
+            UserScript.is_guided.is_(False),
         )
-        # Real shares first, then demos; newest within each.
         .order_by(
             UserScript.is_sample.asc(),
             func.coalesce(UserScript.updated_at, UserScript.created_at).desc(),
         )
-        .limit(limit)
-        .all()
     )
+
+
+@router.get("/scripts", response_model=CommunityLibraryResponse)
+def get_community_scripts(
+    limit: int = Query(60, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Scripts in the Green Room community library — actor-shared plus the system
+    demo scripts (labeled), so the shelf is never empty. Public, semi-anon owner."""
+    rows = community_scripts_query(db).limit(limit).all()
 
     scripts: List[CommunityScript] = []
     for script, user, profile in rows:

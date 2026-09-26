@@ -62,5 +62,28 @@ class TheSeed(Fixture):
         self.assertEqual(self.db.query(SceneLine).count(), 6)
 
 
+class NoShelfListsIt(Fixture):
+    def setUp(self):
+        super().setUp()
+        seed_late(self.db)
+        self.db.commit()
+
+    def test_the_demo_rung_never_picks_it(self):
+        # whats_next's last rung is "the sample play speaks first". With only
+        # the guided sample seeded there must be nothing to say.
+        from app.api.scenes import whats_next
+        self.assertIsNone(whats_next(self.db, self.user.id))
+
+    def test_the_shelf_query_excludes_it(self):
+        from app.api.scripts import shelf_scripts_query
+        rows = shelf_scripts_query(self.db, self.user.id).all()
+        self.assertEqual([s.title for s in rows], [])
+
+    def test_the_community_query_excludes_it(self):
+        from app.api.community import community_scripts_query
+        rows = community_scripts_query(self.db).all()
+        self.assertEqual(rows, [])
+
+
 if __name__ == "__main__":
     unittest.main()

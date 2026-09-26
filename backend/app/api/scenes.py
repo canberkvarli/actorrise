@@ -558,7 +558,7 @@ def whats_next(db: Session, user_id: int) -> Optional[dict]:
     demo_scene = (
         db.query(Scene)
         .join(UserScript, Scene.user_script_id == UserScript.id)
-        .filter(UserScript.is_sample.is_(True))
+        .filter(UserScript.is_sample.is_(True), UserScript.is_guided.is_(False))
         .order_by(UserScript.id, Scene.id)
         .first()
     )

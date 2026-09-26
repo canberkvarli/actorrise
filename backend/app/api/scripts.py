@@ -1246,20 +1246,30 @@ def shelf_ordered(query):
     return query.order_by(*_SHELF_ORDER)
 
 
+def shelf_scripts_query(db: Session, user_id: int):
+    """Everything the actor's shelf shows: their own scripts and the samples.
+
+    The guided first scene is a sample too, but it is started by the hub, not
+    picked off a shelf, so it never appears here.
+    """
+    from sqlalchemy import or_
+    return db.query(UserScript).filter(
+        or_(
+            UserScript.user_id == user_id,
+            UserScript.is_sample == True,
+        ),
+        UserScript.is_guided.is_(False),
+    ).order_by(UserScript.is_sample.desc(), *_SHELF_ORDER)
+
+
 @router.get("/", response_model=List[UserScriptResponse])
 async def list_user_scripts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Get all scripts uploaded by the current user, plus sample scripts"""
-    from sqlalchemy import or_
     _fail_abandoned_extractions(db, current_user.id)
-    scripts = db.query(UserScript).filter(
-        or_(
-            UserScript.user_id == current_user.id,
-            UserScript.is_sample == True,
-        )
-    ).order_by(UserScript.is_sample.desc(), *_SHELF_ORDER).all()
+    scripts = shelf_scripts_query(db, current_user.id).all()
 
     if not scripts:
         return []
