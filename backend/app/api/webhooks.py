@@ -534,6 +534,21 @@ def handle_subscription_created(stripe_subscription: dict, db: Session):
         )
         return
 
+    # user_id is UNIQUE on this table: one subscription row per account, ever.
+    # A second insert raises, the webhook 500s, and Stripe retries the same
+    # event forever. Louis Cunningham is the live example -- an existing trial
+    # row is what actually grants him Plus, and a second row for his real
+    # subscription cannot exist beside it.
+    held = (
+        db.query(UserSubscription).filter(UserSubscription.user_id == user_id).first()
+    )
+    if held:
+        print(
+            f"ℹ️  subscription.created: user {user_id} already has "
+            f"{held.stripe_subscription_id or 'a row'} ({held.status}); leaving it alone"
+        )
+        return
+
     plus_tier = db.query(PricingTier).filter(PricingTier.name == "plus").first()
     if not plus_tier:
         print("⚠️  subscription.created: no 'plus' tier configured; no row written")

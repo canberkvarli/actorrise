@@ -1,112 +1,149 @@
-"""Make `user_subscriptions` agree with Stripe.
+#!/usr/bin/env python
+"""Backfill subscriptions that exist in Stripe and not in this database.
 
-Stripe is the record of what someone is actually being charged. Our table is a
-local cache of that, kept current by webhooks, and it drifts: rows still marked
-`active` carry a `current_period_end` months in the past — 2026-07-02 and even
-2026-02-26 were sitting there in September. A missed webhook leaves a
-subscription looking alive forever, and the admin "Paying" count reads straight
-off those rows.
+Why any exist: `customer.subscription.created` was in the webhook endpoint's
+enabled_events and had no branch in the handler, so it fell through and returned
+200 for months. Every subscription made outside a Checkout session -- which is
+how a comp is granted from the Stripe dashboard -- wrote no row here. That is
+fixed in webhooks.py; this catches the ones that already slipped.
 
-Money is never computed from this table (see stripe_revenue.py, which asks
-Stripe what each subscription will actually be invoiced). But the COUNTS are,
-and a stale row inflates them.
+Matching uses the same rule the webhook does (`stripe_sync.resolve_subscription_owner`):
+customer id first, then the customer's email. No match writes NO row and says
+so. Attaching a subscription to a guessed account hands a stranger someone
+else's membership.
 
-This pulls every subscription we hold an id for, and writes back Stripe's
-answer: status, period end, cancel-at-period-end. Nothing is invented — a row
-whose id Stripe does not recognise is reported, not guessed at.
-
-    python -m scripts.reconcile_stripe_subscriptions            # dry run
-    python -m scripts.reconcile_stripe_subscriptions --apply
+Usage:
+    .venv/bin/python -m scripts.reconcile_stripe_subscriptions            # dry run
+    .venv/bin/python -m scripts.reconcile_stripe_subscriptions --write
 """
-
-from __future__ import annotations
 
 import argparse
 import os
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
 
-backend_dir = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(backend_dir))
-
-import stripe  # noqa: E402
-from sqlalchemy import create_engine  # noqa: E402
-from sqlalchemy.orm import sessionmaker  # noqa: E402
-
-from app.core.config import settings  # noqa: E402
-from app.models.billing import UserSubscription  # noqa: E402
-
-_engine = create_engine(settings.database_url, pool_pre_ping=True, pool_recycle=1800)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False,
-                            expire_on_commit=False, bind=_engine)
+from app.core.database import SessionLocal
+from app.models.billing import PricingTier, UserSubscription
+from app.models.user import User
+from app.services.stripe_sync import resolve_subscription_owner
+from sqlalchemy import func
 
 
-def _ts(value) -> datetime | None:
-    return datetime.fromtimestamp(value, tz=timezone.utc) if value else None
+def _client():
+    """The same SDK the app uses, so the CA bundle and API version match it."""
+    import stripe
+
+    stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
+    return stripe
 
 
-def main() -> int:
+def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--apply", action="store_true")
+    ap.add_argument("--write", action="store_true", help="apply; otherwise dry run")
     args = ap.parse_args()
 
-    key = os.getenv("STRIPE_SECRET_KEY") or getattr(settings, "stripe_secret_key", None)
-    if not key:
-        print("STRIPE_SECRET_KEY not set")
-        return 1
-    stripe.api_key = key
-
     db = SessionLocal()
-    changed = missing = agreed = 0
     try:
-        rows = (
-            db.query(UserSubscription)
+        known = {
+            r[0]
+            for r in db.query(UserSubscription.stripe_subscription_id)
             .filter(UserSubscription.stripe_subscription_id.isnot(None))
             .all()
-        )
-        print(f"local rows with a Stripe id: {len(rows)}\n")
+        }
+        by_customer_id = {
+            r[0]: r[1]
+            for r in db.query(
+                UserSubscription.stripe_customer_id, UserSubscription.user_id
+            )
+            .filter(UserSubscription.stripe_customer_id.isnot(None))
+            .all()
+        }
+        plus = db.query(PricingTier).filter(PricingTier.name == "plus").first()
+        if not plus:
+            print("no 'plus' tier configured; nothing can be written")
+            return
 
-        for row in rows:
-            try:
-                sub = stripe.Subscription.retrieve(row.stripe_subscription_id)
-            except stripe.error.InvalidRequestError:
-                # Stripe has never heard of it, or it was deleted outright.
+        missing, written, unmatched = 0, 0, 0
+        for status in ("active", "trialing", "past_due"):
+            for sub in _client().Subscription.list(status=status, limit=100).data:
+                if sub["id"] in known:
+                    continue
                 missing += 1
-                print(f"  MISSING in Stripe  {row.stripe_subscription_id}  "
-                      f"local status={row.status}")
-                continue
+                cust = sub.get("customer")
+                email = None
+                try:
+                    email = (_client().Customer.retrieve(cust) or {}).get("email")
+                except Exception as exc:  # noqa: BLE001
+                    print(f"  ! could not read customer {cust}: {exc}")
 
-            end = _ts(getattr(sub, "current_period_end", None))
-            updates = {}
-            if row.status != sub.status:
-                updates["status"] = (row.status, sub.status)
-            if end and row.current_period_end != end:
-                updates["current_period_end"] = (row.current_period_end, end)
+                by_email = {}
+                if email:
+                    u = (
+                        db.query(User)
+                        .filter(func.lower(User.email) == email.strip().lower())
+                        .first()
+                    )
+                    if u:
+                        by_email[email.strip().lower()] = u.id
 
-            if not updates:
-                agreed += 1
-                continue
+                owner = resolve_subscription_owner(
+                    customer_id=cust,
+                    customer_email=email,
+                    by_customer_id=by_customer_id,
+                    by_email=by_email,
+                )
+                # A comp is a 100%-off discount, not a different product; say so
+                # in the output because it changes how urgent a gap is.
+                comped = "comp" if sub.get("discounts") else "PAYING"
+                if owner is None:
+                    unmatched += 1
+                    print(f"  UNMATCHED {sub['id']}  {status:9} {comped:7} {email!r}")
+                    continue
 
-            changed += 1
-            desc = ", ".join(f"{k}: {a} -> {b}" for k, (a, b) in updates.items())
-            print(f"  {row.stripe_subscription_id}  {desc}")
-            if args.apply:
-                if "status" in updates:
-                    row.status = sub.status
-                if "current_period_end" in updates:
-                    row.current_period_end = end
+                # user_id is UNIQUE here: one subscription row per account,
+                # ever. Louis already has one (a separate trial that is what
+                # actually grants him Plus), so a second row cannot exist and
+                # must not try -- and one failure inside a shared transaction
+                # rolls back every other row with it.
+                held = (
+                    db.query(UserSubscription)
+                    .filter(UserSubscription.user_id == owner)
+                    .first()
+                )
+                if held:
+                    print(f"  skip      {sub['id']}  {status:9} {comped:7} user={owner} "
+                          f"already has {held.stripe_subscription_id or 'a row'} "
+                          f"({held.status})")
+                    continue
 
-        print(f"\nagreed={agreed} changed={changed} missing_in_stripe={missing}")
-        if args.apply:
-            db.commit()
-            print("written")
-        else:
-            print("\nDRY RUN — nothing written. Re-run with --apply.")
-        return 0
+                print(f"  {'WRITE' if args.write else 'would write'} {sub['id']}  "
+                      f"{status:9} {comped:7} user={owner} {email}")
+                if args.write:
+                    row = UserSubscription(
+                        user_id=owner,
+                        tier_id=plus.id,
+                        stripe_customer_id=cust,
+                        stripe_subscription_id=sub["id"],
+                        status=status,
+                        billing_period=(
+                            "yearly"
+                            if (sub["items"].data[0].price.recurring or {}).get("interval") == "year"
+                            else "monthly"
+                        ),
+                    )
+                    db.add(row)
+                    try:
+                        # Per row, so one collision cannot roll back the rest.
+                        db.commit()
+                        written += 1
+                    except Exception as exc:  # noqa: BLE001
+                        db.rollback()
+                        print(f"  ! {sub['id']} failed: {str(exc)[:120]}")
+
+        print(f"\nmissing from the database: {missing}   written: {written}   unmatched: {unmatched}")
+        if not args.write:
+            print("dry run. re-run with --write to apply.")
     finally:
         db.close()
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
