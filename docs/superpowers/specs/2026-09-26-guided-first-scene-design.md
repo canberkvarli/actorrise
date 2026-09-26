@@ -92,7 +92,7 @@ advance exists and fires `rehearsal_input_mode`, the win screen has a
 ### 3. The win
 
 Headline "That was your first scene." Body "That was mine. Now yours." The
-upload control inline (paste or PDF), and nothing else. The trial offer card
+upload control inline (PDF or text file; the client has no paste control), and nothing else. The trial offer card
 that normally takes this slot yields when `guided=1`. Upload lands on
 `/practice?script=<id>` with the new script open, as it does today.
 

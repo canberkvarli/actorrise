@@ -61,6 +61,9 @@ import { tokenize, alignWords, wordMatchScore } from '@/lib/word-match';
 import { shouldAdvance, MIN_QUIET_MS } from '@/lib/advance-rule';
 import { buildWordTimings, spokenWordIndex } from '@/lib/speech-timing';
 import { trackEvent } from '@/lib/events';
+import { GuidedCoachLine } from '@/components/rehearse/GuidedCoachLine';
+import type { CoachState } from '@/lib/guided-coach';
+import { UploadScriptButton } from '@/components/practice/UploadScriptButton';
 import { useTheme } from 'next-themes';
 
 /** Pure dialogue for TTS — strips both [bracket] and (paren) stage directions. */
@@ -567,6 +570,11 @@ function renderLineWithSpokenSweep(text: string, spokenIndex: number) {
  * playing either of them. `cueNames` is every speaker label in the scene, which
  * is what lets a joint cue be told apart from a character actually named that.
  */
+/** "RILEY" as the coaching copy says it: "Riley". */
+function titleCaseName(name: string): string {
+  return name.charAt(0) + name.slice(1).toLowerCase();
+}
+
 function isMyLine(
   session: { user_character?: string | null; user_characters?: string[] | null } | null | undefined,
   lineCharacter: string | null | undefined,
@@ -640,6 +648,10 @@ function RehearsalPageInner() {
   // completion screen we add a win beat + one clear next step (search with
   // intent) instead of leaving them at "now what?".
   const firstRun = searchParams.get('firstRun') === '1';
+  // Guided first scene: casting pre-decided, no countdown, a coaching line,
+  // and a win screen that offers their own sides. Started by the hub through
+  // /rehearse/start-guided. Spec: docs/superpowers/specs/2026-09-26-guided-first-scene-design.md
+  const guided = searchParams.get('guided') === '1';
   const [prepDone, setPrepDone] = useState(!coldRead);
 
   // The preview, not the editor: it is where the run was started from, and it
@@ -764,11 +776,14 @@ function RehearsalPageInner() {
 
   /* ── Settings ───────────────────────────────────────────────────── */
 
-  const [rehearsalSettings] = useState<RehearsalSettings>(() =>
-    typeof window !== 'undefined'
+  const [rehearsalSettings] = useState<RehearsalSettings>(() => {
+    const saved = typeof window !== 'undefined'
       ? getRehearsalSettings()
-      : { pauseBetweenLinesSeconds: 0.3, skipMyLineIfSilent: false, skipAfterSeconds: 10, countdownSeconds: 3, useAIVoice: true, highlightMyLines: true, autoAdvanceOnFinish: true }
-  );
+      : { pauseBetweenLinesSeconds: 0.3, skipMyLineIfSilent: false, skipAfterSeconds: 10, countdownSeconds: 3, useAIVoice: true, highlightMyLines: true, autoAdvanceOnFinish: true };
+    // The guided scene runs on the coaching line, not a countdown, and never
+    // skips a line the actor has not said.
+    return guided ? { ...saved, countdownSeconds: 0, skipMyLineIfSilent: false, highlightMyLines: true } : saved;
+  });
   const highlightMyLines = rehearsalSettings.highlightMyLines;
   const [useAIVoice] = useState(() =>
     typeof window !== 'undefined' ? getRehearsalSettings().useAIVoice !== false : true
@@ -830,6 +845,8 @@ function RehearsalPageInner() {
   const pendingAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [shouldShake, setShouldShake] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // The guided scene's coaching line; 'nudge' makes the current line tappable.
+  const [coach, setCoach] = useState<CoachState>('listen');
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micSwitchToast, setMicSwitchToast] = useState<{ deviceId: string; label: string } | null>(null);
   const micSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1235,6 +1252,7 @@ function RehearsalPageInner() {
       const matched = liveReadRef.current.matched.size;
       trackEvent('scene_line_delivered', {
         via,
+        guided: guided ? true : undefined,
         line_index: currentIdx,
         sr_match: expectedCount > 0 ? Math.round((matched / expectedCount) * 100) / 100 : null,
         whisper_score: whisperScore != null ? Math.round(whisperScore * 100) / 100 : null,
@@ -2141,18 +2159,24 @@ function RehearsalPageInner() {
     setIsRestarting(false);
 
     // ── Fire API in background — session data arrives silently ──
-    api.post<{ id: number } & Record<string, unknown>>('/api/scenes/rehearse/start', {
-      scene_id: session.scene_id,
-      user_character: session.user_character,
-    }).then(({ data }) => {
+    // The guided scene restarts through its own meter-free endpoint;
+    // /rehearse/start would charge the meter and run the tier check.
+    const startRequest = guided
+      ? api.post<{ id: number } & Record<string, unknown>>('/api/scenes/rehearse/start-guided', {})
+      : api.post<{ id: number } & Record<string, unknown>>('/api/scenes/rehearse/start', {
+          scene_id: session.scene_id,
+          user_character: session.user_character,
+        });
+    startRequest.then(({ data }) => {
       try { sessionStorage.setItem(`actorrise_session_${data.id}`, JSON.stringify(data)); } catch {}
       const vp = lastKnownVoiceIdRef.current !== 'coral' ? `&voice=${lastKnownVoiceIdRef.current}` : '';
-      window.history.replaceState(null, '', `/scenes/${session.scene_id}/rehearse?session=${data.id}&script=${scriptId}${vp}`);
+      const g = guided ? '&guided=1' : '';
+      window.history.replaceState(null, '', `/scenes/${session.scene_id}/rehearse?session=${data.id}&script=${scriptId}${vp}${g}`);
       setSession(data as any);
     }).catch(() => {
       setError('Failed to create new session. Please try again.');
     });
-  }, [session, isRestarting, stopAllAudio, scriptId, rehearsalSettings.countdownSeconds]);
+  }, [session, isRestarting, stopAllAudio, scriptId, rehearsalSettings.countdownSeconds, guided]);
 
   const handleJumpToLine = useCallback((lineIndex: number) => {
     if (!sessionRef.current) return;
@@ -2169,6 +2193,18 @@ function RehearsalPageInner() {
    * so both need to say so.
    */
   const speechIsBroken = !isSpeechRecognitionSupported || speechError !== null;
+
+  // Once per guided run, when the win screen shows.
+  const guidedFinishedRef = useRef(false);
+  useEffect(() => {
+    if (!guided || !showFeedback || guidedFinishedRef.current) return;
+    guidedFinishedRef.current = true;
+    trackEvent('guided_scene_finished', {
+      lines_heard: linesDelivered,
+      tap_mode: isMicBlocked || speechIsBroken,
+      take_ms_total: Date.now() - sessionStartTimeRef.current,
+    });
+  }, [guided, showFeedback, linesDelivered, isMicBlocked, speechIsBroken]);
 
   const handleManualAdvance = useCallback(() => {
     if (!currentUserLineText || isProcessing) return;
@@ -2500,7 +2536,18 @@ function RehearsalPageInner() {
             {/* One next step, never two. The trial offer wins when it is live,
                 because the step it asks for (run your OWN sides) is the same
                 step, and it is the one an actor has just earned the taste of. */}
-            {completionOffer.visible ? (
+            {guided ? (
+              // One next step, and it is theirs. The trial card yields here:
+              // nobody has seen their own sides run yet.
+              <div className="rounded-lg border border-primary/30 bg-primary/10 p-5 text-center space-y-3">
+                <p className={cn("text-base font-semibold", STAGE_INK)}>That was your first scene.</p>
+                <p className={cn("text-sm", STAGE_INK_SOFT)}>That was mine. Now yours.</p>
+                <div className="flex justify-center">
+                  <UploadScriptButton variant="primary">Bring in your sides</UploadScriptButton>
+                </div>
+                <p className={cn("text-xs", STAGE_INK_FAINT)}>A PDF or a text file. The scenes and characters pull themselves out.</p>
+              </div>
+            ) : completionOffer.visible ? (
               <TrialOfferCard
                 headline={firstRun ? 'That was your first scene.' : 'Nice run.'}
                 body="That was my script though, not yours. Upload your own sides and run them the same way, with the same partner."
@@ -2711,12 +2758,26 @@ function RehearsalPageInner() {
           >
             {sceneWithLines && (
               <div className="max-w-md">
-                <p className={cn("text-xs uppercase tracking-widest", STAGE_INK_FAINT)}>Ready to rehearse</p>
-                <h2 className={cn("mt-2 text-2xl font-semibold", STAGE_INK)}>{sceneWithLines.title}</h2>
-                {session && (
-                  <p className={cn("mt-1 text-sm", STAGE_INK_SOFT)}>
-                    You&apos;re playing <span className={cn("font-medium", STAGE_INK)}>{sessionRoles(session).join(' + ')}</span>
-                  </p>
+                {guided ? (
+                  <>
+                    <p className={cn("text-xs uppercase tracking-widest", STAGE_INK_FAINT)}>Your first scene</p>
+                    <h2 className={cn("mt-2 text-2xl font-semibold", STAGE_INK)}>
+                      I&apos;ll read {session ? titleCaseName(session.ai_character) : 'the other part'}.
+                    </h2>
+                    <p className={cn("mt-1 text-sm", STAGE_INK_SOFT)}>
+                      When the dot turns green, say your line.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className={cn("text-xs uppercase tracking-widest", STAGE_INK_FAINT)}>Ready to rehearse</p>
+                    <h2 className={cn("mt-2 text-2xl font-semibold", STAGE_INK)}>{sceneWithLines.title}</h2>
+                    {session && (
+                      <p className={cn("mt-1 text-sm", STAGE_INK_SOFT)}>
+                        You&apos;re playing <span className={cn("font-medium", STAGE_INK)}>{sessionRoles(session).join(' + ')}</span>
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -2727,7 +2788,7 @@ function RehearsalPageInner() {
               style={{ backgroundColor: 'var(--primary)' }}
             >
               <Play className="mr-2 h-5 w-5" />
-              {checkingMic ? 'Checking your mic…' : 'Begin scene'}
+              {checkingMic ? 'Checking your mic…' : guided ? 'Begin' : 'Begin scene'}
             </Button>
             {/* Say which scene we are in. Promising "just speak" to someone whose
                 mic is blocked is how a silent room reads as a broken product. */}
@@ -2849,6 +2910,17 @@ function RehearsalPageInner() {
                 </p>
               </div>
 
+              {guided && (
+                <GuidedCoachLine
+                  partnerSpeaking={isSpeakingAI || isLoadingAI || isSpeakingBrowser}
+                  micOpen={isListening}
+                  linesHeard={linesDelivered}
+                  voicedThisTake={heardAnySpeech}
+                  tapMode={isMicBlocked || speechIsBroken}
+                  onState={setCoach}
+                />
+              )}
+
               {/* Script lines */}
               <div className="space-y-2">
                 {orderedLines.map((line, lineIdx) => {
@@ -2892,6 +2964,10 @@ function RehearsalPageInner() {
                         isUser && highlightMyLines && 'bg-orange-50/50',
                       )}
                       onClick={() => {
+                        if (guided && isCurrentUserLine && coach === 'nudge') {
+                          handleManualAdvance();
+                          return;
+                        }
                         if (!isCurrent) handleJumpToLine(lineIdx);
                         else if (isCurrentUserLine && isUserTurn && !isListening && !isTranscribing) {
                           setSpeechError(null);
@@ -2925,7 +3001,10 @@ function RehearsalPageInner() {
                             </div>
                           );
                         })()}
-                        <span className="text-base font-extrabold uppercase tracking-widest text-black">
+                        <span className={cn(
+                          "text-base font-extrabold uppercase tracking-widest",
+                          guided ? (isUser ? "text-[var(--t-orange)]" : "text-neutral-500") : "text-black",
+                        )}>
                           {line.character_name}
                         </span>
                         <span className={cn(
