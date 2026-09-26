@@ -22,7 +22,10 @@ export type UserEventName =
   | "monologue_work_finished"
   | "rehearsal_input_mode"
   | "rehearsal_voice_advanced"
-  | "scene_line_delivered";
+  | "scene_line_delivered"
+  | "guided_scene_shown"
+  | "guided_scene_started"
+  | "guided_scene_finished";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

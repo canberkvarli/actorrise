@@ -80,6 +80,13 @@ CLIENT_EVENT_NAMES = frozenset(
         # the live recogniser matched; voiced_ms and floor_db come from the
         # level gate (lib/voice-gate.ts).
         "scene_line_delivered",  # {via, line_index, take_ms, voiced_ms, floor_db, sr_match, whisper_score}
+        # The guided first scene (2026-09-26). 513 people a month opened
+        # /practice and about 25 opened a scene. These three say whether the
+        # invitation is taken and whether the run survives its first line;
+        # scene_line_delivered carries guided=true on those runs.
+        "guided_scene_shown",  # {}
+        "guided_scene_started",  # {platform}
+        "guided_scene_finished",  # {lines_heard, tap_mode, take_ms_total}
     }
 )
 
