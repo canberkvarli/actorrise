@@ -943,6 +943,22 @@ async def start_rehearsal(
     return RehearsalSessionResponse(**out)
 
 
+@router.post("/rehearse/start-guided", response_model=RehearsalSessionResponse)
+async def start_guided_rehearsal(
+    http_request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _burst: bool = Depends(BurstLimiter("scene_partner")),
+):
+    """Start the guided first scene. No meter, no tier check; see services/guided_scene."""
+    from app.services.guided_scene import start_guided_session
+
+    session, first_line = start_guided_session(
+        db, current_user, http_request.headers.get("user-agent")
+    )
+    return RehearsalSessionResponse(**{**session.__dict__, "first_line_for_user": first_line})
+
+
 def _duration_seconds(started_at, ended_at) -> Optional[int]:
     """Whole seconds between two timestamps, tolerant of naive/aware mismatch.
 

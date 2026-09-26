@@ -85,5 +85,68 @@ class NoShelfListsIt(Fixture):
         self.assertEqual(rows, [])
 
 
+class StartingIt(Fixture):
+    def setUp(self):
+        super().setUp()
+        seed_late(self.db)
+        self.db.commit()
+
+    def _start(self):
+        from app.services.guided_scene import start_guided_session
+        return start_guided_session(self.db, self.user, user_agent=None)
+
+    def test_it_creates_a_real_session_cast_as_alex(self):
+        session, first_line = self._start()
+        self.assertEqual(session.user_character, "ALEX")
+        self.assertEqual(session.user_characters, ["ALEX"])
+        self.assertEqual(session.ai_character, "RILEY")
+        self.assertEqual(session.status, "in_progress")
+        self.assertEqual(session.current_line_index, 0)
+        self.assertIsNone(session.max_lines)
+        self.assertEqual(first_line, "I know. I'm sorry.")
+        self.assertEqual(self.db.query(RehearsalSession).count(), 1)
+
+    def test_it_charges_no_meter(self):
+        self._start()
+        self.assertEqual(self.db.query(UsageMetrics).count(), 0)
+
+    def test_the_route_has_no_feature_gate(self):
+        # require_scene_partner is a FeatureGate dependency on /rehearse/start.
+        # This route must never grow one: a free actor past their monthly cap
+        # still gets their first scene.
+        from app.api.scenes import router
+        route = next(r for r in router.routes if r.path.endswith("/rehearse/start-guided"))
+        names = [type(d.call).__name__ for d in route.dependant.dependencies]
+        self.assertNotIn("FeatureGate", names)
+
+    def test_it_marks_the_first_rehearsal_as_seen(self):
+        self.assertFalse(self.user.has_seen_first_rehearsal)
+        self._start()
+        self.db.refresh(self.user)
+        self.assertTrue(self.user.has_seen_first_rehearsal)
+
+    def test_a_second_run_is_allowed_and_still_free(self):
+        self._start()
+        self._start()
+        self.assertEqual(self.db.query(RehearsalSession).count(), 2)
+        self.assertEqual(self.db.query(UsageMetrics).count(), 0)
+
+    def test_it_records_the_device(self):
+        from app.services.guided_scene import start_guided_session
+        ua = ("Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 "
+              "(KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1")
+        session, _ = start_guided_session(self.db, self.user, user_agent=ua)
+        self.assertEqual(session.client_platform, "ios")
+
+
+class WithNothingSeeded(Fixture):
+    def test_it_is_a_404(self):
+        from fastapi import HTTPException
+        from app.services.guided_scene import start_guided_session
+        with self.assertRaises(HTTPException) as ctx:
+            start_guided_session(self.db, self.user, user_agent=None)
+        self.assertEqual(ctx.exception.status_code, 404)
+
+
 if __name__ == "__main__":
     unittest.main()
