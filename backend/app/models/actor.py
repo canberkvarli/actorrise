@@ -505,6 +505,12 @@ class UserScript(Base):
     shared_with_community = Column(
         Boolean, default=False, nullable=False, server_default=sql_text("false"), index=True
     )
+    # The guided first scene (docs/superpowers/specs/2026-09-26-guided-first-scene-design.md).
+    # A sample no shelf lists: the hub starts it at an actor who has never
+    # rehearsed. Every listing that shows samples filters this out.
+    is_guided = Column(
+        Boolean, default=False, nullable=False, server_default=sql_text("false")
+    )
 
     # Script Info
     title = Column(String, nullable=False)  # Script title
