@@ -4,6 +4,12 @@ Two drafts, Stage Partners first and YouthPLAYS second. Same ask, same week.
 
 Neither has been sent.
 
+**Stats verified 2026-09-26.** The earlier draft claimed 71 actors and "nothing
+written after 1929". Both were wrong: it is 165 actors over 438 searches, and
+there ARE 13 post-1980 stage pieces plus several thousand modern film and TV
+ones. A publisher can check the site in thirty seconds, so the corrected
+paragraph names the real figures and scopes the gap to contemporary STAGE work.
+
 **The open question is now answered: no. Checked 2026-09-19.** Neither
 publisher's free pages grant a third party anything. Both emails are still
 required, and the ask in them is still the right ask.
@@ -46,13 +52,17 @@ I'd like to list the monologues from your free monologues page on ActorRise,
 each one credited to the play, the playwright and Stage Partners, each one
 linking back to you.
 
-Here's why I'm asking you first. My library is almost entirely public domain
-right now, which means an actor searching for something contemporary gets
-Sophocles and Ibsen. Over the last six months, 71 actors on the site searched
-for a contemporary piece. I had nothing written after 1929 to give them. That
-gap is not something I can scrape my way out of, because every contemporary play
-is in copyright, which is exactly why this is a permission question and not a
-technical one.
+Here's why I'm asking you first. My stage library is almost entirely public
+domain, so an actor searching for a contemporary play gets Sophocles and Ibsen.
+The exact numbers, because I'd rather you could check them: I hold 11,884 stage
+monologues and 13 of them are from plays written after 1980. Over the last six
+months 165 actors ran 438 searches for something contemporary. Thirteen pieces
+is what I had for them.
+
+My film and TV side is fine, a few thousand modern pieces, so this is
+specifically a contemporary STAGE problem. And it isn't one I can scrape my way
+out of, because every contemporary play is in copyright, which is exactly why
+this is a permission question and not a technical one.
 
 What I'd commit to:
 
