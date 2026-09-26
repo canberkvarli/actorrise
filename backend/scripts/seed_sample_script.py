@@ -9,6 +9,7 @@ existing ones.
 Demos:
   - "The Breakup"  — a short contemporary two-person scene (1 scene)
   - "Hamlet"       — Shakespeare; two iconic two-handers (2 scenes)
+  - "Late"         — the guided first scene; is_guided, so no shelf lists it (1 scene)
 
 Run:
     python backend/scripts/seed_sample_script.py
@@ -241,11 +242,90 @@ def seed_hamlet(db):
     )
 
 
+def seed_late(db):
+    """The guided first scene. Six lines, the actor is ALEX, the partner reads RILEY.
+
+    Marked is_guided so the shelf, the community list and the "demo speaks
+    first" rung never show it; the hub starts it directly.
+    """
+    if db.query(UserScript).filter(
+        UserScript.is_sample == True, UserScript.title == "Late"
+    ).first():
+        print('Demo "Late" already exists. Skipping.')
+        return
+
+    play = Play(
+        title="Late",
+        author="Sample Script",
+        genre="drama",
+        category="contemporary",
+        copyright_status="public_domain",
+    )
+    db.add(play)
+    db.flush()
+
+    script = UserScript(
+        user_id=None,
+        is_sample=True,
+        is_guided=True,
+        title="Late",
+        author="Sample Script",
+        description="A first scene. Riley waited; Alex has something to say.",
+        original_filename="late.txt",
+        file_type="txt",
+        file_size_bytes=0,
+        raw_text=LATE_TEXT,
+        characters=[
+            {"name": "RILEY", "gender": "neutral"},
+            {"name": "ALEX", "gender": "neutral"},
+        ],
+        processing_status="completed",
+        ai_extraction_completed=True,
+        genre="drama",
+        num_characters=2,
+        num_scenes_extracted=1,
+    )
+    db.add(script)
+    db.flush()
+
+    scene = Scene(
+        play_id=play.id,
+        user_script_id=script.id,
+        title="Late",
+        scene_number="1",
+        description="Riley waited an hour. Alex finally shows up.",
+        character_1_name="RILEY",
+        character_2_name="ALEX",
+        character_1_gender="neutral",
+        character_2_gender="neutral",
+        line_count=6,
+        estimated_duration_seconds=45,
+        difficulty_level="beginner",
+        primary_emotions=["tension", "relief"],
+        relationship_dynamic="friends",
+        tone="dramatic",
+    )
+    db.add(scene)
+    db.flush()
+
+    _add_lines(db, scene, [
+        ("RILEY", "You're late.", None),
+        ("ALEX", "I know. I'm sorry.", None),
+        ("RILEY", "I waited an hour. I almost left.", None),
+        ("ALEX", "But you didn't.", None),
+        ("RILEY", "No. I didn't. Don't make me regret it.", None),
+        ("ALEX", "I won't. Sit down. I'll tell you everything.", None),
+    ])
+
+    print(f"Demo \"Late\" seeded (script_id={script.id}, scene_id={scene.id}).")
+
+
 def seed_sample_scripts():
     db = SessionLocal()
     try:
         seed_breakup(db)
         seed_hamlet(db)
+        seed_late(db)
         db.commit()
         print("Demo scripts seeded successfully.")
     except Exception as e:
@@ -291,6 +371,29 @@ SAM
 
 JORDAN
 It's too late for that.
+"""
+
+
+LATE_TEXT = """LATE
+A first scene. Author: Sample Script.
+
+RILEY
+You're late.
+
+ALEX
+I know. I'm sorry.
+
+RILEY
+I waited an hour. I almost left.
+
+ALEX
+But you didn't.
+
+RILEY
+No. I didn't. Don't make me regret it.
+
+ALEX
+I won't. Sit down. I'll tell you everything.
 """
 
 
