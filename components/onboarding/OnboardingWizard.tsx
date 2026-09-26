@@ -1,9 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import ProfileOnboardingFlow from "@/components/onboarding/ProfileOnboardingFlow";
+
+/**
+ * Where the profile card stays out of the way. Someone on the ScenePartner
+ * hub is being handed a scene to answer (see GuidedInvitation), and someone on
+ * a rehearsal is mid-scene; a seven-step card about casting and age range on
+ * top of either is the wrong first thing. They meet it on the library instead.
+ * Observed 2026-09-26: the card opened over the invitation within a second of
+ * signup, and the actor read the sequence as pages flashing past.
+ */
+const QUIET_ROUTES = /^\/practice(\/|$)|^\/scenes\/[^/]+\/rehearse(\/|$)/;
 
 /**
  * First-run gate for brand-new users. Shows the 5-tap profile onboarding to
@@ -13,9 +24,15 @@ import ProfileOnboardingFlow from "@/components/onboarding/ProfileOnboardingFlow
  */
 export default function OnboardingWizard() {
   const { user, loading } = useAuth();
+  const pathname = usePathname();
   const [closed, setClosed] = useState(false);
 
-  const showing = !closed && !loading && !!user && user.has_completed_onboarding === false;
+  const showing =
+    !closed &&
+    !loading &&
+    !!user &&
+    user.has_completed_onboarding === false &&
+    !QUIET_ROUTES.test(pathname || "");
 
   // If this card is on screen, the actor is mid-onboarding, and FirstRehearsalGate
   // must not fire for the rest of the session — every exit from this card flips

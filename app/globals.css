@@ -4542,6 +4542,83 @@
   color: var(--t-orange);
 }
 
+/* --- The guided first scene's stage ---------------------------------------
+   Six lines in one column, phone first. The display serif for the line, the
+   direction face for the cue, the actor's cue in the theatre orange. The
+   current line is the only one at full ink; what is past fades, what is next
+   waits. Lives on --t-* so it flips with the room. */
+.g-stage {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 6px 2px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.g-line {
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+.g-line--now {
+  border-left-color: var(--t-line-light-2);
+}
+.g-line--you.g-line--now {
+  border-left-color: var(--t-orange);
+}
+.g-cue {
+  margin: 0 0 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark);
+}
+.g-line--you .g-cue {
+  color: var(--t-orange);
+}
+.g-cue__you {
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0.04em;
+  color: var(--t-faint);
+}
+.g-text {
+  margin: 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(24px, 6.2vw, 34px);
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  color: var(--t-text);
+  overflow-wrap: anywhere;
+}
+.g-line--past .g-text {
+  color: var(--t-muted-dark);
+}
+.g-wave {
+  margin-top: 10px;
+  min-height: 12px;
+}
+.g-said {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-cta-bd);
+  background: var(--t-cta-bg);
+  color: var(--t-cta-fg);
+  font-family: var(--t-body);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .t-script:hover,
   .t-bring-in:hover { transform: none; }

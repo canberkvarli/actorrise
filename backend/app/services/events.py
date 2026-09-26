@@ -79,7 +79,11 @@ CLIENT_EVENT_NAMES = frozenset(
         # whisper | silent_skip | manual; sr_match is the fraction of the line
         # the live recogniser matched; voiced_ms and floor_db come from the
         # level gate (lib/voice-gate.ts).
-        "scene_line_delivered",  # {via, line_index, take_ms, voiced_ms, floor_db, sr_match, whisper_score}
+        # sr_results is how many interim results the live recogniser produced on
+        # the take and sr_error its last error, added after session 402
+        # (2026-09-26) showed 12 s of voice, sr_match 0 and no way to tell
+        # whether recognition had said anything at all.
+        "scene_line_delivered",  # {via, guided, line_index, take_ms, voiced_ms, floor_db, sr_match, whisper_score, sr_results, sr_error}
         # The guided first scene (2026-09-26). 513 people a month opened
         # /practice and about 25 opened a scene. These three say whether the
         # invitation is taken and whether the run survives its first line;

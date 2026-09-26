@@ -62,6 +62,7 @@ import { shouldAdvance, MIN_QUIET_MS } from '@/lib/advance-rule';
 import { buildWordTimings, spokenWordIndex } from '@/lib/speech-timing';
 import { trackEvent } from '@/lib/events';
 import { GuidedCoachLine } from '@/components/rehearse/GuidedCoachLine';
+import { GuidedStage } from '@/components/rehearse/GuidedStage';
 import type { CoachState } from '@/lib/guided-coach';
 import { UploadScriptButton } from '@/components/practice/UploadScriptButton';
 import { useTheme } from 'next-themes';
@@ -847,6 +848,11 @@ function RehearsalPageInner() {
   const [toast, setToast] = useState<string | null>(null);
   // The guided scene's coaching line; 'nudge' makes the current line tappable.
   const [coach, setCoach] = useState<CoachState>('listen');
+  // What the live recogniser did on the current take, for scene_line_delivered.
+  // Session 402 (2026-09-26): 12 s of voice, sr_match 0, no Whisper, manual
+  // tap. Nothing recorded whether recognition returned anything at all.
+  const srResultsRef = useRef(0);
+  const srErrorRef = useRef<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [micSwitchToast, setMicSwitchToast] = useState<{ deviceId: string; label: string } | null>(null);
   const micSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1257,6 +1263,8 @@ function RehearsalPageInner() {
         sr_match: expectedCount > 0 ? Math.round((matched / expectedCount) * 100) / 100 : null,
         whisper_score: whisperScore != null ? Math.round(whisperScore * 100) / 100 : null,
         ...takeStats(),
+        sr_results: srResultsRef.current,
+        sr_error: srErrorRef.current ?? undefined,
       });
     }
 
@@ -1756,6 +1764,8 @@ function RehearsalPageInner() {
     setAutoListenLineKey(activeUserLineKey);
     gotResultRef.current = false;
     takeLineIndexRef.current = activeLineIndexRef.current;
+    srResultsRef.current = 0;
+    srErrorRef.current = null;
     // Fire immediately — no delay needed since we gate on !anySpeaking
     startListeningRef.current();
   }, [
@@ -1797,6 +1807,7 @@ function RehearsalPageInner() {
         // Interim results, deliberately. Waiting for `isFinal` costs 500–800ms,
         // which is most of the gap an actor feels between their last syllable
         // and the next line.
+        srResultsRef.current += 1;
         let fullTranscript = '';
         for (let i = 0; i < event.results.length; i++) {
           fullTranscript += event.results[i][0].transcript + ' ';
@@ -1824,6 +1835,7 @@ function RehearsalPageInner() {
       };
       let alive = true; // flipped in cleanup to prevent restarts after unmount
       recognition.onerror = (ev: any) => {
+        srErrorRef.current = String(ev?.error ?? 'unknown');
         // Fatal errors — don't attempt restart.
         if (ev.error === 'not-allowed' || ev.error === 'service-not-available') {
           alive = false;
@@ -2881,6 +2893,49 @@ function RehearsalPageInner() {
 
       {/* Script parchment */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-6">
+        {guided && sceneWithLines ? (
+          // The first scene is a page you read once, not a working script:
+          // no parchment, no header, no avatars. See components/rehearse/GuidedStage.
+          <div className="max-w-2xl mx-auto px-1 sm:px-2">
+            <GuidedCoachLine
+              partnerSpeaking={isSpeakingAI || isLoadingAI || isSpeakingBrowser}
+              micOpen={isListening}
+              linesHeard={linesDelivered}
+              voicedThisTake={heardAnySpeech}
+              tapMode={isMicBlocked || speechIsBroken}
+              onState={setCoach}
+            />
+            <GuidedStage
+              lines={orderedLines}
+              isUserLine={(name) => isMyLine(session, name, cueNamesRef.current)}
+              activeIndex={activeLineIndex}
+              renderUserLine={(text) =>
+                wordMatchResult
+                  ? renderLineWithWordHighlights(text, wordMatchResult)
+                  : liveWordResult
+                    ? renderLineWithWordHighlights(text, liveWordResult)
+                    : renderTextWithStageDirections(text)
+              }
+              renderPartnerLine={(text) =>
+                isSpeakingAI && aiSpokenIndex >= 0
+                  ? renderLineWithSpokenSweep(text, aiSpokenIndex)
+                  : renderTextWithStageDirections(text)
+              }
+              isListening={isListening}
+              partnerSpeaking={isSpeakingAI}
+              partnerLoading={isLoadingAI}
+              coach={coach}
+              tapMode={speechIsBroken}
+              isUserTurn={isUserTurn}
+              isTranscribing={isTranscribing}
+              shouldShake={shouldShake}
+              onSaidIt={handleManualAdvance}
+              currentLineRef={currentLineRef}
+              analyserRef={analyserRef}
+              aiAudioElement={aiAudioRef.current}
+            />
+          </div>
+        ) : (
         <div
           className={cn("max-w-4xl mx-auto rounded-xl border border-black/5 px-4 sm:px-8 py-5 sm:py-7 shadow-[0_24px_70px_-24px_rgba(203,75,0,0.28),0_10px_34px_-14px_rgba(0,0,0,0.55)]", SCRIPT_SURFACE)}
           /* The theatre's typewriter, not the browser's. Courier Prime is the
@@ -2909,17 +2964,6 @@ function RehearsalPageInner() {
                   )}
                 </p>
               </div>
-
-              {guided && (
-                <GuidedCoachLine
-                  partnerSpeaking={isSpeakingAI || isLoadingAI || isSpeakingBrowser}
-                  micOpen={isListening}
-                  linesHeard={linesDelivered}
-                  voicedThisTake={heardAnySpeech}
-                  tapMode={isMicBlocked || speechIsBroken}
-                  onState={setCoach}
-                />
-              )}
 
               {/* Script lines */}
               <div className="space-y-2">
@@ -3083,6 +3127,7 @@ function RehearsalPageInner() {
             <p className="text-neutral-400 text-sm text-center py-8">Loading script...</p>
           )}
         </div>
+        )}
       </div>
 
       {/* Error banner */}
