@@ -540,7 +540,7 @@ function renderLineTokens(text: string, classForWord: (indices: number[]) => str
 function renderLineWithWordHighlights(text: string, result: WordMatchResult) {
   return renderLineTokens(text, (indices) =>
     indices.some(i => result.words[i]?.matched)
-      ? 'underline decoration-primary/70 decoration-[1.5px] underline-offset-[5px] transition-[text-decoration-color] duration-150'
+      ? 'text-[var(--t-orange)] transition-colors duration-150'
       : '',
   );
 }
@@ -657,9 +657,14 @@ function RehearsalPageInner() {
 
   // The preview, not the editor: it is where the run was started from, and it
   // carries both ways on — run it again, or go in and change it.
+  // The guided scene came from the hub and goes back to it. /rehearse is the
+  // one ScenePartner route the onboarding card is not quiet on, and a first
+  // scene that ends in a seven-step profile card is not a win (2026-09-26).
   const backUrl = scriptId
     ? `/practice/${scriptId}/scenes/${sceneId}`
-    : '/rehearse';
+    : guided
+      ? '/practice'
+      : '/rehearse';
 
   /* ── Core state ─────────────────────────────────────────────────── */
 
@@ -2930,6 +2935,7 @@ function RehearsalPageInner() {
               isTranscribing={isTranscribing}
               shouldShake={shouldShake}
               onSaidIt={handleManualAdvance}
+              onSkip={handleManualAdvance}
               currentLineRef={currentLineRef}
               analyserRef={analyserRef}
               aiAudioElement={aiAudioRef.current}
@@ -3250,8 +3256,9 @@ function RehearsalPageInner() {
             <span className="sr-only">{statusInfo.text}</span>
           </div>
 
-          {/* Progress: line counter + bar */}
-          {orderedLines.length > 0 && (
+          {/* Progress: line counter + bar. Not on the first scene: six lines
+              need no meter, and the guided pill is pause, the dot and the door. */}
+          {!guided && orderedLines.length > 0 && (
             <div className="flex items-center gap-2">
               <div className="w-16 sm:w-24 h-1 bg-neutral-800 rounded-full overflow-hidden">
                 <motion.div
@@ -3267,7 +3274,7 @@ function RehearsalPageInner() {
           )}
 
           {/* Mic picker */}
-          <div className="relative shrink-0">
+          {!guided && <div className="relative shrink-0">
             <button
               type="button"
               onClick={async () => {
@@ -3311,13 +3318,13 @@ function RehearsalPageInner() {
                 })}
               </div>
             )}
-          </div>
+          </div>}
 
           {/* Theme — mid-rehearsal, because the right brightness for a room is
               not something you know before you start reading in it. Swapping the
               theme is a class change on <html>; it touches no audio state, so a
               run in progress carries straight on. */}
-          <button
+          {!guided && <button
             type="button"
             onClick={toggleTheme}
             className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
@@ -3327,10 +3334,10 @@ function RehearsalPageInner() {
             {isDarkTheme
               ? <Sun className="w-4 h-4 text-neutral-400" aria-hidden />
               : <Moon className="w-4 h-4 text-neutral-400" aria-hidden />}
-          </button>
+          </button>}
 
           {/* Shortcuts */}
-          <button
+          {!guided && <button
             type="button"
             onClick={() => setShowShortcutsModal(true)}
             className="hidden sm:flex w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 items-center justify-center transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
@@ -3338,7 +3345,7 @@ function RehearsalPageInner() {
             title="Keyboard shortcuts"
           >
             <span className="text-[11px] font-semibold text-neutral-400" aria-hidden>?</span>
-          </button>
+          </button>}
 
           {/* Exit */}
           <button

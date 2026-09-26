@@ -4603,6 +4603,23 @@
   margin-top: 10px;
   min-height: 12px;
 }
+.g-skip {
+  margin-top: 8px;
+  min-height: 44px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--t-faint);
+  cursor: pointer;
+  transition: color 0.25s;
+}
+.g-skip:hover {
+  color: var(--t-muted-dark);
+}
 .g-said {
   margin-top: 12px;
   display: inline-flex;

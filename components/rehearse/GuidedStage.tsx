@@ -33,6 +33,8 @@ interface Props {
   isTranscribing: boolean;
   shouldShake: boolean;
   onSaidIt: () => void;
+  /** The quiet way past a line that will not come. Same action, softer ask. */
+  onSkip: () => void;
   currentLineRef: RefObject<HTMLDivElement | null>;
   analyserRef: RefObject<AnalyserNode | null>;
   aiAudioElement: HTMLAudioElement | null;
@@ -64,6 +66,7 @@ export function GuidedStage({
   isTranscribing,
   shouldShake,
   onSaidIt,
+  onSkip,
   currentLineRef,
   analyserRef,
   aiAudioElement,
@@ -115,7 +118,7 @@ export function GuidedStage({
                 )}
               </div>
             )}
-            {showSaidIt && (
+            {showSaidIt ? (
               <button
                 type="button"
                 className="g-said"
@@ -126,6 +129,22 @@ export function GuidedStage({
               >
                 {tapMode ? "I said it" : "Move on"}
               </button>
+            ) : (
+              isCurrent &&
+              isUser &&
+              isUserTurn &&
+              !isTranscribing && (
+                <button
+                  type="button"
+                  className="g-skip"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSkip();
+                  }}
+                >
+                  skip this line
+                </button>
+              )
             )}
           </motion.div>
         );
