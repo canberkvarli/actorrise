@@ -91,6 +91,15 @@ CLIENT_EVENT_NAMES = frozenset(
         "guided_scene_shown",  # {}
         "guided_scene_started",  # {platform}
         "guided_scene_finished",  # {lines_heard, tap_mode, take_ms_total}
+        # The money. On 2026-09-27 real charges were $60 a month from five
+        # people, and nothing in Postgres said how many actors ever saw a price:
+        # the upgrade modal and the trial offer reported to GA4 only. These
+        # mirror those, plus the moment a checkout actually starts, so the funnel
+        # signup -> wall seen -> checkout -> trial_ended is one query.
+        "upgrade_modal_viewed",  # {feature, tier_current}
+        "trial_offer_shown",  # {trigger, tier_current}
+        "trial_offer_dismissed",  # {trigger, tier_current}
+        "checkout_started",  # {tier, billing_period, trial, entry_point}
     }
 )
 

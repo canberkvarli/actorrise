@@ -1,3 +1,5 @@
+import { trackEvent } from "./events";
+
 /**
  * GA4 custom event tracking for ActorRise.
  *
@@ -292,22 +294,36 @@ export function trackRehearsalError(params: RehearsalErrorParams) {
 // so those fire server-side from the webhook via the Measurement Protocol
 // (backend/app/services/analytics/ga4.py).
 
+// The money events go to user_events as well as GA4. GA4 is what ad blockers
+// eat and what cannot be joined to a user row, and on 2026-09-27 the question
+// "how many people ever see the price" had no answer in Postgres at all: $60 a
+// month from five people, and no way to tell whether the wall is refused or
+// never reached.
 export function trackUpgradeModalViewed(params: UpgradeModalViewedParams) {
   sendEvent("upgrade_modal_viewed", params);
+  trackEvent("upgrade_modal_viewed", params);
 }
 
 export function trackTrialOfferShown(params: TrialOfferShownParams) {
   sendEvent("trial_offer_shown", params);
+  trackEvent("trial_offer_shown", params);
 }
 
 export function trackTrialOfferDismissed(params: TrialOfferDismissedParams) {
   sendEvent("trial_offer_dismissed", params);
+  trackEvent("trial_offer_dismissed", params);
 }
 
 export function trackBeginCheckout(params: BeginCheckoutParams) {
   sendEvent("begin_checkout", {
     currency: "USD",
     ...params,
+  });
+  trackEvent("checkout_started", {
+    tier: params.tier,
+    billing_period: params.billing_period,
+    trial: params.trial,
+    entry_point: params.entry_point,
   });
 }
 

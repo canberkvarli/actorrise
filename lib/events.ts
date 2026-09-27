@@ -25,7 +25,11 @@ export type UserEventName =
   | "scene_line_delivered"
   | "guided_scene_shown"
   | "guided_scene_started"
-  | "guided_scene_finished";
+  | "guided_scene_finished"
+  | "upgrade_modal_viewed"
+  | "trial_offer_shown"
+  | "trial_offer_dismissed"
+  | "checkout_started";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 
