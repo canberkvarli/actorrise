@@ -31,6 +31,14 @@ export interface SilenceDetectorOptions {
   blindArmAfterMs?: number;
   /** Hard ceiling. A take can never run longer than this. */
   maxDurationMs?: number;
+  /**
+   * Once silence has started, voice must run this long unbroken before it
+   * counts as the speaker resuming. A single voiced frame from a chair or a
+   * breath was resetting the silence clock, and on a quiet room with a low
+   * floor (session 409, -76 dB) that flicker kept a 26-second take open with
+   * two seconds of actual speech in it.
+   */
+  resumeAfterVoicedMs?: number;
 }
 
 export type SilenceVerdict = 'recording' | 'stop';
@@ -42,6 +50,7 @@ const DEFAULTS: Required<SilenceDetectorOptions> = {
   giveUpSilenceMs: 9000,
   blindArmAfterMs: 10000,
   maxDurationMs: 90000,
+  resumeAfterVoicedMs: 120,
 };
 
 export class SilenceDetector {
@@ -86,7 +95,11 @@ export class SilenceDetector {
     if (voiced) {
       this.voicedMs += delta;
       this.voicedRunMs += delta;
-      this.silenceStartedAt = null;
+      // Silence already running: only a sustained return of voice clears it.
+      // A lone voiced frame is a transient, and the clock keeps going under it.
+      if (this.silenceStartedAt === null || this.voicedRunMs >= this.opts.resumeAfterVoicedMs) {
+        this.silenceStartedAt = null;
+      }
       // A sustained run means the speaker is genuinely going — not a stray transient.
       if (this.voicedRunMs >= this.opts.armAfterVoicedMs) this.armed = true;
       return 'recording';

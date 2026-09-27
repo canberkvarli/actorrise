@@ -910,7 +910,13 @@ function RehearsalPageInner() {
     // Actors take beats mid-line, and cold readers pause to scan ahead. 2s cut
     // people off mid-thought; the detector also now needs sustained speech before
     // this timer can run at all.
-    silenceTimeoutMs: 3500,
+    // 1.8 s of quiet after voice ends the take. It was 3.5 s, which with
+    // transcription and the advance delay put six seconds between an actor's
+    // last word and the partner's first whenever live recognition had failed,
+    // and on Canberk's laptop it fails every time (sr_results 0, no-speech).
+    // The detector already refuses to end a take on transients or before 700 ms
+    // of voice, so this cannot cut a line off; it can only stop waiting sooner.
+    silenceTimeoutMs: 1800,
     speechGateRef: whisperGateRef,
     deviceId: selectedMicId,
     prompt: currentUserLineText ? stripStageDirections(currentUserLineText) : undefined,
@@ -951,7 +957,7 @@ function RehearsalPageInner() {
           setWordMatchResult(null);
           handleDeliverLine(text, 'whisper', score);
           resetTranscript();
-        }, 700);
+        }, 300);
       } else {
         // Remember this attempt so the next run of the same line is judged leniently.
         lineAttemptsRef.current.set(curIdx, priorAttempts + 1);
@@ -1372,8 +1378,20 @@ function RehearsalPageInner() {
   // Everything the abandon handler needs to say WHY the run died. It runs from
   // an unmount/pagehide closure with stale state, so this is refreshed every
   // render. Values are the closed list in services/rehearsal_failure.py.
-  const abandonContextRef = useRef({ error, speechError, armed, micStatus, srSupported: isSpeechRecognitionSupported });
-  abandonContextRef.current = { error, speechError, armed, micStatus, srSupported: isSpeechRecognitionSupported };
+  // Whether the partner's audio ever actually played this run. A "never_began"
+  // with the mic granted and no partner audio is autoplay, not the actor.
+  const partnerPlayedRef = useRef(false);
+  useEffect(() => {
+    if (isSpeakingAI) partnerPlayedRef.current = true;
+  }, [isSpeakingAI]);
+  const abandonContextRef = useRef({
+    error, speechError, armed, micStatus, srSupported: isSpeechRecognitionSupported,
+    gateChecked, partnerPlayed: partnerPlayedRef.current,
+  });
+  abandonContextRef.current = {
+    error, speechError, armed, micStatus, srSupported: isSpeechRecognitionSupported,
+    gateChecked, partnerPlayed: partnerPlayedRef.current,
+  };
   const failureReason = (lineIdx: number): string => {
     const c = abandonContextRef.current;
     if (c.error) return 'load_error';
@@ -1639,12 +1657,40 @@ function RehearsalPageInner() {
 
       const token = getCachedAuthToken();
       if (!token) return;
+      const reason = failureReason(lineIdx);
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
       fetch(`${API_URL}/api/scenes/rehearse/${sessionId}/abandon`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers,
         // -> rehearsal_sessions.failure_reason. "51 abandoned at 2.1 lines"
         // becomes "31 mic_denied, 12 never_began, 8 left_midway".
-        body: JSON.stringify({ reason: failureReason(lineIdx) }),
+        body: JSON.stringify({ reason }),
+        keepalive: true,
+      }).catch(() => {});
+      // The why, next to the reason. failure_reason is a closed word list;
+      // this carries what the page actually knew when the actor left. Sent
+      // with keepalive because the axios path does not survive pagehide.
+      // 2026-09-27: three new actors left the guided scene inside 3 to 16
+      // seconds with no line, and "never_began" was all the row could say.
+      const c = abandonContextRef.current;
+      fetch(`${API_URL}/api/events`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          event_name: 'scene_run_abandoned',
+          properties: {
+            reason,
+            guided,
+            armed: c.armed,
+            mic_status: c.micStatus ?? null,
+            speech_error: c.speechError ?? null,
+            load_error: c.error ? String(c.error).slice(0, 120) : null,
+            gate_checked: c.gateChecked,
+            partner_played: c.partnerPlayed,
+            line_index: lineIdx,
+            seconds: Math.floor((Date.now() - sessionStartTimeRef.current) / 1000),
+          },
+        }),
         keepalive: true,
       }).catch(() => {});
     };

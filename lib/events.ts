@@ -29,7 +29,8 @@ export type UserEventName =
   | "upgrade_modal_viewed"
   | "trial_offer_shown"
   | "trial_offer_dismissed"
-  | "checkout_started";
+  | "checkout_started"
+  | "scene_run_abandoned";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

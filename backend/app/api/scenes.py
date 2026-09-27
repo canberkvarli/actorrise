@@ -1116,12 +1116,28 @@ async def deliver_line(
     # Add user input to state (needed by _respond_as_character)
     state["last_user_input"] = request.user_input  # type: ignore
 
-    # Get AI response using LangGraph scene partner
-    partner = ScenePartnerGraph(temperature=0.7)
-    result_state = partner._respond_as_character(state)
+    # The partner's next line is in the script; nothing has to be generated to
+    # say it, and the page speaks it from its own copy before this request even
+    # returns. The language model here only ever produced a feedback sentence
+    # that no screen shows since scores came off the win screen, at a second or
+    # two of latency on every line and a wait on the last one before the win
+    # (2026-09-27, every guided run). It runs only when feedback is asked for.
+    if request.request_feedback:
+        partner = ScenePartnerGraph(temperature=0.7)
+        result_state = partner._respond_as_character(state)
+        ai_message = result_state["messages"][-1] if result_state["messages"] else {}
+    else:
+        next_partner = next(
+            (
+                line for line in all_lines[delivered_index + 1:]
+                if not line_belongs_to(line.character_name, user_roles, line_characters)
+            ),
+            None,
+        )
+        scripted = str(next_partner.text) if next_partner is not None else ""
+        ai_message = {"content": scripted, "line_text": scripted}
 
     # Extract structured AI response
-    ai_message = result_state["messages"][-1] if result_state["messages"] else {}
     ai_response_text = ai_message.get("content", "")
     line_text = ai_message.get("line_text", ai_response_text)
     feedback_from_ai = ai_message.get("feedback", "")

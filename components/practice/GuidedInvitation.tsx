@@ -51,6 +51,12 @@ export function GuidedInvitation() {
   useEffect(() => {
     if (shownRef.current) return;
     shownRef.current = true;
+    // Once per browser session, not per mount: the hub remounts on every
+    // return and was counting one person as three.
+    try {
+      if (sessionStorage.getItem("actorrise_guided_shown") === "1") return;
+      sessionStorage.setItem("actorrise_guided_shown", "1");
+    } catch {}
     trackEvent("guided_scene_shown");
   }, []);
 
@@ -64,6 +70,16 @@ export function GuidedInvitation() {
     if (starting) return;
     setStarting(true);
     setFailed(false);
+    // Ask for the mic here, inside the tap, with the line still on screen. On
+    // phones the rehearse page otherwise puts a second screen and a second
+    // button between Answer and the scene, and the first day's runs on iOS and
+    // Android both ended there inside five seconds. Granted once, the page
+    // finds the mic ready and goes straight on stage; denied, it runs in tap
+    // mode. The tracks are released at once; only the permission is kept.
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+    } catch {}
     try {
       const { data } = await api.post<StartedSession>("/api/scenes/rehearse/start-guided", {});
       try {

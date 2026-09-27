@@ -100,6 +100,10 @@ CLIENT_EVENT_NAMES = frozenset(
         "trial_offer_shown",  # {trigger, tier_current}
         "trial_offer_dismissed",  # {trigger, tier_current}
         "checkout_started",  # {tier, billing_period, trial, entry_point}
+        # Why a scene run died, next to rehearsal_sessions.failure_reason, which
+        # is a closed word list. 2026-09-27: three new actors left the guided
+        # scene inside 3 to 16 seconds and "never_began" was all we had.
+        "scene_run_abandoned",  # {reason, guided, armed, mic_status, speech_error, load_error, gate_checked, partner_played, line_index, seconds}
     }
 )
 
