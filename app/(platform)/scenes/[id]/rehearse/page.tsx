@@ -2563,6 +2563,23 @@ function RehearsalPageInner() {
                   <UploadScriptButton variant="primary">Bring in your sides</UploadScriptButton>
                 </div>
                 <p className={cn("text-xs", STAGE_INK_FAINT)}>A PDF or a text file. The scenes and characters pull themselves out.</p>
+                {/* The one step stays the upload. This is a footnote for the actor
+                    who already knows they want the whole room: the same offer,
+                    caps and tracking as the card it replaces here, on one line.
+                    Without it the hook still counted a "show" nobody saw. */}
+                {completionOffer.visible && (
+                  <p className={cn("text-xs pt-1", STAGE_INK_FAINT)}>
+                    Or take the whole room:{' '}
+                    <a
+                      href={completionOffer.href}
+                      onClick={completionOffer.accept}
+                      className="underline underline-offset-2 text-[var(--t-orange)]"
+                    >
+                      Plus, two weeks free
+                    </a>
+                    .
+                  </p>
+                )}
               </div>
             ) : completionOffer.visible ? (
               <TrialOfferCard
