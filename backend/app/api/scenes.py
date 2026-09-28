@@ -959,6 +959,24 @@ async def start_guided_rehearsal(
     return RehearsalSessionResponse(**{**session.__dict__, "first_line_for_user": first_line})
 
 
+@router.get("/rehearse/guided")
+async def get_guided_scene(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Which scene the hub will start, so the page can be fetched before Answer.
+
+    The invitation prefetches the scene and the rehearse route while the actor
+    reads the line; the tap then cuts to a stage that is already there.
+    """
+    from app.services.guided_scene import guided_scene
+
+    scene = guided_scene(db)
+    if scene is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="The guided scene is not seeded")
+    return {"scene_id": scene.id}
+
+
 def _duration_seconds(started_at, ended_at) -> Optional[int]:
     """Whole seconds between two timestamps, tolerant of naive/aware mismatch.
 

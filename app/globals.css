@@ -4523,6 +4523,53 @@
 .t-invite__alt {
   margin-top: 18px;
 }
+/* Centred, and given the height of the room: this is the whole page for a
+   first-time actor, not a block at the top-left of one. */
+.t-invite {
+  align-items: center;
+  text-align: center;
+  margin: 0 auto;
+  min-height: min(62vh, 640px);
+  justify-content: center;
+  padding-top: 0;
+}
+.t-invite[data-starting="true"] .t-invite__alt {
+  visibility: hidden;
+}
+
+/* The status dot, in the coaching line rather than in a pill of its own. */
+.t-coach {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.t-coach__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* The door out of the first scene: house text under the script. */
+.g-leave {
+  align-self: center;
+  margin-top: 10px;
+  min-height: 44px;
+  padding: 0 8px;
+  background: none;
+  border: 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--t-faint);
+  cursor: pointer;
+  transition: color 0.25s;
+}
+.g-leave:hover {
+  color: var(--t-muted-dark);
+}
 
 /* The guided scene's one line of house text, above the script. Reserved
    height so the parchment does not jump when it goes quiet. */

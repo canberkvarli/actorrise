@@ -2587,14 +2587,16 @@ function RehearsalPageInner() {
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-3xl space-y-6"
           >
-            {/* Header */}
-            <div className="text-center space-y-2">
-              <p className={cn("text-sm uppercase tracking-widest font-medium", STAGE_INK_FAINT)}>Scene Complete</p>
-              <h1 className={cn("text-2xl font-bold", STAGE_INK)}>{sceneTitle}</h1>
-              {showPlayTitle && (
-                <p className={cn("text-sm", STAGE_INK_FAINT)}>from {playTitle}</p>
-              )}
-            </div>
+            {/* Header. Not on the first scene: the card below is the whole screen. */}
+            {!guided && (
+              <div className="text-center space-y-2">
+                <p className={cn("text-sm uppercase tracking-widest font-medium", STAGE_INK_FAINT)}>Scene Complete</p>
+                <h1 className={cn("text-2xl font-bold", STAGE_INK)}>{sceneTitle}</h1>
+                {showPlayTitle && (
+                  <p className={cn("text-sm", STAGE_INK_FAINT)}>from {playTitle}</p>
+                )}
+              </div>
+            )}
 
             {/* One next step, never two. The trial offer wins when it is live,
                 because the step it asks for (run your OWN sides) is the same
@@ -2655,6 +2657,9 @@ function RehearsalPageInner() {
               )
             )}
 
+            {/* The review: duration, the playback, the transcript. Not on the
+                first scene, which asked for one thing and ends on one card. */}
+            {!guided && (<>
             {/* How long the run took, and nothing else.
                 There used to be a completion and an accuracy percentage here.
                 Both were word-match scores against a speech-to-text transcript,
@@ -2767,6 +2772,7 @@ function RehearsalPageInner() {
                 })}
               </div>
             </div>
+            </>)}
           </motion.div>
         </div>
 
@@ -2781,7 +2787,7 @@ function RehearsalPageInner() {
               className={cn("text-sm transition-colors flex items-center gap-1.5 hover:text-neutral-900 dark:hover:text-neutral-100", STAGE_INK_FAINT)}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Back to Script
+              {guided ? 'Back to the room' : 'Back to Script'}
             </button>
             {/* Cold read is one take — no restarts. */}
             {!coldRead && (
@@ -2972,6 +2978,7 @@ function RehearsalPageInner() {
               voicedThisTake={heardAnySpeech}
               tapMode={isMicBlocked || speechIsBroken}
               onState={setCoach}
+              dotClass={cn(statusInfo.color, statusInfo.pulse && 'animate-pulse')}
             />
             <GuidedStage
               lines={orderedLines}
@@ -2999,6 +3006,7 @@ function RehearsalPageInner() {
               shouldShake={shouldShake}
               onSaidIt={handleManualAdvance}
               onSkip={handleManualAdvance}
+              onLeave={() => { handlePause(); setShowPausePlayOverlay(null); setShowExitModal(true); }}
               currentLineRef={currentLineRef}
               analyserRef={analyserRef}
               aiAudioElement={aiAudioRef.current}
@@ -3293,7 +3301,9 @@ function RehearsalPageInner() {
         )}
       </AnimatePresence>
 
-      {/* Floating control pill */}
+      {/* Floating control pill. Not on the first scene: its dot lives in the
+          coaching line and its door is a line of house text under the script. */}
+      {!guided && (
       <div className="shrink-0 flex justify-center px-4 pb-4 safe-area-bottom">
         <div className={cn(CHROME_DARK, "flex items-center gap-2 sm:gap-3 bg-neutral-900/90 backdrop-blur-sm border border-neutral-800 rounded-full shadow-2xl px-3 sm:px-5 py-3 min-h-[52px] max-w-[calc(100vw-1.5rem)]")}>
           {/* Pause / Play */}
@@ -3422,6 +3432,7 @@ function RehearsalPageInner() {
           </button>
         </div>
       </div>
+      )}
 
       {/* Exit confirmation modal */}
       <Dialog open={showExitModal} onOpenChange={(open) => {

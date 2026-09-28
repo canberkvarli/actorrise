@@ -13,6 +13,8 @@ interface Props {
   tapMode: boolean;
   /** Reported on every change so the page can make the line tappable on a nudge. */
   onState?: (state: CoachState) => void;
+  /** The status dot's colour classes; it sits in the line instead of a pill. */
+  dotClass?: string;
 }
 
 /**
@@ -20,7 +22,7 @@ interface Props {
  * while the mic is open (the nudge is a function of time, and the page has no
  * event for "six seconds passed").
  */
-export function GuidedCoachLine({ partnerSpeaking, micOpen, linesHeard, voicedThisTake, tapMode, onState }: Props) {
+export function GuidedCoachLine({ partnerSpeaking, micOpen, linesHeard, voicedThisTake, tapMode, onState, dotClass }: Props) {
   const [state, setState] = useState<CoachState>("listen");
   const stateRef = useRef<CoachState>("listen");
   const micOpenedAtRef = useRef<number | null>(null);
@@ -59,7 +61,8 @@ export function GuidedCoachLine({ partnerSpeaking, micOpen, linesHeard, voicedTh
   const text = COACH_TEXT[state];
   return (
     <p className="t-coach" aria-live="polite" data-state={state}>
-      {text || " "}
+      {dotClass && <span aria-hidden className={`t-coach__dot ${dotClass}`} />}
+      <span>{text || " "}</span>
     </p>
   );
 }

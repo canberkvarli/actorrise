@@ -35,6 +35,8 @@ interface Props {
   onSaidIt: () => void;
   /** The quiet way past a line that will not come. Same action, softer ask. */
   onSkip: () => void;
+  /** The door. Replaces the control pill's X on the first scene. */
+  onLeave: () => void;
   currentLineRef: RefObject<HTMLDivElement | null>;
   analyserRef: RefObject<AnalyserNode | null>;
   aiAudioElement: HTMLAudioElement | null;
@@ -67,6 +69,7 @@ export function GuidedStage({
   shouldShake,
   onSaidIt,
   onSkip,
+  onLeave,
   currentLineRef,
   analyserRef,
   aiAudioElement,
@@ -149,6 +152,9 @@ export function GuidedStage({
           </motion.div>
         );
       })}
+      <button type="button" className="g-leave" onClick={onLeave}>
+        leave the scene
+      </button>
     </div>
   );
 }

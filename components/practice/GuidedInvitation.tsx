@@ -60,10 +60,27 @@ export function GuidedInvitation() {
     trackEvent("guided_scene_shown");
   }, []);
 
-  // The rehearse page is a large chunk. Fetch it while they read the line, so
-  // Answer is a cut, not a spinner.
+  // Everything the rehearse page will need, fetched while they read the line:
+  // its own chunk, and the scene with its lines, put where that page already
+  // looks first (sessionStorage, see loadSession there). Answer then cuts to a
+  // stage that is already drawn; only the partner's audio is still to come.
   useEffect(() => {
-    router.prefetch("/scenes/0/rehearse");
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get<{ scene_id: number }>("/api/scenes/rehearse/guided");
+        if (cancelled) return;
+        router.prefetch(`/scenes/${data.scene_id}/rehearse`);
+        const scene = await api.get<unknown>(`/api/scenes/${data.scene_id}`);
+        if (cancelled) return;
+        try {
+          sessionStorage.setItem(`actorrise_scene_${data.scene_id}`, JSON.stringify(scene.data));
+        } catch {}
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   const answer = async () => {
@@ -102,14 +119,15 @@ export function GuidedInvitation() {
   };
 
   return (
-    <section className="t-invite" aria-labelledby="guided-opening-line">
+    <section className="t-invite" aria-labelledby="guided-opening-line" data-starting={starting}>
       <p className="t-invite__cue">{GUIDED_PARTNER}</p>
       <h1 id="guided-opening-line" className="t-invite__line">
         {GUIDED_OPENING_LINE}
       </h1>
       <p className="t-invite__house">
-        I&apos;ll read {titleCase(GUIDED_PARTNER)}. You&apos;re {titleCase(GUIDED_ACTOR)}. {GUIDED_LINE_COUNT} lines,
-        under a minute.
+        {starting
+          ? `${titleCase(GUIDED_PARTNER)} is waiting.`
+          : `I'll read ${titleCase(GUIDED_PARTNER)}. You're ${titleCase(GUIDED_ACTOR)}. ${GUIDED_LINE_COUNT} lines, under a minute.`}
       </p>
       <button type="button" className="t-invite__answer" onClick={answer} disabled={starting}>
         {starting ? "One moment" : "Answer"}

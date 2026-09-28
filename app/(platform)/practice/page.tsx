@@ -91,10 +91,14 @@ export default function PracticePage() {
 
   // The guided first scene replaces the library for an actor who has never
   // rehearsed. It is a different page, not a redirect: see lib/guided-invite.
-  const invite = !!user && scriptsFetched && shouldInvite(user, ownScriptCount, isDemoUser);
+  // Decided from the user alone as soon as they are known. Waiting for the
+  // scripts fetch too put a skeleton in front of the first-time actor for the
+  // length of a round trip; a brand-new account has no scripts, and if the
+  // fetch says otherwise the library takes over when it lands.
+  const invite = !!user && shouldInvite(user, scriptsFetched ? ownScriptCount : 0, isDemoUser);
 
   const hasCachedData = scriptsFetched || safeScripts.length > 0;
-  const isLoading = (authLoading && !user) || (scriptsLoading && !hasCachedData);
+  const isLoading = (authLoading && !user) || (scriptsLoading && !hasCachedData && !invite);
 
   // The playbill introduces itself to first-timers only, then lives behind (?).
   // Two gates, because either alone is wrong: the seen-flag is per-browser, so

@@ -139,6 +139,20 @@ class StartingIt(Fixture):
         self.assertEqual(session.client_platform, "ios")
 
 
+class LookingItUp(Fixture):
+    def test_the_hub_can_ask_which_scene_it_is(self):
+        from app.services.guided_scene import guided_scene
+        seed_late(self.db)
+        self.db.commit()
+        scene = guided_scene(self.db)
+        self.assertIsNotNone(scene)
+        self.assertEqual(scene.title, "Late")
+
+    def test_nothing_seeded_is_none(self):
+        from app.services.guided_scene import guided_scene
+        self.assertIsNone(guided_scene(self.db))
+
+
 class WithNothingSeeded(Fixture):
     def test_it_is_a_404(self):
         from fastapi import HTTPException
