@@ -410,11 +410,54 @@ def discover_proplay(
                 title=link_title if len(link_title) > 2 else _titlecase(title_slug),
                 author=_titlecase(author_slug),
                 page_url=href,
-                text_url=href,
+                text_url=href,          # provisional; resolved below
                 kind="html",
                 genre=genre,
             )
+
+    # A ProPlay play page is a LANDING page -- synopsis, cast breakdown, rights
+    # contact, playwright bio, about 2-3k characters and not one line of
+    # dialogue. The script itself is a PDF linked from it, at
+    # /scripts/<Name>.pdf. Without this second hop every play arrives as a
+    # 2,400-character blurb and is skipped as having no usable text.
+    for src in found.values():
+        _resolve_proplay_script(src, session)
+
     return sorted(found.values(), key=lambda s: (s.author, s.title))
+
+
+#: The script PDF linked from a play's landing page.
+_PROPLAY_SCRIPT = re.compile(r"^https://proplay\.ws/scripts/.+\.pdf$", re.I)
+#: "Amateur and professional rights: Alan Rossett  rossdoal@aol.com"
+_RIGHTS_EMAIL = re.compile(r"[\w.\-+]+@[\w.\-]+\.\w{2,}")
+
+
+def _resolve_proplay_script(
+    src: PlaySource, session: Optional[requests.Session] = None
+) -> None:
+    """Point ``src`` at the script PDF, and note who to ask about rights.
+
+    ProPlay prints a per-play rights contact ("Amateur and professional
+    rights: <name>, <email>"). That is the single most useful thing on the
+    page: it is the address that can turn this row from `fair_use` into
+    `licensed`. Kept on the source rather than acted on.
+    """
+    session = session or _session()
+    soup = _soup(session, src.page_url)
+    if soup is None:
+        return
+    for a in soup.find_all("a", href=True):
+        href = urljoin(src.page_url, a["href"])
+        if _PROPLAY_SCRIPT.match(href):
+            src.text_url = href
+            src.kind = "pdf"
+            break
+    else:
+        src.notes.append("no script pdf linked from the play page")
+
+    emails = _RIGHTS_EMAIL.findall(soup.get_text(" ", strip=True))
+    if emails:
+        src.notes.append(f"rights contact: {emails[0]}")
 
 
 # --- fetching the script itself --------------------------------------------
