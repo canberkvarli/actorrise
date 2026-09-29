@@ -13,7 +13,8 @@ Five things, in the order they are acted on:
   4. What the emails did
   5. Five people worth writing to by hand
 
-Reads only: the connection is opened read-only. The output carries names and
+Reads only: every query runs in a read-only transaction, and the script checks that
+it is before it asks for anything. The output carries names and
 email addresses, which is why outputs/conversion/ is in .gitignore. Nothing
 here sends anything. It is the input to /conversion-loop, which drafts.
 """
@@ -237,11 +238,18 @@ def main() -> None:
 
     from sqlalchemy import create_engine
 
-    engine = create_engine(
-        os.environ["DATABASE_URL"],
-        connect_args={"options": "-c default_transaction_read_only=on -c statement_timeout=60000"},
-    )
-    with engine.connect() as conn:
+    # Read-only, and actually so. The database is reached through Supabase's
+    # pooler (port 6543), which throws away startup options: passing
+    # "-c default_transaction_read_only=on" connects without complaint and
+    # leaves the session writable. Found 2026-09-29 by asking the server
+    # (`show transaction_read_only` said off). postgresql_readonly is set on the
+    # transaction itself, and a write is refused.
+    engine = create_engine(os.environ["DATABASE_URL"])
+    with engine.connect().execution_options(postgresql_readonly=True) as conn:
+        from sqlalchemy import text
+
+        if conn.execute(text("show transaction_read_only")).scalar() != "on":
+            raise SystemExit("refusing to run: the connection is not read-only")
         brief = build(conn)
 
     if not args.save:

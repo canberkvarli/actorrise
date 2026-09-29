@@ -1312,7 +1312,7 @@ What "agents" means here. Two things send on their own: nothing personal, only t
 **Files:**
 - Create: `backend/scripts/conversion_brief.py`
 
-Read-only (`default_transaction_read_only=on`). Prints markdown:
+Read-only (`execution_options(postgresql_readonly=True)`, checked against the server; the startup option is ignored by the pooler). Prints markdown:
 
 1. `funnel_daily` for the last 7 days, and the 7 before.
 2. **Walked away yesterday:** real free users with a `paywall_hit` and no `checkout_started` since. One line each: name, email, signup date, gate, and what they did (saves, reads, scenes, last search).

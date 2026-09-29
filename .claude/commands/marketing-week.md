@@ -41,8 +41,10 @@ plus the week's folder. Each writes files there and reports back in under 200 wo
 > You are the analyst on ActorRise's marketing. Read only. Write `numbers.md` in the week's
 > folder, one page, no advice.
 >
-> 1. From `backend/`, read `funnel_daily` for the last 14 days (the connection must be opened
->    with `default_transaction_read_only=on`). Report this week against last, by step.
+> 1. From `backend/`, read `funnel_daily` for the last 14 days (read-only: open it with
+>    `engine.connect().execution_options(postgresql_readonly=True)` and confirm
+>    `show transaction_read_only` says `on`. The startup option
+>    `default_transaction_read_only` is ignored by the pooler). Report this week against last, by step.
 > 2. Where signups came from: `users.utm_source`, `utm_medium`, `referrer` for accounts
 >    created in the last 7 days, real users only (`exclude_from_stats` false).
 > 3. What people searched for and did not find: `search_logs` in the last 7 days where

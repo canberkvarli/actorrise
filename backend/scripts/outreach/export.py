@@ -40,15 +40,20 @@ def main() -> None:
 
     from sqlalchemy import create_engine, text
 
-    engine = create_engine(
-        os.environ["DATABASE_URL"],
-        connect_args={"options": "-c default_transaction_read_only=on -c statement_timeout=60000"},
-    )
+    # Read-only, and actually so. The database is reached through Supabase's
+    # pooler (port 6543), which throws away startup options: passing
+    # "-c default_transaction_read_only=on" connects without complaint and
+    # leaves the session writable. Found 2026-09-29 by asking the server
+    # (`show transaction_read_only` said off). postgresql_readonly is set on the
+    # transaction itself, and a write is refused.
+    engine = create_engine(os.environ["DATABASE_URL"])
     args.out.mkdir(parents=True, exist_ok=True)
 
     for name in [args.which] if args.which else LISTS:
         sql = (here / f"{name}.sql").read_text(encoding="utf-8")
-        with engine.connect() as conn:
+        with engine.connect().execution_options(postgresql_readonly=True) as conn:
+            if conn.execute(text("show transaction_read_only")).scalar() != "on":
+                raise SystemExit("refusing to run: the connection is not read-only")
             result = conn.execute(text(sql))
             columns = list(result.keys())
             rows = result.fetchall()
