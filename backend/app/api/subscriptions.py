@@ -48,9 +48,21 @@ class SubscriptionResponse(BaseModel):
     current_period_end: datetime | None
     cancel_at_period_end: bool
     has_stripe_customer: bool  # Whether user can access Stripe portal
+    # How long a trial would run if this actor started one now: 7, or 14 once
+    # they have finished a scene (services/trial_length.py). Every surface
+    # prints this number rather than carrying its own.
+    trial_days: int = 7
+    trial_earned: bool = False
 
     class Config:
         from_attributes = True
+
+
+def _trial_fields(db: Session, user_id: int) -> dict[str, Any]:
+    from app.services.trial_length import EARNED_TRIAL_DAYS, trial_days_for
+
+    days = trial_days_for(db, user_id)
+    return {"trial_days": days, "trial_earned": days == EARNED_TRIAL_DAYS}
 
 
 class CreateCheckoutSessionRequest(BaseModel):
@@ -61,7 +73,7 @@ class CreateCheckoutSessionRequest(BaseModel):
     success_url: str
     cancel_url: str
     promo_code: str | None = None  # student/teacher/startup Stripe coupons
-    trial: bool = False  # start a 14-day Plus trial (first-time Plus members)
+    trial: bool = False  # start a Plus trial (first-time Plus members); length is the server's call
     # GA4 client id lifted from the browser's `_ga` cookie. Rides along in Stripe
     # metadata so the webhook can attribute the trial to the same GA4 user who
     # searched and signed up, instead of stranding it as a brand new visitor.
@@ -128,6 +140,7 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
     Requires authentication.
     """
     subscription = db.query(UserSubscription).filter(UserSubscription.user_id == current_user.id).first()
+    trial = _trial_fields(db, int(current_user.id))
 
     if not subscription:
         # Return Free tier by default (even if DB not seeded yet)
@@ -140,6 +153,7 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
             current_period_end=None,
             cancel_at_period_end=False,
             has_stripe_customer=False,
+            **trial,
         )
 
     tier = db.query(PricingTier).get(subscription.tier_id)
@@ -156,6 +170,7 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
             current_period_end=subscription.current_period_end,
             cancel_at_period_end=subscription.cancel_at_period_end or False,
             has_stripe_customer=bool(subscription.stripe_customer_id),
+            **trial,
         )
 
     if not tier:
@@ -168,6 +183,7 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
             current_period_end=subscription.current_period_end,
             cancel_at_period_end=subscription.cancel_at_period_end or False,
             has_stripe_customer=bool(subscription.stripe_customer_id),
+            **trial,
         )
 
     return SubscriptionResponse(
@@ -178,6 +194,7 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
         current_period_end=subscription.current_period_end,
         cancel_at_period_end=subscription.cancel_at_period_end,
         has_stripe_customer=bool(subscription.stripe_customer_id),
+        **trial,
     )
 
 
@@ -243,11 +260,12 @@ async def create_checkout_session(
             detail=f"Stripe price ID not configured for {tier.display_name} {request.billing_period} plan",
         )
 
-    # First-time Plus members can start a 14-day free trial: card on file, $0
-    # today, rolls into Plus monthly after. No code needed — this replaces the
-    # retired FOUNDER3 coupon.
+    # First-time Plus members can start a free trial: card on file, $0 today,
+    # rolls into Plus monthly after. No code needed — this replaces the retired
+    # FOUNDER3 coupon.
     discounts = []
     trial_period_days: int | None = None
+    trial_earned = False
     if request.trial:
         if tier.name != "plus":
             raise HTTPException(
@@ -259,8 +277,12 @@ async def create_checkout_session(
                 status_code=400,
                 detail="The free trial is only for first-time Plus members.",
             )
-        # 2 weeks free, then auto-converts to Plus monthly ($12/mo).
-        trial_period_days = 14
+        # A week free, or two for an actor who has finished a scene, then it
+        # rolls into Plus monthly ($12/mo). Decided here, never by the client:
+        # the request says "trial", not how long.
+        trial = _trial_fields(db, int(current_user.id))
+        trial_period_days = trial["trial_days"]
+        trial_earned = trial["trial_earned"]
         # Force monthly rollover regardless of the billing toggle they picked.
         price_id = tier.stripe_monthly_price_id
         if not price_id:
@@ -339,6 +361,7 @@ async def create_checkout_session(
             # Stripe metadata values must be strings, and it rejects None.
             "ga_client_id": (request.ga_client_id or "")[:100],
             "trial_days": str(trial_period_days or 0),
+            "trial_earned": "1" if trial_earned else "0",
         },
     }
     if discounts:
