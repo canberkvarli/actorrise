@@ -22,7 +22,7 @@ function getFeaturesList(tier: PricingTier): string[] {
   if (rehearsals === -1) {
     features.push("Unlimited monologue rehearsals");
   } else if (rehearsals && rehearsals > 0) {
-    features.push(`${rehearsals} free rehearsals, then 2 weeks of Plus free`);
+    features.push(`${rehearsals} free rehearsals, then a week of Plus free, two if you finish a scene`);
   }
 
   // AI searches
