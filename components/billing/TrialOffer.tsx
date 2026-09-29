@@ -5,7 +5,9 @@ import Link from "next/link";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { IconX } from "@tabler/icons-react";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useTrialWords } from "@/hooks/useTrialWords";
 import {
+  trackPaywallCtaClicked,
   trackTrialOfferShown,
   trackTrialOfferDismissed,
   type TrialOfferTrigger,
@@ -120,7 +122,8 @@ export function useTrialOffer(trigger: TrialOfferTrigger, active: boolean) {
 
   const accept = useCallback(() => {
     writeState({ clicked: true });
-  }, []);
+    trackPaywallCtaClicked(trigger, "ask", tier);
+  }, [trigger, tier]);
 
   const href = useMemo(() => checkoutHref(trigger), [trigger]);
 
@@ -132,6 +135,7 @@ export function useTrialOffer(trigger: TrialOfferTrigger, active: boolean) {
 interface CardProps {
   headline: string;
   body: string;
+  /** Defaults to the trial this actor would get: "Start 1 week free", or 2. */
   cta?: string;
   href: string;
   onAccept: () => void;
@@ -147,12 +151,13 @@ interface CardProps {
 export function TrialOfferCard({
   headline,
   body,
-  cta = "Start 2 weeks free",
+  cta,
   href,
   onAccept,
   onDismiss,
   tone = "dark",
 }: CardProps) {
+  const words = useTrialWords();
   return (
     /* theatre-tokens and the faces ride on the card: both hosts (scene review,
        the practice panel) bind neither, so without them every --t-* resolves
@@ -177,7 +182,7 @@ export function TrialOfferCard({
 
       <div className="t-offer__foot">
         <Link href={href} onClick={onAccept} className="t-offer__cta">
-          {cta}
+          {cta ?? words.cta}
         </Link>
       </div>
 
@@ -202,6 +207,7 @@ export function TrialOfferBanner({
   onAccept: () => void;
   onDismiss: () => void;
 }) {
+  const words = useTrialWords();
   return (
     <div /* bottom-4 put this behind the phone tab bar — the trial offer, the one
          strip in the product whose whole job is to be seen. Clears the bar on a
@@ -210,7 +216,7 @@ export function TrialOfferBanner({
       <div className={`t-strip theatre-tokens ${theatreFontVars}`}>
         <p className="t-strip__body">{body}</p>
         <Link href={href} onClick={onAccept} className="t-strip__cta shrink-0">
-          2 weeks free
+          {words.short}
         </Link>
         <button
           type="button"

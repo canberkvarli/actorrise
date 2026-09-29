@@ -3,8 +3,10 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useTrialWords } from "@/hooks/useTrialWords";
 import { theatreFontVars } from "@/lib/fonts/theatre";
-import { trackUpgradeModalViewed } from "@/lib/analytics";
+import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
+import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
 
 interface MonologueWallProps {
   /** Where the wall fired, for begin_checkout attribution. */
@@ -28,6 +30,7 @@ interface MonologueWallProps {
 export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps) {
   const { subscription } = useSubscription();
   const currentTier = subscription?.tier_name ?? "free";
+  const words = useTrialWords();
 
   useEffect(() => {
     trackUpgradeModalViewed({ feature, tier_current: currentTier });
@@ -63,8 +66,12 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
       </p>
 
       <div className="t-wall__foot">
-        <Link href={href} className="t-wall__cta">
-          Start 2 weeks free
+        <Link
+          href={href}
+          className="t-wall__cta"
+          onClick={() => trackPaywallCtaClicked(feature, "wall", currentTier)}
+        >
+          {words.cta}
         </Link>
         <Link href="/pricing" className="t-wall__quiet">
           what else is in it
@@ -72,7 +79,8 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
       </div>
 
       <p className="t-wall__body" style={{ marginTop: 14, fontSize: 12 }}>
-        Card on file, cancel before it renews.
+        Card on file, cancel before it renews.{" "}
+        <EarnSecondWeek />
       </p>
     </div>
   );

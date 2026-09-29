@@ -4,8 +4,10 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { IconArrowRight } from "@tabler/icons-react";
 
+import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
 import { useSubscription } from "@/hooks/useSubscription";
-import { trackUpgradeModalViewed } from "@/lib/analytics";
+import { useTrialWords } from "@/hooks/useTrialWords";
+import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
 
 /**
  * The end of the free reads, laid over the text that stops early.
@@ -22,6 +24,7 @@ import { trackUpgradeModalViewed } from "@/lib/analytics";
 export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
   const { subscription } = useSubscription();
   const currentTier = subscription?.tier_name ?? "free";
+  const words = useTrialWords();
 
   useEffect(() => {
     trackUpgradeModalViewed({ feature, tier_current: currentTier });
@@ -60,10 +63,11 @@ export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           <Link
             href={href}
+            onClick={() => trackPaywallCtaClicked(feature, "wall", currentTier)}
             className="inline-flex h-12 items-center gap-2.5 rounded-full pl-5 pr-1.5 text-[15px] font-bold transition-transform duration-300 hover:scale-[1.04] hover:-rotate-1"
             style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
           >
-            Start 2 weeks free
+            {words.cta}
             <span
               className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full"
               style={{
@@ -89,7 +93,8 @@ export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
           className="m-0 mt-3.5 text-[12px]"
           style={{ color: "var(--t-faint)" }}
         >
-          Card on file, cancel before it renews.
+          Card on file, cancel before it renews.{" "}
+          <EarnSecondWeek />
         </p>
       </div>
     </div>

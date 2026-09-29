@@ -4,8 +4,11 @@ import { useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import Link from "next/link";
+import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
 import { useSubscription } from "@/hooks/useSubscription";
-import { trackUpgradeModalViewed } from "@/lib/analytics";
+import { useTrialWords } from "@/hooks/useTrialWords";
+import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
+import { cap } from "@/lib/trial";
 
 interface MonologuePaywallModalProps {
   open: boolean;
@@ -31,8 +34,10 @@ const PLUS_BENEFITS = [
 // No counts. The free cap moved twice in one week and copy that names a number
 // goes stale silently.
 const DEFAULT_TITLE = "Keep going";
-const DEFAULT_DESCRIPTION =
-  "That's your free rehearsals for this month. Plus takes the cap off, and lets you bring your own sides in too. Two weeks free, card on file, cancel before it renews.";
+// The trial length is the server's to say (lib/trial.ts), so the sentence that
+// names it is built at render.
+const defaultDescription = (span: string) =>
+  `That's your free rehearsals for this month. Plus takes the cap off, and lets you bring your own sides in too. ${cap(span)} free, card on file, cancel before it renews.`;
 
 /**
  * Shown when a free user hits a monologue-side wall. Leads with continuing
@@ -53,6 +58,7 @@ export function MonologuePaywallModal({
 }: MonologuePaywallModalProps) {
   const { subscription } = useSubscription();
   const currentTier = subscription?.tier_name ?? "free";
+  const words = useTrialWords();
 
   useEffect(() => {
     if (!open) return;
@@ -74,7 +80,7 @@ export function MonologuePaywallModal({
         <p className="t-modal__dir">(the house is still open.)</p>
         <DialogTitle className="t-modal__title">{title ?? DEFAULT_TITLE}</DialogTitle>
         <DialogDescription className="t-modal__body">
-          {description ?? DEFAULT_DESCRIPTION}
+          {description ?? defaultDescription(words.span)}
         </DialogDescription>
 
         <ul className="t-modal__list">
@@ -89,13 +95,21 @@ export function MonologuePaywallModal({
           {/* begin_checkout is deliberately NOT fired here. The checkout page
               already sends it, reading entry_point from ?from=, and firing in
               both places would double every conversion in the funnel. */}
-          <Link href={href} className="t-modal__cta">
-            Start 2 weeks free
+          <Link
+            href={href}
+            className="t-modal__cta"
+            onClick={() => trackPaywallCtaClicked(feature, "wall", currentTier)}
+          >
+            {words.cta}
           </Link>
           <button type="button" onClick={() => onOpenChange(false)} className="t-modal__quiet">
             Maybe later
           </button>
         </div>
+        <EarnSecondWeek
+          lineClassName="m-0 mt-3 text-center text-[12px]"
+          lineStyle={{ color: "var(--t-muted-dark-2)" }}
+        />
       </DialogContent>
     </Dialog>
   );

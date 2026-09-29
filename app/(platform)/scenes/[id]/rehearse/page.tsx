@@ -18,6 +18,8 @@ import {
   TrialOfferCard,
   TrialOfferBanner,
 } from '@/components/billing/TrialOffer';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useTrialWords } from '@/hooks/useTrialWords';
 import { Button } from '@/components/ui/button';
 import { ColdReadPrep } from '@/components/rehearse/ColdReadPrep';
 import {
@@ -1631,6 +1633,15 @@ function RehearsalPageInner() {
   // Six lines is past the 3.1-line average, so this only reaches actors who are
   // genuinely in the scene rather than poking at it.
   const midSceneOffer = useTrialOffer('lines_delivered', !showFeedback && linesDelivered >= 6);
+  // Finishing a scene is what earns the second week of the trial
+  // (backend/app/services/trial_length.py), and /me is cached for a minute
+  // with no refetch on focus. Ask again as the review opens, or the offer on
+  // this very screen goes on quoting the week they just outgrew.
+  const trialWords = useTrialWords();
+  const { mutate: refreshSubscription } = useSubscription();
+  useEffect(() => {
+    if (showFeedback) void refreshSubscription();
+  }, [showFeedback, refreshSubscription]);
 
   // Kill audio & abandon session when user navigates away (back button, bfcache, client-side route)
   const showFeedbackRef = useRef(showFeedback);
@@ -2620,13 +2631,15 @@ function RehearsalPageInner() {
                     Without it the hook still counted a "show" nobody saw. */}
                 {completionOffer.visible && (
                   <p className={cn("text-xs pt-1", STAGE_INK_FAINT)}>
-                    Or take the whole room:{' '}
+                    {trialWords.earned
+                      ? 'Finishing that earned you a second week. '
+                      : 'Or take the whole room: '}
                     <a
                       href={completionOffer.href}
                       onClick={completionOffer.accept}
                       className="underline underline-offset-2 text-[var(--t-orange)]"
                     >
-                      Plus, two weeks free
+                      Plus, {trialWords.span} free
                     </a>
                     .
                   </p>

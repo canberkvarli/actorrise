@@ -70,6 +70,7 @@ import { computeProfileMatch, type ProfileMatch } from "@/lib/profileMatch";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { useIsPhone } from "@/hooks/useIsPhone";
+import { useTrialWords } from "@/hooks/useTrialWords";
 import {
   Dialog,
   DialogContent,
@@ -147,6 +148,7 @@ function SearchContent() {
   const { user, isDemoUser } = useAuth();
   const { show: showSearchTour, dismiss: dismissSearchTour } =
     useTourTrigger("has_seen_search_tour", { delay: 800 });
+  const trialWords = useTrialWords();
   const [playsQuery, setPlaysQuery] = useState("");
   const [filmTvQuery, setFilmTvQuery] = useState("");
   /* Typed rather than inferred: source_type is optional on SearchFiltersState
@@ -2200,7 +2202,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           onOpenChange={(o) => { if (!o) { setSearchUpgradeUrl(null); setSearchError(null); } }}
           feature="monologue_search"
           title="You&apos;ve used your free searches this month"
-          description="Keep exploring with 2 weeks of Plus, free. Unlimited searches, nothing charged now, card on file, cancel anytime."
+          description={`Keep exploring with ${trialWords.span} of Plus, free. Unlimited searches, nothing charged now, card on file, cancel anytime.`}
         />
 
         {/* Results */}

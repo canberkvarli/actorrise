@@ -10,6 +10,9 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useTrialWords } from "@/hooks/useTrialWords";
+import { cap } from "@/lib/trial";
+import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconArrowLeft, IconX } from "@tabler/icons-react";
@@ -64,7 +67,10 @@ function CheckoutContent() {
   const tierName = searchParams.get("tier");
   const period = searchParams.get("period") || "monthly";
   const { subscription } = useSubscription();
-  // Free trial: first-time Plus members get 14 days free ($0 today). Explicit
+  // A week, or two for an actor who has finished a scene. The server decides
+  // and runs it; this page only prints what /me says.
+  const words = useTrialWords();
+  // Free trial: first-time Plus members get it free ($0 today). Explicit
   // ?trial=1 (or legacy ?promo=FOUNDER3) forces it; otherwise a first-time Plus
   // monthly checkout defaults to the trial. Returning subscribers (already have a
   // Stripe customer) pay as normal, and ?trial=0 is an escape hatch to pay now.
@@ -122,11 +128,11 @@ function CheckoutContent() {
     // code gets a straight answer instead of "invalid coupon", but nothing in
     // the product offers them any more.
     //
-    // The message used to promise a 3-month trial. The trial has been 14 days
-    // since the founder-era link was retired, so it was quoting an offer that
-    // no longer exists to someone already holding a dead code.
+    // The message used to promise a 3-month trial, which was quoting an offer
+    // that no longer exists to someone already holding a dead code. It names
+    // no length now: the trial's length is the server's to say.
     if (["FOUNDER", "FOUNDER3", "FOUNDER6", "FOUNDER12"].includes(code)) {
-      triggerShake("That code has retired. Start the 2-week free trial instead.");
+      triggerShake("That code has retired. Start the free trial instead.");
     } else if (code === "STXQ5NU4" || code === "STUDENT50") {
       // Retired 2026-09-16. Students no longer get a percentage off; schools and
       // studios come in as an organisation and I open Plus for the class. Kept
@@ -267,7 +273,7 @@ function CheckoutContent() {
       <h1 className="t-box-office__title">
         {isTrial ? (
           <>
-            Two weeks, <em>on me.</em>
+            {cap(words.span)}, <em>on me.</em>
           </>
         ) : (
           <>
@@ -322,8 +328,9 @@ function CheckoutContent() {
           <div className="t-ticket__note">
             <p className="t-ticket__note-title">Nothing is charged today.</p>
             <p className="t-ticket__note-body">
-              Card on file, $0 for 14 days, then $12/month. Cancel any time
-              before it renews and you are never billed.
+              Card on file, $0 for {words.days} days, then $12/month. Cancel any
+              time before it renews and you are never billed.{" "}
+              <EarnSecondWeek />
             </p>
           </div>
         )}
@@ -382,17 +389,18 @@ function CheckoutContent() {
                 {tier?.name === "plus" && (
                   <div className="t-ticket__note">
                     <p className="t-ticket__note-title">
-                      First time on Plus? Take two weeks free.
+                      First time on Plus? Take {words.span} free.
                     </p>
                     <p className="t-ticket__note-body">
-                      Card required, nothing charged for 14 days, then $12/month.
+                      Card required, nothing charged for {words.days} days, then
+                      $12/month.
                     </p>
                     <Link
                       href="/checkout?tier=plus&period=monthly&trial=1"
                       className="t-ticket__cta mt-3"
                       style={{ height: 40, padding: "0 18px", fontSize: 14 }}
                     >
-                      Start 2 weeks free
+                      {words.cta}
                     </Link>
                   </div>
                 )}
@@ -456,7 +464,7 @@ function CheckoutContent() {
             {isCheckingOut
               ? "Taking you to Stripe..."
               : isTrial
-                ? "Start 2 weeks free"
+                ? words.cta
                 : "Continue to payment"}
           </button>
           <Link href="/pricing" className="t-ticket__quiet">

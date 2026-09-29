@@ -25,6 +25,9 @@ export interface SubscriptionData {
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   has_stripe_customer: boolean; // Whether user can access Stripe portal
+  /** How long a trial would run if started now: 7, or 14 once a scene is finished. */
+  trial_days?: number;
+  trial_earned?: boolean;
 }
 
 export interface UsageLimits {

@@ -37,6 +37,8 @@ import {
   useUsageLimits,
   type UsageLimits,
 } from "@/hooks/useSubscription";
+import { useTrialWords } from "@/hooks/useTrialWords";
+import { cap } from "@/lib/trial";
 
 /** What each tier opens. Copy only — the numbers come from the same table the
  *  pricing page quotes, and nothing here is derived from the user's account. */
@@ -75,6 +77,7 @@ export default function BillingPage() {
   const { subscription, isLoading: subLoading, isError: subError } = useSubscription();
   const { usage, isLoading: usageLoading } = useUsageLimits();
   const { history: billingHistory, isLoading: historyLoading } = useBillingHistory();
+  const words = useTrialWords();
 
   const isLoading = subLoading || usageLoading || historyLoading;
 
@@ -204,7 +207,7 @@ export default function BillingPage() {
                     href="/checkout?tier=plus&period=monthly&trial=1"
                     className="t-cta t-cta--paper t-cta--stub"
                   >
-                    Two weeks of Plus, free
+                    {cap(words.span)} of Plus, free
                     <span className="t-cta__dot" aria-hidden>
                       <IconGift className="h-4 w-4" />
                     </span>
