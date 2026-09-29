@@ -36,6 +36,12 @@ def opt_out(db, email: str, reason: str, bounce: bool = False) -> dict:
     """Returns {"listed": bool, "account": "opted_out" | "already_out" | "none" | "left_alone"}."""
     from sqlalchemy import func
 
+    # The whole model tree, not only the two tables used here. users carries
+    # foreign keys onto organizations and others, and SQLAlchemy cannot build
+    # a query on User until every table those point at is registered. The
+    # tests never saw this: their fixture imports Organization itself. The
+    # first real run did (2026-09-29), on an actor who had asked to stop.
+    import app.main  # noqa: F401
     from app.models.email_do_not_contact import EmailDoNotContact
     from app.models.user import User
 

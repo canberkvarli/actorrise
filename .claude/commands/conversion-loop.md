@@ -55,7 +55,9 @@ Create each as a Gmail draft:
 piece, search the corpus and tell them what is there, or say plainly that it is not. This is
 mid-conversation: if a trial offer fits, make it plainly and give the next step. No CURTAIN.
 
-**New emails**, to the five people under "Write to these five" in the brief:
+**New emails**, to the five people under "Write to these five" in the brief. They are the
+most active free actors that no automated email is about to reach. Never write by hand to
+someone in section 2: the server emails them a day after their wall.
 
 - About what they did. Their `what they've done` column is the material. "you've saved 16
   pieces" is the email. "I noticed you're an engaged user" is not.
@@ -63,6 +65,8 @@ mid-conversation: if a trial offer fits, make it plainly and give the next step.
 - Three to five sentences.
 - End with: `reply UNSUBSCRIBE and I'll take you off the list, no hard feelings`
 - Skip anyone with no real activity to talk about, and say in the summary that you did.
+- Skip a throwaway address (a mail-drop domain, no name), and anyone whose searches say
+  they are a child. Say in the summary that you did, without saying who.
 
 Do not draft to anyone on `email_do_not_contact`, anyone with `marketing_opt_in` false, or
 anyone who had a lifecycle email in the last 7 days. The brief already filters for all three.

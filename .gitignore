@@ -111,10 +111,12 @@ data-gym-cache/
 
 # Lists of real people. backend/scripts/outreach/export.py writes names and
 # email addresses to the first; the daily conversion brief
-# (backend/scripts/conversion_brief.py) writes them to the second. Neither is
-# ever source.
+# (backend/scripts/conversion_brief.py) writes them to the second, and the weekly
+# marketing run (.claude/commands/marketing-week.md) writes organisations and
+# drafts to the third. None is ever source.
 /outreach/founder/
 /outputs/conversion/
+/outputs/marketing/
 
 # Editor swap and backup files. app/.globals.css.swp was committed once from a
 # live Vim session; nothing stopped it.

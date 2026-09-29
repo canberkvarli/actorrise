@@ -8,6 +8,7 @@ Five things, in the order they are acted on:
 
   1. The funnel, this week against last
   2. Who was stopped by a wall in the last two days and did not start a checkout
+     (the server emails these a day later; listed so Canberk can see them)
   3. Who is inside a Stripe trial, and whether they are using it
   4. What the emails did
   5. Five people worth writing to by hand
@@ -116,6 +117,33 @@ order by (select count(*) from monologue_favorites f where f.user_id = u.id and 
 limit :limit
 """
 
+# Who to write to by hand. NOT the people a wall stopped: those belong to the
+# automated email (paywall_seen_no_trial, a day after the wall), and on the
+# first real run every one of the five drawn from that pool was already owed
+# it. A note from the founder an hour before an automated one from "the
+# founder" is the same person writing twice. These are the most active free
+# actors that nothing automated is about to reach.
+WORTH = f"""
+select coalesce(u.name, ''), u.email, u.created_at::date, {ACTIVITY},
+       (select count(*) from monologue_favorites f where f.user_id = u.id
+          and f.removed_at is null and f.created_at > now() - interval '7 days')
+     + (select count(*) from search_logs s where s.user_id = u.id and s.source = 'search'
+          and coalesce(s.page, 1) = 1 and s.created_at > now() - interval '7 days')
+     + (select count(*) from rehearsal_sessions r where r.user_id = u.id
+          and r.created_at > now() - interval '7 days') as week
+from users u
+where {REACHABLE} and not {PAID}
+  -- Students come through their teacher (CLAUDE.md). On the first run one of
+  -- the five was a student looking for pieces for a thirteen year old.
+  and coalesce(u.account_type, '') <> 'student'
+  and not exists (select 1 from lifecycle_email_sends l
+                  where l.user_id = u.id and l.sent_at > now() - interval '7 days')
+  and not exists (select 1 from user_events e where e.user_id = u.id and {WALL}
+                  and e.created_at > now() - interval '5 days')
+order by week desc, u.created_at desc
+limit 5
+"""
+
 TRIALS = f"""
 select coalesce(u.name, ''), u.email, s.trial_end::date,
        greatest(0, ceil(extract(epoch from (s.trial_end - now())) / 86400))::int days_left,
@@ -168,7 +196,7 @@ def build(conn) -> str:
     ]
 
     walked = q(WALKED_AWAY, days=2, limit=25)
-    worth = [r for r in q(WALKED_AWAY, days=7, limit=40) if not r[6]][:5]
+    worth = [r for r in q(WORTH) if r[4] > 0]
 
     parts = [
         f"# Conversion brief, {date.today():%Y-%m-%d}\n",
@@ -191,11 +219,12 @@ def build(conn) -> str:
         "## 4. Emails, last 7 days\n",
         table(("touch", "sent", "clicked"), q(EMAILS)),
         "## 5. Write to these five\n",
-        "Stopped by a wall in the last 7 days, no checkout since, no email from",
-        "either lifecycle job in that time. Most active first.\n",
+        "The most active free actors this week that nothing automated is about to",
+        "reach: no wall in the last 5 days (that email is the server's), no email",
+        "from either lifecycle job in 7.\n",
         table(
-            ("name", "email", "signed up", "gate", "when", "what they've done"),
-            [r[:6] for r in worth],
+            ("name", "email", "signed up", "what they've done", "actions this week"),
+            worth,
         ),
     ]
     return "\n".join(parts)
