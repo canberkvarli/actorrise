@@ -254,7 +254,7 @@ export default function AdminEmailsPage() {
   const [lifecycleOn, setLifecycleOn] = useState<boolean | null>(null);
   const [lifecycleSaving, setLifecycleSaving] = useState(false);
 
-  // Triggered emails toggle (checkout walked away from, trial ended, wall hit)
+  // Triggered emails toggle (checkout walked away from, wall hit)
   const [triggeredOn, setTriggeredOn] = useState<boolean | null>(null);
   const [triggeredSaving, setTriggeredSaving] = useState(false);
 
@@ -939,7 +939,7 @@ export default function AdminEmailsPage() {
               <p className="text-sm font-medium">Triggered emails</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {triggeredOn
-                  ? "On. A heads-up before a trial charges the card, and one email when someone walks away from a checkout, when a trial ends without paying, or the day after a free limit stops them. Each sent once."
+                  ? "On. One email when someone walks away from a checkout, and one the day after a free limit stops them. Each sent once, never more than two emails a week to anyone."
                   : "Off. Nothing sends until you turn this on. Read the copy in backend/emails/lifecycle first."}
               </p>
             </div>

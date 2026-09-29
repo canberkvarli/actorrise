@@ -33,23 +33,28 @@
 - [x] `backend/scripts/add_funnel_daily_view.sql` applied to prod. `security_invoker=true`, no grant to anon or authenticated.
 - [x] Merged and pushed. The trial is 7 or 14 days for everyone, the two new asks are live, and the pricing line reads "then a week of Plus free, two if you finish a scene".
 
-### Correction, 2026-09-29
+### Correction, and two decisions, 2026-09-29
 
-The review and this plan both said Stripe's `trial_will_end` "already emails the user", and
-`trial_ending` was dropped for that reason. **That was wrong.** The webhook does fire, and
-`send_trial_ending_notification` does send, but to `canberk@actorrise.com`. No actor has ever
-been told by ActorRise that their card was about to be charged. Found when Canberk asked
-"after their trial ends would they get charged?"
+**The correction.** The review and this plan both said Stripe's `trial_will_end` "already emails
+the user", and `trial_ending` was dropped for that reason. That was wrong. The webhook fires and
+`send_trial_ending_notification` sends, but to `canberk@actorrise.com`. No actor has ever been
+told by ActorRise that their card was about to be charged.
 
-`trial_ending` is built now (`backend/emails/lifecycle/trial_ending.txt`). It is a notice, so
-it goes regardless of marketing opt-in and outside the weekly cap, 1 to 3 days before the
-charge, to Stripe trials only. Behind the same switch as the others, which is off.
+**Decision: nothing is sent about a trial ending.** `trial_ending` was built on finding that, and
+`trial_ended_no_pay` was in the first set. Canberk read both and removed both the same day
+("no need for trial ends", "dont wanna give them that update"). Neither was ever switched on.
+So the triggered emails are two: `checkout_abandoned` and `paywall_seen_no_trial`. An actor on
+a trial is charged on the day it ends with no word from ActorRise first. Whether Stripe sends
+its own reminder is a setting in the Stripe dashboard that the code cannot see.
+
+**Decision: no reply-unsubscribe line under the signature** on the triggered emails. They end on
+`canberk`. The unsubscribe link under the letter and the List-Unsubscribe header stay.
 
 ### Still Canberk's
 
 1. **On an iPhone:** does Riley's first line play after Answer with no Begin screen, and does the bottom menu sit still against Chrome's toolbar. Neither can be shown in a desktop browser.
 2. **A brand-new account:** sign up, see the onboarding card on the hub, close it, see "You're late." underneath.
-3. **Read the four emails** in `backend/emails/lifecycle/`, send yourself the set (`uv run python scripts/triggered_emails.py --test canberk@actorrise.com`), then switch on "Triggered emails" in `/admin/emails`. They are OFF and stay off until then.
+3. **Read the two emails** in `backend/emails/lifecycle/`, send yourself the set (`uv run python scripts/triggered_emails.py --test canberk@actorrise.com`), then switch on "Triggered emails" in `/admin/emails`. They are OFF and stay off until then.
 4. **Two Stripe trials end by 2026-10-01.** See `outputs/conversion/2026-09-29.md`, section 3.
 5. Decide Task B5 (the reply-CURTAIN Stripe link still runs 14 days, and CLAUDE.md still says the in-app trial is 14).
 
@@ -103,7 +108,7 @@ The tasks were written before the code. These are the places the code is right a
 | 1 | Trial length | **7 days. 14 if the actor has finished a scene.** Decided server side at checkout, from a session the server closed as completed. | Canberk, 2026-09-29. The second week is earned by the one behaviour that shows the product working. 6 of 22 people who started the guided scene finished it; 24 actors hold a completed session of any kind. |
 | 2 | Free tier | **Ask more, block nothing new.** The three walls that exist stay (5 reads a month, 3 ScenePartner sessions a month, monologue work after the reverse trial). Saves, the cut editor and notes stay free. New asks go where value just happened. | Saving is what the day-1 reminder and both lifecycle emails are anchored on, and 82 free users already hold 4+ saves. Cut editor and notes reach 8 and 9 people a month, so walling them adds no volume. Revisit a hard save cap only if asks convert under 1% after 30 days. |
 | 3 | Goal unit and start | **Distinct real users who saw a price, per day, from 2026-09-27.** July and August are ignored. | The money events did not exist in Postgres before 2026-09-27. Baseline so far: 9 users in 2 days, out of about 35 active. One checkout started. |
-| 4 | Emails | **Three money touches first:** `checkout_abandoned`, `trial_ended_no_pay`, `paywall_seen_no_trial`. `three_saves`, `unfinished_cut`, `dormant_book` are held. `trial_ending` was left out on 2026-09-29 on a wrong reading and added the same day: see the correction under Status. | day3 and day10 have sent 681 and brought back about 1 in 320. The money touches go to people who looked at a price, which is a different population. |
+| 4 | Emails | **Two money touches:** `checkout_abandoned` and `paywall_seen_no_trial` (`trial_ended_no_pay` was in the first set and removed, see Status). `three_saves`, `unfinished_cut`, `dormant_book` are held. `trial_ending` was left out on 2026-09-29 on a wrong reading and added the same day: see the correction under Status. | day3 and day10 have sent 681 and brought back about 1 in 320. The money touches go to people who looked at a price, which is a different population. |
 
 **Targets, 30 days after Phase C ships:** 150 distinct users see a price, 10 `checkout_started`, 5 `trial_started`, 3 first charges. Onboarding completion and day-2 return must not fall.
 

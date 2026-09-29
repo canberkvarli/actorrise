@@ -7,7 +7,7 @@ switching it on, and for sending a test to yourself.
   cd backend
   uv run python scripts/triggered_emails.py                      # everyone owed anything, by touch
   uv run python scripts/triggered_emails.py checkout_abandoned   # one touch
-  uv run python scripts/triggered_emails.py --test you@example.com   # all four, to you
+  uv run python scripts/triggered_emails.py --test you@example.com   # both, to you
   uv run python scripts/triggered_emails.py checkout_abandoned --send
 
 The words are in backend/emails/lifecycle/<touch>.txt.
@@ -50,9 +50,6 @@ def main() -> None:
                 "user_name": "Test Actor",
                 "link": triggered._link(touch),
                 "span": "a week",
-                "date": "thursday, october 1",
-                "amount": "$12",
-                "every": "month",
             }
             subject, html, plain = triggered.render(person, None)
             client.send_email(to=args.test, subject=f"[{touch}] {subject}", html=html, plain_text=plain)

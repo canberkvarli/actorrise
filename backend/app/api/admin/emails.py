@@ -198,8 +198,8 @@ def get_triggered_emails(
     _: User = Depends(require_approval_permission),
     db: Session = Depends(get_db),
 ) -> SavedPieceReminderToggle:
-    """Whether the triggered emails (checkout walked away from, trial ended
-    without paying, stopped by a wall) are sending. Off by default."""
+    """Whether the triggered emails (checkout walked away from,
+    stopped by a wall) are sending. Off by default."""
     enabled = app_settings.get_bool(db, app_settings.TRIGGERED_EMAILS_ENABLED, default=False)
     return SavedPieceReminderToggle(enabled=enabled)
 

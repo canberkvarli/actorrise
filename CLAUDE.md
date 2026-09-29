@@ -110,10 +110,14 @@ LINK LENGTHS DIFFER, CHECK BEFORE SENDING. Three live Stripe payment links exist
 
 THE IN-APP TRIAL IS NOT 2 WEEKS FOR EVERYONE (changed 2026-09-29). Inside the app the trial is **1 week, and 2 weeks for an actor who has finished a scene**. The server decides (`backend/app/services/trial_length.py`) and every surface prints what `/api/subscriptions/me` returns as `trial_days`. It rolls into Plus monthly at $12. So:
 - The Stripe link above is still 14 days, and copy that sends THAT link still says "2 weeks free".
-- Copy that sends someone into the app (`actorrise.com/trial`, a wall, an ask) must NOT promise a length by hand. The three triggered emails fill `{span}` per person for this reason.
+- Copy that sends someone into the app (`actorrise.com/trial`, a wall, an ask) must NOT promise a length by hand. The triggered emails fill `{span}` per person for this reason.
 - Whether the email link should drop to 7 days to match is open, Canberk's call.
 
-Automated emails to people who looked at a price live in `backend/emails/lifecycle/*.txt` and send from `backend/app/services/email/triggered.py`. They are OFF until the "Triggered emails" switch in `/admin/emails` is turned on. `/conversion-loop` is the daily run that reads the funnel and the inbox and leaves drafts; it never sends.
+Automated emails to people who looked at a price live in `backend/emails/lifecycle/*.txt` and send from `backend/app/services/email/triggered.py`. There are two: `checkout_abandoned` and `paywall_seen_no_trial`. They are OFF until the "Triggered emails" switch in `/admin/emails` is turned on. `/conversion-loop` is the daily run that reads the funnel and the inbox and leaves drafts; it never sends.
+
+Two decisions about those, both Canberk's, 2026-09-29. Do not undo either without being asked:
+- **No email about a trial ending.** Not a heads-up before the card is charged, not a question after a trial lapses. Both were written and he removed both.
+- **No reply-UNSUBSCRIBE line on the triggered emails.** They end on `canberk`. This is the one exception to the Opt-out requirement above, which still holds for every other email to current users. The unsubscribe link under the letter stays.
 
 PREFILLED-EMAIL RULE (critical, do not skip): when someone replies CURTAIN, send them the link with their email appended as `?prefilled_email=<their address>`, using the exact address they replied from (that is their ActorRise account email). Example: https://buy.stripe.com/00w8wR4Xqd7o7JGa3X6g802?prefilled_email=giosboss4@gmail.com . The webhook grants Plus by matching the checkout email to their ActorRise account, so a prefilled link makes the match automatic. Never send the bare base link to a specific person, and do not embed the link in cold outreach (only send after a CURTAIN reply).
 
