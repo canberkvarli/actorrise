@@ -6,8 +6,6 @@ import type { ReactNode, RefObject } from "react";
 import { cn } from "@/lib/utils";
 import { renderTextWithStageDirections } from "@/lib/stageDirections";
 import type { CoachState } from "@/lib/guided-coach";
-import { AudioWaveform } from "@/components/scenepartner/AudioWaveform";
-import { TTSWaveform } from "@/components/scenepartner/TTSWaveform";
 
 export interface GuidedLine {
   id: number;
@@ -23,9 +21,6 @@ interface Props {
   renderUserLine: (text: string) => ReactNode;
   /** The spoken sweep for the current partner line, or the plain text. */
   renderPartnerLine: (text: string) => ReactNode;
-  isListening: boolean;
-  partnerSpeaking: boolean;
-  partnerLoading: boolean;
   coach: CoachState;
   /** Mic blocked or recognition broken: the button is the only way through. */
   tapMode: boolean;
@@ -38,8 +33,6 @@ interface Props {
   /** The door. Replaces the control pill's X on the first scene. */
   onLeave: () => void;
   currentLineRef: RefObject<HTMLDivElement | null>;
-  analyserRef: RefObject<AnalyserNode | null>;
-  aiAudioElement: HTMLAudioElement | null;
 }
 
 /**
@@ -49,9 +42,12 @@ interface Props {
  * parchment card, with avatars, "(You)" pills and a waveform row per line.
  * That is a working document for someone running their own sides. A first
  * scene is a page you read once, so this is the display serif, a cue above
- * each line, the actor's cue in the theatre orange, and nothing else. The
- * current line carries the only ornament: a thin waveform saying the room
- * hears you, or that the partner is speaking.
+ * each line, the actor's cue in the theatre orange, and nothing else.
+ *
+ * No waveform. It was the one ornament, a row of bars under the current line,
+ * and it made the scene look like a phone call. The words themselves already
+ * move: the partner's light as they are spoken, the actor's underline as they
+ * are heard, and the dot in the coaching line says the mic is open.
  */
 export function GuidedStage({
   lines,
@@ -59,9 +55,6 @@ export function GuidedStage({
   activeIndex,
   renderUserLine,
   renderPartnerLine,
-  isListening,
-  partnerSpeaking,
-  partnerLoading,
   coach,
   tapMode,
   isUserTurn,
@@ -71,8 +64,6 @@ export function GuidedStage({
   onSkip,
   onLeave,
   currentLineRef,
-  analyserRef,
-  aiAudioElement,
 }: Props) {
   return (
     <div className="g-stage">
@@ -107,20 +98,6 @@ export function GuidedStage({
                   ? renderPartnerLine(line.text)
                   : renderTextWithStageDirections(line.text)}
             </p>
-            {isCurrent && (
-              <div className="g-wave" aria-hidden>
-                {isUser ? (
-                  <AudioWaveform analyserRef={analyserRef} active={isListening} className="w-24 h-3" />
-                ) : (
-                  <TTSWaveform
-                    audioElement={aiAudioElement}
-                    isLoading={partnerLoading}
-                    isSpeaking={partnerSpeaking}
-                    className="w-24 h-3"
-                  />
-                )}
-              </div>
-            )}
             {showSaidIt ? (
               <button
                 type="button"

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { API_URL } from '@/lib/api';
+import { takePrimedAudio, unlockElement } from '@/lib/primed-audio';
 import { supabase } from '@/lib/supabase';
 
 /** Error with HTTP status and structured detail from the backend. */
@@ -97,19 +98,8 @@ function setCache(key: string, blob: Blob): string {
 // from a user gesture. Playing a tiny silent clip on the SAME element during a
 // gesture (the "Begin" tap) unlocks it for the rest of the session — provided
 // we then REUSE that element for every line (a fresh `new Audio()` re-locks).
-let _silentUrl: string | null = null;
-function silentAudioUrl(): string {
-  if (_silentUrl) return _silentUrl;
-  const bytes = new Uint8Array(44);
-  const dv = new DataView(bytes.buffer);
-  const w = (o: number, s: string) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
-  w(0, 'RIFF'); dv.setUint32(4, 36, true); w(8, 'WAVE'); w(12, 'fmt ');
-  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
-  dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true);
-  dv.setUint16(34, 8, true); w(36, 'data'); dv.setUint32(40, 0, true);
-  _silentUrl = URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
-  return _silentUrl;
-}
+// The clip and the unlock live in lib/primed-audio, because the hub's Answer
+// tap needs them a route before this hook exists.
 
 // ── Hook ──────────────────────────────────────────────────────────────────
 
@@ -192,7 +182,8 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
   /** Lazily create the single persistent audio element reused for every line. */
   const ensureAudioEl = useCallback((): HTMLAudioElement => {
     if (!audioRef.current) {
-      const a = new Audio();
+      // One a tap already unlocked, if the actor came from the hub's Answer.
+      const a = takePrimedAudio() ?? new Audio();
       a.preload = 'auto';
       audioRef.current = a;
     }
@@ -201,21 +192,7 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
 
   /** Unlock audio playback on iOS. MUST run inside a user gesture (Begin tap). */
   const unlock = useCallback(() => {
-    const a = ensureAudioEl();
-    try {
-      a.muted = true;
-      a.src = silentAudioUrl();
-      const p = a.play();
-      if (p && typeof (p as Promise<void>).then === 'function') {
-        (p as Promise<void>)
-          .then(() => { try { a.pause(); a.currentTime = 0; } catch { /* noop */ } a.muted = false; })
-          .catch(() => { a.muted = false; });
-      } else {
-        a.muted = false;
-      }
-    } catch {
-      a.muted = false;
-    }
+    unlockElement(ensureAudioEl());
   }, [ensureAudioEl]);
 
   /** Fetch audio blob (from cache or API). Does NOT play it. */

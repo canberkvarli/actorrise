@@ -21,6 +21,8 @@ import {
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTrialWords } from '@/hooks/useTrialWords';
 import { GATE_COPY } from '@/lib/paywall/copy';
+import { clearHandoff, readHandoff } from '@/lib/guided-handoff';
+import { SceneWin } from '@/components/rehearse/SceneWin';
 import { Button } from '@/components/ui/button';
 import { ColdReadPrep } from '@/components/rehearse/ColdReadPrep';
 import {
@@ -53,8 +55,6 @@ import {
 } from '@/lib/scenepartnerStorage';
 import { MicAccessWarning } from '@/components/scenepartner/MicAccessWarning';
 import { useMicPermission } from '@/hooks/useMicPermission';
-import { TTSWaveform } from '@/components/scenepartner/TTSWaveform';
-import { AudioWaveform } from '@/components/scenepartner/AudioWaveform';
 import { parseUpgradeError } from '@/lib/upgradeError';
 import { UpgradeModal } from '@/components/billing/UpgradeModal';
 import { cn } from '@/lib/utils';
@@ -67,7 +67,6 @@ import { trackEvent } from '@/lib/events';
 import { GuidedCoachLine } from '@/components/rehearse/GuidedCoachLine';
 import { GuidedStage } from '@/components/rehearse/GuidedStage';
 import type { CoachState } from '@/lib/guided-coach';
-import { UploadScriptButton } from '@/components/practice/UploadScriptButton';
 import { useTheme } from 'next-themes';
 
 /** Pure dialogue for TTS — strips both [bracket] and (paren) stage directions. */
@@ -1770,6 +1769,28 @@ function RehearsalPageInner() {
   useEffect(() => {
     if (autoBeganRef.current) return;
     if (!focusInitialized || armed || showFeedback || error) return;
+
+    // Come from the hub's Answer, seconds ago: that tap asked for the mic and
+    // started the audio element this page speaks through. Nothing is left for
+    // a Begin screen to do, and on an iPhone the probe below can never say
+    // "granted", so without this every first scene there opened on a second
+    // screen and a second button. A refused mic walks on too, into tap mode.
+    // If the browser still will not play the opening line, onError hands the
+    // scene back to the gate.
+    if (guided) {
+      let cameFromTheTap = false;
+      try {
+        cameFromTheTap = readHandoff(sessionStorage, Date.now()) !== null;
+        clearHandoff(sessionStorage);
+      } catch { /* no storage: ask the browser, as before */ }
+      if (cameFromTheTap) {
+        autoBeganRef.current = true;
+        beganWithoutGestureRef.current = true;
+        void handleBegin();
+        return;
+      }
+    }
+
     // null means the permission probe has not answered yet. Waiting is what
     // keeps the gate from flashing up in front of a scene we are about to start.
     if (micStatus === null) return;
@@ -2602,6 +2623,25 @@ function RehearsalPageInner() {
     const playTitle = sceneWithLines?.play_title || '';
     const showPlayTitle = playTitle && playTitle.toLowerCase() !== sceneTitle.toLowerCase();
 
+    // The first scene ends on a page of its own, not on the review with its
+    // contents hidden: see components/rehearse/SceneWin. The trial ask rides
+    // on it as one line, with the same offer, caps and tracking as the card,
+    // so the hook never counts a "show" nobody saw.
+    if (guided) {
+      return (
+        <div className={cn("fixed inset-0 z-[10050] overflow-auto", STAGE_SURFACE)}>
+          <SceneWin
+            offer={completionOffer}
+            trial={trialWords}
+            onAgain={handleRestart}
+            restarting={isRestarting}
+            onLeave={handleExit}
+            leaveLabel="back to the room"
+          />
+        </div>
+      );
+    }
+
     return (
       <div className={cn("fixed inset-0 flex flex-col z-[10050]", STAGE_SURFACE)}>
         <div className="flex-1 overflow-auto flex justify-center px-4 pt-10 pb-4">
@@ -2610,51 +2650,21 @@ function RehearsalPageInner() {
             animate={{ opacity: 1, y: 0 }}
             className="w-full max-w-3xl space-y-6"
           >
-            {/* Header. Not on the first scene: the card below is the whole screen. */}
-            {!guided && (
-              <div className="text-center space-y-2">
-                <p className={cn("text-sm uppercase tracking-widest font-medium", STAGE_INK_FAINT)}>Scene Complete</p>
-                <h1 className={cn("text-2xl font-bold", STAGE_INK)}>{sceneTitle}</h1>
-                {showPlayTitle && (
-                  <p className={cn("text-sm", STAGE_INK_FAINT)}>from {playTitle}</p>
-                )}
-              </div>
-            )}
+            {/* The scene's name, in the room's own type: a direction, then the
+                title in the display face. It was an uppercase grey label over
+                a bold sans heading, the app's default, on a theatre page. */}
+            <div className="t-review-head">
+              <p className="t-win__dir">{firstRun ? '(lights down. that was your first.)' : '(lights down.)'}</p>
+              <h1 className="t-review-head__title">{sceneTitle}</h1>
+              {showPlayTitle && (
+                <p className="t-review-head__from">from {playTitle}</p>
+              )}
+            </div>
 
             {/* One next step, never two. The trial offer wins when it is live,
                 because the step it asks for (run your OWN sides) is the same
                 step, and it is the one an actor has just earned the taste of. */}
-            {guided ? (
-              // One next step, and it is theirs. The trial card yields here:
-              // nobody has seen their own sides run yet.
-              <div className="rounded-lg border border-primary/30 bg-primary/10 p-5 text-center space-y-3">
-                <p className={cn("text-base font-semibold", STAGE_INK)}>That was your first scene.</p>
-                <p className={cn("text-sm", STAGE_INK_SOFT)}>That was mine. Now yours.</p>
-                <div className="flex justify-center">
-                  <UploadScriptButton variant="primary">Bring in your sides</UploadScriptButton>
-                </div>
-                <p className={cn("text-xs", STAGE_INK_FAINT)}>A PDF or a text file. The scenes and characters pull themselves out.</p>
-                {/* The one step stays the upload. This is a footnote for the actor
-                    who already knows they want the whole room: the same offer,
-                    caps and tracking as the card it replaces here, on one line.
-                    Without it the hook still counted a "show" nobody saw. */}
-                {completionOffer.visible && (
-                  <p className={cn("text-xs pt-1", STAGE_INK_FAINT)}>
-                    {trialWords.earned
-                      ? 'Finishing that earned you a second week. '
-                      : 'Or take the whole room: '}
-                    <a
-                      href={completionOffer.href}
-                      onClick={completionOffer.accept}
-                      className="underline underline-offset-2 text-[var(--t-orange)]"
-                    >
-                      Plus, {trialWords.span} free
-                    </a>
-                    .
-                  </p>
-                )}
-              </div>
-            ) : completionOffer.visible ? (
+            {completionOffer.visible ? (
               <TrialOfferCard
                 headline={firstRun ? 'That was your first scene.' : GATE_COPY.scene_completed.headline}
                 body={GATE_COPY.scene_completed.body}
@@ -2664,27 +2674,22 @@ function RehearsalPageInner() {
               />
             ) : (
               firstRun && (
-                <div className="rounded-lg border border-primary/30 bg-primary/10 p-5 text-center space-y-3">
-                  <p className={cn("text-base font-semibold", STAGE_INK)}>
-                    That was your first scene.
+                <div className="t-review-next">
+                  <p className="t-win__house" style={{ marginTop: 0 }}>
+                    Now bring in something that&apos;s yours and run it the same way.
                   </p>
-                  <p className={cn("text-sm", STAGE_INK_SOFT)}>
-                    Now bring in something that&apos;s actually yours and run it the
-                    same way.
-                  </p>
-                  <Button
+                  <button
+                    type="button"
                     onClick={() => router.push('/practice')}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    className="t-win__alt"
                   >
                     Bring in your own sides
-                  </Button>
+                  </button>
                 </div>
               )
             )}
 
-            {/* The review: duration, the playback, the transcript. Not on the
-                first scene, which asked for one thing and ends on one card. */}
-            {!guided && (<>
+            {/* The review: duration, the playback, the transcript. */}
             {/* How long the run took, and nothing else.
                 There used to be a completion and an accuracy percentage here.
                 Both were word-match scores against a speech-to-text transcript,
@@ -2797,7 +2802,6 @@ function RehearsalPageInner() {
                 })}
               </div>
             </div>
-            </>)}
           </motion.div>
         </div>
 
@@ -2812,7 +2816,7 @@ function RehearsalPageInner() {
               className={cn("text-sm transition-colors flex items-center gap-1.5 hover:text-neutral-900 dark:hover:text-neutral-100", STAGE_INK_FAINT)}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              {guided ? 'Back to the room' : 'Back to Script'}
+              Back to Script
             </button>
             {/* Cold read is one take — no restarts. */}
             {!coldRead && (
@@ -2847,8 +2851,11 @@ function RehearsalPageInner() {
           className={cn("absolute inset-0 z-40", STAGE_BG)}
         />
       )}
-      {/* Loading cover */}
-      {(!focusInitialized || (countdown !== null && countdown > 0)) && (
+      {/* Loading cover. On the first scene it holds until the scene has either
+          begun or been handed to the gate: without that the six lines showed
+          for the beat the mic probe took, and then the Begin screen came down
+          over them. A script, then a screen about the script. */}
+      {(!focusInitialized || (countdown !== null && countdown > 0) || (guided && !armed && !gateChecked && !showFeedback && !error)) && (
         <div className={cn("absolute inset-0 z-20 flex items-center justify-center", STAGE_BG)}>
           {!focusInitialized && (
             <div className={cn("h-8 w-8 rounded-full border-2 border-t-primary animate-spin", STAGE_RULE)} />
@@ -2870,13 +2877,16 @@ function RehearsalPageInner() {
             {sceneWithLines && (
               <div className="max-w-md">
                 {guided ? (
+                  /* Only reached on a reload or a link straight in: from the
+                     hub the Answer tap walks on without this. Set in the
+                     invitation's own type, so it is the same room. */
                   <>
-                    <p className={cn("text-xs uppercase tracking-widest", STAGE_INK_FAINT)}>Your first scene</p>
-                    <h2 className={cn("mt-2 text-2xl font-semibold", STAGE_INK)}>
+                    <p className="t-invite__cue">{session?.ai_character ?? 'your partner'}</p>
+                    <h2 className="g-gate__line">
                       I&apos;ll read {session ? titleCaseName(session.ai_character) : 'the other part'}.
                     </h2>
-                    <p className={cn("mt-1 text-sm", STAGE_INK_SOFT)}>
-                      When the dot turns green, say your line.
+                    <p className="t-invite__house" style={{ marginTop: 10 }}>
+                      Say your line when it&apos;s yours.
                     </p>
                   </>
                 ) : (
@@ -2892,15 +2902,27 @@ function RehearsalPageInner() {
                 )}
               </div>
             )}
-            <Button
-              onClick={handleBegin}
-              disabled={checkingMic}
-              className="min-h-[52px] px-8 text-base"
-              style={{ backgroundColor: 'var(--primary)' }}
-            >
-              <Play className="mr-2 h-5 w-5" />
-              {checkingMic ? 'Checking your mic…' : guided ? 'Begin' : 'Begin scene'}
-            </Button>
+            {guided ? (
+              <button
+                type="button"
+                onClick={handleBegin}
+                disabled={checkingMic}
+                className="t-invite__answer"
+                style={{ marginTop: 0 }}
+              >
+                {checkingMic ? 'One moment' : 'Begin'}
+              </button>
+            ) : (
+              <Button
+                onClick={handleBegin}
+                disabled={checkingMic}
+                className="min-h-[52px] px-8 text-base"
+                style={{ backgroundColor: 'var(--primary)' }}
+              >
+                <Play className="mr-2 h-5 w-5" />
+                {checkingMic ? 'Checking your mic…' : 'Begin scene'}
+              </Button>
+            )}
             {/* Say which scene we are in. Promising "just speak" to someone whose
                 mic is blocked is how a silent room reads as a broken product. */}
             {isMicBlocked ? (
@@ -3025,9 +3047,6 @@ function RehearsalPageInner() {
                   ? renderLineWithSpokenSweep(text, aiSpokenIndex)
                   : renderTextWithStageDirections(text)
               }
-              isListening={isListening}
-              partnerSpeaking={isSpeakingAI}
-              partnerLoading={isLoadingAI}
               coach={coach}
               tapMode={isMicBlocked}
               isUserTurn={isUserTurn}
@@ -3037,8 +3056,6 @@ function RehearsalPageInner() {
               onSkip={handleManualAdvance}
               onLeave={() => { handlePause(); setShowPausePlayOverlay(null); setShowExitModal(true); }}
               currentLineRef={currentLineRef}
-              analyserRef={analyserRef}
-              aiAudioElement={aiAudioRef.current}
             />
           </div>
         ) : (
@@ -3165,25 +3182,11 @@ function RehearsalPageInner() {
                         </span>
                       </div>
 
-                      {/* Waveform row — always reserved, prevents layout shift */}
-                      <div className="flex justify-center mb-2">
-                        {isCurrentAiLine ? (
-                          <TTSWaveform
-                            audioElement={aiAudioRef.current}
-                            isLoading={isLoadingAI}
-                            isSpeaking={isSpeakingAI}
-                            className="w-32 h-4"
-                          />
-                        ) : isCurrentUserLine ? (
-                          <AudioWaveform
-                            analyserRef={analyserRef}
-                            active={isListening}
-                            className="w-32 h-4"
-                          />
-                        ) : (
-                          <div className="w-32 h-4" />
-                        )}
-                      </div>
+                      {/* No waveform. A row of bars bouncing under every line is
+                          what a phone call looks like, and it said nothing the
+                          page does not already say: the words light as the
+                          partner speaks them and underline as yours are heard,
+                          and the dot in the bar below says the mic is open. */}
 
                       {/* Line text — live highlights while listening, post-result highlights after */}
                       <p className="text-[17px] font-semibold leading-relaxed text-black text-center break-words whitespace-pre-wrap">

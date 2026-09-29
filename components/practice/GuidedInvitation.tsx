@@ -12,6 +12,8 @@ import {
   GUIDED_OPENING_LINE,
   GUIDED_PARTNER,
 } from "@/lib/guided-scene";
+import { writeHandoff } from "@/lib/guided-handoff";
+import { primeAudio } from "@/lib/primed-audio";
 import { useUpload } from "@/components/practice/UploadProvider";
 
 type StartedSession = { id: number; scene_id: number };
@@ -85,6 +87,10 @@ export function GuidedInvitation() {
 
   const answer = async () => {
     if (starting) return;
+    // First, and before anything is awaited: the audio element the partner
+    // will speak through, started by THIS tap. An iPhone plays nothing from
+    // code on an element no gesture has touched (lib/primed-audio).
+    primeAudio();
     setStarting(true);
     setFailed(false);
     // Ask for the mic here, inside the tap, with the line still on screen. On
@@ -93,9 +99,19 @@ export function GuidedInvitation() {
     // Android both ended there inside five seconds. Granted once, the page
     // finds the mic ready and goes straight on stage; denied, it runs in tap
     // mode. The tracks are released at once; only the permission is kept.
+    //
+    // The answer is written down for the rehearse page, because on an iPhone
+    // it cannot find out for itself: neither Safari nor Chrome there will say
+    // whether the mic is granted, so the page read "unknown" and put its Begin
+    // screen up anyway (lib/guided-handoff).
+    let mic: "granted" | "denied" = "denied";
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((t) => t.stop());
+      mic = "granted";
+    } catch {}
+    try {
+      writeHandoff(sessionStorage, mic, Date.now());
     } catch {}
     try {
       const { data } = await api.post<StartedSession>("/api/scenes/rehearse/start-guided", {});
