@@ -16,26 +16,44 @@
 
 ## Status, 2026-09-29
 
-**All five phases are built on the branch. Nothing is merged, deployed, applied to prod, or switched on.**
+**Merged to main and pushed 2026-09-29, together with `feat/mobile-first-run`.** Canberk's word: "merge".
 
-| Check | Result |
+| Check, run on the merged tip before the push | Result |
 |---|---|
-| Backend tests | 1,759 pass (1,702 before this branch) |
-| Frontend tests | 199 pass (169 before) |
+| Backend tests | 1,759 pass (1,702 before this work) |
+| Frontend tests | 207 pass (169 before) |
 | `tsc --noEmit` | clean |
-| ESLint on files this branch added | clean |
-| Seen in a browser | **no.** Nothing here has been looked at running. |
+| `next build` | compiles, 594 static pages |
+| Rendered at 390px, logged in, light and dark | login, search, hub, the "Late" scene end to end, the end page |
+| On a real iPhone | **not yet** |
 
-### To go live, in this order
+### Done
 
-1. **Canberk looks at it running.** Especially: the strip above the Rehearse bar on a phone (`/monologue/<id>`), the "Finish a scene first and it's two weeks." line under each price, and `/checkout` saying "A week, on me."
-2. **Canberk reads the marketing line** on `/pricing` and the landing pricing block: "then a week of Plus free, two if you finish a scene". That commit (`4c9e805b`) is separate so it can wait.
-3. Apply `backend/scripts/add_funnel_daily_view.sql` on Supabase. Additive.
-4. Apply `backend/scripts/widen_lifecycle_touch.sql` on Supabase. Additive. Must be before step 7.
-5. Merge to main and push. Render deploys the backend, Vercel the frontend. From here the trial is 7 or 14 days for everyone and the new asks are live.
-6. Canberk reads the three emails in `backend/emails/lifecycle/` and sends himself the set: `uv run python scripts/triggered_emails.py --test canberk@actorrise.com`.
-7. Switch on "Triggered emails" in `/admin/emails`.
-8. Decide Task B5 (the reply-CURTAIN Stripe link still runs 14 days).
+- [x] `backend/scripts/widen_lifecycle_touch.sql` applied to prod. `touch` is `varchar(32)`, 681 rows untouched, the UNIQUE still there.
+- [x] `backend/scripts/add_funnel_daily_view.sql` applied to prod. `security_invoker=true`, no grant to anon or authenticated.
+- [x] Merged and pushed. The trial is 7 or 14 days for everyone, the two new asks are live, and the pricing line reads "then a week of Plus free, two if you finish a scene".
+
+### Still Canberk's
+
+1. **On an iPhone:** does Riley's first line play after Answer with no Begin screen, and does the bottom menu sit still against Chrome's toolbar. Neither can be shown in a desktop browser.
+2. **A brand-new account:** sign up, see the onboarding card on the hub, close it, see "You're late." underneath.
+3. **Read the three emails** in `backend/emails/lifecycle/`, send yourself the set (`uv run python scripts/triggered_emails.py --test canberk@actorrise.com`), then switch on "Triggered emails" in `/admin/emails`. They are OFF and stay off until then.
+4. **Two Stripe trials end by 2026-10-01.** See `outputs/conversion/2026-09-29.md`, section 3.
+5. Decide Task B5 (the reply-CURTAIN Stripe link still runs 14 days, and CLAUDE.md still says the in-app trial is 14).
+
+### Read week 1 on 2026-10-06
+
+```sql
+select * from funnel_daily where d >= '2026-09-29' order by d;
+
+select properties->>'gate' gate, properties->>'kind' kind,
+       count(*) hits, count(distinct user_id) users
+from user_events
+where event_name = 'paywall_hit' and created_at >= '2026-09-29'
+group by 1, 2 order by 3 desc;
+```
+
+Against the baseline at the foot of this file. `paywall_hits` was 0 on every day before the deploy because the name did not exist.
 
 ### Where what shipped differs from the tasks below
 
@@ -1343,7 +1361,7 @@ Phase 2 (partner outreach agents, B2B prospecting) waits until `price_seen` show
 
 ## Shipped log
 
-On `feat/conversion-phase1`. Not merged.
+On `feat/conversion-phase1`, merged 2026-09-29. The three commits of `feat/mobile-first-run` went in with it.
 
 | Date | Commit | What |
 |---|---|---|
