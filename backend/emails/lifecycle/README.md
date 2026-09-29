@@ -14,13 +14,16 @@ subject: the subject line
 the body, exactly as it should read.
 ```
 
-Three placeholders, filled per person:
+Placeholders, filled per person:
 
 | Placeholder | Becomes |
 |---|---|
 | `{name}` | first name, lowercase. With no name the greeting is just `hey,` |
 | `{link}` | the one link, carrying `?e=<touch>` so a click is counted |
 | `{span}` | the trial this person would get: `a week`, or `two weeks` once they have finished a scene |
+| `{date}` | `trial_ending` only: the day the card is charged, e.g. `thursday, october 1` |
+| `{amount}` | `trial_ending` only: what is charged, `$12` or `$99` |
+| `{every}` | `trial_ending` only: `month` or `year` |
 
 ## Rules a test holds every file to
 
@@ -37,12 +40,17 @@ Three placeholders, filled per person:
 
 | Touch | Sent | To | Not if |
 |---|---|---|---|
+| `trial_ending` | 1 to 3 days before the card is charged | everyone on a Stripe trial | they already cancelled |
 | `checkout_abandoned` | 2 hours after `checkout_started` | anyone who started a checkout | the checkout finished |
 | `trial_ended_no_pay` | 1 day after the trial ended | a Stripe trial that did not convert | they are paying now |
 | `paywall_seen_no_trial` | 1 day after hitting a wall | someone a free limit stopped | they started a checkout since, or have had a Stripe subscription before |
 
 Everyone: opted in, not staff, not on the do-not-contact list, no more than 2 lifecycle
 emails in 7 days, each touch once ever.
+
+`trial_ending` is the exception, because it is a notice about a charge and not an ask. It
+goes whether or not the person opted in to marketing, and the weekly cap cannot hold it
+back. Someone who asked to be left alone, or whose address bounced, still does not get it.
 
 ## Open question for Canberk
 

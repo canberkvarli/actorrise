@@ -190,6 +190,111 @@ class PaywallSeenNoTrial(Fixture):
         self.assertEqual(self._emails("paywall_seen_no_trial"), [])
 
 
+class TrialEnding(Fixture):
+    """The notice that a card is about to be charged."""
+
+    def setUp(self):
+        super().setUp()
+        self.plus = PricingTier(
+            name="plus", display_name="Plus", monthly_price_cents=1200,
+            annual_price_cents=9900, features={},
+        )
+        self.db.add(self.plus)
+        self.db.commit()
+
+    def _trial(self, user, ends_in_hours, *, stripe="sub_1", period="monthly", cancelled=False,
+               status="trialing"):
+        self.db.add(
+            UserSubscription(
+                user_id=user.id, tier_id=self.plus.id, status=status, billing_period=period,
+                stripe_subscription_id=stripe, cancel_at_period_end=cancelled,
+                trial_end=NOW + timedelta(hours=ends_in_hours), source="stripe" if stripe else "manual",
+            )
+        )
+        self.db.commit()
+
+    def test_it_goes_one_to_three_days_before_the_charge(self):
+        for email, hours in (("today@x.com", 10), ("due@x.com", 40), ("later@x.com", 100)):
+            self._trial(self._user(email), hours, stripe=f"sub_{hours}")
+        self.assertEqual(self._emails("trial_ending"), ["due@x.com"])
+
+    def test_it_says_what_and_when(self):
+        self._trial(self._user("due@x.com"), 40)
+        (p,) = triggered.select_candidates(self.db, "trial_ending", now=NOW)
+        ends = NOW + timedelta(hours=40)
+        self.assertEqual(p["amount"], "$12")
+        self.assertEqual(p["every"], "month")
+        self.assertEqual(p["date"], f"{ends:%A, %B} {ends.day}".lower())
+        self.assertEqual(p["link"], "https://actorrise.com/billing?e=trial_ending")
+        subject, html, plain = triggered.render(p, None)
+        self.assertEqual(subject, f"your trial ends {p['date']}")
+        self.assertIn(f"your card is charged $12 that day, and every month after", plain)
+        self.assertIn("cancel before then and you won't be charged", plain)
+        self.assertNotRegex(plain + subject + html, r"\{[a-z_]+\}")
+
+    def test_a_yearly_trial_names_the_yearly_price(self):
+        self._trial(self._user("year@x.com"), 40, period="annual")
+        (p,) = triggered.select_candidates(self.db, "trial_ending", now=NOW)
+        self.assertEqual((p["amount"], p["every"]), ("$99", "year"))
+
+    def test_a_comp_is_never_told_it_will_be_charged(self):
+        # 34 of 39 trialing rows on 2026-09-29: granted by hand, no Stripe
+        # subscription, nothing will ever charge them.
+        self._trial(self._user("teacher@x.com"), 40, stripe=None)
+        self.assertEqual(self._emails("trial_ending"), [])
+
+    def test_already_cancelled_gets_nothing(self):
+        self._trial(self._user("gone@x.com"), 40, cancelled=True)
+        self.assertEqual(self._emails("trial_ending"), [])
+
+    def test_only_a_trial(self):
+        self._trial(self._user("paying@x.com"), 40, status="active")
+        self.assertEqual(self._emails("trial_ending"), [])
+
+    def test_it_is_owed_whether_or_not_they_take_marketing(self):
+        self._trial(self._user("quiet@x.com", opt_in=False), 40)
+        self.assertEqual(self._emails("trial_ending"), ["quiet@x.com"])
+
+    def test_the_cap_cannot_swallow_it(self):
+        u = self._user("busy@x.com")
+        self._trial(u, 40)
+        self._sent(u, "day3", 60)
+        self._sent(u, "day10", 20)
+        self.assertEqual(self._emails("trial_ending"), ["busy@x.com"])
+
+    def test_being_on_a_trial_does_not_disqualify_the_trial_notice(self):
+        u = self._user("trialing@x.com")
+        self._trial(u, 40)
+        self.db.add(EmailDoNotContact(email="trialing@x.com", reason="paid_subscriber"))
+        self.db.commit()
+        with mock.patch.object(lifecycle, "_paid_user_ids", lambda db: {u.id}):
+            self.assertEqual(self._emails("trial_ending"), ["trialing@x.com"])
+
+    def test_someone_who_said_stop_is_still_left_alone(self):
+        self._trial(self._user("stop@x.com"), 40)
+        self.db.add(EmailDoNotContact(email="stop@x.com", reason="OPT-OUT: replied unsubscribe"))
+        self.db.commit()
+        self.assertEqual(self._emails("trial_ending"), [])
+
+    def test_staff_and_unreachable_addresses(self):
+        for i, (email, kw) in enumerate((
+            ("staff@x.com", {"exclude_from_stats": True}),
+            ("ghost@anon.actorrise.com", {}),
+            ("hide@privaterelay.appleid.com", {}),
+        )):
+            self._trial(self._user(email, **kw), 40, stripe=f"sub_s{i}")
+        self.assertEqual(self._emails("trial_ending"), [])
+
+    def test_once(self):
+        u = self._user("once@x.com")
+        self._trial(u, 40)
+        self._sent(u, "trial_ending", 5)
+        self.assertEqual(self._emails("trial_ending"), [])
+
+    def test_it_goes_first(self):
+        self.assertEqual(triggered.PRIORITY[0], "trial_ending")
+
+
 class SharedRules(Fixture):
     def test_opted_out_staff_and_unreachable_are_skipped(self):
         for email, kw in (
@@ -280,7 +385,7 @@ class RunAll(Fixture):
     def test_preview_sends_and_claims_nothing(self):
         self._event(self._user("due@x.com"), "checkout_started", 3)
         stats = triggered.run_all(send=False, now=NOW)
-        self.assertEqual([s["eligible"] for s in stats], [1, 0, 0])
+        self.assertEqual([s["eligible"] for s in stats], [0, 1, 0, 0])
         self.assertEqual(self.sent, [])
         self.assertEqual(self.db.query(LifecycleEmailSend).count(), 0)
 
@@ -294,7 +399,7 @@ class RunAll(Fixture):
     def test_the_preview_shows_each_person_once(self):
         self._due_for_two()
         stats = triggered.run_all(send=False, now=NOW)
-        self.assertEqual([s["eligible"] for s in stats], [1, 0, 0])
+        self.assertEqual([s["eligible"] for s in stats], [0, 1, 0, 0])
 
     def test_one_person_gets_the_highest_priority_touch_only(self):
         self._due_for_two()
@@ -341,7 +446,7 @@ class RunAll(Fixture):
 
         with mock.patch.object(triggered, "ResendEmailClient", Broken):
             stats = triggered.run_all(send=True, now=NOW)
-        self.assertEqual(stats[0]["failed"], 1)
+        self.assertEqual(stats[1]["failed"], 1)
         self.assertEqual(self.recorded, [])
         triggered.run_all(send=True, now=NOW)
         self.assertEqual(self.sent, [])
@@ -373,7 +478,8 @@ class CopyTests(unittest.TestCase):
         for touch in triggered.TRIGGERS:
             subject, html, plain = triggered.render(
                 {"touch": touch, "user_name": "Maya Lopez", "link": "https://actorrise.com/x",
-                 "span": "two weeks"},
+                 "span": "two weeks", "date": "thursday, october 1", "amount": "$12",
+                 "every": "month"},
                 "https://actorrise.com/unsubscribe?t=1",
             )
             for out in (subject, html, plain):

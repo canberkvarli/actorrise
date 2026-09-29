@@ -48,10 +48,11 @@ email to do. Two more things:
 - User 2127 has `trial_ended: converted` but no `trial_converted` row. Only 1939
   has both. `funnel_daily.paid` reads `trial_converted`, so it would undercount.
   Worth finding out why before trusting that column.
-- Trial emails already exist. Stripe's `customer.subscription.trial_will_end`
-  calls `send_trial_ending_notification` (webhooks.py:649). The spec's
-  `trial_ending` touch would send a second email about the same thing.
-  `send_trial_ended_notification` (webhooks.py:631) also exists.
+- ~~Trial emails already exist, so the spec's `trial_ending` would be a second
+  email about the same thing.~~ **Wrong, corrected the same day.**
+  `send_trial_ending_notification` and `send_trial_ended_notification` both
+  send to the founder, not the actor. The spec was right to ask for
+  `trial_ending`, and it has been built.
 
 ## 3. Conflicts with what is shipped
 
