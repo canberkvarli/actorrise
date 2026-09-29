@@ -108,7 +108,12 @@ LINK LENGTHS DIFFER, CHECK BEFORE SENDING. Three live Stripe payment links exist
 - `00w6oJgG8gjAaVSgsl6g801` — Plus $99/yr, **90-day** trial. Older founder-era link, do NOT send with 2-week copy.
 - `28EbJ30Had7o1li8ZT6g800` — Pro $199/yr, **90-day** trial.
 
-The in-app upgrade path (UpgradeModal → `/api/subscriptions/checkout` with `trial=true`) is a separate 14-day trial set in `backend/app/api/subscriptions.py`. It already matches the 2-week copy.
+THE IN-APP TRIAL IS NOT 2 WEEKS FOR EVERYONE (changed 2026-09-29). Inside the app the trial is **1 week, and 2 weeks for an actor who has finished a scene**. The server decides (`backend/app/services/trial_length.py`) and every surface prints what `/api/subscriptions/me` returns as `trial_days`. It rolls into Plus monthly at $12. So:
+- The Stripe link above is still 14 days, and copy that sends THAT link still says "2 weeks free".
+- Copy that sends someone into the app (`actorrise.com/trial`, a wall, an ask) must NOT promise a length by hand. The three triggered emails fill `{span}` per person for this reason.
+- Whether the email link should drop to 7 days to match is open, Canberk's call.
+
+Automated emails to people who looked at a price live in `backend/emails/lifecycle/*.txt` and send from `backend/app/services/email/triggered.py`. They are OFF until the "Triggered emails" switch in `/admin/emails` is turned on. `/conversion-loop` is the daily run that reads the funnel and the inbox and leaves drafts; it never sends.
 
 PREFILLED-EMAIL RULE (critical, do not skip): when someone replies CURTAIN, send them the link with their email appended as `?prefilled_email=<their address>`, using the exact address they replied from (that is their ActorRise account email). Example: https://buy.stripe.com/00w8wR4Xqd7o7JGa3X6g802?prefilled_email=giosboss4@gmail.com . The webhook grants Plus by matching the checkout email to their ActorRise account, so a prefilled link makes the match automatic. Never send the bare base link to a specific person, and do not embed the link in cold outreach (only send after a CURTAIN reply).
 
