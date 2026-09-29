@@ -109,6 +109,13 @@ data-gym-cache/
 # up in git status instead of vanishing into an ignore rule.
 /notes/
 
+# Lists of real people. backend/scripts/outreach/export.py writes names and
+# email addresses to the first; the daily conversion brief
+# (backend/scripts/conversion_brief.py) writes them to the second. Neither is
+# ever source.
+/outreach/founder/
+/outputs/conversion/
+
 # Editor swap and backup files. app/.globals.css.swp was committed once from a
 # live Vim session; nothing stopped it.
 *.swp
