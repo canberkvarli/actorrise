@@ -100,8 +100,10 @@ describe('VoiceGate', () => {
   });
 
   it('treats digital silence as no microphone, not as a quiet room to speak over', () => {
-    // A muted or absent mic reads -Infinity / -100. A blip to -85 is not a voice.
-    expect(fresh([[1000, -100], [1000, -85]]).every(none)).toBe(true);
+    // A muted or absent mic reads -Infinity / -100. A blip to -92 is not a
+    // voice. (It used to be -85 against a -70 minimum; -70 was cutting real
+    // speech on low-gain inputs, so the minimum is -90 now.)
+    expect(fresh([[1000, -100], [1000, -92]]).every(none)).toBe(true);
   });
 
   it('carries the room across takes and rides out the next warm-up', () => {

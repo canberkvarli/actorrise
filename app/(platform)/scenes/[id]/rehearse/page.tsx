@@ -1844,7 +1844,9 @@ function RehearsalPageInner() {
 
     // Kill any lingering SR instance from a previous line
     if (liveRecognitionRef.current) {
-      try { liveRecognitionRef.current.onend = () => {}; liveRecognitionRef.current.stop(); } catch {}
+      // The old instance's teardown fires 'aborted' after this take has begun,
+      // which was landing on the new take's diagnostics as its error.
+      try { liveRecognitionRef.current.onend = () => {}; liveRecognitionRef.current.onerror = () => {}; liveRecognitionRef.current.stop(); } catch {}
       liveRecognitionRef.current = null;
     }
 
@@ -2264,7 +2266,8 @@ function RehearsalPageInner() {
     guidedFinishedRef.current = true;
     trackEvent('guided_scene_finished', {
       lines_heard: linesDelivered,
-      tap_mode: isMicBlocked || speechIsBroken,
+      tap_mode: isMicBlocked,
+      sr_broken: speechIsBroken,
       take_ms_total: Date.now() - sessionStartTimeRef.current,
     });
   }, [guided, showFeedback, linesDelivered, isMicBlocked, speechIsBroken]);
@@ -2976,7 +2979,11 @@ function RehearsalPageInner() {
               micOpen={isListening}
               linesHeard={linesDelivered}
               voicedThisTake={heardAnySpeech}
-              tapMode={isMicBlocked || speechIsBroken}
+              // Only a blocked mic means tapping. A broken live recogniser is
+              // not: Whisper still hears the take. iOS Safari always reports
+              // service-not-allowed, and telling those actors to tap each line
+              // had them tapping through the scene without saying a word.
+              tapMode={isMicBlocked}
               onState={setCoach}
               dotClass={cn(statusInfo.color, statusInfo.pulse && 'animate-pulse')}
             />
@@ -3000,7 +3007,7 @@ function RehearsalPageInner() {
               partnerSpeaking={isSpeakingAI}
               partnerLoading={isLoadingAI}
               coach={coach}
-              tapMode={speechIsBroken}
+              tapMode={isMicBlocked}
               isUserTurn={isUserTurn}
               isTranscribing={isTranscribing}
               shouldShake={shouldShake}

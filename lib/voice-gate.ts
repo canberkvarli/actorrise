@@ -50,7 +50,12 @@ const DEFAULTS: Required<VoiceGateOptions> = {
   floorCreepDbPerSec: 1,
   floorFallDbPerSec: 40,
   warmupMs: 250,
-  minVoiceDb: -70,
+  // -70 cut real speech on low-gain inputs: iOS Safari and several desktop
+  // mics sat at floors of -78 to -99 dB with speech peaks under -70, so the
+  // gate heard nothing, every take ran to the 10 s blind arm, and Whisper
+  // then transcribed the line perfectly (2026-09-28, 10 of 26 guided lines).
+  // The floor margin is the real test; this only refuses digital silence.
+  minVoiceDb: -90,
 };
 
 /** Level to assume when the analyser reports -Infinity (a fully silent frame). */
