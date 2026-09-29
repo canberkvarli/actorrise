@@ -136,6 +136,29 @@ def _sync_from_stripe_subscription(subscription: UserSubscription, stripe_sub: d
         print(f"Warning: could not sync subscription from Stripe: {e}")
 
 
+def _trial_days_of(meta: dict, subscription_id: str | None) -> int:
+    """Trial length in days: from our metadata, else from the subscription.
+
+    Payment-link checkouts (the reply-CURTAIN flow) carry no app metadata at
+    all, but they do run a real trial. Its length is read back off Stripe so
+    those conversions are not invisible. Never raises.
+    """
+    try:
+        days = int(meta.get("trial_days") or 0)
+    except (TypeError, ValueError):
+        days = 0
+    if days or not subscription_id:
+        return days
+    try:
+        sub = stripe.Subscription.retrieve(subscription_id)
+        start, end = sub.get("trial_start"), sub.get("trial_end")
+        if start and end:
+            return round((end - start) / 86400)
+    except Exception:
+        pass
+    return 0
+
+
 def handle_checkout_completed(session: dict, db: Session):
     """
     Handle successful checkout.
@@ -222,6 +245,37 @@ def handle_checkout_completed(session: dict, db: Session):
 
     print(f"✅ Checkout completed for user {user_id} - {billing_period} subscription")
 
+    trial_days = _trial_days_of(meta, session.get("subscription"))
+
+    # The checkout and the trial, in Postgres. GA4 gets the trial below, and
+    # GA4 cannot be joined to a users row: on 2026-09-29 the one
+    # checkout_started on record had no way to say whether it ever finished.
+    # One row per subscription, because Stripe retries.
+    try:
+        from app.services.events import record_subscription_event
+
+        _tier_row = db.query(PricingTier).filter(PricingTier.id == tier_id).first()
+        record_subscription_event(
+            db,
+            user_id,
+            "checkout_completed",
+            session.get("subscription"),
+            tier=_tier_row.name if _tier_row else "plus",
+            billing_period=billing_period,
+            trial=trial_days > 0,
+        )
+        if trial_days > 0:
+            record_subscription_event(
+                db,
+                user_id,
+                "trial_started",
+                session.get("subscription"),
+                trial_days=trial_days,
+                earned=meta.get("trial_earned") == "1",
+            )
+    except Exception as e:
+        print(f"Warning: checkout events not recorded: {e}")
+
     # GA4: the money path. Fired here rather than in the browser because the
     # success page is one closed tab away from never loading, and ad blockers
     # eat client-side purchase events. Never allowed to raise: a failure here
@@ -229,19 +283,6 @@ def handle_checkout_completed(session: dict, db: Session):
     # twice.
     try:
         from app.services.analytics import track_trial_started
-
-        trial_days = int(meta.get("trial_days") or 0)
-        if trial_days == 0:
-            # Payment-link checkouts (the reply-CURTAIN flow) carry no app
-            # metadata at all, but they do run a real trial. Recover its length
-            # from the subscription so those conversions are not invisible.
-            try:
-                _sub = stripe.Subscription.retrieve(session["subscription"])
-                start, end = _sub.get("trial_start"), _sub.get("trial_end")
-                if start and end:
-                    trial_days = round((end - start) / 86400)
-            except Exception:
-                pass
 
         if trial_days > 0:
             tier_row = db.query(PricingTier).filter(PricingTier.id == tier_id).first()

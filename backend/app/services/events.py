@@ -27,6 +27,13 @@ SERVER_EVENT_NAMES = frozenset(
         "first_search_submitted",  # the user's first search_logs row
         "trial_ended",  # {subscription_id, outcome: converted|cancelled|past_due|...}
         "trial_converted",  # first real charge on a subscription that had a trial
+        # The two facts the webhook is sure of and only ever told GA4. Without
+        # them checkout_started has no other end, and "abandoned" cannot be
+        # computed at all.
+        "checkout_completed",  # {subscription_id, tier, billing_period, trial}
+        "trial_started",  # {subscription_id, trial_days, earned}
+        # One row per lifecycle or triggered email that actually left.
+        "email_sent",  # {touch}
         # What a searcher actually does next. 240 of the 242 people who
         # searched in the last 30 days opened a monologue; 17 rehearsed a
         # scene. Working a monologue wrote nothing at all, so the activation
@@ -100,6 +107,14 @@ CLIENT_EVENT_NAMES = frozenset(
         "trial_offer_shown",  # {trigger, tier_current}
         "trial_offer_dismissed",  # {trigger, tier_current}
         "checkout_started",  # {tier, billing_period, trial, entry_point}
+        # One name for every moment a price is shown, whatever drew it. `gate`
+        # is the old feature or trigger value; `kind` is wall (a limit said no)
+        # or ask (something went well). upgrade_modal_viewed and
+        # trial_offer_shown keep firing so rows before 2026-09-29 still join.
+        "paywall_hit",  # {gate, kind, variant, surface, tier_current}
+        "paywall_dismissed",  # {gate, kind, surface, tier_current}
+        "paywall_cta_clicked",  # {gate, kind, variant, surface, tier_current}
+        "email_clicked",  # {touch}
         # Why a scene run died, next to rehearsal_sessions.failure_reason, which
         # is a closed word list. 2026-09-27: three new actors left the guided
         # scene inside 3 to 16 seconds and "never_began" was all we had.
@@ -148,27 +163,26 @@ def trial_outcome(stripe_status: str) -> str:
     return stripe_status or "unknown"
 
 
-def record_trial_ended(
+def record_subscription_event(
     db,
     user_id: Optional[int],
+    event_name: str,
     subscription_id: Optional[str],
-    outcome: str,
     **extra: Any,
 ) -> bool:
-    """One trial_ended per Stripe subscription, whichever webhook says so first.
+    """One `event_name` per Stripe subscription, whichever webhook says so first.
 
-    A trial's end can reach us three ways (invoice.paid, subscription.updated
-    with previous status trialing, subscription.deleted inside the trial
-    window) and Stripe does not order them. The subscription id in the
-    properties is the dedupe key, so trial-to-paid stays a plain
-    count(trial_converted) / count(trial_ended).
+    Stripe retries, and a trial's end can reach us three ways (invoice.paid,
+    subscription.updated with previous status trialing, subscription.deleted
+    inside the trial window) in no fixed order. The subscription id in the
+    properties is the dedupe key.
     """
     try:
         if subscription_id:
             dup = (
                 db.query(UserEvent.id)
                 .filter(
-                    UserEvent.event_name == "trial_ended",
+                    UserEvent.event_name == event_name,
                     UserEvent.properties["subscription_id"].as_string() == subscription_id,
                 )
                 .first()
@@ -184,8 +198,25 @@ def record_trial_ended(
             pass
     return record_user_event(
         user_id,
-        "trial_ended",
-        {"subscription_id": subscription_id, "outcome": outcome, **extra},
+        event_name,
+        {"subscription_id": subscription_id, **extra},
+    )
+
+
+def record_trial_ended(
+    db,
+    user_id: Optional[int],
+    subscription_id: Optional[str],
+    outcome: str,
+    **extra: Any,
+) -> bool:
+    """One trial_ended per Stripe subscription, labelled with how it ended.
+
+    Deduped on the subscription id, so trial-to-paid stays a plain
+    count(trial_converted) / count(trial_ended).
+    """
+    return record_subscription_event(
+        db, user_id, "trial_ended", subscription_id, outcome=outcome, **extra
     )
 
 
