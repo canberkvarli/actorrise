@@ -4646,10 +4646,6 @@
 .g-line--past .g-text {
   color: var(--t-muted-dark);
 }
-.g-wave {
-  margin-top: 10px;
-  min-height: 12px;
-}
 .g-skip {
   margin-top: 8px;
   min-height: 44px;
@@ -4681,6 +4677,230 @@
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
+}
+
+/* The Begin screen's line, on the rare run that still meets one (a reload, a
+   link straight in). The invitation's line, a size down: it is said over a
+   stage that is already set. */
+.g-gate__line {
+  margin: 6px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(34px, 8.5vw, 56px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+  text-wrap: balance;
+}
+
+/* --- The end of the first scene --------------------------------------------
+   The invitation's page, turned round: a direction, a line in the display
+   face, a sentence of house text, one pill. It was a tinted box with a bold
+   sans line and a stock button, which is the app's default card and read as
+   the success page of a file converter. Same faces and sizes as .t-invite, so
+   the scene opens and closes in one room. Phone first: one column, the whole
+   height, nothing beside anything. */
+.t-win {
+  box-sizing: border-box;
+  min-height: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: clamp(32px, 8vh, 80px) 24px calc(24px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.t-win > * {
+  animation: t-win-rise 0.6s var(--t-spring) both;
+}
+.t-win > :nth-child(2) { animation-delay: 0.06s; }
+.t-win > :nth-child(3) { animation-delay: 0.14s; }
+.t-win > :nth-child(4) { animation-delay: 0.24s; }
+.t-win > :nth-child(5) { animation-delay: 0.32s; }
+.t-win > :nth-child(6) { animation-delay: 0.4s; }
+@keyframes t-win-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.t-win__dir {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--t-faint);
+}
+.t-win__title {
+  margin: 12px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(42px, 11.5vw, 76px);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+  text-wrap: balance;
+}
+.t-win__house {
+  margin: 16px 0 0;
+  font-family: var(--t-body);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--t-muted-dark);
+}
+.t-win__doors {
+  margin-top: 30px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+/* The pill is the invitation's Answer. It is handed to UploadScriptButton as
+   its className, which sits on the app's <Button>; unlayered, so it wins over
+   that component's own utilities without a fight. */
+.t-win__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: min(100%, 20rem);
+  height: 56px;
+  padding: 0 28px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-cta-bd);
+  background: var(--t-cta-bg);
+  color: var(--t-cta-fg);
+  font-family: var(--t-body);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: 0 20px 60px -15px oklch(0.7 0.18 48 / 0.7);
+  transition: transform 0.3s var(--t-spring), box-shadow 0.3s;
+}
+.t-win__cta:hover:not(:disabled) {
+  background: var(--t-cta-bg);
+  color: var(--t-cta-fg);
+  transform: translateY(-1px);
+  box-shadow: 0 26px 70px -15px oklch(0.7 0.18 48 / 0.8);
+}
+.t-win__cta:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+/* The other door. Dashed, like every "I don't know what I want yet" door. */
+.t-win__alt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 20rem);
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  border: 1.5px dashed var(--t-line-light-2);
+  background: transparent;
+  color: var(--t-text);
+  font-family: var(--t-body);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s var(--t-spring);
+}
+.t-win__alt:hover {
+  background: var(--t-gel-ink);
+  color: var(--t-on-gel-ink);
+  border-style: solid;
+  border-color: var(--t-gel-ink);
+}
+.t-win__earned {
+  margin: 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--t-body);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--t-muted-dark);
+}
+.t-win__earned a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  color: var(--t-orange);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.t-win__foot {
+  margin-top: 30px;
+  padding-top: 6px;
+  width: min(100%, 20rem);
+  border-top: 1.5px dashed var(--t-line-light);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.t-win__quiet {
+  min-height: 44px;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: var(--t-muted-dark-2);
+  cursor: pointer;
+  transition: color 0.25s;
+}
+.t-win__quiet:hover:not(:disabled) {
+  color: var(--t-text);
+}
+.t-win__quiet:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* The review's head, for every scene after the first: the same direction and
+   the same display face, at the size of a title rather than a whole page. */
+.t-review-head {
+  text-align: center;
+}
+.t-review-head__title {
+  margin: 8px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(30px, 7.5vw, 46px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+  text-wrap: balance;
+}
+.t-review-head__from {
+  margin: 8px 0 0;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: var(--t-faint);
+}
+.t-review-next {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-win > * { animation: none; }
+  .t-win__cta,
+  .t-win__alt { transition: none; }
+  .t-win__cta:hover:not(:disabled) { transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5532,9 +5752,24 @@
 }
 
 /* --- The mobile tab bar ---------------------------------------------------
-   A floating pill under the thumb, matching the header pill above it, rather
-   than a bar welded to the bottom edge of the screen. */
-/* The phone tab bar.
+   Welded to the bottom edge of the screen, and gone while you scroll down.
+
+   It was a floating pill, 14px clear of the edge, and on an iPhone it would
+   not sit still. Two things were moving it:
+
+   1. The home indicator was cleared TWICE, once in `bottom` here and once by
+      the `safe-area-bottom` class in the markup. That inset is 0 while the
+      browser's own toolbar is up and 34px once it collapses, so every time
+      Chrome or Safari tucked its toolbar away the pill jumped 34px up the
+      screen AND grew 26px taller, with the page showing in the gap under it.
+   2. A fixed bar follows the bottom of the viewport, and the browser moves
+      that edge whenever its toolbar comes or goes. Nothing in a page can stop
+      that. So the bar leaves on the way down, in step with the browser's own
+      toolbar, and comes back on the way up, which is also when you wanted it.
+      It is only ever on screen while the edge under it is still.
+
+   Welded, the inset is padding inside one solid bar: when the edge does move,
+   the bar fills down to it and nothing shows through.
 
    `display` is decided here, not by the `md:hidden` in the markup. Tailwind v4
    emits its utilities inside `@layer utilities`, and an UNLAYERED rule in this
@@ -5543,24 +5778,27 @@
    app at every width. The breakpoint is 768px to match Tailwind's `md`. */
 .t-tabbar {
   position: fixed;
-  left: 12px;
-  right: 12px;
-  /* The home indicator. Without env() the bar sits ON it on every iPhone
-     since the X, which both looks wrong and puts the tab targets where the
-     system swipe lives. Everything that has to clear this bar — the toaster,
-     the scene preview's dock, the run bar — adds the same env() so the whole
-     stack moves together. */
-  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 9998;
   display: none;
-  padding: 6px;
-  border-radius: 999px;
-  background: oklch(0.13 0.015 50 / 0.92);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid oklch(0.35 0.03 55 / 0.6);
-  box-shadow: var(--bar-shadow);
+  /* The home indicator, once. Everything that has to clear this bar (the
+     toaster, the upload banner, the run bar) adds the same env() on top of
+     its own offset, so the whole stack still moves together. */
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  border-radius: 20px 20px 0 0;
+  /* Solid. The pill was 92% ink over a blur, and where the blur does not
+     paint the page read straight through the labels. */
+  background: oklch(0.13 0.015 50);
+  border-top: 1px solid oklch(0.35 0.03 55 / 0.6);
+  box-shadow: 0 -14px 40px -22px oklch(0 0 0 / 0.55);
   color: var(--bar-fg);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.t-tabbar[data-hidden="true"] {
+  /* Past its own height, so the shadow goes too. */
+  transform: translateY(120%);
 }
 @media (max-width: 767.98px) {
   .t-tabbar {
@@ -5570,29 +5808,46 @@
 .t-tabbar > div { flex: 1; }
 .t-tabbar__tab {
   flex: 1;
-  min-height: 52px;
+  min-width: 0;
+  min-height: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  border-radius: 999px;
+  border-radius: 14px;
   background: transparent;
   color: oklch(0.75 0.02 62);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-align: center;
-  transition: all 0.35s cubic-bezier(0.34, 1.3, 0.64, 1);
+  transition: background 0.3s, color 0.3s;
 }
 /* The same cream light as the desktop nav, here as a filled tab — there is no
-   room to slide one lamp across four tabs on a phone. */
+   room to slide one lamp across four tabs on a phone.
+
+   Literal, not --bar-active. That token is the DESKTOP bar's, which is paper
+   in light and ink in dark, so its active fill flips with the theme. This bar
+   is ink in both, and in light the token handed it an ink tab on an ink bar:
+   the tab you were on was the one you could not pick out. */
 .t-tabbar__tab[data-active="true"] {
-  background: var(--bar-active);
-  color: var(--bar-active-fg);
+  background: oklch(0.96 0.02 85);
+  color: oklch(0.13 0.015 50);
+}
+
+/* One thing above the tab bar at a time, on a phone. The profile card and the
+   callboard's ticker both park in the band just over the bar, and on the hub
+   they landed on top of each other: the ticker ran through the card's button.
+   The card is the one asking something, so the ticker waits for it. */
+@media (max-width: 767.98px) {
+  body:has(.t-backfill) .t-marquee-dock {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .t-tabbar,
   .t-tabbar__tab { transition: none; }
 }
 

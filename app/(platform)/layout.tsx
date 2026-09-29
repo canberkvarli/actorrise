@@ -221,7 +221,7 @@ export default function PlatformLayout({
      written straight to the DOM — see the hook for why neither is state. */
   /* Locked open: the bar must not slide away while the playbill or the phone
      sheet is hanging off it. */
-  const { navRef, lightRef, barRef, shellRef } = useHeaderLight(
+  const { navRef, lightRef, barRef, shellRef, tabbarRef } = useHeaderLight(
     pathname,
     profileDropdownOpen || mobileMenuOpen,
   );
@@ -617,10 +617,14 @@ export default function PlatformLayout({
       {/* Mobile Bottom Navigation - one-thumb access to primary actions */}
       {!isImmersive && (
       <nav
-        /* A floating pill under the thumb rather than a bar welded to the
-           bottom edge, matching the header above it. safe-area-bottom keeps it
-           clear of the home indicator. */
-        className="t-tabbar safe-area-bottom md:hidden"
+        /* Welded to the bottom edge, and it leaves with the header as you
+           scroll down (useHeaderLight writes data-hidden on both). See
+           .t-tabbar in globals.css for why it stopped being a floating pill.
+           No safe-area-bottom class: the rule clears the home indicator
+           itself, and carrying both counted it twice. */
+        ref={tabbarRef}
+        data-hidden="false"
+        className="t-tabbar md:hidden"
         style={{ ['--primary']: 'oklch(0.76 0.15 52)' } as React.CSSProperties}
       >
         <div className="flex items-stretch gap-1">

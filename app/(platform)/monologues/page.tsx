@@ -1783,8 +1783,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           This replaces the old chromeCompact behaviour, which hid the title
           and stuck the bar to the top after a search. The fixed-height row is
           the design's answer to the same problem. */}
-      <div className="mb-6 sm:mb-8">
-        <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
+      <div className="mb-4 sm:mb-8">
+        <div className="flex flex-wrap items-start gap-x-6 gap-y-3 sm:gap-y-4">
           <div className="min-w-0 flex-1 basis-80">
             <div className="flex items-center gap-3">
               {/* Which shelf you are on, drawn. The tab and the caption both
@@ -1826,7 +1826,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               style={{
                 fontFamily: "var(--t-display)",
                 fontWeight: 400,
-                fontSize: "clamp(2.4rem, 5vw, 4.2rem)",
+                /* A step down on a phone. At 2.4rem the headline, its
+                   reserved second line and the toggle under it were 200px of
+                   a phone's first screen before the search box. */
+                fontSize: isPhone ? "2rem" : "clamp(2.4rem, 5vw, 4.2rem)",
                 lineHeight: 0.95,
                 letterSpacing: "-0.02em",
                 color: "var(--t-text)",
@@ -1850,7 +1853,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               setting this column's width — which took 114px off the headline's
               measure on every switch and reflowed the whole head. It wraps
               inside a fixed box now instead of deciding one. */}
-          <div className="w-[252px] shrink-0">
+          <div className={isPhone ? "shrink-0" : "w-[252px] shrink-0"}>
             <div
               className="inline-flex gap-1 p-1"
               style={{
@@ -1868,7 +1871,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     type="button"
                     aria-pressed={active}
                     onClick={() => switchMode(tab.mode)}
-                    className="relative inline-flex min-h-[44px] items-center justify-center gap-2 px-4 text-sm font-semibold transition-transform hover:scale-[1.04]"
+                    className="relative inline-flex min-h-[38px] items-center justify-center gap-2 px-3 text-[13px] font-semibold transition-transform hover:scale-[1.04] sm:min-h-[44px] sm:px-4 sm:text-sm"
                     style={{
                       borderRadius: 999,
                       transitionTimingFunction: "var(--t-spring)",
@@ -1879,7 +1882,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                          row. Nothing downstream was moving because of the
                          chips; it was all this. Equal boxes mean the fill
                          slides and not one other thing on the page reflows. */
-                      minWidth: 124,
+                      minWidth: isPhone ? 108 : 124,
                       color: active ? "var(--t-on-text)" : "var(--t-muted-dark-2)",
                     }}
                   >
@@ -1928,6 +1931,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             {/* The caption is the thing that actually says which shelf you
                 are on now that the page no longer changes colour, so it gets
                 the same cross-fade as the direction above. */}
+            {/* Not on a phone: the pressed tab already says which shelf, and
+                the line cost 30px directly above the search box. */}
+            {!isPhone && (
             <AnimatePresence mode="wait" initial={false}>
               <motion.p
                 key={searchMode}
@@ -1949,6 +1955,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   : "(19,000 pieces.)"}
               </motion.p>
             </AnimatePresence>
+            )}
           </div>
         </div>
       </div>
@@ -2068,15 +2075,21 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </div>
 
           {/* Both shelves. "I don't know what I want" is at least as true of
-              film and TV as it is of plays. */}
-          {(
+              film and TV as it is of plays.
+
+              Beside the search from the tablet up. On a phone it was a second
+              pill the full width of the screen, 46px tall, directly under the
+              first: two bars before a single result, and the second one the
+              bigger target. There it is a chip at the head of the filter row
+              instead (below), which costs the phone no height at all. */}
+          {!isPhone && (
             <button
               id="search-find-for-me"
               type="button"
               onClick={handleFindForMe}
               disabled={isLoading}
-              className="t-find-for-me flex shrink-0 items-center justify-center gap-2 px-4 text-[13px] font-semibold disabled:opacity-50 max-sm:w-full sm:px-6 sm:text-[15px]"
-              style={{ minHeight: isPhone ? 46 : 68, borderRadius: isPhone ? 23 : 40 }}
+              className="t-find-for-me flex shrink-0 items-center justify-center gap-2 px-6 text-[15px] font-semibold disabled:opacity-50"
+              style={{ minHeight: 68, borderRadius: 40 }}
             >
               <IconSparkles className="size-[18px]" />
               Find for me
@@ -2092,8 +2105,21 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             the caption's width came straight off the chips — the last one
             ("Under 2 min") was cut mid-word at every desktop size, which
             reads as a rendering fault rather than a scroll affordance. */}
-        <div className="mt-5">
-          <div className="min-w-0">
+        <div className={isPhone ? "mt-4 flex items-center gap-2" : "mt-5"}>
+          {isPhone && (
+            <button
+              id="search-find-for-me"
+              type="button"
+              onClick={handleFindForMe}
+              disabled={isLoading}
+              className="t-find-for-me flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full px-3 text-[12px] font-semibold disabled:opacity-50"
+              style={{ borderWidth: 1.5 }}
+            >
+              <IconSparkles className="size-[14px]" />
+              Find for me
+            </button>
+          )}
+          <div className="min-w-0 flex-1">
             <QuickFilterChips
               filters={filters}
               onToggle={(key, value) => setFilters({ ...filters, [key]: value })}

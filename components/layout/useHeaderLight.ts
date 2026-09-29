@@ -24,6 +24,10 @@ export function useHeaderLight(routeKey: string, locked = false) {
   const lightRef = useRef<HTMLSpanElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLElement>(null);
+  /* The phone's tab bar, at the other end of the screen. It leaves and returns
+     with the header, on the same signal, so the two are one frame around the
+     page rather than two things with opinions. */
+  const tabbarRef = useRef<HTMLElement>(null);
   /* Read inside the scroll handler rather than closed over, so the listener is
      attached once for the life of the page instead of on every open/close. */
   const lockedRef = useRef(locked);
@@ -87,6 +91,7 @@ export function useHeaderLight(routeKey: string, locked = false) {
     if (locked) {
       hiddenRef.current = false;
       if (shellRef.current) shellRef.current.dataset.hidden = "false";
+      if (tabbarRef.current) tabbarRef.current.dataset.hidden = "false";
     }
   }, [locked]);
 
@@ -94,6 +99,13 @@ export function useHeaderLight(routeKey: string, locked = false) {
     const bar = barRef.current;
     const shell = shellRef.current;
     let lastY = window.scrollY;
+    /* Read at the moment of writing, not captured here: the tab bar is not
+       rendered on immersive routes, and mounts when you leave one. */
+    const setHidden = (hidden: boolean) => {
+      const value = hidden ? "true" : "false";
+      if (shell) shell.dataset.hidden = value;
+      if (tabbarRef.current) tabbarRef.current.dataset.hidden = value;
+    };
 
     const onScroll = () => {
       const y = window.scrollY;
@@ -119,7 +131,7 @@ export function useHeaderLight(routeKey: string, locked = false) {
 
       if (next !== hiddenRef.current) {
         hiddenRef.current = next;
-        if (shell) shell.dataset.hidden = next ? "true" : "false";
+        setHidden(next);
       }
     };
 
@@ -128,5 +140,5 @@ export function useHeaderLight(routeKey: string, locked = false) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  return { navRef, lightRef, barRef, shellRef };
+  return { navRef, lightRef, barRef, shellRef, tabbarRef };
 }
