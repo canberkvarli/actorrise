@@ -30,6 +30,10 @@ export type UserEventName =
   | "trial_offer_shown"
   | "trial_offer_dismissed"
   | "checkout_started"
+  | "paywall_hit"
+  | "paywall_dismissed"
+  | "paywall_cta_clicked"
+  | "email_clicked"
   | "scene_run_abandoned";
 
 type Props = Record<string, string | number | boolean | null | undefined>;

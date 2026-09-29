@@ -1,4 +1,5 @@
 import { trackEvent } from "./events";
+import { paywallProps, type PaywallKind } from "./paywall-events";
 
 /**
  * GA4 custom event tracking for ActorRise.
@@ -133,9 +134,14 @@ export type TrialOfferTrigger =
 type TrialOfferShownParams = {
   trigger: TrialOfferTrigger;
   tier_current: string;
+  /** Which wording was shown (lib/paywall/copy.ts). Rides on paywall_hit only. */
+  variant?: string;
 };
 
-type TrialOfferDismissedParams = TrialOfferShownParams;
+type TrialOfferDismissedParams = {
+  trigger: TrialOfferTrigger;
+  tier_current: string;
+};
 
 type BeginCheckoutParams = {
   tier: string;
@@ -299,19 +305,42 @@ export function trackRehearsalError(params: RehearsalErrorParams) {
 // "how many people ever see the price" had no answer in Postgres at all: $60 a
 // month from five people, and no way to tell whether the wall is refused or
 // never reached.
+//
+// paywall_hit rides inside the two "shown" trackers rather than being called
+// from the nine surfaces that show a price. They all already come through
+// here, so one name covers every wall and every ask, and a new surface cannot
+// forget it. The older names keep firing so rows before 2026-09-29 still join.
+const here = () => (typeof window === "undefined" ? "" : window.location.pathname);
+
 export function trackUpgradeModalViewed(params: UpgradeModalViewedParams) {
   sendEvent("upgrade_modal_viewed", params);
   trackEvent("upgrade_modal_viewed", params);
+  trackEvent("paywall_hit", paywallProps(params.feature, "wall", params.tier_current, here()));
 }
 
-export function trackTrialOfferShown(params: TrialOfferShownParams) {
+export function trackTrialOfferShown({ variant, ...params }: TrialOfferShownParams) {
   sendEvent("trial_offer_shown", params);
   trackEvent("trial_offer_shown", params);
+  trackEvent(
+    "paywall_hit",
+    paywallProps(params.trigger, "ask", params.tier_current, here(), variant),
+  );
 }
 
 export function trackTrialOfferDismissed(params: TrialOfferDismissedParams) {
   sendEvent("trial_offer_dismissed", params);
   trackEvent("trial_offer_dismissed", params);
+  trackEvent("paywall_dismissed", paywallProps(params.trigger, "ask", params.tier_current, here()));
+}
+
+/** The click on a price's own button. begin_checkout is a page later and can be lost. */
+export function trackPaywallCtaClicked(
+  gate: string,
+  kind: PaywallKind,
+  tier: string,
+  variant?: string,
+) {
+  trackEvent("paywall_cta_clicked", paywallProps(gate, kind, tier, here(), variant));
 }
 
 export function trackBeginCheckout(params: BeginCheckoutParams) {
