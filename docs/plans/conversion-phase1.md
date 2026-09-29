@@ -14,11 +14,63 @@
 
 ---
 
+## Status, 2026-09-29
+
+**All five phases are built on the branch. Nothing is merged, deployed, applied to prod, or switched on.**
+
+| Check | Result |
+|---|---|
+| Backend tests | 1,759 pass (1,702 before this branch) |
+| Frontend tests | 199 pass (169 before) |
+| `tsc --noEmit` | clean |
+| ESLint on files this branch added | clean |
+| Seen in a browser | **no.** Nothing here has been looked at running. |
+
+### To go live, in this order
+
+1. **Canberk looks at it running.** Especially: the strip above the Rehearse bar on a phone (`/monologue/<id>`), the "Finish a scene first and it's two weeks." line under each price, and `/checkout` saying "A week, on me."
+2. **Canberk reads the marketing line** on `/pricing` and the landing pricing block: "then a week of Plus free, two if you finish a scene". That commit (`4c9e805b`) is separate so it can wait.
+3. Apply `backend/scripts/add_funnel_daily_view.sql` on Supabase. Additive.
+4. Apply `backend/scripts/widen_lifecycle_touch.sql` on Supabase. Additive. Must be before step 7.
+5. Merge to main and push. Render deploys the backend, Vercel the frontend. From here the trial is 7 or 14 days for everyone and the new asks are live.
+6. Canberk reads the three emails in `backend/emails/lifecycle/` and sends himself the set: `uv run python scripts/triggered_emails.py --test canberk@actorrise.com`.
+7. Switch on "Triggered emails" in `/admin/emails`.
+8. Decide Task B5 (the reply-CURTAIN Stripe link still runs 14 days).
+
+### Where what shipped differs from the tasks below
+
+The tasks were written before the code. These are the places the code is right and the task text is not.
+
+| Task | Plan said | Shipped | Why |
+|---|---|---|---|
+| B1 | The second week is earned by a completed session **or** the `guided_scene_finished` event | A completed `rehearsal_sessions` row only | The event arrives over `POST /api/events`, which any signed-in client can call. Reading it would have let a browser claim 14 days. The background security review caught this. All 6 actors holding the event also hold a completed session, tap mode included, so nobody lost a week. |
+| B3 | `useTrialWords` lives in `lib/trial.ts` | It lives in `hooks/useTrialWords.ts` | Keeps `lib/trial.ts` pure, so its test needs no React. |
+| B4 | One quiet line as a bare `Link` | `components/billing/EarnSecondWeek.tsx` | Six hosts, and an earned trial must leave no empty paragraph behind. |
+| C1 | Four functions | Adds `recordClick`, `parseStore`, and `lib/paywall/slot.ts` | Two strips pin to the same place. The slot lets one ask hold the screen at a time. |
+| C3 | third_save copy promised cutting to time | "Plus lets you rehearse every one of them out loud" | Cutting is free. The ask may only name what Plus adds. |
+| C4, C5 | The hook is called where the component mounts | The strip is its own component, mounted at the moment | `useTrialOffer` reads the limiter once, at mount. Mounted in the layout it would read the state from page load. |
+| C4, C5 | Strip at the foot of the screen | Rides above the Rehearse bar on `/monologue/<id>` below `lg` | It would have covered the one button that page exists for. |
+| D2 | Weekly cap of 2 | Cap of 2 **and** nothing inside 48 hours of the last email | Without the gap, someone due two touches got both an hour apart. Lives in `lifecycle.py` and binds day3 and day10 too. |
+| D2 | `paywall_seen_no_trial` anchors on any `paywall_hit` | Walls only | The email says "you ran into the free limit". Someone shown an ask after a good scene ran into nothing. |
+| D2 | | Skips anyone who has held a Stripe subscription, for the two touches that offer the trial | Checkout refuses them the trial. |
+| D3 | Link is the checkout URL | `actorrise.com/trial?e=<touch>`, a redirect in `next.config.ts` | Plain text, so the address is read. The checkout's own is four parameters long. |
+| D5 | `?e=` on every lifecycle link | On the three new emails only | day3 and day10 are live and approved. Changing their links is a change to a live email. |
+| E2 | The run writes to the list itself | `backend/scripts/opt_out.py` | One tested path that does the list and `marketing_opt_in` together. |
+
+### Found on the way, not part of the plan
+
+- **Two Stripe trials end inside three days** (2026-09-30 and 2026-10-01). One has not rehearsed or run a monologue since it started. Section 3 of `outputs/conversion/2026-09-29.md`.
+- **One actor hit the read wall 18 times in two days** and holds 16 saved pieces. Top of section 5 in the same brief.
+- **The bounced list is all people day-10 already asked.** 30 of 30. `outreach/founder/bounced.md` says what to do instead.
+- **Onboarding completion fell 31% week on week** (75 to 52) on signups down 6%. Not caused by this branch, which is not deployed. Worth its own look.
+
+---
+
 ## Decisions (made 2026-09-29)
 
 | # | Question | Decision | Why |
 |---|---|---|---|
-| 1 | Trial length | **7 days. 14 if the actor has finished a scene.** Decided server side at checkout. | Canberk, 2026-09-29. The second week is earned by the one behaviour that shows the product working. 6 of 22 people who started the guided scene finished it. |
+| 1 | Trial length | **7 days. 14 if the actor has finished a scene.** Decided server side at checkout, from a session the server closed as completed. | Canberk, 2026-09-29. The second week is earned by the one behaviour that shows the product working. 6 of 22 people who started the guided scene finished it; 24 actors hold a completed session of any kind. |
 | 2 | Free tier | **Ask more, block nothing new.** The three walls that exist stay (5 reads a month, 3 ScenePartner sessions a month, monologue work after the reverse trial). Saves, the cut editor and notes stay free. New asks go where value just happened. | Saving is what the day-1 reminder and both lifecycle emails are anchored on, and 82 free users already hold 4+ saves. Cut editor and notes reach 8 and 9 people a month, so walling them adds no volume. Revisit a hard save cap only if asks convert under 1% after 30 days. |
 | 3 | Goal unit and start | **Distinct real users who saw a price, per day, from 2026-09-27.** July and August are ignored. | The money events did not exist in Postgres before 2026-09-27. Baseline so far: 9 users in 2 days, out of about 35 active. One checkout started. |
 | 4 | Emails | **Three money touches first:** `checkout_abandoned`, `trial_ended_no_pay`, `paywall_seen_no_trial`. `three_saves`, `unfinished_cut`, `dormant_book` are held. `trial_ending` is not built: Stripe's `trial_will_end` already sends one. | day3 and day10 have sent 681 and brought back about 1 in 320. The money touches go to people who looked at a price, which is a different population. |
@@ -1291,6 +1343,37 @@ Phase 2 (partner outreach agents, B2B prospecting) waits until `price_seen` show
 
 ## Shipped log
 
+On `feat/conversion-phase1`. Not merged.
+
 | Date | Commit | What |
 |---|---|---|
-| | | |
+| 2026-09-29 | `a9be605f` | Conversion phase 1: the spec checked against prod, and the plan |
+| 2026-09-29 | `88fd71fb` | The money path gets names for every step, and the webhook writes the two it knows |
+| 2026-09-29 | `07a8f6cc` | Every price shown is a paywall_hit |
+| 2026-09-29 | `74dd62c8` | funnel_daily: the money path as one view |
+| 2026-09-29 | `2c90524a` | The trial is a week, two for an actor who has finished a scene |
+| 2026-09-29 | `1306559c` | The second week is the server's to grant, never the browser's |
+| 2026-09-29 | `44956951` | Every price prints the trial the actor has earned |
+| 2026-09-29 | `4c9e805b` | Pricing and landing: a week of Plus free, two if you finish a scene |
+| 2026-09-29 | `42667501` | Two new asks, and the limiter counts per gate |
+| 2026-09-29 | `d90a05b3` | Three emails for people who looked at a price, off until the copy is approved |
+| 2026-09-29 | `7034507e` | The daily loop: a brief, a run that drafts and never sends, and two founder lists |
+
+## Baseline, to read week 1 against
+
+Taken 2026-09-29 from prod. Real users only.
+
+| | Value | Note |
+|---|---|---|
+| Saw a price, 7 days | 9 | counting began 2026-09-27, so this is 2 days |
+| Started checkout, 7 days | 1 | |
+| Started a trial, 7 days | 0 | `trial_started` was GA4 only until this branch |
+| Paid, 7 days | 0 | 2 in the 7 before |
+| Signed up, 7 days | 120 | 127 before |
+| Onboarded, 7 days | 52 | 75 before |
+| Searched, 7 days | 68 | 84 before |
+| Worked a monologue, 7 days | 22 | 32 before |
+| Stripe trials running | 5 | 34 more are manual comps |
+| Free users holding 3+ saves | 97 | the third-save ask's pool |
+| Read 3+ pieces this month | 87 | the reads meter's pool |
+| day3 + day10 sent, 7 days | 217 | clicks uncounted until the beacon deploys |
