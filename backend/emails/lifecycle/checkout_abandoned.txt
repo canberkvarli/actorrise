@@ -1,0 +1,13 @@
+subject: did something go wrong?
+
+hey {name},
+
+you started the plus trial a little while ago and didn't finish. if something broke at the card step, tell me and i'll fix it today.
+
+if you just got pulled away, it's still here: {link}
+
+it's {span} free. nothing is charged until that's up, and you can cancel any time before then.
+
+canberk
+
+reply unsubscribe and i'll take you off the list, no hard feelings.

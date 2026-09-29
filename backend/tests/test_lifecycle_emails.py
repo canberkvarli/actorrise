@@ -86,7 +86,10 @@ class SelectTests(unittest.TestCase):
 
     def test_already_sent_touch_is_skipped_but_other_touch_is_not(self):
         u = self._user("once@x.com", hours_ago=260)
-        self.db.add(LifecycleEmailSend(user_id=u.id, touch="day3", anchor="none"))
+        # Stamped when day3 really goes for someone now due day10. Left at the
+        # default it would be "just now", and nothing follows an email inside
+        # two days.
+        self.db.add(LifecycleEmailSend(user_id=u.id, touch="day3", anchor="none", sent_at=_ago(150)))
         self.db.commit()
         self.assertEqual(len(lifecycle.select_candidates(self.db, "day10")), 1)
         self.db.add(LifecycleEmailSend(user_id=u.id, touch="day10", anchor="none"))
@@ -110,6 +113,30 @@ class SelectTests(unittest.TestCase):
         self.assertEqual(p["anchor"], "none")
         self.assertEqual(p["user_id"], u.id)
 
+    def test_nothing_follows_another_email_inside_two_days(self):
+        # The triggered emails write to the same table. Someone sent one
+        # yesterday is left alone today, whatever the calendar says is due.
+        u = self._user("recent@x.com", hours_ago=250)
+        self.db.add(
+            LifecycleEmailSend(user_id=u.id, touch="checkout_abandoned", anchor="checkout", sent_at=_ago(20))
+        )
+        self.db.commit()
+        self.assertEqual(lifecycle.select_candidates(self.db, "day10"), [])
+
+    def test_two_in_a_week_is_the_cap(self):
+        u = self._user("full@x.com", hours_ago=250)
+        for touch, hours in (("checkout_abandoned", 150), ("paywall_seen_no_trial", 60)):
+            self.db.add(LifecycleEmailSend(user_id=u.id, touch=touch, anchor="x", sent_at=_ago(hours)))
+        self.db.commit()
+        self.assertEqual(lifecycle.select_candidates(self.db, "day10"), [])
+
+    def test_the_cap_forgets_after_a_week(self):
+        u = self._user("rested@x.com", hours_ago=250)
+        for touch, hours in (("checkout_abandoned", 200), ("paywall_seen_no_trial", 180)):
+            self.db.add(LifecycleEmailSend(user_id=u.id, touch=touch, anchor="x", sent_at=_ago(hours)))
+        self.db.commit()
+        self.assertEqual(len(lifecycle.select_candidates(self.db, "day10")), 1)
+
     def test_claim_is_once_per_user_and_touch(self):
         u = self._user("c@x.com")
         self.assertTrue(lifecycle._claim(self.db, u.id, "day3", "none"))
@@ -118,15 +145,18 @@ class SelectTests(unittest.TestCase):
         self.assertEqual(self.db.query(LifecycleEmailSend).count(), 2)
 
     def test_run_touch_sends_once_and_records(self):
-        self._user("r@x.com")
+        u = self._user("r@x.com")
         sent = []
+        recorded = []
         client = mock.Mock()
         client.send_email.side_effect = lambda **kw: sent.append(kw)
         with mock.patch.object(lifecycle, "SessionLocal", lambda: _NoClose(self.db)), \
              mock.patch.object(lifecycle, "ResendEmailClient", lambda: client), \
-             mock.patch.object(lifecycle, "build_unsubscribe_url", lambda e: "https://actorrise.com/unsubscribe?x"):
+             mock.patch.object(lifecycle, "build_unsubscribe_url", lambda e: "https://actorrise.com/unsubscribe?x"), \
+             mock.patch.object(lifecycle, "record_user_event", lambda *a: recorded.append(a)):
             first = lifecycle.run_touch("day3", send=True)
             second = lifecycle.run_touch("day3", send=True)
+        self.assertEqual(recorded, [(u.id, "email_sent", {"touch": "day3"})])
         self.assertEqual((first["eligible"], first["sent"]), (1, 1))
         self.assertEqual((second["eligible"], second["sent"]), (0, 0))
         self.assertEqual(len(sent), 1)

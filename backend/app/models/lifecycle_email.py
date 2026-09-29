@@ -21,7 +21,10 @@ class LifecycleEmailSend(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    touch = Column(String(16), nullable=False)  # day3 | day10
+    # day3 | day10 (services/email/lifecycle.py), and the triggered touches
+    # (services/email/triggered.py). 32 wide since 2026-09-29: 16 could not
+    # hold paywall_seen_no_trial. scripts/widen_lifecycle_touch.sql.
+    touch = Column(String(32), nullable=False)
     anchor = Column(String(16), nullable=True)  # favorite | search | none: what the email reopened
     sent_at = Column(
         DateTime(timezone=True),

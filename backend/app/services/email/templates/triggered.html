@@ -1,0 +1,13 @@
+{% extends "base_personal.html" %}
+
+{# One template for every triggered touch. The words are not here: they live in
+   backend/emails/lifecycle/<touch>.txt and arrive as paragraphs, already
+   escaped, with the link as their only markup (services/email/triggered.py). #}
+
+{% block title %}{{ subject }}{% endblock %}
+
+{% block content %}
+{% for paragraph in paragraphs %}
+        <p{% if paragraph == "canberk" %} style="margin-top:28px;"{% elif loop.last %} class="ar-muted" style="margin-top:20px; color:{{ c.muted }}; font-size:13px;"{% endif %}>{{ paragraph }}</p>
+{% endfor %}
+{% endblock %}

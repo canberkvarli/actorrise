@@ -38,6 +38,7 @@ from app.models.user import User
 from app.services.email.marketing import APPLE_RELAY_DOMAIN, build_unsubscribe_url
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.templates import EmailTemplates
+from app.services.events import record_user_event
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,10 @@ TOUCHES: dict[str, tuple[int, int]] = {
 }
 QUIET_HOURS = 48  # active more recently than this = already back, leave them alone
 MAX_QUERY_LEN = 80
+# Across every row in lifecycle_email_sends, whichever job wrote it: these two
+# touches and the triggered ones in triggered.py.
+WEEKLY_CAP = 2  # emails per person in any 7 days
+MIN_GAP_HOURS = 48  # and never two inside this
 
 SUBJECTS = {
     "day3": {
@@ -147,6 +152,37 @@ def anchor_for(db, uid: int) -> dict:
     )
 
 
+def _aware(dt: datetime) -> datetime:
+    # SQLite hands timestamps back naive; Postgres does not.
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def recent_sends(db, user_id: int, now: datetime) -> list[datetime]:
+    """When this person was emailed from lifecycle_email_sends in the last week."""
+    rows = (
+        db.query(LifecycleEmailSend.sent_at)
+        .filter(
+            LifecycleEmailSend.user_id == user_id,
+            LifecycleEmailSend.sent_at > now - timedelta(days=7),
+        )
+        .all()
+    )
+    return [_aware(r[0]) for r in rows]
+
+
+def has_room(db, user_id: int, now: datetime) -> bool:
+    """Under the weekly cap, and not inside the gap after the last email.
+
+    One number across this job and triggered.py, since both write their claims
+    to the same table. The day-1 saved-piece reminder dedupes on its own column
+    and is not counted here; day3 already stands off from it by QUIET_HOURS.
+    """
+    sends = recent_sends(db, user_id, now)
+    if len(sends) >= WEEKLY_CAP:
+        return False
+    return all(sent <= now - timedelta(hours=MIN_GAP_HOURS) for sent in sends)
+
+
 def select_candidates(db, touch: str, active_hour: int | None = None) -> list[dict]:
     """Users in the touch's window who have not had it, one dict each."""
     hours_min, hours_max = TOUCHES[touch]
@@ -170,6 +206,8 @@ def select_candidates(db, touch: str, active_hour: int | None = None) -> list[di
         if active_hour is not None and user.created_at is not None and user.created_at.hour != active_hour:
             continue
         if _active_since(db, user.id, now - timedelta(hours=QUIET_HOURS)):
+            continue
+        if not has_room(db, user.id, now):
             continue
         anchor = anchor_for(db, user.id)
         # The day-1 saved-piece email went out within the last two days: one
@@ -259,6 +297,7 @@ def run_touch(
                 subject, html, plain = render(tpl, p, unsub)
                 client.send_email(to=p["email"], subject=subject, html=html, plain_text=plain, unsubscribe_url=unsub)
                 stats["sent"] += 1
+                record_user_event(p["user_id"], "email_sent", {"touch": touch})
             except Exception as exc:  # noqa: BLE001
                 stats["failed"] += 1
                 logger.warning("lifecycle %s: send failed for %s: %s", touch, p["email"], exc)

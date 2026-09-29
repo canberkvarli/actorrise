@@ -193,6 +193,28 @@ def set_lifecycle_emails(
     return SavedPieceReminderToggle(enabled=enabled)
 
 
+@router.get("/triggered-emails", response_model=SavedPieceReminderToggle)
+def get_triggered_emails(
+    _: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+) -> SavedPieceReminderToggle:
+    """Whether the triggered emails (checkout walked away from, trial ended
+    without paying, stopped by a wall) are sending. Off by default."""
+    enabled = app_settings.get_bool(db, app_settings.TRIGGERED_EMAILS_ENABLED, default=False)
+    return SavedPieceReminderToggle(enabled=enabled)
+
+
+@router.put("/triggered-emails", response_model=SavedPieceReminderToggle)
+def set_triggered_emails(
+    payload: SavedPieceReminderToggle,
+    _: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+) -> SavedPieceReminderToggle:
+    """Turn the triggered emails on or off (takes effect within the hour)."""
+    enabled = app_settings.set_bool(db, app_settings.TRIGGERED_EMAILS_ENABLED, payload.enabled)
+    return SavedPieceReminderToggle(enabled=enabled)
+
+
 # ========================================
 # Template metadata registry
 # ========================================

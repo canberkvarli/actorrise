@@ -254,6 +254,10 @@ export default function AdminEmailsPage() {
   const [lifecycleOn, setLifecycleOn] = useState<boolean | null>(null);
   const [lifecycleSaving, setLifecycleSaving] = useState(false);
 
+  // Triggered emails toggle (checkout walked away from, trial ended, wall hit)
+  const [triggeredOn, setTriggeredOn] = useState<boolean | null>(null);
+  const [triggeredSaving, setTriggeredSaving] = useState(false);
+
   // Dialogs
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -276,8 +280,29 @@ export default function AdminEmailsPage() {
       api.get<Lead[]>("/api/admin/emails/leads").then(({ data }) => setLeads(data)).catch(() => {}),
       api.get<{ enabled: boolean }>("/api/admin/emails/saved-piece-reminder").then(({ data }) => setSavedReminderOn(data.enabled)).catch(() => {}),
       api.get<{ enabled: boolean }>("/api/admin/emails/lifecycle-emails").then(({ data }) => setLifecycleOn(data.enabled)).catch(() => {}),
+      api.get<{ enabled: boolean }>("/api/admin/emails/triggered-emails").then(({ data }) => setTriggeredOn(data.enabled)).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
+
+  async function updateTriggeredEmails(enabled: boolean) {
+    const prev = triggeredOn;
+    setTriggeredOn(enabled); // optimistic
+    setTriggeredSaving(true);
+    try {
+      const { data } = await api.put<{ enabled: boolean }>("/api/admin/emails/triggered-emails", { enabled });
+      setTriggeredOn(data.enabled);
+      toast.success(
+        data.enabled
+          ? "Triggered emails are on"
+          : "Triggered emails paused. Nothing sends until you turn this back on.",
+      );
+    } catch {
+      setTriggeredOn(prev); // revert
+      toast.error("Failed to update the triggered email setting");
+    } finally {
+      setTriggeredSaving(false);
+    }
+  }
 
   async function updateLifecycleEmails(enabled: boolean) {
     const prev = lifecycleOn;
@@ -902,6 +927,28 @@ export default function AdminEmailsPage() {
             disabled={lifecycleSaving}
             onCheckedChange={updateLifecycleEmails}
             aria-label="Toggle day-3 and day-10 return emails"
+          />
+        </div>
+      )}
+
+      {canSend && triggeredOn !== null && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-3 sm:p-4">
+          <div className="flex items-start gap-2.5">
+            <IconClock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Triggered emails</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {triggeredOn
+                  ? "On. One email when someone walks away from a checkout, when a trial ends without paying, or the day after a free limit stops them. Each sent once, never more than two emails a week to anyone."
+                  : "Off. Nothing sends until you turn this on. Read the copy in backend/emails/lifecycle first."}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={triggeredOn}
+            disabled={triggeredSaving}
+            onCheckedChange={updateTriggeredEmails}
+            aria-label="Toggle triggered emails"
           />
         </div>
       )}

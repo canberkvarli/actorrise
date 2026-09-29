@@ -26,6 +26,13 @@ SAVED_PIECE_REMINDER_ENABLED = "saved_piece_reminder_enabled"
 # LIFECYCLE_EMAILS_ENABLED=false stops the scheduler from starting at all.
 LIFECYCLE_EMAILS_ENABLED = "lifecycle_emails_enabled"
 
+# The triggered emails (services/email/triggered.py): checkout walked away
+# from, trial ended without paying, stopped by a wall. Defaults to OFF and has
+# its own switch, so the copy can be read and approved without touching day3
+# and day10. They ride the lifecycle scheduler, so LIFECYCLE_EMAILS_ENABLED=false
+# in the environment stops these too.
+TRIGGERED_EMAILS_ENABLED = "triggered_emails_enabled"
+
 
 def get_bool(db: Session, key: str, default: bool = False) -> bool:
     """Return a stored boolean setting, or `default` if the row doesn't exist."""

@@ -1,0 +1,13 @@
+subject: you hit the limit yesterday
+
+hey {name},
+
+you ran into the free limit on actorrise yesterday, right in the middle of something.
+
+if you want to keep going, plus is free for {span}. nothing is charged until that's up, and you can cancel before then: {link}
+
+and if the price is the thing stopping you, reply and tell me. i'd rather know.
+
+canberk
+
+reply unsubscribe and i'll take you off the list, no hard feelings.

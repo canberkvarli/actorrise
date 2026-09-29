@@ -225,6 +225,36 @@ def _start_lifecycle_email_scheduler() -> None:
     def loop() -> None:
         time.sleep(150)  # after the reminder (120s) and the sweep (90s)
         while True:
+            # The triggered emails first, in a try of their own. First, because
+            # both jobs draw on one weekly cap of two and the person who walked
+            # away from a checkout should get that email rather than day10.
+            # Their own try, so a fault in either job cannot silence the other.
+            try:
+                from app.core.database import SessionLocal
+                from app.services import app_settings
+                from app.services.email import triggered
+
+                _db = SessionLocal()
+                try:
+                    triggered_on = app_settings.get_bool(
+                        _db, app_settings.TRIGGERED_EMAILS_ENABLED, default=False
+                    )
+                finally:
+                    _db.close()
+                if not triggered_on:
+                    logger.info(
+                        "triggered: skipped, app_settings %s is off",
+                        app_settings.TRIGGERED_EMAILS_ENABLED,
+                    )
+                else:
+                    for stats in triggered.run_all(send=True):
+                        logger.info(
+                            "triggered %s: eligible %s sent %s failed %s",
+                            stats["touch"], stats["eligible"], stats["sent"], stats["failed"],
+                        )
+            except Exception as e:  # noqa: BLE001
+                logger.error("triggered email scheduler run FAILED: %s", e, exc_info=True)
+
             try:
                 from datetime import datetime, timezone
 

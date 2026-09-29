@@ -50,6 +50,15 @@ const nextConfig: NextConfig = {
       // (302) on purpose: the tags can change without a cached 301 pinning them.
       { source: "/x", destination: "/?utm_source=x&utm_medium=bio", permanent: false },
       { source: "/ig", destination: "/?utm_source=instagram&utm_medium=bio", permanent: false },
+      // The link in the triggered emails (backend/app/services/email/triggered.py).
+      // They are plain text, so the address is read, and the checkout's own is
+      // four parameters long. The email's ?e=<touch> rides through untouched.
+      // 302 for the same reason as the bio links.
+      {
+        source: "/trial",
+        destination: "/checkout?tier=plus&period=monthly&trial=1&from=email",
+        permanent: false,
+      },
     ];
   },
 };
