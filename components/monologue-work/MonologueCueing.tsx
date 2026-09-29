@@ -25,6 +25,7 @@ import {
 import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { useTrialOffer, TrialOfferCard } from "@/components/billing/TrialOffer";
+import { GATE_COPY } from "@/lib/paywall/copy";
 import {
   GhostLightSketch,
   MicSketch,
@@ -193,7 +194,11 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   // 12 of 52 searchers rehearsed a monologue against 4 who entered a scene, and
   // the 2-run monologue cap is the most-hit wall in the product. The offer had
   // been built only onto the scene page, which is the smaller audience.
-  const monologueOffer = useTrialOffer("monologue_completed", completed);
+  const monologueOffer = useTrialOffer(
+    "monologue_completed",
+    completed,
+    GATE_COPY.monologue_completed.variant,
+  );
 
   const activeIndexRef = useRef(activeIndex);
   activeIndexRef.current = activeIndex;
@@ -730,10 +735,11 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             {monologueOffer.visible && (
               <div className="w-full max-w-sm">
                 <TrialOfferCard
-                  headline="Keep the stage."
-                  // Deliberately no number: the free cap has moved twice in a week
-                  // and copy that names it goes stale silently.
-                  body="Free runs are capped. Plus takes the cap off and lets you bring your own sides in to rehearse the same way."
+                  // The words live in lib/paywall/copy.ts. Deliberately no
+                  // number there: the free cap has moved twice in a week and
+                  // copy that names it goes stale silently.
+                  headline={GATE_COPY.monologue_completed.headline}
+                  body={GATE_COPY.monologue_completed.body}
                   href={monologueOffer.href}
                   onAccept={monologueOffer.accept}
                   onDismiss={monologueOffer.dismiss}

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import Link from "next/link";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { IconX } from "@tabler/icons-react";
@@ -12,6 +19,16 @@ import {
   trackTrialOfferDismissed,
   type TrialOfferTrigger,
 } from "@/lib/analytics";
+import {
+  canShow,
+  EMPTY_STORE,
+  parseStore,
+  recordClick,
+  recordDismiss,
+  recordShow,
+  type Store,
+} from "@/lib/paywall/eligibility";
+import { claim, holder, release, subscribe } from "@/lib/paywall/slot";
 
 /**
  * The success-triggered trial offer.
@@ -29,44 +46,49 @@ import {
  * Rules this must never break:
  *   - Never interrupt a scene in progress. Mid-scene is a dismissible strip,
  *     never a modal.
- *   - Never nag. Capped per-actor below, and dismissal is respected for days.
+ *   - Never nag. Each gate is capped and cooled on its own
+ *     (lib/paywall/eligibility.ts), and three dismissals end it for the session.
+ *   - Never two at once (lib/paywall/slot.ts).
  *   - Never shown to someone already paying or already trialing.
  */
 
-const STORE_KEY = "actorrise_trial_offer";
-/** Stop asking after this many shows, however they ended. */
-const MAX_LIFETIME_SHOWS = 4;
-/** Quiet period after any show, so two triggers in one session can't stack. */
-const COOLDOWN_MS = 48 * 60 * 60 * 1000;
-/** A dismissal is a clearer "not now" than a scroll-past, so it costs more. */
-const DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+// v2: per gate. The v1 key held one counter for every trigger and is left to
+// go stale unread.
+const STORE_KEY = "actorrise_paywall_v2";
+const SESSION_DISMISSALS_KEY = "actorrise_paywall_dismissals";
 
-type OfferState = {
-  shows: number;
-  lastShownAt: number;
-  quietUntil: number;
-  /** Set once they click through. They are in the flow; stop asking. */
-  clicked: boolean;
-};
-
-const EMPTY: OfferState = { shows: 0, lastShownAt: 0, quietUntil: 0, clicked: false };
-
-function readState(): OfferState {
-  if (typeof window === "undefined") return EMPTY;
+function readStore(): Store {
+  if (typeof window === "undefined") return EMPTY_STORE;
   try {
-    const raw = localStorage.getItem(STORE_KEY);
-    return raw ? { ...EMPTY, ...JSON.parse(raw) } : EMPTY;
+    return parseStore(localStorage.getItem(STORE_KEY));
   } catch {
-    return EMPTY;
+    return EMPTY_STORE;
   }
 }
 
-function writeState(next: Partial<OfferState>) {
+function writeStore(next: Store) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({ ...readState(), ...next }));
+    localStorage.setItem(STORE_KEY, JSON.stringify(next));
   } catch {
-    /* private mode — worst case the cap resets, which is survivable */
+    /* private mode — worst case the caps reset, which is survivable */
+  }
+}
+
+function readSessionDismissals(): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    return parseInt(sessionStorage.getItem(SESSION_DISMISSALS_KEY) || "0", 10) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function addSessionDismissal() {
+  try {
+    sessionStorage.setItem(SESSION_DISMISSALS_KEY, String(readSessionDismissals() + 1));
+  } catch {
+    /* ignore */
   }
 }
 
@@ -78,17 +100,24 @@ export function checkoutHref(trigger: TrialOfferTrigger) {
  * Decides whether this actor should see an offer right now, and records it.
  *
  * `active` is the caller's own condition (scene finished, Nth line delivered,
- * upload succeeded). Eligibility is evaluated once when that flips true, so a
- * re-render can never re-open something the actor just closed.
+ * third piece saved). `variant` names the wording shown, for paywall_hit.
+ *
+ * Eligibility is read once, when the hook mounts. A caller whose moment comes
+ * long after its page loaded (the third save, the reads meter) mounts the hook
+ * at that moment instead of at page load, so what it reads is current.
  */
-export function useTrialOffer(trigger: TrialOfferTrigger, active: boolean) {
+export function useTrialOffer(trigger: TrialOfferTrigger, active: boolean, variant?: string) {
   const { subscription, isLoading } = useSubscription();
   const [dismissed, setDismissed] = useState(false);
 
   // Snapshotted once at mount, deliberately. Reading the cap fresh on every
   // render would let a show recorded below immediately disqualify itself, and
   // the whole decision wants to be stable for the life of the screen anyway.
-  const [snapshot] = useState(() => ({ state: readState(), now: Date.now() }));
+  const [snapshot] = useState(() => ({
+    store: readStore(),
+    now: Date.now(),
+    sessionDismissals: readSessionDismissals(),
+  }));
 
   const tier = subscription?.tier_name ?? "free";
   // A trialing user already has a card on file. Asking again is noise.
@@ -97,33 +126,49 @@ export function useTrialOffer(trigger: TrialOfferTrigger, active: boolean) {
   const eligible =
     !isLoading &&
     isFree &&
-    !snapshot.state.clicked &&
-    snapshot.state.shows < MAX_LIFETIME_SHOWS &&
-    snapshot.now >= snapshot.state.quietUntil &&
-    snapshot.now - snapshot.state.lastShownAt >= COOLDOWN_MS;
+    canShow(snapshot.store, trigger, snapshot.now, snapshot.sessionDismissals);
+
+  const wanted = active && eligible && !dismissed;
+
+  // One ask on screen at a time. Wanting the screen and holding it are two
+  // things: the claim is made in an effect, and who holds it is read back
+  // through the store, so nothing here sets state to find out.
+  const holding = useSyncExternalStore(subscribe, holder, () => null);
+  const held = holding === trigger;
+  // Claims again whenever the slot changes hands, so an ask that had to wait
+  // takes the screen once the one before it lets go.
+  useEffect(() => {
+    if (wanted) claim(trigger);
+  }, [wanted, trigger, holding]);
+  // Letting go is its own effect: tied to wanting it, not to who holds it.
+  useEffect(() => {
+    if (!wanted) return;
+    return () => release(trigger);
+  }, [wanted, trigger]);
 
   // Derived, never set from an effect: the effect below only records that it
   // happened, which keeps the render path honest about what drives the UI.
-  const visible = active && eligible && !dismissed;
+  const visible = wanted && held;
 
   const recordedRef = useRef(false);
   useEffect(() => {
     if (!visible || recordedRef.current) return;
     recordedRef.current = true;
-    writeState({ shows: readState().shows + 1, lastShownAt: Date.now() });
-    trackTrialOfferShown({ trigger, tier_current: tier });
-  }, [visible, trigger, tier]);
+    writeStore(recordShow(readStore(), trigger, Date.now()));
+    trackTrialOfferShown({ trigger, tier_current: tier, variant });
+  }, [visible, trigger, tier, variant]);
 
   const dismiss = useCallback(() => {
     setDismissed(true);
-    writeState({ quietUntil: Date.now() + DISMISS_COOLDOWN_MS });
+    writeStore(recordDismiss(readStore(), trigger, Date.now()));
+    addSessionDismissal();
     trackTrialOfferDismissed({ trigger, tier_current: tier });
   }, [trigger, tier]);
 
   const accept = useCallback(() => {
-    writeState({ clicked: true });
-    trackPaywallCtaClicked(trigger, "ask", tier);
-  }, [trigger, tier]);
+    writeStore(recordClick(readStore()));
+    trackPaywallCtaClicked(trigger, "ask", tier, variant);
+  }, [trigger, tier, variant]);
 
   const href = useMemo(() => checkoutHref(trigger), [trigger]);
 
@@ -201,18 +246,29 @@ export function TrialOfferBanner({
   href,
   onAccept,
   onDismiss,
+  aboveRunBar = false,
 }: {
   body: string;
   href: string;
   onAccept: () => void;
   onDismiss: () => void;
+  /**
+   * The monologue page keeps "Rehearse this" in a bar at the foot of the
+   * screen below lg (components/monologue/v2/RunBar.tsx). An ask must never
+   * sit on the one button the page exists for, so there it rides above.
+   */
+  aboveRunBar?: boolean;
 }) {
   const words = useTrialWords();
+  // Whole class names, both of them: Tailwind cannot see a computed one.
+  const foot = aboveRunBar
+    ? "bottom-[calc(11rem+env(safe-area-inset-bottom,0px))] lg:bottom-4"
+    : "bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:bottom-4";
   return (
     <div /* bottom-4 put this behind the phone tab bar — the trial offer, the one
          strip in the product whose whole job is to be seen. Clears the bar on a
          phone and keeps its original inset from md up. */
-      className="pointer-events-auto fixed left-1/2 z-[10040] w-[min(92vw,30rem)] -translate-x-1/2 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:bottom-4">
+      className={`pointer-events-auto fixed left-1/2 z-[10040] w-[min(92vw,30rem)] -translate-x-1/2 ${foot}`}>
       <div className={`t-strip theatre-tokens ${theatreFontVars}`}>
         <p className="t-strip__body">{body}</p>
         <Link href={href} onClick={onAccept} className="t-strip__cta shrink-0">

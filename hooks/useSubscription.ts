@@ -39,6 +39,9 @@ export interface UsageLimits {
   craft_coach_limit: number;
   scripts_used: number;
   scripts_limit: number;
+  /** Distinct pieces read this month on this client. Limit is -1 when unlimited. */
+  monologue_reads_used?: number;
+  monologue_reads_limit?: number;
 }
 
 export interface BillingHistoryItem {

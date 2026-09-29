@@ -28,6 +28,7 @@ import { ReadView } from "@/components/monologue/v2/ReadView";
 import { SidesSheet } from "@/components/monologue/v2/SidesSheet";
 import { MarginRail } from "@/components/monologue/v2/MarginRail";
 import { RunBar } from "@/components/monologue/v2/RunBar";
+import { ReadsLeft } from "@/components/billing/ReadsLeft";
 import {
   OthersFromPlay,
   SameRegister,
@@ -709,6 +710,10 @@ export default function MonologueDetailPage() {
       {!monologue.paywalled && (
         <RunBar onRehearse={() => router.push(`/monologue/${monologue.id}/work`)} />
       )}
+      {/* Says the free reads are running out while there are still some left.
+          Rendered only once the piece is on screen, which is after the server
+          has counted this read. Signed-out readers have no allowance to count. */}
+      {user && !monologue.paywalled && <ReadsLeft ready />}
     </div>
   );
 }

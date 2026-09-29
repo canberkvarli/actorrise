@@ -20,6 +20,7 @@ import {
 } from '@/components/billing/TrialOffer';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTrialWords } from '@/hooks/useTrialWords';
+import { GATE_COPY } from '@/lib/paywall/copy';
 import { Button } from '@/components/ui/button';
 import { ColdReadPrep } from '@/components/rehearse/ColdReadPrep';
 import {
@@ -1629,10 +1630,18 @@ function RehearsalPageInner() {
   // above the showFeedback early return so the hook order stays stable across
   // the switch into review.
   const linesDelivered = session?.total_lines_delivered ?? 0;
-  const completionOffer = useTrialOffer('scene_completed', showFeedback);
+  const completionOffer = useTrialOffer(
+    'scene_completed',
+    showFeedback,
+    GATE_COPY.scene_completed.variant,
+  );
   // Six lines is past the 3.1-line average, so this only reaches actors who are
   // genuinely in the scene rather than poking at it.
-  const midSceneOffer = useTrialOffer('lines_delivered', !showFeedback && linesDelivered >= 6);
+  const midSceneOffer = useTrialOffer(
+    'lines_delivered',
+    !showFeedback && linesDelivered >= 6,
+    GATE_COPY.lines_delivered.variant,
+  );
   // Finishing a scene is what earns the second week of the trial
   // (backend/app/services/trial_length.py), and /me is cached for a minute
   // with no refetch on focus. Ask again as the review opens, or the offer on
@@ -2647,8 +2656,8 @@ function RehearsalPageInner() {
               </div>
             ) : completionOffer.visible ? (
               <TrialOfferCard
-                headline={firstRun ? 'That was your first scene.' : 'Nice run.'}
-                body="That was my script though, not yours. Upload your own sides and run them the same way, with the same partner."
+                headline={firstRun ? 'That was your first scene.' : GATE_COPY.scene_completed.headline}
+                body={GATE_COPY.scene_completed.body}
                 href={completionOffer.href}
                 onAccept={completionOffer.accept}
                 onDismiss={completionOffer.dismiss}
@@ -2974,7 +2983,7 @@ function RehearsalPageInner() {
           the product is failing, and it owns the bottom of the screen anyway. */}
       {midSceneOffer.visible && !isMicBlocked && (
         <TrialOfferBanner
-          body="Want to run your own sides like this?"
+          body={GATE_COPY.lines_delivered.body}
           href={midSceneOffer.href}
           onAccept={midSceneOffer.accept}
           onDismiss={midSceneOffer.dismiss}

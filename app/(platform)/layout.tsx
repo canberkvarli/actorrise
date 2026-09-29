@@ -64,6 +64,7 @@ import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
 import { CallboardLamp, CallboardSheetRow } from "@/components/community/CallboardLamp";
 import { useHeaderLight } from "@/components/layout/useHeaderLight";
 import { HouseLightsRow, HouseLightsSwitch } from "@/components/layout/HouseLightsSwitch";
+import { SaveAsk } from "@/components/billing/SaveAsk";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -831,6 +832,7 @@ export default function PlatformLayout({
       <PWARegister />
       <SignupTracker />
       <FirstRehearsalGate />
+      <SaveAsk />
       {contactOpen && <ContactModal open={contactOpen} onOpenChange={setContactOpen} />}
     </div>
     </UploadProvider>

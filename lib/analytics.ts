@@ -129,7 +129,11 @@ export type TrialOfferTrigger =
   | "scene_completed"
   | "monologue_completed"
   | "lines_delivered"
-  | "script_uploaded";
+  | "script_uploaded"
+  // The third piece saved: the actor has just built something worth keeping.
+  | "third_save"
+  // Free reads running out, said before the wall rather than by it.
+  | "reads_meter";
 
 type TrialOfferShownParams = {
   trigger: TrialOfferTrigger;
