@@ -81,7 +81,10 @@ plus the week's folder. Each writes files there and reports back in under 200 wo
 >    is wrong, `actorrise<span>.</span>com` is right.
 > 5. Write `tracker-append.csv` with the tracker's own columns, `Status` = `DRAFTED <date>,
 >    not sent`. Canberk or the next run folds it in after he sends.
-> 6. Run `backend/scripts/voice_check.py --kind org` on every draft and fix what it finds
+> 6. Aim at a person who teaches or directs, not at a membership or sponsorship office.
+>    An association that sells access to its members will answer with a price, and there
+>    is no budget for one.
+> 7. Run `backend/scripts/voice_check.py --kind org` on every draft and fix what it finds
 >    before you report. Report which segment, how many drafts, and anything you could not
 >    verify. Never invent a name, a date, or a fact about an organisation. If you could not
 >    confirm it on their own site, leave it out.
@@ -162,7 +165,7 @@ Posts, in outputs/marketing/<week>/social.md
 User email: <yes, to <n> users, subject "<subject>"> | <no: reason>
 
 Decisions only you can make
-  <anything that costs money, names a partner, or changes an offer>
+  <anything that names a partner or changes an offer. Never a paid placement: that is a no>
 
 Did not run / could not verify
   <tool not connected, query failed, fact not confirmed>
@@ -176,4 +179,8 @@ Did not run / could not verify
 - Use CURTAIN with an organisation, or offer a coupon to anyone.
 - Email students. They come through their teacher.
 - Invent a testimonial, a quote, a user, a number, or a fact about an organisation.
-- Spend money or agree to a partnership. It lists the decision and stops.
+- Spend money, or treat spending money as an open question. There is no marketing budget
+  (Canberk, 2026-09-29). If an organisation answers with a price for a membership, a
+  sponsorship, an ad or a listing, the draft is a warm, plain no that leaves the free offer
+  to their teachers standing. It does not ask for their numbers or a cheaper tier.
+- Agree to a partnership. It lists the decision and stops.

@@ -51,6 +51,10 @@ Create each as a Gmail draft:
   write `[LINK]` and put the link in your summary.
 - A reply goes on its thread. A new email does not.
 
+**A reply that names a price** (a membership, a sponsorship, an ad) gets a warm, plain no.
+There is no marketing budget. Leave the free offer to their teachers standing, and do not
+ask for numbers or a cheaper tier.
+
 **Replies** answer what the person actually said, first. If they named a piece or a kind of
 piece, search the corpus and tell them what is there, or say plainly that it is not. This is
 mid-conversation: if a trial offer fits, make it plainly and give the next step. No CURTAIN.
