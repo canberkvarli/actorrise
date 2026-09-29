@@ -81,11 +81,14 @@ export function LoginForm({ redirectTo: redirectToProp }: LoginFormProps = {}) {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
+              {/* 14px and underlined, with room to hit it. At 12px grey it was
+                  the smallest thing on the card and the one a locked-out
+                  actor needs most. */}
               <Link
                 href="/forgot-password"
-                className="text-xs text-muted-foreground hover:text-foreground hover:underline underline-offset-4"
+                className="-my-2 inline-flex min-h-9 items-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
               >
-                Forgot password?
+                Forgot your password?
               </Link>
             </div>
             <Input

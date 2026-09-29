@@ -20,6 +20,7 @@ import { ScenePartnerTour } from "@/components/onboarding/ScenePartnerTour";
 import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
 import { GuidedInvitation } from "@/components/practice/GuidedInvitation";
 import { shouldInvite } from "@/lib/guided-invite";
+import { isOnboardingDoneThisSession, subscribeFirstRun } from "@/lib/firstRun";
 
 /**
  * /practice — the page that opens after login.
@@ -96,6 +97,18 @@ export default function PracticePage() {
   // length of a round trip; a brand-new account has no scripts, and if the
   // fetch says otherwise the library takes over when it lands.
   const invite = !!user && shouldInvite(user, scriptsFetched ? ownScriptCount : 0, isDemoUser);
+  // The onboarding card shows on this page now (lib/onboarding-routes), over
+  // the top of whatever is here. The invitation waits for it: mounted under
+  // the card it would count itself as shown to someone who is looking at a
+  // question about their age range, and start fetching a scene for an actor
+  // who may never close the card. The latch is the session's own word that the
+  // card is done; the server flag says the same a round trip later.
+  const onboardingDone = useSyncExternalStore(
+    subscribeFirstRun,
+    isOnboardingDoneThisSession,
+    () => false,
+  );
+  const stillOnboarding = user?.has_completed_onboarding === false && !onboardingDone;
 
   const hasCachedData = scriptsFetched || safeScripts.length > 0;
   const isLoading = (authLoading && !user) || (scriptsLoading && !hasCachedData && !invite);
@@ -208,7 +221,7 @@ export default function PracticePage() {
               data resolves, which after a login — a full document load — is
               the jump that makes the landing feel broken. */}
           {invite ? (
-            <GuidedInvitation />
+            stillOnboarding ? null : <GuidedInvitation />
           ) : (
             <Suspense fallback={<LibrarySkeleton />}>
               <PracticeLibrary
