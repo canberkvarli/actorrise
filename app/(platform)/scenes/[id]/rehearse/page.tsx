@@ -1273,7 +1273,11 @@ function RehearsalPageInner() {
         via,
         guided: guided ? true : undefined,
         line_index: currentIdx,
-        sr_match: expectedCount > 0 ? Math.round((matched / expectedCount) * 100) / 100 : null,
+        // One score per row, whichever path delivered it. The server keeps
+        // twelve properties; carrying both pushed the recogniser's error off
+        // the end of a Whisper row once stt_ms was added.
+        sr_match: via === 'whisper' ? undefined
+          : expectedCount > 0 ? Math.round((matched / expectedCount) * 100) / 100 : null,
         whisper_score: whisperScore != null ? Math.round(whisperScore * 100) / 100 : null,
         ...takeStats(),
         sr_results: srResultsRef.current,

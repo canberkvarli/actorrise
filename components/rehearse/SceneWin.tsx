@@ -20,21 +20,32 @@ interface SceneWinProps {
 }
 
 /**
+ * What Plus adds over free, and nothing it does not. Free is three runs a
+ * month, one script and three monologue sessions (pricing_tiers); Plus is
+ * unlimited runs, five scripts and every monologue. If the tiers change, this
+ * list changes with them.
+ */
+const PLUS_GETS: Array<[label: string, value: string]> = [
+  ["Runs", "as many as it takes"],
+  ["Your scripts", "five on the shelf"],
+  ["Monologues", "every one, out loud"],
+];
+
+/**
  * The end of a first scene.
  *
- * What stood here was a tinted box with a bold line, a grey line and a stock
- * button: the app's default card, on the one screen where an actor has just
- * said words out loud to a stranger's voice and had them answered. It read as
- * the success page of a file converter.
+ * The invitation's own page, turned round: a direction, a line in the display
+ * face, a sentence of house text. Same faces at the same sizes, so the scene
+ * opens and closes in one room.
  *
- * This is the invitation's own page, turned round. The invitation is a cue, a
- * line in the display face, a sentence of house text and one pill. So is this:
- * the same faces at the same sizes, so the scene opens and closes in one room.
- *
- * Two ways on, not one. "Bring in your sides" was the only door, and five
- * actors uploaded a script in sixty days; most people who finish this scene do
- * not have sides on their phone. The library is the other door, dashed the way
- * every "I don't know what I want yet" door in the app is dashed.
+ * The offer is a ticket, not a sentence. It was one underlined link under two
+ * buttons, which is how a price gets read as a footnote; of the first dozen
+ * actors to finish this scene, one tapped it. A ticket is the same object the
+ * box office at /checkout hands over, at the size of a stub: the plan, the
+ * length of the trial, three printed rows of what it admits to, and the pill.
+ * When it is on the page it is the one filled button, and the two doors go
+ * dashed beside each other underneath. When it is not (already on Plus, or
+ * asked recently), the doors are the page, as before.
  *
  * It carries no theatre surface of its own: the rehearse page already is one.
  */
@@ -48,35 +59,50 @@ export function SceneWin({
   onLeave,
   leaveLabel,
 }: SceneWinProps) {
+  const asking = !!offer?.visible;
+
   return (
-    <section className="t-win" aria-labelledby="scene-win-title">
+    <section className="t-win" aria-labelledby="scene-win-title" data-asking={asking ? "true" : undefined}>
       <p className="t-win__dir">{direction}</p>
       <h1 id="scene-win-title" className="t-win__title">
         {title}
       </h1>
       <p className="t-win__house">That one was mine. The next is yours.</p>
 
-      <div className="t-win__doors">
-        <UploadScriptButton variant="primary" className="t-win__cta">
+      {asking && offer && (
+        <div className="t-win__ticket" role="group" aria-label="Plus">
+          <div className="t-win__ticket-head">
+            <p className="t-win__plan">Plus</p>
+            <span className="t-win__tag">{trial.short}</span>
+          </div>
+          {trial.earned && (
+            <p className="t-win__earned-note">Finishing that scene earned you the second week.</p>
+          )}
+          <ul className="t-win__gets">
+            {PLUS_GETS.map(([label, value]) => (
+              <li key={label}>
+                <span className="t-win__get-label">{label}</span>
+                <span className="t-win__get-lead" aria-hidden />
+                <span className="t-win__get-val">{value}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="t-win__tear" aria-hidden />
+          <a href={offer.href} onClick={offer.accept} className="t-win__cta t-win__cta--ticket">
+            {trial.cta}
+          </a>
+          <p className="t-win__fine">$0 today. Cancel any time.</p>
+        </div>
+      )}
+
+      <div className="t-win__doors" data-beside={asking ? "true" : undefined}>
+        <UploadScriptButton variant="primary" className={asking ? "t-win__alt" : "t-win__cta"}>
           Bring in your sides
         </UploadScriptButton>
         <Link href="/monologues" className="t-win__alt">
           Find a monologue
         </Link>
       </div>
-
-      {/* Two lines, each whole. As one sentence the link broke across the
-          line on a phone, "Plus, two" above "weeks free". */}
-      {offer?.visible && (
-        <p className="t-win__earned">
-          <span>
-            {trial.earned ? "Finishing that earned you a second week." : "Or take the whole room."}
-          </span>
-          <a href={offer.href} onClick={offer.accept}>
-            Plus, {trial.span} free
-          </a>
-        </p>
-      )}
 
       <div className="t-win__foot">
         <button type="button" className="t-win__quiet" onClick={onAgain} disabled={restarting}>

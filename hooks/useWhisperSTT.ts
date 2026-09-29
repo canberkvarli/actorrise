@@ -51,6 +51,14 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
   const chunksRef = useRef<Blob[]>([]);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  // What the last take measured, kept past the recorder's stop. takeStats()
+  // read the live detector, and the stop handler nulls it before the
+  // transcript is back, so every Whisper-delivered line reported voiced_ms 0
+  // and a take_ms that included the transcription. That zero was read, wrongly,
+  // as the gate hearing nothing (2026-09-28).
+  const lastTakeRef = useRef<{ voiced_ms: number; take_ms: number } | null>(null);
+  const sttStartedAtRef = useRef(0);
+  const sttMsRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
   const detectorRef = useRef<SilenceDetector | null>(null);
@@ -129,6 +137,8 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     }
 
     setIsTranscribing(true);
+    sttStartedAtRef.current = Date.now();
+    sttMsRef.current = null;
     const abortController = new AbortController();
     transcribeAbortRef.current = abortController;
 
@@ -161,6 +171,7 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
       const text = (data.text ?? '').trim();
 
       if (text) {
+        sttMsRef.current = sttStartedAtRef.current ? Date.now() - sttStartedAtRef.current : null;
         onResultRef.current?.(text);
       } else {
         onEndRef.current?.();
@@ -299,6 +310,10 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
 
     recorder.onstop = () => {
       setIsRecording(false);
+      lastTakeRef.current = {
+        voiced_ms: Math.round(detectorRef.current?.capturedVoicedMs ?? 0),
+        take_ms: recordingStartRef.current ? Date.now() - recordingStartRef.current : 0,
+      };
       cleanup();
       const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current });
       transcribeBlob(blob);
@@ -378,11 +393,26 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
    * learn what the microphone made of a real room is to ship the numbers
    * with the line: voiced audio in ms, and the room floor the gate settled on.
    */
-  const takeStats = useCallback(() => ({
-    voiced_ms: Math.round(detectorRef.current?.capturedVoicedMs ?? 0),
-    take_ms: recordingStartRef.current ? Date.now() - recordingStartRef.current : 0,
-    floor_db: gateRef.current ? Math.round(gateRef.current.noiseFloorDb) : null,
-  }), []);
+  const takeStats = useCallback(() => {
+    const floor_db = gateRef.current ? Math.round(gateRef.current.noiseFloorDb) : null;
+    // Recorder still running: the take is live, measure it now.
+    if (detectorRef.current) {
+      return {
+        voiced_ms: Math.round(detectorRef.current.capturedVoicedMs),
+        take_ms: recordingStartRef.current ? Date.now() - recordingStartRef.current : 0,
+        stt_ms: undefined as number | undefined,
+        floor_db,
+      };
+    }
+    // Recorder stopped: what it measured when it stopped, and how long the
+    // transcript took to come back, as two numbers rather than one.
+    return {
+      voiced_ms: lastTakeRef.current?.voiced_ms ?? 0,
+      take_ms: lastTakeRef.current?.take_ms ?? 0,
+      stt_ms: sttMsRef.current ?? undefined,
+      floor_db,
+    };
+  }, []);
 
   return {
     startListening: startRecording,   // drop-in replacement API

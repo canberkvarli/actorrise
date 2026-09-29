@@ -4864,6 +4864,183 @@
   opacity: 0.6;
   cursor: default;
 }
+.t-win > :nth-child(7) { animation-delay: 0.48s; }
+
+/* The offer, as a ticket stub. The same paper, ink border and hard gel shadow
+   as the box office's .t-ticket, at the size of something you are handed. It
+   was one underlined link under two buttons, which is how a price reads as a
+   footnote. Left-set inside a centred page, because a ticket is printed. */
+.t-win__ticket {
+  position: relative;
+  box-sizing: border-box;
+  margin-top: 30px;
+  width: min(100%, 23rem);
+  padding: 20px 20px 18px;
+  background: var(--t-paper);
+  border: 1.5px solid var(--t-text);
+  border-radius: 10px;
+  box-shadow: 8px 8px 0 var(--t-gel);
+  text-align: left;
+}
+.t-win__ticket-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.t-win__plan {
+  margin: 0;
+  font-family: var(--t-display);
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+/* Sharp, because it is a label and not a button. */
+.t-win__tag {
+  padding: 5px 10px;
+  border: 1.5px solid var(--t-text);
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--t-text);
+}
+.t-win__earned-note {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--t-gel-ink);
+  background: color-mix(in oklab, var(--t-gel) 14%, transparent);
+  font-family: var(--t-body);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--t-text);
+}
+.t-win__gets {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+}
+/* A row of a printed account: the label, the leader, the figure. */
+.t-win__gets li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 0;
+}
+.t-win__get-label {
+  font-family: var(--t-direction);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--t-muted-dark-2);
+}
+.t-win__get-lead {
+  flex: 1;
+  min-width: 14px;
+  border-bottom: 1px dotted var(--t-line-light);
+  transform: translateY(-4px);
+}
+.t-win__get-val {
+  font-family: var(--t-body);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--t-text);
+}
+/* The tear: a dashed rule edge to edge, with a punched notch at either end.
+   Each notch is a circle in the page's colour, clipped to its inner half. */
+.t-win__tear {
+  position: relative;
+  margin: 14px -20px 16px;
+  border-top: 1.5px dashed var(--t-line-light-2);
+}
+.t-win__tear::before,
+.t-win__tear::after {
+  content: "";
+  position: absolute;
+  top: -9px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--t-text);
+  background: var(--page);
+}
+.t-win__tear::before {
+  left: -9.5px;
+  clip-path: inset(0 0 0 50%);
+}
+.t-win__tear::after {
+  right: -9.5px;
+  clip-path: inset(0 50% 0 0);
+}
+.t-win__cta--ticket {
+  width: 100%;
+  text-decoration: none;
+  box-shadow: none;
+}
+.t-win__cta--ticket:hover:not(:disabled) {
+  box-shadow: none;
+}
+.t-win__fine {
+  margin: 10px 0 0;
+  text-align: center;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: var(--t-muted-dark-2);
+}
+/* With the ticket on the page the doors are the second thing: two dashed
+   pills, beside each other where there is room, stacked where there is not. */
+.t-win__doors[data-beside="true"] {
+  margin-top: 26px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: min(100%, 23rem);
+  gap: 10px;
+}
+.t-win__doors[data-beside="true"] .t-win__alt {
+  flex: 1 1 10rem;
+  width: auto;
+  height: 46px;
+  padding: 0 14px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+/* With a ticket on it the page carries more, so everything above it gives a
+   little: the whole screen, quiet links included, fits a phone without a
+   scroll. */
+.t-win[data-asking="true"] {
+  padding-top: clamp(20px, 4vh, 56px);
+}
+.t-win[data-asking="true"] .t-win__title {
+  font-size: clamp(36px, 10vw, 64px);
+}
+.t-win[data-asking="true"] .t-win__house {
+  margin-top: 12px;
+}
+.t-win[data-asking="true"] .t-win__ticket {
+  margin-top: 22px;
+}
+.t-win[data-asking="true"] .t-win__doors {
+  margin-top: 20px;
+}
+.t-win[data-asking="true"] .t-win__foot {
+  margin-top: 18px;
+}
+@media (max-height: 760px) {
+  .t-win[data-asking="true"] .t-win__gets li {
+    padding: 5px 0;
+  }
+  .t-win[data-asking="true"] .t-win__earned-note {
+    margin-top: 10px;
+    padding: 6px 10px;
+  }
+}
 
 /* The review's head, for every scene after the first: the same direction and
    the same display face, at the size of a title rather than a whole page. */
