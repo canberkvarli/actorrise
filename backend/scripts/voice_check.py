@@ -17,7 +17,11 @@ The kinds, and what each adds to the rules every draft is held to:
 
   org     an organisation (theatre, school, studio, coach, chapter, library):
           no CURTAIN, no promise of three months
-  user    a current ActorRise user: must carry the reply-UNSUBSCRIBE line
+  user    a list of current ActorRise users, sent through /admin/emails:
+          must carry the reply-UNSUBSCRIBE line
+  note    one current user, written by hand about what they did: NO opt-out
+          line (Canberk, 2026-09-30: it made a personal note read like a
+          campaign; a reply saying stop is filed the same way), no CURTAIN
   reply   an answer on a thread already going: no CURTAIN
   social  a post: no sign-off needed
 
@@ -34,8 +38,8 @@ import re
 import sys
 from pathlib import Path
 
-KINDS = ("org", "user", "reply", "social")
-TO_GMAIL = ("org", "user", "reply")
+KINDS = ("org", "user", "note", "reply", "social")
+TO_GMAIL = ("org", "user", "note", "reply")
 
 DASHES = re.compile(r"[‒–—―]| - | -- ")
 WE = re.compile(r"\b(we|we're|we've|we'll|our|ours|us)\b|\bthe (actorrise )?team\b", re.I)
@@ -82,12 +86,14 @@ def check(text: str, kind: str) -> list[str]:
     found(EMOJI, text, "an emoji")
     found(COUPON, text, "a coupon or a retired code")
 
-    if kind in ("org", "reply"):
+    if kind in ("org", "note", "reply"):
         found(CURTAIN, text, f"CURTAIN in a {kind} email")
     if kind == "org":
         found(THREE_MONTHS, text, "three months promised (educators get 1, students 2 weeks or 1 month)")
     if kind == "user" and not UNSUBSCRIBE_LINE.search(text):
-        problems.append("no reply-UNSUBSCRIBE line, which every email to a current user carries")
+        problems.append("no reply-UNSUBSCRIBE line, which every email to a list of users carries")
+    if kind == "note":
+        found(UNSUBSCRIBE_LINE, text, "an opt-out line on a personal note (it reads as a campaign)")
 
     if kind in TO_GMAIL:
         found(URL, SAFE_DOMAIN.sub("", text), "a URL in a Gmail draft (write [LINK], or the domain with the span)")

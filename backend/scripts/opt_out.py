@@ -13,7 +13,9 @@ A bounce skips the second: the address is dead, the person never asked for
 anything. Prints what it did and what was already so.
 
 For /conversion-loop, which files a reply asking to stop the moment it reads
-one. The admin page does the first half; nothing else did both.
+one. The unsubscribe link does the same thing by itself since 2026-09-30;
+the work lives in app.services.email.opt_out so both paths agree. Start the
+reason with OPT-OUT: when the person asked, so the resubscribe link can undo it.
 """
 
 import argparse
@@ -31,56 +33,7 @@ try:
 except ImportError:
     pass
 
-
-def opt_out(db, email: str, reason: str, bounce: bool = False) -> dict:
-    """Returns {"listed": bool, "account": "opted_out" | "already_out" | "none" | "left_alone"}."""
-    from sqlalchemy import func
-
-    # The whole model tree, not only the two tables used here. users carries
-    # foreign keys onto organizations and others, and SQLAlchemy cannot build
-    # a query on User until every table those point at is registered. The
-    # tests never saw this: their fixture imports Organization itself. The
-    # first real run did (2026-09-29), on an actor who had asked to stop.
-    import app.main  # noqa: F401
-    from app.models.email_do_not_contact import EmailDoNotContact
-    from app.models.user import User
-
-    address = email.strip().lower()
-    if "@" not in address:
-        raise ValueError(f"not an email address: {email!r}")
-    if not reason.strip():
-        raise ValueError("a reason is required: say what they replied to, and the date")
-
-    user = db.query(User).filter(func.lower(User.email) == address).first()
-
-    listed = False
-    exists = (
-        db.query(EmailDoNotContact.id)
-        .filter(func.lower(EmailDoNotContact.email) == address)
-        .first()
-    )
-    if exists is None:
-        db.add(
-            EmailDoNotContact(
-                email=address,
-                name=getattr(user, "name", None) if user else None,
-                reason=reason.strip(),
-            )
-        )
-        listed = True
-
-    if bounce:
-        account = "left_alone"
-    elif user is None:
-        account = "none"
-    elif not user.marketing_opt_in:
-        account = "already_out"
-    else:
-        user.marketing_opt_in = False
-        account = "opted_out"
-
-    db.commit()
-    return {"listed": listed, "account": account}
+from app.services.email.opt_out import opt_out  # noqa: E402,F401  (tests import it from here)
 
 
 def main() -> None:
@@ -90,6 +43,11 @@ def main() -> None:
     ap.add_argument("--bounce", action="store_true", help="a dead address: list it, leave the account alone")
     args = ap.parse_args()
 
+    # The whole model tree, not only the two tables used here. users carries
+    # foreign keys onto organizations and others, and SQLAlchemy cannot build
+    # a query on User until every table those point at is registered. The
+    # first real run (2026-09-29) crashed on this, on an actor who had asked to stop.
+    import app.main  # noqa: F401
     from app.core.database import SessionLocal
 
     db = SessionLocal()

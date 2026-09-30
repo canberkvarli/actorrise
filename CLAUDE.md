@@ -84,12 +84,14 @@ Reference example of Canberk's actual voice: user memory `email-voice.md`.
 
 ## Opt-out requirement (current-user emails)
 
-Any marketing email sent to existing platform users (not cold outreach) must include a plain reply-to-opt-out option in the body or sign-off, not just the unsubscribe link. Reason: some people would rather tell a human than click a form, and a reply keeps the conversation open. (The original reason, the /unsubscribe page's "Other" reason having no free-text field, was fixed in commit 40baad8c on 2026-08-19 and is live: the page now shows a comment box for every reason and forwards it to canberk@actorrise.com via POST /unsubscribe-feedback. Verified 2026-09-16, do not re-fix.)
+Any marketing email sent to a LIST of existing platform users (through `/admin/emails`, not cold outreach) must include a plain reply-to-opt-out option in the body or sign-off, not just the unsubscribe link. Reason: some people would rather tell a human than click a form, and a reply keeps the conversation open. (The original reason, the /unsubscribe page's "Other" reason having no free-text field, was fixed in commit 40baad8c on 2026-08-19 and is live: the page now shows a comment box for every reason and forwards it to canberk@actorrise.com via POST /unsubscribe-feedback. Verified 2026-09-16, do not re-fix.)
 
 Standard line, place near the sign-off:
 "reply UNSUBSCRIBE and I'll take you off the list, no hard feelings"
 
-If a user replies UNSUBSCRIBE (or otherwise asks to stop), add their email to `email_do_not_contact` in Supabase right away. Keep the unsubscribe link too, this is in addition to it, not a replacement.
+NOT on a personal note to ONE user (the daily loop's hand-written notes about what that person did, sent from Gmail). Canberk, 2026-09-30: the line made a personal note read like a campaign. Those end on `Canberk`, full stop. `voice_check.py --kind note` flags the line if it sneaks in. Same exception as the two triggered emails.
+
+If a user replies UNSUBSCRIBE (or otherwise asks to stop), file it right away: `cd backend && uv run python scripts/opt_out.py <address> "OPT-OUT: <what they replied to, date>"`. It adds them to `email_do_not_contact` AND turns `marketing_opt_in` off. Since 2026-09-30 the unsubscribe link under every automated email does exactly the same by itself (`app/services/email/opt_out.py`), so both ways of saying stop land in both places, and the resubscribe link lifts an `OPT-OUT:` row again (never a `BOUNCE:` or a payer's row). Keep the unsubscribe link too, this is in addition to it, not a replacement.
 
 ## Trial-link CTA (dramatic one-word ask)
 

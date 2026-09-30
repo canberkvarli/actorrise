@@ -34,7 +34,7 @@ Sort every reply into exactly one of these:
 
 | The reply | What you do |
 |---|---|
-| Asks to stop: UNSUBSCRIBE, stop, remove me, no thanks, not interested | File it now: `cd backend && uv run python scripts/opt_out.py <address> "<reason>"`. The reason is dated and in the house style, e.g. `OPT-OUT: replied "unsubscribe" to the day-10 email on 2026-10-02`. It lists the address and turns `marketing_opt_in` off, and is safe to run twice. No reply is drafted. |
+| Asks to stop: UNSUBSCRIBE, stop, remove me, no thanks, not interested | File it now: `cd backend && uv run python scripts/opt_out.py <address> "<reason>"`. The reason is dated and in the house style, e.g. `OPT-OUT: replied "unsubscribe" to the day-10 email on 2026-10-02`. It lists the address and turns `marketing_opt_in` off, and is safe to run twice. (The unsubscribe link under the automated emails does the same by itself; this is for the people who reply instead.) No reply is drafted. |
 | CURTAIN | Draft a reply on the thread. The link is `https://buy.stripe.com/00w8wR4Xqd7o7JGa3X6g802?prefilled_email=<the address they replied from>`. **Do not put it in the draft**: the Gmail connector rewrites every URL into a google.com redirect. Write `[LINK]` where it goes and list the full link in your summary for Canberk to paste in Gmail. |
 | A bounce or an auto-reply | Hard bounce (5.x.x): `scripts/opt_out.py <address> "BOUNCE: <code and text>, <date>" --bounce`. Soft bounce (4.x.x) or out-of-office: nothing. |
 | Anything else: an answer, a question, a complaint, a thank you | Draft a reply in Canberk's voice (step 3), and append what they said to `docs/metrics/user-voice.md` (step 4). |
@@ -67,7 +67,10 @@ someone in section 2: the server emails them a day after their wall.
   pieces" is the email. "I noticed you're an engaged user" is not.
 - Not about Plus. One question, and the question is about them.
 - Three to five sentences.
-- End with: `reply UNSUBSCRIBE and I'll take you off the list, no hard feelings`
+- End on `Canberk`. **No reply-UNSUBSCRIBE line** (Canberk, 2026-09-30: it made a note to one
+  person read like a campaign). If they answer asking to stop, it is filed like any other.
+  The line still belongs on anything sent to a list through `/admin/emails`.
+- Check each one: `uv run python scripts/voice_check.py --kind note -` and fix what it finds.
 - Skip anyone with no real activity to talk about, and say in the summary that you did.
 - Skip a throwaway address (a mail-drop domain, no name), and anyone whose searches say
   they are a child. Say in the summary that you did, without saying who.

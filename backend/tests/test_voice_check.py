@@ -87,6 +87,12 @@ class ByKind(unittest.TestCase):
     def test_an_org_email_does_not_need_it(self):
         self.assertEqual(check(CLEAN_ORG, "org"), [])
 
+    def test_a_personal_note_must_not_carry_it(self):
+        note = CLEAN_USER.split("\n\nreply")[0]
+        self.assertEqual(check(note, "note"), [])
+        self.assertIn("opt-out line on a personal note", broken(CLEAN_USER, "note"))
+        self.assertIn("CURTAIN", broken(note.replace("Canberk", "Reply CURTAIN.\n\nCanberk"), "note"))
+
     def test_no_url_in_anything_headed_for_gmail(self):
         for link in ("https://actorrise.com", "actorrise.com", "www.nctc.org", "buy.stripe.com/abc"):
             for kind in ("org", "user", "reply"):

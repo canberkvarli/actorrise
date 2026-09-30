@@ -6,6 +6,7 @@ from app.models.billing import UsageMetrics
 from app.models.founding_actor import FoundingActor
 from app.models.user import User
 from app.services.email.marketing import verify_unsubscribe_token
+from app.services.email.opt_out import link_reason, opt_back_in, opt_out
 from app.services.email.notifications import (
     send_welcome_email,
 )
@@ -430,10 +431,8 @@ def unsubscribe(
             status_code=400,
         )
 
-    user = db.query(User).filter(User.email == email).first()
-    if user and user.marketing_opt_in:
-        user.marketing_opt_in = False
-        db.commit()
+    # Both lists, same as a reply saying "unsubscribe": see services/email/opt_out.
+    opt_out(db, email, link_reason())
 
     if want_json:
         return JSONResponse({"ok": True, "message": "Unsubscribed successfully."})
@@ -464,10 +463,9 @@ def resubscribe(
             return JSONResponse({"ok": False, "message": "Invalid or expired link."}, status_code=400)
         return HTMLResponse(content=_unsubscribe_page("Invalid or expired link."), status_code=400)
 
-    user = db.query(User).filter(User.email == email).first()
-    if user and not user.marketing_opt_in:
-        user.marketing_opt_in = True
-        db.commit()
+    # Lifts the OPT-OUT row the link (or a reply) added. A bounce or a payer's
+    # row is not theirs to lift, and stays.
+    opt_back_in(db, email)
 
     if want_json:
         return JSONResponse({"ok": True, "message": "You're back on the list."})

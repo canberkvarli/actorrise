@@ -59,3 +59,76 @@ class OptOutTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheLinks(unittest.TestCase):
+    """GET /unsubscribe and /resubscribe, called as functions with a real token."""
+
+    def setUp(self):
+        self.db, self.saved = memory_db([Organization, User, EmailDoNotContact])
+        self.user = User(email="maya@example.com", supabase_id="s1", marketing_opt_in=True, name="Maya")
+        self.db.add(self.user)
+        self.db.commit()
+        from app.services.email.marketing import generate_unsubscribe_token
+
+        self.token = generate_unsubscribe_token("maya@example.com")
+
+    def tearDown(self):
+        self.db.close()
+        restore(self.saved)
+
+    def _unsubscribe(self):
+        from app.api.auth import unsubscribe
+
+        return unsubscribe(email="maya@example.com", token=self.token, request=None, db=self.db)
+
+    def _resubscribe(self):
+        from app.api.auth import resubscribe
+
+        return resubscribe(email="maya@example.com", token=self.token, request=None, db=self.db)
+
+    def test_the_link_lands_on_both_lists(self):
+        self._unsubscribe()
+        row = self.db.query(EmailDoNotContact).one()
+        self.assertEqual(row.email, "maya@example.com")
+        self.assertTrue(row.reason.startswith("OPT-OUT: clicked the unsubscribe link on 20"))
+        self.db.refresh(self.user)
+        self.assertFalse(self.user.marketing_opt_in)
+
+    def test_the_link_twice_is_once(self):
+        self._unsubscribe()
+        self._unsubscribe()
+        self.assertEqual(self.db.query(EmailDoNotContact).count(), 1)
+
+    def test_a_bad_token_touches_nothing(self):
+        from app.api.auth import unsubscribe
+
+        unsubscribe(email="maya@example.com", token="nope", request=None, db=self.db)
+        self.assertEqual(self.db.query(EmailDoNotContact).count(), 0)
+        self.db.refresh(self.user)
+        self.assertTrue(self.user.marketing_opt_in)
+
+    def test_resubscribe_undoes_the_link(self):
+        self._unsubscribe()
+        self._resubscribe()
+        self.assertEqual(self.db.query(EmailDoNotContact).count(), 0)
+        self.db.refresh(self.user)
+        self.assertTrue(self.user.marketing_opt_in)
+
+    def test_resubscribe_undoes_a_filed_reply_too(self):
+        opt_out(self.db, "maya@example.com", REASON)
+        self._resubscribe()
+        self.assertEqual(self.db.query(EmailDoNotContact).count(), 0)
+        self.db.refresh(self.user)
+        self.assertTrue(self.user.marketing_opt_in)
+
+    def test_resubscribe_leaves_a_bounce_alone(self):
+        opt_out(self.db, "maya@example.com", "BOUNCE: 550 5.1.1 address not found, 2026-10-02", bounce=True)
+        self._resubscribe()
+        self.assertEqual(self.db.query(EmailDoNotContact).count(), 1)
+
+    def test_resubscribe_leaves_a_payer_alone(self):
+        self.db.add(EmailDoNotContact(email="maya@example.com", reason="Paid subscriber"))
+        self.db.commit()
+        self._resubscribe()
+        self.assertEqual(self.db.query(EmailDoNotContact).count(), 1)
