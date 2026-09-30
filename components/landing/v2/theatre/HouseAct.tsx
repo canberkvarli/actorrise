@@ -5,6 +5,7 @@ import { useState } from "react";
 import { SOCIALS, externalProps } from "@/lib/socials";
 import { TESTIMONIALS } from "@/data/testimonials";
 import { TheatreCta } from "./TheatreCta";
+import { TheatrePartners } from "./TheatrePartners";
 import { useTheatreStats } from "./useTheatreStats";
 
 const YOUTUBE_ID = "TTZxo3bZPI4";
@@ -319,6 +320,8 @@ export function HouseAct() {
             </div>
           </div>
         </div>
+
+        <TheatrePartners />
 
         {/* --- What it costs, in a sentence -------------------------------- */}
         <div

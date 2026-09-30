@@ -103,16 +103,52 @@ _FILTER_WORDS = frozenset("""
 """.split())
 
 
+#: Dimensions of KEYWORD_MAPPINGS whose words describe the PIECE OR THE ACTOR
+#: rather than its subject matter, and so carry no content for cosine to judge.
+#:
+#: This exists because the two vocabularies drifted. `sad woman`, `funny woman`,
+#: `fierce woman` and `intense woman` were all filter-only; `angry woman` was
+#: not, because the anger family lives in KEYWORD_MAPPINGS['emotions'] and was
+#: never copied into the hand-written list below. A real actor searching
+#: "angry woman" got a weak-match banner over results that were correct, while
+#: "sad woman" did not. Deriving the words instead of re-typing them is what
+#: stops that happening again.
+#:
+#: Deliberately NOT included:
+#:   themes            - "love", "death", "betrayal", "grief" ARE the content.
+#:                       An actor asking for a monologue about betrayal wants it
+#:                       to be about betrayal, and cosine is how we know.
+#:   famous_characters - "macbeth", "iago" name a work; the character pre-pass
+#:                       handles them and it is not floor-exempt for a reason.
+#:   character_type    - "villain", "hero" read as subject matter more than as
+#:                       an attribute.
+#:   author, category  - overlap with the title and author pre-passes; left
+#:                       alone until there is a search log that asks for it.
+_FILTER_DIMENSIONS = ("emotions", "gender", "age_range", "source_type", "tone")
+
+
+@lru_cache(maxsize=1)
+def _derived_filter_words() -> frozenset:
+    """Every single word that the extractor can turn into a hard filter."""
+    words = set()
+    for dim in _FILTER_DIMENSIONS:
+        for phrase in KeywordExtractor.KEYWORD_MAPPINGS.get(dim, {}):
+            if " " not in phrase:
+                words.add(phrase)
+    return frozenset(words)
+
+
 def is_filter_only_query(query) -> bool:
     """True when the query has no semantic content beyond filter vocabulary."""
     if not query or not str(query).strip():
         return False
     words = re.sub(r"[^a-z0-9\s-]", " ", str(query).lower()).split()
+    vocab = _FILTER_WORDS | _derived_filter_words()
     residual = [
         w for w in words
-        if w not in _FILTER_WORDS
+        if w not in vocab
         and not re.fullmatch(r"\d+[a-z]*|\d+-\d+", w)
-        and w.replace("-", "") not in _FILTER_WORDS
+        and w.replace("-", "") not in vocab
     ]
     return not residual
 

@@ -35,7 +35,7 @@ type PartnerClickedParams = {
   /** Organization name, e.g. "Virginia Theatre Association". */
   partner: string;
   /** Where the mark was clicked. */
-  surface: "landing" | "thanks";
+  surface: "landing" | "thanks" | "theatre-house";
 };
 
 type SignupCompletedParams = {
