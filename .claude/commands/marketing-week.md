@@ -146,7 +146,9 @@ When all four are back:
 
 ## 3. The page for Canberk
 
-Write `outputs/marketing/$WEEK/README.md` and end your reply with the same thing:
+Write `outputs/marketing/$WEEK/README.md` and end your reply with the same thing, as plain
+text with bold headings, NOT inside a code fence (a fenced block renders in the terminal's
+code colour, which Canberk could not read on his theme, 2026-10-01):
 
 ```
 MARKETING WEEK <week>

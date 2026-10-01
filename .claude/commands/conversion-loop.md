@@ -102,7 +102,9 @@ feature, did not understand what it does, happy. If it names a bug, say which pa
 
 ## 5. The summary
 
-End with this, and nothing after it:
+End with this, and nothing after it. Write it as plain text with the headings in bold, NOT
+inside a code fence: a fenced block renders in the terminal's code colour, which Canberk
+could not read on his theme (2026-10-01).
 
 ```
 CONVERSION LOOP, <date>
