@@ -152,12 +152,16 @@ def sanitize_properties(props: Optional[dict[str, Any]]) -> dict[str, Any]:
 def trial_outcome(stripe_status: str) -> str:
     """Stripe's post-trial status as an outcome word.
 
-    `active` after `trialing` is a conversion; `canceled` is spelt our way so
-    the two webhook paths that can report a cancellation agree on the label.
-    Anything else (past_due, unpaid, incomplete_expired) is kept verbatim.
+    `active` after `trialing` is NOT a conversion. Stripe flips the status the
+    moment the trial ends and only then tries the card; on 2026-09-30 a trial
+    was reported converted at 16:17:16 and declined (closed account) seconds
+    later. The conversion is `invoice.paid`, which records `trial_converted`.
+    `canceled` is spelt our way so the two webhook paths that can report a
+    cancellation agree on the label. Anything else (past_due, unpaid,
+    incomplete_expired) is kept verbatim.
     """
     if stripe_status == "active":
-        return "converted"
+        return "awaiting_payment"
     if stripe_status == "canceled":
         return "cancelled"
     return stripe_status or "unknown"

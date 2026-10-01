@@ -69,9 +69,14 @@ select
   count(distinct e.user_id) filter (where e.event_name = 'paywall_cta_clicked'),
   count(distinct e.user_id) filter (where e.event_name = 'checkout_started'),
   count(distinct e.user_id) filter (where e.event_name = 'trial_started'),
+  -- paid is invoice.paid (trial_converted). trial_ended/converted is only
+  -- trusted before 2026-09-27, when trial_converted did not exist yet: after
+  -- that it was written on `active`, before the card was tried, and on
+  -- 2026-09-30 it counted a declined card as money.
   count(distinct e.user_id) filter (
     where e.event_name = 'trial_converted'
-       or (e.event_name = 'trial_ended' and e.properties->>'outcome' = 'converted'))
+       or (e.event_name = 'trial_ended' and e.properties->>'outcome' = 'converted'
+           and e.created_at < '2026-09-27'))
 from user_events e join users u on u.id = e.user_id
 where {REAL} and e.created_at > now() - make_interval(days => :older)
   and e.created_at <= now() - make_interval(days => :newer)

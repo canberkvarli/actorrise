@@ -8,8 +8,8 @@
 --
 -- Distinct users throughout, staff dropped. price_seen folds in the two older
 -- names so days before paywall_hit existed are not read as zero. paid folds in
--- trial_ended/converted because user 2127 (2026-09-15) has that row and no
--- trial_converted.
+-- trial_ended/converted before 2026-09-27 because user 2127 (2026-09-15) has
+-- that row and no trial_converted; after that date only invoice.paid counts.
 --
 -- The money events start 2026-09-27 (31bfe793). A day before that shows
 -- price_seen = 0 because nothing was counting, not because nobody saw a price.
@@ -30,9 +30,14 @@ select
   count(distinct e.user_id) filter (where e.event_name = 'checkout_started')       as checkouts,
   count(distinct e.user_id) filter (where e.event_name = 'checkout_completed')     as checkouts_done,
   count(distinct e.user_id) filter (where e.event_name = 'trial_started')          as trials,
+  -- paid is invoice.paid (trial_converted). trial_ended/converted is trusted
+  -- only before 2026-09-27, when trial_converted did not exist: after that it
+  -- was written on `active`, before the card was tried, and on 2026-09-30 it
+  -- counted a declined card as money.
   count(distinct e.user_id) filter (
     where e.event_name = 'trial_converted'
-       or (e.event_name = 'trial_ended' and e.properties->>'outcome' = 'converted')
+       or (e.event_name = 'trial_ended' and e.properties->>'outcome' = 'converted'
+           and e.created_at < '2026-09-27')
   ) as paid
 from public.user_events e
 join public.users u on u.id = e.user_id

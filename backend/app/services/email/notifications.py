@@ -293,6 +293,11 @@ def send_trial_ending_notification(
 #: an unfamiliar one.
 _TRIAL_OUTCOME_COPY = {
     "converted": ("Trial converted", "The first charge went through."),
+    "awaiting_payment": (
+        "Trial ended, charging the card",
+        "Stripe is attempting the first charge now. A second mail follows if it "
+        "goes through; if it fails, the subscription shows past_due in Stripe.",
+    ),
     "cancelled": ("Trial cancelled", "They left before being charged."),
     "past_due": (
         "Trial ended, payment failed",

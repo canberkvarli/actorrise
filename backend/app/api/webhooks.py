@@ -451,6 +451,24 @@ def handle_invoice_paid(invoice: dict, db: Session):
                     },
                 )
                 record_trial_ended(db, subscription.user_id, _sid, "converted", tier=_tier)
+
+                # The money mail. subscription.updated already said "charging
+                # the card"; this is the one that says it went through.
+                paid_user = db.query(User).filter(User.id == subscription.user_id).first()
+                if paid_user:
+                    from app.services.email.notifications import send_trial_ended_notification
+
+                    threading.Thread(
+                        target=send_trial_ended_notification,
+                        kwargs={
+                            "user_name": paid_user.name or "",
+                            "user_email": paid_user.email,
+                            "tier_display_name": tier_row.display_name if tier_row else "Plus",
+                            "outcome": "converted",
+                            "stripe_status": stripe_sub.get("status") or "active",
+                        },
+                        daemon=True,
+                    ).start()
     except Exception as e:
         # logger, not print: this warning went unread for five months.
         logger.warning("trial_converted not recorded for user %s: %s", subscription.user_id, e)

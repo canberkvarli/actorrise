@@ -12,7 +12,9 @@ from tests.dbfixture import memory_db, restore
 
 class OutcomeTests(unittest.TestCase):
     def test_labels(self):
-        self.assertEqual(events.trial_outcome("active"), "converted")
+        # active at trial end is Stripe flipping the status BEFORE it tries the
+        # card; the 2026-09-30 trial read "converted" and was declined seconds later.
+        self.assertEqual(events.trial_outcome("active"), "awaiting_payment")
         self.assertEqual(events.trial_outcome("canceled"), "cancelled")
         self.assertEqual(events.trial_outcome("past_due"), "past_due")
         self.assertEqual(events.trial_outcome(""), "unknown")
