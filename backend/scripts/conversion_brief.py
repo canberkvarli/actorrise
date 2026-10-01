@@ -141,6 +141,10 @@ where {REACHABLE} and not {PAID}
                   where l.user_id = u.id and l.sent_at > now() - interval '7 days')
   and not exists (select 1 from user_events e where e.user_id = u.id and {WALL}
                   and e.created_at > now() - interval '5 days')
+  -- Hand-written notes go out through Gmail, which the database never sees.
+  -- outputs/conversion/written.txt is the loop's own record of who it drafted
+  -- to; without it the same three names came back the day after they were sent.
+  and lower(u.email) not in :written
 order by week desc, u.created_at desc
 limit 5
 """
@@ -183,11 +187,32 @@ def change(now: int, before: int) -> str:
     return f"{(now - before) / before:+.0%}"
 
 
+WRITTEN = backend_dir.parent / "outputs" / "conversion" / "written.txt"
+
+
+def written_to() -> list[str]:
+    """Addresses the loop has drafted a personal note to: one per line, anything
+    after a # is a comment. The loop appends; the brief leaves them out of
+    section 5. Returns a placeholder when the file is empty, since `not in ()`
+    is not SQL."""
+    if not WRITTEN.exists():
+        return ["nobody@nowhere"]
+    addrs = []
+    for line in WRITTEN.read_text().splitlines():
+        addr = line.split("#", 1)[0].strip().lower()
+        if "@" in addr:
+            addrs.append(addr)
+    return addrs or ["nobody@nowhere"]
+
+
 def build(conn) -> str:
-    from sqlalchemy import text
+    from sqlalchemy import bindparam, text
 
     def q(sql, **params):
-        return [tuple(r) for r in conn.execute(text(sql), params).fetchall()]
+        stmt = text(sql)
+        if "written" in params:
+            stmt = stmt.bindparams(bindparam("written", expanding=True))
+        return [tuple(r) for r in conn.execute(stmt, params).fetchall()]
 
     this_week = q(FUNNEL, older=7, newer=0)[0]
     last_week = q(FUNNEL, older=14, newer=7)[0]
@@ -197,7 +222,7 @@ def build(conn) -> str:
     ]
 
     walked = q(WALKED_AWAY, days=2, limit=25)
-    worth = [r for r in q(WORTH) if r[4] > 0]
+    worth = [r for r in q(WORTH, written=written_to()) if r[4] > 0]
 
     parts = [
         f"# Conversion brief, {date.today():%Y-%m-%d}\n",

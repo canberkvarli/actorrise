@@ -71,6 +71,10 @@ someone in section 2: the server emails them a day after their wall.
   person read like a campaign). If they answer asking to stop, it is filed like any other.
   The line still belongs on anything sent to a list through `/admin/emails`.
 - Check each one: `uv run python scripts/voice_check.py --kind note -` and fix what it finds.
+- After drafting, append each address to `outputs/conversion/written.txt` as
+  `<address>   # <date> <subject>`. The brief reads that file and leaves them out of section 5
+  from then on; the database never sees a Gmail draft, so without it the same people come back
+  the next day.
 - Skip anyone with no real activity to talk about, and say in the summary that you did.
 - Skip a throwaway address (a mail-drop domain, no name), and anyone whose searches say
   they are a child. Say in the summary that you did, without saying who.
