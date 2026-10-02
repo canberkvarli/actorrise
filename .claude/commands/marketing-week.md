@@ -53,6 +53,12 @@ plus the week's folder. Each writes files there and reports back in under 200 wo
 >    impressions to actorrise.com in the last 28 days, and the ten pages people land on.
 >    If a tool is not connected, say so in one line and move on. Do not guess a number.
 > 5. One line at the top: the single number that moved most, and by how much.
+> 6. Vercel ISR writes per day for the last 7 days, from `/v1/billing/charges`
+>    (one-day windows, `ServiceName = "ISR Writes"`, sum `ConsumedQuantity`; token in
+>    `~/Library/Application Support/com.vercel.cli/auth.json`). Canberk is moving
+>    Vercel to the Hobby plan, whose cap is 200k a month, and AhrefsBot was blocked on
+>    2026-10-02 to get under it. Print the seven numbers and say whether every day is
+>    under 6,000. Drop this item once he has switched and a month has passed.
 >
 > A failed query is not a zero. If something errors, print the error and leave the row out.
 
