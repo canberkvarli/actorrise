@@ -5,6 +5,13 @@ const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
+      // SEO-tool crawlers, shut out. On 2026-10-01 AhrefsBot made 10,852 of
+      // the 12,500 hits on /monologues/[slug] in 31 hours (Google: 51). Each
+      // hit on an uncached page is an ISR write on Vercel, and those were
+      // 362k a month against the 200k the Hobby plan allows. Neither bot sends
+      // an actor here; they crawl for their own backlink indexes. Ahrefs'
+      // own data about this site is read through its API, not its crawler.
+      { userAgent: ["AhrefsBot", "SemrushBot"], disallow: ["/"] },
       {
         userAgent: "*",
         // Explicitly allow the marketing /monologues* pages. A bare `Disallow: /monologues`

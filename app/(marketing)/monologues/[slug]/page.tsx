@@ -18,8 +18,10 @@ import { displayableAuthor } from "@/lib/utils";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
-// ISR: render on first request, cache for a day. Keeps ~20k pages cheap + crawlable.
-export const revalidate = 86400;
+// ISR: render on first request, cache for a week. Keeps ~20k pages cheap + crawlable.
+// A day was the setting until 2026-10-02: a monologue page does not change
+// day to day, and every re-render after expiry is an ISR write Vercel counts.
+export const revalidate = 604800;
 
 /*
  * A dynamic [slug] route with no generateStaticParams never enters static mode,
