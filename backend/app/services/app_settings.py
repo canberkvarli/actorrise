@@ -94,3 +94,41 @@ def set_value(db: Session, key: str, value: str) -> str:
         row.value = value
     db.commit()
     return value
+
+
+# The founder's daily digests (comp expiry + new teachers) are sent once a
+# day. "Once" used to be a dict in the scheduler thread's memory, which is
+# once per PROCESS: on 2026-10-02 two processes woke at 16:00 UTC seven
+# seconds apart and the "1 new teacher" mail arrived twice.
+FOUNDER_DIGEST_SENT_ON = "founder_digest_sent_on"
+
+
+def claim_day(db: Session, key: str, day: str) -> bool:
+    """Compare-and-set a date-stamped setting. True once per day across processes.
+
+    The first caller to move `key` from anything-but-`day` to `day` wins;
+    everyone else on the same day gets False. Done as one UPDATE (or one
+    INSERT guarded by the unique key) rather than read-then-write, so two
+    processes racing at the same second cannot both win.
+    """
+    from sqlalchemy import text
+    from sqlalchemy.exc import IntegrityError
+
+    moved = db.execute(
+        text("UPDATE app_settings SET value = :day WHERE key = :key AND value IS DISTINCT FROM :day"),
+        {"key": key, "day": day},
+    ).rowcount
+    if moved:
+        db.commit()
+        return True
+    exists = db.query(AppSetting.key).filter(AppSetting.key == key).first()
+    if exists is not None:
+        db.rollback()
+        return False
+    try:
+        db.add(AppSetting(key=key, value=day))
+        db.commit()
+        return True
+    except IntegrityError:
+        db.rollback()
+        return False

@@ -341,7 +341,6 @@ def _start_comp_expiry_scheduler() -> None:
     """
 
     send_hour = int(os.getenv("COMP_EXPIRY_DIGEST_HOUR", "16"))  # 16:00 UTC ≈ 9am PT
-    sent_on: dict[str, bool] = {}
 
     def loop() -> None:
         # Offset again from the other three so four threads don't wake together.
@@ -350,25 +349,27 @@ def _start_comp_expiry_scheduler() -> None:
             try:
                 now = datetime.now(timezone.utc)
                 today = now.strftime("%Y-%m-%d")
-                # The date guard is in-process, so a restart inside the send
-                # hour can repeat the digest once. A duplicate email is a far
-                # cheaper failure than a missed expiry, so it stays this simple
-                # rather than growing a table to remember one boolean.
-                if now.hour == send_hour and not sent_on.get(today):
+                # The date guard used to be a dict in this thread, which is
+                # once per PROCESS. On 2026-10-02 two processes woke at 16:00
+                # seven seconds apart and Canberk got "1 new teacher" twice.
+                # app_settings.claim_day is one UPDATE, so only one of them
+                # can win a given day, restarts and overlapping deploys included.
+                if now.hour == send_hour:
                     from app.core.database import SessionLocal
+                    from app.services import app_settings
                     from app.services.comp_expiry import send_comp_expiry_digest
                     from app.services.educator_signups import send_educator_signup_digest
 
                     _db = SessionLocal()
                     try:
-                        count = send_comp_expiry_digest(_db)
+                        # Not `continue`: that would skip the sleep below and spin.
+                        mine = app_settings.claim_day(_db, app_settings.FOUNDER_DIGEST_SENT_ON, today)
+                        count = send_comp_expiry_digest(_db) if mine else 0
                         # Same slot, separate email: teachers who made an account
                         # in the last day and have not been offered the comp yet.
                         # Both functions swallow their own errors, so one failing
                         # never blocks the other.
-                        teachers = send_educator_signup_digest(_db)
-                        sent_on.clear()
-                        sent_on[today] = True
+                        teachers = send_educator_signup_digest(_db) if mine else 0
                         if count:
                             logger.info("comp expiry digest: reported %s comp(s)", count)
                         if teachers:

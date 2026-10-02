@@ -97,3 +97,42 @@ class FloatSettingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ClaimDayTests(unittest.TestCase):
+    """claim_day: the founder digest goes once a day, however many processes wake."""
+
+    KEY = app_settings.FOUNDER_DIGEST_SENT_ON
+
+    def setUp(self):
+        self.engine = create_engine("sqlite:///:memory:")
+
+        @event.listens_for(self.engine, "connect")
+        def _register_now(dbapi_conn, _record):
+            dbapi_conn.create_function("now", 0, lambda: "2026-01-01 00:00:00")
+
+        AppSetting.__table__.create(bind=self.engine)
+        self.db = sessionmaker(bind=self.engine)()
+
+    def tearDown(self):
+        self.db.close()
+
+    def test_first_claim_wins_and_the_second_does_not(self):
+        self.assertTrue(app_settings.claim_day(self.db, self.KEY, "2026-10-02"))
+        self.assertFalse(app_settings.claim_day(self.db, self.KEY, "2026-10-02"))
+        self.assertFalse(app_settings.claim_day(self.db, self.KEY, "2026-10-02"))
+
+    def test_the_next_day_is_a_new_claim(self):
+        app_settings.claim_day(self.db, self.KEY, "2026-10-02")
+        self.assertTrue(app_settings.claim_day(self.db, self.KEY, "2026-10-03"))
+        self.assertFalse(app_settings.claim_day(self.db, self.KEY, "2026-10-03"))
+        row = self.db.query(AppSetting).filter(AppSetting.key == self.KEY).one()
+        self.assertEqual(row.value, "2026-10-03")
+
+    def test_a_second_session_sees_the_first_claim(self):
+        other = sessionmaker(bind=self.engine)()
+        try:
+            self.assertTrue(app_settings.claim_day(self.db, self.KEY, "2026-10-02"))
+            self.assertFalse(app_settings.claim_day(other, self.KEY, "2026-10-02"))
+        finally:
+            other.close()
