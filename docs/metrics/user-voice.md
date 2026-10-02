@@ -8,3 +8,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-09-29, 6 saved, 0 scenes finished, free
 **They said:** "I was looking for this movie because I liked a few scenes, but there's dialogue in it—I thought maybe there were some monologues here that were adapted from the dialogue, which is why I was searching for it."
 **Heard as:** did not understand what it does. They expected monologues cut from a film's dialogue; the answer that fits is ScenePartner (bring the scene, rehearse the dialogue), which the search page never points at.
+
+## 2026-10-02
+
+**Replying to:** the welcome email, two hours after signing up
+**Account:** signed up 2026-10-02, educator, 0 saved, 0 scenes finished, free
+**They said:** "When I did a pop up told me to email you and you can set up my students with access. Would this include the PLUS for them? We are all going to VTA for the first time in a few weeks and that is how I heard about ActorRise. And my students would love access to consider the monologues you have."
+**Heard as:** happy, and the educator funnel working end to end: VTA partner → teacher signs up → the account-type pop-up tells her to email → she asks for her students. The one gap: the pop-up did not say Plus is included, so she had to ask.
