@@ -39,10 +39,12 @@ const ENTER = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
 type Variant = "new" | "backfill";
 
-// Referral goes first, and only for new signups. Every other answer can be
-// recovered later (the backfill card exists for exactly that), but how someone
-// found me decays from memory within days — it is the one question I could not
-// answer about the August signups at all.
+// Referral is asked of new signups only, and last (see `questions` below for
+// why it moved off the front). Every other answer can be recovered later (the
+// backfill card exists for exactly that), but how someone found me decays from
+// memory within days — it is the one question I could not answer about the
+// August signups at all. It is written on tap, so its position in the card
+// does not change when it lands.
 //
 // Asked of new accounts only: putting "How did you find me?" in front of
 // someone who has been using the app for months reads like the app forgot
@@ -267,9 +269,16 @@ export default function ProfileOnboardingFlow({
     // found me decays from memory; whether you teach does not, and the 800
     // accounts that predate this question are exactly where the educators are
     // hiding.
+    //
+    // Referral used to open the card. It was the question people left on:
+    // 27% of starters before the first scene sat behind the card, 37% after,
+    // 47% on an iPhone (Sep 29 to Oct 2), and the skip under it closed all
+    // seven. It is asked last now, when the six taps already made say they
+    // are staying; account type opens, one tap and the educator funnel needs
+    // it most.
     () =>
       variant === "new"
-        ? [REFERRAL_QUESTION, ACCOUNT_TYPE_QUESTION, ...PROFILE_QUESTIONS]
+        ? [ACCOUNT_TYPE_QUESTION, ...PROFILE_QUESTIONS, REFERRAL_QUESTION]
         : [ACCOUNT_TYPE_QUESTION, ...PROFILE_QUESTIONS],
     [variant]
   );
@@ -426,7 +435,25 @@ export default function ProfileOnboardingFlow({
     setPhase("payoff");
   }, [submitting, persist, answers]);
 
-  const handleSkip = useCallback(async () => {
+  // "skip" skips THIS question. Until 2026-10-02 it closed the whole card:
+  // one tap on the first screen a stranger saw, and all seven questions were
+  // gone, has_completed_onboarding flipped, the first scene two seconds later.
+  // Over a third of starters did that, half of them on iPhones. On the last
+  // question it finishes with whatever was answered; buildProfileWrite leaves
+  // out what is missing.
+  const handleSkipQuestion = useCallback(() => {
+    if (submitting) return;
+    trackEvent("onboarding_question_skipped", { step, key: questions[step]?.key, variant });
+    if (step < totalSteps - 1) {
+      goTo(1);
+      return;
+    }
+    void handleFinishQuestions();
+  }, [submitting, step, questions, variant, totalSteps, goTo, handleFinishQuestions]);
+
+  // The way out of the card altogether. Quieter than skip, and a separate
+  // tap, so leaving is a decision and not the reflex that skip had become.
+  const handleNotNow = useCallback(async () => {
     if (submitting) return;
     setSubmitting(true);
     try {
@@ -630,17 +657,32 @@ export default function ProfileOnboardingFlow({
             ))}
           </div>
           {isQuestion && !referralRequired && (
-            <button
-              type="button"
-              onClick={handleSkip}
-              disabled={submitting}
-              className="cursor-pointer border-0 bg-transparent py-1.5 text-xs italic tracking-[0.06em] underline underline-offset-4 transition-colors disabled:opacity-50"
-              style={{ fontFamily: "var(--t-direction)", color: "var(--t-faint)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--t-text)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--t-faint)")}
-            >
-              {variant === "backfill" ? "not now" : "skip"}
-            </button>
+            <div className="flex items-center gap-4">
+              {/* Two ways out, two different sizes of decision. "not now" is
+                  the fainter of the two on purpose: it closes the card. */}
+              <button
+                type="button"
+                onClick={handleNotNow}
+                disabled={submitting}
+                className="cursor-pointer border-0 bg-transparent py-1.5 text-[11px] italic tracking-[0.06em] transition-colors disabled:opacity-50"
+                style={{ fontFamily: "var(--t-direction)", color: "color-mix(in oklab, var(--t-faint) 70%, transparent)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--t-text)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "color-mix(in oklab, var(--t-faint) 70%, transparent)")}
+              >
+                not now
+              </button>
+              <button
+                type="button"
+                onClick={handleSkipQuestion}
+                disabled={submitting}
+                className="cursor-pointer border-0 bg-transparent py-1.5 text-xs italic tracking-[0.06em] underline underline-offset-4 transition-colors disabled:opacity-50"
+                style={{ fontFamily: "var(--t-direction)", color: "var(--t-faint)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--t-text)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--t-faint)")}
+              >
+                {step < totalSteps - 1 ? "skip this one" : "skip"}
+              </button>
+            </div>
           )}
         </div>
 

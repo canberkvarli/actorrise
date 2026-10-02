@@ -13,6 +13,7 @@ import api from "./api";
 
 export type UserEventName =
   | "onboarding_step_viewed"
+  | "onboarding_question_skipped"
   | "search_box_focused"
   | "cut_editor_opened"
   | "notes_field_focused"

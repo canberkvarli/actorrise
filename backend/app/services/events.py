@@ -47,6 +47,7 @@ SERVER_EVENT_NAMES = frozenset(
 CLIENT_EVENT_NAMES = frozenset(
     {
         "onboarding_step_viewed",  # {step, key}
+        "onboarding_question_skipped",  # {step, key, variant}: skip skips one question since 2026-10-02
         "search_box_focused",  # once per /monologues mount
         # Collection depth: 167 favorites, 2 cuts, 2 notes, 13 memorized. These
         # split "never found the feature" from "found it, didn't want it".
