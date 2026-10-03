@@ -287,6 +287,11 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
         ownedUrlRef.current = audioUrl;
 
         const audio = ensureAudioEl();
+        /* Never inherit a mute. The element may have been handed over mid
+           unlock (lib/primed-audio mutes it to play a silent clip inside the
+           tap), and a muted element still fires `onplay` — so the scene
+           reported the partner as speaking while the actor heard nothing. */
+        audio.muted = false;
         audio.src = audioUrl;
 
         audio.onplay = () => {

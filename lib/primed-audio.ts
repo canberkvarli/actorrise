@@ -49,25 +49,44 @@ export function silentAudioUrl(): string {
  */
 export function unlockElement(audio: HTMLAudioElement): void {
   try {
+    const silent = silentAudioUrl();
     audio.muted = true;
-    audio.src = silentAudioUrl();
+    audio.src = silent;
     const playing = audio.play();
-    if (playing && typeof playing.then === "function") {
-      playing
-        .then(() => {
-          try {
-            audio.pause();
-            audio.currentTime = 0;
-          } catch {
-            /* noop */
-          }
-          audio.muted = false;
-        })
-        .catch(() => {
-          audio.muted = false;
-        });
-    } else {
+
+    /* The tidy-up only applies if this element is STILL playing the silent
+       clip. It runs a tick or two later, and by then a real line may already
+       have been handed to the same element — the whole point of priming it.
+       Pausing then would stop the partner mid-word, and unmuting is the
+       caller's business once they own it.
+
+       This went wrong the moment the hub started warming the first line.
+       Before that, the first speak() waited on a network fetch and this always
+       resolved first; with the audio already cached, speak() set its src and
+       called play() inside the same beat, and the partner "spoke" muted and
+       then stopped. The status said "Riley speaking" and nothing came out. */
+    const stillSilent = () => {
+      try {
+        return audio.src === silent;
+      } catch {
+        return false;
+      }
+    };
+    const settle = () => {
+      if (!stillSilent()) return;
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch {
+        /* noop */
+      }
       audio.muted = false;
+    };
+
+    if (playing && typeof playing.then === "function") {
+      playing.then(settle).catch(settle);
+    } else {
+      settle();
     }
   } catch {
     audio.muted = false;
