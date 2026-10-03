@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { IconLoader2 } from "@tabler/icons-react";
 import { createBrowserClient } from "@supabase/ssr";
+import { markSignupPending } from "@/lib/firstRun";
 import { motion, AnimatePresence } from "framer-motion";
 import { getStoredLastAuthMethod, PENDING_OAUTH_PROVIDER_KEY, type LastAuthMethod } from "@/lib/last-auth-method";
 
@@ -23,6 +24,22 @@ interface OAuthButtonsProps {
   emailButtonLabel?: string;
   /** When user clicks the email option (progressive disclosure) */
   onEmailClick?: () => void;
+  /**
+   * True on the signup page.
+   *
+   * The OAuth callback is a SERVER redirect, so unlike the email path it
+   * cannot claim the stage on the way in: an actor signing up with Google
+   * landed on /practice with no user yet, auth still loading, and
+   * FirstRunCurtain reading `signupPending` as false. The dashboard painted,
+   * then the onboarding card dropped on top of it — the flicker Canberk saw
+   * on his phone. The flag is set here instead, before leaving for the
+   * provider; sessionStorage survives the round trip in the same tab, which
+   * the pending-provider write just below has always relied on.
+   *
+   * Safe on an existing account: the curtain lifts the moment the user object
+   * says has_completed_onboarding === true, which beats a stale flag.
+   */
+  isSignup?: boolean;
 }
 
 // Brand SVG icons (inline for reliability)
@@ -83,6 +100,7 @@ const providerConfig: Record<
 export function OAuthButtons({
   redirectTo = "/practice",
   variant = "icons",
+  isSignup = false,
   emailButtonLabel,
   onEmailClick,
 }: OAuthButtonsProps) {
@@ -100,6 +118,8 @@ export function OAuthButtons({
 
   const handleOAuthSignIn = async (provider: OAuthProvider) => {
     setLoadingProvider(provider);
+    // Claim the stage before we leave for the provider — see `isSignup`.
+    if (isSignup) markSignupPending();
     // Store provider so when user lands back after OAuth we can persist "last used" (callback URL params may not be preserved)
     try {
       if (typeof window !== "undefined") {

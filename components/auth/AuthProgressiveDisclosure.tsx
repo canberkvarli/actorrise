@@ -52,6 +52,7 @@ function AuthProgressiveDisclosureInner({
     <div className="space-y-5">
       <OAuthButtons
         redirectTo={redirectTo}
+        isSignup={mode === "signup"}
         variant="stack"
         emailButtonLabel={emailButtonLabel}
         onEmailClick={() => setShowEmailForm(true)}

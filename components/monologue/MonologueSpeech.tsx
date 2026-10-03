@@ -246,6 +246,7 @@ export function MonologueSpeech({
      that these are television. Only film and TV rows ever carry a poster, so
      the row cannot mislabel itself. See lib/resultPoster.ts. */
   const poster = resultPoster(mono);
+  const [posterOpen, setPosterOpen] = useState(false);
   const crossShelf = isCrossShelf(mono, mode);
 
   const marks = marksFor(mono, index, profileMatch, showMatchMark);
@@ -311,10 +312,55 @@ export function MonologueSpeech({
       className="t-row group sm:grid"
     >
       {/* Below sm the margin has nowhere to go, so the marks run as one line
-          above the name rather than stealing width from the speech. */}
-      {marks.length > 0 && (
-        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 sm:hidden">
-          {markList}
+          above the name rather than stealing width from the speech. The poster
+          joins them: at 8rem it would eat half the width of a phone, but a
+          thumbnail beside the marks costs one line and is how an actor
+          recognises the show without reading the title. Tapping it opens it
+          full size, because the point of a poster at 34px is recognition, and
+          the point of looking twice is the face. */}
+      {(marks.length > 0 || poster) && (
+        <div className="mb-2 flex items-center gap-x-3 gap-y-1 sm:hidden">
+          {poster && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setPosterOpen(true); }}
+              className="shrink-0 leading-none"
+              aria-label={`See the poster for ${mono.play_title}`}
+            >
+              <Image
+                src={poster}
+                alt=""
+                width={68}
+                height={102}
+                className="h-[51px] w-[34px] rounded-[2px] object-cover"
+                style={{ border: "1px solid var(--t-text)", boxShadow: "2px 2px 0 var(--t-text)" }}
+                unoptimized
+              />
+            </button>
+          )}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">{markList}</div>
+        </div>
+      )}
+
+      {/* Full size, on a tap. Its own layer rather than a zoom in place: the
+          row is a line in a list and growing one mid-list pushes every other
+          row down the page under the thumb. */}
+      {posterOpen && poster && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-8 sm:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Poster for ${mono.play_title}`}
+          onClick={(e) => { e.stopPropagation(); setPosterOpen(false); }}
+        >
+          <Image
+            src={poster}
+            alt={`Poster for ${mono.play_title}`}
+            width={600}
+            height={900}
+            className="max-h-full w-auto rounded-sm object-contain"
+            unoptimized
+          />
         </div>
       )}
 
