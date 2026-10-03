@@ -883,7 +883,6 @@ function RehearsalPageInner() {
   // actor's own next cue.
   const takeLineIndexRef = useRef<number | null>(null);
   // Gate for Whisper: only allow transcription when SR has matched words from the line
-  const whisperGateRef = useRef(false);
   // Latest read of the current line, written by recognition and read by the
   // advance watcher. A ref because it updates far faster than it needs rendering.
   const liveReadRef = useRef<{ transcript: string; matched: Set<number> }>({
@@ -919,7 +918,6 @@ function RehearsalPageInner() {
     // The detector already refuses to end a take on transients or before 700 ms
     // of voice, so this cannot cut a line off; it can only stop waiting sooner.
     silenceTimeoutMs: 1800,
-    speechGateRef: whisperGateRef,
     deviceId: selectedMicId,
     prompt: currentUserLineText ? stripStageDirections(currentUserLineText) : undefined,
     onResult: (text) => {
@@ -1922,9 +1920,6 @@ function RehearsalPageInner() {
         // session that is plainly working.
         setSpeechError(prev => (prev ? null : prev));
 
-        // Open Whisper gate once SR has matched enough sequential words
-        const gateThreshold = Math.min(3, expectedWords.length);
-        if (bestMatchedRef.current.size >= gateThreshold) whisperGateRef.current = true;
 
         // Hand the current read to the advance watcher below. Nothing advances
         // from inside onresult any more — that fired on word count alone, which
@@ -2037,7 +2032,6 @@ function RehearsalPageInner() {
       toastTimerRef.current = null;
     }
     srAdvancedRef.current = false;
-    whisperGateRef.current = false;
     liveReadRef.current = { transcript: '', matched: new Set() };
     lastDeliveredIndexRef.current = null;
     setWordMatchResult(null);

@@ -24,12 +24,6 @@ interface UseWhisperSTTOptions {
    * theatrical/dramatic language. Improves accuracy at no extra cost.
    */
   prompt?: string;
-  /**
-   * External gate ref — silence countdown only starts when this is true.
-   * Lets the caller (e.g. SR word matching) control when Whisper should
-   * be allowed to transcribe. Without it, falls back to audio-level detection.
-   */
-  speechGateRef?: React.RefObject<boolean>;
   /** Specific mic device to use (from enumerateDevices). Falls back to default if not set. */
   deviceId?: string;
 }
