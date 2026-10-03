@@ -71,7 +71,14 @@ someone in section 2: the server emails them a day after their wall.
   person read like a campaign). If they answer asking to stop, it is filed like any other.
   The line still belongs on anything sent to a list through `/admin/emails`.
 - Check each one: `uv run python scripts/voice_check.py --kind note -` and fix what it finds.
-- After drafting, append each address to `outputs/conversion/written.txt` as
+- **Send these, don't draft them**, under the one exception in CLAUDE.md ("Never autonomously",
+  Canberk 2026-10-03). Before sending each one, confirm in this run: every fact in it was
+  checked against the database; the voice check is clean; the person is an individual actor
+  (not a student or school domain, not a throwaway, not a child); no offer, price, link,
+  CURTAIN, or thread. Send with the Gmail `send_message` tool, `htmlBody` only. If any
+  condition fails, leave it as a draft and say which in the summary. The summary lists every
+  note sent with its subject, under "Notes sent", not "drafts waiting".
+- After sending, append each address to `outputs/conversion/written.txt` as
   `<address>   # <date> <subject>`. The brief reads that file and leaves them out of section 5
   from then on; the database never sees a Gmail draft, so without it the same people come back
   the next day.
@@ -119,10 +126,11 @@ Inbox
   <n> replies read
   <n> opt-outs filed: <addresses>
   <n> CURTAIN: <address> -> <full prefilled link to paste>
-  <n> drafts waiting in Gmail
+  <n> drafts waiting in Gmail (replies, orgs, educators: still yours to send)
 
-New emails drafted: <n> of 5
-  <first name>: <one line on why them>
+Notes sent: <n> of 5
+  <first name>: "<subject>", <one line on why them>
+Notes left as drafts: <n>, and which condition failed
 
 Trials ending inside 3 days: <names, and whether each has used it>
 
@@ -133,7 +141,7 @@ If a number is zero, print the zero. If a step did not run, say which and why.
 
 ## What this never does
 
-- Send, post, or push. Drafts only.
+- Send, post, or push. Drafts only, except the one kind of note CLAUDE.md allows (step 3).
 - Change the triggered email copy or turn the switch on.
 - Email anyone the brief did not list, or go looking for more people to write to.
 - Write a name or an address anywhere that is committed.

@@ -183,6 +183,16 @@ setting the fields by hand.
 ## Never autonomously
 
 - Send an email
+  One exception (Canberk, 2026-10-03): the daily loop's personal note to ONE individual actor about what they searched for, the "you searched X, here's what is and isn't in the library"
+  kind. The loop may send those itself from Gmail when ALL of these hold:
+
+  - every fact in the note (a title is in, a character is not, how many pieces) was checked against the database in the same run
+  - voice_check.py --kind note is clean
+  - the person is an individual actor: not a student or school domain, not a throwaway address, not someone whose searches read as a child
+  - the note carries no offer, no price, no link, no CURTAIN, and is not a reply on an existing thread
+
+  Everything else stays a draft: replies, organisations, educators, anything with Plus or a trial in it. Every note sent is listed in that run's summary with its subject, and the address
+  goes in outputs/conversion/written.txt. If a fact cannot be verified, the note stays a draft and the summary says so.
 - Post to social
 - Push marketing-page commits
 - Make up testimonials, user quotes, or stats
