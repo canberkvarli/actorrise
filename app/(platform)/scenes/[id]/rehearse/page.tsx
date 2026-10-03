@@ -63,6 +63,7 @@ import { ownsLine, sessionRoles } from '@/lib/character-roles';
 import { tokenize, alignWords, wordMatchScore } from '@/lib/word-match';
 import { shouldAdvance, MIN_QUIET_MS } from '@/lib/advance-rule';
 import { rehearseStatus } from '@/lib/rehearse-status';
+import { ttsText, ttsInstructions, sceneVoiceContext as buildVoiceContext, DEFAULT_VOICE } from '@/lib/scene-voice';
 import { buildWordTimings, spokenWordIndex } from '@/lib/speech-timing';
 import { trackEvent } from '@/lib/events';
 import { GuidedCoachLine } from '@/components/rehearse/GuidedCoachLine';
@@ -71,36 +72,6 @@ import type { CoachState } from '@/lib/guided-coach';
 import { useTheme } from 'next-themes';
 
 /** Pure dialogue for TTS — strips both [bracket] and (paren) stage directions. */
-function ttsText(line: { text: string; stage_direction?: string | null }): string {
-  return line.text
-    .replace(/\[([^\]]+)\]/g, '')
-    .replace(/\(([^)]+)\)/g, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
-
-/** Build TTS instructions from stage directions and scene context.
- *  The voice ACTS on directions instead of reading them aloud. */
-function ttsInstructions(
-  line: { text: string; stage_direction?: string | null },
-  sceneContext?: string,
-): string {
-  const fieldDir = line.stage_direction?.trim();
-  const inlineDirs = [...line.text.matchAll(/\(([^)]+)\)/g)].map(m => m[1].trim());
-  const allDirs = [...new Set([fieldDir, ...inlineDirs].filter(Boolean))];
-  const base = sceneContext || 'You are a skilled actor performing a scene.';
-  // Shared delivery notes so the read feels like a living person mid-conversation,
-  // not a flat narrator: real breath, shifting pace, and tonal movement.
-  const alive =
-    'Sound like a real person in the middle of a conversation, not a narrator. ' +
-    'Take a natural breath before you speak. Vary your pace: let some phrases rush out, let others land slowly with a beat of silence. ' +
-    'Let your pitch and tone shift with the meaning of each phrase. Never flat, monotone, or robotic. React as if you just heard your partner speak.';
-  if (!allDirs.length) {
-    return `${base} Deliver this line with emotional truth and full commitment. ${alive}`;
-  }
-  return `${base} Stage direction: ${allDirs.join('; ')}. Fully embody this — if it says "sighing", actually sigh; "whispering", drop your voice; "angrily", let real frustration through. ${alive}`;
-}
-
 /** Tiny silent WAV as a data URL — played on a gesture to unlock iOS audio so
  *  the continuous-replay elements can play programmatically afterward. */
 let _silentWavUrl: string | null = null;
@@ -816,17 +787,10 @@ function RehearsalPageInner() {
   cueNamesRef.current = cueNames;
 
   // Build rich voice context from scene metadata — reused in every TTS call
-  const sceneVoiceContext = useMemo(() => {
-    const s = sceneWithLines;
-    const ai = session?.ai_character;
-    if (!s || !ai) return '';
-    const parts = [`You are ${ai}, a character in "${s.title}"`];
-    if (s.play_title) parts[0] += ` from "${s.play_title}"`;
-    parts[0] += '.';
-    if (s.description) parts.push(`Scene context: ${s.description.slice(0, 150)}.`);
-    parts.push('You are a skilled actor. React naturally to the emotional stakes. Let pauses breathe. Commit fully.');
-    return parts.join(' ');
-  }, [sceneWithLines, session?.ai_character]);
+  const sceneVoiceContext = useMemo(
+    () => buildVoiceContext(sceneWithLines, session?.ai_character),
+    [sceneWithLines, session?.ai_character],
+  );
   const sceneVoiceContextRef = useRef(sceneVoiceContext);
   sceneVoiceContextRef.current = sceneVoiceContext;
   orderedLinesRef.current = orderedLines;
@@ -1485,7 +1449,7 @@ function RehearsalPageInner() {
         }
         setSceneWithLines(sceneData);
         // Eagerly preload first AI lines during loading screen so they're cached before countdown ends
-        const voiceId = voiceParam || data.ai_voice_id || 'coral';
+        const voiceId = voiceParam || data.ai_voice_id || DEFAULT_VOICE;
 
         // Build per-character voice map so each AI character gets a distinct voice
         // First try to load user-assigned voices from sessionStorage (set by edit page)

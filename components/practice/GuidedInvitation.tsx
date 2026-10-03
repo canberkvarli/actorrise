@@ -14,6 +14,14 @@ import {
 } from "@/lib/guided-scene";
 import { writeHandoff } from "@/lib/guided-handoff";
 import { primeAudio } from "@/lib/primed-audio";
+import {
+  DEFAULT_VOICE,
+  sceneVoiceContext,
+  ttsInstructions,
+  ttsText,
+  type VoiceLine,
+} from "@/lib/scene-voice";
+import { useOpenAITTS } from "@/hooks/useOpenAITTS";
 import { useUpload } from "@/components/practice/UploadProvider";
 
 type StartedSession = { id: number; scene_id: number };
@@ -33,6 +41,7 @@ export function GuidedInvitation() {
   const [starting, setStarting] = useState(false);
   const [failed, setFailed] = useState(false);
   const shownRef = useRef(false);
+  const { preload: preloadTTS } = useOpenAITTS();
 
   // The same picker UploadScriptButton owns, without its pill: on this page
   // bringing in a script is the footnote, not the way in.
@@ -78,12 +87,42 @@ export function GuidedInvitation() {
         try {
           sessionStorage.setItem(`actorrise_scene_${data.scene_id}`, JSON.stringify(scene.data));
         } catch {}
+
+        /* ...and the partner's VOICE, which the comment above used to end by
+           admitting was still to come. It was 3 to 4 seconds of silence after
+           Answer on a phone: the page had to mount, create the session, fetch
+           the scene and only then ask for audio.
+
+           Nothing needs to wait. The scene is fixed, Riley is whoever is not
+           ALEX, and the guided session never sets ai_voice_id, so her voice is
+           always DEFAULT_VOICE. Every input to the cache key is known here, and
+           the actor spends seconds reading "I'll read Riley. You're Alex."
+           before they tap. The cache is module-level in useOpenAITTS, so it
+           survives the route change and the rehearse page finds it warm.
+
+           All three of text, voice and instructions come from lib/scene-voice,
+           the same module the player uses. If they are computed even slightly
+           differently this is not a warm cache, it is a wasted request. */
+        const s = scene.data as {
+          lines?: Array<VoiceLine & { character_name: string; line_order?: number }>;
+        } & Parameters<typeof sceneVoiceContext>[0];
+        const lines = [...(s?.lines ?? [])].sort(
+          (a, b) => (a.line_order ?? 0) - (b.line_order ?? 0),
+        );
+        const partnerLine = lines.find((l) => l.character_name !== GUIDED_ACTOR);
+        if (!partnerLine || cancelled) return;
+        const context = sceneVoiceContext(s, partnerLine.character_name);
+        void preloadTTS(
+          ttsText(partnerLine),
+          DEFAULT_VOICE,
+          ttsInstructions(partnerLine, context),
+        ).catch(() => {});
       } catch {}
     })();
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, preloadTTS]);
 
   const answer = async () => {
     if (starting) return;
