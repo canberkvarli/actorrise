@@ -9055,3 +9055,19 @@ select.t-field {
     transform: none;
   }
 }
+
+/* The first-run curtain, before React can draw it.
+   FirstRunCurtain reads sessionStorage, which the server cannot, so the HTML
+   that arrives contains no curtain and the browser paints the app underneath
+   it. That beat is the dashboard flash a new account sees after signing up.
+   components/onboarding/FirstRunPaint sets this attribute before first paint;
+   the curtain itself removes it once it has mounted and can take over with the
+   real element and the real exit animation. */
+html[data-firstrun="1"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--page);
+  pointer-events: none;
+}

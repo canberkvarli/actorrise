@@ -3315,9 +3315,15 @@ function RehearsalPageInner() {
         )}
       </AnimatePresence>
 
-      {/* Floating control pill. Not on the first scene: its dot lives in the
-          coaching line and its door is a line of house text under the script. */}
-      {!guided && (
+      {/* Floating control pill.
+          It used to be hidden on the first scene, on the grounds that the
+          guided run has its own coaching line and its own door. The effect was
+          that a brand-new actor — the only person who has never done this
+          before — was the one person with no pause, no status and no way past
+          a line. Canberk hit exactly that: paused, resumed, and had nothing to
+          press when the scene did not pick up. The progress meter still stays
+          off for six lines; the controls do not. */}
+      {true && (
       <div className="shrink-0 flex justify-center px-4 pb-4 safe-area-bottom">
         <div className={cn(CHROME_DARK, "flex items-center gap-2 sm:gap-3 bg-neutral-900/90 backdrop-blur-sm border border-neutral-800 rounded-full shadow-2xl px-3 sm:px-5 py-3 min-h-[52px] max-w-[calc(100vw-1.5rem)]")}>
           {/* Pause / Play */}
@@ -3334,6 +3340,25 @@ function RehearsalPageInner() {
             }
           </button>
 
+          {/* Past this line.
+              There was a manual advance on a key, which is no use on a phone
+              and undiscoverable anywhere. An actor who cannot remember the
+              line, or whose mic will not catch it, needs one obvious way
+              forward or the scene is simply over. Only on their own line: the
+              partner's lines end themselves. */}
+          {isUserTurn && (
+            <button
+              type="button"
+              onClick={() => { unlockAudio(); handleManualAdvance(); }}
+              disabled={isProcessing || !currentUserLineText}
+              className="h-9 shrink-0 rounded-full bg-neutral-800 px-3.5 text-[12px] font-semibold text-neutral-200 transition-colors hover:bg-neutral-700 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              aria-label="Skip this line and go on"
+              title="Skip this line and go on"
+            >
+              skip line
+            </button>
+          )}
+
           {/* Status: the dot AND the word.
               The word used to be sr-only, on the reasoning that an actor only
               needs to know whose turn it is and the colour says that. It does
@@ -3346,10 +3371,20 @@ function RehearsalPageInner() {
               See lib/rehearse-status.ts. */}
           <div className="flex items-center gap-2 shrink-0 px-1" role="status" aria-live="polite">
             <div className={cn('w-2.5 h-2.5 rounded-full', statusInfo.color, statusInfo.pulse && 'animate-pulse')} />
-            <span className="hidden text-[11px] tracking-[0.04em] text-neutral-400 whitespace-nowrap sm:inline">
+            {/* The word, on every width.
+                It was `hidden sm:inline`, which is every phone — the devices
+                where the dot is smallest and the actor is furthest from the
+                screen. Whose turn it is was the one thing Canberk could not
+                tell, so it is the one thing that does not get dropped on a
+                narrow screen. */}
+            <span className={cn(
+              'text-[11px] tracking-[0.04em] whitespace-nowrap',
+              // Their turn is not a status among statuses. It is the only
+              // moment the scene is waiting on a person.
+              isUserTurn || isListening ? 'font-bold text-white' : 'text-neutral-400',
+            )}>
               {statusInfo.text}
             </span>
-            <span className="sr-only">{statusInfo.text}</span>
           </div>
 
           {/* Progress: line counter + bar. Not on the first scene: six lines

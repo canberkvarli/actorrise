@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
@@ -66,6 +66,16 @@ export function FirstRunCurtain() {
   // ScenePartner hub waiting for a card that never comes (2026-09-26: a
   // brand-new account saw a black /practice).
   const show = !finished && !onboardingIsQuietOn(pathname) && (needsOnboarding || signupPending);
+
+  /* Take the pre-paint cover down once this element is the one covering the
+     app. FirstRunPaint puts `data-firstrun` on <html> before the first frame,
+     because nothing inside React is early enough; from here on the real
+     curtain owns the stage and has the exit animation. Removing it only when
+     `show` is false would leave a plain rectangle sitting over the lift. */
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.removeAttribute("data-firstrun");
+  }, [show]);
 
   return (
     <AnimatePresence>

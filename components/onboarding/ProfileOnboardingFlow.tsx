@@ -100,7 +100,7 @@ const TWO_COLUMN_KEYS = new Set<QuestionKey>(["referral", "ageRange", "mediums",
  * the play starts when the questions start being about them. */
 const DIRECTION: Record<QuestionKey, string> = {
   referral: "(before anything.)",
-  accountType: "(and who's asking.)",
+  accountType: "(and who you are.)",
   casting: "(act i. the type.)",
   ageRange: "(act ii. the age.)",
   workOn: "(act iii. the work.)",
@@ -592,9 +592,14 @@ export default function ProfileOnboardingFlow({
             : { opacity: 0, y: -18, scale: 0.985, rotate: -0.2, transition: { duration: 0.3, ease: [0.4, 0, 1, 1] } }
         }
         transition={{ duration: 0.6, ease: ENTER }}
-        className="relative z-10 my-auto w-full overflow-hidden rounded-lg border-[1.5px] transition-[max-width] duration-500"
+        className="relative z-10 my-auto w-full overflow-hidden rounded-lg border-[1.5px]"
         style={{
-          maxWidth: phase === "payoff" ? 560 : 480,
+          /* ONE width for every step. It used to widen from 480 to 560 for the
+             payoff, and between that and each question's own content height
+             the card changed shape under the actor's thumb on nearly every
+             tap. A card that resizes as you answer it reads as instability,
+             not as progress — the dots already carry progress. */
+          maxWidth: 520,
           background: "var(--card)",
           color: "var(--t-text)",
           borderColor: "var(--t-text)",
@@ -671,7 +676,14 @@ export default function ProfileOnboardingFlow({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: direction * -28 }}
               transition={stepTransition}
-              className="relative px-5 pb-6 pt-[18px] sm:px-7 sm:pb-7 sm:pt-[22px]"
+              /* And one height. Each question carries a different number of
+                 options, so the card grew and shrank step to step and the
+                 buttons moved out from under the thumb between taps. The floor
+                 is the tallest question; anything shorter sits in the same box
+                 with room to spare, which is what makes the sequence feel like
+                 one card being written on rather than five cards. */
+              style={{ minHeight: "min(52vh, 360px)" }}
+              className="relative flex flex-col px-5 pb-6 pt-[18px] sm:px-7 sm:pb-7 sm:pt-[22px]"
             >
               <p
                 className="m-0 text-[13px] italic tracking-[0.08em]"
