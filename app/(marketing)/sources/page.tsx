@@ -102,7 +102,7 @@ export default function SourcesPage() {
 
       <p className="text-sm text-muted-foreground/90">
         If you have questions about a specific source or copyright, please{" "}
-        <Link href="/contact" className="text-foreground underline hover:no-underline">
+        <Link prefetch={false} href="/contact" className="text-foreground underline hover:no-underline">
           contact us
         </Link>
         .

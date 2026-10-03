@@ -103,10 +103,10 @@ export default function AuditionAiPage() {
       </ul>
       <div className="flex flex-wrap gap-4 mb-16">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup">Start rehearsing</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/">Try the search</Link>
+          <Link prefetch={false} href="/">Try the search</Link>
         </Button>
       </div>
 
@@ -129,11 +129,11 @@ export default function AuditionAiPage() {
       <p className="text-muted-foreground mb-12">
         Type something like “contemporary dramatic monologue for a woman under two minutes” and get a
         ranked shortlist of real pieces that fit. No keyword guessing. Start from the{" "}
-        <Link href="/monologue-finder" className="text-foreground font-medium underline hover:no-underline">
+        <Link prefetch={false} href="/monologue-finder" className="text-foreground font-medium underline hover:no-underline">
           monologue finder
         </Link>{" "}
         or browse{" "}
-        <Link href="/audition-monologues" className="text-foreground font-medium underline hover:no-underline">
+        <Link prefetch={false} href="/audition-monologues" className="text-foreground font-medium underline hover:no-underline">
           audition monologues
         </Link>{" "}
         by type.
@@ -145,7 +145,7 @@ export default function AuditionAiPage() {
       <p className="text-muted-foreground mb-12">
         Rehearsing alone is the hard part. ScenePartner reads the other lines so you can run a scene or
         a monologue out loud whenever you want, without booking a friend. See how it works on the{" "}
-        <Link href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
+        <Link prefetch={false} href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
           ScenePartner page
         </Link>
         .
@@ -187,10 +187,10 @@ export default function AuditionAiPage() {
 
       <div className="flex flex-wrap gap-4">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup">Start rehearsing</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/">Try the search</Link>
+          <Link prefetch={false} href="/">Try the search</Link>
         </Button>
       </div>
       </div>

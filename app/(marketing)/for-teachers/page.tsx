@@ -83,10 +83,10 @@ export default function ForTeachersPage() {
       </p>
       <div className="flex flex-wrap gap-4">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup">Start rehearsing</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/">Explore the search</Link>
+          <Link prefetch={false} href="/">Explore the search</Link>
         </Button>
       </div>
       </div>

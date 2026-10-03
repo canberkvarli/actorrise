@@ -84,7 +84,7 @@ export function LoginForm({ redirectTo: redirectToProp }: LoginFormProps = {}) {
               {/* 14px and underlined, with room to hit it. At 12px grey it was
                   the smallest thing on the card and the one a locked-out
                   actor needs most. */}
-              <Link
+              <Link prefetch={false}
                 href="/forgot-password"
                 className="-my-2 inline-flex min-h-9 items-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
               >
@@ -107,7 +107,7 @@ export function LoginForm({ redirectTo: redirectToProp }: LoginFormProps = {}) {
               {error?.includes("No account found") && (
                 <p className="text-sm text-muted-foreground">
                   Don&apos;t have an account?{" "}
-                  <Link href="/signup" className="text-primary hover:underline">
+                  <Link prefetch={false} href="/signup" className="text-primary hover:underline">
                     Sign up here
                   </Link>
                 </p>

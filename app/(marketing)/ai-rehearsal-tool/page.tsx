@@ -64,29 +64,29 @@ export default function Page() {
       </ul>
       <div className="flex flex-wrap gap-4">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup">Start rehearsing</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/scene-partner-ai">Learn about ScenePartner</Link>
+          <Link prefetch={false} href="/scene-partner-ai">Learn about ScenePartner</Link>
         </Button>
       </div>
 
       <div className="mt-12 space-y-3 text-sm text-muted-foreground">
         <p>
           Looking for material? Try the{" "}
-          <Link href="/monologue-finder" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/monologue-finder" className="text-foreground underline hover:no-underline">
             monologue finder
           </Link>
           , browse{" "}
-          <Link href="/audition-monologues" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/audition-monologues" className="text-foreground underline hover:no-underline">
             audition monologues
           </Link>
           , or explore{" "}
-          <Link href="/monologues-for-women" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/monologues-for-women" className="text-foreground underline hover:no-underline">
             monologues for women
           </Link>{" "}
           and{" "}
-          <Link href="/monologues-for-men" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/monologues-for-men" className="text-foreground underline hover:no-underline">
             monologues for men
           </Link>
           .
@@ -104,7 +104,7 @@ export default function Page() {
             <p className="text-muted-foreground">
               Yes. The free tier gives you access to monologue search and limited ScenePartner
               sessions. No credit card required. Check the{" "}
-              <Link href="/pricing" className="text-foreground underline hover:no-underline">
+              <Link prefetch={false} href="/pricing" className="text-foreground underline hover:no-underline">
                 pricing page
               </Link>{" "}
               for details on paid plans.

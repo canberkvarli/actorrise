@@ -165,10 +165,10 @@ export default async function PublicMonologuePage({ params }: Params) {
 
       <div className="flex flex-wrap gap-3 mb-10">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href={`/monologue/${m.id}/work`}>Rehearse this free</Link>
+          <Link prefetch={false} href={`/monologue/${m.id}/work`}>Rehearse this free</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/">Find more monologues</Link>
+          <Link prefetch={false} href="/">Find more monologues</Link>
         </Button>
       </div>
 
@@ -203,10 +203,10 @@ export default async function PublicMonologuePage({ params }: Params) {
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Button asChild size="lg" className="rounded-full px-6">
-            <Link href={`/monologue/${m.id}/work`}>Rehearse free</Link>
+            <Link prefetch={false} href={`/monologue/${m.id}/work`}>Rehearse free</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-            <Link href="/signup">Start rehearsing</Link>
+            <Link prefetch={false} href="/signup">Start rehearsing</Link>
           </Button>
         </div>
       </div>

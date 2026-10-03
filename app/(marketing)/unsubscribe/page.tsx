@@ -110,7 +110,7 @@ function UnsubscribeContent() {
       <div className="w-full max-w-md text-center space-y-6">
         {/* Logo */}
         <div className="flex justify-center mb-2">
-          <Link href="/">
+          <Link prefetch={false} href="/">
             <BrandLogo size="header" />
           </Link>
         </div>
@@ -223,7 +223,7 @@ function UnsubscribeContent() {
               </div>
             )}
 
-            <Link
+            <Link prefetch={false}
               href="/"
               className="inline-block text-sm font-medium text-primary hover:underline"
             >
@@ -243,7 +243,7 @@ function UnsubscribeContent() {
               Nothing changed. You&apos;ll keep getting the occasional email
               from me, and you can unsubscribe from any of them.
             </p>
-            <Link
+            <Link prefetch={false}
               href="/"
               className="inline-block text-sm font-medium text-primary hover:underline"
             >
@@ -261,7 +261,7 @@ function UnsubscribeContent() {
             </h1>
             <p className="text-muted-foreground text-sm">{errorMsg}</p>
             <div className="flex flex-col items-center gap-2">
-              <Link
+              <Link prefetch={false}
                 href="/"
                 className="inline-block text-sm font-medium text-primary hover:underline"
               >

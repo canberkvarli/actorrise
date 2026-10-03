@@ -96,7 +96,7 @@ export default function ResetPasswordPage() {
                 This reset link is invalid or has expired.
               </p>
               <Button asChild variant="outline" className="w-full">
-                <Link href="/forgot-password">Request a new link</Link>
+                <Link prefetch={false} href="/forgot-password">Request a new link</Link>
               </Button>
             </div>
           )}

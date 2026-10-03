@@ -51,12 +51,12 @@ export default function BlogIndexPage() {
               {formatDate(post.date)} · {post.readingMinutes} min read
             </p>
             <h2 className="text-xl md:text-2xl font-semibold tracking-tight mb-2">
-              <Link href={`/blog/${post.slug}`} className="text-foreground hover:text-primary transition-colors">
+              <Link prefetch={false} href={`/blog/${post.slug}`} className="text-foreground hover:text-primary transition-colors">
                 {post.title}
               </Link>
             </h2>
             <p className="text-muted-foreground">{post.excerpt}</p>
-            <Link
+            <Link prefetch={false}
               href={`/blog/${post.slug}`}
               className="inline-block mt-3 text-sm text-primary font-medium hover:underline"
             >

@@ -85,11 +85,11 @@ export default function AboutPage() {
       </div>
 
       <p className="mt-10 text-sm text-muted-foreground">
-        <Link href="/sources" className="text-primary hover:underline">
+        <Link prefetch={false} href="/sources" className="text-primary hover:underline">
           Sources & copyright
         </Link>
         {" · "}
-        <Link href="/contact" className="text-primary hover:underline">
+        <Link prefetch={false} href="/contact" className="text-primary hover:underline">
           Contact
         </Link>
       </p>

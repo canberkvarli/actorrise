@@ -85,10 +85,10 @@ export default function AuditionMonologuesPage() {
         }
       >
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup">Start rehearsing</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/">Search audition monologues</Link>
+          <Link prefetch={false} href="/">Search audition monologues</Link>
         </Button>
       </StageHero>
 
@@ -102,7 +102,7 @@ export default function AuditionMonologuesPage() {
         <li className="flex gap-2">
           <span className="text-primary">·</span>
           <span>
-            <Link href="/monologues/classical-monologues" className="text-foreground font-medium underline hover:no-underline">
+            <Link prefetch={false} href="/monologues/classical-monologues" className="text-foreground font-medium underline hover:no-underline">
               Classical monologues
             </Link>{" "}
             : Shakespeare and beyond
@@ -111,7 +111,7 @@ export default function AuditionMonologuesPage() {
         <li className="flex gap-2">
           <span className="text-primary">·</span>
           <span>
-            <Link href="/monologues/dramatic-contemporary" className="text-foreground font-medium underline hover:no-underline">
+            <Link prefetch={false} href="/monologues/dramatic-contemporary" className="text-foreground font-medium underline hover:no-underline">
               Dramatic contemporary
             </Link>{" "}
             : from modern plays
@@ -120,7 +120,7 @@ export default function AuditionMonologuesPage() {
         <li className="flex gap-2">
           <span className="text-primary">·</span>
           <span>
-            <Link href="/monologues/comedic-woman-under-2-minutes" className="text-foreground font-medium underline hover:no-underline">
+            <Link prefetch={false} href="/monologues/comedic-woman-under-2-minutes" className="text-foreground font-medium underline hover:no-underline">
               Comedic (e.g. woman under 2 minutes)
             </Link>
           </span>
@@ -166,19 +166,19 @@ export default function AuditionMonologuesPage() {
       </h2>
       <p className="text-muted-foreground mb-12">
         Start with a category, then narrow it down:{" "}
-        <Link href="/monologues/classical-monologues" className="text-foreground font-medium underline hover:no-underline">
+        <Link prefetch={false} href="/monologues/classical-monologues" className="text-foreground font-medium underline hover:no-underline">
           classical
         </Link>{" "}
         for Shakespeare and period pieces,{" "}
-        <Link href="/monologues/dramatic-contemporary" className="text-foreground font-medium underline hover:no-underline">
+        <Link prefetch={false} href="/monologues/dramatic-contemporary" className="text-foreground font-medium underline hover:no-underline">
           dramatic contemporary
         </Link>{" "}
         for modern plays, or{" "}
-        <Link href="/monologues/comedic-woman-under-2-minutes" className="text-foreground font-medium underline hover:no-underline">
+        <Link prefetch={false} href="/monologues/comedic-woman-under-2-minutes" className="text-foreground font-medium underline hover:no-underline">
           comedic
         </Link>{" "}
         when you need to land a laugh. You can also start from the{" "}
-        <Link href="/monologue-finder" className="text-foreground font-medium underline hover:no-underline">
+        <Link prefetch={false} href="/monologue-finder" className="text-foreground font-medium underline hover:no-underline">
           monologue finder
         </Link>{" "}
         and describe exactly what you’re after.
@@ -206,7 +206,7 @@ export default function AuditionMonologuesPage() {
         Every monologue is from a published play or a licensed source, never invented by a model. The
         AI is in the search, so what you rehearse is text casting will recognize. Once you’ve picked
         your piece, run it out loud with{" "}
-        <Link href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
+        <Link prefetch={false} href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
           ScenePartner
         </Link>
         .
@@ -233,7 +233,7 @@ export default function AuditionMonologuesPage() {
                 {item.link && (
                   <>
                     {" "}
-                    <Link href={item.link.href} className="text-primary hover:underline">
+                    <Link prefetch={false} href={item.link.href} className="text-primary hover:underline">
                       {item.link.label}
                     </Link>
                     .
@@ -247,10 +247,10 @@ export default function AuditionMonologuesPage() {
 
       <div className="flex flex-wrap gap-4">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup">Start rehearsing</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/">Search audition monologues</Link>
+          <Link prefetch={false} href="/">Search audition monologues</Link>
         </Button>
       </div>
       </div>

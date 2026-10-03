@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
             size="sm"
             className="gap-2 -ml-2 text-muted-foreground hover:text-foreground"
           >
-            <Link href="/login">
+            <Link prefetch={false} href="/login">
               <IconArrowLeft className="h-4 w-4" />
               Back to sign in
             </Link>
@@ -81,7 +81,7 @@ export default function ForgotPasswordPage() {
 
           {sent ? (
             <Button asChild variant="outline" className="w-full">
-              <Link href="/login">Back to sign in</Link>
+              <Link prefetch={false} href="/login">Back to sign in</Link>
             </Button>
           ) : (
             <form onSubmit={onSubmit} className="space-y-4">

@@ -134,13 +134,16 @@ Notes left as drafts: <n>, and which condition failed
 
 Trials ending inside 3 days: <names, and whether each has used it>
 
-Vercel ISR writes yesterday: <n>  (Hobby allows ~6,600 a day; over that, name the bot)
+Vercel yesterday: ISR writes <n> (cap ~6,600/day), CDN requests <n> (cap ~33,000/day)
 
 Broken or odd: <anything that failed, any number that moved more than it should>
 ```
 
-The ISR line: Vercel moved to the Hobby plan on 2026-10-04 to stop a $20 charge, and
-the plan pauses the site if ISR writes pass 200k in a cycle. Read yesterday's number
+The Vercel line: the site moved to the Hobby plan on 2026-10-03 to stop a $20 charge,
+and the plan pauses the site if ISR writes pass 200k or CDN requests pass 1M in a cycle
+(the cycle runs from the 4th). CDN requests were ~50k/day on Pro; the marketing pages'
+link prefetch was turned off on 2026-10-03 to bring that down. Read both from the same
+billing call (`ServiceName` "ISR Writes" and "CDN Requests"). Read yesterday's number
 from `/v1/billing/charges` (one-day window, `ServiceName = "ISR Writes"`, token in
 `~/Library/Application Support/com.vercel.cli/auth.json`). If it is over 6,000, run the
 observability query (`vercel.request.count` grouped by `bot_name`, route

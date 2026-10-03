@@ -78,14 +78,14 @@ export default function FiveMonologuesPage() {
                   <p className="text-sm text-muted-foreground mt-2">{m.scene_description}</p>
                 )}
                 <Button asChild variant="outline" size="sm" className="mt-3">
-                  <Link href={`/monologue/${m.id}`}>View on ActorRise</Link>
+                  <Link prefetch={false} href={`/monologue/${m.id}`}>View on ActorRise</Link>
                 </Button>
               </li>
             ))
           ) : (
             <li className="text-muted-foreground">
               We couldn&apos;t load the list right now.{" "}
-              <Link href="/monologues" className="text-primary underline">
+              <Link prefetch={false} href="/monologues" className="text-primary underline">
                 Browse monologues
               </Link>{" "}
               to find fresh pieces.
@@ -93,7 +93,7 @@ export default function FiveMonologuesPage() {
           )}
         </ul>
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/signup">Start rehearsing on ActorRise</Link>
+          <Link prefetch={false} href="/signup">Start rehearsing on ActorRise</Link>
         </Button>
       </div>
     );

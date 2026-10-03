@@ -94,10 +94,10 @@ export default function HowToFindAMonologuePage() {
 
         <div className="flex flex-wrap gap-4 mb-14">
           <Button asChild size="lg" className="rounded-full px-6">
-            <Link href="/">Find a monologue now</Link>
+            <Link prefetch={false} href="/">Find a monologue now</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-            <Link href="/signup">Start rehearsing</Link>
+            <Link prefetch={false} href="/signup">Start rehearsing</Link>
           </Button>
         </div>
 
@@ -163,7 +163,7 @@ export default function HowToFindAMonologuePage() {
         </ul>
         <p className="text-muted-foreground mb-12">
           That is exactly what the{" "}
-          <Link href="/monologue-finder" className="text-primary underline underline-offset-4">
+          <Link prefetch={false} href="/monologue-finder" className="text-primary underline underline-offset-4">
             ActorRise monologue finder
           </Link>{" "}
           does. It reads what you describe and ranks real monologues that fit your tone, length,
@@ -200,7 +200,7 @@ export default function HowToFindAMonologuePage() {
         </h2>
         <div className="flex flex-wrap gap-2 mb-12">
           {CATEGORY_LINKS.map((c) => (
-            <Link
+            <Link prefetch={false}
               key={c.href}
               href={c.href}
               className="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
@@ -220,7 +220,7 @@ export default function HowToFindAMonologuePage() {
               <p className="text-muted-foreground">
                 {item.a}
                 {item.link && (
-                  <Link
+                  <Link prefetch={false}
                     href={item.link.href}
                     className="text-primary underline underline-offset-4"
                   >
@@ -242,10 +242,10 @@ export default function HowToFindAMonologuePage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button asChild size="lg" className="rounded-full px-6">
-              <Link href="/">Find a monologue now</Link>
+              <Link prefetch={false} href="/">Find a monologue now</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-              <Link href="/signup">Start rehearsing</Link>
+              <Link prefetch={false} href="/signup">Start rehearsing</Link>
             </Button>
           </div>
         </div>

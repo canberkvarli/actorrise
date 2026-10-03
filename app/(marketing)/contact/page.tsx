@@ -64,17 +64,17 @@ export default function ContactPage() {
           <h2 className="text-xl font-semibold text-foreground mb-3">Other links</h2>
           <ul className="space-y-2">
             <li>
-              <Link href="/terms" className="text-foreground underline hover:no-underline">
+              <Link prefetch={false} href="/terms" className="text-foreground underline hover:no-underline">
                 Terms of Service
               </Link>
             </li>
             <li>
-              <Link href="/privacy" className="text-foreground underline hover:no-underline">
+              <Link prefetch={false} href="/privacy" className="text-foreground underline hover:no-underline">
                 Privacy Policy
               </Link>
             </li>
             <li>
-              <Link href="/sources" className="text-foreground underline hover:no-underline">
+              <Link prefetch={false} href="/sources" className="text-foreground underline hover:no-underline">
                 Sources & copyright
               </Link>
             </li>

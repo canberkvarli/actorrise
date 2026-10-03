@@ -92,21 +92,21 @@ export default function GuidesPage() {
       <div className="mt-16 pt-12 border-t border-border/60">
         <p className="text-muted-foreground mb-6">
           Ready to try it yourself? Start from the{" "}
-          <Link href="/monologue-finder" className="text-foreground font-medium underline hover:no-underline">
+          <Link prefetch={false} href="/monologue-finder" className="text-foreground font-medium underline hover:no-underline">
             monologue finder
           </Link>{" "}
           or rehearse with{" "}
-          <Link href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
+          <Link prefetch={false} href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
             ScenePartner
           </Link>
           .
         </p>
         <div className="flex flex-wrap gap-4">
           <Button asChild size="lg" className="rounded-full px-6">
-            <Link href="/signup">Start rehearsing</Link>
+            <Link prefetch={false} href="/signup">Start rehearsing</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-            <Link href="/">Try the search</Link>
+            <Link prefetch={false} href="/">Try the search</Link>
           </Button>
         </div>
       </div>

@@ -46,7 +46,7 @@ export default function Page() {
         }
       >
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
+          <Link prefetch={false} href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
             Search monologues for women
           </Link>
         </Button>
@@ -56,15 +56,15 @@ export default function Page() {
       <div className="mt-0 space-y-3 text-sm text-muted-foreground">
         <p>
           Browse by category:{" "}
-          <Link href="/monologues/comedic-woman-under-2-minutes" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/monologues/comedic-woman-under-2-minutes" className="text-foreground underline hover:no-underline">
             comedic monologues for women under 2 minutes
           </Link>
           ,{" "}
-          <Link href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
             dramatic monologues
           </Link>
           , or{" "}
-          <Link href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
             contemporary monologues
           </Link>
           .
@@ -103,7 +103,7 @@ export default function Page() {
             </h3>
             <p className="text-muted-foreground">
               Yes. Save any monologue and rehearse it with{" "}
-              <Link href="/scene-partner-ai" className="text-foreground underline hover:no-underline">
+              <Link prefetch={false} href="/scene-partner-ai" className="text-foreground underline hover:no-underline">
                 ScenePartner AI
               </Link>
               , which reads the other lines out loud so you can practice on your own.

@@ -179,7 +179,7 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-semibold text-foreground mb-3">13. Contact</h2>
           <p>
             For privacy-related questions, requests, or complaints, contact us at:{" "}
-            <Link href="/contact" className="text-foreground underline hover:no-underline">
+            <Link prefetch={false} href="/contact" className="text-foreground underline hover:no-underline">
               Contact page
             </Link>
             {" "}or by email at the address listed there. We will respond in accordance with applicable law.
@@ -188,9 +188,9 @@ export default function PrivacyPage() {
       </div>
 
       <p className="mt-12 text-sm text-muted-foreground">
-        <Link href="/" className="text-foreground underline hover:no-underline">Back to home</Link>
+        <Link prefetch={false} href="/" className="text-foreground underline hover:no-underline">Back to home</Link>
         {" · "}
-        <Link href="/terms" className="text-foreground underline hover:no-underline">Terms of Service</Link>
+        <Link prefetch={false} href="/terms" className="text-foreground underline hover:no-underline">Terms of Service</Link>
       </p>
       </div>
     </>

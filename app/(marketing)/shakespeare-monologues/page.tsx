@@ -47,7 +47,7 @@ export default function Page() {
         }
       >
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
+          <Link prefetch={false} href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
             Search Shakespeare monologues
           </Link>
         </Button>
@@ -57,15 +57,15 @@ export default function Page() {
       <div className="mt-0 space-y-3 text-sm text-muted-foreground">
         <p>
           Also browse{" "}
-          <Link href="/monologues/classical-monologues" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/monologues/classical-monologues" className="text-foreground underline hover:no-underline">
             classical monologues
           </Link>
           ,{" "}
-          <Link href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
             dramatic monologues
           </Link>
           , or{" "}
-          <Link href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
             contemporary monologues
           </Link>
           .
@@ -106,7 +106,7 @@ export default function Page() {
             <p className="text-muted-foreground">
               Yes. Shakespeare&apos;s works are in the public domain, so we include full monologue
               text you can read, save, and rehearse with{" "}
-              <Link href="/scene-partner-ai" className="text-foreground underline hover:no-underline">
+              <Link prefetch={false} href="/scene-partner-ai" className="text-foreground underline hover:no-underline">
                 ScenePartner AI
               </Link>
               .

@@ -46,7 +46,7 @@ export default function Page() {
         }
       >
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
+          <Link prefetch={false} href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
             Search contemporary monologues
           </Link>
         </Button>
@@ -56,15 +56,15 @@ export default function Page() {
       <div className="mt-0 space-y-3 text-sm text-muted-foreground">
         <p>
           Also try{" "}
-          <Link href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
             dramatic monologues
           </Link>
           ,{" "}
-          <Link href="/monologues-for-men" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/monologues-for-men" className="text-foreground underline hover:no-underline">
             monologues for men
           </Link>
           , or{" "}
-          <Link href="/shakespeare-monologues" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/shakespeare-monologues" className="text-foreground underline hover:no-underline">
             Shakespeare monologues
           </Link>
           .

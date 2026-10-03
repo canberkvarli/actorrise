@@ -290,7 +290,7 @@ export default function PricingPage() {
                     ))}
                   </ul>
 
-                  <Link
+                  <Link prefetch={false}
                     href={
                       isFree
                         ? "/signup"

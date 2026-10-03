@@ -45,7 +45,7 @@ export default function Page() {
       }
     >
       <Button asChild size="lg" className="rounded-full px-6">
-        <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
+        <Link prefetch={false} href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
           Search 19,000+ monologues
         </Link>
       </Button>

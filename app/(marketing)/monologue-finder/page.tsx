@@ -107,10 +107,10 @@ export default function MonologueFinderPage() {
       </ul>
       <div className="flex flex-wrap gap-4 mb-16">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup">Start rehearsing</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/">Try the monologue finder</Link>
+          <Link prefetch={false} href="/">Try the monologue finder</Link>
         </Button>
       </div>
 
@@ -181,19 +181,19 @@ export default function MonologueFinderPage() {
       </h2>
       <p className="text-muted-foreground mb-12">
         Whether you’re prepping a professional audition, a{" "}
-        <Link href="/for-students" className="text-foreground font-medium underline hover:no-underline">
+        <Link prefetch={false} href="/for-students" className="text-foreground font-medium underline hover:no-underline">
           college audition
         </Link>
         , or coaching a class as a{" "}
-        <Link href="/for-teachers" className="text-foreground font-medium underline hover:no-underline">
+        <Link prefetch={false} href="/for-teachers" className="text-foreground font-medium underline hover:no-underline">
           teacher
         </Link>
         , the finder works the same way. Once you’ve picked your piece, rehearse it out loud with{" "}
-        <Link href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
+        <Link prefetch={false} href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
           ScenePartner
         </Link>
         , which reads the other lines so you can run it anytime. You can also browse curated{" "}
-        <Link href="/audition-monologues" className="text-foreground font-medium underline hover:no-underline">
+        <Link prefetch={false} href="/audition-monologues" className="text-foreground font-medium underline hover:no-underline">
           audition monologues
         </Link>{" "}
         by style and length.
@@ -217,7 +217,7 @@ export default function MonologueFinderPage() {
                 {item.link && (
                   <>
                     {" "}
-                    <Link href={item.link.href} className="text-primary hover:underline">
+                    <Link prefetch={false} href={item.link.href} className="text-primary hover:underline">
                       {item.link.label}
                     </Link>
                     .
@@ -231,10 +231,10 @@ export default function MonologueFinderPage() {
 
       <div className="flex flex-wrap gap-4">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup">Start rehearsing</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/">Try the monologue finder</Link>
+          <Link prefetch={false} href="/">Try the monologue finder</Link>
         </Button>
       </div>
       </div>

@@ -33,10 +33,10 @@ export default function Page() {
       <StageHero direction="(young performers.)" title={H1} lede={INTRO}>
         <div className="flex flex-wrap gap-4">
           <Button asChild size="lg" className="rounded-full px-6">
-            <Link href="/signup">Start rehearsing</Link>
+            <Link prefetch={false} href="/signup">Start rehearsing</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-            <Link href="/">Try the search</Link>
+            <Link prefetch={false} href="/">Try the search</Link>
           </Button>
         </div>
       </StageHero>
@@ -54,7 +54,7 @@ export default function Page() {
           {RELATED.map((r, i) => (
             <span key={r.href}>
               {i > 0 ? " · " : ""}
-              <Link href={r.href} className="text-foreground font-medium underline hover:no-underline">
+              <Link prefetch={false} href={r.href} className="text-foreground font-medium underline hover:no-underline">
                 {r.label}
               </Link>
             </span>

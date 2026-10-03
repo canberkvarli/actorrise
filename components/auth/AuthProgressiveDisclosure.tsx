@@ -65,7 +65,7 @@ function AuthProgressiveDisclosureInner({
           open its own link, beside the password field, takes over. */}
       {mode === "login" && !showEmailForm && (
         <p className="text-center">
-          <Link
+          <Link prefetch={false}
             href="/forgot-password"
             className="inline-flex min-h-11 items-center px-2 text-sm underline underline-offset-4 transition-colors hover:text-[var(--t-cream)]"
             style={{ color: "var(--t-muted-light-2)" }}

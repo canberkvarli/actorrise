@@ -46,7 +46,7 @@ export default function Page() {
         }
       >
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
+          <Link prefetch={false} href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
             Search dramatic monologues
           </Link>
         </Button>
@@ -56,15 +56,15 @@ export default function Page() {
       <div className="mt-0 space-y-3 text-sm text-muted-foreground">
         <p>
           Looking for something specific? Try{" "}
-          <Link href="/shakespeare-monologues" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/shakespeare-monologues" className="text-foreground underline hover:no-underline">
             Shakespeare monologues
           </Link>
           ,{" "}
-          <Link href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
             contemporary monologues
           </Link>
           , or{" "}
-          <Link href="/monologues-for-women" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/monologues-for-women" className="text-foreground underline hover:no-underline">
             monologues for women
           </Link>
           .
@@ -103,7 +103,7 @@ export default function Page() {
             </h3>
             <p className="text-muted-foreground">
               Yes.{" "}
-              <Link href="/scene-partner-ai" className="text-foreground underline hover:no-underline">
+              <Link prefetch={false} href="/scene-partner-ai" className="text-foreground underline hover:no-underline">
                 ScenePartner AI
               </Link>{" "}
               lets you rehearse scenes and monologues with AI reading the other lines. Save any

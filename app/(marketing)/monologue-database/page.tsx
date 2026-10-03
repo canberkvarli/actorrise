@@ -112,10 +112,10 @@ export default function MonologueDatabasePage() {
         </ul>
         <div className="flex flex-wrap gap-4 mb-16">
           <Button asChild size="lg" className="rounded-full px-6">
-            <Link href="/">Search the database</Link>
+            <Link prefetch={false} href="/">Search the database</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-            <Link href="/signup">Start rehearsing</Link>
+            <Link prefetch={false} href="/signup">Start rehearsing</Link>
           </Button>
         </div>
 
@@ -154,7 +154,7 @@ export default function MonologueDatabasePage() {
         </h2>
         <div className="flex flex-wrap gap-2 mb-12">
           {CATEGORY_LINKS.map((c) => (
-            <Link
+            <Link prefetch={false}
               key={c.href}
               href={c.href}
               className="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
@@ -174,7 +174,7 @@ export default function MonologueDatabasePage() {
               <p className="text-muted-foreground">
                 {item.a}
                 {item.link && (
-                  <Link href={item.link.href} className="text-primary underline underline-offset-4">
+                  <Link prefetch={false} href={item.link.href} className="text-primary underline underline-offset-4">
                     {item.link.label}
                   </Link>
                 )}
@@ -192,10 +192,10 @@ export default function MonologueDatabasePage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button asChild size="lg" className="rounded-full px-6">
-              <Link href="/">Search the database</Link>
+              <Link prefetch={false} href="/">Search the database</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-              <Link href="/signup">Start rehearsing</Link>
+              <Link prefetch={false} href="/signup">Start rehearsing</Link>
             </Button>
           </div>
         </div>

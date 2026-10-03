@@ -28,7 +28,7 @@ export function TheatreFooter() {
     >
       <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-x-8 gap-y-4">
         <div className="flex items-center gap-3.5">
-          <Link href="/" aria-label="ActorRise home">
+          <Link prefetch={false} href="/" aria-label="ActorRise home">
             <Image
               src="/transparent_textlogo.png"
               alt="ActorRise"
@@ -55,7 +55,7 @@ export function TheatreFooter() {
           style={{ color: "var(--t-muted-light-2)" }}
         >
           {LINKS.map((l) => (
-            <Link
+            <Link prefetch={false}
               key={l.href}
               href={l.href}
               className="transition-colors hover:!text-[var(--t-gel)]"

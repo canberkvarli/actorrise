@@ -101,25 +101,25 @@ export default function Page() {
       </ul>
       <div className="flex flex-wrap gap-4">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup">Start rehearsing</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/audition-ai">Learn more about Audition AI</Link>
+          <Link prefetch={false} href="/audition-ai">Learn more about Audition AI</Link>
         </Button>
       </div>
 
       <div className="mt-12 space-y-3 text-sm text-muted-foreground">
         <p>
           Need material first? Try the{" "}
-          <Link href="/monologue-finder" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/monologue-finder" className="text-foreground underline hover:no-underline">
             monologue finder
           </Link>{" "}
           or browse{" "}
-          <Link href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
             dramatic monologues
           </Link>{" "}
           and{" "}
-          <Link href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
+          <Link prefetch={false} href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
             contemporary monologues
           </Link>
           .
@@ -148,7 +148,7 @@ export default function Page() {
             <p className="text-muted-foreground">
               The free tier includes limited ScenePartner sessions. For unlimited rehearsal, check
               the{" "}
-              <Link href="/pricing" className="text-foreground underline hover:no-underline">
+              <Link prefetch={false} href="/pricing" className="text-foreground underline hover:no-underline">
                 pricing page
               </Link>
               .

@@ -49,7 +49,7 @@ export function MarketingFooter() {
         <div className="mx-auto max-w-[1240px]">
           <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
             <div className="flex items-center gap-3.5">
-              <Link href="/" aria-label="ActorRise home">
+              <Link prefetch={false} href="/" aria-label="ActorRise home">
                 <Image
                   src="/transparent_textlogo.png"
                   alt="ActorRise"
@@ -78,14 +78,14 @@ export function MarketingFooter() {
               aria-label="Footer links"
             >
               {LINKS.map((l) => (
-                <Link key={l.href} href={l.href} className={linkCls}>
+                <Link prefetch={false} key={l.href} href={l.href} className={linkCls}>
                   {l.label}
                 </Link>
               ))}
               {/* Hidden until an organization has approved a listing, so this
                   never points at an empty page. */}
               {APPROVED_PARTNERS.length > 0 && (
-                <Link href="/thanks" className={linkCls}>
+                <Link prefetch={false} href="/thanks" className={linkCls}>
                   With thanks
                 </Link>
               )}
@@ -105,7 +105,7 @@ export function MarketingFooter() {
           >
             <p>
               Every piece links back to its source (see{" "}
-              <Link href="/sources" className="underline hover:no-underline">
+              <Link prefetch={false} href="/sources" className="underline hover:no-underline">
                 Sources
               </Link>
               ); I never host full scripts of copyrighted works. Rights holders can

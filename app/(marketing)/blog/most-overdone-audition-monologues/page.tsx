@@ -158,7 +158,7 @@ export default function Page() {
             <span>
               <strong className="text-foreground">Use the Overdone filter.</strong> ActorRise flags
               pieces that get used constantly, so you can skip them on purpose. Start from the{" "}
-              <Link href="/monologue-finder" className="text-foreground font-medium underline hover:no-underline">
+              <Link prefetch={false} href="/monologue-finder" className="text-foreground font-medium underline hover:no-underline">
                 monologue finder
               </Link>
               .
@@ -184,7 +184,7 @@ export default function Page() {
             <span>
               <strong className="text-foreground">Rehearse it until it’s yours.</strong> Run it out loud
               with{" "}
-              <Link href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
+              <Link prefetch={false} href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
                 ScenePartner
               </Link>{" "}
               so the piece feels lived in, not recited.
@@ -199,10 +199,10 @@ export default function Page() {
 
       <div className="mt-12 pt-10 border-t border-border/60 flex flex-wrap gap-4">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/monologue-finder">Find a fresh monologue</Link>
+          <Link prefetch={false} href="/monologue-finder">Find a fresh monologue</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup">Start rehearsing</Link>
         </Button>
       </div>
     </article>

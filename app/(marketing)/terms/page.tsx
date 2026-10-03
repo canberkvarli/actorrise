@@ -102,7 +102,7 @@ export default function TermsPage() {
           </p>
           <p className="mb-3">
             <strong className="text-foreground">Monologues and scripts:</strong> Monologue and script content we make available is provided for discovery with attribution and links back to its source and original publication. Your use of that content is subject to applicable copyright and our display terms. We do not grant you rights to use third-party copyrighted works beyond what the applicable license allows; see our{" "}
-            <Link href="/sources" className="text-foreground underline hover:no-underline">Sources &amp; copyright</Link>
+            <Link prefetch={false} href="/sources" className="text-foreground underline hover:no-underline">Sources &amp; copyright</Link>
             {" "}page for more information.
           </p>
           <p className="mb-3">
@@ -169,7 +169,7 @@ export default function TermsPage() {
           <h2 className="text-xl font-semibold text-foreground mb-3">13. Contact</h2>
           <p>
             For questions about these Terms, please contact us via our{" "}
-            <Link href="/contact" className="text-foreground underline hover:no-underline">
+            <Link prefetch={false} href="/contact" className="text-foreground underline hover:no-underline">
               Contact page
             </Link>
             .
@@ -187,9 +187,9 @@ export default function TermsPage() {
       </div>
 
       <p className="mt-12 text-sm text-muted-foreground">
-        <Link href="/" className="text-foreground underline hover:no-underline">Back to home</Link>
+        <Link prefetch={false} href="/" className="text-foreground underline hover:no-underline">Back to home</Link>
         {" · "}
-        <Link href="/privacy" className="text-foreground underline hover:no-underline">Privacy Policy</Link>
+        <Link prefetch={false} href="/privacy" className="text-foreground underline hover:no-underline">Privacy Policy</Link>
       </p>
       </div>
     </>

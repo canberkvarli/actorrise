@@ -38,7 +38,7 @@ export function TheatreAuthShell({
       />
 
       <div className="relative w-full max-w-md">
-        <Link
+        <Link prefetch={false}
           href="/"
           className="mb-8 inline-flex items-center gap-2 text-[13px] font-medium"
           style={{ color: "var(--t-muted-light-2)" }}
@@ -118,7 +118,7 @@ export function TheatreAuthShell({
           }}
         >
           (by continuing you agree to the{" "}
-          <Link href="/terms" className="underline hover:no-underline">
+          <Link prefetch={false} href="/terms" className="underline hover:no-underline">
             terms
           </Link>
           .)

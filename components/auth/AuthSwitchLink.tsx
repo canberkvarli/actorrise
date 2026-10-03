@@ -34,7 +34,7 @@ function AuthSwitchAnchor({
   children,
 }: AuthSwitchLinkProps & { redirect: string | null }) {
   return (
-    <Link
+    <Link prefetch={false}
       href={redirect ? `${href}?redirect=${encodeURIComponent(redirect)}` : href}
       className="font-medium text-primary hover:underline underline-offset-4"
     >

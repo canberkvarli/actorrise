@@ -54,7 +54,7 @@ export function TheatreNav({
           boxShadow: "0 10px 40px -10px rgb(0 0 0/.6)",
         }}
       >
-        <Link href="/" aria-label="ActorRise home" className="flex items-center">
+        <Link prefetch={false} href="/" aria-label="ActorRise home" className="flex items-center">
           <Image
             src="/transparent_textlogo.png"
             alt="ActorRise"
@@ -75,7 +75,7 @@ export function TheatreNav({
             footer, which is where the full map lives. */}
         <div className="hidden items-center lg:flex">
           {links.map((l) => (
-            <Link
+            <Link prefetch={false}
               key={l.href}
               href={l.href}
               className="whitespace-nowrap px-2.5 py-1.5 text-[13px] font-medium transition-colors hover:!text-[var(--t-gel)]"
@@ -127,7 +127,7 @@ function TheatreNavAuthLink() {
 
   if (user) {
     return (
-      <Link href="/practice" className={cls} style={style}>
+      <Link prefetch={false} href="/practice" className={cls} style={style}>
         Practice
       </Link>
     );

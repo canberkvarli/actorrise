@@ -85,17 +85,17 @@ export default function SupportPage() {
             <h2 className="text-xl font-semibold text-foreground mb-3">More</h2>
             <ul className="space-y-2">
               <li>
-                <Link href="/contact" className="text-foreground underline hover:no-underline">
+                <Link prefetch={false} href="/contact" className="text-foreground underline hover:no-underline">
                   Contact form
                 </Link>
               </li>
               <li>
-                <Link href="/privacy" className="text-foreground underline hover:no-underline">
+                <Link prefetch={false} href="/privacy" className="text-foreground underline hover:no-underline">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-foreground underline hover:no-underline">
+                <Link prefetch={false} href="/terms" className="text-foreground underline hover:no-underline">
                   Terms of Service
                 </Link>
               </li>
