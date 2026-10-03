@@ -134,8 +134,18 @@ Notes left as drafts: <n>, and which condition failed
 
 Trials ending inside 3 days: <names, and whether each has used it>
 
+Vercel ISR writes yesterday: <n>  (Hobby allows ~6,600 a day; over that, name the bot)
+
 Broken or odd: <anything that failed, any number that moved more than it should>
 ```
+
+The ISR line: Vercel moved to the Hobby plan on 2026-10-04 to stop a $20 charge, and
+the plan pauses the site if ISR writes pass 200k in a cycle. Read yesterday's number
+from `/v1/billing/charges` (one-day window, `ServiceName = "ISR Writes"`, token in
+`~/Library/Application Support/com.vercel.cli/auth.json`). If it is over 6,000, run the
+observability query (`vercel.request.count` grouped by `bot_name`, route
+`/monologues/[slug]`) and add the crawler to the disallow list in `app/robots.ts`,
+as AhrefsBot and shapbot were. Google and Bing are never blocked.
 
 If a number is zero, print the zero. If a step did not run, say which and why.
 
