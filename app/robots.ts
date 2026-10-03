@@ -11,7 +11,9 @@ export default function robots(): MetadataRoute.Robots {
       // 362k a month against the 200k the Hobby plan allows. Neither bot sends
       // an actor here; they crawl for their own backlink indexes. Ahrefs'
       // own data about this site is read through its API, not its crawler.
-      { userAgent: ["AhrefsBot", "SemrushBot"], disallow: ["/"] },
+      // shapbot joined the list 2026-10-03: the day after AhrefsBot stopped,
+      // it made 2,995 of 3,700 hits on the same pages. Same deal.
+      { userAgent: ["AhrefsBot", "SemrushBot", "shapbot"], disallow: ["/"] },
       {
         userAgent: "*",
         // Explicitly allow the marketing /monologues* pages. A bare `Disallow: /monologues`
