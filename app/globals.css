@@ -3539,6 +3539,16 @@
   border-color: var(--t-line-light);
   color: var(--t-muted-dark-2);
 }
+/* The row came from the other shelf. Cross-tab title recovery answers "game of
+   thrones" on the Plays shelf with the television rows, which is right, and was
+   silent, which read as a bug. Outlined rather than filled: it states a fact
+   about the row, it is not a recommendation like `best pick`. */
+.t-mark--shelf {
+  border-color: var(--t-text);
+  color: var(--t-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 
 /* Rehearse: the one filled control on a row. */
 .t-rehearse {

@@ -9,6 +9,7 @@ import { Monologue } from "@/types/actor";
 import { displayableAuthor } from "@/lib/utils";
 import { entrance } from "@/lib/motion";
 import type { ProfileMatch } from "@/lib/profileMatch";
+import { resultPoster, isCrossShelf, shelfLabel } from "@/lib/resultPoster";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { MonologueSourceTag } from "@/components/search/SourceTag";
 
@@ -63,7 +64,7 @@ function excerpt(text: string, limit = 185): { text: string; endsClean: boolean 
   return { text: word > 0 ? window.slice(0, word) : window, endsClean: false };
 }
 
-type MarkTone = "best" | "lane" | "overdone" | "match";
+type MarkTone = "best" | "lane" | "overdone" | "match" | "shelf";
 type Mark = { key: string; label: string; tone: MarkTone; title?: string };
 
 /** Roman numerals for the margin. Results are a page of sides; the rank is set
@@ -182,8 +183,8 @@ export interface MonologueSpeechProps {
   index?: number;
   isModerator?: boolean;
   onEdit?: (id: number) => void;
-  /** Tints `best pick` to the shelf you are on, and decides whether the margin
-   *  holds a poster. */
+  /** Tints `best pick` to the shelf you are on. The poster is NOT decided here
+   *  any more: it is read off the row, so a cross-tab result keeps it. */
   mode?: "plays" | "film_tv";
   /** From the page's existing profileMatchMap. Drives the `your lane` mark. */
   profileMatch?: ProfileMatch;
@@ -239,8 +240,30 @@ export function MonologueSpeech({
   const shown = excerpt(body);
   const truncated = shown.text.length < body.length;
 
+  /* Read the ROW, not the tab. Cross-tab title recovery answers "game of
+     thrones" on the Plays shelf with the TV rows, and gating the poster on
+     `mode` threw it away in exactly the case where the actor most needs to see
+     that these are television. Only film and TV rows ever carry a poster, so
+     the row cannot mislabel itself. See lib/resultPoster.ts. */
+  const poster = resultPoster(mono);
+  const crossShelf = isCrossShelf(mono, mode);
+
   const marks = marksFor(mono, index, profileMatch, showMatchMark);
-  const poster = mode === "film_tv" ? mono.poster_url : null;
+  /* Cross-tab recovery was good behaviour that read as a bug because it was
+     silent: asking the Plays shelf for "game of thrones" returns the TV rows
+     and nothing on the row said they were television. One word fixes it, and
+     it only ever appears when the row really is from the other shelf. */
+  if (crossShelf) {
+    const label = shelfLabel(mono);
+    if (label) {
+      marks.unshift({
+        key: "shelf",
+        label,
+        tone: "shelf",
+        title: `Not a play. This is from ${label === "tv" ? "television" : label}.`,
+      });
+    }
+  }
 
   /* Typed, not set in the UI face. These are notes in the margin of a page of
      sides, and at 11px sans they read as debug output someone forgot to
