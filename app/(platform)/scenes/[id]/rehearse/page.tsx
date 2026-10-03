@@ -62,6 +62,7 @@ import { theatreFontVars } from '@/lib/fonts/theatre';
 import { ownsLine, sessionRoles } from '@/lib/character-roles';
 import { tokenize, alignWords, wordMatchScore } from '@/lib/word-match';
 import { shouldAdvance, MIN_QUIET_MS } from '@/lib/advance-rule';
+import { rehearseStatus } from '@/lib/rehearse-status';
 import { buildWordTimings, spokenWordIndex } from '@/lib/speech-timing';
 import { trackEvent } from '@/lib/events';
 import { GuidedCoachLine } from '@/components/rehearse/GuidedCoachLine';
@@ -872,6 +873,10 @@ function RehearsalPageInner() {
 
   // Live word matching via SpeechRecognition (for real-time highlighting while Whisper records)
   const [liveMatchedIndices, setLiveMatchedIndices] = useState<Set<number>>(new Set());
+  /* Is a voice reaching the microphone RIGHT NOW. Off the level, not off
+     recognition, so it stays true for an actor whose words never transcribe.
+     This is the only live feedback the screen gives during a take. */
+  const [liveVoiceHeard, setLiveVoiceHeard] = useState(false);
   const bestMatchedRef = useRef<Set<number>>(new Set()); // accumulates ever-matched indices so SR regressions don't un-highlight words
   const liveRecognitionRef = useRef<any>(null);
   // Prevents double-advance when SR final result fires before Whisper returns
@@ -1980,6 +1985,11 @@ function RehearsalPageInner() {
         lastProgressAt = Date.now();
       }
 
+      // Same sample the advance rule uses, so the dot can never disagree with
+      // the thing deciding whether the line is finished. MIN_QUIET_MS is the
+      // gap that already counts as "still talking".
+      setLiveVoiceHeard(msSinceVoice() < MIN_QUIET_MS);
+
       if (!shouldAdvance({
         msSinceVoice: msSinceVoice(),
         score,
@@ -2368,24 +2378,34 @@ function RehearsalPageInner() {
 
   const isUserTurn = currentUserLineText != null && lastAiLine == null;
 
-  // Build a live WordMatchResult from SpeechRecognition interim results
-  const liveWordResult: WordMatchResult | null = (() => {
-    if (!isListening || liveMatchedIndices.size === 0 || !currentUserLineText) return null;
-    const expected = stripStageDirections(currentUserLineText);
-    const words = tokenize(expected)
-      .map((word, i) => ({ word, matched: liveMatchedIndices.has(i) }));
-    return { words, willAdvance: true };
-  })();
+  /* No live word highlight.
+     It was built from SpeechRecognition INTERIM results, which on iOS Safari
+     return the first word and then stop: saying "I won't" lit up `I`, left
+     `won't` dark, and read as "it cannot hear me" while the microphone was
+     working perfectly. The accurate transcript only arrives after the take, so
+     everything shown during the take came from the engine that had failed.
 
-  const statusInfo = (() => {
-    if (isLoadingAI) return { text: 'Generating voice', color: 'bg-amber-400', pulse: true };
-    if (anySpeaking) return { text: `${session?.ai_character ?? 'Partner'} speaking`, color: 'bg-amber-400', pulse: true };
-    if (isTranscribing) return { text: 'One moment', color: 'bg-blue-400', pulse: true };
-    if (isListening) return { text: 'Listening', color: 'bg-green-400', pulse: true };
-    if (isProcessing) return { text: 'One moment', color: 'bg-blue-400', pulse: true };
-    if (isUserTurn) return { text: 'Your turn', color: 'bg-orange-400', pulse: false };
-    return { text: 'Waiting', color: 'bg-neutral-500', pulse: false };
-  })();
+     It should not come back once transcription improves, either. Watching
+     words tick green pulls an actor's eyes down to be scored by the page,
+     which is the opposite of what rehearsing is for. A scene partner listens
+     and comes in on the cue; it does not mark your copy. The screen now says
+     whether it can hear a voice — from the microphone level, which is
+     reliable — and never which words it thinks it caught.
+     See lib/rehearse-status.ts. */
+  const liveWordResult: WordMatchResult | null = null;
+
+  const statusInfo = rehearseStatus({
+    loadingVoice: isLoadingAI,
+    partnerSpeaking: anySpeaking,
+    transcribing: isTranscribing,
+    listening: isListening,
+    processing: isProcessing,
+    userTurn: isUserTurn,
+    // From the microphone level, not from recognition, so it is true whenever
+    // someone is actually talking.
+    voiceHeard: isListening && liveVoiceHeard,
+    partnerName: session?.ai_character ?? null,
+  });
 
   /* ── Session review helpers ───────────────────────────────────── */
 
@@ -3350,12 +3370,21 @@ function RehearsalPageInner() {
             }
           </button>
 
-          {/* Status: one dot. The words it used to carry ("Recording",
-              "Transcribing") were the pipeline narrating itself. An actor only
-              needs to know whose turn it is, and the colour says that. The
-              text stays for screen readers. */}
-          <div className="flex items-center shrink-0 px-1" role="status" aria-live="polite">
+          {/* Status: the dot AND the word.
+              The word used to be sr-only, on the reasoning that an actor only
+              needs to know whose turn it is and the colour says that. It does
+              not. Canberk read an amber dot as "Listen" on his own phone while
+              the scene was still generating the partner's voice, and amber,
+              green and blue are not self-explanatory to anyone. The moment an
+              actor looks at the status is the moment they have lost the
+              thread, which is precisely when a colour alone cannot help.
+              Two words at most, and never a claim about which words it heard.
+              See lib/rehearse-status.ts. */}
+          <div className="flex items-center gap-2 shrink-0 px-1" role="status" aria-live="polite">
             <div className={cn('w-2.5 h-2.5 rounded-full', statusInfo.color, statusInfo.pulse && 'animate-pulse')} />
+            <span className="hidden text-[11px] tracking-[0.04em] text-neutral-400 whitespace-nowrap sm:inline">
+              {statusInfo.text}
+            </span>
             <span className="sr-only">{statusInfo.text}</span>
           </div>
 
