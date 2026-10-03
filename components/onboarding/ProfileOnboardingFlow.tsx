@@ -451,25 +451,6 @@ export default function ProfileOnboardingFlow({
     void handleFinishQuestions();
   }, [submitting, step, questions, variant, totalSteps, goTo, handleFinishQuestions]);
 
-  // The way out of the card altogether. Quieter than skip, and a separate
-  // tap, so leaving is a decision and not the reflex that skip had become.
-  const handleNotNow = useCallback(async () => {
-    if (submitting) return;
-    setSubmitting(true);
-    try {
-      if (variant === "new") {
-        // Close the first-run gate but leave the profile flag unset so the soft
-        // backfill card can re-invite them later. No profile write.
-        await api.patch("/api/auth/onboarding", {
-          has_completed_onboarding: true,
-          has_seen_welcome: true,
-        });
-      }
-      endFlow();
-    } catch {
-      setSubmitting(false);
-    }
-  }, [submitting, variant, endFlow]);
 
   /**
    * Take the picks into the collection and leave them ON the platform.
@@ -658,19 +639,14 @@ export default function ProfileOnboardingFlow({
           </div>
           {isQuestion && !referralRequired && (
             <div className="flex items-center gap-4">
-              {/* Two ways out, two different sizes of decision. "not now" is
-                  the fainter of the two on purpose: it closes the card. */}
-              <button
-                type="button"
-                onClick={handleNotNow}
-                disabled={submitting}
-                className="cursor-pointer border-0 bg-transparent py-1.5 text-[11px] italic tracking-[0.06em] transition-colors disabled:opacity-50"
-                style={{ fontFamily: "var(--t-direction)", color: "color-mix(in oklab, var(--t-faint) 70%, transparent)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--t-text)")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "color-mix(in oklab, var(--t-faint) 70%, transparent)")}
-              >
-                not now
-              </button>
+              {/* ONE way out, not two.
+                  There used to be a faint "not now" beside "skip this one",
+                  and on a phone they read as the same offer twice: the actor
+                  has to work out that one closes the card and the other moves
+                  past one question, from two words of italic six pixels apart.
+                  Skipping every question already ends the flow, so the second
+                  control was a shortcut nobody could identify, sitting on the
+                  screen that decides whether someone finishes onboarding. */}
               <button
                 type="button"
                 onClick={handleSkipQuestion}
