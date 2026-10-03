@@ -47,9 +47,17 @@ REACHABLE = f"""{REAL} and u.marketing_opt_in is true and u.email is not null
 # A wall, under either name. upgrade_modal_viewed was only ever sent by walls.
 WALL = """(e.event_name = 'upgrade_modal_viewed'
            or (e.event_name = 'paywall_hit' and e.properties->>'kind' = 'wall'))"""
-ACTIVITY = """concat_ws(', ',
+# A save the actor chose. The onboarding payoff saves its whole shelf in one
+# burst right after signup (ProfileOnboardingFlow: api.post favorite per pick),
+# so every day-one account showed "6 saved" and the note nearly said "you
+# saved six pieces" to someone who tapped one button (2026-10-03). Fifteen
+# minutes after signup is past the wizard for everyone; the first search
+# comes after it anyway.
+CHOSEN_SAVE = """f.user_id = u.id and f.removed_at is null
+            and f.created_at > u.created_at + interval '15 minutes'"""
+ACTIVITY = f"""concat_ws(', ',
     nullif((select count(*) from monologue_favorites f
-            where f.user_id = u.id and f.removed_at is null), 0) || ' saved',
+            where {CHOSEN_SAVE}), 0) || ' saved',
     nullif((select count(distinct v.monologue_id) from monologue_views v
             where v.user_id = u.id and v.created_at > now() - interval '30 days'), 0) || ' read this month',
     nullif((select count(*) from rehearsal_sessions r
@@ -117,7 +125,7 @@ from hit h join users u on u.id = h.user_id
 where {REACHABLE} and not {PAID}
   and not exists (select 1 from user_events c where c.user_id = u.id
                   and c.event_name = 'checkout_started' and c.created_at >= h.at)
-order by (select count(*) from monologue_favorites f where f.user_id = u.id and f.removed_at is null)
+order by (select count(*) from monologue_favorites f where {CHOSEN_SAVE})
        + (select count(*) from search_logs s where s.user_id = u.id
           and s.created_at > now() - interval '30 days') desc
 limit :limit
@@ -131,8 +139,8 @@ limit :limit
 # actors that nothing automated is about to reach.
 WORTH = f"""
 select coalesce(u.name, ''), u.email, u.created_at::date, {ACTIVITY},
-       (select count(*) from monologue_favorites f where f.user_id = u.id
-          and f.removed_at is null and f.created_at > now() - interval '7 days')
+       (select count(*) from monologue_favorites f where {CHOSEN_SAVE}
+          and f.created_at > now() - interval '7 days')
      + (select count(*) from search_logs s where s.user_id = u.id and s.source = 'search'
           and coalesce(s.page, 1) = 1 and s.created_at > now() - interval '7 days')
      + (select count(*) from rehearsal_sessions r where r.user_id = u.id
