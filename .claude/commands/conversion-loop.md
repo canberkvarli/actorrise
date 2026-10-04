@@ -142,12 +142,15 @@ Broken or odd: <anything that failed, any number that moved more than it should>
 The Vercel line: the site moved to the Hobby plan on 2026-10-03 to stop a $20 charge,
 and the plan pauses the site if ISR writes pass 200k or CDN requests pass 1M in a cycle
 (the cycle runs from the 4th). CDN requests were ~50k/day on Pro; the marketing pages'
-link prefetch was turned off on 2026-10-03 to bring that down. Read both from the same
-billing call (`ServiceName` "ISR Writes" and "CDN Requests"). Read yesterday's number
-from `/v1/billing/charges` (one-day window, `ServiceName = "ISR Writes"`, token in
-`~/Library/Application Support/com.vercel.cli/auth.json`). If it is over 6,000, run the
-observability query (`vercel.request.count` grouped by `bot_name`, route
-`/monologues/[slug]`) and add the crawler to the disallow list in `app/robots.ts`,
+link prefetch was turned off on 2026-10-03 to bring that down. Read both from one call to `/v1/billing/charges` (token in
+`~/Library/Application Support/com.vercel.cli/auth.json`), `ServiceName` "ISR Writes" and
+"CDN Requests", summing `ConsumedQuantity`. **Vercel's billing day runs 07:00 UTC to
+07:00 UTC** (midnight Pacific): ask for `from=<yesterday>T07:00:00Z&to=<today>T07:00:00Z`.
+A UTC-midnight window straddles two billing days and the current one reads as zero until
+it closes (that is what happened on 2026-10-04). The feed still reports usage on Hobby.
+If ISR writes are over 6,000, find the crawler: the observability `bot_name` query is
+Pro-only now, so use `get_runtime_logs` grouped by `route` and then read a sample of
+`/monologues/[slug]` lines, and add the crawler to the disallow list in `app/robots.ts`,
 as AhrefsBot and shapbot were. Google and Bing are never blocked.
 
 If a number is zero, print the zero. If a step did not run, say which and why.
