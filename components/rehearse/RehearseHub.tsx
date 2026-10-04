@@ -62,7 +62,7 @@ export function RehearseHub() {
   // set from an effect — an effect that sets state on mount is a cascading
   // render, and the lint rule that catches it is right.
   const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
-  const { data, isLoading } = useBookmarks({ alwaysFresh: true });
+  const { data, isLoading, isFetching } = useBookmarks({ alwaysFresh: true });
 
   const mark = useToggleMemorized();
   const toggleFavorite = useToggleFavorite();
@@ -84,7 +84,17 @@ export function RehearseHub() {
     return pickCurrent(all);
   }, [all, pickedId]);
 
-  const isEmpty = !isLoading && all.length === 0;
+  /* An empty shelf and a shelf that has not arrived look identical, and the
+     difference matters more here than anywhere: this is the screen a new actor
+     lands on straight after choosing their first pieces. React Query serves
+     the cached list first, and that cache was filled BEFORE the picks were
+     saved — so an actor who had just chosen six was told they had none, and
+     then watched them appear. `isLoading` is false in that moment, because
+     there is data; it is just the wrong data.
+     Nothing in flight AND nothing to show is the only honest empty. A later
+     background refetch cannot trip this, because by then `all` is not empty. */
+  const settling = isLoading || isFetching;
+  const isEmpty = !settling && all.length === 0;
   const showContent = mounted && !isLoading;
 
   const handleRemove = (monologue: Monologue) => {

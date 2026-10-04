@@ -323,6 +323,29 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
         };
 
         await audio.play();
+
+        /* Did it actually make a sound?
+           Twice now a line has "played" to a silent room: a muted element
+           still fires `onplay`, still advances `currentTime`, and still fires
+           `onended`, so every signal the scene reads says the partner spoke.
+           The guards upstream close the two known routes to that state; this
+           closes the rest, including the ones nobody has found yet.
+           Checked a beat later because the unlock that causes it resolves on a
+           microtask, and restarted from the top rather than left to limp on,
+           since the actor has already missed the opening words. */
+        window.setTimeout(() => {
+          const a = audioRef.current;
+          if (!a || a.src !== audioUrl || a.paused) return;
+          if (!a.muted && a.volume > 0) return;
+          a.muted = false;
+          a.volume = 1;
+          try {
+            a.currentTime = 0;
+            void a.play();
+          } catch {
+            /* nothing more to try here; onerror covers a dead element */
+          }
+        }, 250);
       } catch (err: unknown) {
         setIsLoading(false);
         setIsSpeaking(false);

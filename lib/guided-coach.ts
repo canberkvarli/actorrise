@@ -2,7 +2,7 @@
  * The one line of house text above the script in the guided first scene.
  *
  * It changes three times and then goes quiet: "Listen." while the partner
- * opens, "Your line." when the mic opens, "That's it. Keep going." while the
+ * opens, "Your line." when the mic opens, "That's it. Now listen." while the
  * partner answers the first line, and nothing after that. Two exceptions
  * outrank the sequence: a nudge after six quiet seconds with the mic open,
  * and tap mode when the mic is blocked or recognition threw.
@@ -32,7 +32,10 @@ export const NUDGE_AFTER_MS = 6000;
 export const COACH_TEXT: Record<CoachState, string> = {
   listen: "Listen.",
   your_line: "Your line.",
-  heard_first: "That's it. Keep going.",
+  // "Keep going" over the partner's line reads as "carry on talking",
+  // which is the opposite of what the actor should do while someone
+  // else has the line. Praise, then the actual instruction.
+  heard_first: "That's it. Now listen.",
   quiet: "",
   nudge: "Say it again, or tap it.",
   tap_mode: "Tap each line when you've said it.",

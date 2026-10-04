@@ -50,6 +50,15 @@ export function silentAudioUrl(): string {
 export function unlockElement(audio: HTMLAudioElement): void {
   try {
     const silent = silentAudioUrl();
+
+    /* Already playing real audio? Then it is unlocked by definition, and
+       there is nothing to do but damage.
+       This runs on every tap of the pause button, and it MUTES the element and
+       replaces its src with a silent clip. Doing that to an element that is
+       mid-line stops the partner dead and leaves her muted for the next line
+       too: "Riley speaking" on screen, silence in the room, and a scene that
+       never picks up. The gesture it was spending was already spent. */
+    if (!audio.paused && audio.src && audio.src !== silent) return;
     audio.muted = true;
     audio.src = silent;
     const playing = audio.play();

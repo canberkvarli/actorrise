@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FirstRunPaint } from "@/components/onboarding/FirstRunPaint";
 import Script from "next/script";
 import { Suspense } from "react";
 import {
@@ -195,6 +196,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Before anything is painted, not merely before hydration. This marks
+            the document when an account was just created in this tab, and CSS
+            covers the app with the page colour until FirstRunCurtain mounts
+            and takes over. It lived at the foot of the platform layout first,
+            which was too late by definition: everything above it in the tree
+            had already been parsed, and that is exactly the dashboard the
+            actor saw flash. */}
+        <FirstRunPaint />
         {/* No logo preload here. It used to warm /transparent_textlogo.png for the
             auth modal, but BrandLogo renders that wordmark through next/image, so
             the browser asks for /_next/image?url=... instead and the raw file in

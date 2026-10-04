@@ -30,7 +30,6 @@ const ContactModal = dynamic(
 // First-run onboarding wizard. Self-gates on user.has_completed_onboarding,
 // so it's safe to mount unconditionally.
 import { FirstRunCurtain } from "@/components/onboarding/FirstRunCurtain";
-import { FirstRunPaint } from "@/components/onboarding/FirstRunPaint";
 
 const OnboardingWizard = dynamic(
   () => import("@/components/onboarding/OnboardingWizard"),
@@ -832,7 +831,6 @@ export default function PlatformLayout({
 
       {/* Holds the stage while the dynamic OnboardingWizard chunk loads, so the
           dashboard never assembles itself only to be covered a beat later. */}
-      <FirstRunPaint />
       <FirstRunCurtain />
       <OnboardingWizard />
       <ProfileBackfillCard />
