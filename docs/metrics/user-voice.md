@@ -15,3 +15,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-10-02, educator, 0 saved, 0 scenes finished, free
 **They said:** "When I did a pop up told me to email you and you can set up my students with access. Would this include the PLUS for them? We are all going to VTA for the first time in a few weeks and that is how I heard about ActorRise. And my students would love access to consider the monologues you have."
 **Heard as:** happy, and the educator funnel working end to end: VTA partner → teacher signs up → the account-type pop-up tells her to email → she asks for her students. The one gap: the pop-up did not say Plus is included, so she had to ask.
+
+## 2026-10-04
+
+**Replying to:** the second reply on a personal note about a film not in the corpus
+**Account:** signed up 2026-09-29, 6 saved, 1 scene run, free
+**They said:** "I'd like to try out different scenes with different characters, and I chose these ones because I watched the movie and they really moved me. I'd be really happy if you could recommend some interesting monologues featuring different female characters."
+**Heard as:** happy, and a request the product does not serve: a curated spread of contrasting women, not a search. The search gives twenty near-matches to one query; she wanted six that differ. A "contrasts" shelf would do it.
