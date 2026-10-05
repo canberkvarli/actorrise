@@ -302,6 +302,20 @@ def _start_rehearsal_sweep_scheduler() -> None:
     paid service; this rides the existing web dyno, which is on `starter` and
     doesn't sleep.
     """
+    # Production only. A dev server on the laptop points at the production
+    # database (backend/.env), and a sweep from there is a write to prod from
+    # a machine nobody is watching. Same gate as the other schedulers.
+    from app.services.scheduler_gate import scheduler_status
+
+    status = scheduler_status(
+        "rehearsal_sweep",
+        environment=os.getenv("ENVIRONMENT"),
+        flag=os.getenv("REHEARSAL_SWEEP_ENABLED"),
+    )
+    if not status.will_run:
+        logger.info(status.reason)
+        return
+    logger.info(status.reason)
 
     def loop() -> None:
         # Offset from the reminder scheduler so the two don't both wake on the
@@ -339,6 +353,22 @@ def _start_comp_expiry_scheduler() -> None:
     existing web dyno like the other schedulers rather than adding a paid Render
     Cron Job.
     """
+
+    # Production only, like the other schedulers. A dev server on Canberk's
+    # laptop (uvicorn on :8000, backend/.env is the production pooler) ran this
+    # loop too, with code from before the database claim, and the digest
+    # arrived twice at 16:00 whenever the Mac was awake (Oct 3 and Oct 5, 2026).
+    from app.services.scheduler_gate import scheduler_status
+
+    status = scheduler_status(
+        "founder_digest",
+        environment=os.getenv("ENVIRONMENT"),
+        flag=os.getenv("FOUNDER_DIGEST_ENABLED"),
+    )
+    if not status.will_run:
+        logger.info(status.reason)
+        return
+    logger.info(status.reason)
 
     send_hour = int(os.getenv("COMP_EXPIRY_DIGEST_HOUR", "16"))  # 16:00 UTC ≈ 9am PT
 
