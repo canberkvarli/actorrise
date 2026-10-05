@@ -1,17 +1,18 @@
 ---
-description: The weekly marketing run. Four agents (numbers, outreach, posts, user email) and an editor. Drafts only, never sends or posts.
+description: The weekly marketing run. Three agents (numbers, outreach, user email) and an editor. Drafts only, never sends.
 ---
 
 # /marketing-week
 
 Canberk's marketing team for one week, run in one sitting. `/conversion-loop` is the daily
 run and looks after people already in the product. This is the weekly one and looks outward:
-organisations, posts, and one note to users if there is something real to say.
+organisations, and one note to users if there is something real to say. No social posts:
+Canberk, 2026-10-05, "no need for posts".
 
 **Nothing here sends, posts, or pushes.** Everything lands as a Gmail draft or a file, and
 Canberk sends. CLAUDE.md is the law on voice and offers; read it before anything else.
 
-You are the editor. You brief four agents, read what they bring back, throw out what breaks
+You are the editor. You brief three agents, read what they bring back, throw out what breaks
 the rules, and hand Canberk one page.
 
 ## 0. Set up
@@ -31,9 +32,9 @@ Read, before briefing anyone:
 - `docs/metrics/user-voice.md`, if it exists
 - the last seven files in `outputs/conversion/`
 
-## 1. Brief the four, in one message so they run together
+## 1. Brief the three, in one message so they run together
 
-Use the Agent tool, four calls in one message. Give each its section below word for word,
+Use the Agent tool, three calls in one message. Give each its section below word for word,
 plus the week's folder. Each writes files there and reports back in under 200 words.
 
 ### The analyst
@@ -97,24 +98,6 @@ plus the week's folder. Each writes files there and reports back in under 200 wo
 >    verify. Never invent a name, a date, or a fact about an organisation. If you could not
 >    confirm it on their own site, leave it out.
 
-### The writer
-
-> You write social posts for Canberk, a working actor who built ActorRise on his own. Invoke
-> the `write-actor-social-post` skill and follow it. You never post.
->
-> Material, in this order of preference: something an actor actually said
-> (`docs/metrics/user-voice.md`, quoted without a name), something that shipped this week
-> (`git log --since="7 days ago" --oneline`, read the commits that touch what an actor
-> sees), a number from `numbers.md` if the analyst has written it.
->
-> Write `social.md` in the week's folder: three posts for X (under 280 characters each) and
-> two captions for Instagram (50 to 150 words), each with one line above it saying what it is
-> built on and what picture or clip goes with it. Build in public, first person, no dashes,
-> no emojis, no hashtags beyond two. Nothing about a feature that is not live. No made-up
-> quote, user, or number: if you cannot point at where it came from, cut it.
->
-> Run `backend/scripts/voice_check.py --kind social` on the file and fix what it finds.
-
 ### The user email
 
 > You decide whether ActorRise's users get an email from Canberk this week, and draft it if
@@ -133,13 +116,12 @@ plus the week's folder. Each writes files there and reports back in under 200 wo
 
 ## 2. Edit
 
-When all four are back:
+When all three are back:
 
 1. Run the checker yourself over everything. Do not trust that an agent did.
    ```bash
    cd backend
    uv run python scripts/voice_check.py --kind org ../outputs/marketing/$WEEK/outreach/*.md
-   uv run python scripts/voice_check.py --kind social ../outputs/marketing/$WEEK/social.md
    ```
 2. Read every outreach draft. Cut any that: states a fact about the organisation you cannot
    find on their own site in one search; could have been sent to anyone in the segment with
@@ -169,9 +151,6 @@ Waiting in Gmail
 Follow-ups owed (you, not me)
   <organisation>: <what they said>
 
-Posts, in outputs/marketing/<week>/social.md
-  <n> for X, <n> for Instagram
-
 User email: <yes, to <n> users, subject "<subject>"> | <no: reason>
 
 Decisions only you can make
@@ -183,7 +162,7 @@ Did not run / could not verify
 
 ## What this never does
 
-- Send an email, post, or push. Create a Gmail draft for the user email.
+- Send an email or push. Write a social post (Canberk, 2026-10-05). Create a Gmail draft for the user email.
 - Write to `ActorRise_Outreach_Tracker.xlsx`.
 - Contact anyone already in the tracker or on the do-not-contact list.
 - Use CURTAIN with an organisation, or offer a coupon to anyone.
