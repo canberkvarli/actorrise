@@ -71,6 +71,11 @@ someone in section 2: the server emails them a day after their wall.
   person read like a campaign). If they answer asking to stop, it is filed like any other.
   The line still belongs on anything sent to a list through `/admin/emails`.
 - Check each one: `uv run python scripts/voice_check.py --kind note -` and fix what it finds.
+- **"It isn't in the library" is the claim that bites.** Check a title in THREE places before
+  saying it is absent: `plays.title` (joined from `monologues.play_id`), `monologues.title`,
+  and `monologues.character_name`. On 2026-10-05 a note said nothing from Sentimental Value
+  was in; the film's rows carry it only as the play title, and another actor had opened two
+  of them that same day. If a search only hit `monologues.title`, it has not checked.
 - **Send these, don't draft them**, under the one exception in CLAUDE.md ("Never autonomously",
   Canberk 2026-10-03). Before sending each one, confirm in this run: every fact in it was
   checked against the database; the voice check is clean; the person is an individual actor
