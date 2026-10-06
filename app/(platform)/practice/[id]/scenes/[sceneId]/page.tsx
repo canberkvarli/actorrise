@@ -350,7 +350,7 @@ export default function ScenePreviewPage() {
 
             <div>
               <p className="t-prev__label">I read</p>
-              <div className="mt-2 flex flex-col gap-2">
+              <div className="t-prev__castlist mt-2">
                 {theirs.length === 0 ? (
                   <p className="m-0 text-[13px]" style={{ color: "var(--t-faint)" }}>
                     Everyone in this scene is yours. Drop one to hear it read back.
@@ -362,15 +362,16 @@ export default function ScenePreviewPage() {
                     return (
                       <div
                         key={name}
-                        className="flex flex-wrap items-center gap-2"
+                        className="t-prev__castrow"
                         style={castColorVars(name, palette)}
                       >
-                        <span className="t-prev__voicemark" aria-hidden>
-                          <VoiceMark voiceId={v.id} size={15} />
+                        <span className="t-prev__who-cell">
+                          <span className="t-prev__voicemark" aria-hidden>
+                            <VoiceMark voiceId={v.id} size={15} />
+                          </span>
+                          <span className="t-prev__them">{name}</span>
                         </span>
-                        <span className="t-prev__them">{name}</span>
-                        <div className="flex items-center gap-1.5">
-                          <select
+                        <select
                             aria-label={`Voice for ${name}`}
                             className="t-prev__voice"
                             value={v.id}
@@ -405,7 +406,6 @@ export default function ScenePreviewPage() {
                             )}
                             {busy ? "stop" : "hear"}
                           </button>
-                        </div>
                       </div>
                     );
                   })

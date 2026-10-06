@@ -9147,3 +9147,53 @@ html[data-firstrun="1"] body::before {
 .dark .t-prev__voicemark {
   color: color-mix(in oklab, var(--cast-ink) 62%, white);
 }
+
+/* The casting list: three columns, shared by every row.
+   It was one flex row per character, so every cell sized to its own content
+   and nothing lined up down the page — FRANCISCO's select started further
+   right than HORATIO's, the chevrons sat at three different x positions, and
+   the three "hear" buttons stepped in and out with the length of the voice
+   description. A column is a column: the names set the first, the selects
+   share whatever is left, and "hear" is the same width throughout.
+
+   Rows are `display: contents` so their cells join the parent grid; the cast
+   colour set on the row still inherits, because contents removes the box and
+   not the element. */
+.t-prev__castlist {
+  display: grid;
+  /* The middle column is capped rather than 1fr: at full width the select
+     stretched to 960px on a laptop to hold "Sage — Calm, measured", which is
+     a very long pill for four words. Capped, every select is the SAME width,
+     which is the point — the chevrons line up because the boxes match, not
+     because the text happens to. */
+  grid-template-columns: max-content minmax(0, 260px) max-content;
+  justify-content: start;
+  align-items: center;
+  gap: 10px 12px;
+}
+.t-prev__castrow {
+  display: contents;
+}
+.t-prev__who-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+/* In the grid the select no longer flexes; it fills its column, so every
+   chevron lands on the same line. */
+.t-prev__castlist .t-prev__voice {
+  width: 100%;
+  max-width: none;
+  flex: none;
+}
+/* Below the narrowest phone the three columns stop fitting. Two rows per
+   character beats a squeezed select: the name over the controls. */
+@media (max-width: 420px) {
+  .t-prev__castlist {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
+  .t-prev__who-cell {
+    grid-column: 1 / -1;
+  }
+}
