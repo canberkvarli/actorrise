@@ -11,6 +11,7 @@ import os
 
 import stripe
 from app.models.actor import (
+    ActorCredit,
     ActorProfile,
     FilmTvFavorite,
     MonologueFavorite,
@@ -147,6 +148,11 @@ def delete_user_completely(db: Session, user_id: int) -> None:
         {"user_id": None}, synchronize_session=False
     )
 
+    # Résumé credits. Missing here meant any actor who had added a credit could
+    # not be deleted at all: the users row hit actor_credits_user_id_fkey.
+    db.query(ActorCredit).filter(ActorCredit.user_id == user_id).delete(
+        synchronize_session=False
+    )
     db.query(ActorProfile).filter(ActorProfile.user_id == user_id).delete(
         synchronize_session=False
     )
