@@ -48,6 +48,7 @@ from app.models.moderation import (  # noqa: F401; register with Base for create
     ModerationLog, MonologueSubmission)
 from app.models.tape import UserTape  # noqa: F401; register with Base for create_all
 from app.models.audition_usage import AuditionFeedbackUsage  # noqa: F401; register with Base for create_all
+from app.models.app_store_daily import AppStoreDaily  # noqa: F401; register with Base for create_all
 from app.models.app_setting import AppSetting  # noqa: F401; register with Base for create_all
 from app.models.user_event import UserEvent  # noqa: F401; register with Base for create_all
 from app.models.lifecycle_email import LifecycleEmailSend  # noqa: F401; register with Base for create_all
@@ -395,6 +396,15 @@ def _start_comp_expiry_scheduler() -> None:
                     try:
                         # Not `continue`: that would skip the sleep below and spin.
                         mine = app_settings.claim_day(_db, app_settings.FOUNDER_DIGEST_SENT_ON, today)
+                        if mine:
+                            # Same daily slot: yesterday's App Store Connect numbers
+                            # for the Ghost Light app. Apple publishes them in the
+                            # morning Pacific; 16:00 UTC is after that. Swallows its
+                            # own errors and reports missing env as a state.
+                            from app.services.app_store_connect import sync_recent
+
+                            synced = sync_recent(_db)
+                            logger.info("app store sync: %s", synced)
                         count = send_comp_expiry_digest(_db) if mine else 0
                         # Same slot, separate email: teachers who made an account
                         # in the last day and have not been offered the comp yet.
