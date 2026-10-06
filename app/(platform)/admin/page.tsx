@@ -429,26 +429,38 @@ function MoneyPanel({ stripe, app }: { stripe: StripeRevenue | undefined; app: A
             Nobody is counted twice: an app subscriber does not get web Plus. */}
         {app && (
           <div className="border-t border-border pt-3">
+            {/* One basis for all three tiles: monthly plans only, the money that
+                recurs. Yearly plans are named separately so the tiles add up;
+                they used to be folded into App and Both but not Web, and the
+                row read $60 + $7.49 = $92.24. Stripe pays the web side to the
+                bank every few days; Apple pays the app side once a month, a
+                month in arrears. They never combine into one payment. */}
             <div className="grid gap-2 sm:grid-cols-3">
               <MoneyFigure
-                label="Web, Stripe"
+                label="Web, via Stripe"
                 value={cash != null ? `${moneyExact(cash)}/mo` : "—"}
-                explain={`${stripe.paying_count ?? 0} paying`}
-              />
-              <MoneyFigure
-                label="App, Apple"
-                value={`${moneyExact(app.cash_monthly_usd + app.annual_amortised_usd)}/mo`}
                 explain={
-                  app.proceeds_30d_usd != null
-                    ? `${app.paying_count} paying at list price. Apple actually paid out ${moneyExact(app.proceeds_30d_usd)} in the last 30 days.`
-                    : `${app.paying_count} paying at list price; yearly plans counted as price ÷ 12.`
+                  amortised && amortised > 0
+                    ? `${stripe.paying_count ?? 0} paying. Monthly plans; another ${moneyExact(amortised)}/mo is yearly plans already paid, counted ÷ 12.`
+                    : `${stripe.paying_count ?? 0} paying, monthly plans.`
                 }
               />
               <MoneyFigure
+                label="App, via Apple"
+                value={`${moneyExact(app.cash_monthly_usd)}/mo`}
+                explain={[
+                  `${app.paying_count} paying.`,
+                  app.annual_amortised_usd > 0 ? `Another ${moneyExact(app.annual_amortised_usd)}/mo is a yearly plan already paid, ÷ 12.` : null,
+                  app.proceeds_30d_usd != null ? `Apple paid out ${moneyExact(app.proceeds_30d_usd)} in the last 30 days, after its cut.` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              />
+              <MoneyFigure
                 accent
-                label="Both platforms"
-                value={`${moneyExact((cash ?? 0) + (amortised ?? 0) + app.mrr_list_usd)}/mo`}
-                explain={`${(stripe.paying_count ?? 0) + app.paying_count} people paying for ActorRise, web and app together.`}
+                label="Both, every month"
+                value={`${moneyExact((cash ?? 0) + app.cash_monthly_usd)}/mo`}
+                explain={`${(stripe.paying_count ?? 0) + app.paying_count} people paying, web and app. Counting yearly plans ÷ 12 as well: ${moneyExact((cash ?? 0) + (amortised ?? 0) + app.mrr_list_usd)}/mo. Two payouts, never one: Stripe every few days, Apple once a month.`}
               />
             </div>
           </div>
