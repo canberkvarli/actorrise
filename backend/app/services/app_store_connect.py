@@ -71,6 +71,12 @@ def configured() -> tuple[Optional[Config], list[str]]:
     issuer = os.getenv("ASC_ISSUER_ID", "").strip()
     key_id = os.getenv("ASC_KEY_ID", "").strip()
     pem = os.getenv("ASC_PRIVATE_KEY", "").strip().replace("\\n", "\n")
+    # Accept the bare base64 body too. The .p8 Apple hands out has BEGIN/END
+    # lines around a base64 block, and pasting only the block is the natural
+    # mistake; the signer needs the armour, so put it back.
+    if pem and "BEGIN" not in pem:
+        body = "".join(pem.split())
+        pem = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(body[i : i + 64] for i in range(0, len(body), 64)) + "\n-----END PRIVATE KEY-----"
     vendor = os.getenv("ASC_VENDOR_NUMBER", "").strip() or None
     app_id = os.getenv("ASC_APP_ID", "").strip() or DEFAULT_APP_ID
     missing = [n for n, v in (("ASC_ISSUER_ID", issuer), ("ASC_KEY_ID", key_id), ("ASC_PRIVATE_KEY", pem)) if not v]
