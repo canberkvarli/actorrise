@@ -9115,3 +9115,35 @@ html[data-firstrun="1"] body::before {
 .t-prev__line[data-mine="true"] .t-prev__name {
   color: var(--t-text);
 }
+
+/* The voice mark in a cue line and in the casting row.
+   It replaced the character's own initial, which was the same word twice: an
+   H beside HORATIO. What an actor cannot read off the page is WHICH of the
+   ten voices reads this part, and whether two characters got the same one.
+   Takes the cast colour through currentColor, so the mark and the name are
+   one object rather than two. */
+.t-prev__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  margin-right: 5px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--cast-ink);
+  vertical-align: -2px;
+}
+.dark .t-prev__chip {
+  background: none;
+  color: color-mix(in oklab, var(--cast-ink) 62%, white);
+}
+.t-prev__voicemark {
+  display: inline-flex;
+  align-items: center;
+  color: var(--cast-ink);
+}
+.dark .t-prev__voicemark {
+  color: color-mix(in oklab, var(--cast-ink) 62%, white);
+}

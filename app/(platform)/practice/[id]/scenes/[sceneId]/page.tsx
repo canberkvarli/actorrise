@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { castPalette, castColorVars, castInitial } from "@/lib/castColors";
+import { castPalette, castColorVars } from "@/lib/castColors";
+import { VoiceMark } from "@/components/scenepartner/VoiceMark";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -359,7 +360,14 @@ export default function ScenePreviewPage() {
                     const v = voiceById(fullVoices[name]);
                     const busy = auditioning === name;
                     return (
-                      <div key={name} className="flex flex-wrap items-center gap-2">
+                      <div
+                        key={name}
+                        className="flex flex-wrap items-center gap-2"
+                        style={castColorVars(name, palette)}
+                      >
+                        <span className="t-prev__voicemark" aria-hidden>
+                          <VoiceMark voiceId={v.id} size={15} />
+                        </span>
                         <span className="t-prev__them">{name}</span>
                         <div className="flex items-center gap-1.5">
                           <select
@@ -368,10 +376,19 @@ export default function ScenePreviewPage() {
                             value={v.id}
                             onChange={(e) => chooseVoice(name, e.target.value)}
                           >
-                            {AI_VOICES.map((voice) => (
-                              <option key={voice.id} value={voice.id}>
-                                {voice.label} — {voice.desc}
-                              </option>
+                            {/* Grouped, because ten voices in a flat list is
+                                ten things to read; three kinds is a choice. */}
+                            {(["female", "male", "neutral"] as const).map((g) => (
+                              <optgroup
+                                key={g}
+                                label={g === "neutral" ? "Either" : g === "female" ? "Feminine" : "Masculine"}
+                              >
+                                {AI_VOICES.filter((voice) => voice.gender === g).map((voice) => (
+                                  <option key={voice.id} value={voice.id}>
+                                    {voice.label} — {voice.desc}
+                                  </option>
+                                ))}
+                              </optgroup>
                             ))}
                           </select>
                           <button
@@ -452,9 +469,20 @@ export default function ScenePreviewPage() {
                   ) : (
                     <>
                       <p className="t-prev__who" style={castColorVars(line.character_name, palette)}>
-                        <span aria-hidden className="t-prev__chip">
-                          {castInitial(line.character_name)}
-                        </span>
+                        {/* The voice, not the character's own initial.
+                            An H beside HORATIO is the same word twice. What
+                            cannot be read off the page is which of the ten
+                            voices reads this part, and whether two characters
+                            have been handed the same one. */}
+                        {!isMine && (
+                          <span className="t-prev__chip">
+                            <VoiceMark
+                              voiceId={fullVoices[line.character_name]}
+                              label={voiceById(fullVoices[line.character_name]).label}
+                              size={13}
+                            />
+                          </span>
+                        )}
                         <span className="t-prev__name">{line.character_name}</span>
                         {isMine && <span className="t-prev__yours">you</span>}
                         {/* Fix it where you read it. The editor was the only
