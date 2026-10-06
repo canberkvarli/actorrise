@@ -40,6 +40,10 @@ SERVER_EVENT_NAMES = frozenset(
         # number only ever counted the minority path. Emitted at the metered
         # start, after the gate: a 403 is a paywall, not a rehearsal.
         "monologue_work_started",  # {monologue_id}
+        # One row per RevenueCat webhook event that matched a user: the Ghost
+        # Light iOS app's money trail. Until 2026-10-06 every delivery failed
+        # on auth and two paying subscribers were invisible to the backend.
+        "app_subscription_event",  # {type, product_id, store, period_type, environment, price, expires_at}
     }
 )
 

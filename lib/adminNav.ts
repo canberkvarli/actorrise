@@ -2,6 +2,7 @@ import {
   IconBuilding,
   IconChartBar,
   IconClipboardCheck,
+  IconDeviceMobile,
   IconFileSearch,
   IconInbox,
   IconMail,
@@ -61,6 +62,7 @@ export const ADMIN_NAV: NavGroup[] = [
         badgeKey: "searches",
       },
       { href: "/admin/sessions", label: "Sessions", icon: IconMicrophone },
+      { href: "/admin/ghostlight", label: "Ghost Light", icon: IconDeviceMobile },
       {
         href: "/admin/feedback",
         label: "Feedback",

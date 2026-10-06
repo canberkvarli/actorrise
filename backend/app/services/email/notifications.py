@@ -303,6 +303,14 @@ _TRIAL_OUTCOME_COPY = {
         "Trial ended, payment failed",
         "The card was declined at the end of the trial. Worth a look in Stripe.",
     ),
+    # The Ghost Light iOS app, via RevenueCat. Apple already took the money by
+    # the time these arrive, so "purchase" here means paid, not "started".
+    "app_purchase": ("App: new subscriber", "Apple charged them. The Monologues tier is open on their account."),
+    "app_renewal": ("App: renewed", "Another period paid through the App Store."),
+    "app_trial": ("App: trial started", "A free trial in the app. Apple charges when it ends unless they cancel."),
+    "app_cancelled": ("App: auto-renew off", "They cancelled in the App Store. Access stays until the period ends."),
+    "app_expired": ("App: expired", "The subscription lapsed. Back on Free."),
+    "app_billing_issue": ("App: billing issue", "Apple could not charge the card. Grace period; a renewal clears it."),
 }
 
 

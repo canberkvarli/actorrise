@@ -11,6 +11,7 @@ from app.api.admin.film_tv import router as admin_film_tv_router
 from app.api.admin.monologues import router as admin_monologues_router
 from app.api.admin.stats import router as admin_stats_router
 from app.api.admin.emails import router as admin_emails_router
+from app.api.admin.ghostlight import router as admin_ghostlight_router
 from app.api.admin.founding_actors import router as admin_founding_actors_router
 from app.api.admin.searches import router as admin_searches_router
 from app.api.admin.stripe_revenue import router as admin_stripe_revenue_router
@@ -498,6 +499,7 @@ app.include_router(admin_organizations_router)
 app.include_router(admin_pulse_router)
 app.include_router(admin_feedback_router)
 app.include_router(admin_emails_router)
+app.include_router(admin_ghostlight_router)
 app.include_router(admin_searches_router)
 app.include_router(admin_stripe_revenue_router)
 app.include_router(admin_sessions_router)

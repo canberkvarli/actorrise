@@ -990,6 +990,43 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
         return {"status": "ok", "message": "user not found"}
 
     sub = _rc_get_or_create_subscription(int(user.id), db)
+    prior_tier_id = sub.tier_id
+
+    # The app's money trail, one row per event, so the admin can see what
+    # RevenueCat saw. Every delivery failed on auth from Aug 26 to Oct 6 2026
+    # and nothing anywhere said so.
+    from app.services.events import record_user_event
+
+    exp_ms = event.get("expiration_at_ms")
+    record_user_event(
+        int(user.id),
+        "app_subscription_event",
+        {
+            "type": event_type,
+            "product_id": event.get("product_id") or "",
+            "store": event.get("store") or "",
+            "period_type": event.get("period_type") or "",
+            "environment": event.get("environment") or "",
+            "price": event.get("price") if event.get("price") is not None else "",
+            "expires_at": datetime.utcfromtimestamp(int(exp_ms) / 1000).isoformat() if exp_ms else "",
+        },
+    )
+
+    def _rc_notify(outcome: str) -> None:
+        # Tell me, like the Stripe path does. Fire-and-forget on a thread.
+        from app.services.email.notifications import send_trial_ended_notification
+
+        threading.Thread(
+            target=send_trial_ended_notification,
+            kwargs={
+                "user_name": user.name or "",
+                "user_email": user.email,
+                "tier_display_name": "Monologues (app)",
+                "outcome": outcome,
+                "stripe_status": f"RevenueCat {event_type} · {event.get('product_id') or ''}",
+            },
+            daemon=True,
+        ).start()
 
     if event_type in _RC_GRANT_EVENTS:
         tier = db.query(PricingTier).filter(PricingTier.name == "monologues").first()
@@ -1007,12 +1044,19 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
             sub.current_period_end = datetime.utcfromtimestamp(int(exp_ms) / 1000)
         db.commit()
         logger.info("RevenueCat %s → granted Monologues to user %s", event_type, user.id)
+        if event.get("period_type") == "TRIAL":
+            _rc_notify("app_trial")
+        elif prior_tier_id != tier.id or event_type == "INITIAL_PURCHASE":
+            _rc_notify("app_purchase")
+        else:
+            _rc_notify("app_renewal")
 
     elif event_type == "CANCELLATION":
         # Auto-renew off; keep the tier until EXPIRATION.
         sub.cancel_at_period_end = True
         sub.canceled_at = datetime.now()
         db.commit()
+        _rc_notify("app_cancelled")
 
     elif event_type == "EXPIRATION":
         free_tier = db.query(PricingTier).filter(PricingTier.name == "free").first()
@@ -1021,11 +1065,13 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
         sub.status = "expired"
         db.commit()
         logger.info("RevenueCat EXPIRATION → revoked Monologues from user %s", user.id)
+        _rc_notify("app_expired")
 
     elif event_type == "BILLING_ISSUE":
         # Grace: keep the tier, flag the trouble so a renewal can clear it.
         sub.status = "past_due"
         db.commit()
+        _rc_notify("app_billing_issue")
 
     else:
         return {"status": "ok", "message": f"unhandled event: {event_type}"}
