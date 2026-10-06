@@ -29,3 +29,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-09-29, free
 **They said:** "Thank you so much for the recommendations, I'll definitely read them and get back to you!"
 **Heard as:** happy. A hand-picked spread got a third reply where a search result got none.
+
+## 2026-10-06
+
+**Replying to:** a personal note listing the Yellowjackets shelf
+**Account:** signed up 2026-10-04, free
+**They said:** "I'm gonna do the Shauna one! It's for a school play audition. Are you a real person sorry im confused"
+**Heard as:** happy, and a fair question. A note that knows your three searches and arrives two days later reads as automated to a stranger; the reply should say plainly it is a person. Also: a school play audition, so likely a student, reached through a note meant for actors.
