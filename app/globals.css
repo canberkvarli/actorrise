@@ -9072,3 +9072,46 @@ html[data-firstrun="1"] body::before {
   background: var(--page);
   pointer-events: none;
 }
+
+/* The cue line, coloured by character.
+   A scene reads as a wall of identical monospace with a name over every
+   paragraph; an actor works a page of sides by flicking down the left edge
+   for their own. The rehearsal screen already drew a coloured initial per
+   character and the page where the actor READS had nothing. Hues come from
+   lib/castColors, dealt in order of appearance so a two-hander never
+   collides. Both tokens are set on the element, so one rule serves both
+   themes. */
+.t-prev__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  margin-right: 1px;
+  border-radius: 2px;
+  background: var(--cast-wash);
+  color: var(--cast-ink);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+}
+.t-prev__name {
+  color: var(--cast-ink);
+}
+.dark .t-prev__chip {
+  background: color-mix(in oklab, var(--cast-ink) 22%, transparent);
+  color: color-mix(in oklab, var(--cast-ink) 62%, white);
+}
+.dark .t-prev__name {
+  color: color-mix(in oklab, var(--cast-ink) 55%, white);
+}
+/* The actor's own cue keeps the accent, not a cast colour: on their own page
+   of sides the one thing that must never be just another colour is them. */
+.t-prev__line[data-mine="true"] .t-prev__chip {
+  background: color-mix(in oklab, var(--acc) 18%, transparent);
+  color: var(--acc);
+}
+.t-prev__line[data-mine="true"] .t-prev__name {
+  color: var(--t-text);
+}

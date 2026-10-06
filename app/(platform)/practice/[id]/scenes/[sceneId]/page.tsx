@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { castPalette, castColorVars, castInitial } from "@/lib/castColors";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -29,7 +30,7 @@ import {
 import { useOpenAITTS } from "@/hooks/useOpenAITTS";
 import { parseUpgradeError } from "@/lib/upgradeError";
 import { UpgradeModal } from "@/components/billing/UpgradeModal";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ScenePreviewSkeleton } from "@/components/practice/ScenePreviewSkeleton";
 
 /**
  * The scene, before you run it.
@@ -156,6 +157,17 @@ export default function ScenePreviewPage() {
   );
 
   const mine = roles[0] ?? "";
+
+  /* A colour per character, dealt in order of appearance.
+     A scene is a wall of identical monospace with a name over every
+     paragraph, so finding your own cue means reading every name. An actor
+     works off a page of sides by flicking down the left edge. The rehearsal
+     screen already drew a coloured initial per character; the page where the
+     actor actually READS had nothing. See lib/castColors. */
+  const palette = useMemo(
+    () => castPalette((scene?.lines ?? []).map((l) => l.character_name)),
+    [scene?.lines],
+  );
   const theirs = useMemo(() => cast.filter((c) => !roles.includes(c)), [cast, roles]);
   const fullVoices = useMemo(() => withDefaultVoices(cast, voices), [cast, voices]);
 
@@ -249,19 +261,10 @@ export default function ScenePreviewPage() {
   const shell = `theatre-monologue theatre-tokens t-m__body ${theatreFontVars} min-h-screen pb-32`;
   const column = "mx-auto w-full max-w-[880px] px-5 pt-7 sm:px-6 sm:pt-10";
 
-  if (isLoading || !scene) {
-    return (
-      <div className={shell}>
-        <div className={column}>
-          <Skeleton className="h-4 w-28 opacity-40" />
-          <Skeleton className="mt-7 h-3 w-24 opacity-40" />
-          <Skeleton className="mt-3 h-10 w-2/3 opacity-40" />
-          <Skeleton className="mt-6 h-24 w-full rounded-2xl opacity-40" />
-          <Skeleton className="mt-5 h-64 w-full rounded-lg opacity-40" />
-        </div>
-      </div>
-    );
-  }
+  /* The same skeleton loading.tsx renders, not a second one shaped slightly
+     differently. Opening a scene used to show a skeleton, then a DIFFERENT
+     skeleton, then the sides. */
+  if (isLoading || !scene) return <ScenePreviewSkeleton />;
 
   /* The top of the scene, which is what a preview is for. Enough to recognise
      it and to feel the temperature; not the whole thing, or this is the
@@ -448,8 +451,11 @@ export default function ScenePreviewPage() {
                     </div>
                   ) : (
                     <>
-                      <p className="t-prev__who">
-                        {line.character_name}
+                      <p className="t-prev__who" style={castColorVars(line.character_name, palette)}>
+                        <span aria-hidden className="t-prev__chip">
+                          {castInitial(line.character_name)}
+                        </span>
+                        <span className="t-prev__name">{line.character_name}</span>
                         {isMine && <span className="t-prev__yours">you</span>}
                         {/* Fix it where you read it. The editor was the only
                             way to correct a typo and it cost a full page. */}
