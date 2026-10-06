@@ -164,6 +164,43 @@ def ghostlight_overview(db: Session = Depends(get_db), _=Depends(require_moderat
     }
 
 
+@router.get("/app-revenue")
+def app_revenue(db: Session = Depends(get_db), _=Depends(require_moderator)):
+    """The app's money in the Overview's terms, so web and app add up on one line.
+
+    `cash_monthly_usd` is monthly plans at list price, the figure that recurs;
+    `annual_amortised_usd` is yearly plans ÷ 12, money that already arrived as a
+    lump. `proceeds_30d_usd` is what Apple actually paid out, from the Sales
+    report, after its cut; it is the only one of these that is not list price.
+    """
+    monologues = db.query(PricingTier).filter(PricingTier.name == "monologues").first()
+    subs = db.query(UserSubscription).filter(UserSubscription.source == "revenuecat").all()
+    paying = 0
+    cash = 0.0
+    amortised = 0.0
+    for sub in subs:
+        if not (monologues and sub.tier_id == monologues.id and sub.status == "active"):
+            continue
+        paying += 1
+        if sub.billing_period == "annual":
+            amortised += ANNUAL_PRICE / 12
+        else:
+            cash += MONTHLY_PRICE
+    since = date.today() - timedelta(days=30)
+    proceeds = (
+        db.query(AppStoreDaily.proceeds_usd)
+        .filter(AppStoreDaily.day >= since, AppStoreDaily.proceeds_usd.isnot(None))
+        .all()
+    )
+    return {
+        "paying_count": paying,
+        "cash_monthly_usd": round(cash, 2),
+        "annual_amortised_usd": round(amortised, 2),
+        "mrr_list_usd": round(cash + amortised, 2),
+        "proceeds_30d_usd": round(sum(p[0] for p in proceeds), 2) if proceeds else None,
+    }
+
+
 @router.post("/ghostlight/sync")
 def ghostlight_sync(db: Session = Depends(get_db), _=Depends(require_moderator)):
     """Pull the last 30 days from App Store Connect now. Returns what happened."""

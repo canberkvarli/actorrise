@@ -132,6 +132,24 @@ function useStripeRevenue() {
   });
 }
 
+/** The iOS app's money (RevenueCat + Apple), in the same terms as Stripe's. */
+interface AppRevenue {
+  paying_count: number;
+  cash_monthly_usd: number;
+  annual_amortised_usd: number;
+  mrr_list_usd: number;
+  proceeds_30d_usd: number | null;
+}
+
+function useAppRevenue() {
+  return useQuery({
+    queryKey: ["admin-app-revenue"],
+    queryFn: async () => (await api.get<AppRevenue>("/api/admin/app-revenue")).data,
+    staleTime: 10 * 60_000,
+    gcTime: 20 * 60_000,
+  });
+}
+
 const BRAND = "#CB4B00";
 
 export interface GrowthStats {
@@ -316,7 +334,7 @@ function MoneyFigure({
  * figures below are what Stripe says it will actually charge, discounts
  * included, so there is no longer a "theoretical" number anywhere on screen.
  */
-function MoneyPanel({ stripe }: { stripe: StripeRevenue | undefined }) {
+function MoneyPanel({ stripe, app }: { stripe: StripeRevenue | undefined; app: AppRevenue | undefined }) {
   if (!stripe || stripe.available === false) {
     return (
       <section className="border border-border bg-card p-4">
@@ -404,6 +422,36 @@ function MoneyPanel({ stripe }: { stripe: StripeRevenue | undefined }) {
             Too many subscriptions to price individually, so this is a list-price estimate and will
             read high.
           </p>
+        )}
+
+        {/* Both platforms on one line. The Stripe figures above are web only;
+            the Ghost Light app bills through Apple and never touches Stripe.
+            Nobody is counted twice: an app subscriber does not get web Plus. */}
+        {app && (
+          <div className="border-t border-border pt-3">
+            <div className="grid gap-2 sm:grid-cols-3">
+              <MoneyFigure
+                label="Web, Stripe"
+                value={cash != null ? `${moneyExact(cash)}/mo` : "—"}
+                explain={`${stripe.paying_count ?? 0} paying`}
+              />
+              <MoneyFigure
+                label="App, Apple"
+                value={`${moneyExact(app.cash_monthly_usd + app.annual_amortised_usd)}/mo`}
+                explain={
+                  app.proceeds_30d_usd != null
+                    ? `${app.paying_count} paying at list price. Apple actually paid out ${moneyExact(app.proceeds_30d_usd)} in the last 30 days.`
+                    : `${app.paying_count} paying at list price; yearly plans counted as price ÷ 12.`
+                }
+              />
+              <MoneyFigure
+                accent
+                label="Both platforms"
+                value={`${moneyExact((cash ?? 0) + (amortised ?? 0) + app.mrr_list_usd)}/mo`}
+                explain={`${(stripe.paying_count ?? 0) + app.paying_count} people paying for ActorRise, web and app together.`}
+              />
+            </div>
+          </div>
         )}
       </div>
     </section>
@@ -536,6 +584,7 @@ export default function AdminOverviewPage() {
     refetch: refetchHealth,
   } = useSystemHealth(healthEnabled);
   const { data: stripeRevenue } = useStripeRevenue();
+  const { data: appRevenue } = useAppRevenue();
 
   if (isLoading) {
     return (
@@ -704,7 +753,7 @@ export default function AdminOverviewPage() {
             <MiniStat label="Dormant" value={growth.retention.dormant.toLocaleString()} hint="14d+ silent" />
           </div>
 
-          <MoneyPanel stripe={stripeRevenue} />
+          <MoneyPanel stripe={stripeRevenue} app={appRevenue} />
 
           <ActivationFunnel steps={growth.activation} />
 
