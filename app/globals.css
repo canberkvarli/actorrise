@@ -12,7 +12,8 @@
   --font-family-serif: var(--font-serif);
   /* Brand wordmark – Playfair Display (use same name in Canva for consistency) */
   --font-family-brand: var(--font-brand), var(--font-serif), serif;
-  --font-typewriter: "Courier Prime", "Courier New", Courier, monospace;
+  /* Courier Prime, served from lib/fonts/files; the var is bound on <body> in app/layout.tsx. */
+  --font-typewriter: var(--font-theatre-direction), "Courier Prime", "Courier New", Courier, monospace;
   /* Playbill face — Callboard only. See the note in app/layout.tsx. */
   --font-family-playbill: var(--font-playbill), var(--font-sans), sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);

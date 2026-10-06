@@ -2,50 +2,54 @@ import type { Metadata } from "next";
 import { FirstRunPaint } from "@/components/onboarding/FirstRunPaint";
 import Script from "next/script";
 import { Suspense } from "react";
-import {
-  Montserrat,
-  JetBrains_Mono,
-  Cormorant_Garamond,
-  Playfair_Display,
-  Big_Shoulders,
-} from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProviderWrapper } from "@/components/providers/AuthProviderWrapper";
 import { AuthModalProvider } from "@/components/auth/AuthModalContext";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "sonner";
-import { theatreFontVars } from "@/lib/fonts/theatre";
+import { theatreFontVars, typewriterFontVar } from "@/lib/fonts/theatre";
 import { Analytics } from "@vercel/analytics/react";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
-import { FontLoader } from "@/components/FontLoader";
 import { OAuthCallbackRedirect } from "@/components/auth/OAuthCallbackRedirect";
 import { LastAuthCookieSync } from "@/components/auth/LastAuthCookieSync";
 import { AttributionCapture } from "@/components/analytics/AttributionCapture";
 
 const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
-const montserrat = Montserrat({
+/*
+ * Every face is served from `lib/fonts/files` (latin subset, one variable
+ * file per family). They used to come from `next/font/google`, which fetches
+ * the files from Google while the build runs; the Vercel build box could not
+ * reach it on 2026-10-03 and again on 2026-10-06, and the deploy failed both
+ * times with "module not found" on the font's CSS module. The build has no
+ * network dependency now. `lib/fonts/files/README.md` says how to refresh.
+ */
+const montserrat = localFont({
   variable: "--font-sans",
-  subsets: ["latin"],
+  src: [{ path: "../lib/fonts/files/montserrat-normal-100-900.woff2", weight: "100 900", style: "normal" }],
+  display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const jetbrainsMono = localFont({
   variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  src: [{ path: "../lib/fonts/files/jetbrains-mono-normal-100-800.woff2", weight: "100 800", style: "normal" }],
+  display: "swap",
 });
 
-const cormorantGaramond = Cormorant_Garamond({
+const cormorantGaramond = localFont({
   variable: "--font-serif",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  src: [{ path: "../lib/fonts/files/cormorant-garamond-normal-300-700.woff2", weight: "300 700", style: "normal" }],
+  display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
 /** Brand/logo font – use for "ActorRise" wordmark. Same font is in Canva as "Playfair Display". */
-const playfairDisplay = Playfair_Display({
+const playfairDisplay = localFont({
   variable: "--font-brand",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  src: [{ path: "../lib/fonts/files/playfair-display-normal-400-900.woff2", weight: "400 900", style: "normal" }],
+  display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
 /**
@@ -53,14 +57,12 @@ const playfairDisplay = Playfair_Display({
  * "every big title is Playfair" rule, and it is scoped to the Callboard, which
  * is a physical pinned object rather than a page heading.
  *
- * The family is `Big_Shoulders`, not `Big_Shoulders_Display`. Google renamed it;
- * the Display name is gone from next/font's family list entirely, so importing
- * it builds locally off a warm cache and then fails the deploy.
+ * The family is `Big Shoulders`, not `Big Shoulders Display`; Google renamed it.
  */
-const bigShoulders = Big_Shoulders({
+const bigShoulders = localFont({
   variable: "--font-playbill",
-  subsets: ["latin"],
-  weight: ["500", "700", "800"],
+  src: [{ path: "../lib/fonts/files/big-shoulders-normal-100-900.woff2", weight: "100 900", style: "normal" }],
+  display: "swap",
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
@@ -228,7 +230,7 @@ export default function RootLayout({
         )}
       </head>
       <body
-        className={`${montserrat.variable} ${jetbrainsMono.variable} ${cormorantGaramond.variable} ${playfairDisplay.variable} ${bigShoulders.variable} font-sans antialiased`}
+        className={`${montserrat.variable} ${jetbrainsMono.variable} ${cormorantGaramond.variable} ${playfairDisplay.variable} ${bigShoulders.variable} ${typewriterFontVar} font-sans antialiased`}
       >
         {/* Persist OAuth "last used" before React: from sessionStorage (set when user clicked Google/Apple) or URL */}
         <script
@@ -240,7 +242,6 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <FontLoader />
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
