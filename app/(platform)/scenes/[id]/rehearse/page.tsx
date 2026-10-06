@@ -63,6 +63,8 @@ import { ownsLine, sessionRoles } from '@/lib/character-roles';
 import { tokenize, alignWords, wordMatchScore } from '@/lib/word-match';
 import { shouldAdvance, MIN_QUIET_MS } from '@/lib/advance-rule';
 import { rehearseStatus } from '@/lib/rehearse-status';
+import { castPalette, castColorVars } from '@/lib/castColors';
+import { VoiceMark } from '@/components/scenepartner/VoiceMark';
 import { ttsText, ttsInstructions, sceneVoiceContext as buildVoiceContext, DEFAULT_VOICE } from '@/lib/scene-voice';
 import { buildWordTimings, spokenWordIndex } from '@/lib/speech-timing';
 import { trackEvent } from '@/lib/events';
@@ -1053,6 +1055,13 @@ function RehearsalPageInner() {
 
   const anySpeaking = isSpeakingBrowser || isSpeakingAI || isLoadingAI;
 
+  /* One colour per character, dealt in order of appearance — the same palette
+     the prep screen uses, so a character is the same colour on both. */
+  const castPaletteForScene = useMemo(
+    () => castPalette(orderedLines.map((l) => l.character_name)),
+    [orderedLines],
+  );
+
   /* ── AI word sweep, and arming the mic before the cue lands ────── */
 
   /** Index of the word the scene partner is speaking; -1 when not speaking. */
@@ -1105,20 +1114,41 @@ function RehearsalPageInner() {
   // Keep lastAiLine in a ref for the rAF callback
   const lastAiLineRef = useRef(lastAiLine);
   lastAiLineRef.current = lastAiLine;
+  /* For the browser-voice watchdog below: read live, not through a closure. */
+  const isSpeakingBrowserRef = useRef(isSpeakingBrowser);
+  isSpeakingBrowserRef.current = isSpeakingBrowser;
+  const browserStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ── Speak a line (AI or browser) ──────────────────────────────── */
 
   const speakLine = useCallback((text: string, instructions: string = '', charName?: string) => {
     if (isListening) stopListening();
     lastAiLineForFallbackRef.current = text;
-    if (useAIVoice) {
-      const voiceId = charName
-        ? (characterVoiceMapRef.current.get(charName) ?? lastKnownVoiceIdRef.current)
-        : lastKnownVoiceIdRef.current;
+    const voiceId = charName
+      ? (characterVoiceMapRef.current.get(charName) ?? lastKnownVoiceIdRef.current)
+      : lastKnownVoiceIdRef.current;
+
+    if (useAIVoice || !isSpeechSynthesisSupported) {
       speakAI(text, voiceId, instructions);
-    } else if (isSpeechSynthesisSupported) {
-      speakBrowser(text);
+      return;
     }
+
+    /* The browser voice is a trap, and it is a SAVED setting, so an actor who
+       turned it on months ago is still on it.
+       Chrome's speechSynthesis stops producing audio while continuing to
+       report that it is speaking — a long-standing bug with no event for it.
+       The scene then shows "<partner> speaking" over silence and waits for an
+       `onend` that never comes, which is one of the shapes of "it says it is
+       speaking and nobody is". Nothing downstream can tell the difference,
+       because every signal says the line played.
+       So: give it a beat to actually start, and if it has not, hand the line
+       to the AI voice, which is the product's voice anyway. */
+    speakBrowser(text);
+    if (browserStartTimerRef.current) clearTimeout(browserStartTimerRef.current);
+    browserStartTimerRef.current = setTimeout(() => {
+      if (isSpeakingBrowserRef.current) return; // it really did start
+      speakAI(text, voiceId, instructions);
+    }, 900);
   }, [useAIVoice, speakAI, speakBrowser, isSpeechSynthesisSupported, isListening, stopListening]);
   const speakLineRef = useRef(speakLine);
   speakLineRef.current = speakLine;
@@ -3147,11 +3177,25 @@ function RehearsalPageInner() {
                           </div>
                         ) : (() => {
                           const meta = characterVoiceMeta.get(line.character_name);
-                          const bgColor = meta?.color ?? 'bg-neutral-500';
+                          /* The SAME mark the prep screen uses. It was a
+                             letter in a filled circle here and a waveform
+                             there, for the same voice on the same scene, so
+                             the two screens looked like two products. And the
+                             letter was the voice's initial, which put an S
+                             over FRANCISCO and explained nothing. */
+                          const voiceId = characterVoiceMapRef.current.get(line.character_name);
                           return (
-                            <div className={cn("w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold text-white", bgColor)}>
-                              {(meta?.label ?? line.character_name).charAt(0).toUpperCase()}
-                            </div>
+                            <span
+                              className="shrink-0 inline-flex items-center"
+                              style={castColorVars(line.character_name, castPaletteForScene)}
+                            >
+                              <VoiceMark
+                                voiceId={voiceId}
+                                label={meta?.label}
+                                size={14}
+                                className={isUser ? "text-[var(--acc)]" : undefined}
+                              />
+                            </span>
                           );
                         })()}
                         <span className={cn(
@@ -3166,6 +3210,24 @@ function RehearsalPageInner() {
                         )}>
                           {isUser ? "(You)" : "\u00A0"}
                         </span>
+                        {/* Whose turn it is, ON the line it belongs to.
+                            It lived only in the bar at the foot of the screen,
+                            so the one thing an actor has to know pulled their
+                            eye off the words every time it changed. A dot that
+                            breathes with their own voice says "open, and I can
+                            hear you" without a word, and it is beside the line
+                            they are about to say. The bar below keeps the
+                            words for anyone who looks. */}
+                        {isCurrentUserLine && (isListening || isUserTurn) && (
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "t-cuedot inline-block h-[7px] w-[7px] shrink-0 rounded-full",
+                              isListening ? "bg-green-500" : "bg-orange-400",
+                            )}
+                            data-hearing={isListening && liveVoiceHeard}
+                          />
+                        )}
                       </div>
 
                       {/* No waveform. A row of bars bouncing under every line is
@@ -3344,24 +3406,11 @@ function RehearsalPageInner() {
             }
           </button>
 
-          {/* Past this line.
-              There was a manual advance on a key, which is no use on a phone
-              and undiscoverable anywhere. An actor who cannot remember the
-              line, or whose mic will not catch it, needs one obvious way
-              forward or the scene is simply over. Only on their own line: the
-              partner's lines end themselves. */}
-          {isUserTurn && (
-            <button
-              type="button"
-              onClick={() => { unlockAudio(); handleManualAdvance(); }}
-              disabled={isProcessing || !currentUserLineText}
-              className="h-9 shrink-0 rounded-full bg-neutral-800 px-3.5 text-[12px] font-semibold text-neutral-200 transition-colors hover:bg-neutral-700 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-              aria-label="Skip this line and go on"
-              title="Skip this line and go on"
-            >
-              skip line
-            </button>
-          )}
+          {/* No "skip line" here. The active line carries its own, directly
+              under the words, which is where the actor is already looking.
+              A second one down here was the same offer twice and it pulled the
+              eye off the script to the furniture at the bottom of the screen —
+              on the one screen whose entire job is to keep you reading. */}
 
           {/* Status: the dot AND the word.
               The word used to be sr-only, on the reasoning that an actor only
