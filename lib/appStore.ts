@@ -28,7 +28,11 @@ export type AppStorePlacement =
   | "landing_modal"
   | "landing_teaser"
   | "launch_bar"
-  | "hero";
+  | "hero"
+  // The rehearsal screen on iOS Safari, at the moment the mic has failed and
+  // the run has fallen back to tap-to-advance. The one placement where the
+  // app is not a nicer version of the page but the thing that works.
+  | "rehearse_fallback";
 
 export function appStoreUrl(placement: AppStorePlacement): string {
   return `${APP_STORE_URL}?ct=${placement}`;

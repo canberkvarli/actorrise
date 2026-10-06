@@ -15,6 +15,7 @@ import { useToggleFavorite } from "@/hooks/useBookmarks";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/events";
+import { appStoreUrl } from "@/lib/appStore";
 import { wordMatchScore, toDeliverableLines, spokenPrefixCount } from "@/lib/lineMatching";
 import {
   trackRehearsalStarted,
@@ -861,13 +862,32 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                 lines change length. */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-2.5 bg-gradient-to-t from-[var(--stage)] via-[var(--stage)]/85 to-transparent pb-4 pt-14">
               {tapToAdvance ? (
-                <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/45">
-                  <StatusDot state="tap" />
-                  {/* If the mic dropped out mid-run, say so. Switching the rules
-                      of the screen without a word is how the old silent failure
-                      read as the app being broken. */}
-                  {micDead || listenExhausted ? "Mic dropped · tap to advance" : "Tap to advance"}
-                </span>
+                <>
+                  <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/45">
+                    <StatusDot state="tap" />
+                    {/* If the mic dropped out mid-run, say so. Switching the rules
+                        of the screen without a word is how the old silent failure
+                        read as the app being broken. */}
+                    {micDead || listenExhausted ? "Mic dropped · tap to advance" : "Tap to advance"}
+                  </span>
+                  {/* iOS Safari is where the web rehearsal fails: 19 of the 32
+                      mobile sessions on record, every one of them finishing
+                      zero times. The native app hears fine. This is the one
+                      place a download link is an answer rather than an ad, so
+                      it appears only here, only on iOS, only once the run has
+                      already fallen back to tapping. `ct=rehearse_fallback`
+                      makes it countable in App Store Connect. */}
+                  {detectPlatform() === "ios" && (
+                    <a
+                      href={appStoreUrl("rehearse_fallback")}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="pointer-events-auto font-sans text-[0.78rem] text-[var(--stage-fg)]/70 underline decoration-[var(--stage-fg)]/30 underline-offset-4 hover:text-[var(--stage-fg)]"
+                    >
+                      Safari can&apos;t hear you here. The Ghost Light app can.
+                    </a>
+                  )}
+                </>
               ) : (
                 <span className="pointer-events-none flex select-none items-center gap-2.5 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/55">
                   <MicWaveform active={isListening} className="w-20" />
