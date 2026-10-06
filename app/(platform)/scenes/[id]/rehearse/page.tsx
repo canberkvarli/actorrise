@@ -3012,6 +3012,10 @@ function RehearsalPageInner() {
               tapMode={isMicBlocked}
               onState={setCoach}
               dotClass={cn(statusInfo.color, statusInfo.pulse && 'animate-pulse')}
+              /* The one honest live signal there is: the microphone level,
+                 not recognition. It stays true for an actor whose words never
+                 transcribe, which is most of them on iOS Safari. */
+              hearingYou={isListening && liveVoiceHeard}
             />
             <GuidedStage
               lines={orderedLines}
@@ -3315,15 +3319,15 @@ function RehearsalPageInner() {
         )}
       </AnimatePresence>
 
-      {/* Floating control pill.
-          It used to be hidden on the first scene, on the grounds that the
-          guided run has its own coaching line and its own door. The effect was
-          that a brand-new actor — the only person who has never done this
-          before — was the one person with no pause, no status and no way past
-          a line. Canberk hit exactly that: paused, resumed, and had nothing to
-          press when the scene did not pick up. The progress meter still stays
-          off for six lines; the controls do not. */}
-      {true && (
+      {/* Floating control pill. NOT on the first scene.
+          I put it there on 2026-10-03, having read that the guided run was the
+          one place with no controls. It was not: GuidedStage carries its own
+          "said it", "skip" and "leave", and GuidedCoachLine carries the state
+          above the script. The pill added a SECOND of each, at the far end of
+          the page, so a six-line scene narrated itself twice and pulled the
+          actor's eye off the words and down to the furniture. Six lines need
+          one set of controls, and they belong beside the line. */}
+      {!guided && (
       <div className="shrink-0 flex justify-center px-4 pb-4 safe-area-bottom">
         <div className={cn(CHROME_DARK, "flex items-center gap-2 sm:gap-3 bg-neutral-900/90 backdrop-blur-sm border border-neutral-800 rounded-full shadow-2xl px-3 sm:px-5 py-3 min-h-[52px] max-w-[calc(100vw-1.5rem)]")}>
           {/* Pause / Play */}

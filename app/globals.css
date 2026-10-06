@@ -9197,3 +9197,21 @@ html[data-firstrun="1"] body::before {
     grid-column: 1 / -1;
   }
 }
+
+/* The dot breathes with the actor's own voice.
+   It is the only live feedback in the guided scene, and a dot that simply
+   sits there cannot tell "I am listening" from "I have frozen" — which is
+   what an actor reads it as the moment anything else goes wrong. The signal
+   is the microphone LEVEL, not recognition, so it holds true for the actors
+   whose words never transcribe. No colour change: the colour already means
+   whose turn it is, and two meanings on one dot is none. */
+.t-coach[data-hearing="true"] .t-coach__dot {
+  animation: t-coach-hear 0.9s ease-in-out infinite;
+}
+@keyframes t-coach-hear {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 currentColor; }
+  50% { transform: scale(1.35); box-shadow: 0 0 0 4px color-mix(in oklab, currentColor 18%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-coach[data-hearing="true"] .t-coach__dot { animation: none; transform: scale(1.3); }
+}

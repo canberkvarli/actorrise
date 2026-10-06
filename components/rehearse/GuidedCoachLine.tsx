@@ -15,6 +15,15 @@ interface Props {
   onState?: (state: CoachState) => void;
   /** The status dot's colour classes; it sits in the line instead of a pill. */
   dotClass?: string;
+  /**
+   * A voice is reaching the microphone RIGHT NOW.
+   *
+   * Off the level, not off speech recognition, so it stays true for an actor
+   * whose words never transcribe — which on iOS Safari is most of them. The
+   * dot is the only live feedback in the guided scene, and a dot that just
+   * sits there cannot distinguish "I am listening" from "I have frozen".
+   */
+  hearingYou?: boolean;
 }
 
 /**
@@ -22,7 +31,7 @@ interface Props {
  * while the mic is open (the nudge is a function of time, and the page has no
  * event for "six seconds passed").
  */
-export function GuidedCoachLine({ partnerSpeaking, micOpen, linesHeard, voicedThisTake, tapMode, onState, dotClass }: Props) {
+export function GuidedCoachLine({ partnerSpeaking, micOpen, linesHeard, voicedThisTake, tapMode, onState, dotClass, hearingYou }: Props) {
   const [state, setState] = useState<CoachState>("listen");
   const stateRef = useRef<CoachState>("listen");
   const micOpenedAtRef = useRef<number | null>(null);
