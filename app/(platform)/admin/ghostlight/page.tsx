@@ -85,8 +85,13 @@ type Overview = { store: Store; money: Money };
 const n = (v: number | null | undefined) => (v === null || v === undefined ? "·" : v.toLocaleString());
 const pct = (v: number | null | undefined) => (v === null || v === undefined ? "·" : `${Math.round(v * 100)}%`);
 const usd = (v: number | null | undefined) => (v === null || v === undefined ? "·" : `$${v.toFixed(2)}`);
-const day = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+const day = (iso: string | null | undefined) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  // An annual plan renews next year; "Oct 3" without the year read as overdue.
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }) });
+};
 const when = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
 
