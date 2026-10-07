@@ -36,3 +36,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-10-04, free
 **They said:** "I'm gonna do the Shauna one! It's for a school play audition. Are you a real person sorry im confused"
 **Heard as:** happy, and a fair question. A note that knows your three searches and arrives two days later reads as automated to a stranger; the reply should say plainly it is a person. Also: a school play audition, so likely a student, reached through a note meant for actors.
+
+## 2026-10-07
+
+**Replying to:** a personal note about his "Dramedy LGBT" search and the piece he opened
+**Account:** signed up 2026-10-06, 0 saved, 0 scenes finished, free
+**They said:** "It's for an exclusive acting class. Before being paired with actors, I need to perform a monologue. I've found one by Belize: Angels in America. But super open to more. The website search tool wasn't functioning the best for me so I had to look elsewhere. I like the design and concept though."
+**Heard as:** content gap (Angels in America is not in the library, checked in all three places) and a search miss on "Dramedy LGBT" (weak match, 20 results, opened one); liked the design
