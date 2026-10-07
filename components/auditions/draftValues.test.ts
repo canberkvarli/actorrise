@@ -67,7 +67,7 @@ describe("patchFromValues", () => {
 describe("errMessage", () => {
   const err = (m: unknown) => ({ message: m });
   it("puts the backend's known 400s in plain words", () => {
-    expect(errMessage(err("tape_link must be an http(s) link"))).toBe("That tape link needs to start with https://.");
+    expect(errMessage(err("tape_link must be an http(s) link"))).toBe("That tape link needs to be a full link, starting with http.");
     expect(errMessage(err("tz must be an IANA timezone name"))).toMatch(/time zone/);
     expect(errMessage(err("project is required"))).toBe("I need the name of the project to save this.");
     expect(errMessage(err("user_script_id must be one of your scripts"))).toMatch(/sides/);

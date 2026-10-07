@@ -180,15 +180,6 @@ class CoreTests(unittest.TestCase):
         self.assertIs(core.get_owned(self.db, self.user.id, a.id), a)
         self.assertIsNone(core.get_owned(self.db, self.other.id, a.id))
 
-    def test_add_piece_needs_exactly_one(self):
-        a = self._make()
-        core.add_piece(self.db, a, monologue_id=7)
-        with self.assertRaises(ValueError):
-            core.add_piece(self.db, a)
-        with self.assertRaises(ValueError):
-            core.add_piece(self.db, a, monologue_id=1, scene_id=2)
-        self.assertEqual(self.db.query(AuditionPiece).count(), 1)
-
     def test_none_for_defaulted_fields_uses_defaults(self):
         a = core.create_audition(
             self.db, self.user.id,
@@ -240,28 +231,14 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(names("waiting"), ["WNew", "WOld"])
         self.assertEqual(names("past"), ["Past"])
 
-    def test_serialize_with_prep(self):
-        a = self._make(material_raw="1 min comedic", starts_at=NOW + timedelta(days=1))
-        core.add_piece(self.db, a, monologue_id=3)
-        with mock.patch.object(core, "count_runs", lambda db, aud, pieces: (len(pieces), NOW)), \
-                mock.patch.object(core, "piece_labels", lambda db, pieces: {}):
-            out = core.serialize(self.db, a, NOW)
-            bare = core.serialize(self.db, a, NOW, with_prep=False)
-        self.assertEqual(out["scope"], "upcoming")
-        self.assertEqual(out["pieces"][0]["monologue_id"], 3)
-        self.assertEqual(out["prep"]["runs"], 1)
-        self.assertEqual([s["key"] for s in out["prep"]["steps"]], ["piece"])
-        self.assertTrue(out["prep"]["steps"][0]["done"])
-        self.assertNotIn("prep", bare)
 
-
-class PieceLabelTests(unittest.TestCase):
-    """The prep room names each attached piece, so serialize carries its title."""
+class PieceTests(unittest.TestCase):
+    """Pieces: only real ones, once each, named in serialize so the prep room can show them."""
 
     def setUp(self):
-        from app.models.actor import FilmTvReference, Monologue, Play
+        from app.models.actor import FilmTvReference, Monologue, Play, Scene
 
-        self.db, self.saved = memory_db(TABLES + [FilmTvReference, Play, Monologue])
+        self.db, self.saved = memory_db(TABLES + [FilmTvReference, Play, Monologue, Scene])
         self.user = User(email="a@x.com", supabase_id="a")
         self.db.add(self.user)
         self.db.commit()
@@ -271,17 +248,71 @@ class PieceLabelTests(unittest.TestCase):
         self.db.flush()
         self.mono = Monologue(play_id=play.id, title="Blue Roses", character_name="Laura",
                               text="word " * 120, word_count=120, estimated_duration_seconds=60)
-        self.db.add(self.mono)
+        self.hidden = Monologue(play_id=play.id, title="Too short", character_name="Tom",
+                                text="word " * 20, word_count=20, estimated_duration_seconds=10,
+                                review_status="too_short")
+        self.scene = Scene(play_id=play.id, title="The gentleman caller", character_1_name="Laura",
+                           character_2_name="Jim", line_count=40, estimated_duration_seconds=300)
+        self.db.add_all([self.mono, self.hidden, self.scene])
         self.db.commit()
+        self.p = mock.patch.object(core, "record_user_event", lambda *a, **k: None)
+        self.p.start()
 
     def tearDown(self):
+        self.p.stop()
         self.db.close()
         restore(self.saved)
 
-    def test_serialized_pieces_carry_title_character_and_play(self):
-        a = core.create_audition(self.db, self.user.id, {"project": "P", "tz": "UTC"}, source="manual", now=NOW)
+    def _aud(self, **kw):
+        return core.create_audition(self.db, self.user.id, {"project": "P", "tz": "UTC", **kw}, source="manual", now=NOW)
+
+    def test_add_piece_needs_exactly_one(self):
+        a = self._aud()
         core.add_piece(self.db, a, monologue_id=self.mono.id)
-        core.add_piece(self.db, a, scene_id=4)
+        with self.assertRaises(ValueError):
+            core.add_piece(self.db, a)
+        with self.assertRaises(ValueError):
+            core.add_piece(self.db, a, monologue_id=self.mono.id, scene_id=self.scene.id)
+        self.assertEqual(self.db.query(AuditionPiece).count(), 1)
+
+    def test_missing_or_hidden_pieces_are_refused(self):
+        a = self._aud()
+        for kw in ({"monologue_id": 999}, {"monologue_id": self.hidden.id}, {"scene_id": 999}):
+            with self.assertRaises(ValueError):
+                core.add_piece(self.db, a, **kw)
+        self.assertEqual(self.db.query(AuditionPiece).count(), 0)
+        core.add_piece(self.db, a, scene_id=self.scene.id)
+        self.assertEqual(self.db.query(AuditionPiece).count(), 1)
+
+    def test_adding_the_same_piece_twice_keeps_one(self):
+        a = self._aud()
+        first = core.add_piece(self.db, a, monologue_id=self.mono.id)
+        again = core.add_piece(self.db, a, monologue_id=self.mono.id)
+        self.assertEqual(first.id, again.id)
+        s1 = core.add_piece(self.db, a, scene_id=self.scene.id)
+        self.assertEqual(core.add_piece(self.db, a, scene_id=self.scene.id).id, s1.id)
+        self.assertEqual(self.db.query(AuditionPiece).count(), 2)
+        other = self._aud()
+        core.add_piece(self.db, other, monologue_id=self.mono.id)  # another audition may bring it too
+        self.assertEqual(self.db.query(AuditionPiece).count(), 3)
+
+    def test_serialize_with_prep(self):
+        a = self._aud(material_raw="1 min comedic", starts_at=NOW + timedelta(days=1))
+        core.add_piece(self.db, a, monologue_id=self.mono.id)
+        with mock.patch.object(core, "count_runs", lambda db, aud, pieces: (len(pieces), NOW)):
+            out = core.serialize(self.db, a, NOW)
+            bare = core.serialize(self.db, a, NOW, with_prep=False)
+        self.assertEqual(out["scope"], "upcoming")
+        self.assertEqual(out["pieces"][0]["monologue_id"], self.mono.id)
+        self.assertEqual(out["prep"]["runs"], 1)
+        self.assertEqual([s["key"] for s in out["prep"]["steps"]], ["piece"])
+        self.assertTrue(out["prep"]["steps"][0]["done"])
+        self.assertNotIn("prep", bare)
+
+    def test_serialized_pieces_carry_title_character_and_play(self):
+        a = self._aud()
+        core.add_piece(self.db, a, monologue_id=self.mono.id)
+        core.add_piece(self.db, a, scene_id=self.scene.id)
         with mock.patch.object(core, "count_runs", lambda db, aud, pieces: (0, None)):
             out = core.serialize(self.db, a, NOW)
         mono, scene = out["pieces"]
@@ -290,10 +321,12 @@ class PieceLabelTests(unittest.TestCase):
         self.assertIsNone(scene["title"])
 
     def test_one_query_for_all_pieces(self):
-        a = core.create_audition(self.db, self.user.id, {"project": "P", "tz": "UTC"}, source="manual", now=NOW)
-        for _ in range(3):
-            core.add_piece(self.db, a, monologue_id=self.mono.id)
-        pieces = core.pieces_for(self.db, a)  # loaded, so only piece_labels' own query is counted
+        a = self._aud()
+        a2 = self._aud()
+        core.add_piece(self.db, a, monologue_id=self.mono.id)
+        core.add_piece(self.db, a, scene_id=self.scene.id)
+        core.add_piece(self.db, a2, monologue_id=self.mono.id)
+        pieces = core.pieces_for(self.db, a) + core.pieces_for(self.db, a2)  # loaded, so only piece_labels' own query is counted
         from sqlalchemy import event
 
         statements = []

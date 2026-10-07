@@ -219,6 +219,21 @@ def add_piece(
 ) -> AuditionPiece:
     if (monologue_id is None) == (scene_id is None):
         raise ValueError("give exactly one of monologue_id or scene_id")
+    # Only something that is really there: a retired or made-up id would tick
+    # "Pick your piece" and name nothing. Imports inside, as in count_runs.
+    from app.models.actor import Monologue, Scene
+    from app.services.search.semantic_search import HIDDEN_REVIEW_STATUSES
+
+    if monologue_id is not None:
+        status = db.query(Monologue.review_status).filter(Monologue.id == monologue_id).first()
+        if status is None or status[0] in HIDDEN_REVIEW_STATUSES:
+            raise ValueError("monologue_id not found")
+    elif db.query(Scene.id).filter(Scene.id == scene_id).first() is None:
+        raise ValueError("scene_id not found")
+    # A second tap on the same piece is the same piece.
+    existing = db.query(AuditionPiece).filter_by(audition_id=a.id, monologue_id=monologue_id, scene_id=scene_id).first()
+    if existing is not None:
+        return existing
     piece = AuditionPiece(audition_id=a.id, monologue_id=monologue_id, scene_id=scene_id)
     db.add(piece)
     db.commit()

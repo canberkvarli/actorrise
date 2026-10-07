@@ -38,7 +38,6 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
   // Closing the form hands focus back to the button that opened it.
   const fixButton = useRef<HTMLButtonElement>(null);
   const refocus = useRef(false);
-  useEffect(() => { setEditingFor(null); }, [a.id]);
   useEffect(() => {
     if (editingFor === null && refocus.current) {
       refocus.current = false;
@@ -118,14 +117,14 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
         {a.prep && (
           <ol className="mt-4 grid gap-2.5">
             {a.prep.steps.map((s) => (
-              <li key={s.key} className="aud-step grid grid-cols-[22px_1fr_auto] items-center gap-3 px-3 py-2.5">
+              <li key={s.key} className={`aud-step grid grid-cols-[22px_1fr_auto] gap-3 px-3 py-2.5 ${hasPieces(s.key) ? "items-start" : "items-center"}`}>
                 <span className="aud-box" data-done={s.done ? "true" : "false"} aria-label={s.done ? "done" : "not yet"} />
                 <span className="min-w-0 text-sm">
                   {s.label}
                   {s.key === "sides" && (
                     <span className="aud-dir aud-muted block text-[11px]">{sidesNote(a.prep!.runs)}</span>
                   )}
-                  {(s.key === "piece" || s.key === "bring") && <Pieces a={a} />}
+                  {hasPieces(s.key) && <Pieces a={a} />}
                 </span>
                 {s.href && (
                   <Link
@@ -141,6 +140,12 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
               </li>
             ))}
           </ol>
+        )}
+        {/* A sides-only audition has no piece step, but the actor may still be bringing a monologue. */}
+        {a.prep && !a.prep.steps.some((s) => hasPieces(s.key)) && (
+          <div className="mt-3 px-3 text-sm">
+            <Pieces a={a} label="Bringing a monologue too?" />
+          </div>
         )}
 
         {past && a.status !== "booked" && a.status !== "passed" && answeredFor !== a.id && (
@@ -196,6 +201,8 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
   );
 }
 
+const hasPieces = (key: string) => key === "piece" || key === "bring";
+
 function pieceName(p: AuditionPiece): string {
   if (!p.monologue_id) return "A scene";
   if (!p.title) return "A monologue";
@@ -203,15 +210,17 @@ function pieceName(p: AuditionPiece): string {
 }
 
 /** What the actor is bringing: the pieces already on this audition, and one tap to add a saved monologue. */
-function Pieces({ a }: { a: Audition }) {
+function Pieces({ a, label }: { a: Audition; label?: string }) {
   const add = useAddPiece();
   const remove = useRemovePiece();
   const { data: saved } = useBookmarks();
   const attached = new Set(a.pieces.map((p) => p.monologue_id));
   const choices = (saved ?? []).filter((m) => !attached.has(m.id));
+  if (label && a.pieces.length === 0 && choices.length === 0) return null;
 
   return (
     <span className="mt-1.5 block">
+      {label && <span className="block">{label}</span>}
       {a.pieces.length > 0 && (
         <span className="grid gap-1">
           {a.pieces.map((p) => (

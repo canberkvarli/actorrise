@@ -54,7 +54,7 @@ export function patchFromValues(a: Audition, v: DraftValues): Record<string, unk
 
 // The backend's 400s are written for developers. The ones an actor can actually hit, in my words.
 const FRIENDLY: [RegExp, string][] = [
-  [/^tape_link must be/, "That tape link needs to start with https://."],
+  [/^tape_link must be/, "That tape link needs to be a full link, starting with http."],
   [/^tz must be/, "I couldn't read that time zone. Try again from your own browser."],
   [/^project is required/, "I need the name of the project to save this."],
   [/^user_script_id must be/, "I couldn't find those sides on your account. Try adding them again."],
