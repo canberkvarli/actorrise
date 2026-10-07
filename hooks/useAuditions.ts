@@ -2,22 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import api, { API_URL, getCachedAuthToken } from "@/lib/api";
+import api, { API_URL, getAuthToken } from "@/lib/api";
 import type { Audition, ParseResult } from "@/lib/auditions";
 
 const KEY = ["auditions"] as const;
 
-// Cached token first: getSession() takes a Web Lock and can hang behind another tab.
-// The race mirrors lib/api.ts so a stuck lock becomes a retryable error, not a frozen upload.
 async function token(): Promise<string | null> {
-  const cached = getCachedAuthToken();
-  if (cached) return cached;
-  const { supabase } = await import("@/lib/supabase");
-  const { data } = await Promise.race([
-    supabase.auth.getSession(),
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Auth session lookup timed out")), 8_000)),
-  ]);
-  return data.session?.access_token ?? null;
+  return (await getAuthToken()) ?? null;
 }
 
 async function multipart<T>(path: string, form: FormData): Promise<T> {

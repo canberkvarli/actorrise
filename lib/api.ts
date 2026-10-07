@@ -25,7 +25,7 @@ function isSessionCacheValid(): boolean {
   return Date.now() < cachedSession.expires_at;
 }
 
-async function getAuthToken(): Promise<string | undefined> {
+export async function getAuthToken(): Promise<string | undefined> {
   if (typeof window === "undefined") return undefined;
   if (isSessionCacheValid() && cachedSession) return cachedSession.access_token;
   // Deduplicate: if a fetch is already in flight, reuse it
