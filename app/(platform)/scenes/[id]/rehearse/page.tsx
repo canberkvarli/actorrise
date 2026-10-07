@@ -44,7 +44,6 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useWhisperSTT } from '@/hooks/useWhisperSTT';
-import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
 import { renderTextWithStageDirections, stripStageDirections } from '@/lib/stageDirections';
 import { useOpenAITTS } from '@/hooks/useOpenAITTS';
 import {
@@ -1000,16 +999,9 @@ function RehearsalPageInner() {
 
   /* ── Browser speech synthesis (fallback) ───────────────────────── */
 
-  const {
-    speak: speakBrowser,
-    isSpeaking: isSpeakingBrowser,
-    isSupported: isSpeechSynthesisSupported,
-  } = useSpeechSynthesis({
-    rate: 1.0,
-    pitch: 1.0,
-    volume: 1.0,
-    onEnd: handleTTSEnd,
-  });
+  /* The browser synth is gone from this page. It is not wired up, not behind a
+   setting, and not a fallback — see the note on speakLine. Anything queued on
+   it belongs to the TAB and cannot be stopped from here once it starts. */
 
   /* ── OpenAI TTS (primary) ──────────────────────────────────────── */
 
@@ -1040,10 +1032,12 @@ function RehearsalPageInner() {
         setGateChecked(true);
         return;
       }
-      const fallbackLine = lastAiLineForFallbackRef.current;
-      if (fallbackLine && isSpeechSynthesisSupported) {
-        speakBrowser(fallbackLine);
-      }
+      /* No browser-voice fallback. See the note on speakLine: the browser
+         synth is global to the TAB, not to this page, so a line handed to it
+         outlives the route. Falling back here meant a TTS hiccup queued a
+         speech that then followed the actor to the next page and said itself
+         again. Better a silent line the self-heal steps past than a voice
+         that will not stop. */
     },
   });
 
@@ -1060,7 +1054,7 @@ function RehearsalPageInner() {
     onError: () => advanceReplayRef.current(),
   });
 
-  const anySpeaking = isSpeakingBrowser || isSpeakingAI || isLoadingAI;
+  const anySpeaking = isSpeakingAI || isLoadingAI;
 
   /* One colour per character, dealt in order of appearance — the same palette
      the prep screen uses, so a character is the same colour on both. */
@@ -1121,10 +1115,6 @@ function RehearsalPageInner() {
   // Keep lastAiLine in a ref for the rAF callback
   const lastAiLineRef = useRef(lastAiLine);
   lastAiLineRef.current = lastAiLine;
-  /* For the browser-voice watchdog below: read live, not through a closure. */
-  const isSpeakingBrowserRef = useRef(isSpeakingBrowser);
-  isSpeakingBrowserRef.current = isSpeakingBrowser;
-  const browserStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ── Speak a line (AI or browser) ──────────────────────────────── */
 
@@ -1135,28 +1125,23 @@ function RehearsalPageInner() {
       ? (characterVoiceMapRef.current.get(charName) ?? lastKnownVoiceIdRef.current)
       : lastKnownVoiceIdRef.current;
 
-    if (useAIVoice || !isSpeechSynthesisSupported) {
-      speakAI(text, voiceId, instructions);
-      return;
-    }
+    /* The partner has ONE voice, and it is the AI voice.
+       The browser synth used to be an option, kept behind a saved setting and
+       reachable from two fallbacks. It has to go, and not because it sounds
+       worse:
 
-    /* The browser voice is a trap, and it is a SAVED setting, so an actor who
-       turned it on months ago is still on it.
-       Chrome's speechSynthesis stops producing audio while continuing to
-       report that it is speaking — a long-standing bug with no event for it.
-       The scene then shows "<partner> speaking" over silence and waits for an
-       `onend` that never comes, which is one of the shapes of "it says it is
-       speaking and nobody is". Nothing downstream can tell the difference,
-       because every signal says the line played.
-       So: give it a beat to actually start, and if it has not, hand the line
-       to the AI voice, which is the product's voice anyway. */
-    speakBrowser(text);
-    if (browserStartTimerRef.current) clearTimeout(browserStartTimerRef.current);
-    browserStartTimerRef.current = setTimeout(() => {
-      if (isSpeakingBrowserRef.current) return; // it really did start
-      speakAI(text, voiceId, instructions);
-    }, 900);
-  }, [useAIVoice, speakAI, speakBrowser, isSpeechSynthesisSupported, isListening, stopListening]);
+       `window.speechSynthesis` belongs to the TAB, not to this page. A line
+       handed to it is queued somewhere React cannot reach, survives unmount,
+       survives the route change, and says itself on whatever page the actor
+       opens next. Canberk heard "Long live the King" repeatedly on a page he
+       had already left. On top of that Chrome's synth stops producing audio
+       while still reporting that it is speaking, so the scene shows "<partner>
+       speaking" over silence and waits for an `onend` that never comes.
+
+       Two different ways to be unfixable from here. The AI voice is a blob on
+       an element this page owns and can stop. */
+    speakAI(text, voiceId, instructions);
+  }, [speakAI, isListening, stopListening]);
   const speakLineRef = useRef(speakLine);
   speakLineRef.current = speakLine;
   const preloadTTSRef = useRef(preloadTTS);
@@ -1175,11 +1160,11 @@ function RehearsalPageInner() {
     const sess = sessionRef.current;
     const line = orderedLinesRef.current[activeLineIndex];
     if (!sess || !line || isMyLine(sess, line.character_name, cueNamesRef.current)) return; // AI lines only
-    if (isSpeakingAI || isSpeakingBrowser) return; // audio is actually playing — fine
+    if (isSpeakingAI) return; // audio is actually playing — fine
     const autoT = setTimeout(() => { handleTTSEndRef.current(); }, 6000); // self-heal
     return () => clearTimeout(autoT);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLineIndex, isSpeakingAI, isSpeakingBrowser, isLoadingAI, paused, countdown]);
+  }, [activeLineIndex, isSpeakingAI, isLoadingAI, paused, countdown]);
 
   /* ── Core: advance to a specific line index ────────────────────── */
 
@@ -2165,6 +2150,17 @@ function RehearsalPageInner() {
     return () => clearInterval(t);
   }, [hasSession]);
 
+  /* Silence whatever the tab is still saying.
+     The browser synth outlives a route change, so a line queued on an earlier
+     page carries on talking over this one — Canberk heard "Long live the King"
+     on a page he had already left. Nothing here queues it any more, but a
+     stale utterance from an older session, or from a tab that was open across
+     the deploy, is still out there. Cancelling on mount costs nothing and ends
+     it. */
+  useEffect(() => {
+    try { window.speechSynthesis?.cancel(); } catch { /* not supported */ }
+  }, []);
+
   /* ── Controls ──────────────────────────────────────────────────── */
 
   const stopAllAudio = useCallback(() => {
@@ -3038,7 +3034,7 @@ function RehearsalPageInner() {
           // no parchment, no header, no avatars. See components/rehearse/GuidedStage.
           <div className="max-w-2xl mx-auto px-1 sm:px-2">
             <GuidedCoachLine
-              partnerSpeaking={isSpeakingAI || isLoadingAI || isSpeakingBrowser}
+              partnerSpeaking={isSpeakingAI || isLoadingAI}
               micOpen={isListening}
               linesHeard={linesDelivered}
               voicedThisTake={heardAnySpeech}
