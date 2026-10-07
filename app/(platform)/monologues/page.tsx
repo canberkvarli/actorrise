@@ -9,6 +9,7 @@ import { MonologueWall } from "@/components/monologue/MonologueWall";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/events";
+import { AuditionStrip } from "@/components/auditions/AuditionStrip";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -1770,6 +1771,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           the viewport rather than stopping at the container. */}
       <div aria-hidden className="t-search-wash" />
       {outlineOverlay}
+
+      <AuditionStrip surface="monologues" />
 
       {/* The search head.
           

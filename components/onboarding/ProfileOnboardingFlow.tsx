@@ -852,7 +852,9 @@ export default function ProfileOnboardingFlow({
                 onKeep={keepPicks}
                 onClose={endFlow}
                 onBrowse={() => { endFlow(); router.push("/monologues"); }}
-                onOwnSides={() => { endFlow(); router.push("/practice"); }}
+                // A real audition's sides go through the tracker now: same
+                // ScenePartner upload, plus the date and the reminders.
+                onOwnSides={() => { endFlow(); router.push("/auditions?new=1&from=onboarding"); }}
                 onCollection={goToCollection}
               />
             </motion.div>
@@ -1187,7 +1189,7 @@ function OnboardingPayoff({
             busy={going === "sides"}
             dimmed={!!going && going !== "sides"}
             title="Bring your own sides"
-            note="A real audition script. I'll read every role that isn't yours."
+            note="A real audition? Drop the sides and the date. I'll read the other roles and remind you."
             icon={<path d="M12 16V4M6 10l6-6 6 6M4 20h16" />}
           />
         </div>
