@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { fromLocalInput, toLocalInput, KIND_LABEL, type AuditionKind, type Draft } from "@/lib/auditions";
 
@@ -34,10 +34,11 @@ const LABEL = "aud-dir aud-muted text-[10.5px] uppercase tracking-[0.06em]";
 const INPUT = "aud-field mt-1 w-full border border-[var(--t-line-light)] bg-[var(--t-paper)] px-2.5 py-2 text-sm";
 
 export function DraftCard({
-  draft, initialNotes = "", sidesName, saving, onSave, onCancel,
+  draft, initialNotes = "", quotaHit = false, sidesName, saving, onSave, onCancel,
 }: {
   draft: Draft | null;
   initialNotes?: string;
+  quotaHit?: boolean;
   sidesName: string | null;
   saving: boolean;
   onSave: (v: DraftValues) => void;
@@ -51,7 +52,8 @@ export function DraftCard({
     const f = draft?.[k] as { value: unknown; confidence: string } | null | undefined;
     return draft && f && typeof f === "object" && "confidence" in f && (f.confidence === "low" || f.value == null) ? "true" : "false";
   };
-  const hint = (k: keyof Draft) => (unsure(k) === "true" ? "aud-unsure-hint" : undefined);
+  const hintId = useId();
+  const hint = (k: keyof Draft) => (unsure(k) === "true" ? hintId : undefined);
   const set = (k: keyof DraftValues) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setV((p) => ({ ...p, [k]: e.target.value }));
   const whenKey = v.kind === "self_tape" ? "due_at" : "starts_at";
@@ -65,7 +67,12 @@ export function DraftCard({
       }}
     >
       <p className="aud-title text-2xl">{draft ? "Check what I read" : "Add an audition"}</p>
-      {draft && <p id="aud-unsure-hint" className="aud-muted mt-1 text-sm">The outlined ones I wasn&apos;t sure about.</p>}
+      {quotaHit && (
+        <p role="status" className="aud-muted mt-1 text-sm">
+          You&apos;re out of free reads this month. Fill it in yourself and it still saves, or go Plus for unlimited reads.
+        </p>
+      )}
+      {draft && <p id={hintId} className="aud-muted mt-1 text-sm">The outlined ones I wasn&apos;t sure about.</p>}
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="sm:col-span-2"><span className={LABEL}>Project</span>
           <input required autoFocus className={INPUT} data-unsure={unsure("project")} aria-describedby={hint("project")} maxLength={200} value={v.project} onChange={set("project")} />
@@ -79,7 +86,7 @@ export function DraftCard({
           </select>
         </label>
         <label><span className={LABEL}>{v.kind === "self_tape" ? "Tape due" : "When"}</span>
-          <input type="datetime-local" className={INPUT} data-unsure={unsure(whenKey)} value={v.when} onChange={set("when")} />
+          <input type="datetime-local" className={INPUT} data-unsure={unsure(whenKey)} aria-describedby={hint(whenKey)} value={v.when} onChange={set("when")} />
         </label>
         <label><span className={LABEL}>Where</span>
           <input className={INPUT} data-unsure={unsure("location")} aria-describedby={hint("location")} maxLength={300} value={v.location} onChange={set("location")} />

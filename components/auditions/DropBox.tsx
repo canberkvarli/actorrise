@@ -15,7 +15,7 @@ const MAX_BYTES = 10 * 1024 * 1024;
 
 function errMessage(e: unknown): string {
   const m = (e as { message?: unknown })?.message;
-  return typeof m === "string" && m && m !== "[object Object]" ? m : "That didn't save. Check the fields and try again.";
+  return typeof m === "string" && m && !m.startsWith("[object") ? m : "That didn't save. Check the fields and try again.";
 }
 
 export function DropBox({ source = "parse", startOpen = false }: { source?: "parse" | "onboarding"; startOpen?: boolean }) {
@@ -114,6 +114,7 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
     return (
       <DraftCard
         draft={manual ? null : draft}
+        quotaHit={quotaHit}
         sidesName={file?.name ?? null}
         saving={saving}
         initialNotes={manual || !parsedOk ? text.trim().slice(0, 4000) : ""}
