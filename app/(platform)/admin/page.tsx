@@ -249,6 +249,72 @@ function ActivationFunnel({ steps }: { steps: GrowthStats["activation"] }) {
   );
 }
 
+type AuditionsPanel = {
+  users_with_auditions: number;
+  auditions: number;
+  parse: { requested: number; corrected: number; failed: number };
+  prep_before_date: { past: number; prepped: number };
+  reminders: { sent: Record<string, number>; clicked: Record<string, number> };
+  outcomes_by_via: Record<string, number>;
+  habit: { week_start: string; tracker_active: number; tracker_back: number; other_active: number; other_back: number }[];
+  winback_users: number;
+};
+
+function pct(n: number, d: number) {
+  return d ? `${Math.round((n / d) * 100)}%` : "-";
+}
+
+function AuditionsCard() {
+  const { data } = useQuery<AuditionsPanel>({
+    queryKey: ["admin", "auditions"],
+    queryFn: async () => (await api.get<AuditionsPanel>("/api/admin/auditions")).data,
+    staleTime: 60_000,
+  });
+  if (!data) return null;
+  const moments = ["prep", "eve", "after"];
+  return (
+    <div className="border border-border bg-card p-4 space-y-3">
+      <div>
+        <p className="text-sm font-medium">Audition tracker</p>
+        <p className="text-xs text-muted-foreground">
+          {data.users_with_auditions} actors, {data.auditions} auditions. Prep before the date:{" "}
+          {pct(data.prep_before_date.prepped, data.prep_before_date.past)} (baseline rehearse rate 17.5%).
+        </p>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <div>Parses {data.parse.requested}<br /><span className="text-muted-foreground">corrected {pct(data.parse.corrected, data.parse.requested)}, failed {pct(data.parse.failed, data.parse.requested)}</span></div>
+        {moments.map((m) => (
+          <div key={m}>
+            {m}: {data.reminders.sent[m] ?? 0} sent<br />
+            <span className="text-muted-foreground">{pct(data.reminders.clicked[m] ?? 0, data.reminders.sent[m] ?? 0)} clicked</span>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Outcomes: {data.outcomes_by_via.email ?? 0} by email, {data.outcomes_by_via.app ?? 0} in app. Win-back clicks: {data.winback_users}.
+      </p>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-border text-muted-foreground">
+            <th className="py-1.5 text-left font-medium">Week of</th>
+            <th className="py-1.5 text-right font-medium">Tracker back next week</th>
+            <th className="py-1.5 text-right font-medium">Everyone else</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.habit.map((h) => (
+            <tr key={h.week_start} className="border-b border-border/50 last:border-0">
+              <td className="py-1.5 text-muted-foreground">{h.week_start.slice(5)}</td>
+              <td className="py-1.5 text-right tabular-nums">{h.tracker_back}/{h.tracker_active} ({pct(h.tracker_back, h.tracker_active)})</td>
+              <td className="py-1.5 text-right tabular-nums">{h.other_back}/{h.other_active} ({pct(h.other_back, h.other_active)})</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function RetentionPanel({ retention }: { retention: GrowthStats["retention"] }) {
   const weeks = retention.weeks;
   return (
@@ -779,6 +845,8 @@ export default function AdminOverviewPage() {
           <ActivationFunnel steps={growth.activation} />
 
           <RetentionPanel retention={growth.retention} />
+
+          <AuditionsCard />
 
           {/* Active users over time */}
           <Card>
