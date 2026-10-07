@@ -401,7 +401,14 @@ const STAGE_BG = `${THEATRE} bg-[var(--page)]`;
  * The values are the theatre's light paper and ink, written out because they
  * are constants here rather than variables.
  */
-const SCRIPT_SURFACE = 'bg-white dark:bg-[#faf7f1] text-neutral-900';
+/* The script follows the theme.
+   It was `bg-white dark:bg-[#faf7f1]` — white in light and CREAM in dark, so
+   it was a bright sheet either way and a dark-theme actor got a page that
+   ignored the setting and lit the room. Ghost Light's dark shell plus light
+   reading canvas was a deliberate idea, and Canberk's call on 2026-10-07 is
+   that the rehearsal screen honours the setting instead. These tokens are the
+   themed pair the rest of the app already uses. */
+const SCRIPT_SURFACE = `${THEATRE} bg-[var(--t-paper)] text-[var(--t-text)]`;
 
 /**
  * The floating control pill, which stays dark in both themes on purpose: it
@@ -1169,7 +1176,7 @@ function RehearsalPageInner() {
     const line = orderedLinesRef.current[activeLineIndex];
     if (!sess || !line || isMyLine(sess, line.character_name, cueNamesRef.current)) return; // AI lines only
     if (isSpeakingAI || isSpeakingBrowser) return; // audio is actually playing — fine
-    const autoT = setTimeout(() => { handleTTSEndRef.current(); }, 14000); // self-heal
+    const autoT = setTimeout(() => { handleTTSEndRef.current(); }, 6000); // self-heal
     return () => clearTimeout(autoT);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeLineIndex, isSpeakingAI, isSpeakingBrowser, isLoadingAI, paused, countdown]);
@@ -3088,7 +3095,7 @@ function RehearsalPageInner() {
               {/* Script header */}
               <div className="text-center mb-6 pb-5 border-b border-neutral-200">
                 <h1
-                  className="text-[30px] sm:text-[38px] leading-[1.05] tracking-[-0.02em] text-neutral-900"
+                  className="text-[30px] sm:text-[38px] leading-[1.05] tracking-[-0.02em] text-[var(--t-text)]"
                   style={{ fontFamily: 'var(--t-display)', fontWeight: 400 }}
                 >
                   {sceneWithLines.title}
@@ -3097,9 +3104,9 @@ function RehearsalPageInner() {
                   <p className="text-base italic text-neutral-600 mt-1.5">{sceneWithLines.description}</p>
                 )}
                 <p className="text-base text-neutral-700 mt-2">
-                  from <span className="text-neutral-900 font-medium">{sceneWithLines.play_title}</span>
+                  from <span className="text-[var(--t-text)] font-medium">{sceneWithLines.play_title}</span>
                   {sceneWithLines.play_author && (
-                    <>{' '}by <span className="text-neutral-900 font-medium">{sceneWithLines.play_author}</span></>
+                    <>{' '}by <span className="text-[var(--t-text)] font-medium">{sceneWithLines.play_author}</span></>
                   )}
                 </p>
               </div>
@@ -3119,7 +3126,7 @@ function RehearsalPageInner() {
                         out loud — Anita appeared to deliver a paragraph about a
                         crowd at a hearing. It stands on its own now. */}
                     {line.stage_direction?.trim() && (
-                      <p className="px-6 py-3 text-center text-[13px] italic leading-relaxed text-neutral-500 sm:px-12">
+                      <p className="px-6 py-3 text-center text-[13px] italic leading-relaxed text-[var(--t-muted-dark)] sm:px-12">
                         {line.stage_direction.trim()}
                       </p>
                     )}
@@ -3171,11 +3178,12 @@ function RehearsalPageInner() {
                     >
                       {/* Character name row */}
                       <div className="flex items-center justify-center gap-2 mb-1">
-                        {isUser ? (
-                          <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center shrink-0 text-[9px] font-bold text-white">
-                            {line.character_name.charAt(0).toUpperCase()}
-                          </div>
-                        ) : (() => {
+                        {/* Nothing in front of your own name. An F before
+                            FRANCISCO is the same letter twice, and "(You)" and
+                            the accent colour beside it already say whose line
+                            it is. The mark exists to name a VOICE, and nobody
+                            reads yours. */}
+                        {isUser ? null : (() => {
                           const meta = characterVoiceMeta.get(line.character_name);
                           /* The SAME mark the prep screen uses. It was a
                              letter in a filled circle here and a waveform
@@ -3200,13 +3208,13 @@ function RehearsalPageInner() {
                         })()}
                         <span className={cn(
                           "text-base font-extrabold uppercase tracking-widest",
-                          guided ? (isUser ? "text-[var(--t-orange)]" : "text-neutral-500") : "text-black",
+                          guided ? (isUser ? "text-[var(--t-orange)]" : "text-[var(--t-muted-dark)]") : "text-[var(--t-text)]",
                         )}>
                           {line.character_name}
                         </span>
                         <span className={cn(
                           "text-[11px] font-bold min-w-[30px]",
-                          isUser ? "text-orange-700" : "text-transparent select-none"
+                          isUser ? "text-[var(--acc)]" : "text-transparent select-none"
                         )}>
                           {isUser ? "(You)" : "\u00A0"}
                         </span>
@@ -3237,7 +3245,7 @@ function RehearsalPageInner() {
                           and the dot in the bar below says the mic is open. */}
 
                       {/* Line text — live highlights while listening, post-result highlights after */}
-                      <p className="text-[17px] font-semibold leading-relaxed text-black text-center break-words whitespace-pre-wrap">
+                      <p className="text-[17px] font-semibold leading-relaxed text-[var(--t-text)] text-center break-words whitespace-pre-wrap">
                         {isCurrentUserLine && wordMatchResult
                           ? renderLineWithWordHighlights(line.text, wordMatchResult)
                           : isCurrentUserLine && liveWordResult
@@ -3260,7 +3268,7 @@ function RehearsalPageInner() {
                             className={
                               speechIsBroken
                                 ? 'rounded-full border border-amber-500 px-4 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-50 min-h-[44px]'
-                                : 'text-[11px] text-neutral-500 hover:text-neutral-800 underline underline-offset-2 transition-colors'
+                                : 'text-[11px] text-[var(--t-muted-dark)] hover:text-[var(--t-text)] underline underline-offset-2 transition-colors'
                             }
                           >
                             {speechIsBroken ? 'I said my line →' : 'Skip line'}
@@ -3424,20 +3432,14 @@ function RehearsalPageInner() {
               See lib/rehearse-status.ts. */}
           <div className="flex items-center gap-2 shrink-0 px-1" role="status" aria-live="polite">
             <div className={cn('w-2.5 h-2.5 rounded-full', statusInfo.color, statusInfo.pulse && 'animate-pulse')} />
-            {/* The word, on every width.
-                It was `hidden sm:inline`, which is every phone — the devices
-                where the dot is smallest and the actor is furthest from the
-                screen. Whose turn it is was the one thing Canberk could not
-                tell, so it is the one thing that does not get dropped on a
-                narrow screen. */}
-            <span className={cn(
-              'text-[11px] tracking-[0.04em] whitespace-nowrap',
-              // Their turn is not a status among statuses. It is the only
-              // moment the scene is waiting on a person.
-              isUserTurn || isListening ? 'font-bold text-white' : 'text-neutral-400',
-            )}>
-              {statusInfo.text}
-            </span>
+            {/* No words down here any more.
+                The dot on the active line carries the state now, where the
+                actor is already looking. Two live readouts on one screen means
+                the eye leaves the script every time either changes, which is
+                the opposite of what a rehearsal screen is for. This dot stays
+                as a quiet second copy for anyone who glances down; the text
+                stays for screen readers. */}
+            <span className="sr-only">{statusInfo.text}</span>
           </div>
 
           {/* Progress: line counter + bar. Not on the first scene: six lines
