@@ -12,11 +12,13 @@ const KEY = "aud-strip-dismissed";
  * One slim line for people with nothing upcoming. Dismissal is per browser
  * (localStorage), not per user: no new column, and a strip that comes back on
  * another device is harmless. Renders nothing until the list and localStorage
- * are both read, so it never shifts the page or mismatches on hydration.
+ * are both read, which avoids a hydration mismatch. It does appear after the
+ * fetch, so hosts place it below their fixed content and it fades in.
  */
 export function AuditionStrip({ surface }: { surface: "rehearse" | "monologues" }) {
   const { data } = useAuditions();
   const [hidden, setHidden] = useState(true);
+  const [shown, setShown] = useState(false);
   useEffect(() => {
     try {
       setHidden(localStorage.getItem(KEY) === "1");
@@ -24,9 +26,16 @@ export function AuditionStrip({ surface }: { surface: "rehearse" | "monologues" 
       setHidden(false);
     }
   }, []);
+  const visible = !hidden && !!data && !data.some((a) => a.scope === "upcoming");
+  useEffect(() => {
+    if (!visible) return;
+    const id = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(id);
+  }, [visible]);
   if (hidden || !data || data.some((a) => a.scope === "upcoming")) return null;
   return (
-    <div className="mb-4 flex items-center justify-between gap-3 text-sm" style={{ color: "var(--t-text)" }}>
+    <div className={`mt-4 flex items-center justify-between gap-3 text-sm transition-opacity duration-500 motion-reduce:transition-none ${shown ? "opacity-100" : "opacity-0"}`}
+      style={{ color: "var(--t-text)" }}>
       <Link
         href="/auditions?new=1"
         onClick={() => trackEvent("audition_strip_clicked", { surface })}
@@ -36,7 +45,6 @@ export function AuditionStrip({ surface }: { surface: "rehearse" | "monologues" 
       </Link>
       <button
         type="button"
-        aria-label="Dismiss"
         className="shrink-0 text-xs opacity-70 hover:opacity-100"
         onClick={() => {
           try {

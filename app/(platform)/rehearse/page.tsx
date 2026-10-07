@@ -39,10 +39,10 @@ export default function RehearsePage() {
   return (
     <div className={`theatre-tokens theatre-collection ${theatreFontVars}`}>
       <div className="relative isolate mx-auto w-full max-w-[1160px] px-5 py-8 sm:py-14 md:px-[14px]">
-        <AuditionStrip surface="rehearse" />
         <Suspense fallback={<RehearseFallback />}>
           <RehearseHub />
         </Suspense>
+        <AuditionStrip surface="rehearse" />
       </div>
     </div>
   );

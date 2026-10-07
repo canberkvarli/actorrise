@@ -1772,8 +1772,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <div aria-hidden className="t-search-wash" />
       {outlineOverlay}
 
-      <AuditionStrip surface="monologues" />
-
       {/* The search head.
           
           One height in every state, which is the whole point: the direction
@@ -1962,6 +1960,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </div>
         </div>
       </div>
+
+      <AuditionStrip surface="monologues" />
 
       <div>
         {/* The search box.

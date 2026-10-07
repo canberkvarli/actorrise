@@ -852,9 +852,10 @@ export default function ProfileOnboardingFlow({
                 onKeep={keepPicks}
                 onClose={endFlow}
                 onBrowse={() => { endFlow(); router.push("/monologues"); }}
-                // A real audition's sides go through the tracker now: same
+                onOwnSides={() => { endFlow(); router.push("/practice"); }}
+                // A real audition's sides go through the tracker: same
                 // ScenePartner upload, plus the date and the reminders.
-                onOwnSides={() => { endFlow(); router.push("/auditions?new=1&from=onboarding"); }}
+                onAuditionSides={() => { endFlow(); router.push("/auditions?new=1&from=onboarding"); }}
                 onCollection={goToCollection}
               />
             </motion.div>
@@ -948,6 +949,7 @@ function OnboardingPayoff({
   onBrowse,
   onClose,
   onOwnSides,
+  onAuditionSides,
   onCollection,
 }: {
   answers: OnboardingAnswers;
@@ -957,6 +959,7 @@ function OnboardingPayoff({
   onBrowse: () => void;
   onClose: () => void;
   onOwnSides: () => void;
+  onAuditionSides: () => void;
   onCollection: () => void;
 }) {
   const summary = describeAnswers(answers);
@@ -1185,7 +1188,7 @@ function OnboardingPayoff({
             icon={<><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>}
           />
           <WayOn
-            onClick={leave("sides", onOwnSides)}
+            onClick={leave("sides", onAuditionSides)}
             busy={going === "sides"}
             dimmed={!!going && going !== "sides"}
             title="Bring your own sides"
