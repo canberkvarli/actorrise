@@ -10,6 +10,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from urllib.parse import urlencode
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
@@ -63,18 +64,40 @@ def scope_of(a: Audition, now: datetime) -> str:
     return "past"
 
 
+_NOT_NULL = ("project", "kind", "status", "tz", "reminders_on")  # None means "leave it / use the default"
+
+
 def _clean(data: dict[str, Any]) -> dict[str, Any]:
-    out = {k: v for k, v in data.items() if k in EDITABLE}
+    out = {k: v for k, v in data.items() if k in EDITABLE and not (v is None and k in _NOT_NULL)}
     for k, v in list(out.items()):
         if isinstance(v, str):
             out[k] = v.strip() or None
+    if "project" in out and not out["project"]:
+        raise ValueError("project is required")
+    for k in ("kind", "status", "tz"):
+        if k in out and out[k] is None:
+            del out[k]  # blank string: same as not sent
     if "kind" in out and out["kind"] not in KINDS:
         raise ValueError(f"kind must be one of {KINDS}")
     if "status" in out and out["status"] not in STATUSES:
         raise ValueError(f"status must be one of {STATUSES}")
-    if "project" in out and not out["project"]:
-        raise ValueError("project is required")
+    if "tz" in out:
+        try:
+            ZoneInfo(out["tz"])
+        except Exception:
+            raise ValueError("tz must be an IANA timezone name")
     return out
+
+
+def _check_script(db: Session, user_id: int, fields: dict[str, Any]) -> None:
+    sid = fields.get("user_script_id")
+    if sid is None:
+        return
+    from app.models.actor import UserScript
+
+    owned = db.query(UserScript.id).filter(UserScript.id == sid, UserScript.user_id == user_id).first()
+    if owned is None:
+        raise ValueError("user_script_id must be one of your scripts")
 
 
 def _event(db: Session, a: Audition, kind: str, data: Optional[dict] = None) -> None:
@@ -89,6 +112,7 @@ def create_audition(
     fields = _clean(data)
     if not fields.get("project"):
         raise ValueError("project is required")
+    _check_script(db, user_id, fields)
     fields.setdefault("kind", "in_person")
     fields.setdefault("tz", "UTC")
     if "status" not in fields:
@@ -112,6 +136,7 @@ def create_audition(
 
 def update_audition(db: Session, a: Audition, changes: dict[str, Any]) -> Audition:
     fields = _clean(changes)
+    _check_script(db, a.user_id, fields)
     old_status = a.status
     for k, v in fields.items():
         setattr(a, k, v)
@@ -208,7 +233,7 @@ def pieces_for(db: Session, a: Audition) -> list[AuditionPiece]:
     return db.query(AuditionPiece).filter_by(audition_id=a.id).order_by(AuditionPiece.id).all()
 
 
-def count_runs(db: Session, a: Audition) -> tuple[int, Optional[datetime]]:
+def count_runs(db: Session, a: Audition, pieces: list[AuditionPiece]) -> tuple[int, Optional[datetime]]:
     """Completed ScenePartner runs on the sides, plus Monologue Work starts on the
     linked pieces, since the audition was added. Imports inside: the actor models
     carry Postgres-only columns, and tests patch this function out."""
@@ -229,7 +254,7 @@ def count_runs(db: Session, a: Audition) -> tuple[int, Optional[datetime]]:
             )
         )
         stamps += [aware(r[0]) for r in q.all()]
-    mono_ids = {p.monologue_id for p in pieces_for(db, a) if p.monologue_id}
+    mono_ids = {p.monologue_id for p in pieces if p.monologue_id}
     if mono_ids:
         rows = (
             db.query(UserEvent.created_at, UserEvent.properties)
@@ -276,7 +301,7 @@ def serialize(db: Session, a: Audition, now: datetime, *, with_prep: bool = True
         "pieces": [{"id": p.id, "monologue_id": p.monologue_id, "scene_id": p.scene_id, "used": p.used} for p in pieces],
     }
     if with_prep:
-        runs, last = count_runs(db, a)
+        runs, last = count_runs(db, a, pieces)
         out["prep"] = {"runs": runs, "last_run_at": _iso(last),
                        "steps": build_prep_steps(a, runs=runs, piece_count=len(pieces))}
     return out

@@ -182,6 +182,58 @@ class CoreTests(unittest.TestCase):
             core.add_piece(self.db, a, monologue_id=1, scene_id=2)
         self.assertEqual(self.db.query(AuditionPiece).count(), 1)
 
+    def test_none_for_defaulted_fields_uses_defaults(self):
+        a = core.create_audition(
+            self.db, self.user.id,
+            {"project": "P", "status": None, "kind": None, "tz": None, "reminders_on": None, "role": None},
+            source="manual", now=NOW,
+        )
+        self.assertEqual((a.status, a.kind, a.tz, a.reminders_on), ("submitted", "in_person", "UTC", True))
+
+    def test_patch_with_null_leaves_fields_alone(self):
+        a = self._make(starts_at=NOW + timedelta(days=2))
+        core.update_audition(self.db, a, {"status": None, "tz": "", "reminders_on": None, "project": None, "location": None})
+        self.assertEqual((a.status, a.tz, a.reminders_on, a.project), ("scheduled", "America/New_York", True, "The Glass Menagerie"))
+
+    def test_bad_tz_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self._make(tz="Mars/Olympus")
+
+    def test_script_must_belong_to_owner(self):
+        mine = UserScript(user_id=self.user.id, title="m", author="x", original_filename="m.pdf", file_path="m", file_type="pdf", file_size_bytes=1, raw_text="x")
+        theirs = UserScript(user_id=self.other.id, title="t", author="x", original_filename="t.pdf", file_path="t", file_type="pdf", file_size_bytes=1, raw_text="x")
+        self.db.add_all([mine, theirs])
+        self.db.commit()
+        a = self._make(user_script_id=mine.id)
+        self.assertEqual(a.user_script_id, mine.id)
+        with self.assertRaises(ValueError):
+            self._make(user_script_id=theirs.id)
+        with self.assertRaises(ValueError):
+            core.update_audition(self.db, a, {"user_script_id": theirs.id})
+
+    def test_list_scope_filter_and_order(self):
+        self._make(project="Up2", starts_at=NOW + timedelta(days=5))
+        self._make(project="Up1", starts_at=NOW + timedelta(days=1))
+        self._make(project="WOld", starts_at=NOW - timedelta(days=30))
+        self._make(project="WNew", starts_at=NOW - timedelta(days=2))
+        self._make(project="Past", starts_at=NOW - timedelta(days=90))
+        names = lambda scope=None: [a.project for a in core.list_auditions(self.db, self.user.id, NOW, scope)]
+        self.assertEqual(names(), ["Up1", "Up2", "WNew", "WOld", "Past"])
+        self.assertEqual(names("waiting"), ["WNew", "WOld"])
+        self.assertEqual(names("past"), ["Past"])
+
+    def test_serialize_with_prep(self):
+        a = self._make(material_raw="1 min comedic", starts_at=NOW + timedelta(days=1))
+        core.add_piece(self.db, a, monologue_id=3)
+        with mock.patch.object(core, "count_runs", lambda db, aud, pieces: (len(pieces), NOW)):
+            out = core.serialize(self.db, a, NOW)
+        self.assertEqual(out["scope"], "upcoming")
+        self.assertEqual(out["pieces"][0]["monologue_id"], 3)
+        self.assertEqual(out["prep"]["runs"], 1)
+        self.assertEqual([s["key"] for s in out["prep"]["steps"]], ["piece"])
+        self.assertTrue(out["prep"]["steps"][0]["done"])
+        self.assertNotIn("prep", core.serialize(self.db, a, NOW, with_prep=False))
+
 
 class PrepStepTests(unittest.TestCase):
     def _a(self, **kw):
