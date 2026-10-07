@@ -20,6 +20,7 @@ from app.api.admin.users import router as admin_users_router
 from app.api.admin.organizations import router as admin_organizations_router
 from app.api.admin.pulse import router as admin_pulse_router
 from app.api.audition import router as audition_router
+from app.api.auditions import router as auditions_router
 from app.api.community import router as community_router
 from app.api.monologue_work import router as monologue_work_router
 from app.api.auth import router as auth_router
@@ -492,6 +493,7 @@ app.include_router(scenes_router)
 app.include_router(speech_router)
 app.include_router(scripts_router)
 app.include_router(audition_router)
+app.include_router(auditions_router)
 app.include_router(monologue_work_router)
 app.include_router(community_router)
 app.include_router(tapes_router)

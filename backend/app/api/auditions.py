@@ -1,0 +1,259 @@
+"""/api/auditions: the audition tracker.
+
+Plain REST and plain JSON so Ghost Light can use the same endpoints later.
+Static paths are declared before /{audition_id}, which would otherwise swallow
+"next" and "parse" and answer 422.
+"""
+
+import os
+import secrets
+from datetime import datetime, timedelta, timezone
+from typing import Any, Optional
+
+from fastapi.concurrency import run_in_threadpool
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi.responses import RedirectResponse
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from app.api.auth import get_current_user
+from app.core.database import get_db
+from app.models.audition import Audition
+from app.models.user import User
+from app.services.auditions import core, ics, parse
+from app.services.events import record_user_event
+
+router = APIRouter(prefix="/api/auditions", tags=["auditions"])
+
+SITE_URL = os.getenv("SITE_URL", "https://actorrise.com")
+API_PUBLIC_URL = os.getenv("API_PUBLIC_URL", "https://api.actorrise.com")
+
+
+CALENDAR_PAST_DAYS = 30
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+class AuditionIn(BaseModel):
+    project: str = Field(min_length=1, max_length=200)
+    role: Optional[str] = Field(None, max_length=200)
+    kind: str = "in_person"
+    status: Optional[str] = None
+    starts_at: Optional[datetime] = None
+    due_at: Optional[datetime] = None
+    tz: str = Field("UTC", max_length=64)
+    location: Optional[str] = Field(None, max_length=300)
+    casting: Optional[str] = Field(None, max_length=200)
+    material_raw: Optional[str] = Field(None, max_length=300)
+    material: Optional[dict[str, Any]] = None
+    bring: Optional[str] = Field(None, max_length=300)
+    notes: Optional[str] = Field(None, max_length=4000)
+    tape_link: Optional[str] = Field(None, max_length=500)
+    user_script_id: Optional[int] = None
+    reminders_on: bool = True
+    source: str = "manual"
+
+
+class AuditionPatch(BaseModel):
+    project: Optional[str] = Field(None, max_length=200)
+    role: Optional[str] = Field(None, max_length=200)
+    kind: Optional[str] = None
+    status: Optional[str] = None
+    starts_at: Optional[datetime] = None
+    due_at: Optional[datetime] = None
+    tz: Optional[str] = Field(None, max_length=64)
+    location: Optional[str] = Field(None, max_length=300)
+    casting: Optional[str] = Field(None, max_length=200)
+    material_raw: Optional[str] = Field(None, max_length=300)
+    material: Optional[dict[str, Any]] = None
+    bring: Optional[str] = Field(None, max_length=300)
+    notes: Optional[str] = Field(None, max_length=4000)
+    tape_link: Optional[str] = Field(None, max_length=500)
+    user_script_id: Optional[int] = None
+    reminders_on: Optional[bool] = None
+
+
+class PieceIn(BaseModel):
+    monologue_id: Optional[int] = None
+    scene_id: Optional[int] = None
+
+
+class OutcomeIn(BaseModel):
+    outcome: str
+
+
+def _owned(db: Session, user: User, audition_id: int) -> Audition:
+    a = core.get_owned(db, int(user.id), audition_id)
+    if a is None:
+        raise HTTPException(status_code=404, detail="Audition not found")
+    return a
+
+
+# ---------- static paths first ----------
+
+
+@router.get("/next")
+def get_next(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    now = _now()
+    a = core.next_upcoming(db, int(user.id), now)
+    return {"audition": core.serialize(db, a, now, with_prep=False) if a else None}
+
+
+@router.get("/quota")
+def get_quota(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    return parse.quota(db, int(user.id), _now())
+
+
+@router.post("/parse")
+async def parse_breakdown(
+    text: Optional[str] = Form(None),
+    tz: str = Form("UTC"),
+    file: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    now = _now()
+    q = parse.quota(db, int(user.id), now)
+    if q["remaining"] == 0:
+        raise HTTPException(status_code=403, detail={"error": "audition_parse_quota", "quota": q})
+    body = (text or "").strip()
+    has_pdf = False
+    if file is not None and file.filename:
+        if not file.filename.lower().endswith(".pdf"):
+            raise HTTPException(status_code=400, detail="Sides must be a PDF")
+        content = await file.read()
+        if len(content) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+        has_pdf = True
+        header = parse.header_text_from_pdf(content)
+        body = f"{body}\n\n[First pages of the sides]\n{header}".strip()
+    if not body:
+        raise HTTPException(status_code=400, detail="Paste the notice or drop the sides")
+    record_user_event(int(user.id), "audition_parse_requested", {"has_pdf": has_pdf, "has_text": bool(text)})
+    result = await run_in_threadpool(parse.parse_notice, body, now, tz)
+    if not result["ok"]:
+        record_user_event(int(user.id), "audition_parse_failed", {"reason": "model"})
+    result["quota"] = parse.quota(db, int(user.id), now)
+    return result
+
+
+@router.get("/calendar-link")
+def get_calendar_link(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    if not user.calendar_feed_key:
+        user.calendar_feed_key = secrets.token_urlsafe(24)
+        db.commit()
+    return {"url": f"{API_PUBLIC_URL}/api/auditions/calendar.ics?k={user.calendar_feed_key}"}
+
+
+@router.post("/calendar-link/reset")
+def reset_calendar_link(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    user.calendar_feed_key = secrets.token_urlsafe(24)
+    db.commit()
+    return {"url": f"{API_PUBLIC_URL}/api/auditions/calendar.ics?k={user.calendar_feed_key}"}
+
+
+@router.get("/calendar.ics")
+def calendar_feed(k: str = Query(..., min_length=10), db: Session = Depends(get_db)):
+    owner = db.query(User).filter(User.calendar_feed_key == k).first()
+    if owner is None:
+        raise HTTPException(status_code=404, detail="Unknown calendar")
+    now = _now()
+    # Subscribed calendars delete events that vanish from the feed, so keep
+    # recent past auditions (last 30 days) alongside upcoming and waiting ones.
+    cutoff = now - timedelta(days=CALENDAR_PAST_DAYS)
+    rows = []
+    for a in core.list_auditions(db, int(owner.id), now):  # excludes deleted
+        w = core.when(a)
+        if core.scope_of(a, now) != "past" or (w is not None and w >= cutoff):
+            rows.append(a)
+    return Response(
+        content=ics.build_calendar(rows, now=now, site=SITE_URL),
+        media_type="text/calendar; charset=utf-8",
+        headers={"Cache-Control": "private, max-age=900"},
+    )
+
+
+@router.get("/outcome/{token}")
+def outcome_from_email(token: str, o: str = Query(...), db: Session = Depends(get_db)):
+    """The three links in the morning-after email. No login: the token is the key."""
+    a = db.query(Audition).filter(Audition.outcome_token == token, Audition.deleted_at.is_(None)).first()
+    if a is None or o not in core.OUTCOMES:
+        return RedirectResponse(f"{SITE_URL}/auditions", status_code=303)
+    core.log_outcome(db, a, o, via="email")
+    return RedirectResponse(f"{SITE_URL}/auditions/{a.id}?logged={o}&ar=after", status_code=303)
+
+
+# ---------- collection ----------
+
+
+@router.get("")
+def list_auditions(
+    scope: Optional[str] = Query(None, pattern="^(upcoming|waiting|past)$"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    now = _now()
+    return [core.serialize(db, a, now) for a in core.list_auditions(db, int(user.id), now, scope)]
+
+
+@router.post("", status_code=201)
+def create(body: AuditionIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    data = body.model_dump(exclude={"source"})
+    try:
+        a = core.create_audition(db, int(user.id), data, source=body.source)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return core.serialize(db, a, _now())
+
+
+# ---------- one audition ----------
+
+
+@router.get("/{audition_id}")
+def get_one(audition_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    return core.serialize(db, _owned(db, user, audition_id), _now())
+
+
+@router.patch("/{audition_id}")
+def patch(audition_id: int, body: AuditionPatch, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    a = _owned(db, user, audition_id)
+    try:
+        core.update_audition(db, a, body.model_dump(exclude_unset=True))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return core.serialize(db, a, _now())
+
+
+@router.delete("/{audition_id}", status_code=204)
+def delete(audition_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    core.delete_audition(db, _owned(db, user, audition_id))
+    return Response(status_code=204)
+
+
+@router.post("/{audition_id}/outcome")
+def outcome_in_app(audition_id: int, body: OutcomeIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    a = _owned(db, user, audition_id)
+    try:
+        core.log_outcome(db, a, body.outcome, via="app")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return core.serialize(db, a, _now())
+
+
+@router.post("/{audition_id}/pieces", status_code=201)
+def add_piece(audition_id: int, body: PieceIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    a = _owned(db, user, audition_id)
+    try:
+        core.add_piece(db, a, monologue_id=body.monologue_id, scene_id=body.scene_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return core.serialize(db, a, _now())
+
+
+@router.delete("/{audition_id}/pieces/{piece_id}", status_code=204)
+def remove_piece(audition_id: int, piece_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    if not core.remove_piece(db, _owned(db, user, audition_id), piece_id):
+        raise HTTPException(status_code=404, detail="Piece not found")
+    return Response(status_code=204)
