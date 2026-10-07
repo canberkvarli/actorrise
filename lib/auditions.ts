@@ -40,7 +40,8 @@ export type Draft = {
   location: DraftField; casting: DraftField; material_raw: DraftField; bring: DraftField; notes: DraftField;
   material: Record<string, unknown> | null;
 };
-export type ParseResult = { ok: boolean; draft: Draft; quota: { used: number | null; limit: number | null; remaining: number | null } };
+export type AuditionQuota = { used: number; limit: number; remaining: number; tier: "free" | "plus" | "pro" };
+export type ParseResult = { ok: boolean; draft: Draft; quota: AuditionQuota };
 
 export const STATUS_ORDER: AuditionStatus[] = ["submitted", "scheduled", "callback", "booked", "pinned", "passed"];
 export const STATUS_LABEL: Record<AuditionStatus, string> = {

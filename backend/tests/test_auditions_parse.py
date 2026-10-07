@@ -134,7 +134,7 @@ class QuotaTests(unittest.TestCase):
         self.db.commit()
 
     def test_free_gets_five_a_calendar_month(self):
-        with mock.patch.object(parse, "_is_paid", lambda db, uid: False):
+        with mock.patch.object(parse, "_tier", lambda db, uid: "free"):
             self._use(4, NOW - timedelta(days=1))
             self._use(9, datetime(2026, 9, 28, tzinfo=timezone.utc))  # last month, does not count
             q = parse.quota(self.db, self.user.id, NOW)
@@ -145,28 +145,30 @@ class QuotaTests(unittest.TestCase):
     def test_month_start_is_utc(self):
         # 23:30 on Sept 30 in New York is already Oct 1 in UTC
         ny = timezone(timedelta(hours=-4))
-        with mock.patch.object(parse, "_is_paid", lambda db, uid: False):
+        with mock.patch.object(parse, "_tier", lambda db, uid: "free"):
             self._use(2, datetime(2026, 10, 1, 1, tzinfo=timezone.utc))
             q = parse.quota(self.db, self.user.id, datetime(2026, 9, 30, 21, 30, tzinfo=ny))
             self.assertEqual(q["used"], 2)
 
-    def test_paid_is_unlimited(self):
-        with mock.patch.object(parse, "_is_paid", lambda db, uid: True):
-            self._use(40, NOW)
-            q = parse.quota(self.db, self.user.id, NOW)
-            self.assertIsNone(q["limit"])
-            self.assertIsNone(q["remaining"])
+    def test_plus_gets_thirty_and_pro_a_hundred(self):
+        self._use(31, NOW)
+        for tier, limit, remaining in (("plus", 30, 0), ("pro", 100, 69)):
+            with mock.patch.object(parse, "_tier", lambda db, uid, t=tier: t):
+                q = parse.quota(self.db, self.user.id, NOW)
+                self.assertEqual((q["tier"], q["limit"], q["remaining"]), (tier, limit, remaining))
 
 
-class IsPaidTests(unittest.TestCase):
+class TierTests(unittest.TestCase):
     def setUp(self):
         from app.models.billing import PricingTier, UserSubscription
 
         self.db, self.saved = memory_db([Organization, User, PricingTier, UserSubscription])
         self.free = PricingTier(name="free", display_name="Free", monthly_price_cents=0, features={})
         self.plus = PricingTier(name="plus", display_name="Plus", monthly_price_cents=1200, features={})
+        self.pro = PricingTier(name="pro", display_name="Pro", monthly_price_cents=2400, features={})
+        self.solo = PricingTier(name="solo", display_name="Solo", monthly_price_cents=700, features={})
         self.user = User(email="p@x.com", supabase_id="p")
-        self.db.add_all([self.free, self.plus, self.user])
+        self.db.add_all([self.free, self.plus, self.pro, self.solo, self.user])
         self.db.commit()
 
     def tearDown(self):
@@ -179,24 +181,32 @@ class IsPaidTests(unittest.TestCase):
         self.db.commit()
 
     def test_no_row(self):
-        self.assertFalse(parse._is_paid(self.db, self.user.id))
+        self.assertEqual(parse._tier(self.db, self.user.id), "free")
 
     def test_free_tier(self):
         self._sub(self.free, status="active")
-        self.assertFalse(parse._is_paid(self.db, self.user.id))
+        self.assertEqual(parse._tier(self.db, self.user.id), "free")
 
     def test_expired_comp(self):
         self._sub(self.plus, status="active", trial_end=datetime.now(timezone.utc) - timedelta(days=1))
-        self.assertFalse(parse._is_paid(self.db, self.user.id))
+        self.assertEqual(parse._tier(self.db, self.user.id), "free")
 
     def test_active_paid(self):
         self._sub(self.plus, status="active", stripe_subscription_id="sub_1")
-        self.assertTrue(parse._is_paid(self.db, self.user.id))
+        self.assertEqual(parse._tier(self.db, self.user.id), "plus")
 
     def test_trialing_paid(self):
         self._sub(self.plus, status="trialing", stripe_subscription_id="sub_2")
-        self.assertTrue(parse._is_paid(self.db, self.user.id))
+        self.assertEqual(parse._tier(self.db, self.user.id), "plus")
 
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_pro(self):
+        self._sub(self.pro, status="active", stripe_subscription_id="sub_3")
+        self.assertEqual(parse._tier(self.db, self.user.id), "pro")
+
+    def test_legacy_solo_reads_as_plus(self):
+        self._sub(self.solo, status="active", stripe_subscription_id="sub_4")
+        self.assertEqual(parse._tier(self.db, self.user.id), "plus")

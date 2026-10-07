@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 
 MAX_TEXT = 12_000
 TIMEOUT_S = 10
-FREE_PARSES_PER_MONTH = 5
+# Founder call: no unlimited reads. Manual entry stays free for everyone.
+PARSES_PER_MONTH = {"free": 5, "plus": 30, "pro": 100}
 FIELDS = ("project", "role", "kind", "starts_at", "due_at", "location", "casting", "material_raw", "bring", "notes")
 MAX_LEN = {"project": 200, "role": 200, "location": 300, "casting": 200, "material_raw": 300, "bring": 300, "notes": 4000}
 
@@ -150,19 +151,26 @@ def header_text_from_pdf(content: bytes) -> str:
         return ""
 
 
-def _is_paid(db: Session, user_id: int) -> bool:
+def _tier(db: Session, user_id: int) -> str:
+    """free, plus or pro. An inactive or expired sub is free; any other paid
+    tier name (a legacy solo, a comp) reads like plus."""
     from app.models.billing import UserSubscription
 
     sub = db.query(UserSubscription).filter(UserSubscription.user_id == user_id).first()
-    return bool(sub and sub.is_active and sub.tier and sub.tier.name != "free")
+    if not (sub and sub.is_active and sub.tier):
+        return "free"
+    name = (sub.tier.name or "").lower()
+    if name == "free":
+        return "free"
+    return "pro" if name == "pro" else "plus"
 
 
 def quota(db: Session, user_id: int, now: datetime) -> dict:
-    """Free: 5 parses per calendar month (UTC), counted off the events table."""
+    """Reads per calendar month (UTC) by tier, counted off the events table."""
     from app.models.user_event import UserEvent
 
-    if _is_paid(db, user_id):
-        return {"used": None, "limit": None, "remaining": None}
+    tier = _tier(db, user_id)
+    limit = PARSES_PER_MONTH[tier]
     start = now.astimezone(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     used = (
         db.query(UserEvent)
@@ -173,4 +181,4 @@ def quota(db: Session, user_id: int, now: datetime) -> dict:
         )
         .count()
     )
-    return {"used": used, "limit": FREE_PARSES_PER_MONTH, "remaining": max(0, FREE_PARSES_PER_MONTH - used)}
+    return {"used": used, "limit": limit, "remaining": max(0, limit - used), "tier": tier}

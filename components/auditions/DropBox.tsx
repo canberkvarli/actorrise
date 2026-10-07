@@ -1,13 +1,23 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { trackEvent } from "@/lib/events";
-import { browserTz, changedFields, type Draft } from "@/lib/auditions";
+import { browserTz, changedFields, type AuditionQuota, type Draft } from "@/lib/auditions";
 import { uploadSides, useCreateAudition, useParseBreakdown } from "@/hooks/useAuditions";
 import { DraftCard, bodyFromValues, valuesFromDraft, type DraftValues } from "./DraftCard";
+
+// First person, no dashes. Free and Plus point at /pricing; Pro has nowhere to go.
+function QuotaLine({ tier, limit }: { tier: AuditionQuota["tier"]; limit: number }) {
+  if (tier === "pro") return <>That&apos;s {limit} this month. Fill this one in yourself and it resets on the 1st.</>;
+  if (tier === "plus") {
+    return <>That&apos;s your {limit} reads this month. <Link href="/pricing" className="underline">Pro reads 100</Link> a month, or fill it in yourself below, that&apos;s always free.</>;
+  }
+  return <>That&apos;s your {limit} reads this month. <Link href="/pricing" className="underline">Plus reads 30</Link> a month, or fill it in yourself below, that&apos;s always free.</>;
+}
 
 type Stage = "idle" | "reading" | "card";
 
@@ -26,7 +36,7 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
   const [stage, setStage] = useState<Stage>(startOpen ? "card" : "idle");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [manual, setManual] = useState(startOpen);
-  const [quotaHit, setQuotaHit] = useState(false);
+  const [quotaHit, setQuotaHit] = useState<Pick<AuditionQuota, "tier" | "limit"> | null>(null);
   const [parsedOk, setParsedOk] = useState(false);
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
@@ -54,8 +64,8 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
       setManual(false);
       if (!res.ok) toast.message("I couldn't read that one. Fill it in and I'll keep your text in the notes.");
     } catch (e) {
-      const err = e as Error & { detail?: { error?: string } };
-      if (err.detail?.error === "audition_parse_quota") setQuotaHit(true);
+      const err = e as Error & { detail?: { error?: string; quota?: AuditionQuota } };
+      if (err.detail?.error === "audition_parse_quota") setQuotaHit({ tier: err.detail.quota?.tier ?? "free", limit: err.detail.quota?.limit ?? 5 });
       else toast.error(errMessage(e));
       setDraft(null);
       setParsedOk(false);
@@ -112,15 +122,20 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
 
   if (stage === "card") {
     return (
+      <>
+      {quotaHit && (
+        <p role="status" className="aud-muted mb-2 text-sm"><QuotaLine {...quotaHit} /></p>
+      )}
       <DraftCard
         draft={manual ? null : draft}
-        quotaHit={quotaHit}
+        quotaHit={false}
         sidesName={file?.name ?? null}
         saving={saving}
         initialNotes={manual || !parsedOk ? text.trim().slice(0, 4000) : ""}
         onSave={save}
         onCancel={cancel}
       />
+      </>
     );
   }
 
@@ -148,14 +163,14 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
       />
       {quotaHit && (
         <p role="status" className="aud-muted mt-2 text-xs">
-          You&apos;re out of free reads this month. Fill it in yourself and it still saves, or go Plus for unlimited reads.
+          <QuotaLine {...quotaHit} />
         </p>
       )}
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={read}
-          disabled={stage === "reading" || quotaHit || (!text.trim() && !file)}
+          disabled={stage === "reading" || !!quotaHit || (!text.trim() && !file)}
           className="bg-primary text-primary-foreground px-3.5 py-1.5 text-sm font-semibold disabled:opacity-50"
         >
           {stage === "reading" ? "Reading it" : "Read it"}
