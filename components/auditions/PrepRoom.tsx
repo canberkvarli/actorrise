@@ -9,6 +9,8 @@ import { trackEvent } from "@/lib/events";
 import { countdown, STATUS_LABEL, STATUS_ORDER, whenLabel, type Audition, type AuditionStatus } from "@/lib/auditions";
 import { useDeleteAudition, useLogOutcome, useUpdateAudition } from "@/hooks/useAuditions";
 import { useScript } from "@/hooks/useScripts";
+import { DraftCard } from "./DraftCard";
+import { patchFromValues, valuesFromAudition, type DraftValues } from "./draftValues";
 
 /** One voice for a logged outcome, whether it came from here or the email (AuditionsShell's ?logged=). */
 export const OUTCOME_NOTE: Record<"good" | "callback" | "no", string> = {
@@ -18,6 +20,11 @@ export const OUTCOME_NOTE: Record<"good" | "callback" | "no", string> = {
 };
 
 const SAVE_FAILED = "That didn't save. Try again in a moment.";
+
+function errMessage(e: unknown): string {
+  const m = (e as { message?: unknown })?.message;
+  return typeof m === "string" && m && !m.startsWith("[object") ? m : "That didn't save. Check the fields and try again.";
+}
 
 export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
   const router = useRouter();
@@ -30,6 +37,8 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
   const del = useDeleteAudition();
   // Which audition the question was answered for this session, so it goes away once answered.
   const [answeredFor, setAnsweredFor] = useState<number | null>(null);
+  // Same trick for the edit form: open for one audition, so picking another ticket closes it.
+  const [editingFor, setEditingFor] = useState<number | null>(null);
   const save = (body: Record<string, unknown>) => update.mutate({ id: a.id, ...body }, { onError: () => toast.error(SAVE_FAILED) });
   // Sides go up in the background, so the script can still be reading when the prep room opens.
   // useScript polls while it is, and /practice handles a reading script on its own.
@@ -45,6 +54,32 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
     if (sidesReading) return "Sides are still loading";
     if (sidesFailed) return "Those sides didn't read. Open them to try again";
     return runs === 0 ? "not run yet" : `${runs} ${runs === 1 ? "run" : "runs"}`;
+  }
+
+  function saveEdit(v: DraftValues) {
+    const patch = patchFromValues(a, v);
+    if (Object.keys(patch).length === 0) { setEditingFor(null); return; }
+    const moved = "starts_at" in patch || "due_at" in patch;
+    update.mutate({ id: a.id, ...patch }, {
+      onSuccess: () => {
+        setEditingFor(null);
+        toast.success(moved && a.reminders_on ? "Fixed. Your reminders moved with the new time." : "Fixed. Thanks for catching that.");
+      },
+      onError: (e) => toast.error(errMessage(e)),
+    });
+  }
+
+  if (editingFor === a.id) {
+    return (
+      <DraftCard
+        draft={null}
+        editing={valuesFromAudition(a)}
+        sidesName={null}
+        saving={update.isPending}
+        onSave={saveEdit}
+        onCancel={() => setEditingFor(null)}
+      />
+    );
   }
 
   return (
@@ -128,6 +163,9 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
             <input type="checkbox" checked={a.reminders_on} onChange={(e) => save({ reminders_on: e.target.checked })} />
             email me about this one
           </label>
+          <button type="button" className="underline underline-offset-2" onClick={() => setEditingFor(a.id)}>
+            fix the details
+          </button>
           {a.tape_link && <a href={a.tape_link} target="_blank" rel="noreferrer" className="underline">tape</a>}
           <button
             type="button"

@@ -2,39 +2,16 @@
 
 import { useId, useState } from "react";
 
-import { fromLocalInput, toLocalInput, KIND_LABEL, type AuditionKind, type Draft } from "@/lib/auditions";
+import { KIND_LABEL, type AuditionKind, type Draft } from "@/lib/auditions";
+import { valuesFromDraft, type DraftValues } from "./draftValues";
 
-export type DraftValues = {
-  project: string; role: string; kind: AuditionKind; when: string; location: string; casting: string;
-  material_raw: string; bring: string; notes: string; tape_link: string;
-};
-
-export function valuesFromDraft(d: Draft | null): DraftValues {
-  const v = (f?: { value: string | null }) => f?.value ?? "";
-  const kind = (d?.kind.value ?? "in_person") as AuditionKind;
-  return {
-    project: v(d?.project), role: v(d?.role), kind,
-    when: toLocalInput(kind === "self_tape" ? d?.due_at.value ?? d?.starts_at.value ?? null : d?.starts_at.value ?? null),
-    location: v(d?.location), casting: v(d?.casting), material_raw: v(d?.material_raw), bring: v(d?.bring),
-    notes: v(d?.notes), tape_link: "",
-  };
-}
-
-export function bodyFromValues(v: DraftValues): Record<string, unknown> {
-  const iso = fromLocalInput(v.when);
-  return {
-    project: v.project.trim(), role: v.role || null, kind: v.kind,
-    starts_at: v.kind === "self_tape" ? null : iso, due_at: v.kind === "self_tape" ? iso : null,
-    location: v.location || null, casting: v.casting || null, material_raw: v.material_raw || null,
-    bring: v.bring || null, notes: v.notes || null, tape_link: v.tape_link || null,
-  };
-}
+export { bodyFromValues, valuesFromDraft, type DraftValues } from "./draftValues";
 
 const LABEL = "aud-dir aud-muted text-[10.5px] uppercase tracking-[0.06em]";
 const INPUT = "aud-field mt-1 w-full border border-[var(--t-line-light)] bg-[var(--t-paper)] px-2.5 py-2 text-sm";
 
 export function DraftCard({
-  draft, initialNotes = "", quotaHit = false, sidesName, saving, onSave, onCancel,
+  draft, initialNotes = "", quotaHit = false, sidesName, saving, onSave, onCancel, editing,
 }: {
   draft: Draft | null;
   initialNotes?: string;
@@ -43,8 +20,11 @@ export function DraftCard({
   saving: boolean;
   onSave: (v: DraftValues) => void;
   onCancel: () => void;
+  /** Edit mode: the saved audition's values. Capture never passes it. */
+  editing?: DraftValues;
 }) {
   const [v, setV] = useState<DraftValues>(() => {
+    if (editing) return editing;
     const base = valuesFromDraft(draft);
     return { ...base, notes: base.notes || initialNotes };
   });
@@ -66,7 +46,7 @@ export function DraftCard({
         if (v.project.trim()) onSave(v);
       }}
     >
-      <p className="aud-title text-2xl">{draft ? "Check what I read" : "Add an audition"}</p>
+      <p className="aud-title text-2xl">{draft ? "Check what I read" : editing ? "Fix the details" : "Add an audition"}</p>
       {quotaHit && (
         <p role="status" className="aud-muted mt-1 text-sm">
           You&apos;re out of free reads this month. Fill it in yourself and it still saves, or go Plus for unlimited reads.
@@ -112,7 +92,7 @@ export function DraftCard({
       {sidesName && <p className="aud-dir aud-muted mt-3 text-xs">Sides: {sidesName}. They&apos;ll load into ScenePartner when you save.</p>}
       <div className="mt-4 flex items-center gap-3">
         <button type="submit" disabled={saving} className="bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold disabled:opacity-60">
-          {saving ? "Saving" : "Save it"}
+          {saving ? "Saving" : editing ? "Save changes" : "Save it"}
         </button>
         <button type="button" onClick={onCancel} className="aud-muted text-sm underline-offset-2 hover:underline">Cancel</button>
       </div>
