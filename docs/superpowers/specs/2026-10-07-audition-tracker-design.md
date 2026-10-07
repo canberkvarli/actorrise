@@ -118,7 +118,7 @@ Steps are one button into existing routes. No new rehearsal UI.
 
 ## Sides into ScenePartner
 
-On save with a PDF, the backend calls the same service the `/api/scripts/upload` route uses, then sets `auditions.user_script_id`. If extraction fails, the audition still saves and the prep step reads "Sides did not load, try again" with a retry. Existing ScenePartner tier limits apply unchanged.
+On save with a PDF, the browser posts it to the existing `/api/scripts/upload-background` (the same call ScenePartner's UploadProvider makes, which returns the script row at once and reads it on a worker thread), then sends the returned id as `user_script_id` when creating the audition. If extraction fails, the audition still saves and the prep step reads "Sides did not load, try again" with a retry. Existing ScenePartner tier limits apply unchanged.
 
 ## Frontend
 
@@ -180,7 +180,7 @@ Rules:
 - Dedupe table `audition_reminder_sends (audition_id, moment)` UNIQUE, claimed before send, as in `lifecycle._claim`.
 - Skip if `reminders_on` is false, the audition is deleted, status is booked/passed, or the user is in `email_do_not_contact`.
 - These are service emails for dates the actor entered, so they are outside the lifecycle 2-per-week cap and do not count toward it.
-- They carry the unsubscribe link (per-audition mute plus a global "stop audition emails" preference), and end on `Canberk`. They are triggered emails in the same family as checkout_abandoned, so no reply-UNSUBSCRIBE line.
+- They carry the unsubscribe link, which files the address in `email_do_not_contact` like every other email, so it stops audition emails too. The per-audition mute covers the softer case. No separate global preference in v1. They end on `Canberk`. They are triggered emails in the same family as checkout_abandoned, so no reply-UNSUBSCRIBE line.
 - Copy lives in `backend/emails/auditions/*.txt` with the same `subject:` first-line format and the same CopyTests enforcement (no dashes, first person, no corporate phrases).
 - Outcome links: `good` keeps status and logs outcome, `callback` sets status callback and opens the prep room to add the new date, `no` sets passed. All write `outcome_logged {via: email}`.
 
