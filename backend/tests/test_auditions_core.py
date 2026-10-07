@@ -101,6 +101,13 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(self.events[0][0], "audition_created")
         self.assertEqual(self.events[0][1]["source"], "manual")
 
+    def test_material_must_be_an_object(self):
+        for bad in ("a string", ["x"], 5):
+            with self.assertRaises(ValueError):
+                self._make(material=bad)
+        self._make(material={"count": 1})
+        self._make(material=None)
+
     def test_create_rejects_bad_kind_and_blank_project(self):
         with self.assertRaises(ValueError):
             self._make(kind="hologram")

@@ -81,6 +81,8 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(f"kind must be one of {KINDS}")
     if "status" in out and out["status"] not in STATUSES:
         raise ValueError(f"status must be one of {STATUSES}")
+    if "material" in out and out["material"] is not None and not isinstance(out["material"], dict):
+        raise ValueError("material must be an object")
     if "tz" in out:
         try:
             ZoneInfo(out["tz"])

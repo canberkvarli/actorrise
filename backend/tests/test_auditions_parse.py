@@ -54,6 +54,40 @@ class NormalizeTests(unittest.TestCase):
         self.assertEqual(len(parse.normalize_draft(raw, NOW, "UTC")["project"]["value"]), 200)
 
 
+class ReviewFixTests(unittest.TestCase):
+    def test_date_only_deadline_is_end_of_day_local(self):
+        raw = dict(BACKSTAGE, due_at={"value": "2026-10-12", "confidence": "high"})
+        d = parse.normalize_draft(raw, NOW, "America/New_York")
+        self.assertEqual(d["due_at"]["value"], "2026-10-13T03:59:00+00:00")  # 23:59 EDT
+        raw = dict(BACKSTAGE, due_at={"value": "2026-10-12T09:00:00", "confidence": "high"})
+        self.assertEqual(parse.normalize_draft(raw, NOW, "UTC")["due_at"]["value"], "2026-10-12T09:00:00+00:00")
+
+    def test_material_is_lowercased_and_bools_rejected(self):
+        raw = dict(BACKSTAGE, material={"length_seconds": True, "genre": "Comedic", "era": " CLASSICAL ", "count": False})
+        self.assertEqual(
+            parse.normalize_draft(raw, NOW, "UTC")["material"],
+            {"length_seconds": None, "genre": "comedic", "era": "classical", "count": None},
+        )
+
+    def test_default_call_bounds_the_client_not_a_thread(self):
+        seen = {}
+
+        class Fake:
+            def invoke(self, prompt):
+                raise TimeoutError("slow")
+
+        def fake_get_llm(**kw):
+            seen.update(kw)
+            return Fake()
+
+        with mock.patch("app.services.ai.langchain.config.get_llm", fake_get_llm):
+            out = parse.parse_notice("CALLBACK", NOW, "UTC")
+        self.assertEqual(seen["timeout"], parse.TIMEOUT_S)
+        self.assertEqual(seen["max_retries"], 0)
+        self.assertFalse(out["ok"])
+        self.assertEqual(out["draft"]["notes"]["value"], "CALLBACK")
+
+
 class ParseNoticeTests(unittest.TestCase):
     def test_good_call(self):
         out = parse.parse_notice("notice", NOW, "UTC", llm_call=lambda prompt: json.dumps(BACKSTAGE))
@@ -108,12 +142,60 @@ class QuotaTests(unittest.TestCase):
             self._use(1, NOW)
             self.assertEqual(parse.quota(self.db, self.user.id, NOW)["remaining"], 0)
 
+    def test_month_start_is_utc(self):
+        # 23:30 on Sept 30 in New York is already Oct 1 in UTC
+        ny = timezone(timedelta(hours=-4))
+        with mock.patch.object(parse, "_is_paid", lambda db, uid: False):
+            self._use(2, datetime(2026, 10, 1, 1, tzinfo=timezone.utc))
+            q = parse.quota(self.db, self.user.id, datetime(2026, 9, 30, 21, 30, tzinfo=ny))
+            self.assertEqual(q["used"], 2)
+
     def test_paid_is_unlimited(self):
         with mock.patch.object(parse, "_is_paid", lambda db, uid: True):
             self._use(40, NOW)
             q = parse.quota(self.db, self.user.id, NOW)
             self.assertIsNone(q["limit"])
             self.assertIsNone(q["remaining"])
+
+
+class IsPaidTests(unittest.TestCase):
+    def setUp(self):
+        from app.models.billing import PricingTier, UserSubscription
+
+        self.db, self.saved = memory_db([Organization, User, PricingTier, UserSubscription])
+        self.free = PricingTier(name="free", display_name="Free", monthly_price_cents=0, features={})
+        self.plus = PricingTier(name="plus", display_name="Plus", monthly_price_cents=1200, features={})
+        self.user = User(email="p@x.com", supabase_id="p")
+        self.db.add_all([self.free, self.plus, self.user])
+        self.db.commit()
+
+    def tearDown(self):
+        restore(self.saved)
+
+    def _sub(self, tier, **kw):
+        from app.models.billing import UserSubscription
+
+        self.db.add(UserSubscription(user_id=self.user.id, tier_id=tier.id, **kw))
+        self.db.commit()
+
+    def test_no_row(self):
+        self.assertFalse(parse._is_paid(self.db, self.user.id))
+
+    def test_free_tier(self):
+        self._sub(self.free, status="active")
+        self.assertFalse(parse._is_paid(self.db, self.user.id))
+
+    def test_expired_comp(self):
+        self._sub(self.plus, status="active", trial_end=datetime.now(timezone.utc) - timedelta(days=1))
+        self.assertFalse(parse._is_paid(self.db, self.user.id))
+
+    def test_active_paid(self):
+        self._sub(self.plus, status="active", stripe_subscription_id="sub_1")
+        self.assertTrue(parse._is_paid(self.db, self.user.id))
+
+    def test_trialing_paid(self):
+        self._sub(self.plus, status="trialing", stripe_subscription_id="sub_2")
+        self.assertTrue(parse._is_paid(self.db, self.user.id))
 
 
 if __name__ == "__main__":

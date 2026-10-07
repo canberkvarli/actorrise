@@ -42,7 +42,9 @@ def get_llm(
     model: str = "gpt-4o-mini",
     temperature: float = 0.3,
     api_key: Optional[str] = None,
-    use_json_format: bool = False
+    use_json_format: bool = False,
+    timeout: Optional[float] = None,
+    max_retries: Optional[int] = None,
 ) -> BaseChatModel:
     """
     Get a configured ChatOpenAI instance.
@@ -52,6 +54,8 @@ def get_llm(
         temperature: Sampling temperature (0.0-2.0)
         api_key: Optional OpenAI API key (defaults to OPENAI_API_KEY env var)
         use_json_format: If True, force JSON output format (requires "json" in prompts)
+        timeout: Optional per-request timeout in seconds
+        max_retries: Optional retry count (library default when None)
 
     Returns:
         Configured ChatOpenAI instance
@@ -64,7 +68,11 @@ def get_llm(
     
     if use_json_format:
         kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
-    
+    if timeout is not None:
+        kwargs["timeout"] = timeout
+    if max_retries is not None:
+        kwargs["max_retries"] = max_retries
+
     return ChatOpenAI(**kwargs)
 
 

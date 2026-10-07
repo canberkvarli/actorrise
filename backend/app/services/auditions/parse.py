@@ -10,9 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import TimeoutError as FutureTimeout
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import Any, Callable, Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -55,13 +53,15 @@ def _field(raw: Any) -> tuple[Any, str]:
     return raw.get("value"), conf
 
 
-def _date(value: Any, conf: str, now: datetime, zone: ZoneInfo) -> dict:
+def _date(value: Any, conf: str, now: datetime, zone: ZoneInfo, end_of_day: bool = False) -> dict:
     if not isinstance(value, str) or not value.strip():
         return {"value": None, "confidence": conf if value is None else "low"}
     try:
         dt = datetime.fromisoformat(value.strip())
     except ValueError:
         return {"value": None, "confidence": "low"}
+    if end_of_day and len(value.strip()) <= 10:
+        dt = datetime.combine(dt.date(), time(23, 59))  # a deadline with no time means end of that day
     dt = dt.replace(tzinfo=zone) if dt.tzinfo is None else dt
     dt = dt.astimezone(timezone.utc)
     if dt < now - timedelta(days=1) or dt > now + timedelta(days=548):
@@ -91,14 +91,21 @@ def normalize_draft(raw: dict, now: datetime, tz: str) -> dict:
     d["kind"] = {"value": kind, "confidence": conf} if kind in KINDS else {"value": "in_person", "confidence": "low"}
     for f in ("starts_at", "due_at"):
         value, conf = _field(raw.get(f))
-        d[f] = _date(value, conf, now, zone)
+        d[f] = _date(value, conf, now, zone, end_of_day=(f == "due_at"))
     m = raw.get("material")
     if isinstance(m, dict):
+        def _int(v):
+            return v if isinstance(v, int) and not isinstance(v, bool) else None
+
+        def _word(v, allowed):
+            v = v.strip().lower() if isinstance(v, str) else None
+            return v if v in allowed else None
+
         d["material"] = {
-            "length_seconds": m.get("length_seconds") if isinstance(m.get("length_seconds"), int) else None,
-            "genre": m.get("genre") if m.get("genre") in ("comedic", "dramatic") else None,
-            "era": m.get("era") if m.get("era") in ("contemporary", "classical") else None,
-            "count": m.get("count") if isinstance(m.get("count"), int) else None,
+            "length_seconds": _int(m.get("length_seconds")),
+            "genre": _word(m.get("genre"), ("comedic", "dramatic")),
+            "era": _word(m.get("era"), ("contemporary", "classical")),
+            "count": _int(m.get("count")),
         }
     return d
 
@@ -106,9 +113,10 @@ def normalize_draft(raw: dict, now: datetime, tz: str) -> dict:
 def _default_llm_call(prompt: str) -> str:
     from app.services.ai.langchain.config import get_llm
 
-    llm = get_llm(model="gpt-4o-mini", temperature=0, use_json_format=True)
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        return pool.submit(lambda: llm.invoke(prompt).content).result(timeout=TIMEOUT_S)
+    # The timeout lives on the client itself: a thread pool cannot cancel a hung
+    # call, and leaving its `with` block would wait for it.
+    llm = get_llm(model="gpt-4o-mini", temperature=0, use_json_format=True, timeout=TIMEOUT_S, max_retries=0)
+    return llm.invoke(prompt).content
 
 
 def parse_notice(
@@ -125,7 +133,7 @@ def parse_notice(
                 return {"ok": True, "draft": normalize_draft(raw, now, tz)}
         except (json.JSONDecodeError, TypeError):
             continue
-        except (FutureTimeout, Exception) as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
             logger.warning("audition parse failed: %s", exc)
             break
     return {"ok": False, "draft": empty_draft(text)}
@@ -155,7 +163,7 @@ def quota(db: Session, user_id: int, now: datetime) -> dict:
 
     if _is_paid(db, user_id):
         return {"used": None, "limit": None, "remaining": None}
-    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    start = now.astimezone(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     used = (
         db.query(UserEvent)
         .filter(
