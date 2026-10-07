@@ -1,0 +1,11 @@
+subject: {project} is {days_phrase}
+
+hey {name},
+
+{project}{role_line} is {when_phrase}. {step_line}
+
+{link}
+
+i'll send one more note the night before.
+
+canberk

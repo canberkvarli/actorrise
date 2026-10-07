@@ -1,0 +1,15 @@
+subject: how did {project} go?
+
+hey {name},
+
+how did it go? one tap and i'll keep track of it for you.
+
+felt good: {good}
+
+got a callback: {callback}
+
+not this time: {no}
+
+whatever happened, the next one goes on the rail too.
+
+canberk
