@@ -30,6 +30,15 @@ SITE_URL = os.getenv("SITE_URL", "https://actorrise.com")
 API_PUBLIC_URL = os.getenv("API_PUBLIC_URL", "https://api.actorrise.com")
 
 
+def require_moderator(user: User = Depends(get_current_user)) -> User:
+    """Moderators only while Canberk tries the tracker (same check as the admin
+    routers). The public token routes (email outcome links, calendar.ics?k=)
+    stay open; only a moderator can hold a token anyway."""
+    if not user.is_moderator:
+        raise HTTPException(status_code=403, detail="You do not have moderator permissions")
+    return user
+
+
 CALENDAR_PAST_DAYS = 30
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
@@ -97,14 +106,14 @@ def _owned(db: Session, user: User, audition_id: int) -> Audition:
 
 
 @router.get("/next")
-def get_next(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_next(db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     now = _now()
     a = core.next_upcoming(db, int(user.id), now)
     return {"audition": core.serialize(db, a, now, with_prep=False) if a else None}
 
 
 @router.get("/quota")
-def get_quota(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_quota(db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     return parse.quota(db, int(user.id), _now())
 
 
@@ -114,7 +123,7 @@ async def parse_breakdown(
     tz: str = Form("UTC"),
     file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_moderator),
 ):
     # Every DB call and the PDF read run in a worker thread: on the event loop
     # they block the whole API (see the comment in app/api/scripts.py).
@@ -147,7 +156,7 @@ async def parse_breakdown(
 
 
 @router.get("/calendar-link")
-def get_calendar_link(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_calendar_link(db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     if not user.calendar_feed_key:
         user.calendar_feed_key = secrets.token_urlsafe(24)
         db.commit()
@@ -155,7 +164,7 @@ def get_calendar_link(db: Session = Depends(get_db), user: User = Depends(get_cu
 
 
 @router.post("/calendar-link/reset")
-def reset_calendar_link(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def reset_calendar_link(db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     user.calendar_feed_key = secrets.token_urlsafe(24)
     db.commit()
     return {"url": f"{API_PUBLIC_URL}/api/auditions/calendar.ics?k={user.calendar_feed_key}"}
@@ -243,14 +252,14 @@ def outcome_from_email(
 def list_auditions(
     scope: Optional[str] = Query(None, pattern="^(upcoming|waiting|past)$"),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_moderator),
 ):
     now = _now()
     return [core.serialize(db, a, now) for a in core.list_auditions(db, int(user.id), now, scope)]
 
 
 @router.post("", status_code=201)
-def create(body: AuditionIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def create(body: AuditionIn, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     data = body.model_dump(exclude={"source"})
     try:
         a = core.create_audition(db, int(user.id), data, source=body.source)
@@ -263,12 +272,12 @@ def create(body: AuditionIn, db: Session = Depends(get_db), user: User = Depends
 
 
 @router.get("/{audition_id}")
-def get_one(audition_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_one(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     return core.serialize(db, _owned(db, user, audition_id), _now())
 
 
 @router.patch("/{audition_id}")
-def patch(audition_id: int, body: AuditionPatch, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def patch(audition_id: int, body: AuditionPatch, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     a = _owned(db, user, audition_id)
     try:
         core.update_audition(db, a, body.model_dump(exclude_unset=True))
@@ -278,13 +287,13 @@ def patch(audition_id: int, body: AuditionPatch, db: Session = Depends(get_db), 
 
 
 @router.delete("/{audition_id}", status_code=204)
-def delete(audition_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def delete(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     core.delete_audition(db, _owned(db, user, audition_id))
     return Response(status_code=204)
 
 
 @router.post("/{audition_id}/outcome")
-def outcome_in_app(audition_id: int, body: OutcomeIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def outcome_in_app(audition_id: int, body: OutcomeIn, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     a = _owned(db, user, audition_id)
     try:
         core.log_outcome(db, a, body.outcome, via="app")
@@ -294,7 +303,7 @@ def outcome_in_app(audition_id: int, body: OutcomeIn, db: Session = Depends(get_
 
 
 @router.post("/{audition_id}/pieces", status_code=201)
-def add_piece(audition_id: int, body: PieceIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def add_piece(audition_id: int, body: PieceIn, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     a = _owned(db, user, audition_id)
     try:
         core.add_piece(db, a, monologue_id=body.monologue_id, scene_id=body.scene_id)
@@ -304,7 +313,7 @@ def add_piece(audition_id: int, body: PieceIn, db: Session = Depends(get_db), us
 
 
 @router.delete("/{audition_id}/pieces/{piece_id}", status_code=204)
-def remove_piece(audition_id: int, piece_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def remove_piece(audition_id: int, piece_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     if not core.remove_piece(db, _owned(db, user, audition_id), piece_id):
         raise HTTPException(status_code=404, detail="Piece not found")
     return Response(status_code=204)

@@ -22,9 +22,8 @@ export default function LoginPage() {
         {/* Three options: Google, Apple, Sign in with email (expandable).
             A returning sign-in lands on the Collection — the saved pieces they
             came back for (H-14 retention). ?redirect= still wins for deep
-            links (a Green Room invite, checkout). New signups keep /practice.
-            Since the audition tracker, /auditions/next decides: the prep room when one is inside 14 days, else the Collection. */}
-        <AuthProgressiveDisclosure mode="login" redirectTo="/auditions/next" />
+            links (a Green Room invite, checkout). New signups keep /practice. */}
+        <AuthProgressiveDisclosure mode="login" redirectTo="/rehearse" />
       </TheatreAuthShell>
     </>
   );

@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { trackEvent } from "@/lib/events";
 import { useAuditions } from "@/hooks/useAuditions";
+import { useAuth } from "@/lib/auth";
 
 const KEY = "aud-strip-dismissed";
 
@@ -16,7 +17,10 @@ const KEY = "aud-strip-dismissed";
  * fetch, so hosts place it below their fixed content and it fades in.
  */
 export function AuditionStrip({ surface }: { surface: "rehearse" | "monologues" }) {
-  const { data } = useAuditions();
+  // Moderators only while Canberk tries the tracker: no query, no strip for anyone else.
+  const { user } = useAuth();
+  const isModerator = !!user?.is_moderator;
+  const { data } = useAuditions(isModerator);
   const [hidden, setHidden] = useState(true);
   const [shown, setShown] = useState(false);
   useEffect(() => {
@@ -32,7 +36,7 @@ export function AuditionStrip({ surface }: { surface: "rehearse" | "monologues" 
     const id = requestAnimationFrame(() => setShown(true));
     return () => cancelAnimationFrame(id);
   }, [visible]);
-  if (hidden || !data || data.some((a) => a.scope === "upcoming")) return null;
+  if (!isModerator || hidden || !data || data.some((a) => a.scope === "upcoming")) return null;
   return (
     <div className={`mt-4 flex items-center justify-between gap-3 text-sm transition-opacity duration-500 motion-reduce:transition-none ${shown ? "opacity-100" : "opacity-0"}`}
       style={{ color: "var(--t-text)" }}>

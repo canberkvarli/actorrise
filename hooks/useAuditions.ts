@@ -25,10 +25,11 @@ async function multipart<T>(path: string, form: FormData): Promise<T> {
   return body as T;
 }
 
-export function useAuditions() {
+export function useAuditions(enabled = true) {
   return useQuery<Audition[]>({
     queryKey: KEY,
     queryFn: async () => (await api.get<Audition[]>("/api/auditions")).data,
+    enabled,
     staleTime: 30_000,
   });
 }
