@@ -73,7 +73,7 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
       if (file) {
         if (scriptId.current == null) scriptId.current = await uploadSides(file);
         if (scriptId.current != null) body.user_script_id = scriptId.current;
-        else toast.message("The sides didn't load into ScenePartner. You can add them from the prep room.");
+        else toast.message("Your audition is saved, but the sides didn't load. You can upload them in ScenePartner.");
       }
       const parsed = draft && !manual && parsedOk ? draft : null;
       if (parsed?.material && v.material_raw === valuesFromDraft(parsed).material_raw) body.material = parsed.material;

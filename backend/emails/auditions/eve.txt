@@ -4,7 +4,7 @@ hey {name},
 
 {tomorrow_line}{bring_line}
 
-{runs_line} one more run before bed: {link}
+{runs_line} {link}
 
 break a leg.
 

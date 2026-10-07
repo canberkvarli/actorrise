@@ -240,6 +240,19 @@ class CopyTests(unittest.TestCase):
                 self.assertNotIn("unsubscribe", plain.lower())
                 self.assertIn("https://actorrise.com/unsubscribe?t=1", html)
 
+    def test_eve_run_line_only_claims_runs_when_something_is_linked(self):
+        def eve(a, runs):
+            _, _, plain = reminders.render(a, "eve", "Maya", runs=runs, unsubscribe_url=None,
+                                           now=utc(2026, 10, 8, 23, 0), has_material=None)
+            return next(ln for ln in plain.splitlines() if "http" in ln and "ar=eve" in ln)
+        self.assertEqual(eve(aud(), 0), "if you have a minute tonight, open your prep room: https://actorrise.com/auditions/1?ar=eve")
+        linked = aud(user_script_id=4)
+        self.assertIn("you haven't run it here yet. one run before bed:", eve(linked, 0))
+        self.assertIn("you've run it once. one more run before bed:", eve(linked, 1))
+        self.assertIn("you've run it 3 times. one more run before bed:", eve(linked, 3))
+        _, _, plain = reminders.render(aud(), "eve", "Maya", runs=0, unsubscribe_url=None, has_material=True)
+        self.assertIn("you haven't run it here yet", plain)
+
     def test_after_links_carry_the_token(self):
         _, html, plain = reminders.render(aud(), "after", "Maya", runs=0, unsubscribe_url=None)
         for o in ("good", "callback", "no"):

@@ -85,7 +85,8 @@ def _clock(dt: datetime) -> str:
     return dt.strftime("%I:%M %p").lstrip("0").lower().replace(":00", "")
 
 
-def _fields(a: Audition, moment: str, name: str, runs: int, now: Optional[datetime] = None) -> tuple[dict, dict]:
+def _fields(a: Audition, moment: str, name: str, runs: int, now: Optional[datetime] = None,
+            has_material: Optional[bool] = None) -> tuple[dict, dict]:
     """(plain fields, link fields). Links are kept apart so the HTML can wrap them."""
     zone = _zone(a)
     local = when(a).astimezone(zone)
@@ -105,6 +106,17 @@ def _fields(a: Audition, moment: str, name: str, runs: int, now: Optional[dateti
     else:
         where = f" at {a.location}" if a.location else ""
         tomorrow = f"tomorrow, {_clock(local)}{where}."
+    if has_material is None:
+        has_material = bool(a.user_script_id)
+    # Only talk about runs when there is something here to run.
+    if not has_material:
+        runs_line = "if you have a minute tonight, open your prep room:"
+    elif runs > 1:
+        runs_line = f"you've run it {runs} times. one more run before bed:"
+    elif runs == 1:
+        runs_line = "you've run it once. one more run before bed:"
+    else:
+        runs_line = "you haven't run it here yet. one run before bed:"
     fields = {
         "name": name,
         "project": a.project,
@@ -114,8 +126,7 @@ def _fields(a: Audition, moment: str, name: str, runs: int, now: Optional[dateti
         "step_line": step,
         "tomorrow_line": tomorrow,
         "bring_line": f" bring {a.bring}." if a.bring else "",
-        "runs_line": (f"you've run it {runs} times." if runs > 1 else "you've run it once." if runs == 1
-                      else "you haven't run it here yet."),
+        "runs_line": runs_line,
     }
     base = f"{SITE_URL}/auditions/{a.id}?ar={moment}"
     out = f"{API_PUBLIC_URL}/api/auditions/outcome/{a.outcome_token}?o="
@@ -131,10 +142,10 @@ def _fill(text: str, fields: dict, links: dict) -> str:
 
 def render(a: Audition, moment: str, user_name: Optional[str], *, runs: int,
            unsubscribe_url: Optional[str], tpl: Optional[EmailTemplates] = None,
-           now: Optional[datetime] = None) -> tuple[str, str, str]:
+           now: Optional[datetime] = None, has_material: Optional[bool] = None) -> tuple[str, str, str]:
     subject, body = load_copy(moment)
     name = (EmailTemplates._first_name(user_name) or "").lower()
-    fields, links = _fields(a, moment, name, runs, now)
+    fields, links = _fields(a, moment, name, runs, now, has_material)
     if not name:
         body = body.replace("hey {name},", "hey,")
     subject = _fill(subject, fields, {})
@@ -268,8 +279,10 @@ def run(db: Session, *, now: Optional[datetime] = None, send: bool = False, clie
                 unsub = build_unsubscribe_url(u.email)
             except Exception:  # noqa: BLE001
                 pass
-            runs, _ = count_runs(db, a, pieces_for(db, a))
-            subject, html, plain = render(a, moment, u.name, runs=runs, unsubscribe_url=unsub, tpl=tpl, now=now)
+            pieces = pieces_for(db, a)
+            runs, _ = count_runs(db, a, pieces)
+            subject, html, plain = render(a, moment, u.name, runs=runs, unsubscribe_url=unsub, tpl=tpl, now=now,
+                                          has_material=bool(a.user_script_id or pieces))
             client.send_email(to=u.email, subject=subject, html=html, plain_text=plain, unsubscribe_url=unsub)
             db.add(AuditionEvent(audition_id=a.id, user_id=a.user_id, kind="reminder_sent", data={"moment": moment}))
             db.commit()
