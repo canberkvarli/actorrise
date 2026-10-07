@@ -1961,8 +1961,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         </div>
       </div>
 
-      <AuditionStrip surface="monologues" />
-
       <div>
         {/* The search box.
 
@@ -2193,6 +2191,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </DialogContent>
           </Dialog>
       </div>
+
+      <AuditionStrip surface="monologues" />
 
       <div className="space-y-6">
 
