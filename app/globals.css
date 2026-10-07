@@ -9378,3 +9378,48 @@ html[data-firstrun="1"] body::before {
   --t-line-light: oklch(0.3 0.03 55);
   --t-hard-shadow: oklch(0.07 0.01 45);
 }
+
+/* The script card.
+   Light: a white page lifted off a cream room, with the product's warm glow
+   under it. Dark: the glow becomes a brown halo and `border-black/5` is
+   invisible, so the card read as a flat slab with no edge at all. Dark gets a
+   real hairline, a hint of light along its top edge, and a plain deep shadow
+   instead of the orange one. */
+.t-script-card {
+  border: 1px solid rgb(0 0 0 / 0.05);
+  box-shadow:
+    0 24px 70px -24px rgba(203, 75, 0, 0.28),
+    0 10px 34px -14px rgba(0, 0, 0, 0.55);
+}
+.dark .t-script-card {
+  border-color: var(--t-line-light);
+  box-shadow:
+    inset 0 1px 0 0 color-mix(in oklab, white 6%, transparent),
+    0 30px 80px -30px rgb(0 0 0 / 0.9);
+}
+
+/* The handover bar: the silence after the actor's line, made visible.
+   "How much does it need to hear before it skips?" has no percentage answer —
+   the scene moves when they STOP, and waits longer the less it caught. That
+   was invisible, so the cut felt arbitrary and an actor could not tell whether
+   to keep going. Beside the cue, not under the words, so the speech is never
+   pushed around mid-line. */
+.t-handover {
+  display: inline-block;
+  width: 26px;
+  height: 2px;
+  margin-left: 2px;
+  border-radius: 999px;
+  background: color-mix(in oklab, currentColor 18%, transparent);
+  overflow: hidden;
+  vertical-align: middle;
+}
+.t-handover__fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: currentColor;
+  transform-origin: left center;
+  transition: transform 90ms linear;
+}

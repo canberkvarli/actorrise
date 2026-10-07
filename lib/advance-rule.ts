@@ -117,3 +117,36 @@ export function shouldAdvance({
 
   return false;
 }
+
+
+/**
+ * How long this take must stay quiet before the scene moves on, in ms.
+ *
+ * The rule above answers "go or not". An actor asking "how much does it need
+ * to hear before it skips to the next line?" is asking something the screen
+ * never told them, and the true answer is not a percentage: it advances when
+ * they STOP. How long it waits is what varies, and it varies with how much of
+ * the line was caught.
+ *
+ * Mirrors `shouldAdvance` exactly, from the same constants, so the bar the
+ * actor watches cannot promise a handover the rule will not make.
+ */
+export function quietNeededMs(s: AdvanceState): number {
+  if (!s.heardAnySpeech) return Infinity;
+  if (s.lastWordMatched && s.score >= ENDING_MIN_SCORE) return MIN_QUIET_MS;
+  if (s.score >= DROPPED_TAIL_MIN_SCORE) return DROPPED_TAIL_QUIET_MS;
+  if (s.score > 0) return TRAILED_OFF_QUIET_MS;
+  return Infinity; // nothing recognised: this take belongs to the transcriber
+}
+
+/**
+ * How far through that wait we are, 0 to 1.
+ *
+ * 0 while they are still making sound, which is the only time the answer is
+ * obvious. Infinity for "not coming" reads as 0 rather than NaN.
+ */
+export function handoverProgress(s: AdvanceState): number {
+  const needed = quietNeededMs(s);
+  if (!Number.isFinite(needed) || needed <= 0) return 0;
+  return Math.max(0, Math.min(1, s.msSinceVoice / needed));
+}

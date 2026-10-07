@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shouldAdvance, MIN_QUIET_MS, type AdvanceState } from './advance-rule';
+import { shouldAdvance, quietNeededMs, handoverProgress, MIN_QUIET_MS, type AdvanceState } from './advance-rule';
 
 const state = (over: Partial<AdvanceState> = {}): AdvanceState => ({
   msSinceVoice: 0,
@@ -163,5 +163,58 @@ describe('shouldAdvance — the noisy-room deadlock', () => {
         state({ msSinceVoice: 0, score: 1, lastWordMatched: true, heardAnySpeech: true }),
       ),
     ).toBe(false);
+  });
+});
+
+describe("quietNeededMs — what the handover bar is counting toward", () => {
+  const base = { msSinceVoice: 0, score: 0, lastWordMatched: false, heardAnySpeech: true };
+
+  it("is the short wait once the line is demonstrably finished", () => {
+    expect(quietNeededMs({ ...base, score: 1, lastWordMatched: true })).toBe(MIN_QUIET_MS);
+  });
+
+  it("is longer when the tail was missed but the line clearly got read", () => {
+    expect(quietNeededMs({ ...base, score: 0.8 })).toBe(900);
+  });
+
+  it("is longest when they stopped somewhere in the middle", () => {
+    expect(quietNeededMs({ ...base, score: 0.2 })).toBe(2500);
+  });
+
+  it("never promises a handover when nothing was recognised", () => {
+    // That take belongs to the transcriber, not to this rule.
+    expect(quietNeededMs({ ...base, score: 0 })).toBe(Infinity);
+    expect(quietNeededMs({ ...base, heardAnySpeech: false, score: 1 })).toBe(Infinity);
+  });
+
+  it("agrees with shouldAdvance at the threshold", () => {
+    // The bar must not fill past a point the rule would not act on.
+    for (const score of [0.2, 0.8, 1]) {
+      const s = { ...base, score, lastWordMatched: score === 1 };
+      const needed = quietNeededMs(s);
+      if (!Number.isFinite(needed)) continue;
+      expect(shouldAdvance({ ...s, msSinceVoice: needed })).toBe(true);
+    }
+  });
+});
+
+describe("handoverProgress", () => {
+  const base = { msSinceVoice: 0, score: 0.8, lastWordMatched: false, heardAnySpeech: true };
+
+  it("is zero while they are still making sound", () => {
+    expect(handoverProgress(base)).toBe(0);
+  });
+
+  it("fills as the quiet runs on", () => {
+    expect(handoverProgress({ ...base, msSinceVoice: 450 })).toBeCloseTo(0.5, 2);
+    expect(handoverProgress({ ...base, msSinceVoice: 900 })).toBe(1);
+  });
+
+  it("never exceeds one, however long the silence", () => {
+    expect(handoverProgress({ ...base, msSinceVoice: 99999 })).toBe(1);
+  });
+
+  it("stays at zero rather than NaN when no handover is coming", () => {
+    expect(handoverProgress({ ...base, score: 0 })).toBe(0);
   });
 });

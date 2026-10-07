@@ -60,7 +60,7 @@ import { cn } from '@/lib/utils';
 import { theatreFontVars } from '@/lib/fonts/theatre';
 import { ownsLine, sessionRoles } from '@/lib/character-roles';
 import { tokenize, alignWords, wordMatchScore } from '@/lib/word-match';
-import { shouldAdvance, MIN_QUIET_MS } from '@/lib/advance-rule';
+import { shouldAdvance, handoverProgress, MIN_QUIET_MS } from '@/lib/advance-rule';
 import { rehearseStatus } from '@/lib/rehearse-status';
 import { castPalette, castColorVars } from '@/lib/castColors';
 import { VoiceMark } from '@/components/scenepartner/VoiceMark';
@@ -849,6 +849,11 @@ function RehearsalPageInner() {
      recognition, so it stays true for an actor whose words never transcribe.
      This is the only live feedback the screen gives during a take. */
   const [liveVoiceHeard, setLiveVoiceHeard] = useState(false);
+  /* How far through the quiet the take is, 0 to 1. The scene does not advance
+     on "enough words" — it advances when the actor STOPS, and how long it
+     waits depends on how much was caught. That was invisible, so the handover
+     felt arbitrary and the actor could not tell whether to keep going. */
+  const [handover, setHandover] = useState(0);
   const bestMatchedRef = useRef<Set<number>>(new Set()); // accumulates ever-matched indices so SR regressions don't un-highlight words
   const liveRecognitionRef = useRef<any>(null);
   // Prevents double-advance when SR final result fires before Whisper returns
@@ -1975,6 +1980,13 @@ function RehearsalPageInner() {
       // the thing deciding whether the line is finished. MIN_QUIET_MS is the
       // gap that already counts as "still talking".
       setLiveVoiceHeard(msSinceVoice() < MIN_QUIET_MS);
+      setHandover(handoverProgress({
+        msSinceVoice: msSinceVoice(),
+        score,
+        lastWordMatched,
+        heardAnySpeech: heardAnySpeech(),
+        msSinceProgress: Date.now() - lastProgressAt,
+      }));
 
       if (!shouldAdvance({
         msSinceVoice: msSinceVoice(),
@@ -3079,7 +3091,13 @@ function RehearsalPageInner() {
           </div>
         ) : (
         <div
-          className={cn("max-w-4xl mx-auto rounded-xl border border-black/5 px-4 sm:px-8 py-5 sm:py-7 shadow-[0_24px_70px_-24px_rgba(203,75,0,0.28),0_10px_34px_-14px_rgba(0,0,0,0.55)]", SCRIPT_SURFACE)}
+          /* `t-script-card` carries the edge and the shadow, because the two
+             themes need different ones and a utility string cannot say that.
+             Rendered in both themes before shipping this time: the dark card
+             was a brown slab with no edge, since `border-black/5` is invisible
+             on a dark ground and the orange drop shadow became a halo under
+             it. */
+          className={cn("t-script-card max-w-4xl mx-auto rounded-xl px-4 sm:px-8 py-5 sm:py-7", SCRIPT_SURFACE)}
           /* The theatre's typewriter, not the browser's. Courier Prime is the
              face every other script surface in the product is set in — the
              sides on the scene preview, the cue on the shelf — and the fallback
@@ -3231,6 +3249,20 @@ function RehearsalPageInner() {
                             )}
                             data-hearing={isListening && liveVoiceHeard}
                           />
+                        )}
+                        {/* The handover, while it is happening.
+                            "How much does it need to hear before it moves on?"
+                            has no percentage answer: it moves when you STOP,
+                            and it waits longer the less it caught. None of
+                            that was visible, so the cut felt arbitrary and an
+                            actor could not tell whether to keep going. The
+                            line fills through the silence and the scene moves
+                            when it is full. Reads off the same rule, so it
+                            cannot promise a handover that will not come. */}
+                        {isCurrentUserLine && isListening && handover > 0 && (
+                          <span aria-hidden className="t-handover">
+                            <span className="t-handover__fill" style={{ transform: `scaleX(${handover})` }} />
+                          </span>
                         )}
                       </div>
 
