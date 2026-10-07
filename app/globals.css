@@ -9246,32 +9246,39 @@ html[data-firstrun="1"] body::before {
 
 /* ============================================================
    AUDITIONS: the ticket rail and the prep room.
-   Tokens only, so both house-light modes follow. Orange comes from
-   bg-primary on the element, never from here. Visibility (rail vs
-   prep room on phones) is Tailwind's job, so no `display` on the
-   shell columns.
+   .theatre tokens do not change with the theme; the `.dark` block below
+   redefines them for this surface, the way collection does. Orange comes
+   from bg-primary on the element, never from here. Visibility (rail vs
+   prep room on phones) is Tailwind's job, so no `display` on the shell
+   columns. Padding is left to markup (unlayered rules beat utilities).
    ============================================================ */
 .theatre-auditions {
-  background: var(--t-cream);
-  color: var(--t-ink);
+  --page: oklch(0.96 0.02 85);
+  background: var(--page);
+  color: var(--t-text);
   font-family: var(--t-body);
 }
 .aud-title {
   font-family: var(--t-display);
   font-weight: 400;
-  line-height: 1;
+  line-height: 1.1;
 }
 .aud-dir {
   font-family: var(--t-direction);
 }
 .aud-ticket {
   background: var(--t-paper);
-  border: 1.5px solid var(--t-ink);
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: var(--t-text);
   box-shadow: 4px 4px 0 var(--t-hard-shadow);
   transition: transform 200ms var(--t-spring), border-color 200ms;
 }
+.aud-ticket[data-empty] {
+  border-style: dashed;
+}
 .aud-ticket:focus-visible {
-  outline: 2px solid var(--t-ink);
+  outline: 2px solid var(--t-text);
   outline-offset: 3px;
 }
 .aud-ticket[data-open="true"] {
@@ -9281,7 +9288,7 @@ html[data-firstrun="1"] body::before {
   opacity: 0.6;
 }
 .aud-stub {
-  border-right: 1.5px dashed var(--t-ink);
+  border-right: 1.5px dashed var(--t-text);
   /* Words ("Tomorrow", "Oct 12") share this slot with digits. */
   overflow: hidden;
   min-width: 0;
@@ -9299,17 +9306,16 @@ html[data-firstrun="1"] body::before {
   font-size: 10.5px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  border: 1px solid var(--t-ink);
-  padding: 1px 6px;
+  border: 1px solid var(--t-text);
 }
 .aud-chip[data-tone="gel"] {
   background: var(--t-gel);
-  border-color: var(--t-gel);
-  color: var(--t-on-gel);
+  border-color: var(--t-gel-ink);
+  color: var(--t-text);
 }
 .aud-drop {
   background: var(--t-paper);
-  border: 1.5px dashed var(--t-ink);
+  border: 1.5px dashed var(--t-text);
 }
 .aud-drop[data-over="true"] {
   border-style: solid;
@@ -9317,7 +9323,7 @@ html[data-firstrun="1"] body::before {
 }
 .aud-prep {
   background: var(--t-paper);
-  border: 1.5px solid var(--t-ink);
+  border: 1.5px solid var(--t-text);
   box-shadow: 6px 6px 0 var(--t-hard-shadow);
 }
 .aud-row {
@@ -9335,13 +9341,13 @@ html[data-firstrun="1"] body::before {
 .aud-box {
   width: 18px;
   height: 18px;
-  border: 1.5px solid var(--t-ink);
+  border: 1.5px solid var(--t-text);
 }
 .aud-box[data-done="true"] {
-  background: var(--t-ink);
+  background: var(--t-text);
 }
 .aud-field[data-unsure="true"] {
-  outline: 2px solid var(--t-gel);
+  outline: 2px solid var(--t-gel-ink);
   outline-offset: 1px;
 }
 .aud-muted {
@@ -9351,4 +9357,15 @@ html[data-firstrun="1"] body::before {
   .aud-ticket {
     transition: none;
   }
+}
+
+.dark .theatre-auditions {
+  --page: oklch(0.11 0.012 50);
+  --t-gel-ink: var(--t-gel);
+  --t-paper: oklch(0.19 0.018 52);
+  --t-paper-2: oklch(0.17 0.018 52);
+  --t-text: oklch(0.95 0.02 85);
+  --t-muted-dark: oklch(0.75 0.02 62);
+  --t-line-light: oklch(0.3 0.03 55);
+  --t-hard-shadow: oklch(0.07 0.01 45);
 }
