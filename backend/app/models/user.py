@@ -30,6 +30,9 @@ class User(Base):
 
     # Marketing: explicit opt-in only (GDPR/CAN-SPAM compliant)
     marketing_opt_in = Column(Boolean, default=False, nullable=False)
+    # Secret for the read-only calendar feed /api/auditions/calendar.ics?k=.
+    # Made on first request; "Reset link" replaces it.
+    calendar_feed_key = Column(String(48), unique=True, nullable=True)
 
     # Community "Green Room" feed opt-out. Default TRUE (activity is public
     # semi-anonymously: first name + city + headshot). Filtered at feed READ

@@ -22,3 +22,5 @@ from app.models.community import CommunityEvent
 
 
 from app.models.admin_seen import AdminSeen
+
+from app.models.audition import Audition, AuditionEvent, AuditionPiece, AuditionReminderSend
