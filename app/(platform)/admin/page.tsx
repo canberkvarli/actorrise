@@ -158,6 +158,7 @@ export interface GrowthStats {
   active_users: {
     dau: number;
     wau: number;
+    engaged_wau?: number;
     mau: number;
     stickiness_percent: number | null;
     by_day: { date: string; count: number }[];
@@ -168,6 +169,8 @@ export interface GrowthStats {
       active: number;
       new: number;
       returning: number;
+      engaged_active: number;
+      engaged_returning: number;
       wow_retention_percent: number | null;
     }[];
     dormant: number;
@@ -270,6 +273,8 @@ function RetentionPanel({ retention }: { retention: GrowthStats["retention"] }) 
                 <th className="py-1.5 text-right font-medium">Active</th>
                 <th className="py-1.5 text-right font-medium">New</th>
                 <th className="py-1.5 text-right font-medium">Returning</th>
+                <th className="py-1.5 text-right font-medium" title="usage_metrics plus tracker and rehearsal events">Engaged</th>
+                <th className="py-1.5 text-right font-medium">Eng. returning</th>
                 <th className="py-1.5 text-right font-medium">WoW</th>
               </tr>
             </thead>
@@ -281,6 +286,10 @@ function RetentionPanel({ retention }: { retention: GrowthStats["retention"] }) 
                   <td className="py-1.5 text-right tabular-nums">{w.new}</td>
                   <td className="py-1.5 text-right tabular-nums" style={{ color: w.returning > 0 ? BRAND : undefined }}>
                     {w.returning}
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums">{w.engaged_active ?? 0}</td>
+                  <td className="py-1.5 text-right tabular-nums" style={{ color: (w.engaged_returning ?? 0) > 0 ? BRAND : undefined }}>
+                    {w.engaged_returning ?? 0}
                   </td>
                   <td className="py-1.5 text-right tabular-nums text-muted-foreground">
                     {w.wow_retention_percent != null ? `${w.wow_retention_percent}%` : "-"}

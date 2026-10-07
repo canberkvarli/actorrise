@@ -377,6 +377,12 @@ def get_growth_stats(
 
     sorted_weeks = sorted(week_users.keys())
     recent_weeks = sorted_weeks[-8:]
+    from app.services import engagement
+
+    engaged_rows = engagement.activity_rows(db, real_ids)
+    engaged_by_week = engagement.weekly(engaged_rows)
+    engaged_wau = len({u for u, d in engaged_rows if to_d - timedelta(days=6) <= d <= to_d})
+
     retention_weeks = []
     seen_before: set[int] = set()
     for w in sorted_weeks:
@@ -391,6 +397,8 @@ def get_growth_stats(
                 "active": len(users),
                 "new": new,
                 "returning": returning,
+                "engaged_active": engaged_by_week.get(w, {}).get("active", 0),
+                "engaged_returning": engaged_by_week.get(w, {}).get("returning", 0),
                 "wow_retention_percent": wow,
             })
         seen_before |= users
@@ -511,7 +519,7 @@ def get_growth_stats(
         "from": from_d.isoformat(),
         "to": to_d.isoformat(),
         "active_users": {
-            "dau": dau, "wau": wau, "mau": mau,
+            "dau": dau, "wau": wau, "engaged_wau": engaged_wau, "mau": mau,
             "stickiness_percent": stickiness,
             "by_day": active_by_day,
         },
