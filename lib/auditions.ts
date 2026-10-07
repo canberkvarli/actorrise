@@ -50,25 +50,48 @@ export const KIND_LABEL: Record<AuditionKind, string> = { in_person: "In the roo
 
 const HOUR = 3_600_000;
 
-export function countdown(when: string | null, now: Date = new Date()): { n: string; unit: string } {
+/** An IANA zone the runtime accepts, else UTC. */
+function safeTz(tz: string | undefined): string {
+  if (!tz) return "UTC";
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return tz;
+  } catch {
+    return "UTC";
+  }
+}
+
+/** Calendar day number of an instant in a zone. */
+function dayNumber(d: Date, tz: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "numeric", day: "numeric" }).formatToParts(d);
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  return Math.floor(Date.UTC(get("year"), get("month") - 1, get("day")) / (24 * HOUR));
+}
+
+export function countdown(when: string | null, now: Date = new Date(), tz: string = "UTC"): { n: string; unit: string } {
   if (!when) return { n: "?", unit: "no date" };
+  const zone = safeTz(tz);
   const t = new Date(when);
   const ms = t.getTime() - now.getTime();
-  if (ms < 0) return { n: t.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }), unit: "" };
+  if (ms < 0) return { n: t.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: zone }), unit: "" };
   if (ms < HOUR) return { n: "Now", unit: "" };
-  if (ms < 48 * HOUR) {
+  if (ms < 12 * HOUR) {
     const h = Math.floor(ms / HOUR);
     return { n: String(h), unit: h === 1 ? "hour" : "hours" };
   }
-  return { n: String(Math.floor(ms / (24 * HOUR))), unit: "days" };
+  const diff = dayNumber(t, zone) - dayNumber(now, zone);
+  if (diff <= 0) return { n: "Today", unit: "" };
+  if (diff === 1) return { n: "Tomorrow", unit: "" };
+  return { n: String(diff), unit: "days" };
 }
 
 /** "Thu Oct 9 · 10:40 AM" in the audition's own zone. */
 export function whenLabel(a: Pick<Audition, "when" | "tz" | "kind">): string {
   if (!a.when) return "No date yet";
   const d = new Date(a.when);
-  const day = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: a.tz });
-  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: a.tz });
+  const timeZone = safeTz(a.tz);
+  const day = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone });
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone });
   return a.kind === "self_tape" ? `Due ${day}, ${time}` : `${day} · ${time}`;
 }
 
@@ -99,5 +122,5 @@ export function browserTz(): string {
 }
 
 export function changedFields(parsed: Record<string, unknown>, saved: Record<string, unknown>): string[] {
-  return Object.keys(saved).filter((k) => k in parsed && (parsed[k] ?? null) !== (saved[k] ?? null));
+  return Object.keys(saved).filter((k) => k in parsed && JSON.stringify(parsed[k] ?? null) !== JSON.stringify(saved[k] ?? null));
 }

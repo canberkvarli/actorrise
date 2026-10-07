@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { countdown, groupByScope, toLocalInput, fromLocalInput, changedFields, type Audition } from "./auditions";
+import { countdown, whenLabel, groupByScope, toLocalInput, fromLocalInput, changedFields, type Audition } from "./auditions";
 
 const NOW = new Date("2026-10-07T15:00:00Z");
 
@@ -17,8 +17,21 @@ describe("countdown", () => {
   it("days when two or more out", () => {
     expect(countdown("2026-10-11T15:00:00Z", NOW)).toEqual({ n: "4", unit: "days" });
   });
-  it("hours inside 48", () => {
-    expect(countdown("2026-10-08T20:00:00Z", NOW)).toEqual({ n: "29", unit: "hours" });
+  it("hours inside 12, Today and Tomorrow by calendar day in the zone", () => {
+    expect(countdown("2026-10-07T20:00:00Z", NOW)).toEqual({ n: "5", unit: "hours" });
+    expect(countdown("2026-10-07T23:30:00Z", new Date("2026-10-07T01:00:00Z"))).toEqual({ n: "Today", unit: "" });
+    expect(countdown("2026-10-08T20:00:00Z", NOW)).toEqual({ n: "Tomorrow", unit: "" });
+  });
+  it("counts calendar days in the audition zone, not elapsed time", () => {
+    const mon = new Date("2026-10-06T03:00:00Z"); // Mon 10 PM in LA
+    expect(countdown("2026-10-08T16:00:00Z", mon, "America/Los_Angeles")).toEqual({ n: "3", unit: "days" });
+  });
+  it("past dates read in the zone", () => {
+    expect(countdown("2026-10-02T03:00:00Z", NOW, "America/Los_Angeles")).toEqual({ n: "Oct 1", unit: "" });
+  });
+  it("an invalid zone falls back to UTC", () => {
+    expect(countdown("2026-10-11T15:00:00Z", NOW, "Nope/Zone")).toEqual({ n: "4", unit: "days" });
+    expect(whenLabel({ when: "2026-10-09T14:40:00Z", tz: "Nope/Zone", kind: "in_person" })).toBe("Fri, Oct 9 · 2:40 PM");
   });
   it("one hour reads singular, under an hour reads now", () => {
     expect(countdown("2026-10-07T16:10:00Z", NOW)).toEqual({ n: "1", unit: "hour" });
@@ -51,5 +64,8 @@ describe("datetime-local round trip", () => {
 describe("changedFields", () => {
   it("lists parsed fields the actor edited", () => {
     expect(changedFields({ project: "A", role: "B", casting: null }, { project: "A", role: "C", casting: "X" })).toEqual(["role", "casting"]);
+  });
+  it("ignores objects that did not change", () => {
+    expect(changedFields({ material: { genre: "comedic" } }, { material: { genre: "comedic" } })).toEqual([]);
   });
 });
