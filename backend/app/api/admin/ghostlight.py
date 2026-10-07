@@ -134,6 +134,7 @@ def ghostlight_overview(db: Session = Depends(get_db), _=Depends(require_moderat
                 "product_id": p.get("product_id", ""),
                 "period_type": p.get("period_type", ""),
                 "price": p.get("price", ""),
+                "reason": p.get("reason", ""),
             }
         )
 

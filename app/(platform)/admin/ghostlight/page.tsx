@@ -67,6 +67,19 @@ type Purchase = {
   product_id: string;
   period_type: string;
   price: string | number;
+  /** Apple's word for why, on a cancellation or expiration: UNSUBSCRIBE,
+   *  BILLING_ERROR, CUSTOMER_SUPPORT. Empty on purchases and renewals. */
+  reason?: string;
+};
+
+const REASON_LABEL: Record<string, string> = {
+  UNSUBSCRIBE: "they turned auto-renew off",
+  BILLING_ERROR: "card failed",
+  CUSTOMER_SUPPORT: "refunded by Apple support",
+  PRICE_INCREASE: "declined a price increase",
+  DEVELOPER_INITIATED: "cancelled from this side",
+  SUBSCRIPTION_PAUSED: "paused",
+  UNKNOWN: "no reason given",
 };
 
 type Money = {
@@ -304,6 +317,9 @@ export default function GhostLightAdminPage() {
                   <span>{TYPE_LABEL[p.type] ?? p.type.toLowerCase()}</span>
                   {p.period_type === "TRIAL" && <span className="text-muted-foreground">trial</span>}
                   <span className="text-muted-foreground">{p.product_id}</span>
+                  {p.reason && (
+                    <span className="text-muted-foreground">{REASON_LABEL[p.reason] ?? p.reason.toLowerCase()}</span>
+                  )}
                   {p.price !== "" && <span className="ml-auto tabular-nums">{usd(Number(p.price))}</span>}
                 </li>
               ))}

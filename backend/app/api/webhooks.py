@@ -1009,6 +1009,10 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
             "environment": event.get("environment") or "",
             "price": event.get("price") if event.get("price") is not None else "",
             "expires_at": datetime.utcfromtimestamp(int(exp_ms) / 1000).isoformat() if exp_ms else "",
+            # Why, in Apple's words: UNSUBSCRIBE (they turned auto-renew off),
+            # BILLING_ERROR, CUSTOMER_SUPPORT, and so on. Without it a lapsed
+            # trial could not be told from a card that failed (2026-10-07).
+            "reason": event.get("expiration_reason") or event.get("cancel_reason") or "",
         },
     )
 
