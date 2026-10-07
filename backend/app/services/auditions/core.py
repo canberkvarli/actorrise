@@ -88,6 +88,9 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
             ZoneInfo(out["tz"])
         except Exception:
             raise ValueError("tz must be an IANA timezone name")
+    # Rendered as a link in the prep room, so only http(s): never javascript: or data:.
+    if out.get("tape_link") and not re.match(r"^https?://\S+$", out["tape_link"], re.IGNORECASE):
+        raise ValueError("tape_link must be an http(s) link")
     return out
 
 

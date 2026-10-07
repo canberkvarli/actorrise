@@ -206,6 +206,17 @@ class CoreTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._make(tz="Mars/Olympus")
 
+    def test_tape_link_must_be_http(self):
+        a = self._make(tape_link="https://vimeo.com/123")
+        self.assertEqual(a.tape_link, "https://vimeo.com/123")
+        for bad in ("javascript:alert(1)", "data:text/html,x", "vimeo.com/123", "ftp://x/y"):
+            with self.assertRaises(ValueError):
+                core.update_audition(self.db, a, {"tape_link": bad})
+        with self.assertRaises(ValueError):
+            self._make(tape_link="JavaScript:alert(1)")
+        core.update_audition(self.db, a, {"tape_link": ""})
+        self.assertIsNone(a.tape_link)
+
     def test_script_must_belong_to_owner(self):
         mine = UserScript(user_id=self.user.id, title="m", author="x", original_filename="m.pdf", file_path="m", file_type="pdf", file_size_bytes=1, raw_text="x")
         theirs = UserScript(user_id=self.other.id, title="t", author="x", original_filename="t.pdf", file_path="t", file_type="pdf", file_size_bytes=1, raw_text="x")

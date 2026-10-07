@@ -6013,7 +6013,7 @@
   transition: background 0.3s, color 0.3s;
 }
 /* The same cream light as the desktop nav, here as a filled tab — there is no
-   room to slide one lamp across four tabs on a phone.
+   room to slide one lamp across five tabs on a phone.
 
    Literal, not --bar-active. That token is the DESKTOP bar's, which is paper
    in light and ink in dark, so its active fill flips with the theme. This bar
@@ -6022,6 +6022,15 @@
 .t-tabbar__tab[data-active="true"] {
   background: oklch(0.96 0.02 85);
   color: oklch(0.13 0.015 50);
+}
+/* Five slots since the Auditions tab. At 360 to 380px each is under 70px and
+   "ScenePartner" at 10px with tracking runs right up to the edge, so the
+   narrowest phones get a hair less of both. */
+@media (max-width: 380px) {
+  .t-tabbar__tab {
+    font-size: 9.5px;
+    letter-spacing: 0;
+  }
 }
 
 /* One thing above the tab bar at a time, on a phone. The profile card and the

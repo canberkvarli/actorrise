@@ -9,15 +9,8 @@ import { trackEvent } from "@/lib/events";
 import { useAuditions } from "@/hooks/useAuditions";
 import { DropBox } from "./DropBox";
 import { TicketRail } from "./TicketRail";
-import { PrepRoom } from "./PrepRoom";
+import { OUTCOME_NOTE, PrepRoom } from "./PrepRoom";
 import { CalendarLink } from "./CalendarLink";
-
-/** What the outcome email's confirm button lands on: /auditions/{id}?logged=<o>&ar=after. */
-const LOGGED_NOTE: Record<string, string> = {
-  good: "Got it, it felt good. Fingers crossed for you.",
-  callback: "A callback! I moved it to Callback. Go get it.",
-  no: "Got it. Not this time, on to the next one.",
-};
 
 /**
  * One shell for /auditions and /auditions/[id]. Desktop: rail left, prep room
@@ -26,7 +19,7 @@ const LOGGED_NOTE: Record<string, string> = {
  */
 export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   const params = useSearchParams();
-  const { data: list = [], isLoading } = useAuditions();
+  const { data: list = [], isLoading, isError, refetch, isFetching } = useAuditions();
   const now = useMemo(() => new Date(), [list]); // eslint-disable-line react-hooks/exhaustive-deps
   const fallback = list.find((a) => a.scope === "upcoming") ?? list[0] ?? null;
   const open = (selectedId != null ? list.find((a) => a.id === selectedId) : fallback) ?? null;
@@ -45,7 +38,20 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
 
   const startOpen = params.get("new") === "1";
   const source = params.get("from") === "onboarding" ? "onboarding" : "parse";
-  const logged = selectedId != null && open?.id === selectedId ? LOGGED_NOTE[params.get("logged") ?? ""] : undefined;
+  // The outcome email's confirm button lands on /auditions/{id}?logged=<o>&ar=after.
+  const loggedParam = params.get("logged");
+  const logged = selectedId != null && open?.id === selectedId && loggedParam && loggedParam in OUTCOME_NOTE
+    ? OUTCOME_NOTE[loggedParam as keyof typeof OUTCOME_NOTE]
+    : undefined;
+  const failed = isError && list.length === 0;
+  const retry = (
+    <p className="aud-muted mt-6 text-sm">
+      I couldn&apos;t load your auditions.{" "}
+      <button type="button" className="underline underline-offset-2" disabled={isFetching} onClick={() => refetch()}>
+        {isFetching ? "Trying again" : "Try again"}
+      </button>
+    </p>
+  );
 
   return (
     <div className={`theatre-tokens theatre-auditions ${theatreFontVars} min-h-[calc(100dvh-65px)] overflow-x-clip`}>
@@ -58,6 +64,8 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
           <DropBox startOpen={startOpen} source={source} />
           {isLoading ? (
             <p className="aud-muted mt-6 text-sm">Loading your rail</p>
+          ) : failed ? (
+            retry
           ) : list.length === 0 ? (
             <div className="mt-6">
               <div data-empty="true" className="aud-ticket flex min-h-[84px] items-center justify-center opacity-60">
@@ -79,7 +87,9 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
           )}
           {open ? (
             <PrepRoom a={open} now={now} />
-          ) : !isLoading && selectedId != null ? (
+          ) : failed && selectedId != null ? (
+            <div className="md:hidden">{retry}</div>
+          ) : !isLoading && !failed && selectedId != null ? (
             <p className="aud-muted text-sm">That audition isn&apos;t on your rail.</p>
           ) : null}
         </section>

@@ -24,6 +24,10 @@ export const SKIP_PREFIXES = [
   // later, and the actor landed on /monologue/45/work without touching
   // anything. It is the same fault the /monologue entry below was added for.
   "/practice",
+  // The audition tracker. Login hops through /auditions/next to a prep room, and
+  // reminder emails land on /auditions/<id>: both are an actor who came for a
+  // specific audition, not one drifting on the shelf.
+  "/auditions",
 ];
 
 /** Rooms already in progress: never interrupt one. */

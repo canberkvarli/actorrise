@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -9,7 +10,14 @@ import { countdown, STATUS_LABEL, STATUS_ORDER, whenLabel, type Audition, type A
 import { useDeleteAudition, useLogOutcome, useUpdateAudition } from "@/hooks/useAuditions";
 import { useScript } from "@/hooks/useScripts";
 
-const OUTCOME_NOTE = { good: "Noted. Fingers crossed for you.", callback: "A callback. I moved it up for you.", no: "Noted. On to the next one." } as const;
+/** One voice for a logged outcome, whether it came from here or the email (AuditionsShell's ?logged=). */
+export const OUTCOME_NOTE: Record<"good" | "callback" | "no", string> = {
+  good: "Got it, it felt good. Fingers crossed for you.",
+  callback: "A callback! I moved it to Callback. Go get it.",
+  no: "Got it. Not this time, on to the next one.",
+};
+
+const SAVE_FAILED = "That didn't save. Try again in a moment.";
 
 export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
   const router = useRouter();
@@ -20,6 +28,9 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
   const update = useUpdateAudition();
   const outcome = useLogOutcome();
   const del = useDeleteAudition();
+  // Which audition the question was answered for this session, so it goes away once answered.
+  const [answeredFor, setAnsweredFor] = useState<number | null>(null);
+  const save = (body: Record<string, unknown>) => update.mutate({ id: a.id, ...body }, { onError: () => toast.error(SAVE_FAILED) });
   // Sides go up in the background, so the script can still be reading when the prep room opens.
   // useScript polls while it is, and /practice handles a reading script on its own.
   const { data: sides } = useScript(a.user_script_id);
@@ -86,13 +97,16 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
           </ol>
         )}
 
-        {past && a.status !== "booked" && a.status !== "passed" && (
+        {past && a.status !== "booked" && a.status !== "passed" && answeredFor !== a.id && (
           <div className="mt-5">
             <p className="text-sm">How did it go?</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {([["good", "Felt good"], ["callback", "Got a callback"], ["no", "Not this time"]] as const).map(([o, label]) => (
                 <button key={o} type="button" className="aud-chip px-2.5 py-1" disabled={outcome.isPending}
-                  onClick={() => outcome.mutate({ id: a.id, outcome: o }, { onSuccess: () => toast.success(OUTCOME_NOTE[o]) })}>
+                  onClick={() => outcome.mutate({ id: a.id, outcome: o }, {
+                    onSuccess: () => { setAnsweredFor(a.id); toast.success(OUTCOME_NOTE[o]); },
+                    onError: () => toast.error(SAVE_FAILED),
+                  })}>
                   {label}
                 </button>
               ))}
@@ -103,7 +117,7 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
         <div className="mt-5 flex flex-wrap gap-1.5" role="group" aria-label="Status">
           {STATUS_ORDER.map((s: AuditionStatus) => (
             <button key={s} type="button" className="aud-chip px-2 py-1" data-tone={s === a.status ? "gel" : undefined}
-              aria-pressed={s === a.status} onClick={() => s !== a.status && update.mutate({ id: a.id, status: s })}>
+              aria-pressed={s === a.status} onClick={() => s !== a.status && save({ status: s })}>
               {STATUS_LABEL[s]}
             </button>
           ))}
@@ -111,7 +125,7 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
 
         <div className="aud-dir aud-muted mt-5 flex flex-wrap items-center gap-4 text-[11.5px]">
           <label className="flex items-center gap-1.5">
-            <input type="checkbox" checked={a.reminders_on} onChange={(e) => update.mutate({ id: a.id, reminders_on: e.target.checked })} />
+            <input type="checkbox" checked={a.reminders_on} onChange={(e) => save({ reminders_on: e.target.checked })} />
             email me about this one
           </label>
           {a.tape_link && <a href={a.tape_link} target="_blank" rel="noreferrer" className="underline">tape</a>}
@@ -121,7 +135,7 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
             disabled={del.isPending}
             onClick={() => {
               if (!window.confirm(`Take ${a.project} off your rail?`)) return;
-              del.mutate(a.id, { onSuccess: () => router.push("/auditions") });
+              del.mutate(a.id, { onSuccess: () => router.push("/auditions"), onError: () => toast.error(SAVE_FAILED) });
             }}
           >
             remove

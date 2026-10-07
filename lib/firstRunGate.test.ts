@@ -16,6 +16,12 @@ describe("gateMayFire", () => {
     expect(gateMayFire("/practice/115/scenes/929")).toBe(false);
   });
 
+  it("leaves the audition tracker alone, login hop and reminder landings included", () => {
+    expect(gateMayFire("/auditions")).toBe(false);
+    expect(gateMayFire("/auditions/next")).toBe(false);
+    expect(gateMayFire("/auditions/12?ar=prep")).toBe(false);
+  });
+
   it("never interrupts a room already in progress", () => {
     expect(gateMayFire("/monologue/45/work")).toBe(false);
     expect(gateMayFire("/monologue/45/memorize")).toBe(false);

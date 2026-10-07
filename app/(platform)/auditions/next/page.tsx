@@ -16,5 +16,9 @@ export default function NextAuditionHop() {
     if (isError) router.replace("/rehearse");
     else if (data) router.replace(data.audition ? `/auditions/${data.audition.id}?from=login` : "/rehearse");
   }, [data, isError, router]);
-  return null;
+  return (
+    <p role="status" className="mx-auto max-w-6xl px-4 py-10 text-sm text-muted-foreground">
+      Finding your next audition
+    </p>
+  );
 }
