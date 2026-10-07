@@ -295,7 +295,7 @@ function AuditionsCard() {
       <p className="text-xs text-muted-foreground">
         Reminded auditions prepped afterwards: {data.reminders.prepped_after}/{data.reminders.auditions}.
         {" "}Created by week:{" "}
-        {data.created_by_week.map((w) => `${w.week_start.slice(5)} ${w.parse ?? 0} parsed, ${w.manual ?? 0} manual`).join(" · ") || "none"}.
+        {data.created_by_week.map((w) => `${w.week_start.slice(5)} ${w.parse ?? 0} parsed, ${w.manual ?? 0} manual, ${w.onboarding ?? 0} onboarding`).join(" · ") || "none"}.
       </p>
       <p className="text-xs text-muted-foreground">
         Outcomes: {data.outcomes_by_via.email ?? 0} by email, {data.outcomes_by_via.app ?? 0} in app. Win-back clicks: {data.winback_users}.

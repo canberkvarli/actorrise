@@ -65,10 +65,13 @@ def auditions_panel(_: User = Depends(require_moderator), db: Session = Depends(
         )
 
     owner: dict[int, int] = {}
+    when_of: dict[int, datetime] = {}
     past_rows = []
     for aid, uid, starts, due in db.query(Audition.id, Audition.user_id, Audition.starts_at, Audition.due_at).filter(*live).all():
         owner[aid] = uid
         t = aware(starts or due)
+        if t is not None:
+            when_of[aid] = t
         if t is not None and t < now:
             past_rows.append((aid, t))
 
@@ -95,7 +98,7 @@ def auditions_panel(_: User = Depends(require_moderator), db: Session = Depends(
         if aid is not None and owner.get(aid) == uid and created is not None:
             t = aware(created)
             first_sent[aid] = min(t, first_sent.get(aid, t))
-    reminded_prepped = sum(1 for aid, t in first_sent.items() if any(p > t for p in prep_at.get(aid, [])))
+    reminded_prepped = sum(1 for aid, t in first_sent.items() if any(t < p <= when_of.get(aid, p) for p in prep_at.get(aid, [])))
 
     reminders = Counter((p or {}).get("moment") for _, p, _ in props_of("audition_reminder_sent"))
     clicks = Counter((p or {}).get("moment") for _, p, _ in props_of("audition_reminder_clicked"))

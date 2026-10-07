@@ -92,7 +92,7 @@ class AdminAuditionsPanelTests(unittest.TestCase):
         from datetime import date
         from app.services import engagement
         now = datetime.now(timezone.utc)
-        w1 = engagement.week_start(date.today()) - timedelta(days=21)
+        w1 = engagement.week_start(datetime.now(timezone.utc).date()) - timedelta(days=21)
         u, v = self._u("a@gmail.com"), self._u("b@gmail.com")
         # u creates their first audition in week 3, so is "other" in weeks 1 and 2.
         self.db.add(Audition(user_id=u.id, project="P", created_at=now - timedelta(days=7)))
@@ -104,3 +104,19 @@ class AdminAuditionsPanelTests(unittest.TestCase):
         self.assertEqual(habit[w1.isoformat()]["tracker_active"], 0)
         self.assertEqual(habit[w1.isoformat()]["other_active"], 2)
         self.assertEqual(habit[(w1 + timedelta(days=14)).isoformat()]["tracker_active"], 1)
+
+    def test_prep_after_the_date_is_not_reminder_prep(self):
+        now = datetime.now(timezone.utc)
+        u = self._u("a@gmail.com")
+        a = Audition(user_id=u.id, project="P", starts_at=now - timedelta(hours=3))
+        self.db.add(a)
+        self.db.flush()
+        self.db.add_all([
+            UserEvent(user_id=u.id, event_name="audition_reminder_sent",
+                      properties={"audition_id": a.id, "moment": "prep"}, created_at=now - timedelta(days=1)),
+            UserEvent(user_id=u.id, event_name="audition_prep_started", properties={"audition_id": a.id},
+                      created_at=now - timedelta(hours=1)),
+        ])
+        self.db.commit()
+        r = auditions_panel(None, self.db)["reminders"]
+        self.assertEqual((r["auditions"], r["prepped_after"]), (1, 0))
