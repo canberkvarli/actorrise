@@ -9,6 +9,7 @@ import { trackEvent } from "@/lib/events";
 import { browserTz, changedFields, type AuditionQuota, type Draft } from "@/lib/auditions";
 import { uploadSides, useCreateAudition, useParseBreakdown } from "@/hooks/useAuditions";
 import { DraftCard, bodyFromValues, valuesFromDraft, type DraftValues } from "./DraftCard";
+import { errMessage } from "./draftValues";
 
 // First person, no dashes. Free and Plus point at /pricing; Pro has nowhere to go.
 function QuotaLine({ tier, limit }: { tier: AuditionQuota["tier"]; limit: number }) {
@@ -22,11 +23,6 @@ function QuotaLine({ tier, limit }: { tier: AuditionQuota["tier"]; limit: number
 type Stage = "idle" | "reading" | "card";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-
-function errMessage(e: unknown): string {
-  const m = (e as { message?: unknown })?.message;
-  return typeof m === "string" && m && !m.startsWith("[object") ? m : "That didn't save. Check the fields and try again.";
-}
 
 export function DropBox({ source = "parse", startOpen = false }: { source?: "parse" | "onboarding"; startOpen?: boolean }) {
   const router = useRouter();
@@ -128,7 +124,6 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
       )}
       <DraftCard
         draft={manual ? null : draft}
-        quotaHit={false}
         sidesName={file?.name ?? null}
         saving={saving}
         initialNotes={manual || !parsedOk ? text.trim().slice(0, 4000) : ""}

@@ -10,7 +10,7 @@ import { countdown, STATUS_LABEL, STATUS_ORDER, whenLabel, type Audition, type A
 import { useDeleteAudition, useLogOutcome, useUpdateAudition } from "@/hooks/useAuditions";
 import { useScript } from "@/hooks/useScripts";
 import { DraftCard } from "./DraftCard";
-import { patchFromValues, valuesFromAudition, type DraftValues } from "./draftValues";
+import { errMessage, patchFromValues, valuesFromAudition, type DraftValues } from "./draftValues";
 
 /** One voice for a logged outcome, whether it came from here or the email (AuditionsShell's ?logged=). */
 export const OUTCOME_NOTE: Record<"good" | "callback" | "no", string> = {
@@ -20,11 +20,6 @@ export const OUTCOME_NOTE: Record<"good" | "callback" | "no", string> = {
 };
 
 const SAVE_FAILED = "That didn't save. Try again in a moment.";
-
-function errMessage(e: unknown): string {
-  const m = (e as { message?: unknown })?.message;
-  return typeof m === "string" && m && !m.startsWith("[object") ? m : "That didn't save. Check the fields and try again.";
-}
 
 export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
   const router = useRouter();

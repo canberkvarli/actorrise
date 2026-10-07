@@ -11,11 +11,10 @@ const LABEL = "aud-dir aud-muted text-[10.5px] uppercase tracking-[0.06em]";
 const INPUT = "aud-field mt-1 w-full border border-[var(--t-line-light)] bg-[var(--t-paper)] px-2.5 py-2 text-sm";
 
 export function DraftCard({
-  draft, initialNotes = "", quotaHit = false, sidesName, saving, onSave, onCancel, editing,
+  draft, initialNotes = "", sidesName, saving, onSave, onCancel, editing,
 }: {
   draft: Draft | null;
   initialNotes?: string;
-  quotaHit?: boolean;
   sidesName: string | null;
   saving: boolean;
   onSave: (v: DraftValues) => void;
@@ -47,11 +46,6 @@ export function DraftCard({
       }}
     >
       <p className="aud-title text-2xl">{draft ? "Check what I read" : editing ? "Fix the details" : "Add an audition"}</p>
-      {quotaHit && (
-        <p role="status" className="aud-muted mt-1 text-sm">
-          You&apos;re out of free reads this month. Fill it in yourself and it still saves, or go Plus for unlimited reads.
-        </p>
-      )}
       {draft && <p id={hintId} className="aud-muted mt-1 text-sm">The outlined ones I wasn&apos;t sure about.</p>}
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="sm:col-span-2"><span className={LABEL}>Project</span>

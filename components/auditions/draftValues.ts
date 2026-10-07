@@ -51,3 +51,9 @@ export function patchFromValues(a: Audition, v: DraftValues): Record<string, unk
   if ("material_raw" in patch && a.material) patch.material = null;
   return patch;
 }
+
+/** The API's own message when it sent one, else a plain fallback. */
+export function errMessage(e: unknown): string {
+  const m = (e as { message?: unknown })?.message;
+  return typeof m === "string" && m && !m.startsWith("[object") ? m : "That didn't save. Check the fields and try again.";
+}
