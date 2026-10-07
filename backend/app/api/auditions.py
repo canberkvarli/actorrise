@@ -5,6 +5,7 @@ Static paths are declared before /{audition_id}, which would otherwise swallow
 "next" and "parse" and answer 422.
 """
 
+import html
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -12,7 +13,7 @@ from typing import Any, Optional
 
 from fastapi.concurrency import run_in_threadpool
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -30,6 +31,7 @@ API_PUBLIC_URL = os.getenv("API_PUBLIC_URL", "https://api.actorrise.com")
 
 
 CALENDAR_PAST_DAYS = 30
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
 def _now() -> datetime:
@@ -114,8 +116,11 @@ async def parse_breakdown(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    # Every DB call and the PDF read run in a worker thread: on the event loop
+    # they block the whole API (see the comment in app/api/scripts.py).
     now = _now()
-    q = parse.quota(db, int(user.id), now)
+    uid = int(user.id)
+    q = await run_in_threadpool(parse.quota, db, uid, now)
     if q["remaining"] == 0:
         raise HTTPException(status_code=403, detail={"error": "audition_parse_quota", "quota": q})
     body = (text or "").strip()
@@ -123,19 +128,21 @@ async def parse_breakdown(
     if file is not None and file.filename:
         if not file.filename.lower().endswith(".pdf"):
             raise HTTPException(status_code=400, detail="Sides must be a PDF")
-        content = await file.read()
-        if len(content) > 10 * 1024 * 1024:
+        content = await file.read(MAX_UPLOAD_BYTES + 1)
+        if len(content) > MAX_UPLOAD_BYTES:
             raise HTTPException(status_code=400, detail="File too large (max 10MB)")
         has_pdf = True
-        header = parse.header_text_from_pdf(content)
+        header = await run_in_threadpool(parse.header_text_from_pdf, content)
         body = f"{body}\n\n[First pages of the sides]\n{header}".strip()
     if not body:
         raise HTTPException(status_code=400, detail="Paste the notice or drop the sides")
-    record_user_event(int(user.id), "audition_parse_requested", {"has_pdf": has_pdf, "has_text": bool(text)})
+    await run_in_threadpool(
+        record_user_event, uid, "audition_parse_requested", {"has_pdf": has_pdf, "has_text": bool((text or "").strip())}
+    )
     result = await run_in_threadpool(parse.parse_notice, body, now, tz)
     if not result["ok"]:
-        record_user_event(int(user.id), "audition_parse_failed", {"reason": "model"})
-    result["quota"] = parse.quota(db, int(user.id), now)
+        await run_in_threadpool(record_user_event, uid, "audition_parse_failed", {"reason": "model"})
+    result["quota"] = await run_in_threadpool(parse.quota, db, uid, now)
     return result
 
 
@@ -175,14 +182,58 @@ def calendar_feed(k: str = Query(..., min_length=10), db: Session = Depends(get_
     )
 
 
-@router.get("/outcome/{token}")
-def outcome_from_email(token: str, o: str = Query(...), db: Session = Depends(get_db)):
-    """The three links in the morning-after email. No login: the token is the key."""
+_OUTCOME_WORDS = {"good": "it went well", "callback": "callback", "no": "not this time"}
+_OUTCOME_PAGE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Log your audition</title>
+<style>body{{font-family:system-ui,sans-serif;max-width:28rem;margin:4rem auto;padding:0 1rem;color:#222}}
+button{{font:inherit;padding:.7rem 1.4rem;border:0;border-radius:4px;background:#CB4B00;color:#fff;cursor:pointer}}</style>
+</head><body>
+<h1>{project}</h1>
+<p>Log it as: {word}?</p>
+<form method="post" action="{action}"><input type="hidden" name="o" value="{o}">
+<button type="submit">Yes, log it</button></form>
+</body></html>"""
+
+
+def _outcome_audition(db: Session, token: str) -> Audition:
     a = db.query(Audition).filter(Audition.outcome_token == token, Audition.deleted_at.is_(None)).first()
-    if a is None or o not in core.OUTCOMES:
+    if a is None:
+        raise HTTPException(status_code=404, detail="Unknown link")
+    return a
+
+
+@router.get("/outcome/{token}", response_class=HTMLResponse)
+def outcome_confirm(token: str, o: str = Query(...), db: Session = Depends(get_db)):
+    """The three links in the morning-after email land here. A GET records nothing
+    (mail scanners open every link); the button below POSTs to the same URL."""
+    a = _outcome_audition(db, token)
+    if o not in core.OUTCOMES:
         return RedirectResponse(f"{SITE_URL}/auditions", status_code=303)
-    core.log_outcome(db, a, o, via="email")
-    return RedirectResponse(f"{SITE_URL}/auditions/{a.id}?logged={o}&ar=after", status_code=303)
+    page = _OUTCOME_PAGE.format(
+        project=html.escape(a.project or "Your audition"),
+        word=html.escape(_OUTCOME_WORDS.get(o, o)),
+        action=f"/api/auditions/outcome/{html.escape(token, quote=True)}",
+        o=html.escape(o, quote=True),
+    )
+    return HTMLResponse(page, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/outcome/{token}")
+def outcome_from_email(
+    token: str,
+    o: Optional[str] = Query(None),
+    o_form: Optional[str] = Form(None, alias="o"),
+    db: Session = Depends(get_db),
+):
+    a = _outcome_audition(db, token)
+    choice = o or o_form
+    if choice not in core.OUTCOMES:
+        return RedirectResponse(f"{SITE_URL}/auditions", status_code=303)
+    core.log_outcome(db, a, choice, via="email")
+    return RedirectResponse(f"{SITE_URL}/auditions/{a.id}?logged={choice}&ar=after", status_code=303)
 
 
 # ---------- collection ----------
