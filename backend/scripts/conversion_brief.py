@@ -23,7 +23,7 @@ import argparse
 import os
 import re
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 backend_dir = Path(__file__).resolve().parent.parent
@@ -186,6 +186,61 @@ group by 1 order by 2 desc
 """
 
 
+# The Ghost Light iOS app, which bills through Apple and never touches Stripe.
+# Three sources: app_store_daily (App Store Connect: who saw the listing and
+# installed, synced daily at 16:00 UTC, about a day behind), monologue_views
+# with client = 'ghostlight' (what people actually read in the app; the only
+# in-app action the server records by client), and RevenueCat (who pays, via
+# the webhook, recorded from 2026-10-06). Anonymous app users carry an
+# anon+...@anon.actorrise.com address and can never be emailed.
+APP_STORE_DAYS = """
+select day, impressions, page_views, downloads, redownloads, iap_units, proceeds_usd
+from app_store_daily where day >= current_date - 14 order by day
+"""
+
+APP_READS = """
+select count(*) filter (where created_at > now() - interval '7 days'),
+       count(distinct user_id) filter (where created_at > now() - interval '7 days'),
+       count(*) filter (where created_at <= now() - interval '7 days'),
+       count(distinct user_id) filter (where created_at <= now() - interval '7 days')
+from monologue_views where client = 'ghostlight' and created_at > now() - interval '14 days'
+"""
+
+APP_READERS = f"""
+select case when u.email like 'anon+%' then '(anonymous)' else coalesce(nullif(u.name, ''), '') end,
+       case when u.email like 'anon+%' then '' else u.email end,
+       u.created_at::date,
+       count(*) reads, count(distinct mv.monologue_id) pieces, max(mv.created_at)::date,
+       (select count(*) from monologue_views w where w.user_id = u.id and w.client = 'web'
+          and w.created_at > now() - interval '7 days'),
+       coalesce((select t.name from user_subscriptions s join pricing_tiers t on t.id = s.tier_id
+                 where s.user_id = u.id and s.status in ('active', 'trialing')
+                 order by s.updated_at desc limit 1), 'free'),
+       (select string_agg(distinct coalesce(p.title, m.title), ', ')
+          from monologue_views w join monologues m on m.id = w.monologue_id
+          left join plays p on p.id = m.play_id
+          where w.user_id = u.id and w.client = 'ghostlight' and w.created_at > now() - interval '7 days')
+from monologue_views mv join users u on u.id = mv.user_id
+where mv.client = 'ghostlight' and mv.created_at > now() - interval '7 days' and {REAL}
+group by u.id order by reads desc limit 10
+"""
+
+APP_SUBS = """
+select s.status, coalesce(s.billing_period, ''), count(*)
+from user_subscriptions s where s.source = 'revenuecat' group by 1, 2 order by 1, 2
+"""
+
+APP_EVENTS = """
+select e.created_at::date, e.properties->>'type', e.properties->>'product_id', e.properties->>'period_type',
+       case when u.email like 'anon+%' then '(anonymous)' else coalesce(nullif(u.name, ''), u.email) end
+from user_events e join users u on u.id = e.user_id
+where e.event_name = 'app_subscription_event'
+  and coalesce(e.properties->>'environment', '') <> 'SANDBOX'
+  and e.created_at > now() - interval '7 days'
+order by e.created_at desc
+"""
+
+
 def table(head: tuple[str, ...], rows: list[tuple]) -> str:
     if not rows:
         return "_nobody_\n"
@@ -237,6 +292,29 @@ def build(conn) -> str:
     walked = q(WALKED_AWAY, days=2, limit=25)
     worth = [r for r in q(WORTH, written=written_to()) if r[4] > 0]
 
+    # Ghost Light. Apple's analytics columns are NULL until the first instance
+    # lands (about a day after the report request), and a NULL is "not from
+    # Apple yet", never a zero.
+    store_days = q(APP_STORE_DAYS)
+    cutoff = date.today() - timedelta(days=7)
+
+    def store_sum(col: int, recent: bool) -> int | float | None:
+        vals = [r[col] for r in store_days if (r[0] >= cutoff) == recent and r[col] is not None]
+        if not vals:
+            return None
+        s = sum(vals)
+        return round(s, 2) if isinstance(s, float) else s
+
+    store_rows = []
+    for i, name in ((1, "impressions"), (2, "page views"), (3, "first downloads"), (4, "redownloads"), (5, "in-app purchases"), (6, "proceeds, USD")):
+        now_v, before_v = store_sum(i, True), store_sum(i, False)
+        if now_v is None and before_v is None:
+            store_rows.append((name, "not from Apple yet", "", ""))
+        else:
+            store_rows.append((name, now_v if now_v is not None else "", before_v if before_v is not None else "",
+                               change(int(now_v or 0), int(before_v or 0)) if isinstance(now_v, int) or now_v is None else ""))
+    reads7, readers7, reads14, readers14 = q(APP_READS)[0]
+
     parts = [
         f"# Conversion brief, {date.today():%Y-%m-%d}\n",
         "## 1. The funnel: last 7 days against the 7 before\n",
@@ -265,6 +343,22 @@ def build(conn) -> str:
             ("name", "email", "signed up", "what they've done", "actions this week"),
             worth,
         ),
+        "## 6. Ghost Light, the iOS app\n",
+        "### The store, last 7 days against the 7 before\n",
+        "App Store Connect, synced at 16:00 UTC and about a day behind. Downloads are",
+        "first-time installs.\n",
+        table(("", "last 7 days", "7 before", "change"), store_rows),
+        "### In the app\n",
+        f"{readers7} people read {reads7} pieces in the app this week, against {readers14} people and {reads14} the week before.",
+        "Anonymous means they never signed in: the app lets you read without an account, and those people cannot be emailed.\n",
+        table(
+            ("name", "email", "signed up", "reads", "pieces", "last read", "web reads too", "tier", "what they read"),
+            q(APP_READERS),
+        ),
+        "### Money, via RevenueCat\n",
+        table(("status", "plan", "people"), q(APP_SUBS)),
+        "Events this week (purchases, renewals, trials, expirations), as Apple reported them:\n",
+        table(("day", "type", "product", "period", "who"), q(APP_EVENTS)),
     ]
     return "\n".join(parts)
 

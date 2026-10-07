@@ -24,6 +24,15 @@ Then read `outputs/conversion/<today>.md`. It is gitignored because it names peo
 If the script fails, stop and report the error with its output. Do not reconstruct the
 numbers by hand, and do not read a failed query as "nobody".
 
+Section 6 of the brief is the Ghost Light iOS app (Canberk, 2026-10-07: "make sure you are
+reading the ghostlight in the conversion loop too, conversions downloads etc"). Read it like
+the web funnel: the store (impressions → page views → downloads, from App Store Connect, a
+day behind), who read what in the app this week, and the RevenueCat events (a purchase, a
+renewal, a trial that lapsed). "Not from Apple yet" is a missing report, not a zero. The
+app's readers who signed in with a real address are ordinary actors and may be written to
+under the same rules as section 5, but only if the brief lists them there; do not add
+people from section 6 to the five by hand. An anonymous app reader cannot be emailed.
+
 ## 2. The inbox
 
 Load the Gmail tools and search for replies since the last run (the date of the newest other
@@ -138,6 +147,12 @@ Notes sent: <n> of 5
 Notes left as drafts: <n>, and which condition failed
 
 Trials ending inside 3 days: <names, and whether each has used it>
+
+Ghost Light (7 days, against the 7 before)
+  store     impressions <n> (<change>), page views <n>, downloads <n>   [or: Apple has not published yet]
+  in app    <n> people read <n> pieces (<n> signed in, <n> anonymous)
+  money     <n> paying, <n> in a trial; this week: <each RevenueCat event in a few words, or "no events">
+  people    <two or three lines: who read what, in the app, by first name; "anonymous" for the rest>
 
 Vercel yesterday: ISR writes <n> (cap ~6,600/day), CDN requests <n> (cap ~33,000/day)
 
