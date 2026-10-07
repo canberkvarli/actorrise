@@ -116,7 +116,7 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
         draft={manual ? null : draft}
         sidesName={file?.name ?? null}
         saving={saving}
-        initialNotes={manual ? text.trim() : ""}
+        initialNotes={manual || !parsedOk ? text.trim().slice(0, 4000) : ""}
         onSave={save}
         onCancel={cancel}
       />
