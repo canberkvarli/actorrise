@@ -243,14 +243,71 @@ class CoreTests(unittest.TestCase):
     def test_serialize_with_prep(self):
         a = self._make(material_raw="1 min comedic", starts_at=NOW + timedelta(days=1))
         core.add_piece(self.db, a, monologue_id=3)
-        with mock.patch.object(core, "count_runs", lambda db, aud, pieces: (len(pieces), NOW)):
+        with mock.patch.object(core, "count_runs", lambda db, aud, pieces: (len(pieces), NOW)), \
+                mock.patch.object(core, "piece_labels", lambda db, pieces: {}):
             out = core.serialize(self.db, a, NOW)
+            bare = core.serialize(self.db, a, NOW, with_prep=False)
         self.assertEqual(out["scope"], "upcoming")
         self.assertEqual(out["pieces"][0]["monologue_id"], 3)
         self.assertEqual(out["prep"]["runs"], 1)
         self.assertEqual([s["key"] for s in out["prep"]["steps"]], ["piece"])
         self.assertTrue(out["prep"]["steps"][0]["done"])
-        self.assertNotIn("prep", core.serialize(self.db, a, NOW, with_prep=False))
+        self.assertNotIn("prep", bare)
+
+
+class PieceLabelTests(unittest.TestCase):
+    """The prep room names each attached piece, so serialize carries its title."""
+
+    def setUp(self):
+        from app.models.actor import FilmTvReference, Monologue, Play
+
+        self.db, self.saved = memory_db(TABLES + [FilmTvReference, Play, Monologue])
+        self.user = User(email="a@x.com", supabase_id="a")
+        self.db.add(self.user)
+        self.db.commit()
+        play = Play(title="The Glass Menagerie", author="Tennessee Williams", source_type="play",
+                    genre="drama", category="classical", copyright_status="copyrighted")
+        self.db.add(play)
+        self.db.flush()
+        self.mono = Monologue(play_id=play.id, title="Blue Roses", character_name="Laura",
+                              text="word " * 120, word_count=120, estimated_duration_seconds=60)
+        self.db.add(self.mono)
+        self.db.commit()
+
+    def tearDown(self):
+        self.db.close()
+        restore(self.saved)
+
+    def test_serialized_pieces_carry_title_character_and_play(self):
+        a = core.create_audition(self.db, self.user.id, {"project": "P", "tz": "UTC"}, source="manual", now=NOW)
+        core.add_piece(self.db, a, monologue_id=self.mono.id)
+        core.add_piece(self.db, a, scene_id=4)
+        with mock.patch.object(core, "count_runs", lambda db, aud, pieces: (0, None)):
+            out = core.serialize(self.db, a, NOW)
+        mono, scene = out["pieces"]
+        self.assertEqual((mono["title"], mono["character"], mono["play_title"]),
+                         ("Blue Roses", "Laura", "The Glass Menagerie"))
+        self.assertIsNone(scene["title"])
+
+    def test_one_query_for_all_pieces(self):
+        a = core.create_audition(self.db, self.user.id, {"project": "P", "tz": "UTC"}, source="manual", now=NOW)
+        for _ in range(3):
+            core.add_piece(self.db, a, monologue_id=self.mono.id)
+        pieces = core.pieces_for(self.db, a)  # loaded, so only piece_labels' own query is counted
+        from sqlalchemy import event
+
+        statements = []
+        listener = lambda *args: statements.append(args[2])
+        event.listen(self.db.get_bind(), "before_cursor_execute", listener)
+        try:
+            labels = core.piece_labels(self.db, pieces)
+        finally:
+            event.remove(self.db.get_bind(), "before_cursor_execute", listener)
+        self.assertEqual(len(statements), 1)
+        self.assertEqual(labels[self.mono.id]["title"], "Blue Roses")
+
+    def test_no_monologues_means_no_query(self):
+        self.assertEqual(core.piece_labels(self.db, []), {})
 
 
 class PrepStepTests(unittest.TestCase):

@@ -52,8 +52,18 @@ export function patchFromValues(a: Audition, v: DraftValues): Record<string, unk
   return patch;
 }
 
-/** The API's own message when it sent one, else a plain fallback. */
+// The backend's 400s are written for developers. The ones an actor can actually hit, in my words.
+const FRIENDLY: [RegExp, string][] = [
+  [/^tape_link must be/, "That tape link needs to start with https://."],
+  [/^tz must be/, "I couldn't read that time zone. Try again from your own browser."],
+  [/^project is required/, "I need the name of the project to save this."],
+  [/^user_script_id must be/, "I couldn't find those sides on your account. Try adding them again."],
+  [/^kind must be/, "Pick in person, self tape or virtual for this one."],
+];
+
+/** The API's message, in friendlier words when I know it, else as sent, else a plain fallback. */
 export function errMessage(e: unknown): string {
   const m = (e as { message?: unknown })?.message;
-  return typeof m === "string" && m && !m.startsWith("[object") ? m : "That didn't save. Check the fields and try again.";
+  if (typeof m !== "string" || !m || m.startsWith("[object")) return "That didn't save. Check the fields and try again.";
+  return FRIENDLY.find(([re]) => re.test(m))?.[1] ?? m;
 }

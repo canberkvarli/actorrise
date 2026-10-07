@@ -30,8 +30,14 @@ export type Audition = {
   reminders_on: boolean;
   scope: AuditionScope;
   created_at: string;
-  pieces: { id: number; monologue_id: number | null; scene_id: number | null; used: boolean }[];
+  pieces: AuditionPiece[];
   prep?: { runs: number; last_run_at: string | null; steps: PrepStep[] };
+};
+
+/** A piece the actor is bringing. title/character/play_title name a monologue; null for a scene. */
+export type AuditionPiece = {
+  id: number; monologue_id: number | null; scene_id: number | null; used: boolean;
+  title: string | null; character: string | null; play_title: string | null;
 };
 
 export type DraftField<T = string | null> = { value: T; confidence: "high" | "low" };

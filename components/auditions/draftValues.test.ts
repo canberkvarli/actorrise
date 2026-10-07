@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { fromLocalInput, type Audition } from "../../lib/auditions";
-import { patchFromValues, valuesFromAudition } from "./draftValues";
+import { errMessage, patchFromValues, valuesFromAudition } from "./draftValues";
 
 function aud(over: Partial<Audition> = {}): Audition {
   return {
@@ -61,5 +61,29 @@ describe("patchFromValues", () => {
     expect(patchFromValues(a, { ...valuesFromAudition(a), material_raw: "2 min contemporary" })).toEqual({
       material_raw: "2 min contemporary", material: null,
     });
+  });
+});
+
+describe("errMessage", () => {
+  const err = (m: unknown) => ({ message: m });
+  it("puts the backend's known 400s in plain words", () => {
+    expect(errMessage(err("tape_link must be an http(s) link"))).toBe("That tape link needs to start with https://.");
+    expect(errMessage(err("tz must be an IANA timezone name"))).toMatch(/time zone/);
+    expect(errMessage(err("project is required"))).toBe("I need the name of the project to save this.");
+    expect(errMessage(err("user_script_id must be one of your scripts"))).toMatch(/sides/);
+  });
+  it("passes anything else through as sent", () => {
+    expect(errMessage(err("Please sign in again."))).toBe("Please sign in again.");
+  });
+  it("falls back when there is no usable message", () => {
+    const fallback = "That didn't save. Check the fields and try again.";
+    expect(errMessage(err(""))).toBe(fallback);
+    expect(errMessage(err("[object Object]"))).toBe(fallback);
+    expect(errMessage(null)).toBe(fallback);
+  });
+  it("never puts a dash in front of an actor", () => {
+    for (const m of ["tape_link must be", "tz must be", "project is required", "user_script_id must be", "kind must be"]) {
+      expect(errMessage(err(m))).not.toMatch(/[\u2013\u2014]/);
+    }
   });
 });

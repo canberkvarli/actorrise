@@ -238,6 +238,23 @@ def pieces_for(db: Session, a: Audition) -> list[AuditionPiece]:
     return db.query(AuditionPiece).filter_by(audition_id=a.id).order_by(AuditionPiece.id).all()
 
 
+def piece_labels(db: Session, pieces: list[AuditionPiece]) -> dict[int, dict[str, Optional[str]]]:
+    """Title, character and play for every linked monologue, in one query, so the
+    prep room can name the piece. Imports inside for the same reason as count_runs."""
+    ids = {p.monologue_id for p in pieces if p.monologue_id}
+    if not ids:
+        return {}
+    from app.models.actor import Monologue, Play
+
+    rows = (
+        db.query(Monologue.id, Monologue.title, Monologue.character_name, Play.title)
+        .join(Play, Play.id == Monologue.play_id)
+        .filter(Monologue.id.in_(ids))
+        .all()
+    )
+    return {mid: {"title": t, "character": c, "play_title": pt} for mid, t, c, pt in rows}
+
+
 def count_runs(db: Session, a: Audition, pieces: list[AuditionPiece]) -> tuple[int, Optional[datetime]]:
     """Completed ScenePartner runs on the sides, plus Monologue Work starts on the
     linked pieces, since the audition was added. Imports inside: the actor models
@@ -296,6 +313,8 @@ def _iso(dt: Optional[datetime]) -> Optional[str]:
 
 def serialize(db: Session, a: Audition, now: datetime, *, with_prep: bool = True) -> dict[str, Any]:
     pieces = pieces_for(db, a)
+    labels = piece_labels(db, pieces)
+    none = {"title": None, "character": None, "play_title": None}
     out: dict[str, Any] = {
         "id": a.id, "project": a.project, "role": a.role, "kind": a.kind, "status": a.status,
         "starts_at": _iso(a.starts_at), "due_at": _iso(a.due_at), "when": _iso(when(a)), "tz": a.tz,
@@ -303,7 +322,11 @@ def serialize(db: Session, a: Audition, now: datetime, *, with_prep: bool = True
         "bring": a.bring, "notes": a.notes, "tape_link": a.tape_link, "source": a.source,
         "user_script_id": a.user_script_id, "reminders_on": a.reminders_on,
         "scope": scope_of(a, now), "created_at": _iso(a.created_at),
-        "pieces": [{"id": p.id, "monologue_id": p.monologue_id, "scene_id": p.scene_id, "used": p.used} for p in pieces],
+        "pieces": [
+            {"id": p.id, "monologue_id": p.monologue_id, "scene_id": p.scene_id, "used": p.used,
+             **labels.get(p.monologue_id, none)}
+            for p in pieces
+        ],
     }
     if with_prep:
         runs, last = count_runs(db, a, pieces)

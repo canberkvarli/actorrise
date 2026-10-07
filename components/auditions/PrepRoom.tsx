@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { trackEvent } from "@/lib/events";
-import { countdown, STATUS_LABEL, STATUS_ORDER, whenLabel, type Audition, type AuditionStatus } from "@/lib/auditions";
-import { useDeleteAudition, useLogOutcome, useUpdateAudition } from "@/hooks/useAuditions";
+import { countdown, STATUS_LABEL, STATUS_ORDER, whenLabel, type Audition, type AuditionPiece, type AuditionStatus } from "@/lib/auditions";
+import { useAddPiece, useDeleteAudition, useLogOutcome, useRemovePiece, useUpdateAudition } from "@/hooks/useAuditions";
+import { useBookmarks } from "@/hooks/useBookmarks";
 import { useScript } from "@/hooks/useScripts";
 import { DraftCard } from "./DraftCard";
 import { errMessage, patchFromValues, valuesFromAudition, type DraftValues } from "./draftValues";
@@ -34,6 +35,20 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
   const [answeredFor, setAnsweredFor] = useState<number | null>(null);
   // Same trick for the edit form: open for one audition, so picking another ticket closes it.
   const [editingFor, setEditingFor] = useState<number | null>(null);
+  // Closing the form hands focus back to the button that opened it.
+  const fixButton = useRef<HTMLButtonElement>(null);
+  const refocus = useRef(false);
+  useEffect(() => { setEditingFor(null); }, [a.id]);
+  useEffect(() => {
+    if (editingFor === null && refocus.current) {
+      refocus.current = false;
+      fixButton.current?.focus();
+    }
+  }, [editingFor]);
+  function closeEdit() {
+    refocus.current = true;
+    setEditingFor(null);
+  }
   const save = (body: Record<string, unknown>) => update.mutate({ id: a.id, ...body }, { onError: () => toast.error(SAVE_FAILED) });
   // Sides go up in the background, so the script can still be reading when the prep room opens.
   // useScript polls while it is, and /practice handles a reading script on its own.
@@ -53,12 +68,12 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
 
   function saveEdit(v: DraftValues) {
     const patch = patchFromValues(a, v);
-    if (Object.keys(patch).length === 0) { setEditingFor(null); return; }
-    const moved = "starts_at" in patch || "due_at" in patch;
+    if (Object.keys(patch).length === 0) { closeEdit(); return; }
+    const moved = patch.starts_at != null || patch.due_at != null;
     update.mutate({ id: a.id, ...patch }, {
       onSuccess: () => {
-        setEditingFor(null);
-        toast.success(moved && a.reminders_on ? "Fixed. Your reminders moved with the new time." : "Fixed. Thanks for catching that.");
+        closeEdit();
+        toast.success(moved && a.reminders_on ? "Got it. Any reminders still to come follow the new time." : "Fixed. Thanks for catching that.");
       },
       onError: (e) => toast.error(errMessage(e)),
     });
@@ -72,7 +87,7 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
         sidesName={null}
         saving={update.isPending}
         onSave={saveEdit}
-        onCancel={() => setEditingFor(null)}
+        onCancel={closeEdit}
       />
     );
   }
@@ -110,6 +125,7 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
                   {s.key === "sides" && (
                     <span className="aud-dir aud-muted block text-[11px]">{sidesNote(a.prep!.runs)}</span>
                   )}
+                  {(s.key === "piece" || s.key === "bring") && <Pieces a={a} />}
                 </span>
                 {s.href && (
                   <Link
@@ -158,7 +174,7 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
             <input type="checkbox" checked={a.reminders_on} onChange={(e) => save({ reminders_on: e.target.checked })} />
             email me about this one
           </label>
-          <button type="button" className="underline underline-offset-2" onClick={() => setEditingFor(a.id)}>
+          <button ref={fixButton} type="button" className="underline underline-offset-2" onClick={() => setEditingFor(a.id)}>
             fix the details
           </button>
           {a.tape_link && <a href={a.tape_link} target="_blank" rel="noreferrer" className="underline">tape</a>}
@@ -177,5 +193,78 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
         {a.notes && <p className="aud-muted mt-4 whitespace-pre-wrap break-words text-sm">{a.notes}</p>}
       </div>
     </article>
+  );
+}
+
+function pieceName(p: AuditionPiece): string {
+  if (!p.monologue_id) return "A scene";
+  if (!p.title) return "A monologue";
+  return p.character && !p.title.includes(p.character) ? `${p.title}, ${p.character}` : p.title;
+}
+
+/** What the actor is bringing: the pieces already on this audition, and one tap to add a saved monologue. */
+function Pieces({ a }: { a: Audition }) {
+  const add = useAddPiece();
+  const remove = useRemovePiece();
+  const { data: saved } = useBookmarks();
+  const attached = new Set(a.pieces.map((p) => p.monologue_id));
+  const choices = (saved ?? []).filter((m) => !attached.has(m.id));
+
+  return (
+    <span className="mt-1.5 block">
+      {a.pieces.length > 0 && (
+        <span className="grid gap-1">
+          {a.pieces.map((p) => (
+            <span key={p.id} className="aud-dir flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[12px]">
+              <span className="min-w-0 break-words">
+                {pieceName(p)}
+                {p.play_title && <span className="aud-muted"> from {p.play_title}</span>}
+              </span>
+              {p.monologue_id && (
+                <Link
+                  href={`/monologue/${p.monologue_id}/work`}
+                  onClick={() => trackEvent("audition_prep_started", { audition_id: a.id, kind: "monologue" })}
+                  className="underline underline-offset-2"
+                >
+                  work on it
+                </Link>
+              )}
+              <button
+                type="button"
+                className="aud-muted underline underline-offset-2"
+                disabled={remove.isPending}
+                aria-label={`Take ${pieceName(p)} off this audition`}
+                onClick={() => remove.mutate({ id: a.id, piece_id: p.id }, { onError: () => toast.error(SAVE_FAILED) })}
+              >
+                take it off
+              </button>
+            </span>
+          ))}
+        </span>
+      )}
+      {choices.length > 0 && (
+        <select
+          className="aud-dir mt-1.5 max-w-full border border-current bg-transparent px-1.5 py-1 text-[12px]"
+          aria-label="Bring a monologue you saved"
+          value=""
+          disabled={add.isPending}
+          onChange={(e) => {
+            const id = Number(e.target.value);
+            if (!id) return;
+            add.mutate({ id: a.id, monologue_id: id }, {
+              onSuccess: () => toast.success("Got it. That's the one you're bringing."),
+              onError: () => toast.error(SAVE_FAILED),
+            });
+          }}
+        >
+          <option value="">{a.pieces.length ? "Add another one you saved" : "Pick one you saved"}</option>
+          {choices.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.character_name}, {m.play_title}
+            </option>
+          ))}
+        </select>
+      )}
+    </span>
   );
 }

@@ -110,6 +110,15 @@ export function useAddPiece() {
   });
 }
 
+export function useRemovePiece() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, piece_id }: { id: number; piece_id: number }) =>
+      api.delete(`/api/auditions/${id}/pieces/${piece_id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
 export function useCalendarLink(enabled: boolean) {
   return useQuery<{ url: string }>({
     queryKey: [...KEY, "calendar"],
