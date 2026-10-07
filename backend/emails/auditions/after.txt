@@ -2,7 +2,7 @@ subject: how did {project} go?
 
 hey {name},
 
-how did it go? one tap and i'll keep track of it for you.
+tap one and i'll keep track of it for you.
 
 felt good: {good}
 
