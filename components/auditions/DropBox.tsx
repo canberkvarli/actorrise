@@ -11,6 +11,13 @@ import { DraftCard, bodyFromValues, valuesFromDraft, type DraftValues } from "./
 
 type Stage = "idle" | "reading" | "card";
 
+const MAX_BYTES = 10 * 1024 * 1024;
+
+function errMessage(e: unknown): string {
+  const m = (e as { message?: unknown })?.message;
+  return typeof m === "string" && m && m !== "[object Object]" ? m : "That didn't save. Check the fields and try again.";
+}
+
 export function DropBox({ source = "parse", startOpen = false }: { source?: "parse" | "onboarding"; startOpen?: boolean }) {
   const router = useRouter();
   const [text, setText] = useState("");
@@ -20,9 +27,22 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
   const [draft, setDraft] = useState<Draft | null>(null);
   const [manual, setManual] = useState(startOpen);
   const [quotaHit, setQuotaHit] = useState(false);
+  const [parsedOk, setParsedOk] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const busy = useRef(false);
+  const scriptId = useRef<number | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const parse = useParseBreakdown();
   const create = useCreateAudition();
+
+  function acceptFile(f: File | null | undefined) {
+    if (!f) return;
+    const isPdf = f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) return void toast.message("Sides need to be a PDF.");
+    if (f.size > MAX_BYTES) return void toast.message("That PDF is over 10MB. Try a smaller one.");
+    setFile(f);
+    scriptId.current = null;
+  }
 
   async function read() {
     if (!text.trim() && !file) return;
@@ -30,47 +50,62 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
     try {
       const res = await parse.mutateAsync({ text: text.trim(), file, tz: browserTz() });
       setDraft(res.draft);
+      setParsedOk(res.ok);
       setManual(false);
       if (!res.ok) toast.message("I couldn't read that one. Fill it in and I'll keep your text in the notes.");
     } catch (e) {
       const err = e as Error & { detail?: { error?: string } };
-      if (err.detail?.error === "audition_parse_quota") {
-        setQuotaHit(true);
-        toast.message("That's your 5 free reads this month. Fill this one in by hand, or go Plus for unlimited.");
-      } else {
-        toast.error(err.message);
-      }
+      if (err.detail?.error === "audition_parse_quota") setQuotaHit(true);
+      else toast.error(errMessage(e));
       setDraft(null);
+      setParsedOk(false);
       setManual(true);
     }
     setStage("card");
   }
 
   async function save(v: DraftValues) {
-    const body: Record<string, unknown> = { ...bodyFromValues(v), tz: browserTz(), source: manual ? (source === "onboarding" ? "onboarding" : "manual") : source };
-    if (file) {
-      const scriptId = await uploadSides(file);
-      if (scriptId) body.user_script_id = scriptId;
-      else toast.message("The sides didn't load into ScenePartner. You can add them from the prep room.");
-    }
-    if (draft && !manual && draft.material) body.material = draft.material;
-    if (draft && !manual) {
-      const fields = changedFields(valuesFromDraft(draft) as unknown as Record<string, unknown>, v as unknown as Record<string, unknown>);
-      if (fields.length) trackEvent("audition_parse_corrected", { fields: fields.join(",") });
-    }
+    if (busy.current) return;
+    busy.current = true;
+    setSaving(true);
     try {
+      const body: Record<string, unknown> = { ...bodyFromValues(v), tz: browserTz(), source: manual ? (source === "onboarding" ? "onboarding" : "manual") : source };
+      if (file) {
+        if (scriptId.current == null) scriptId.current = await uploadSides(file);
+        if (scriptId.current != null) body.user_script_id = scriptId.current;
+        else toast.message("The sides didn't load into ScenePartner. You can add them from the prep room.");
+      }
+      const parsed = draft && !manual && parsedOk ? draft : null;
+      if (parsed?.material && v.material_raw === valuesFromDraft(parsed).material_raw) body.material = parsed.material;
       const a = await create.mutateAsync(body);
+      if (parsed) {
+        const fields = changedFields(valuesFromDraft(parsed) as unknown as Record<string, unknown>, v as unknown as Record<string, unknown>);
+        if (fields.length) trackEvent("audition_parse_corrected", { fields: fields.join(",") });
+      }
       reset();
       router.push(`/auditions/${a.id}`);
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(errMessage(e));
+    } finally {
+      busy.current = false;
+      setSaving(false);
     }
   }
 
   function reset() {
     setText("");
     setFile(null);
+    scriptId.current = null;
     setDraft(null);
+    setParsedOk(false);
+    setStage("idle");
+    setManual(false);
+  }
+
+  // Cancel goes back to the box with the paste and the sides still in it.
+  function cancel() {
+    setDraft(null);
+    setParsedOk(false);
     setStage("idle");
     setManual(false);
   }
@@ -80,9 +115,10 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
       <DraftCard
         draft={manual ? null : draft}
         sidesName={file?.name ?? null}
-        saving={create.isPending}
+        saving={saving}
+        initialNotes={manual ? text.trim() : ""}
         onSave={save}
-        onCancel={reset}
+        onCancel={cancel}
       />
     );
   }
@@ -92,13 +128,11 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
       className="aud-drop p-3"
       data-over={over ? "true" : "false"}
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
-      onDragLeave={() => setOver(false)}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(false); }}
       onDrop={(e) => {
         e.preventDefault();
         setOver(false);
-        const f = e.dataTransfer.files?.[0];
-        if (f && f.type === "application/pdf") setFile(f);
-        else if (f) toast.message("Sides need to be a PDF.");
+        acceptFile(e.dataTransfer.files?.[0]);
       }}
     >
       <p className="text-sm"><b>Got one coming up?</b> Paste the casting email or drop the sides.</p>
@@ -128,7 +162,7 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
         <button type="button" className="aud-dir text-xs underline-offset-2 hover:underline" onClick={() => fileInput.current?.click()}>
           {file ? `Sides: ${file.name}` : "attach sides (PDF)"}
         </button>
-        <input ref={fileInput} type="file" accept="application/pdf" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        <input ref={fileInput} type="file" accept="application/pdf" className="sr-only" onChange={(e) => { acceptFile(e.target.files?.[0]); e.target.value = ""; }} />
         <button type="button" className="aud-dir aud-muted ml-auto text-xs underline-offset-2 hover:underline" onClick={() => { setManual(true); setStage("card"); }}>
           or fill it in yourself
         </button>
