@@ -258,6 +258,10 @@ export default function AdminEmailsPage() {
   const [triggeredOn, setTriggeredOn] = useState<boolean | null>(null);
   const [triggeredSaving, setTriggeredSaving] = useState(false);
 
+  // Audition tracker reminders toggle
+  const [auditionRemindersOn, setAuditionRemindersOn] = useState<boolean | null>(null);
+  const [auditionRemindersSaving, setAuditionRemindersSaving] = useState(false);
+
   // Dialogs
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -281,6 +285,7 @@ export default function AdminEmailsPage() {
       api.get<{ enabled: boolean }>("/api/admin/emails/saved-piece-reminder").then(({ data }) => setSavedReminderOn(data.enabled)).catch(() => {}),
       api.get<{ enabled: boolean }>("/api/admin/emails/lifecycle-emails").then(({ data }) => setLifecycleOn(data.enabled)).catch(() => {}),
       api.get<{ enabled: boolean }>("/api/admin/emails/triggered-emails").then(({ data }) => setTriggeredOn(data.enabled)).catch(() => {}),
+      api.get<{ enabled: boolean }>("/api/admin/emails/audition-reminders").then(({ data }) => setAuditionRemindersOn(data.enabled)).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -301,6 +306,22 @@ export default function AdminEmailsPage() {
       toast.error("Failed to update the triggered email setting");
     } finally {
       setTriggeredSaving(false);
+    }
+  }
+
+  async function updateAuditionReminders(enabled: boolean) {
+    const prev = auditionRemindersOn;
+    setAuditionRemindersOn(enabled); // optimistic
+    setAuditionRemindersSaving(true);
+    try {
+      const { data } = await api.put<{ enabled: boolean }>("/api/admin/emails/audition-reminders", { enabled });
+      setAuditionRemindersOn(data.enabled);
+      toast.success(data.enabled ? "Audition reminders are on" : "Audition reminders paused.");
+    } catch {
+      setAuditionRemindersOn(prev); // revert
+      toast.error("Failed to update the audition reminder setting");
+    } finally {
+      setAuditionRemindersSaving(false);
     }
   }
 
@@ -949,6 +970,28 @@ export default function AdminEmailsPage() {
             disabled={triggeredSaving}
             onCheckedChange={updateTriggeredEmails}
             aria-label="Toggle triggered emails"
+          />
+        </div>
+      )}
+
+      {canSend && auditionRemindersOn !== null && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-3 sm:p-4">
+          <div className="flex items-start gap-2.5">
+            <IconClock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Audition reminders</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {auditionRemindersOn
+                  ? "On. Three notes per audition the actor added: 3 days out, the night before, the morning after. Never more than one a day, outside the weekly cap."
+                  : "Off. Nothing sends until you turn this on. Copy is in backend/emails/auditions."}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={auditionRemindersOn}
+            disabled={auditionRemindersSaving}
+            onCheckedChange={updateAuditionReminders}
+            aria-label="Toggle audition reminders"
           />
         </div>
       )}

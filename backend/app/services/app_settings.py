@@ -32,6 +32,9 @@ LIFECYCLE_EMAILS_ENABLED = "lifecycle_emails_enabled"
 # and day10. They ride the lifecycle scheduler, so LIFECYCLE_EMAILS_ENABLED=false
 # in the environment stops these too.
 TRIGGERED_EMAILS_ENABLED = "triggered_emails_enabled"
+# The audition tracker's prep / night-before / morning-after emails
+# (services/auditions/reminders.py). Defaults OFF; turned on at launch.
+AUDITION_REMINDERS_ENABLED = "audition_reminders_enabled"
 
 
 def get_bool(db: Session, key: str, default: bool = False) -> bool:

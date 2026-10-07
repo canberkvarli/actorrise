@@ -295,6 +295,54 @@ def _start_lifecycle_email_scheduler() -> None:
     logger.info("Lifecycle email scheduler started (hourly)")
 
 
+def _start_audition_reminder_scheduler() -> None:
+    """Hourly audition reminders (services/auditions/reminders.py).
+
+    Runtime switch app_settings.AUDITION_REMINDERS_ENABLED, default OFF. Env
+    hard-kill: AUDITION_REMINDERS_ENABLED=false. Production only, like every
+    scheduler here: a local uvicorn talks to the prod pooler.
+    """
+    import os
+
+    from app.services.scheduler_gate import scheduler_status
+
+    status = scheduler_status(
+        "audition_reminders",
+        environment=os.getenv("ENVIRONMENT"),
+        flag=os.getenv("AUDITION_REMINDERS_ENABLED"),
+    )
+    if not status.will_run:
+        logger.warning(status.reason)
+        return
+
+    def loop() -> None:
+        time.sleep(180)  # after the lifecycle loop's first pass
+        while True:
+            try:
+                from app.core.database import SessionLocal
+                from app.services import app_settings
+                from app.services.auditions import reminders
+
+                db = SessionLocal()
+                try:
+                    if not app_settings.get_bool(db, app_settings.AUDITION_REMINDERS_ENABLED, default=False):
+                        logger.info("audition reminders: skipped, app_settings switch is off")
+                    else:
+                        stats = reminders.run(db, send=True)
+                        logger.info(
+                            "audition reminders: eligible %s sent %s failed %s",
+                            stats["eligible"], stats["sent"], stats["failed"],
+                        )
+                finally:
+                    db.close()
+            except Exception as e:  # noqa: BLE001
+                logger.error("audition reminder scheduler run FAILED: %s", e, exc_info=True)
+            time.sleep(max(60, 3600 - (time.time() % 3600)))
+
+    threading.Thread(target=loop, daemon=True, name="audition-reminders").start()
+    logger.info("Audition reminder scheduler started (hourly)")
+
+
 def _start_rehearsal_sweep_scheduler() -> None:
     """Hourly global sweep of rehearsal sessions left open.
 
@@ -438,6 +486,7 @@ async def lifespan(app: FastAPI):
     _warmup_title_catalogue_background()
     _start_saved_piece_reminder_scheduler()
     _start_lifecycle_email_scheduler()
+    _start_audition_reminder_scheduler()
     _start_rehearsal_sweep_scheduler()
     _start_comp_expiry_scheduler()
     yield
