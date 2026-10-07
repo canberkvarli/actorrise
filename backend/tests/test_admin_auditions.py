@@ -43,3 +43,64 @@ class AdminAuditionsPanelTests(unittest.TestCase):
         self.assertEqual(out["reminders"]["sent"], {"eve": 1})
         self.assertEqual(out["parse"]["requested"], 1)
         self.assertEqual(len(out["created_by_week"]), 1)
+
+    def _u(self, email, days=60):
+        u = User(email=email, hashed_password="x", created_at=datetime.now(timezone.utc) - timedelta(days=days))
+        self.db.add(u)
+        self.db.flush()
+        return u
+
+    def test_edge_cases(self):
+        now = datetime.now(timezone.utc)
+        u, other, staff = self._u("a@gmail.com"), self._u("b@gmail.com"), self._u("s@actorrise.com")
+        gone = Audition(user_id=u.id, project="Gone", starts_at=now - timedelta(days=1), deleted_at=now)
+        late = Audition(user_id=u.id, project="Late", starts_at=now - timedelta(days=2))
+        self.db.add_all([gone, late])
+        self.db.flush()
+        self.db.add_all([
+            UserEvent(user_id=u.id, event_name="audition_prep_started", properties={"audition_id": late.id},
+                      created_at=now - timedelta(days=1)),  # after the date
+            UserEvent(user_id=u.id, event_name="audition_prep_started", properties={"audition_id": "oops"}),
+            UserEvent(user_id=u.id, event_name="audition_prep_started", properties={"audition_id": {"x": 1}}),
+            UserEvent(user_id=other.id, event_name="audition_prep_started", properties={"audition_id": late.id},
+                      created_at=now - timedelta(days=5)),  # not the owner
+            UserEvent(user_id=staff.id, event_name="audition_reminder_sent", properties={"moment": "prep"}),
+        ])
+        self.db.commit()
+        out = auditions_panel(None, self.db)
+        self.assertEqual(out["auditions"], 1)
+        self.assertEqual(out["prep_before_date"], {"past": 1, "prepped": 0})
+        self.assertEqual(out["reminders"]["sent"], {})
+
+    def test_reminder_loop_counts_prep_after_reminder(self):
+        now = datetime.now(timezone.utc)
+        u = self._u("a@gmail.com")
+        a = Audition(user_id=u.id, project="P", starts_at=now + timedelta(days=3))
+        self.db.add(a)
+        self.db.flush()
+        self.db.add_all([
+            UserEvent(user_id=u.id, event_name="audition_reminder_sent",
+                      properties={"audition_id": a.id, "moment": "prep"}, created_at=now - timedelta(hours=5)),
+            UserEvent(user_id=u.id, event_name="audition_prep_started", properties={"audition_id": a.id},
+                      created_at=now - timedelta(hours=1)),
+        ])
+        self.db.commit()
+        r = auditions_panel(None, self.db)["reminders"]
+        self.assertEqual((r["auditions"], r["prepped_after"]), (1, 1))
+
+    def test_habit_counts_tracker_only_after_first_audition(self):
+        from datetime import date
+        from app.services import engagement
+        now = datetime.now(timezone.utc)
+        w1 = engagement.week_start(date.today()) - timedelta(days=21)
+        u, v = self._u("a@gmail.com"), self._u("b@gmail.com")
+        # u creates their first audition in week 3, so is "other" in weeks 1 and 2.
+        self.db.add(Audition(user_id=u.id, project="P", created_at=now - timedelta(days=7)))
+        for uid in (u.id, v.id):
+            for k in range(4):
+                self.db.add(UsageMetrics(user_id=uid, date=w1 + timedelta(days=7 * k)))
+        self.db.commit()
+        habit = {h["week_start"]: h for h in auditions_panel(None, self.db)["habit"]}
+        self.assertEqual(habit[w1.isoformat()]["tracker_active"], 0)
+        self.assertEqual(habit[w1.isoformat()]["other_active"], 2)
+        self.assertEqual(habit[(w1 + timedelta(days=14)).isoformat()]["tracker_active"], 1)

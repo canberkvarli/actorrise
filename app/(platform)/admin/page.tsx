@@ -254,7 +254,8 @@ type AuditionsPanel = {
   auditions: number;
   parse: { requested: number; corrected: number; failed: number };
   prep_before_date: { past: number; prepped: number };
-  reminders: { sent: Record<string, number>; clicked: Record<string, number> };
+  reminders: { sent: Record<string, number>; clicked: Record<string, number>; auditions: number; prepped_after: number };
+  created_by_week: { week_start: string; parse?: number; manual?: number; onboarding?: number }[];
   outcomes_by_via: Record<string, number>;
   habit: { week_start: string; tracker_active: number; tracker_back: number; other_active: number; other_back: number }[];
   winback_users: number;
@@ -265,11 +266,12 @@ function pct(n: number, d: number) {
 }
 
 function AuditionsCard() {
-  const { data } = useQuery<AuditionsPanel>({
+  const { data, isError } = useQuery<AuditionsPanel>({
     queryKey: ["admin", "auditions"],
     queryFn: async () => (await api.get<AuditionsPanel>("/api/admin/auditions")).data,
     staleTime: 60_000,
   });
+  if (isError) return <p className="text-xs text-muted-foreground">Audition tracker numbers did not load.</p>;
   if (!data) return null;
   const moments = ["prep", "eve", "after"];
   return (
@@ -290,6 +292,11 @@ function AuditionsCard() {
           </div>
         ))}
       </div>
+      <p className="text-xs text-muted-foreground">
+        Reminded auditions prepped afterwards: {data.reminders.prepped_after}/{data.reminders.auditions}.
+        {" "}Created by week:{" "}
+        {data.created_by_week.map((w) => `${w.week_start.slice(5)} ${w.parse ?? 0} parsed, ${w.manual ?? 0} manual`).join(" · ") || "none"}.
+      </p>
       <p className="text-xs text-muted-foreground">
         Outcomes: {data.outcomes_by_via.email ?? 0} by email, {data.outcomes_by_via.app ?? 0} in app. Win-back clicks: {data.winback_users}.
       </p>
