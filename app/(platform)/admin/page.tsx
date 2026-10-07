@@ -763,7 +763,7 @@ export default function AdminOverviewPage() {
               }
               accent
             />
-            <MiniStat label="Active (7d)" value={growth.active_users.wau.toLocaleString()} hint="WAU" />
+            <MiniStat label="Active (7d)" value={growth.active_users.wau.toLocaleString()} hint={growth.active_users.engaged_wau != null ? `WAU, ${growth.active_users.engaged_wau.toLocaleString()} engaged` : "WAU"} />
             <MiniStat label="Active (30d)" value={growth.active_users.mau.toLocaleString()} hint="MAU" />
             <MiniStat label="Stickiness" value={growth.active_users.stickiness_percent != null ? `${growth.active_users.stickiness_percent}%` : "-"} hint="DAU÷MAU" />
             <MiniStat
