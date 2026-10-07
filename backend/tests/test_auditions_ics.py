@@ -23,7 +23,7 @@ class IcsTests(unittest.TestCase):
         self.assertIn("DTEND:20261009T154000Z", out)
         self.assertIn("SUMMARY:Callback: The Glass Menagerie (Laura)", out)
         self.assertIn("LOCATION:Ripley Grier\\, 16C", out)
-        self.assertIn("Casting: Telsey\; Co", out)
+        self.assertIn("Casting: Telsey\\; Co", out)
         self.assertIn("DTSTART;VALUE=DATE:20261012", out)
         self.assertIn("DTEND;VALUE=DATE:20261013", out)
         self.assertIn("SUMMARY:Tape due 5:00 PM: Untitled Pilot", out)
@@ -61,6 +61,10 @@ class IcsTests(unittest.TestCase):
         out = ics.build_calendar([undated, due_only], now=NOW, site="https://a")
         self.assertNotIn("audition-6@", out)
         self.assertIn("audition-7@", out)
+        self.assertIn("SUMMARY:Due 9:00 PM: Y", out)
+        self.assertNotIn("Tape due: Y", out)
+        self.assertIn("REFRESH-INTERVAL;VALUE=DURATION:PT1H", out)
+        self.assertIn("X-PUBLISHED-TTL:PT1H", out)
 
 
 if __name__ == "__main__":

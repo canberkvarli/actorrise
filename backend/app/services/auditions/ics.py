@@ -46,8 +46,9 @@ def _event(a: Audition, now: datetime, site: str) -> list[str]:
         local = aware(a.due_at).astimezone(zone)
         day = local.date()
         lines += [f"DTSTART;VALUE=DATE:{day:%Y%m%d}", f"DTEND;VALUE=DATE:{day + timedelta(days=1):%Y%m%d}"]
+        word = "Tape due" if a.kind == "self_tape" else "Due"
         clock = local.strftime("%I:%M %p").lstrip("0")
-        lines.append(f"SUMMARY:{_esc(f'Tape due {clock}: {title}')}")
+        lines.append(f"SUMMARY:{_esc(f'{word} {clock}: {title}')}")
     else:
         start = aware(a.starts_at)
         lines += [f"DTSTART:{_utc(start)}", f"DTEND:{_utc(start + timedelta(hours=1))}"]
@@ -67,7 +68,8 @@ def _event(a: Audition, now: datetime, site: str) -> list[str]:
 
 def build_calendar(auditions: list[Audition], *, now: datetime, site: str) -> str:
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//ActorRise//Auditions//EN",
-             "CALSCALE:GREGORIAN", "X-WR-CALNAME:Auditions (ActorRise)"]
+             "CALSCALE:GREGORIAN", "X-WR-CALNAME:Auditions (ActorRise)",
+             "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H"]
     for a in auditions:
         if a.starts_at or a.due_at:
             lines += _event(a, now, site)
