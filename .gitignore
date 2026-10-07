@@ -123,3 +123,4 @@ data-gym-cache/
 *.swp
 *.swo
 *~
+.superpowers/
