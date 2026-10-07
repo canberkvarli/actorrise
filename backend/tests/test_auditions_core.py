@@ -46,5 +46,21 @@ class TableTests(unittest.TestCase):
         self.db.rollback()
 
 
+class VocabularyTests(unittest.TestCase):
+    def test_tracker_events_are_known(self):
+        from app.services.events import CLIENT_EVENT_NAMES, SERVER_EVENT_NAMES
+
+        server = {
+            "audition_created", "audition_status_changed", "audition_outcome_logged",
+            "audition_parse_requested", "audition_parse_failed", "audition_reminder_sent",
+        }
+        client = {
+            "audition_parse_corrected", "audition_prep_started", "audition_reminder_clicked",
+            "audition_landing_shown", "audition_strip_clicked", "calendar_feed_subscribed",
+        }
+        self.assertTrue(server <= SERVER_EVENT_NAMES, server - SERVER_EVENT_NAMES)
+        self.assertTrue(client <= CLIENT_EVENT_NAMES, client - CLIENT_EVENT_NAMES)
+
+
 if __name__ == "__main__":
     unittest.main()

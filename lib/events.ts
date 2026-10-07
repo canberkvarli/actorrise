@@ -35,7 +35,13 @@ export type UserEventName =
   | "paywall_dismissed"
   | "paywall_cta_clicked"
   | "email_clicked"
-  | "scene_run_abandoned";
+  | "scene_run_abandoned"
+  | "audition_parse_corrected"
+  | "audition_prep_started"
+  | "audition_reminder_clicked"
+  | "audition_landing_shown"
+  | "audition_strip_clicked"
+  | "calendar_feed_subscribed";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

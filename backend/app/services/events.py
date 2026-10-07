@@ -44,6 +44,14 @@ SERVER_EVENT_NAMES = frozenset(
         # Light iOS app's money trail. Until 2026-10-06 every delivery failed
         # on auth and two paying subscribers were invisible to the backend.
         "app_subscription_event",  # {type, product_id, store, period_type, environment, price, expires_at}
+        # The audition tracker (services/auditions). Written where the fact is
+        # certain: the row exists, the status moved, the email left.
+        "audition_created",  # {source: parse|manual|onboarding, kind, has_sides, has_material}
+        "audition_status_changed",  # {audition_id, from, to}
+        "audition_outcome_logged",  # {audition_id, outcome: good|callback|no, via: email|app}
+        "audition_parse_requested",  # {has_pdf, has_text}; also the free quota counter
+        "audition_parse_failed",  # {reason}
+        "audition_reminder_sent",  # {audition_id, moment: prep|eve|after}
     }
 )
 
@@ -124,6 +132,13 @@ CLIENT_EVENT_NAMES = frozenset(
         # is a closed word list. 2026-09-27: three new actors left the guided
         # scene inside 3 to 16 seconds and "never_began" was all we had.
         "scene_run_abandoned",  # {reason, guided, armed, mic_status, speech_error, load_error, gate_checked, partner_played, line_index, seconds}
+        # Audition tracker, browser side.
+        "audition_parse_corrected",  # {fields}: parsed fields the actor changed before saving
+        "audition_prep_started",  # {audition_id, kind: sides|monologue}
+        "audition_reminder_clicked",  # {audition_id, moment}: landed from a reminder link
+        "audition_landing_shown",  # {audition_id}: login sent them to the prep room
+        "audition_strip_clicked",  # {surface: rehearse|monologues|winback_email}
+        "calendar_feed_subscribed",  # copied the calendar link
     }
 )
 
