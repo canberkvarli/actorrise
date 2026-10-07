@@ -9311,7 +9311,7 @@ html[data-firstrun="1"] body::before {
 .aud-chip[data-tone="gel"] {
   background: var(--t-gel);
   border-color: var(--t-gel-ink);
-  color: var(--t-text);
+  color: var(--t-ink);
 }
 .aud-drop {
   background: var(--t-paper);
