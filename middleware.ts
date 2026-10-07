@@ -68,7 +68,7 @@ export default async function middleware(request: NextRequest) {
   // /greenroom is here so an invited partner arriving at a room link logged out
   // gets sent to /login with the room URL preserved, and lands back in the room
   // after signing in. Without it the room just hangs on its skeleton forever.
-  const protectedPaths = ['/dashboard', '/profile', '/search', '/checkout', '/billing', '/admin', '/greenroom']
+  const protectedPaths = ['/dashboard', '/profile', '/search', '/checkout', '/billing', '/admin', '/greenroom', '/auditions']
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p))
   if (isProtected) {
     if (!user) {
@@ -134,6 +134,7 @@ export const config = {
     '/billing/:path*',
     '/admin/:path*',
     '/greenroom/:path*',
+    '/auditions/:path*',
   ],
 }
 

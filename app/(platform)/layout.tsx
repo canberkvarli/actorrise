@@ -7,7 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
-import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconHelpCircle } from "@tabler/icons-react";
+import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconHelpCircle, IconTicket } from "@tabler/icons-react";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarks";
 import { useFilmTvFavoriteCount } from "@/hooks/useFilmTvFavorites";
@@ -195,6 +195,8 @@ export default function PlatformLayout({
     // desktop rate over the 28 days to 2026-08-15 (20/113 vs 8/86 users), so the
     // fix was to give desktop the tab, not to take the tab off the phone.
     { href: "/rehearse", label: "Collection", icon: IconBookmark, match: "exact" as const },
+    // The tracker. Prefix match so the prep room (/auditions/12) lights the tab.
+    { href: "/auditions", label: "Auditions", icon: IconTicket, match: "prefix" as const },
   ];
   /* Which room the phone bar names. Derived from the same nav config, with the
      rooms that are not tabs spelled out, so it never says nothing. */
@@ -627,7 +629,9 @@ export default function PlatformLayout({
         className="t-tabbar md:hidden"
         style={{ ['--primary']: 'oklch(0.76 0.15 52)' } as React.CSSProperties}
       >
-        <div className="flex items-stretch gap-1">
+        {/* gap-0.5, not gap-1: five slots (four tabs and Account) at 390px leave
+            each about 73px, and "ScenePartner" needs about 70. */}
+        <div className="flex items-stretch gap-0.5">
           {/* Same navItems, same order as the desktop bar, so the two navs can no
               longer drift apart. Account is appended here only, it lives in the
               avatar dropdown on desktop. */}
@@ -681,7 +685,7 @@ export default function PlatformLayout({
           dropdown would have been welded to a bar that leaves the screen. Down
           here is also where the thumb already is.
 
-          The primary nav is deliberately absent: all four destinations are
+          The primary nav is deliberately absent: every destination is
           tabs in the bar behind this sheet. */}
       {!isImmersive && mobileMenuOpen && (
         <>
