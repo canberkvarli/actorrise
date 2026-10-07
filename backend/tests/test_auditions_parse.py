@@ -199,10 +199,6 @@ class TierTests(unittest.TestCase):
         self._sub(self.plus, status="trialing", stripe_subscription_id="sub_2")
         self.assertEqual(parse._tier(self.db, self.user.id), "plus")
 
-
-if __name__ == "__main__":
-    unittest.main()
-
     def test_pro(self):
         self._sub(self.pro, status="active", stripe_subscription_id="sub_3")
         self.assertEqual(parse._tier(self.db, self.user.id), "pro")
@@ -210,3 +206,16 @@ if __name__ == "__main__":
     def test_legacy_solo_reads_as_plus(self):
         self._sub(self.solo, status="active", stripe_subscription_id="sub_4")
         self.assertEqual(parse._tier(self.db, self.user.id), "plus")
+
+    def test_monologues_app_tier_gets_the_free_cap(self):
+        from app.models.billing import PricingTier
+
+        mono = PricingTier(name="monologues", display_name="Monologues", monthly_price_cents=500, features={})
+        self.db.add(mono)
+        self.db.commit()
+        self._sub(mono, status="active", stripe_subscription_id="sub_5")
+        self.assertEqual(parse._tier(self.db, self.user.id), "free")
+
+
+if __name__ == "__main__":
+    unittest.main()

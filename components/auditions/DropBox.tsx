@@ -13,11 +13,10 @@ import { errMessage } from "./draftValues";
 
 // First person, no dashes. Free and Plus point at /pricing; Pro has nowhere to go.
 function QuotaLine({ tier, limit }: { tier: AuditionQuota["tier"]; limit: number }) {
-  if (tier === "pro") return <>That&apos;s {limit} this month. Fill this one in yourself and it resets on the 1st.</>;
-  if (tier === "plus") {
-    return <>That&apos;s your {limit} reads this month. <Link href="/pricing" className="underline">Pro reads 100</Link> a month, or fill it in yourself below, that&apos;s always free.</>;
-  }
-  return <>That&apos;s your {limit} reads this month. <Link href="/pricing" className="underline">Plus reads 30</Link> a month, or fill it in yourself below, that&apos;s always free.</>;
+  const all = <>That&apos;s all {limit} of your reads this month. </>;
+  if (tier === "pro") return <>{all}They come back next month, and you can fill this one in yourself.</>;
+  const next = tier === "plus" ? { to: "Pro", n: 100 } : { to: "Plus", n: 30 };
+  return <>{all}<Link href="/pricing" className="underline">{next.to} reads {next.n}</Link> a month, or fill it in yourself below, that&apos;s always free.</>;
 }
 
 type Stage = "idle" | "reading" | "card";
@@ -119,17 +118,17 @@ export function DropBox({ source = "parse", startOpen = false }: { source?: "par
   if (stage === "card") {
     return (
       <>
-      {quotaHit && (
-        <p role="status" className="aud-muted mb-2 text-sm"><QuotaLine {...quotaHit} /></p>
-      )}
-      <DraftCard
-        draft={manual ? null : draft}
-        sidesName={file?.name ?? null}
-        saving={saving}
-        initialNotes={manual || !parsedOk ? text.trim().slice(0, 4000) : ""}
-        onSave={save}
-        onCancel={cancel}
-      />
+        {quotaHit && (
+          <p role="status" className="aud-muted mb-2 text-sm"><QuotaLine {...quotaHit} /></p>
+        )}
+        <DraftCard
+          draft={manual ? null : draft}
+          sidesName={file?.name ?? null}
+          saving={saving}
+          initialNotes={manual || !parsedOk ? text.trim().slice(0, 4000) : ""}
+          onSave={save}
+          onCancel={cancel}
+        />
       </>
     );
   }

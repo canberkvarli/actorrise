@@ -160,7 +160,8 @@ def _tier(db: Session, user_id: int) -> str:
     if not (sub and sub.is_active and sub.tier):
         return "free"
     name = (sub.tier.name or "").lower()
-    if name == "free":
+    # monologues is the Ghost Light iOS app tier: monologue-only, so it reads like free here.
+    if name in ("free", "monologues"):
         return "free"
     return "pro" if name == "pro" else "plus"
 
