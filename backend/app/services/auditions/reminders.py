@@ -62,7 +62,10 @@ def due_moments(a: Audition, now: datetime) -> list[str]:
     due = []
     if prep_from <= now < prep_from + WINDOW and now < eve_at - timedelta(hours=2):
         due.append("prep")
-    if eve_at <= now < eve_at + WINDOW and now < w:
+    # Past local midnight the copy's "tomorrow" is wrong and the day cap has
+    # rolled over, so eve stops at the end of the evening, not six hours on.
+    zone = _zone(a)
+    if eve_at <= now < eve_at + WINDOW and now.astimezone(zone).date() < w.astimezone(zone).date():
         due.append("eve")
     if after_at <= now < after_at + WINDOW:
         due.append("after")
@@ -159,6 +162,28 @@ def _claim(db: Session, a: Audition, moment: str, local_day: str) -> bool:
         return False
 
 
+def _has_outcome(db: Session, auditions: list[Audition]) -> set[int]:
+    """Auditions the actor already reported on, so "how did it go?" is moot:
+    an outcome logged, or the ticket moved to callback once the audition was
+    past. A ticket created as a callback appointment is not an answer."""
+    by_id = {a.id: a for a in auditions}
+    rows = (
+        db.query(AuditionEvent.audition_id, AuditionEvent.kind, AuditionEvent.data, AuditionEvent.created_at)
+        .filter(
+            AuditionEvent.audition_id.in_(by_id),
+            AuditionEvent.kind.in_(("outcome_logged", "status_changed")),
+        )
+        .all()
+    )
+    out = set()
+    for aid, kind, data, created_at in rows:
+        if kind == "outcome_logged":
+            out.add(aid)
+        elif (data or {}).get("to") == "callback" and aware(created_at) >= when(by_id[aid]):
+            out.add(aid)
+    return out
+
+
 def select_due(db: Session, now: datetime) -> list[tuple[Audition, User, str]]:
     """(audition, user, moment) to send now, already reduced to one per person per local day."""
     lo, hi = now - timedelta(days=2), now + timedelta(days=4)
@@ -195,6 +220,9 @@ def select_due(db: Session, now: datetime) -> list[tuple[Audition, User, str]]:
         for moment in due_moments(a, now):
             if (a.id, moment) not in sent_moments:
                 candidates.append((a, u, moment))
+    if any(m == "after" for _, _, m in candidates):
+        answered = _has_outcome(db, [a for a, _, m in candidates if m == "after"])
+        candidates = [c for c in candidates if not (c[2] == "after" and c[0].id in answered)]
     if not candidates:
         return []
     candidates.sort(key=lambda c: abs((when(c[0]) - now).total_seconds()))
@@ -248,6 +276,9 @@ def run(db: Session, *, now: Optional[datetime] = None, send: bool = False, clie
             stats["sent"] += 1
             record_user_event(a.user_id, "audition_reminder_sent", {"audition_id": a.id, "moment": moment})
         except Exception as exc:  # noqa: BLE001
+            # The claim is already committed and stays; this only clears a
+            # broken transaction so the next person still gets theirs.
+            db.rollback()
             stats["failed"] += 1
             logger.warning("audition reminder %s failed for audition %s: %s", moment, a.id, exc)
     return stats

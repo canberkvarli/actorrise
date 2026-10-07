@@ -40,6 +40,12 @@ class DueTests(unittest.TestCase):
     def test_after_at_9am_the_day_after(self):
         self.assertEqual(reminders.due_moments(aud(), utc(2026, 10, 10, 13, 5)), ["after"])  # Fri 9:05am EDT
 
+    def test_no_eve_once_the_audition_day_has_begun(self):
+        # Eve window runs 7pm to 1am; at 12:10am the audition is "today", not "tomorrow".
+        a = aud(starts_at=utc(2026, 10, 9, 14, 0))  # Fri 10am EDT
+        self.assertEqual(reminders.due_moments(a, utc(2026, 10, 9, 4, 10)), [])  # Fri 12:10am EDT
+        self.assertEqual(reminders.due_moments(a, utc(2026, 10, 9, 3, 50)), ["eve"])  # Thu 11:50pm EDT
+
     def test_window_closes_after_six_hours(self):
         self.assertEqual(reminders.due_moments(aud(), utc(2026, 10, 7, 4, 1)), [])
 
@@ -151,6 +157,54 @@ class RunTests(unittest.TestCase):
         self._add(project="Near")
         self.db.commit()
         self.assertEqual(reminders.run(self.db, now=utc(2026, 10, 8, 23, 30), send=False)["eligible"], 0)
+
+    def test_after_skipped_once_an_outcome_is_logged(self):
+        a = self._add()
+        t = utc(2026, 10, 10, 13, 5)  # Fri 9:05am EDT, after is due
+        self.assertEqual(reminders.run(self.db, now=t, send=False)["previews"], [(a.id, "after")])
+        self.db.add(AuditionEvent(audition_id=a.id, user_id=self.user.id, kind="outcome_logged",
+                                  data={"outcome": "good", "via": "app"}))
+        self.db.commit()
+        self.assertEqual(reminders.run(self.db, now=t, send=False)["eligible"], 0)
+
+    def test_after_skipped_when_moved_to_callback_after_the_audition(self):
+        a = self._add()
+        a.status = "callback"
+        self.db.add(AuditionEvent(audition_id=a.id, user_id=self.user.id, kind="status_changed",
+                                  data={"from": "scheduled", "to": "callback"},
+                                  created_at=utc(2026, 10, 9, 20, 0)))
+        self.db.commit()
+        self.assertEqual(reminders.run(self.db, now=utc(2026, 10, 10, 13, 5), send=False)["eligible"], 0)
+
+    def test_after_still_sent_for_a_callback_booked_as_callback(self):
+        # A ticket that IS a callback appointment has no outcome yet.
+        a = self._add(status="callback")
+        self.db.add(AuditionEvent(audition_id=a.id, user_id=self.user.id, kind="status_changed",
+                                  data={"from": "scheduled", "to": "callback"},
+                                  created_at=utc(2026, 10, 1, 12, 0)))
+        self.db.commit()
+        self.assertEqual(reminders.run(self.db, now=utc(2026, 10, 10, 13, 5), send=False)["eligible"], 1)
+
+    def test_db_error_mid_send_rolls_back_and_keeps_going(self):
+        self._add(project="First")
+        other = User(email="sam@x.com", supabase_id="s", name="Sam")
+        self.db.add(other)
+        self.db.commit()
+        self._add(project="Second", user_id=other.id)
+        real_add = self.db.add
+        calls = {"n": 0}
+
+        def flaky_add(obj):
+            if isinstance(obj, AuditionEvent) and calls["n"] == 0:
+                calls["n"] += 1
+                real_add(AuditionEvent(audition_id=obj.audition_id, user_id=obj.user_id, kind=None, data={}))
+                return
+            real_add(obj)
+
+        with mock.patch.object(self.db, "add", side_effect=flaky_add):
+            stats = reminders.run(self.db, now=utc(2026, 10, 8, 23, 30), send=True, client=self.client)
+        self.assertEqual((stats["sent"], stats["failed"]), (1, 1))
+        self.assertEqual(self.db.query(AuditionReminderSend).count(), 2)  # both claims survive
 
     def test_far_off_auditions_are_not_loaded(self):
         self._add(starts_at=utc(2026, 12, 1, 14, 0))
