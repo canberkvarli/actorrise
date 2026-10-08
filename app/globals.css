@@ -9508,6 +9508,24 @@ html[data-firstrun="1"] body::before {
   transform: translate(3px, 3px);
   box-shadow: 1px 1px 0 var(--aud-press);
 }
+/* "How it works": a quiet pill, the brand stays on Read it. */
+.aud-help {
+  background: var(--aud-surface);
+  color: var(--aud-fg);
+}
+.aud-help-q {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--aud-fg);
+  color: var(--aud-surface);
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 22px;
+  line-height: 1;
+}
 .aud-dropzone {
   margin: 10px;
   border: 2px dashed var(--aud-brand);

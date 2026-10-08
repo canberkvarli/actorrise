@@ -81,7 +81,7 @@ export const CALENDAR_PANEL_ID = "aud-calendar-panel";
 /**
  * The header control once the rail has tickets: a quiet link that opens the
  * options in place. The shell owns `open` so the panel can sit full width
- * under the header rather than squeezed beside "how this works".
+ * under the header rather than squeezed beside "How it works".
  */
 export function CalendarToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (

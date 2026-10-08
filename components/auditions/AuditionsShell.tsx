@@ -122,8 +122,13 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   );
 
   const howItWorks = (
-    <button type="button" className="aud-link aud-cap-muted aud-focus text-sm font-medium" onClick={() => setIntro(true)}>
-      how this works
+    <button
+      type="button"
+      className="aud-pill aud-help aud-focus inline-flex h-11 shrink-0 items-center gap-2.5 pl-1.5 pr-4 text-[15px]"
+      onClick={() => setIntro(true)}
+    >
+      <span aria-hidden className="aud-help-q">?</span>
+      How it works
     </button>
   );
 
@@ -131,23 +136,19 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
     <div className={`theatre-tokens theatre-auditions ${theatreFontVars} min-h-[calc(100dvh-65px)] overflow-x-clip`}>
       {pending ? (
         <div className="mx-auto max-w-[1280px] px-4 pb-28 pt-6 sm:px-6 md:pb-20 md:pt-10 lg:px-8">
-          <h1 className="aud-title text-[32px] leading-none">Auditions</h1>
           <p className="aud-cap-muted mt-10 text-center text-sm md:mt-16" role="status">Loading your rail</p>
         </div>
       ) : empty ? (
         <div className="mx-auto max-w-[1280px] px-4 pb-28 pt-6 sm:px-6 md:pb-20 md:pt-10 lg:px-8">
-          <div className="flex items-baseline justify-between gap-4">
-            <h1 className="aud-title text-[32px] leading-none">Auditions</h1>
-            {howItWorks}
-          </div>
+          <div className="flex justify-end">{howItWorks}</div>
           {loggedNote && (
             <p role="status" className="aud-dir aud-muted mt-4 text-[13.5px]">{loggedNote}</p>
           )}
-          <section aria-labelledby="aud-ask" className="aud-rise mx-auto mt-10 flex max-w-[760px] flex-col items-center text-center md:mt-16">
+          <section aria-labelledby="aud-ask" className="aud-rise mx-auto mt-4 flex max-w-[760px] flex-col items-center text-center md:mt-6">
             <p className="aud-hero-dir aud-cap-muted text-lg md:text-xl">(house is dark. one lamp on.)</p>
-            <h2 id="aud-ask" className="aud-hero-h mt-2.5">
-              Got one <em>coming up?</em>
-            </h2>
+            <h1 id="aud-ask" className="aud-hero-h mt-2.5">
+              <span className="sr-only">Auditions. </span>Got one <em>coming up?</em>
+            </h1>
             <p className="mt-5 max-w-[30em] text-[17px] leading-normal md:text-[19px]">
               Paste the casting email or drop the sides. I&apos;ll read it into a ticket and keep you on it.
             </p>
