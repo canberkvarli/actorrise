@@ -6,6 +6,7 @@ transcribes user speech to text (OpenAI Whisper).
 
 import logging
 import os
+import re
 import tempfile
 from typing import Optional
 
@@ -114,12 +115,17 @@ async def synthesize_speech(
 #: and `gpt-4o-transcribe` is materially more accurate on short, emotional,
 #: accented speech, which is the whole of what this endpoint ever receives.
 #: whisper-1 stays last so a model outage degrades instead of failing.
-# Live streaming runs on mini on purpose. The actor is reading a script we
-# already hold, and we hand that script over as the prompt, so the hard part of
-# transcription — guessing the words — is largely solved before the audio
-# arrives. Mini is a fraction of the cost per minute and a rehearsal holds the
-# session open for as long as the actor keeps working.
-LIVE_TRANSCRIBE_MODEL = "gpt-4o-mini-transcribe"
+# The model built for streaming, rather than a batch model pressed into it.
+# `gpt-live-transcribe` emits transcript deltas while the actor is still
+# speaking, which is the whole requirement; the /transcribe models above only
+# ever speak once the file is closed. It also takes `delay: "low"` and a
+# keyword list, both used below.
+#
+# It does NOT support server or semantic turn detection — the docs are explicit
+# that turn_detection must be null — so the "have they finished" question is
+# answered on the client, off transcript progress rather than microphone
+# volume. See lib/live-read.ts.
+LIVE_TRANSCRIBE_MODEL = "gpt-live-transcribe"
 
 TRANSCRIBE_MODELS = ("gpt-4o-transcribe", "gpt-4o-mini-transcribe", "whisper-1")
 
@@ -204,10 +210,16 @@ async def transcribe_speech(
 class LiveSessionRequest(BaseModel):
     """Open a live transcription session for one rehearsal."""
 
-    # The whole scene's text, trimmed, as a vocabulary hint. Not one line:
-    # the secret is minted once per rehearsal and the client re-points the
-    # prompt at the current speech over the data channel as the scene moves.
+    # What the recording IS, in a sentence. Not the script: the prompt is for
+    # setting, and the literal terms belong in `keywords`.
     prompt: str = Field(default="", max_length=2000)
+
+    # Proper nouns the transcriber would otherwise modernise or mangle —
+    # character names, period diction, place names. This is the single biggest
+    # accuracy win available to us: we know what the actor is about to say,
+    # because we are the ones holding the script. "Anita" stops arriving as
+    # "a nita" and never has to be recovered by the matcher at all.
+    keywords: list[str] = Field(default_factory=list, max_length=100)
 
 
 @router.post("/live-session")
@@ -227,16 +239,16 @@ async def create_live_session(
     so no amount of threshold tuning makes it feel live.
 
     A Realtime transcription session streams instead: words arrive as deltas
-    while the actor is still speaking, and the server's own turn detection says
-    when they stopped. The browser talks to OpenAI directly over WebRTC, so the
-    audio never passes through us and there is no upload at all. This endpoint's
-    only job is to hand out a short-lived key so the real one never reaches the
-    page.
+    while the actor is still speaking. The browser talks to OpenAI directly
+    over WebRTC, so the audio never passes through us and there is no upload at
+    all. This endpoint's only job is to hand out a short-lived key so the real
+    one never reaches the page.
 
-    Cost: `gpt-4o-mini-transcribe`, billed per minute of audio actually sent.
-    The client keeps the microphone track disabled except on the actor's own
-    turn, which both halves the bill and stops the session transcribing our own
-    partner voice back out of the speakers.
+    Billed per minute of audio actually sent, which is why the client keeps the
+    microphone track disabled except on the actor's own turn. That is not only
+    a cost decision: a live microphone during the partner's line transcribes
+    our own synthesised voice back out of the speakers and matches it against
+    the actor's next speech.
     """
     if not settings.openai_api_key:
         raise HTTPException(status_code=500, detail="OpenAI API key not configured")
@@ -250,31 +262,25 @@ async def create_live_session(
                     "input": {
                         "transcription": {
                             "model": LIVE_TRANSCRIBE_MODEL,
-                            "language": "en",
-                            # The script itself, as a hint. A transcriber that
-                            # already knows the words is a different instrument
-                            # from one guessing at them: this is what keeps
-                            # period diction intact and stops proper nouns
-                            # being modernised into something that will never
-                            # match the page.
+                            "languages": ["en"],
+                            # Partial transcripts as early as the model will
+                            # give them. The actor is watching their own words
+                            # appear on the page, so a late-but-tidier delta is
+                            # worth less than an early one.
+                            "delay": "low",
+                            "keywords": [
+                                k[:80] for k in request.keywords[:100]
+                                if k and not re.search(r"[<>\r\n]", k)
+                            ],
                             "prompt": request.prompt[:2000],
                         },
-                        # Semantic, not a volume gate. A volume gate cannot tell
-                        # a dramatic pause from a finished line, which is the
-                        # whole difficulty here — it cut actors off mid-speech
-                        # and stranded them on noisy rooms. This waits on a
-                        # model's read of whether the thought is complete.
-                        #
-                        # "low" is deliberate: patient, up to 8s. Being cut off
-                        # mid-line is a much worse failure than a held beat,
-                        # and the fast path does not wait on this at all. The
-                        # scene moves the instant the last word of the speech
-                        # lands in the transcript; this only catches a line
-                        # that was trailed off or misread.
-                        "turn_detection": {
-                            "type": "semantic_vad",
-                            "eagerness": "low",
-                        },
+                        # Required to be null for this model, and we would not
+                        # want it anyway: a server turn-end is a guess about
+                        # the actor made from audio alone, and the page can do
+                        # better. The common case does not wait for a verdict
+                        # at all — the scene moves the instant the last word of
+                        # the speech lands in the transcript.
+                        "turn_detection": None,
                         "noise_reduction": {"type": "near_field"},
                     }
                 },

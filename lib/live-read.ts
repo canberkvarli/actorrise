@@ -17,17 +17,22 @@
  * actor who had said nothing at all.
  *
  * A streaming session answers the question directly. Words arrive as deltas
- * while the actor speaks, and the server's semantic turn detection — a model,
- * not a volume gate — says when the thought is finished. So the decision here
- * has two clauses and no timers:
+ * while the actor speaks, so the decision here has two clauses:
  *
  *   1. The last word of the speech has been heard. Go now.
- *   2. The turn ended and we heard some of it. Go.
+ *   2. The actor has stopped and we heard some of it. Go.
  *
  * Clause 1 is the common case and waits on nothing, which is why it feels
  * immediate: an actor who reads to the end of their line hands over on the
- * final syllable. Clause 2 is the only safety net, and it is the server's
- * judgement rather than ours.
+ * final syllable, with no silence to sit through at all. Clause 2 is the only
+ * safety net, for a line trailed off or misheard.
+ *
+ * "Stopped" is decided off TRANSCRIPT PROGRESS, not microphone level — see
+ * `QUIET_AFTER_WORDS_MS` in hooks/useLiveTranscription.ts. That distinction is
+ * the one that matters: the old level gate could sit above its threshold for
+ * ever on a phone with AGC or a fan, and when it did, a finished line waited
+ * on "Recording…" until the actor gave up. Words arriving is a fact; a volume
+ * reading was only ever a proxy for it.
  *
  * Pure, so live-read.test.ts pins it without a microphone or a browser.
  */
@@ -92,12 +97,12 @@ const ENDING_MIN_SCORE = 0.5;
 
 export interface HandOverState extends LiveRead {
   /**
-   * Has the session's turn detection said the actor stopped?
+   * Has the actor stopped speaking?
    *
-   * This is `semantic_vad`: a model's read of whether the thought is complete,
-   * not a silence timer. It waits longer when a line trails off on "and I
-   * just…" than when it lands, which is the distinction a volume threshold
-   * could never make and the reason there are no timers left in here.
+   * True once the transcript has gained no new words for a beat. Supplied by
+   * the caller rather than computed here so this stays pure, and sourced from
+   * the transcript rather than from the microphone, which is what makes it
+   * trustworthy: it cannot be held true by a fan or held false by AGC.
    */
   turnEnded: boolean;
 }
