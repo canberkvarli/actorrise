@@ -43,3 +43,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-10-06, 0 saved, 0 scenes finished, free
 **They said:** "It's for an exclusive acting class. Before being paired with actors, I need to perform a monologue. I've found one by Belize: Angels in America. But super open to more. The website search tool wasn't functioning the best for me so I had to look elsewhere. I like the design and concept though."
 **Heard as:** content gap (Angels in America is not in the library, checked in all three places) and a search miss on "Dramedy LGBT" (weak match, 20 results, opened one); liked the design
+
+## 2026-10-08
+
+**Replying to:** the same thread, second message, before the reply draft was sent
+**Account:** signed up 2026-10-06, 0 saved, 0 scenes finished, free
+**They said:** "I'm looking for something dramatic but also comedic that I can sink my emotional teeth into. I can play male teens to mid-20s. I prefer queer / LGBT themes. Something that is spoken TO and is actively affecting somebody, rather than just telling a story."
+**Heard as:** a search the product cannot express: "spoken to someone, not narrated" is not a filter; queer-themed male pieces for teens to mid 20s are thin in the corpus (no Angels, no Inheritance, no Spring Awakening)
