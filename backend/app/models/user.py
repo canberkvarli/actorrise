@@ -33,6 +33,10 @@ class User(Base):
     # Secret for the read-only calendar feed /api/auditions/calendar.ics?k=.
     # Made on first request; "Reset link" replaces it.
     calendar_feed_key = Column(String(48), unique=True, nullable=True)
+    # Where the actor leaves from for auditions, and how. Only ever typed by them;
+    # the audition page plans the trip from it (services/auditions/assist.py).
+    leaving_from = Column(String(300), nullable=True)
+    travel_mode = Column(String(8), nullable=True)  # transit | drive
 
     # Community "Green Room" feed opt-out. Default TRUE (activity is public
     # semi-anonymously: first name + city + headshot). Filtered at feed READ

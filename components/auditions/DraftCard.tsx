@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 
-import { KIND_LABEL, type AuditionKind, type Draft } from "@/lib/auditions";
+import { KIND_LABEL, type AuditionKind, type Draft, type ThroughKind } from "@/lib/auditions";
 import { valuesFromDraft, type DraftValues } from "./draftValues";
 
 export { bodyFromValues, valuesFromDraft, type DraftValues } from "./draftValues";
@@ -70,6 +70,18 @@ export function DraftCard({
         </label>
         <label><span className={LABEL}>What they asked for</span>
           <input className={INPUT} data-unsure={unsure("material_raw")} aria-describedby={hint("material_raw")} placeholder="1 min contemporary comedic" maxLength={300} value={v.material_raw} onChange={set("material_raw")} />
+        </label>
+        <label><span className={LABEL}>Through</span>
+          <input className={INPUT} data-unsure={unsure("through")} aria-describedby={hint("through")} placeholder="Your agent, by name" maxLength={200} value={v.through} onChange={set("through")} />
+        </label>
+        <label><span className={LABEL}>Who put you up</span>
+          <select className={INPUT} value={v.through_kind} onChange={set("through_kind")}>
+            <option value="">Not saying</option>
+            {(["agent", "manager", "self"] as ThroughKind[]).map((k) => <option key={k} value={k}>{k === "self" ? "I did" : k === "agent" ? "My agent" : "My manager"}</option>)}
+          </select>
+        </label>
+        <label className="sm:col-span-2"><span className={LABEL}>Shoots</span>
+          <input className={INPUT} data-unsure={unsure("shoots")} aria-describedby={hint("shoots")} placeholder="Dates, union, rate" maxLength={300} value={v.shoots} onChange={set("shoots")} />
         </label>
         <label className="sm:col-span-2"><span className={LABEL}>Bring</span>
           <input className={INPUT} data-unsure={unsure("bring")} aria-describedby={hint("bring")} maxLength={300} value={v.bring} onChange={set("bring")} />

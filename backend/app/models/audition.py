@@ -50,6 +50,16 @@ class Audition(Base):
     material_raw = Column(String(300), nullable=True)
     material = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
     bring = Column(String(300), nullable=True)
+    # [{"text", "done", "src": "email" | "ai" | "me"}]. Null until first touched;
+    # until then serialize() derives it from `bring`.
+    bring_list = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    through = Column(String(200), nullable=True)  # who put them up: the agent, manager, or themselves
+    through_kind = Column(String(8), nullable=True)  # agent | manager | self
+    shoots = Column(String(300), nullable=True)  # dates, union, rate, as written
+    # Private notes after the room: {"how", "differently", "room"}.
+    after_notes = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
+    # Saved AI help (services/auditions/assist.py): {"trip", "read", "asks"}.
+    assist = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
     notes = Column(Text, nullable=True)
     tape_link = Column(String(500), nullable=True)
     source = Column(String(16), nullable=False, default="manual")

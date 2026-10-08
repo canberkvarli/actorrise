@@ -51,6 +51,8 @@ SERVER_EVENT_NAMES = frozenset(
         "audition_outcome_logged",  # {audition_id, outcome: good|callback|no, via: email|app}
         "audition_parse_requested",  # {has_pdf, has_text}; also the free quota counter
         "audition_parse_failed",  # {reason}
+        "audition_assist_made",  # {audition_id, part: trip | read}: an AI helper was made fresh (a saved one served again is not counted)
+        "audition_asked",  # {audition_id}: one "ask me" question answered; counts against the monthly allowance
         "audition_reminder_sent",  # {audition_id, moment: prep|eve|after}
     }
 )

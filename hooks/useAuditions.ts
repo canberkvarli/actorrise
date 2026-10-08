@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import api, { API_URL, getAuthToken } from "@/lib/api";
-import type { Audition, ParseResult } from "@/lib/auditions";
+import type { Audition, ParseResult, Travel } from "@/lib/auditions";
 
 const KEY = ["auditions"] as const;
 
@@ -125,5 +125,47 @@ export function useCalendarLink(enabled: boolean) {
     queryKey: [...KEY, "calendar"],
     queryFn: async () => (await api.get<{ url: string }>("/api/auditions/calendar-link")).data,
     enabled,
+  });
+}
+
+/** Swap one audition in the cached list for the fresh copy the server sent back. */
+function useReplaceOne() {
+  const qc = useQueryClient();
+  return (fresh: Audition) =>
+    qc.setQueryData<Audition[]>(KEY, (list) => list?.map((a) => (a.id === fresh.id ? fresh : a)));
+}
+
+export function useTravel(enabled = true) {
+  return useQuery<Travel>({
+    queryKey: [...KEY, "travel"],
+    queryFn: async () => (await api.get<Travel>("/api/auditions/travel")).data,
+    enabled,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useSaveTravel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Partial<Travel>) => (await api.put<Travel>("/api/auditions/travel", body)).data,
+    onSuccess: (travel) => qc.setQueryData([...KEY, "travel"], travel),
+  });
+}
+
+/** Ask the server to make (or hand back the saved) trip or read for one audition. */
+export function useAssist() {
+  const replace = useReplaceOne();
+  return useMutation({
+    mutationFn: async ({ id, part }: { id: number; part: "trip" | "read" }) =>
+      (await api.post<Audition>(`/api/auditions/${id}/assist/${part}`)).data,
+    onSuccess: replace,
+  });
+}
+
+export function useAskAudition() {
+  const replace = useReplaceOne();
+  return useMutation({
+    mutationFn: async ({ id, q }: { id: number; q: string }) => (await api.post<Audition>(`/api/auditions/${id}/ask`, { q })).data,
+    onSuccess: replace,
   });
 }

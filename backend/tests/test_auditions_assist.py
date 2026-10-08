@@ -1,0 +1,271 @@
+"""The audition file: bring checklist, notes after the room, and the AI help
+(getting there, a read on the scene, ask me), with Google and the model faked."""
+
+import json
+import unittest
+from datetime import datetime, timedelta, timezone
+from unittest import mock
+
+from app.models.actor import UserScript
+from app.models.audition import Audition, AuditionEvent, AuditionPiece, AuditionReminderSend
+from app.models.organization import Organization
+from app.models.user import User
+from app.models.user_event import UserEvent
+from app.services.auditions import assist, core, parse
+from tests.dbfixture import memory_db, restore
+
+NOW = datetime(2026, 10, 7, 15, 0, tzinfo=timezone.utc)
+STARTS = datetime(2026, 10, 14, 18, 40, tzinfo=timezone.utc)  # 2:40 pm in New York
+TABLES = [Organization, User, UserScript, Audition, AuditionPiece, AuditionEvent, AuditionReminderSend, UserEvent]
+
+ROUTE = {
+    "minutes": 35,
+    "rides": [{"line": "A", "vehicle": "subway", "from": "Jay St", "to": "42 St", "stops": 7}],
+    "walk_minutes": 9,
+    "polyline": "_p~iF~ps|U_ulLnnqC_mqNvxq`@",
+}
+
+
+def _llm(payload):
+    calls = []
+
+    def call(prompt):
+        calls.append(prompt)
+        return json.dumps(payload)
+
+    call.calls = calls
+    return call
+
+
+class Base(unittest.TestCase):
+    def setUp(self):
+        self.db, self.saved = memory_db(TABLES)
+        self.user = User(email="a@x.com", supabase_id="a")
+        self.db.add(self.user)
+        self.db.commit()
+        self.a = core.create_audition(self.db, self.user.id, {
+            "project": "The Long Winter", "role": "Nora", "starts_at": STARTS, "tz": "America/New_York",
+            "location": "Ripley Studios, 412 W 39th St, room 4", "bring": "headshot, resume and the sides",
+        }, source="manual", now=NOW)
+
+    def tearDown(self):
+        restore(self.saved)
+
+
+class BringListTests(Base):
+    def test_the_email_line_becomes_a_checklist(self):
+        out = core.serialize(self.db, self.a, NOW, with_prep=False)
+        self.assertEqual([i["text"] for i in out["bring_list"]], ["Headshot", "Resume", "The sides"])
+        self.assertTrue(all(i["src"] == "email" and not i["done"] for i in out["bring_list"]))
+
+    def test_ticking_one_is_kept_and_cleaned(self):
+        core.update_audition(self.db, self.a, {"bring_list": [
+            {"text": " Headshot ", "done": True, "src": "email"},
+            {"text": "headshot", "done": False},  # duplicate, dropped
+            {"text": "", "done": False},  # empty, dropped
+            {"text": "Layers", "src": "nonsense"},
+        ]})
+        self.assertEqual(self.a.bring_list, [
+            {"text": "Headshot", "done": True, "src": "email"},
+            {"text": "Layers", "done": False, "src": "me"},
+        ])
+
+    def test_a_new_bring_line_keeps_what_i_added(self):
+        core.update_audition(self.db, self.a, {"bring_list": [
+            {"text": "Headshot", "done": True, "src": "email"}, {"text": "Layers", "done": False, "src": "me"},
+        ]})
+        core.update_audition(self.db, self.a, {"bring": "two copies of the sides"})
+        self.assertEqual([i["text"] for i in self.a.bring_list], ["Two copies of the sides", "Layers"])
+
+    def test_a_bad_list_is_refused(self):
+        with self.assertRaises(ValueError):
+            core.update_audition(self.db, self.a, {"bring_list": "headshot"})
+
+
+class DetailsTests(Base):
+    def test_through_and_after_notes(self):
+        core.update_audition(self.db, self.a, {
+            "through": "Maya Chen, Bright Talent", "through_kind": "agent", "shoots": "Jan to Mar, SAG",
+            "after_notes": {"how": " Felt good ", "room": "", "nonsense": "x"},
+        })
+        out = core.serialize(self.db, self.a, NOW, with_prep=False)
+        self.assertEqual(out["through"], "Maya Chen, Bright Talent")
+        self.assertEqual(out["through_kind"], "agent")
+        self.assertEqual(out["after_notes"], {"how": "Felt good"})
+
+    def test_through_kind_must_be_known(self):
+        with self.assertRaises(ValueError):
+            core.update_audition(self.db, self.a, {"through_kind": "cousin"})
+
+    def test_reader_picks_up_who_sent_it(self):
+        d = parse.normalize_draft({
+            "project": {"value": "P", "confidence": "high"},
+            "through": {"value": "Maya Chen, Bright Talent", "confidence": "high"},
+            "through_kind": {"value": "agent", "confidence": "high"},
+            "shoots": {"value": "Shoots Jan to Mar, SAG", "confidence": "low"},
+        }, NOW, "UTC")
+        self.assertEqual(d["through"]["value"], "Maya Chen, Bright Talent")
+        self.assertEqual(d["through_kind"]["value"], "agent")
+        self.assertEqual(d["shoots"], {"value": "Shoots Jan to Mar, SAG", "confidence": "low"})
+
+    def test_reader_drops_an_unknown_through_kind(self):
+        d = parse.normalize_draft({"through_kind": {"value": "friend", "confidence": "high"}}, NOW, "UTC")
+        self.assertIsNone(d["through_kind"]["value"])
+
+
+class TripTests(Base):
+    def test_no_origin_no_trip_and_no_calls(self):
+        routes = mock.Mock()
+        self.assertIsNone(assist.plan_trip(self.db, self.a, None, None, routes_call=routes, llm_call=_llm({})))
+        routes.assert_not_called()
+
+    def test_self_tape_never_gets_a_trip(self):
+        self.a.kind = "self_tape"
+        routes = mock.Mock()
+        self.assertIsNone(assist.plan_trip(self.db, self.a, "Brooklyn", None, routes_call=routes, llm_call=_llm({})))
+        routes.assert_not_called()
+
+    def test_plans_to_arrive_fifteen_minutes_early(self):
+        routes = mock.Mock(return_value=ROUTE)
+        llm = _llm({"line": "(leave by 1:50. the A to 42 St, then a short walk west. it's a buzzer building.)"})
+        trip = assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=routes, llm_call=llm)
+        origin, dest, mode, arrive = routes.call_args.args
+        self.assertEqual((origin, mode), ("Brooklyn", "transit"))
+        self.assertEqual(arrive, STARTS - timedelta(minutes=15))
+        self.assertEqual(trip["leave_at"], (STARTS - timedelta(minutes=50)).isoformat())
+        self.assertIn("buzzer", trip["line"])
+        self.assertTrue(trip["points"])
+        self.assertIn("origin=Brooklyn", trip["maps_url"])
+
+    def test_saved_trip_is_served_until_the_inputs_change(self):
+        routes = mock.Mock(return_value=ROUTE)
+        llm = _llm({"line": "(leave by 1:50. the A.)"})
+        first = assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=routes, llm_call=llm)
+        again = assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=routes, llm_call=llm)
+        self.assertEqual(again, first)
+        self.assertEqual(routes.call_count, 1)
+        assist.plan_trip(self.db, self.a, "Queens", "transit", routes_call=routes, llm_call=llm)
+        self.assertEqual(routes.call_count, 2)
+
+    def test_a_line_without_the_leave_time_is_replaced_by_the_plain_one(self):
+        llm = _llm({"line": "(take the C train, it's quicker)"})  # made up, and no leave time
+        trip = assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=lambda *a: ROUTE, llm_call=llm)
+        self.assertEqual(trip["line"], "(leave by 1:50. the A from Jay St to 42 St, about 9 minutes on foot all in. you're there by 2:25.)")
+
+    def test_dashes_never_reach_the_page(self):
+        llm = _llm({"line": "(leave by 1:50 — the A to 42 St.)"})
+        trip = assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=lambda *a: ROUTE, llm_call=llm)
+        self.assertNotIn("—", trip["line"])
+
+    def test_google_failing_means_no_trip(self):
+        self.assertIsNone(assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=lambda *a: None, llm_call=_llm({})))
+        self.assertIsNone(core.serialize(self.db, self.a, NOW, with_prep=False)["assist"]["trip"])
+
+    def test_cache_key_never_reaches_the_page(self):
+        assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=lambda *a: ROUTE, llm_call=_llm({}))
+        out = core.serialize(self.db, self.a, NOW, with_prep=False)
+        self.assertNotIn("key", out["assist"]["trip"])
+
+    def test_polyline_and_sketch(self):
+        pts = assist.decode_polyline("_p~iF~ps|U_ulLnnqC_mqNvxq`@")
+        self.assertEqual(pts, [(38.5, -120.2), (40.7, -120.95), (43.252, -126.453)])
+        sketch = assist.sketch_points(pts)
+        self.assertTrue(all(0 <= x <= 1 and 0 <= y <= 1 for x, y in sketch))
+        self.assertEqual(sketch[-1][1], 0.0)  # the northmost point sits at the top
+
+    def test_routes_summary(self):
+        s = assist.summarize_route({
+            "duration": "2100s",
+            "polyline": {"encodedPolyline": "abc"},
+            "legs": [{"steps": [
+                {"travelMode": "WALK", "staticDuration": "300s"},
+                {"travelMode": "TRANSIT", "transitDetails": {
+                    "transitLine": {"nameShort": "A", "vehicle": {"type": "SUBWAY"}},
+                    "stopDetails": {"departureStop": {"name": "Jay St"}, "arrivalStop": {"name": "42 St"}},
+                    "stopCount": 7,
+                }},
+                {"travelMode": "WALK", "staticDuration": "240s"},
+            ]}],
+        })
+        self.assertEqual(s["minutes"], 35)
+        self.assertEqual(s["walk_minutes"], 9)
+        self.assertEqual(s["rides"], [{"line": "A", "vehicle": "subway", "from": "Jay St", "to": "42 St", "stops": 7}])
+
+
+class ReadTests(Base):
+    def _sides(self, text="NORA\nYou think I don't know what this winter costs?", status="completed"):
+        s = UserScript(user_id=self.user.id, title="Long Winter sides", author="x", original_filename="s.pdf",
+                       file_type="pdf", raw_text=text, processing_status=status)
+        self.db.add(s)
+        self.db.commit()
+        core.update_audition(self.db, self.a, {"user_script_id": s.id})
+
+    def test_read_from_the_sides_and_wear_goes_on_the_list(self):
+        self._sides()
+        llm = _llm({"read": "my read: she is angry at the numbers, not at Tom.", "wear": ["Layers", "headshot", "Flat boots"]})
+        read = assist.read_scene(self.db, self.a, llm_call=llm)
+        self.assertEqual(read["line"], "(my read: she is angry at the numbers, not at Tom.)")
+        self.assertIn("You think I don't know", llm.calls[0])
+        items = core.serialize(self.db, self.a, NOW, with_prep=False)["bring_list"]
+        self.assertEqual([i["text"] for i in items], ["Headshot", "Resume", "The sides", "Layers", "Flat boots"])
+        self.assertEqual(items[-1]["src"], "ai")
+
+    def test_no_sides_means_wear_only(self):
+        llm = _llm({"read": "(my read: invented)", "wear": ["Layers"]})
+        read = assist.read_scene(self.db, self.a, llm_call=llm)
+        self.assertIsNone(read["line"])
+        self.assertIn("No sides yet.", llm.calls[0])
+
+    def test_sides_still_loading_count_as_none(self):
+        self._sides(status="processing")
+        llm = _llm({"read": "x", "wear": []})
+        self.assertIsNone(assist.read_scene(self.db, self.a, llm_call=llm)["line"])
+
+    def test_read_is_made_once(self):
+        self._sides()
+        llm = _llm({"read": "(my read: x)", "wear": []})
+        assist.read_scene(self.db, self.a, llm_call=llm)
+        assist.read_scene(self.db, self.a, llm_call=llm)
+        self.assertEqual(len(llm.calls), 1)
+
+    def test_model_failure_means_no_read(self):
+        def broken(prompt):
+            raise TimeoutError("slow")
+
+        self.assertIsNone(assist.read_scene(self.db, self.a, llm_call=broken))
+        self.assertIsNone(core.serialize(self.db, self.a, NOW, with_prep=False)["assist"]["read"])
+
+
+class AskTests(Base):
+    def test_answer_is_kept_on_the_audition(self):
+        llm = _llm({"answer": "Bring two copies – one for the reader."})
+        entry = assist.ask(self.db, self.a, "how many copies?", NOW, llm_call=llm)
+        self.assertEqual(entry["a"], "Bring two copies, one for the reader.")
+        self.assertIn("Ripley Studios", llm.calls[0])
+        asks = core.serialize(self.db, self.a, NOW, with_prep=False)["assist"]["asks"]
+        self.assertEqual([x["q"] for x in asks], ["how many copies?"])
+
+    def test_keeps_the_last_twenty(self):
+        llm = _llm({"answer": "ok"})
+        for i in range(assist.ASKS_KEPT + 3):
+            assist.ask(self.db, self.a, f"q{i}", NOW, llm_call=llm)
+        asks = self.a.assist["asks"]
+        self.assertEqual(len(asks), assist.ASKS_KEPT)
+        self.assertEqual(asks[-1]["q"], f"q{assist.ASKS_KEPT + 2}")
+
+    def test_empty_answer_is_a_failure(self):
+        self.assertIsNone(assist.ask(self.db, self.a, "anything?", NOW, llm_call=_llm({"answer": ""})))
+
+    def test_quota_counts_this_month(self):
+        for _ in range(3):
+            self.db.add(UserEvent(user_id=self.user.id, event_name="audition_asked", properties={}, created_at=NOW))
+        self.db.add(UserEvent(user_id=self.user.id, event_name="audition_asked", properties={},
+                              created_at=NOW - timedelta(days=40)))
+        self.db.commit()
+        with mock.patch.object(parse, "_tier", lambda db, uid: "free"):
+            q = assist.asks_quota(self.db, self.user.id, NOW)
+        self.assertEqual((q["tier"], q["used"], q["remaining"]), ("free", 3, assist.ASKS_PER_MONTH["free"] - 3))
+
+
+if __name__ == "__main__":
+    unittest.main()

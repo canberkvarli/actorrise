@@ -21,7 +21,7 @@ from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.models.audition import Audition
 from app.models.user import User
-from app.services.auditions import core, ics, parse
+from app.services.auditions import assist, core, ics, parse
 from app.services.events import record_user_event
 
 router = APIRouter(prefix="/api/auditions", tags=["auditions"])
@@ -64,6 +64,9 @@ class AuditionIn(BaseModel):
     tape_link: Optional[str] = Field(None, max_length=500)
     user_script_id: Optional[int] = None
     reminders_on: bool = True
+    through: Optional[str] = Field(None, max_length=200)
+    through_kind: Optional[str] = None
+    shoots: Optional[str] = Field(None, max_length=300)
     source: str = "manual"
 
 
@@ -84,6 +87,11 @@ class AuditionPatch(BaseModel):
     tape_link: Optional[str] = Field(None, max_length=500)
     user_script_id: Optional[int] = None
     reminders_on: Optional[bool] = None
+    through: Optional[str] = Field(None, max_length=200)
+    through_kind: Optional[str] = None
+    shoots: Optional[str] = Field(None, max_length=300)
+    bring_list: Optional[list[dict[str, Any]]] = None
+    after_notes: Optional[dict[str, Any]] = None
 
 
 class PieceIn(BaseModel):
@@ -93,6 +101,15 @@ class PieceIn(BaseModel):
 
 class OutcomeIn(BaseModel):
     outcome: str
+
+
+class TravelIn(BaseModel):
+    leaving_from: Optional[str] = Field(None, max_length=300)
+    travel_mode: Optional[str] = Field(None, pattern="^(transit|drive)$")
+
+
+class AskIn(BaseModel):
+    q: str = Field(min_length=2, max_length=500)
 
 
 def _owned(db: Session, user: User, audition_id: int) -> Audition:
@@ -153,6 +170,26 @@ async def parse_breakdown(
         await run_in_threadpool(record_user_event, uid, "audition_parse_failed", {"reason": "model"})
     result["quota"] = await run_in_threadpool(parse.quota, db, uid, now)
     return result
+
+
+def _travel(user: User) -> dict:
+    return {"leaving_from": user.leaving_from, "travel_mode": user.travel_mode or "transit"}
+
+
+@router.get("/travel")
+def get_travel(user: User = Depends(require_moderator)):
+    return _travel(user)
+
+
+@router.put("/travel")
+def put_travel(body: TravelIn, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+    fields = body.model_dump(exclude_unset=True)
+    if "leaving_from" in fields:
+        user.leaving_from = (fields["leaving_from"] or "").strip() or None
+    if fields.get("travel_mode"):
+        user.travel_mode = fields["travel_mode"]
+    db.commit()
+    return _travel(user)
 
 
 @router.get("/calendar-link")
@@ -317,3 +354,40 @@ def remove_piece(audition_id: int, piece_id: int, db: Session = Depends(get_db),
     if not core.remove_piece(db, _owned(db, user, audition_id), piece_id):
         raise HTTPException(status_code=404, detail="Piece not found")
     return Response(status_code=204)
+
+
+# ---------- the AI help (sync on purpose: FastAPI runs these in a worker thread) ----------
+
+
+@router.post("/{audition_id}/assist/trip")
+def assist_trip(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+    a = _owned(db, user, audition_id)
+    before = (a.assist or {}).get("trip") if isinstance(a.assist, dict) else None
+    trip = assist.plan_trip(db, a, user.leaving_from, user.travel_mode)
+    if trip is not None and trip is not before:  # made now, not served from the saved one
+        record_user_event(int(user.id), "audition_assist_made", {"audition_id": a.id, "part": "trip"})
+    return core.serialize(db, a, _now())
+
+
+@router.post("/{audition_id}/assist/read")
+def assist_read(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+    a = _owned(db, user, audition_id)
+    before = (a.assist or {}).get("read") if isinstance(a.assist, dict) else None
+    read = assist.read_scene(db, a)
+    if read is not None and read is not before:  # made now, not served from the saved one
+        record_user_event(int(user.id), "audition_assist_made", {"audition_id": a.id, "part": "read"})
+    return core.serialize(db, a, _now())
+
+
+@router.post("/{audition_id}/ask")
+def ask(audition_id: int, body: AskIn, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+    a = _owned(db, user, audition_id)
+    now = _now()
+    q = assist.asks_quota(db, int(user.id), now)
+    if q["remaining"] == 0:
+        raise HTTPException(status_code=403, detail={"error": "audition_ask_quota", "quota": q})
+    entry = assist.ask(db, a, body.q, now)
+    if entry is None:
+        raise HTTPException(status_code=502, detail="I couldn't answer that just now. Try again in a moment.")
+    record_user_event(int(user.id), "audition_asked", {"audition_id": a.id})
+    return core.serialize(db, a, now)

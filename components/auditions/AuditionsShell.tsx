@@ -10,16 +10,15 @@ import { useAuditions } from "@/hooks/useAuditions";
 import { markIntroSeen, readIntroSeen, shouldAutoShowIntro } from "@/lib/auditionIntro";
 import { AuditionsIntro } from "./AuditionsIntro";
 import { DropBox } from "./DropBox";
-import { TicketRail } from "./TicketRail";
-import { OUTCOME_NOTE, PrepRoom } from "./PrepRoom";
+import { AuditionFile, OUTCOME_NOTE } from "./AuditionFile";
 import { CalendarOffer, CalendarPanel, CalendarToggle } from "./CalendarLink";
 import { GhostTicket } from "./GhostTicket";
 import { takeCalendarOffer } from "@/lib/calendarFeed";
 
 /**
- * One shell for /auditions and /auditions/[id]. One column on every width:
- * the open audition as one big ticket (the next one up, unless an id picks
- * another), the rest as reels under it.
+ * One shell for /auditions and /auditions/[id]: the open audition as its file
+ * (the next one up, unless an id picks another), with every other audition in
+ * the file's quiet side column.
  */
 export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   const params = useSearchParams();
@@ -176,32 +175,30 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
         </div>
       ) : (
       <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 md:pb-20 md:pt-10">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <h1 className="aud-title text-4xl">Auditions</h1>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            {list.length > 0 && <CalendarToggle open={calOpen} onToggle={() => setCalOpen((v) => !v)} />}
+        <div className="mb-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+          <h1 className="sr-only">Auditions</h1>
+          {list.length > 0 && <CalendarToggle open={calOpen} onToggle={() => setCalOpen((v) => !v)} />}
+          <button
+            type="button"
+            aria-label="How it works"
+            title="How it works"
+            className="aud-help-q aud-focus"
+            onClick={() => setIntro(true)}
+          >
+            ?
+          </button>
+          {!adding && (
             <button
               type="button"
-              aria-label="How it works"
-              title="How it works"
-              className="aud-help-q aud-focus"
-              onClick={() => setIntro(true)}
+              className="aud-quiet-chip aud-focus inline-flex h-10 items-center gap-1.5 px-4 text-[14px] font-semibold"
+              aria-controls="aud-add"
+              aria-expanded={false}
+              onClick={openAdd}
             >
-              ?
+              <span aria-hidden className="text-lg leading-none">+</span>
+              Add an audition
             </button>
-            {!adding && (
-              <button
-                type="button"
-                className="aud-pill aud-help aud-focus inline-flex h-11 items-center gap-2 px-4 text-[15px]"
-                aria-controls="aud-add"
-                aria-expanded={false}
-                onClick={openAdd}
-              >
-                <span aria-hidden className="text-xl leading-none">+</span>
-                Add an audition
-              </button>
-            )}
-          </div>
+          )}
         </div>
         {calOpen && list.length > 0 && <CalendarPanel />}
         <div id="aud-add" ref={capture} className={adding ? "mx-auto mb-8 max-w-2xl" : "hidden"}>
@@ -220,16 +217,11 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
         ) : failed ? (
           retry
         ) : open ? (
-          <PrepRoom a={open} now={now} next={open.id === fallback?.id && open.scope === "upcoming"} />
+          <AuditionFile key={open.id} a={open} list={list} now={now} next={open.id === fallback?.id && open.scope === "upcoming"} />
         ) : selectedId != null ? (
           <p className="aud-muted text-sm">That audition isn&apos;t on your rail.</p>
         ) : null}
         {offer && <div className="mt-6">{offer}</div>}
-        {list.length > 1 && (
-          <div className="mt-12">
-            <TicketRail list={list} openId={open?.id ?? null} now={now} />
-          </div>
-        )}
       </div>
       )}
       <AuditionsIntro open={intro} onOpenChange={introChange} onCapture={focusCapture} onCaptured={revealCapture} firstOne={list.length === 0} />

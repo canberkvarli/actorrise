@@ -9762,3 +9762,181 @@ html[data-firstrun="1"] body::before {
   transform-origin: left center;
   transition: transform 90ms linear;
 }
+
+/* AUDITIONS, the file: one audition as a calm page (components/auditions/AuditionFile).
+   Paper and hairlines; the only hard shadow is the next step's aud-pill. My
+   pencilled notes (trip, read) are display italic, like stage directions. */
+.theatre-auditions {
+  --aud-rule-soft: color-mix(in oklab, var(--aud-rule) 60%, transparent);
+}
+.aud-eyebrow {
+  font-family: var(--t-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--aud-muted);
+}
+.aud-file-title {
+  font-family: var(--t-display);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.aud-sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--aud-rule);
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+.aud-sec-title {
+  font-family: var(--t-display);
+  font-weight: 400;
+  line-height: 1;
+}
+.aud-card {
+  background: var(--aud-surface);
+  border: 1px solid var(--aud-rule-soft);
+  border-radius: 12px;
+}
+.aud-pencil {
+  font-family: var(--t-display);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--aud-fg);
+}
+.aud-pencil-muted {
+  font-family: var(--t-display);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--aud-muted);
+}
+.aud-page {
+  position: relative;
+  overflow: hidden;
+  background: var(--aud-surface);
+  border: 1px solid var(--aud-rule-soft);
+  border-radius: 4px;
+  font-family: var(--t-direction);
+  white-space: pre-wrap;
+}
+.aud-page::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 56px;
+  background: linear-gradient(transparent, var(--aud-surface));
+}
+.aud-page[data-tilt="l"] {
+  transform: rotate(-0.6deg);
+}
+.aud-page[data-tilt="r"] {
+  transform: rotate(0.8deg) translateY(4px);
+}
+.aud-check {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 1.5px solid var(--aud-fg);
+  border-radius: 5px;
+}
+.aud-check[data-on="true"] {
+  background: var(--aud-fg);
+}
+.aud-check[data-on="true"]::after {
+  content: "";
+  width: 8px;
+  height: 4px;
+  border: 2px solid var(--aud-surface);
+  border-top: 0;
+  border-right: 0;
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+.aud-tick-row {
+  border-bottom: 1px dashed var(--aud-rule-soft);
+}
+.aud-tick-row[data-on="true"] .aud-tick-text {
+  color: var(--aud-muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--aud-rule);
+}
+.aud-quiet-chip {
+  border: 1px solid var(--aud-rule);
+  border-radius: 999px;
+  background: var(--aud-surface);
+  color: var(--aud-fg);
+}
+.aud-quiet-chip[aria-pressed="true"] {
+  background: var(--aud-fg);
+  color: var(--aud-surface);
+  border-color: var(--aud-fg);
+}
+.aud-input {
+  background: var(--aud-surface);
+  color: var(--aud-fg);
+  border: 1px solid var(--aud-rule);
+  border-radius: 10px;
+}
+.aud-input::placeholder {
+  font-family: var(--t-display);
+  font-style: italic;
+  color: var(--aud-muted);
+}
+.aud-input:focus-visible {
+  outline: 3px solid var(--aud-focus);
+  outline-offset: 1px;
+}
+.aud-mini {
+  display: flex;
+  overflow: hidden;
+  background: var(--aud-surface);
+  border: 1px solid var(--aud-rule);
+  border-radius: 8px;
+  transition: border-color 150ms;
+}
+.aud-mini:hover {
+  border-color: var(--aud-fg);
+}
+.aud-mini-stub {
+  width: 58px;
+  flex: none;
+  border-right: 1.5px dashed var(--aud-rule);
+  text-align: center;
+}
+.aud-sketch path,
+.aud-sketch circle {
+  vector-effect: non-scaling-stroke;
+}
+.aud-sketch .aud-sketch-route {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: aud-draw 1.4s ease-out 0.2s forwards;
+}
+@keyframes aud-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.aud-thinking {
+  animation: aud-breathe 1.8s ease-in-out infinite;
+}
+@keyframes aud-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aud-sketch .aud-sketch-route {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .aud-thinking {
+    animation: none;
+  }
+}

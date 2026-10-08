@@ -32,7 +32,12 @@ OUTCOMES = {"good": None, "callback": "callback", "no": "passed"}  # outcome -> 
 EDITABLE = (
     "project", "role", "kind", "status", "starts_at", "due_at", "tz", "location", "casting",
     "material_raw", "material", "bring", "notes", "tape_link", "user_script_id", "reminders_on",
+    "bring_list", "through", "through_kind", "shoots", "after_notes",
 )
+THROUGH_KINDS = ("agent", "manager", "self")
+BRING_SOURCES = ("email", "ai", "me")
+AFTER_KEYS = ("how", "differently", "room")
+MAX_BRING_ITEMS = 20
 _CASTING_NOISE = {"casting", "csa", "inc", "llc", "co", "the", "and"}
 
 
@@ -83,6 +88,15 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(f"status must be one of {STATUSES}")
     if "material" in out and out["material"] is not None and not isinstance(out["material"], dict):
         raise ValueError("material must be an object")
+    if out.get("through_kind") is not None and out["through_kind"] not in THROUGH_KINDS:
+        raise ValueError(f"through_kind must be one of {THROUGH_KINDS}")
+    if "bring_list" in out and out["bring_list"] is not None:
+        out["bring_list"] = clean_bring_list(out["bring_list"])
+    if "after_notes" in out and out["after_notes"] is not None:
+        if not isinstance(out["after_notes"], dict):
+            raise ValueError("after_notes must be an object")
+        notes = {k: str(out["after_notes"].get(k) or "").strip()[:4000] for k in AFTER_KEYS}
+        out["after_notes"] = {k: v for k, v in notes.items() if v} or None
     if "tz" in out:
         try:
             ZoneInfo(out["tz"])
@@ -92,6 +106,34 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
     if out.get("tape_link") and not re.match(r"^https?://\S+$", out["tape_link"], re.IGNORECASE):
         raise ValueError("tape_link must be an http(s) link")
     return out
+
+
+def clean_bring_list(items: Any) -> list[dict[str, Any]]:
+    if not isinstance(items, list):
+        raise ValueError("bring_list must be a list")
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in items:
+        if not isinstance(item, dict):
+            raise ValueError("bring_list items must be objects")
+        text = str(item.get("text") or "").strip()[:200]
+        if not text or text.lower() in seen:
+            continue
+        seen.add(text.lower())
+        src = item.get("src") if item.get("src") in BRING_SOURCES else "me"
+        out.append({"text": text, "done": bool(item.get("done")), "src": src})
+    return out[:MAX_BRING_ITEMS]
+
+
+def split_bring(bring: Optional[str]) -> list[dict[str, Any]]:
+    """The one-line `bring` from the email as checklist items: "headshot, resume; sides" is three."""
+    parts = re.split(r"[;,\n]|\band\b", bring or "")
+    items = [p.strip(" .") for p in parts]
+    return [{"text": t[:1].upper() + t[1:], "done": False, "src": "email"} for t in items if t]
+
+
+def bring_items(a: Audition) -> list[dict[str, Any]]:
+    return a.bring_list if isinstance(a.bring_list, list) else split_bring(a.bring)
 
 
 def _check_script(db: Session, user_id: int, fields: dict[str, Any]) -> None:
@@ -143,6 +185,10 @@ def update_audition(db: Session, a: Audition, changes: dict[str, Any]) -> Auditi
     fields = _clean(changes)
     _check_script(db, a.user_id, fields)
     old_status = a.status
+    if "bring" in fields and "bring_list" not in fields and isinstance(a.bring_list, list):
+        # A new bring line starts the checklist over from it, keeping what the actor or I added.
+        kept = [i for i in a.bring_list if i.get("src") != "email"]
+        fields["bring_list"] = clean_bring_list(split_bring(fields["bring"]) + kept)
     for k, v in fields.items():
         setattr(a, k, v)
     if "casting" in fields:
@@ -348,6 +394,44 @@ def _iso(dt: Optional[datetime]) -> Optional[str]:
     return dt.isoformat() if dt else None
 
 
+SIDES_PREVIEW_CHARS = 700
+
+
+def sides_text(db: Session, a: Audition) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """(title, status, raw_text) of the attached sides, or Nones."""
+    if not a.user_script_id:
+        return None, None, None
+    from app.models.actor import UserScript
+
+    row = (
+        db.query(UserScript.title, UserScript.processing_status, UserScript.raw_text)
+        .filter(UserScript.id == a.user_script_id, UserScript.user_id == a.user_id)
+        .first()
+    )
+    return (row[0], row[1], row[2]) if row else (None, None, None)
+
+
+def sides_preview(db: Session, a: Audition) -> Optional[dict[str, Any]]:
+    """The first lines of their sides, for the page to show as paper."""
+    title, status, text = sides_text(db, a)
+    if title is None and status is None:
+        return None
+    return {"title": title, "status": status, "excerpt": (text or "").strip()[:SIDES_PREVIEW_CHARS] or None}
+
+
+def public_assist(raw: Any) -> dict[str, Any]:
+    """The saved AI help without the cache keys."""
+    raw = raw if isinstance(raw, dict) else {}
+    trip = raw.get("trip") if isinstance(raw.get("trip"), dict) else None
+    read = raw.get("read") if isinstance(raw.get("read"), dict) else None
+    asks = raw.get("asks") if isinstance(raw.get("asks"), list) else []
+    return {
+        "trip": {k: v for k, v in trip.items() if k != "key"} if trip else None,
+        "read": {k: v for k, v in read.items() if k != "key"} if read else None,
+        "asks": asks,
+    }
+
+
 def serialize(db: Session, a: Audition, now: datetime, *, with_prep: bool = True) -> dict[str, Any]:
     pieces = pieces_for(db, a)
     labels = piece_labels(db, pieces)
@@ -359,6 +443,9 @@ def serialize(db: Session, a: Audition, now: datetime, *, with_prep: bool = True
         "bring": a.bring, "notes": a.notes, "tape_link": a.tape_link, "source": a.source,
         "user_script_id": a.user_script_id, "reminders_on": a.reminders_on,
         "scope": scope_of(a, now), "created_at": _iso(a.created_at),
+        "bring_list": bring_items(a), "through": a.through, "through_kind": a.through_kind,
+        "shoots": a.shoots, "after_notes": a.after_notes or {},
+        "assist": public_assist(a.assist),
         "pieces": [
             {"id": p.id, "monologue_id": p.monologue_id, "scene_id": p.scene_id, "used": p.used,
              **labels.get(p.monologue_id, none)}
@@ -366,6 +453,7 @@ def serialize(db: Session, a: Audition, now: datetime, *, with_prep: bool = True
         ],
     }
     if with_prep:
+        out["sides"] = sides_preview(db, a)
         runs, last = count_runs(db, a, pieces)
         out["prep"] = {"runs": runs, "last_run_at": _iso(last),
                        "steps": build_prep_steps(a, runs=runs, piece_count=len(pieces))}

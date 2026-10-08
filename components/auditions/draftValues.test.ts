@@ -9,7 +9,7 @@ function aud(over: Partial<Audition> = {}): Audition {
     starts_at: "2026-10-12T18:30:45.123Z", due_at: null, when: "2026-10-12T18:30:45.123Z", tz: "America/New_York",
     location: "Pearl Studios", casting: "Telsey", material_raw: "1 min classical", material: { length: 1 },
     bring: null, notes: null, tape_link: null, source: "parse", user_script_id: null, reminders_on: true,
-    scope: "upcoming", created_at: "2026-10-01T00:00:00Z", pieces: [], ...over,
+    scope: "upcoming", created_at: "2026-10-01T00:00:00Z", pieces: [], bring_list: [], through: null, through_kind: null, shoots: null, after_notes: {}, assist: { trip: null, read: null, asks: [] }, ...over,
   };
 }
 

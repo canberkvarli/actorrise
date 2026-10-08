@@ -24,13 +24,21 @@ MAX_TEXT = 12_000
 TIMEOUT_S = 10
 # Founder call: no unlimited reads. Manual entry stays free for everyone.
 PARSES_PER_MONTH = {"free": 5, "plus": 30, "pro": 100}
-FIELDS = ("project", "role", "kind", "starts_at", "due_at", "location", "casting", "material_raw", "bring", "notes")
-MAX_LEN = {"project": 200, "role": 200, "location": 300, "casting": 200, "material_raw": 300, "bring": 300, "notes": 4000}
+FIELDS = (
+    "project", "role", "kind", "starts_at", "due_at", "location", "casting", "material_raw", "bring", "notes",
+    "through", "through_kind", "shoots",
+)
+TEXT_FIELDS = ("project", "role", "location", "casting", "material_raw", "bring", "through", "shoots")
+MAX_LEN = {
+    "project": 200, "role": 200, "location": 300, "casting": 200, "material_raw": 300, "bring": 300, "notes": 4000,
+    "through": 200, "shoots": 300,
+}
+THROUGH_KINDS = ("agent", "manager", "self")
 
 PROMPT = """You read casting notices and audition emails for actors.
 Today is {today}. The actor's timezone is {tz}.
 Return JSON with exactly these keys. Each of them except "material" is an object {{"value": ..., "confidence": "high" or "low"}}:
-project, role, kind ("in_person", "self_tape" or "virtual"), starts_at (appointment, ISO 8601 local time without offset, e.g. 2026-10-09T10:40:00), due_at (self-tape deadline, same format), location, casting (casting director or office), material_raw (what to prepare, as written, e.g. "1 min contemporary comedic"), bring (what to bring).
+project, role, kind ("in_person", "self_tape" or "virtual"), starts_at (appointment, ISO 8601 local time without offset, e.g. 2026-10-09T10:40:00), due_at (self-tape deadline, same format), location, casting (casting director or office), material_raw (what to prepare, as written, e.g. "1 min contemporary comedic"), bring (what to bring), through (the agent or manager who sent this to the actor, by name and agency, e.g. "Maya Chen, Bright Talent"; null if the actor submitted themselves or it does not say), through_kind ("agent", "manager" or "self"), shoots (shoot dates, union status and rate, as written, e.g. "Shoots Jan to Mar, SAG, scale").
 "material" is an object {{"length_seconds": int or null, "genre": "comedic", "dramatic" or null, "era": "contemporary", "classical" or null, "count": int or null, "own_choice": true, false or null}}. own_choice is true when the actor chooses their own piece (a monologue or song of their choice), false when casting sends what to prepare (sides, scenes, pages, a script), null if the notice does not say.
 Use a null value when the notice does not say. Use "low" confidence for anything you inferred or are unsure about, including relative dates like "Thursday".
 
@@ -82,12 +90,14 @@ def normalize_draft(raw: dict, now: datetime, tz: str) -> dict:
     zone = _zone(tz)
     d = empty_draft()
     d["notes"] = {"value": None, "confidence": "high"}
-    for f in ("project", "role", "location", "casting", "material_raw", "bring"):
+    for f in TEXT_FIELDS:
         value, conf = _field(raw.get(f))
         if isinstance(value, str) and value.strip():
             d[f] = {"value": value.strip()[: MAX_LEN[f]], "confidence": conf}
         else:
             d[f] = {"value": None, "confidence": "low" if not isinstance(raw.get(f), dict) else conf}
+    tk, conf = _field(raw.get("through_kind"))
+    d["through_kind"] = {"value": tk, "confidence": conf} if tk in THROUGH_KINDS else {"value": None, "confidence": "low"}
     kind, conf = _field(raw.get("kind"))
     d["kind"] = {"value": kind, "confidence": conf} if kind in KINDS else {"value": "in_person", "confidence": "low"}
     for f in ("starts_at", "due_at"):

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { countdown, whenLabel, groupByScope, toLocalInput, fromLocalInput, changedFields, momentsFor, type Audition } from "./auditions";
+import { countdown, whenLabel, groupByScope, toLocalInput, fromLocalInput, changedFields, momentsFor, nextStep, sectionOrder, eyebrow, whenSentence, type Audition, type PrepStep } from "./auditions";
 
 const NOW = new Date("2026-10-07T15:00:00Z");
 
@@ -9,7 +9,7 @@ function a(over: Partial<Audition>): Audition {
     id: 1, project: "P", role: null, kind: "in_person", status: "scheduled", starts_at: null, due_at: null,
     when: null, tz: "UTC", location: null, casting: null, material_raw: null, material: null, bring: null,
     notes: null, tape_link: null, source: "manual", user_script_id: null, reminders_on: true, scope: "upcoming",
-    created_at: NOW.toISOString(), pieces: [], ...over,
+    created_at: NOW.toISOString(), pieces: [], bring_list: [], through: null, through_kind: null, shoots: null, after_notes: {}, assist: { trip: null, read: null, asks: [] }, ...over,
   };
 }
 
@@ -83,5 +83,66 @@ describe("momentsFor", () => {
   });
   it("calls the day a tape due for a self-tape", () => {
     expect(momentsFor({ ...a, kind: "self_tape" })[2].label).toBe("tape due");
+  });
+});
+
+const sides = (done: boolean): PrepStep => ({ key: "sides", label: "Run the sides", done, href: "/practice?script=9" });
+const upload: PrepStep = { key: "upload", label: "Add their sides", done: false, href: null };
+const piece = (done: boolean): PrepStep => ({ key: "piece", label: "Pick your piece", done, href: "/monologues?q=x" });
+const prep = (...steps: PrepStep[]) => ({ runs: 0, last_run_at: null, steps });
+const IN_5 = "2026-10-12T18:40:00Z";
+const TOMORROW = "2026-10-08T18:40:00Z";
+const TODAY = "2026-10-07T20:00:00Z";
+
+describe("nextStep: the one orange button", () => {
+  it("asks for their sides before anything else", () => {
+    expect(nextStep(a({ when: IN_5, prep: prep(upload) }), NOW)).toEqual({ kind: "upload", label: "Add their sides" });
+  });
+  it("runs the sides, then picks the piece", () => {
+    expect(nextStep(a({ when: IN_5, prep: prep(sides(false), piece(false)) }), NOW)).toMatchObject({ kind: "link", label: "Run your sides" });
+    expect(nextStep(a({ when: IN_5, prep: prep(sides(true), piece(false)) }), NOW)).toMatchObject({ kind: "link", label: "Pick your piece" });
+  });
+  it("the day before, packing beats running it again", () => {
+    const bring_list = [{ text: "Headshot", done: false, src: "email" as const }];
+    expect(nextStep(a({ when: TOMORROW, prep: prep(sides(true)), bring_list }), NOW)).toEqual({ kind: "scroll", label: "Pack", target: "bring" });
+    expect(nextStep(a({ when: IN_5, prep: prep(sides(true)), bring_list }), NOW)).toMatchObject({ label: "Run it again" });
+  });
+  it("nothing left to do is no button", () => {
+    expect(nextStep(a({ when: IN_5, prep: prep() }), NOW)).toBeNull();
+  });
+  it("afterwards asks how it went until it's written or they heard", () => {
+    expect(nextStep(a({ scope: "waiting", prep: prep(sides(false)) }), NOW)).toEqual({ kind: "scroll", label: "How did it go?", target: "after" });
+    expect(nextStep(a({ scope: "waiting", after_notes: { how: "fine" } }), NOW)).toBeNull();
+    expect(nextStep(a({ scope: "past", status: "booked" }), NOW)).toBeNull();
+  });
+});
+
+describe("sectionOrder", () => {
+  it("days out: the trip, the work, then packing", () => {
+    expect(sectionOrder(a({ when: IN_5 }), NOW)).toEqual(["trip", "sides", "bring", "after", "ask"]);
+  });
+  it("the day before, bring comes first; on the day, the trip", () => {
+    expect(sectionOrder(a({ when: TOMORROW }), NOW)[0]).toBe("bring");
+    expect(sectionOrder(a({ when: TODAY }), NOW).slice(0, 2)).toEqual(["trip", "bring"]);
+  });
+  it("a self tape never gets a trip", () => {
+    expect(sectionOrder(a({ when: IN_5, kind: "self_tape" }), NOW)).not.toContain("trip");
+  });
+  it("afterwards the notes lead", () => {
+    expect(sectionOrder(a({ scope: "waiting" }), NOW)[0]).toBe("after");
+  });
+});
+
+describe("eyebrow and whenSentence", () => {
+  it("reads like a person", () => {
+    expect(eyebrow(a({ when: IN_5 }), NOW, true)).toBe("Next up · in 5 days");
+    expect(eyebrow(a({ when: TOMORROW }), NOW)).toBe("Tomorrow at 6:40 pm");
+    expect(eyebrow(a({ when: TODAY, kind: "self_tape" }), NOW)).toBe("Tape due today at 8:00 pm");
+    expect(eyebrow(a({ scope: "waiting" }), NOW)).toBe("Waiting to hear");
+    expect(eyebrow(a({ scope: "past", status: "booked" }), NOW)).toBe("Booked");
+  });
+  it("names the day", () => {
+    expect(whenSentence(a({ when: IN_5, tz: "America/New_York" }))).toBe("Monday, Oct 12 at 2:40 pm");
+    expect(whenSentence(a({ when: IN_5, kind: "self_tape" }))).toBe("Due Monday, Oct 12 at 6:40 pm");
   });
 });
