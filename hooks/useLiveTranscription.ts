@@ -73,11 +73,22 @@ interface OpenOptions {
   prompt?: string;
   /** Proper nouns for the whole scene. Re-pointed per turn by `beginTurn`. */
   keywords?: string[];
+  /**
+   * The microphone to stream, supplied by the caller.
+   *
+   * Deliberately not acquired here. The rehearsal already holds a stream for
+   * the level meter and for recording the take, and calling getUserMedia a
+   * second time on the same device gives the browser two independent capture
+   * paths with their own gain control — which is both wasteful and a plausible
+   * source of the AGC behaviour that kept the old level gate pinned open. One
+   * microphone, one stream, three consumers.
+   */
+  getStream: () => Promise<MediaStream | null>;
 }
 
 const CALLS_URL = 'https://api.openai.com/v1/realtime/calls';
 
-export function useLiveTranscription(options: OpenOptions = {}): LiveTranscription {
+export function useLiveTranscription(options: OpenOptions): LiveTranscription {
   const [status, setStatus] = useState<LiveStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [transcript, setTranscript] = useState('');
@@ -182,15 +193,11 @@ export function useLiveTranscription(options: OpenOptions = {}): LiveTranscripti
           },
         );
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-        });
+        const stream = await optionsRef.current.getStream();
+        if (!stream) throw new Error('No microphone');
         streamRef.current = stream;
         const track = stream.getAudioTracks()[0];
+        if (!track) throw new Error('No microphone track');
         trackRef.current = track;
         /* Muted from the moment it exists. The session comes up during the
            partner's line as often as not, and a live microphone then hears the
@@ -230,9 +237,8 @@ export function useLiveTranscription(options: OpenOptions = {}): LiveTranscripti
       } catch (err: unknown) {
         setStatus('error');
         setError(err instanceof Error ? err.message : 'Could not start live transcription');
-        // Leave nothing half-built: a peer connection without a remote
-        // description holds the microphone light on for no reason.
-        try { streamRef.current?.getTracks().forEach(t => t.stop()); } catch { /* gone */ }
+        /* The stream belongs to the caller, so it is released, not stopped —
+           the mic check is still using it. */
         streamRef.current = null;
         trackRef.current = null;
       } finally {
@@ -300,7 +306,7 @@ export function useLiveTranscription(options: OpenOptions = {}): LiveTranscripti
     turnOpenRef.current = false;
     try { dcRef.current?.close(); } catch { /* already gone */ }
     try { pcRef.current?.close(); } catch { /* already gone */ }
-    try { streamRef.current?.getTracks().forEach(t => t.stop()); } catch { /* already gone */ }
+    // Not ours to stop; useLiveCapture owns the stream's lifetime.
     dcRef.current = null;
     pcRef.current = null;
     trackRef.current = null;
@@ -309,7 +315,7 @@ export function useLiveTranscription(options: OpenOptions = {}): LiveTranscripti
     setStatus('idle');
   }, []);
 
-  // The microphone light must not survive the page.
+  // The peer connection must not survive the page.
   useEffect(() => close, [close]);
 
   return {

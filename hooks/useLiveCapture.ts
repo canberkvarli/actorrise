@@ -3,8 +3,8 @@
 /**
  * Everything the rehearsal needs from a microphone, with nothing batch left in it.
  *
- * This replaces `useWhisperSTT`, which was a batch recorder wearing a
- * real-time name. Its own return block admitted as much:
+ * This replaces `useWhisperSTT` (deleted in this change), which was a batch
+ * recorder wearing a real-time name. Its own return block admitted as much:
  *
  *     // liveTranscript always empty — Whisper is batch, not real-time
  *     liveTranscript: '',
@@ -72,36 +72,30 @@ export interface LiveCapture {
 }
 
 export function useLiveCapture(options: UseLiveCaptureOptions = {}): LiveCapture {
-  const live = useLiveTranscription({
-    prompt: options.prompt,
-    keywords: options.keywords,
-  });
-
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const lastBlobRef = useRef<Blob | null>(null);
+  const mimeRef = useRef('audio/webm');
 
-  const isSupported =
-    typeof window !== 'undefined' &&
-    typeof RTCPeerConnection !== 'undefined' &&
-    typeof navigator !== 'undefined' &&
-    !!navigator.mediaDevices;
+  const deviceIdRef = useRef(options.deviceId);
+  deviceIdRef.current = options.deviceId;
 
   /**
-   * Acquire a microphone for the pre-flight check.
+   * The one microphone, acquired once.
    *
-   * A SEPARATE stream from the one the live session streams. Sharing it would
-   * mean the meter's analyser and the session's track lived or died together,
-   * and the mic check runs before the session exists.
+   * Three things read it: the WebRTC track that streams to the transcriber,
+   * the MediaRecorder that keeps the take for review, and the analyser behind
+   * the mic check. They share it rather than each opening their own.
    */
-  const prewarmStream = useCallback(async () => {
-    if (streamRef.current) return;
+  const acquire = useCallback(async (): Promise<MediaStream | null> => {
+    if (streamRef.current) return streamRef.current;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: options.deviceId ? { deviceId: { exact: options.deviceId } } : true,
+        audio: deviceIdRef.current
+          ? { deviceId: { exact: deviceIdRef.current } }
+          : { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
       streamRef.current = stream;
 
@@ -111,11 +105,36 @@ export function useLiveCapture(options: UseLiveCaptureOptions = {}): LiveCapture
       analyser.fftSize = 2048;
       ctx.createMediaStreamSource(stream).connect(analyser);
       analyserRef.current = analyser;
+      return stream;
     } catch {
       /* The mic-check screen reads analyserRef and shows its own warning when
-         it is null. Nothing here needs to decide what that looks like. */
+         it is null, and the session reports its own failure. Nothing here has
+         to decide what either looks like. */
+      return null;
     }
-  }, [options.deviceId]);
+  }, []);
+
+  const {
+    status, error, transcript, turnEnded, listening,
+    open,
+    beginTurn: liveBeginTurn,
+    endTurn: liveEndTurn,
+  } = useLiveTranscription({
+    prompt: options.prompt,
+    keywords: options.keywords,
+    getStream: acquire,
+  });
+
+  const isSupported =
+    typeof window !== 'undefined' &&
+    typeof RTCPeerConnection !== 'undefined' &&
+    typeof navigator !== 'undefined' &&
+    !!navigator.mediaDevices;
+
+  /** Acquire the microphone ahead of the scene, so no line pays for it. */
+  const prewarmStream = useCallback(async () => {
+    await acquire();
+  }, [acquire]);
 
   /** Start recording the take, for review playback only. */
   const startRecording = useCallback(() => {
@@ -128,12 +147,13 @@ export function useLiveCapture(options: UseLiveCaptureOptions = {}): LiveCapture
       rec.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
-      rec.onstop = () => {
-        lastBlobRef.current = chunksRef.current.length
-          ? new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' })
-          : null;
-      };
-      rec.start();
+      mimeRef.current = rec.mimeType || 'audio/webm';
+      /* A timeslice, because the caller reads the take WHILE it is still
+         recording — the delivery handler files the audio for review before it
+         mutes the microphone. Without one, MediaRecorder emits a single chunk
+         on stop and a read before that returns nothing at all. 250ms keeps the
+         unflushed tail inaudible. */
+      rec.start(250);
       recorderRef.current = rec;
     } catch {
       /* No playback for this take. The rehearsal is unaffected — the words do
@@ -149,17 +169,26 @@ export function useLiveCapture(options: UseLiveCaptureOptions = {}): LiveCapture
     }
   }, []);
 
+  /* Stable identities. These land in the deps of several page callbacks, and
+     taking them off the hook's return object instead would give them a new
+     identity every render. */
   const beginTurn = useCallback((keywords?: string[]) => {
-    live.beginTurn(keywords?.length ? { keywords } : undefined);
+    liveBeginTurn(keywords?.length ? { keywords } : undefined);
     startRecording();
-  }, [live, startRecording]);
+  }, [liveBeginTurn, startRecording]);
 
   const endTurn = useCallback(() => {
-    live.endTurn();
+    liveEndTurn();
     stopRecording();
-  }, [live, stopRecording]);
+  }, [liveEndTurn, stopRecording]);
 
-  const getRecordedBlob = useCallback(() => lastBlobRef.current, []);
+  /** The take so far, for review playback. Safe to call mid-recording. */
+  const getRecordedBlob = useCallback(
+    () => (chunksRef.current.length
+      ? new Blob(chunksRef.current, { type: mimeRef.current })
+      : null),
+    [],
+  );
 
   // Nothing holds a microphone open past the page.
   useEffect(() => () => {
@@ -169,12 +198,12 @@ export function useLiveCapture(options: UseLiveCaptureOptions = {}): LiveCapture
   }, []);
 
   return {
-    status: live.status,
-    error: live.error,
-    transcript: live.transcript,
-    turnEnded: live.turnEnded,
-    listening: live.listening,
-    open: live.open,
+    status,
+    error,
+    transcript,
+    turnEnded,
+    listening,
+    open,
     beginTurn,
     endTurn,
     getRecordedBlob,

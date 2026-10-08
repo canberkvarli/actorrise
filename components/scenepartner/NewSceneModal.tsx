@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Plus, Trash2, User } from "lucide-react";
-import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
+import { AI_VOICES } from "@/lib/scenePrefs";
 import api from "@/lib/api";
 import { toast } from "sonner";
 
@@ -36,7 +36,6 @@ interface NewSceneModalProps {
 
 export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalProps) {
   const router = useRouter();
-  const { voices } = useSpeechSynthesis({ rate: 1.0, volume: 1.0 });
 
   const [title, setTitle] = useState("");
   const [myCharacter, setMyCharacter] = useState("");
@@ -184,9 +183,13 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
                   onChange={(e) => updateCharacter(c.id, { voiceURI: e.target.value })}
                 >
                   <option value="">Select voice</option>
-                  {voices.map((v) => (
-                    <option key={v.voiceURI} value={v.voiceURI}>
-                      {v.name}
+                  {/* The partner's real voices. This listed the BROWSER's
+                      system voices, which the rehearsal has never used and
+                      cannot use — the partner is OpenAI TTS. Offering them
+                      here advertised a voice the scene would never speak in. */}
+                  {AI_VOICES.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.label} — {v.desc.toLowerCase()}
                     </option>
                   ))}
                 </select>
