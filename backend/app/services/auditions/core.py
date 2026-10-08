@@ -306,13 +306,35 @@ def count_runs(db: Session, a: Audition, pieces: list[AuditionPiece]) -> tuple[i
     return len(stamps), (max(stamps) if stamps else None)
 
 
+_OWN_PIECE = re.compile(
+    r"\b(monologues?|bars|songs?|of your (own )?choice|your own|contemporary|classical|comedic|dramatic|\d+\s*(min|mins|minutes?|sec|seconds?))\b", re.I)
+_THEIR_MATERIAL = re.compile(r"\b(sides?|scenes?|pages?|pp|attached|script|copy|cold read)\b", re.I)
+
+
+def asks_for_own_piece(a: Audition) -> bool:
+    """True when the actor picks what to bring; False when casting sent it (sides, scenes)."""
+    m = a.material if isinstance(a.material, dict) else {}
+    if isinstance(m.get("own_choice"), bool):
+        return m["own_choice"]
+    text = a.material_raw or ""
+    if _OWN_PIECE.search(text):
+        return True
+    if _THEIR_MATERIAL.search(text):
+        return False
+    return bool(m.get("length_seconds") or m.get("genre") or m.get("era"))
+
+
 def build_prep_steps(a: Audition, *, runs: int, piece_count: int) -> list[dict[str, Any]]:
     steps: list[dict[str, Any]] = []
+    own = asks_for_own_piece(a)
     if a.user_script_id:
         steps.append({"key": "sides", "label": "Run the sides", "done": runs > 0,
                       "href": f"/practice?script={a.user_script_id}"})
-    if a.material_raw or a.material:
-        q = a.material_raw or " ".join(str(v) for v in (a.material or {}).values() if v)
+    elif a.material_raw and not own:
+        # Casting sent the material but it isn't here yet: ask for their sides, not a pick.
+        steps.append({"key": "upload", "label": "Add their sides", "done": False, "href": None})
+    if own:
+        q = a.material_raw or " ".join(str(v) for v in (a.material or {}).values() if v and not isinstance(v, bool))
         steps.append({"key": "piece", "label": "Pick your piece", "done": piece_count > 0,
                       "href": "/monologues?" + urlencode({"q": q})})
     if not steps:

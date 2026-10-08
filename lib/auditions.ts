@@ -6,7 +6,7 @@ export type AuditionKind = "in_person" | "self_tape" | "virtual";
 export type AuditionStatus = "submitted" | "scheduled" | "callback" | "booked" | "pinned" | "passed";
 export type AuditionScope = "upcoming" | "waiting" | "past";
 
-export type PrepStep = { key: "sides" | "piece" | "bring"; label: string; done: boolean; href: string | null };
+export type PrepStep = { key: "sides" | "upload" | "piece" | "bring"; label: string; done: boolean; href: string | null };
 
 export type Audition = {
   id: number;

@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { trackEvent } from "@/lib/events";
 import { countdown, KIND_LABEL, momentsFor, STATUS_LABEL, STATUS_ORDER, whenLabel, type Audition, type AuditionPiece, type AuditionStatus } from "@/lib/auditions";
-import { useAddPiece, useDeleteAudition, useLogOutcome, useRemovePiece, useUpdateAudition } from "@/hooks/useAuditions";
+import { uploadSides, useAddPiece, useDeleteAudition, useLogOutcome, useRemovePiece, useUpdateAudition } from "@/hooks/useAuditions";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { useScript } from "@/hooks/useScripts";
 import { DraftCard } from "./DraftCard";
@@ -21,6 +21,40 @@ export const OUTCOME_NOTE: Record<"good" | "callback" | "no", string> = {
 };
 
 const SAVE_FAILED = "That didn't save. Try again in a moment.";
+
+/** Casting sent sides that aren't here yet: take the PDF right on the ticket, then run them. */
+function AddSides({ a }: { a: Audition }) {
+  const update = useUpdateAudition();
+  const [busy, setBusy] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  async function take(file: File | undefined) {
+    if (!file) return;
+    setBusy(true);
+    const id = await uploadSides(file);
+    if (id == null) {
+      setBusy(false);
+      toast.error("Those sides didn't load. Try the PDF again.");
+      return;
+    }
+    update.mutate({ id: a.id, user_script_id: id }, {
+      onSuccess: () => toast.success("Got them. They're loading into ScenePartner."),
+      onError: () => toast.error(SAVE_FAILED),
+      onSettled: () => setBusy(false),
+    });
+  }
+  return (
+    <>
+      <span className="aud-dir aud-muted text-[13px]">Drop in the PDF they sent and you can run them with ScenePartner.</span>
+      <input ref={input} type="file" accept="application/pdf" className="sr-only" tabIndex={-1} aria-hidden
+        onChange={(e) => { void take(e.target.files?.[0]); e.target.value = ""; }} />
+      <button type="button" disabled={busy}
+        className="aud-pill aud-focus bg-primary text-primary-foreground mt-auto inline-flex h-10 items-center self-start whitespace-nowrap px-4 text-[14px]"
+        onClick={() => input.current?.click()}>
+        {busy ? "Adding them" : "Add the PDF"}
+      </button>
+    </>
+  );
+}
 
 export function PrepRoom({ a, now, next = false }: { a: Audition; now: Date; next?: boolean }) {
   const router = useRouter();
@@ -121,11 +155,12 @@ export function PrepRoom({ a, now, next = false }: { a: Audition; now: Date; nex
                   <span className="min-w-0 text-[15px] font-semibold leading-snug">{s.label}</span>
                 </span>
                 {s.key === "sides" && <span className="aud-dir aud-muted text-[13px]">{sidesNote(a.prep!.runs)}</span>}
+                {s.key === "upload" && <AddSides a={a} />}
                 {(s.key === "piece" || s.key === "bring") && <Pieces a={a} />}
                 {s.href && (
                   <Link
                     href={s.href}
-                    onClick={() => s.key !== "bring" && trackEvent("audition_prep_started", { audition_id: a.id, kind: s.key === "sides" ? "sides" : "monologue" })}
+                    onClick={() => s.key !== "bring" && s.key !== "upload" && trackEvent("audition_prep_started", { audition_id: a.id, kind: s.key === "sides" ? "sides" : "monologue" })}
                     className={`aud-pill aud-focus mt-auto inline-flex h-10 items-center self-start whitespace-nowrap px-4 text-[14px] ${s.done ? "aud-help" : "bg-primary text-primary-foreground"}`}
                   >
                     {s.key === "sides"
@@ -143,10 +178,10 @@ export function PrepRoom({ a, now, next = false }: { a: Audition; now: Date; nex
             )}
           </ol>
         )}
-        {/* A sides-only audition has no piece step, but the actor may still be bringing a monologue. */}
-        {a.prep && !a.prep.steps.some((s) => s.key === "piece" || s.key === "bring") && (
+        {/* Casting sent the material, so there is nothing to pick. A piece attached earlier still shows. */}
+        {a.prep && !a.prep.steps.some((s) => s.key === "piece" || s.key === "bring") && a.pieces.length > 0 && (
           <div className="mt-3 text-sm">
-            <Pieces a={a} label="Bringing a monologue too?" />
+            <Pieces a={a} label="Also bringing" />
           </div>
         )}
 

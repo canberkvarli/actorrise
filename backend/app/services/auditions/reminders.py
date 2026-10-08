@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 from app.models.audition import CLOSED_STATUSES, Audition, AuditionEvent, AuditionReminderSend
 from app.models.email_do_not_contact import EmailDoNotContact
 from app.models.user import User
-from app.services.auditions.core import aware, count_runs, pieces_for, when
+from app.services.auditions.core import asks_for_own_piece, aware, count_runs, pieces_for, when
 from app.services.email.marketing import build_unsubscribe_url
 from app.services.email.templates import EmailTemplates
 from app.services.events import record_user_event
@@ -97,8 +97,10 @@ def _fields(a: Audition, moment: str, name: str, runs: int, now: Optional[dateti
     when_phrase = (f"due {local:%A} at {_clock(local)}" if tape else f"{local:%A} at {_clock(local)}")
     if a.user_script_id:
         step = "your sides are loaded. run them once tonight and they'll sit better by then."
-    elif a.material_raw:
+    elif a.material_raw and asks_for_own_piece(a):
         step = f"you still need a piece for it ({a.material_raw}). i pulled a few that fit."
+    elif a.material_raw:
+        step = "add the sides they sent to your prep room and you can run them before then."
     else:
         step = "worth deciding tonight what you're bringing."
     if tape:

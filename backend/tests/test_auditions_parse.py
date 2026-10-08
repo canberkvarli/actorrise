@@ -34,7 +34,7 @@ class NormalizeTests(unittest.TestCase):
         self.assertEqual(d["starts_at"]["value"], "2026-10-09T14:40:00+00:00")  # EDT is UTC-4
         self.assertEqual(d["starts_at"]["confidence"], "high")
         self.assertEqual(d["casting"]["confidence"], "low")
-        self.assertEqual(d["material"], {"length_seconds": 60, "genre": "comedic", "era": "contemporary", "count": 1})
+        self.assertEqual(d["material"], {"length_seconds": 60, "genre": "comedic", "era": "contemporary", "count": 1, "own_choice": None})
 
     def test_past_and_far_future_dates_drop_to_low(self):
         raw = dict(BACKSTAGE, starts_at={"value": "2026-09-01T10:00:00", "confidence": "high"})
@@ -66,8 +66,13 @@ class ReviewFixTests(unittest.TestCase):
         raw = dict(BACKSTAGE, material={"length_seconds": True, "genre": "Comedic", "era": " CLASSICAL ", "count": False})
         self.assertEqual(
             parse.normalize_draft(raw, NOW, "UTC")["material"],
-            {"length_seconds": None, "genre": "comedic", "era": "classical", "count": None},
+            {"length_seconds": None, "genre": "comedic", "era": "classical", "count": None, "own_choice": None},
         )
+
+    def test_own_choice_is_a_bool_or_nothing(self):
+        for given, want in ((False, False), (True, True), ("yes", None)):
+            raw = dict(BACKSTAGE, material={"own_choice": given})
+            self.assertIs(parse.normalize_draft(raw, NOW, "UTC")["material"]["own_choice"], want)
 
     def test_default_call_bounds_the_client_not_a_thread(self):
         seen = {}

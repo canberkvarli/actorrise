@@ -358,6 +358,22 @@ class PrepStepTests(unittest.TestCase):
         steps = core.build_prep_steps(self._a(user_script_id=9, material_raw="x"), runs=2, piece_count=1)
         self.assertTrue(all(s["done"] for s in steps))
 
+    def test_their_sides_are_not_a_pick(self):
+        steps = core.build_prep_steps(self._a(material_raw="attached sides (pages 12 to 14)"), runs=0, piece_count=0)
+        self.assertEqual([s["key"] for s in steps], ["upload"])
+        steps = core.build_prep_steps(self._a(user_script_id=9, material_raw="the two attached scenes"), runs=0, piece_count=0)
+        self.assertEqual([s["key"] for s in steps], ["sides"])
+
+    def test_a_monologue_and_their_sides_is_both(self):
+        steps = core.build_prep_steps(self._a(user_script_id=9, material_raw="a 1 min monologue plus the attached sides"), runs=0, piece_count=0)
+        self.assertEqual([s["key"] for s in steps], ["sides", "piece"])
+
+    def test_the_reader_flag_wins_over_the_words(self):
+        a = self._a(material_raw="prepare the material", material={"own_choice": True})
+        self.assertEqual([s["key"] for s in core.build_prep_steps(a, runs=0, piece_count=0)], ["piece"])
+        a = self._a(material_raw="a contemporary piece", material={"own_choice": False})
+        self.assertEqual([s["key"] for s in core.build_prep_steps(a, runs=0, piece_count=0)], ["upload"])
+
     def test_nothing_known_asks_what_you_are_bringing(self):
         (step,) = core.build_prep_steps(self._a(), runs=0, piece_count=0)
         self.assertEqual(step["key"], "bring")

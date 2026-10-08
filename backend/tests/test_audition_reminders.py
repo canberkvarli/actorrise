@@ -253,6 +253,11 @@ class CopyTests(unittest.TestCase):
         _, _, plain = reminders.render(aud(), "eve", "Maya", runs=0, unsubscribe_url=None, has_material=True)
         self.assertIn("you haven't run it here yet", plain)
 
+    def test_prep_asks_for_their_sides_not_a_piece(self):
+        prep = lambda a: reminders.render(a, "prep", "Maya", runs=0, unsubscribe_url=None)[2]
+        self.assertIn("add the sides they sent", prep(aud(material_raw="attached sides (pages 12 to 14)")))
+        self.assertIn("you still need a piece for it (1 min contemporary comedic)", prep(aud(material_raw="1 min contemporary comedic")))
+
     def test_after_links_carry_the_token(self):
         _, html, plain = reminders.render(aud(), "after", "Maya", runs=0, unsubscribe_url=None)
         for o in ("good", "callback", "no"):

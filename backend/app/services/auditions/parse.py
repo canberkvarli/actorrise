@@ -31,7 +31,7 @@ PROMPT = """You read casting notices and audition emails for actors.
 Today is {today}. The actor's timezone is {tz}.
 Return JSON with exactly these keys. Each of them except "material" is an object {{"value": ..., "confidence": "high" or "low"}}:
 project, role, kind ("in_person", "self_tape" or "virtual"), starts_at (appointment, ISO 8601 local time without offset, e.g. 2026-10-09T10:40:00), due_at (self-tape deadline, same format), location, casting (casting director or office), material_raw (what to prepare, as written, e.g. "1 min contemporary comedic"), bring (what to bring).
-"material" is an object {{"length_seconds": int or null, "genre": "comedic", "dramatic" or null, "era": "contemporary", "classical" or null, "count": int or null}}.
+"material" is an object {{"length_seconds": int or null, "genre": "comedic", "dramatic" or null, "era": "contemporary", "classical" or null, "count": int or null, "own_choice": true, false or null}}. own_choice is true when the actor chooses their own piece (a monologue or song of their choice), false when casting sends what to prepare (sides, scenes, pages, a script), null if the notice does not say.
 Use a null value when the notice does not say. Use "low" confidence for anything you inferred or are unsure about, including relative dates like "Thursday".
 
 Notice:
@@ -107,6 +107,7 @@ def normalize_draft(raw: dict, now: datetime, tz: str) -> dict:
             "genre": _word(m.get("genre"), ("comedic", "dramatic")),
             "era": _word(m.get("era"), ("contemporary", "classical")),
             "count": _int(m.get("count")),
+            "own_choice": m.get("own_choice") if isinstance(m.get("own_choice"), bool) else None,
         }
     return d
 
