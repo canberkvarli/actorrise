@@ -9379,6 +9379,255 @@ html[data-firstrun="1"] body::before {
   --t-hard-shadow: oklch(0.07 0.01 45);
 }
 
+/* AUDITIONS, round 2: the capture box and what hangs off it (empty hero,
+   rail box, ghost ticket, calendar). The handoff's semantic tokens, mapped
+   onto Theatre Walk under an --aud- prefix so nothing here can shadow a
+   shadcn name (--muted, --ring) or move the rail/ticket/prep styling above,
+   which keeps reading --t-*. Brand is var(--primary), already theme aware. */
+.theatre-auditions {
+  --aud-surface: var(--t-paper);
+  --aud-surface-2: var(--t-paper-2);
+  --aud-fg: var(--t-text);
+  --aud-muted: var(--t-muted-dark);
+  --aud-rule: var(--t-line-light);
+  --aud-press: var(--t-ink);
+  --aud-focus: var(--t-orange-deep);
+  --aud-brand: var(--primary);
+  --aud-drop: color-mix(in oklab, var(--t-orange) 8%, transparent);
+}
+.dark .theatre-auditions {
+  --aud-surface: var(--t-stage);
+  --aud-surface-2: var(--t-stage-card);
+  /* Never full cream in dark. */
+  --aud-fg: oklch(0.9 0.02 82);
+  --aud-muted: var(--t-muted-light-2);
+  --aud-rule: var(--t-line-dark-2);
+  --aud-press: oklch(0.04 0.01 50);
+  --aud-focus: var(--t-gel);
+  --aud-drop: color-mix(in oklab, var(--t-gel) 6%, transparent);
+}
+.aud-hero-dir {
+  font-family: var(--t-display);
+  font-style: italic;
+  font-weight: 400;
+}
+.aud-hero-h {
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(52px, 8.4vw, 108px);
+  line-height: 0.92;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.aud-cap-muted {
+  color: var(--aud-muted);
+}
+.aud-cap-strong {
+  color: var(--aud-fg);
+  font-weight: 600;
+}
+.aud-brand-ink {
+  color: var(--aud-brand);
+}
+.aud-link {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.aud-link:hover {
+  color: var(--aud-fg);
+}
+.aud-focus:focus-visible {
+  outline: 3px solid var(--aud-focus);
+  outline-offset: 2px;
+}
+.aud-cap {
+  position: relative;
+  border-radius: 14px;
+  border: 1.5px solid var(--aud-fg);
+  background: var(--aud-surface);
+  color: var(--aud-fg);
+  box-shadow: 8px 8px 0 var(--aud-press);
+  overflow: hidden;
+}
+.aud-cap[data-size="compact"] {
+  border-radius: 12px;
+  box-shadow: 5px 5px 0 var(--aud-press);
+}
+/* The textarea has no ring of its own; the whole box takes the focus ring. */
+.aud-cap:has(textarea:focus-visible) {
+  outline: 3px solid var(--aud-focus);
+  outline-offset: 3px;
+}
+.aud-cap textarea {
+  display: block;
+  width: 100%;
+  min-height: 150px;
+  resize: vertical;
+  border: 0;
+  background: transparent;
+  color: var(--aud-fg);
+  padding: 20px 22px;
+  font-family: inherit;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.aud-cap[data-size="compact"] textarea {
+  min-height: 96px;
+  padding: 14px 16px;
+  font-size: 15px;
+}
+.aud-cap textarea::placeholder {
+  color: var(--aud-muted);
+}
+.aud-cap textarea:focus {
+  outline: none;
+  background: var(--aud-surface-2);
+}
+.aud-cap-row {
+  border-top: 1.5px dashed var(--aud-rule);
+}
+.aud-pill {
+  border-radius: 999px;
+  border: 1.5px solid var(--aud-press);
+  box-shadow: 4px 4px 0 var(--aud-press);
+  font-weight: 700;
+  transition: transform 150ms, box-shadow 150ms;
+}
+.aud-pill:focus-visible {
+  outline-offset: 3px;
+}
+.aud-pill:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--aud-press);
+}
+.aud-pill:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0 var(--aud-press);
+}
+.aud-dropzone {
+  margin: 10px;
+  border: 2px dashed var(--aud-brand);
+  border-radius: 8px;
+  background: var(--aud-drop);
+}
+.aud-track {
+  position: relative;
+  height: 2px;
+  background: var(--aud-rule);
+  overflow: hidden;
+}
+.aud-track > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: var(--aud-brand);
+  animation: aud-sweep 1.6s ease-in-out infinite;
+}
+.aud-beat {
+  animation: aud-beatin 450ms ease both;
+}
+.aud-lamp {
+  color: var(--aud-fg);
+}
+.aud-lamp-glow {
+  fill: var(--aud-brand);
+  fill-opacity: 0.16;
+  animation: aud-flicker 4s linear infinite;
+}
+.aud-lamp-lit {
+  stroke: var(--aud-brand);
+}
+.aud-lamp-rays {
+  animation: aud-flicker 2.4s linear infinite;
+}
+.aud-rise {
+  animation: aud-rise 700ms var(--t-enter) both;
+}
+.aud-ghost {
+  color: var(--aud-muted);
+  opacity: 0.7;
+}
+.aud-ghost-ticket {
+  background: var(--aud-surface);
+  border: 1.5px solid var(--aud-rule);
+  transform: rotate(-2deg);
+}
+.aud-ghost-stub {
+  border-right: 2px dashed var(--aud-rule);
+}
+.aud-ghost-head {
+  border-bottom: 1.5px solid var(--aud-rule);
+}
+.aud-ghost-line {
+  border-bottom: 1.5px dotted var(--aud-rule);
+}
+.aud-cal-btn {
+  border-radius: 999px;
+  border: 1.5px solid var(--aud-fg);
+  background: var(--aud-surface);
+  color: var(--aud-fg);
+  box-shadow: 3px 3px 0 var(--aud-press);
+  transition: transform 150ms, box-shadow 150ms;
+}
+.aud-cal-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--aud-press);
+}
+.aud-cal-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--aud-press);
+}
+.aud-cal-panel,
+.aud-cal-offer {
+  background: var(--aud-surface-2);
+  color: var(--aud-fg);
+  border: 1.5px solid var(--aud-fg);
+}
+.aud-cal-offer {
+  background: var(--aud-surface);
+  box-shadow: 5px 5px 0 var(--aud-press);
+}
+@keyframes aud-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+@keyframes aud-beatin {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes aud-flicker {
+  0%, 92%, 100% { opacity: 1; }
+  93% { opacity: 0.55; }
+  95% { opacity: 1; }
+  97% { opacity: 0.75; }
+}
+@keyframes aud-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+/* Still: everything in its final state. The sweep holds as a fixed bar. */
+@media (prefers-reduced-motion: reduce) {
+  .aud-track > span {
+    animation: none;
+    transform: translateX(75%);
+  }
+  .aud-beat,
+  .aud-lamp-glow,
+  .aud-lamp-rays,
+  .aud-rise {
+    animation: none;
+  }
+  .aud-pill,
+  .aud-cal-btn {
+    transition: none;
+  }
+  .aud-pill:hover:not(:disabled),
+  .aud-cal-btn:hover {
+    transform: none;
+  }
+}
+
 /* The script card.
    Light: a white page lifted off a cream room, with the product's warm glow
    under it. Dark: the glow becomes a brown halo and `border-black/5` is

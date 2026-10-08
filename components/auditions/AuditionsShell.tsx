@@ -12,7 +12,9 @@ import { AuditionsIntro } from "./AuditionsIntro";
 import { DropBox } from "./DropBox";
 import { TicketRail } from "./TicketRail";
 import { OUTCOME_NOTE, PrepRoom } from "./PrepRoom";
-import { CalendarLink } from "./CalendarLink";
+import { CalendarOffer, CalendarPanel, CalendarToggle } from "./CalendarLink";
+import { GhostTicket } from "./GhostTicket";
+import { takeCalendarOffer } from "@/lib/calendarFeed";
 
 /**
  * One shell for /auditions and /auditions/[id]. Desktop: rail left, prep room
@@ -46,6 +48,19 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
     ? OUTCOME_NOTE[loggedParam as keyof typeof OUTCOME_NOTE]
     : undefined;
   const failed = isError && list.length === 0;
+  // An empty rail turns the page into one ask: the capture box, centre stage.
+  const empty = !isLoading && !failed && list.length === 0 && selectedId == null;
+
+  // Saving the first audition leaves a note for the page it lands on: offer
+  // the calendar once, under the new ticket.
+  const [calOffer, setCalOffer] = useState<number | null>(null);
+  const [calOpen, setCalOpen] = useState(false);
+  useEffect(() => {
+    const id = takeCalendarOffer();
+    if (id != null) setCalOffer(id);
+  }, []);
+  const offerShown = calOffer != null && list.some((a) => a.id === calOffer);
+  const offer = offerShown ? <CalendarOffer onDone={() => setCalOffer(null)} /> : null;
 
   // The three-card intro opens by itself once per browser, and only on an
   // empty rail: someone with auditions already knows what this page is. Nor
@@ -103,35 +118,59 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
     </p>
   );
 
+  const howItWorks = (
+    <button type="button" className="aud-link aud-cap-muted aud-focus text-sm font-medium" onClick={() => setIntro(true)}>
+      how this works
+    </button>
+  );
+
   return (
     <div className={`theatre-tokens theatre-auditions ${theatreFontVars} min-h-[calc(100dvh-65px)] overflow-x-clip`}>
+      {empty ? (
+        <div className="mx-auto max-w-[1280px] px-4 pb-28 pt-6 sm:px-6 md:pb-20 md:pt-10 lg:px-8">
+          <div className="flex items-baseline justify-between gap-4">
+            <h1 className="aud-title text-[32px] leading-none">Auditions</h1>
+            {howItWorks}
+          </div>
+          <section aria-labelledby="aud-ask" className="aud-rise mx-auto mt-10 flex max-w-[760px] flex-col items-center text-center md:mt-16">
+            <p className="aud-hero-dir aud-cap-muted text-lg md:text-xl">(house is dark. one lamp on.)</p>
+            <h2 id="aud-ask" className="aud-hero-h mt-2.5">
+              Got one <em>coming up?</em>
+            </h2>
+            <p className="mt-5 max-w-[30em] text-[17px] leading-normal md:text-[19px]">
+              Paste the casting email or drop the sides. I&apos;ll read it into a ticket and keep you on it.
+            </p>
+            <div ref={capture} className="mt-9 w-full max-w-[720px] text-left">
+              <DropBox startOpen={startOpen} source={source} size="hero" firstOne />
+            </div>
+            <GhostTicket />
+          </section>
+        </div>
+      ) : (
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 md:grid-cols-[360px_1fr] md:py-10">
         <section className={`min-w-0 ${selectedId != null ? "max-md:hidden" : ""}`}>
           <div className="mb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
             <h1 className="aud-title text-4xl">Auditions</h1>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <button type="button" className="aud-dir aud-muted text-xs underline-offset-2 hover:underline" onClick={() => setIntro(true)}>
-                how this works
-              </button>
-              <CalendarLink />
+              {howItWorks}
+              {list.length > 0 && <CalendarToggle open={calOpen} onToggle={() => setCalOpen((v) => !v)} />}
             </div>
           </div>
-          <div ref={capture}>
-            <DropBox startOpen={startOpen} source={source} />
+          {calOpen && list.length > 0 && <CalendarPanel />}
+          <div ref={capture} className="mb-2">
+            <DropBox startOpen={startOpen} source={source} size="compact" firstOne={list.length === 0} />
           </div>
           {isLoading ? (
             <p className="aud-muted mt-6 text-sm">Loading your rail</p>
           ) : failed ? (
             retry
           ) : list.length === 0 ? (
-            <div className="mt-6">
-              <div data-empty="true" className="aud-ticket flex min-h-[84px] items-center justify-center opacity-60">
-                <p className="aud-dir text-xs">your next one goes here</p>
-              </div>
-              <p className="aud-muted mt-4 text-sm">Paste the next casting email you get. I&apos;ll handle the reminders.</p>
-            </div>
+            <p className="aud-muted mt-6 text-sm">Paste the next casting email you get. I&apos;ll handle the reminders.</p>
           ) : (
-            <TicketRail list={list} openId={open?.id ?? null} now={now} />
+            <>
+              <TicketRail list={list} openId={open?.id ?? null} now={now} />
+              {offer && <div className="mt-5">{offer}</div>}
+            </>
           )}
         </section>
 
@@ -139,6 +178,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
           {selectedId != null && (
             <Link href="/auditions" className="aud-dir mb-3 inline-block text-xs md:hidden">all auditions</Link>
           )}
+          {offer && <div className="mb-4 md:hidden">{offer}</div>}
           {logged && (
             <p role="status" className="aud-dir aud-muted mb-3 text-[12px]">{logged}</p>
           )}
@@ -151,6 +191,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
           ) : null}
         </section>
       </div>
+      )}
       <AuditionsIntro open={intro} onOpenChange={introChange} onCapture={focusCapture} onCaptured={revealCapture} firstOne={list.length === 0} />
     </div>
   );
