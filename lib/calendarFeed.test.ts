@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CALENDAR_OFFER_KEY, httpsUrl, markCalendarOffer, subscribeUrl, takeCalendarOffer, webcalUrl } from "./calendarFeed";
+import { CALENDAR_OFFER_KEY, httpsUrl, isApplePlatform, markCalendarOffer, subscribeUrl, takeCalendarOffer, webcalUrl } from "./calendarFeed";
 
 const FEED = "https://api.actorrise.com/api/auditions/calendar.ics?k=abc_123-XYZ";
 
@@ -55,5 +55,22 @@ describe("first-audition calendar offer", () => {
     const boom = () => { throw new Error("blocked"); };
     expect(takeCalendarOffer(boom)).toBeNull();
     expect(() => markCalendarOffer(1, boom)).not.toThrow();
+  });
+});
+
+describe("isApplePlatform", () => {
+  it("is true on a Mac, an iPhone and an iPad", () => {
+    expect(isApplePlatform({ platform: "MacIntel", userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" })).toBe(true);
+    expect(isApplePlatform({ platform: "iPhone", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)" })).toBe(true);
+    expect(isApplePlatform({ userAgentData: { platform: "macOS" } })).toBe(true);
+  });
+  it("is false on Windows, Android and Linux", () => {
+    expect(isApplePlatform({ platform: "Win32", userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" })).toBe(false);
+    expect(isApplePlatform({ platform: "Linux armv8l", userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 8)" })).toBe(false);
+    expect(isApplePlatform({ userAgentData: { platform: "Linux" }, userAgent: "Mozilla/5.0 (X11; Linux x86_64)" })).toBe(false);
+  });
+  it("shows it when it cannot tell", () => {
+    expect(isApplePlatform(undefined)).toBe(true);
+    expect(isApplePlatform({})).toBe(true);
   });
 });

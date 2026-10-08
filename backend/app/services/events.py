@@ -138,7 +138,7 @@ CLIENT_EVENT_NAMES = frozenset(
         "audition_reminder_clicked",  # {audition_id, moment}: landed from a reminder link
         "audition_landing_shown",  # {audition_id}: login sent them to the prep room
         "audition_strip_clicked",  # {surface: rehearse|monologues|winback_email}
-        "calendar_feed_subscribed",  # copied the calendar link
+        "calendar_feed_subscribed",  # {provider: google|apple|outlook|copy, surface: header|first_save}
     }
 )
 

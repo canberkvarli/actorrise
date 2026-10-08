@@ -127,7 +127,7 @@ export function SceneCapture() {
           <span className={`${s.readIt} bg-primary text-primary-foreground`}>Read it</span>
         </div>
       </div>
-      <span className={s.keycap}>⌘V</span>
+      <span className={s.keycap}>paste</span>
 
       <div className={s.rail}>
         <p className={s.dir}>(coming up)</p>

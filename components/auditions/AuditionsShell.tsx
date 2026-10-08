@@ -44,12 +44,15 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   const source = params.get("from") === "onboarding" ? "onboarding" : "parse";
   // The outcome email's confirm button lands on /auditions/{id}?logged=<o>&ar=after.
   const loggedParam = params.get("logged");
-  const logged = selectedId != null && open?.id === selectedId && loggedParam && loggedParam in OUTCOME_NOTE
-    ? OUTCOME_NOTE[loggedParam as keyof typeof OUTCOME_NOTE]
-    : undefined;
+  const loggedNote = loggedParam && loggedParam in OUTCOME_NOTE ? OUTCOME_NOTE[loggedParam as keyof typeof OUTCOME_NOTE] : undefined;
+  const logged = selectedId != null && open?.id === selectedId ? loggedNote : undefined;
   const failed = isError && list.length === 0;
   // An empty rail turns the page into one ask: the capture box, centre stage.
   const empty = !isLoading && !failed && list.length === 0 && selectedId == null;
+  // Until the list arrives, /auditions shows neither layout's capture box: a
+  // box mounted for one layout and swapped for the other would drop whatever
+  // was typed into it, and the swap itself is a flash.
+  const pending = isLoading && list.length === 0 && selectedId == null;
 
   // Saving the first audition leaves a note for the page it lands on: offer
   // the calendar once, under the new ticket.
@@ -126,12 +129,20 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
 
   return (
     <div className={`theatre-tokens theatre-auditions ${theatreFontVars} min-h-[calc(100dvh-65px)] overflow-x-clip`}>
-      {empty ? (
+      {pending ? (
+        <div className="mx-auto max-w-[1280px] px-4 pb-28 pt-6 sm:px-6 md:pb-20 md:pt-10 lg:px-8">
+          <h1 className="aud-title text-[32px] leading-none">Auditions</h1>
+          <p className="aud-cap-muted mt-10 text-center text-sm md:mt-16" role="status">Loading your rail</p>
+        </div>
+      ) : empty ? (
         <div className="mx-auto max-w-[1280px] px-4 pb-28 pt-6 sm:px-6 md:pb-20 md:pt-10 lg:px-8">
           <div className="flex items-baseline justify-between gap-4">
             <h1 className="aud-title text-[32px] leading-none">Auditions</h1>
             {howItWorks}
           </div>
+          {loggedNote && (
+            <p role="status" className="aud-dir aud-muted mt-4 text-[13.5px]">{loggedNote}</p>
+          )}
           <section aria-labelledby="aud-ask" className="aud-rise mx-auto mt-10 flex max-w-[760px] flex-col items-center text-center md:mt-16">
             <p className="aud-hero-dir aud-cap-muted text-lg md:text-xl">(house is dark. one lamp on.)</p>
             <h2 id="aud-ask" className="aud-hero-h mt-2.5">
@@ -176,11 +187,11 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
 
         <section className={`min-w-0 ${selectedId == null ? "max-md:hidden" : ""}`}>
           {selectedId != null && (
-            <Link href="/auditions" className="aud-dir mb-3 inline-block text-xs md:hidden">all auditions</Link>
+            <Link href="/auditions" className="aud-dir aud-link aud-focus mb-3 inline-block text-sm font-medium md:hidden">all auditions</Link>
           )}
           {offer && <div className="mb-4 md:hidden">{offer}</div>}
           {logged && (
-            <p role="status" className="aud-dir aud-muted mb-3 text-[12px]">{logged}</p>
+            <p role="status" className="aud-dir aud-muted mb-3 text-[13.5px]">{logged}</p>
           )}
           {open ? (
             <PrepRoom a={open} now={now} />

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { groupByScope, type Audition } from "@/lib/auditions";
 import { AuditionTicket } from "./AuditionTicket";
 
-const HEAD = "aud-dir aud-muted mb-2 mt-4 text-[10.5px] uppercase tracking-[0.08em]";
+const HEAD = "aud-dir aud-muted mb-2 mt-4 text-[11px] font-semibold uppercase tracking-[0.1em]";
 
 export function TicketRail({ list, openId, now }: { list: Audition[]; openId: number | null; now: Date }) {
   const g = groupByScope(list);

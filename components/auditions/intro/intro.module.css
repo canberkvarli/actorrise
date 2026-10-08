@@ -544,14 +544,15 @@
   position: absolute;
   left: 16px;
   top: 14px;
-  right: 16px;
+  /* Clear of "Read it" (84px wide, 12px in), so the line never runs under it. */
+  right: 108px;
   display: flex;
   gap: 7px;
   font-size: 10.5px;
   line-height: 1.4;
   color: var(--i-card-muted);
 }
-.capFile u { color: var(--i-card-fg); font-weight: 600; text-underline-offset: 2px; }
+.capFile u { color: var(--i-card-fg); font-weight: 600; text-underline-offset: 2px; white-space: nowrap; }
 .readIt {
   position: absolute;
   right: 12px;

@@ -1,10 +1,10 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 
 import { trackEvent } from "@/lib/events";
-import { subscribeUrl, type CalendarProvider } from "@/lib/calendarFeed";
+import { isApplePlatform, subscribeUrl, type CalendarProvider } from "@/lib/calendarFeed";
 import { useCalendarLink } from "@/hooks/useAuditions";
 
 type Surface = "header" | "first_save";
@@ -23,6 +23,9 @@ const PROVIDERS: { id: CalendarProvider; label: string; newTab: boolean }[] = [
  */
 export function CalendarOptions({ surface }: { surface: Surface }) {
   const { data, isError, refetch, isFetching } = useCalendarLink(true);
+  // Decided after mount so the server render and the first client render agree.
+  const [apple, setApple] = useState(true);
+  useEffect(() => setApple(isApplePlatform(navigator as Parameters<typeof isApplePlatform>[0])), []);
   const picked = (provider: CalendarProvider | "copy") => trackEvent("calendar_feed_subscribed", { provider, surface });
 
   if (isError && !data) {
@@ -51,7 +54,7 @@ export function CalendarOptions({ surface }: { surface: Surface }) {
 
   return (
     <ul className="flex flex-wrap items-center gap-2" aria-label="Subscribe in">
-      {PROVIDERS.map((p) => (
+      {PROVIDERS.filter((p) => p.id !== "apple" || apple).map((p) => (
         <li key={p.id}>
           <a
             href={subscribeUrl(p.id, data.url)}

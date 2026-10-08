@@ -63,3 +63,15 @@ export function takeCalendarOffer(storage: GetStorage = session): number | null 
     return null;
   }
 }
+
+/**
+ * webcal:// only does something on a Mac, an iPhone or an iPad, so the Apple
+ * button shows there and nowhere else. Unknown (no navigator) counts as Apple:
+ * the server render shows it and the client decides after mount.
+ */
+export function isApplePlatform(nav?: { userAgent?: string; platform?: string; userAgentData?: { platform?: string } }): boolean {
+  if (!nav) return true;
+  const hay = [nav.userAgentData?.platform, nav.platform, nav.userAgent].filter(Boolean).join(" ");
+  if (!hay) return true;
+  return /mac|iphone|ipad|ipod|\bios\b/i.test(hay);
+}

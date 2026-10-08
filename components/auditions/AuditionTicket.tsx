@@ -24,14 +24,14 @@ export function AuditionTicket({ a, open, now }: { a: Audition; open: boolean; n
           open ? "bg-primary text-primary-foreground" : ""
         }`}
       >
-        <span className={big ? `aud-stub-n ${c.n.length > 3 ? "text-xl" : c.n.length === 3 ? "text-3xl" : "text-4xl"}` : "aud-dir text-center text-[10px] uppercase leading-tight"}>
+        <span className={big ? `aud-stub-n ${c.n.length > 3 ? "text-xl" : c.n.length === 3 ? "text-3xl" : "text-4xl"}` : "aud-dir text-center text-[10px] font-semibold uppercase leading-tight tracking-[0.06em]"}>
           {c.n}
         </span>
-        {c.unit && <span className="aud-dir text-[10px] uppercase">{c.unit}</span>}
+        {c.unit && <span className="aud-dir text-[10px] font-semibold uppercase tracking-[0.1em]">{c.unit}</span>}
       </div>
       <div className="min-w-0 flex-1 px-3 py-2.5">
         <p className="aud-title truncate text-xl">{a.project}</p>
-        <p className="aud-dir aud-muted mt-0.5 truncate text-[11px] uppercase">
+        <p className="aud-dir aud-muted mt-0.5 truncate text-[11px] font-medium uppercase tracking-[0.06em]">
           {[a.role, whenLabel(a)].filter(Boolean).join(" · ")}
         </p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">

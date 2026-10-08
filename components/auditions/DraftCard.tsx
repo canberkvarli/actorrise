@@ -7,7 +7,7 @@ import { valuesFromDraft, type DraftValues } from "./draftValues";
 
 export { bodyFromValues, valuesFromDraft, type DraftValues } from "./draftValues";
 
-const LABEL = "aud-dir aud-muted text-[10.5px] uppercase tracking-[0.06em]";
+const LABEL = "aud-dir aud-muted text-[11px] font-semibold uppercase tracking-[0.08em]";
 const INPUT = "aud-field mt-1 w-full border border-[var(--t-line-light)] bg-[var(--t-paper)] px-2.5 py-2 text-sm";
 
 export function DraftCard({
@@ -83,14 +83,14 @@ export function DraftCard({
           <textarea rows={2} maxLength={4000} className={INPUT} value={v.notes} onChange={set("notes")} />
         </label>
       </div>
-      {sidesName && <p className="aud-dir aud-muted mt-3 text-xs">Sides: {sidesName}. They&apos;ll load into ScenePartner when you save.</p>}
+      {sidesName && <p className="aud-dir aud-muted mt-3 text-[13px]">Sides: {sidesName}. They&apos;ll load into ScenePartner when you save.</p>}
       <div className="mt-4 flex items-center gap-3">
         <button type="submit" disabled={saving} className="bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold disabled:opacity-60">
           {saving ? "Saving" : editing ? "Save changes" : "Save it"}
         </button>
         <button type="button" onClick={onCancel} className="aud-muted text-sm underline-offset-2 hover:underline">Cancel</button>
       </div>
-      <p className="aud-dir aud-muted mt-2 text-[11px]">Times are in {Intl.DateTimeFormat().resolvedOptions().timeZone}.</p>
+      <p className="aud-dir aud-muted mt-2 text-xs">Times are in {Intl.DateTimeFormat().resolvedOptions().timeZone}.</p>
     </form>
   );
 }

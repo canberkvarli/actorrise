@@ -96,19 +96,19 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
       <div className="aud-prep-stub bg-primary text-primary-foreground flex min-w-0 items-center gap-4 border-dashed px-4 py-3 max-sm:border-b-2 sm:flex-col sm:items-center sm:justify-start sm:border-r-2 sm:py-6 sm:text-center">
         <div className="min-w-0 shrink-0 sm:w-full">
           <p className={big ? "aud-stub-n text-6xl sm:text-8xl" : "aud-stub-n break-words text-3xl"}>{c.n}</p>
-          {c.unit && <p className="aud-dir text-[11px] uppercase tracking-[0.1em]">{c.unit}</p>}
+          {c.unit && <p className="aud-dir text-[11px] font-semibold uppercase tracking-[0.12em]">{c.unit}</p>}
         </div>
-        <p className="aud-dir min-w-0 text-[11.5px] leading-relaxed sm:mt-4">{whenLabel(a)}</p>
+        <p className="aud-dir min-w-0 text-[13px] font-medium leading-snug sm:mt-4">{whenLabel(a)}</p>
       </div>
 
       <div className="min-w-0 p-4 sm:p-6">
-        <p className="aud-dir text-[11px] uppercase tracking-[0.08em]">{STATUS_LABEL[a.status]}</p>
+        <p className="aud-dir aud-muted text-[11px] font-semibold uppercase tracking-[0.1em]">{STATUS_LABEL[a.status]}</p>
         <h1 className="aud-title break-words text-3xl sm:text-4xl">{a.project}</h1>
         {a.role && <p className="aud-muted mt-0.5 text-sm">{a.role}</p>}
 
         <dl className="mt-3">
           {rows.filter(([, v]) => v).map(([k, v]) => (
-            <div key={k} className="aud-row aud-dir grid grid-cols-[84px_1fr] py-1.5 text-[12.5px]">
+            <div key={k} className="aud-row aud-dir grid grid-cols-[84px_1fr] items-baseline py-1.5 text-sm">
               <dt>{k}</dt><dd className="min-w-0 break-words">{v}</dd>
             </div>
           ))}
@@ -122,7 +122,7 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
                 <span className="min-w-0 text-sm">
                   {s.label}
                   {s.key === "sides" && (
-                    <span className="aud-dir aud-muted block text-[11px]">{sidesNote(a.prep!.runs)}</span>
+                    <span className="aud-dir aud-muted block text-[12.5px]">{sidesNote(a.prep!.runs)}</span>
                   )}
                   {hasPieces(s.key) && <Pieces a={a} />}
                 </span>
@@ -174,7 +174,7 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
           ))}
         </div>
 
-        <div className="aud-dir aud-muted mt-5 flex flex-wrap items-center gap-4 text-[11.5px]">
+        <div className="aud-dir aud-muted mt-5 flex flex-wrap items-center gap-4 text-[13px]">
           <label className="flex items-center gap-1.5">
             <input type="checkbox" checked={a.reminders_on} onChange={(e) => save({ reminders_on: e.target.checked })} />
             email me about this one
@@ -224,7 +224,7 @@ function Pieces({ a, label }: { a: Audition; label?: string }) {
       {a.pieces.length > 0 && (
         <span className="grid gap-1">
           {a.pieces.map((p) => (
-            <span key={p.id} className="aud-dir flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[12px]">
+            <span key={p.id} className="aud-dir flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[13px]">
               <span className="min-w-0 break-words">
                 {pieceName(p)}
                 {p.play_title && <span className="aud-muted"> from {p.play_title}</span>}
@@ -253,7 +253,7 @@ function Pieces({ a, label }: { a: Audition; label?: string }) {
       )}
       {choices.length > 0 && (
         <select
-          className="aud-dir mt-1.5 max-w-full border border-current bg-transparent px-1.5 py-1 text-[12px]"
+          className="aud-dir mt-1.5 max-w-full border border-current bg-transparent px-1.5 py-1 text-[13px]"
           aria-label="Bring a monologue you saved"
           value=""
           disabled={add.isPending}

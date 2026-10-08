@@ -73,6 +73,13 @@ export function DropBox({
   const parse = useParseBreakdown();
   const create = useCreateAudition();
   const compact = size === "compact";
+  // "stop" hands focus back to the paste, once the textarea is back on screen.
+  const refocus = useRef(false);
+  useEffect(() => {
+    if (stage !== "idle" || !refocus.current) return;
+    refocus.current = false;
+    area.current?.focus();
+  }, [stage]);
 
   useEffect(() => {
     if (stage !== "reading") return;
@@ -130,6 +137,7 @@ export function DropBox({
   // itself carries on server side; its answer is simply not waited for.
   function stop() {
     run.current++;
+    refocus.current = true;
     setStage("idle");
   }
 
@@ -278,7 +286,12 @@ export function DropBox({
               >
                 Read it
               </button>
-              <input ref={fileInput} type="file" accept="application/pdf" className="sr-only" tabIndex={-1} onChange={(e) => { acceptFile(e.target.files?.[0]); e.target.value = ""; }} />
+              <input ref={fileInput} type="file" accept="application/pdf" className="sr-only" tabIndex={-1} onChange={(e) => {
+                  // Same as a drop: a good PDF starts reading straight away.
+                  const f = acceptFile(e.target.files?.[0]);
+                  e.target.value = "";
+                  if (f && !quotaHit) read(f);
+                }} />
             </div>
           </>
         )}

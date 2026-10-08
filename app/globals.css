@@ -9272,8 +9272,10 @@ html[data-firstrun="1"] body::before {
   font-weight: 400;
   line-height: 1.1;
 }
+/* Small chrome: labels, dates, rows. Sans, never Courier: the typewriter face
+   is for monologue text only. Real stage directions use .aud-hero-dir. */
 .aud-dir {
-  font-family: var(--t-direction);
+  font-family: var(--t-body);
 }
 .aud-ticket {
   background: var(--t-paper);
@@ -9311,9 +9313,10 @@ html[data-firstrun="1"] body::before {
   line-height: 0.9;
 }
 .aud-chip {
-  font-family: var(--t-direction);
+  font-family: var(--t-body);
   font-size: 10.5px;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   border: 1px solid var(--t-text);
 }
@@ -9341,6 +9344,7 @@ html[data-firstrun="1"] body::before {
 .aud-row dt {
   color: var(--t-muted-dark);
   font-size: 10.5px;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
