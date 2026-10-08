@@ -9922,3 +9922,41 @@ html[data-firstrun="1"] body::before {
     animation: none;
   }
 }
+
+/* Loading: the page's own shape in faint paper (FileSkeleton), shown only if
+   the list takes longer than 400ms; the file itself fades up into place. */
+.aud-ghost-bar {
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--aud-rule) 45%, transparent);
+}
+.aud-ghost-rule {
+  height: 1px;
+  background: var(--aud-rule-soft);
+}
+.aud-skeleton {
+  opacity: 0;
+  animation: aud-skeleton-in 300ms ease 400ms forwards;
+}
+@keyframes aud-skeleton-in {
+  to {
+    opacity: 1;
+  }
+}
+.aud-file-in {
+  animation: aud-file-in 320ms var(--t-enter) both;
+}
+@keyframes aud-file-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aud-skeleton {
+    animation: none;
+    opacity: 1;
+  }
+  .aud-file-in {
+    animation: none;
+  }
+}

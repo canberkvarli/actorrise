@@ -13,6 +13,7 @@ import { DropBox } from "./DropBox";
 import { AuditionFile, OUTCOME_NOTE } from "./AuditionFile";
 import { CalendarOffer, CalendarPanel, CalendarToggle } from "./CalendarLink";
 import { GhostTicket } from "./GhostTicket";
+import { FileSkeleton } from "./FileSkeleton";
 import { takeCalendarOffer } from "@/lib/calendarFeed";
 
 /**
@@ -150,8 +151,10 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   return (
     <div className={`theatre-tokens theatre-auditions ${theatreFontVars} min-h-[calc(100dvh-65px)] overflow-x-clip`}>
       {pending ? (
-        <div className="mx-auto max-w-[1280px] px-4 pb-28 pt-6 sm:px-6 md:pb-20 md:pt-10 lg:px-8">
-          <p className="aud-cap-muted mt-10 text-center text-sm md:mt-16" role="status">Loading your rail</p>
+        // Same frame as the rail below, top bar's height included, so nothing jumps when it lands.
+        <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 md:pb-20 md:pt-10">
+          <div aria-hidden className="mb-6 h-10" />
+          <FileSkeleton />
         </div>
       ) : empty ? (
         <div className="mx-auto max-w-[1280px] px-4 pb-28 pt-6 sm:px-6 md:pb-20 md:pt-10 lg:px-8">
@@ -213,7 +216,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
           <p role="status" className="aud-dir aud-muted mb-3 text-[13.5px]">{logged}</p>
         )}
         {isLoading ? (
-          <p className="aud-muted mt-6 text-sm">Loading your rail</p>
+          <FileSkeleton />
         ) : failed ? (
           retry
         ) : open ? (

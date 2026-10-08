@@ -144,7 +144,7 @@ export function AuditionFile({ a, list, now, next = false, startEditing = false 
   };
 
   return (
-    <article className="grid gap-x-12 gap-y-10 lg:grid-cols-[minmax(0,1fr)_280px]">
+    <article className="aud-file-in grid gap-x-12 gap-y-10 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="min-w-0">
         <p className="aud-eyebrow">{eyebrow(a, now, next)}</p>
         <h1 className="aud-file-title mt-3 break-words text-[52px] md:text-[76px]">{a.project}</h1>
