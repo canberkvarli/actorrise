@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { trackEvent } from "@/lib/events";
 import { useAuditions } from "@/hooks/useAuditions";
+import { markIntroSeen, readIntroSeen, shouldAutoShowIntro } from "@/lib/auditionIntro";
+import { AuditionsIntro } from "./AuditionsIntro";
 import { DropBox } from "./DropBox";
 import { TicketRail } from "./TicketRail";
 import { OUTCOME_NOTE, PrepRoom } from "./PrepRoom";
@@ -44,6 +46,36 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
     ? OUTCOME_NOTE[loggedParam as keyof typeof OUTCOME_NOTE]
     : undefined;
   const failed = isError && list.length === 0;
+
+  // The three-card intro opens by itself once per browser, and only on an
+  // empty rail: someone with auditions already knows what this page is.
+  const router = useRouter();
+  const capture = useRef<HTMLDivElement>(null);
+  const [intro, setIntro] = useState(false);
+  const introChecked = useRef(false);
+  useEffect(() => {
+    if (introChecked.current || isLoading) return;
+    // A beat after the rail paints, so the card lands on a page rather than a blank.
+    const t = window.setTimeout(() => {
+      introChecked.current = true;
+      if (shouldAutoShowIntro({ loading: false, failed, count: list.length, seen: readIntroSeen() })) setIntro(true);
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [isLoading, failed, list.length]);
+  function introChange(next: boolean) {
+    setIntro(next);
+    if (!next) markIntroSeen();
+  }
+  // "Add my first audition": the paste box if it is showing, else whatever the
+  // capture area has open (the fill-it-in card). Hidden on a phone prep room, so go to the rail.
+  function toCapture() {
+    const box = capture.current;
+    const el = box?.querySelector<HTMLElement>("textarea:not([disabled])") ?? box?.querySelector<HTMLElement>("input:not([type=file]), textarea, button");
+    if (!box || !el || box.offsetParent === null) return void router.push("/auditions");
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    box.scrollIntoView({ block: "center", behavior: still ? "auto" : "smooth" });
+    el.focus({ preventScroll: true });
+  }
   const retry = (
     <p className="aud-muted mt-6 text-sm">
       I couldn&apos;t load your auditions.{" "}
@@ -59,9 +91,16 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
         <section className={`min-w-0 ${selectedId != null ? "max-md:hidden" : ""}`}>
           <div className="mb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
             <h1 className="aud-title text-4xl">Auditions</h1>
-            <CalendarLink />
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <button type="button" className="aud-dir aud-muted text-xs underline-offset-2 hover:underline" onClick={() => setIntro(true)}>
+                how this works
+              </button>
+              <CalendarLink />
+            </div>
           </div>
-          <DropBox startOpen={startOpen} source={source} />
+          <div ref={capture}>
+            <DropBox startOpen={startOpen} source={source} />
+          </div>
           {isLoading ? (
             <p className="aud-muted mt-6 text-sm">Loading your rail</p>
           ) : failed ? (
@@ -94,6 +133,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
           ) : null}
         </section>
       </div>
+      <AuditionsIntro open={intro} onOpenChange={introChange} onCapture={toCapture} />
     </div>
   );
 }
