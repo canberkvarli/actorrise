@@ -154,24 +154,16 @@ Ghost Light (7 days, against the 7 before)
   money     <n> paying, <n> in a trial; this week: <each RevenueCat event in a few words, or "no events">
   people    <two or three lines: who read what, in the app, by first name; "anonymous" for the rest>
 
-Vercel yesterday: ISR writes <n> (cap ~6,600/day), CDN requests <n> (cap ~33,000/day)
-
 Broken or odd: <anything that failed, any number that moved more than it should>
 ```
 
-The Vercel line: the site moved to the Hobby plan on 2026-10-03 to stop a $20 charge,
-and the plan pauses the site if ISR writes pass 200k or CDN requests pass 1M in a cycle
-(the cycle runs from the 4th). CDN requests were ~50k/day on Pro; the marketing pages'
-link prefetch was turned off on 2026-10-03 to bring that down. Read both from one call to `/v1/billing/charges` (token in
-`~/Library/Application Support/com.vercel.cli/auth.json`), `ServiceName` "ISR Writes" and
-"CDN Requests", summing `ConsumedQuantity`. **Vercel's billing day runs 07:00 UTC to
-07:00 UTC** (midnight Pacific): ask for `from=<yesterday>T07:00:00Z&to=<today>T07:00:00Z`.
-A UTC-midnight window straddles two billing days and the current one reads as zero until
-it closes (that is what happened on 2026-10-04). The feed still reports usage on Hobby.
-If ISR writes are over 6,000, find the crawler: the observability `bot_name` query is
-Pro-only now, so use `get_runtime_logs` grouped by `route` and then read a sample of
-`/monologues/[slug]` lines, and add the crawler to the disallow list in `app/robots.ts`,
-as AhrefsBot and shapbot were. Google and Bing are never blocked.
+No Vercel line (Canberk, 2026-10-08: "drop it for vercel"). The site is on the Hobby plan
+since 2026-10-03 and `/v1/billing/charges` answered 404 `costs_not_found` for every day
+since; Hobby does not publish usage through that feed. The caps still exist (200k ISR
+writes, 1M CDN requests a cycle, the cycle runs from the 4th), so if the site ever pauses,
+the usage page in the Vercel dashboard is where to look, and a crawler goes in the
+disallow list in `app/robots.ts` as AhrefsBot and shapbot did. Google and Bing are never
+blocked.
 
 If a number is zero, print the zero. If a step did not run, say which and why.
 
