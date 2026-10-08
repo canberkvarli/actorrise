@@ -126,11 +126,11 @@ export function PrepRoom({ a, now, next = false }: { a: Audition; now: Date; nex
                   <Link
                     href={s.href}
                     onClick={() => s.key !== "bring" && trackEvent("audition_prep_started", { audition_id: a.id, kind: s.key === "sides" ? "sides" : "monologue" })}
-                    className={`t-cta mt-auto self-start whitespace-nowrap px-3.5 py-2 text-[13px] font-semibold ${s.done ? "border border-current" : "bg-primary text-primary-foreground"}`}
+                    className={`aud-pill aud-focus mt-auto inline-flex h-10 items-center self-start whitespace-nowrap px-4 text-[14px] ${s.done ? "aud-help" : "bg-primary text-primary-foreground"}`}
                   >
                     {s.key === "sides"
                       ? sidesReading ? "Open them" : a.prep!.runs ? "Run it again" : "Run your sides"
-                      : s.key === "piece" ? "See them" : "Your collection"}
+                      : s.key === "piece" ? "Find one" : "Your collection"}
                   </Link>
                 )}
               </li>
