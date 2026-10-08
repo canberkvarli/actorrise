@@ -9765,7 +9765,7 @@ html[data-firstrun="1"] body::before {
 
 /* AUDITIONS, the file: one audition as a calm page (components/auditions/AuditionFile).
    Paper and hairlines; the only hard shadow is the next step's aud-pill. My
-   pencilled notes (trip, read) are display italic, like stage directions. */
+   pencilled notes (the read on the scene) are display italic, like stage directions. */
 .theatre-auditions {
   --aud-rule-soft: color-mix(in oklab, var(--aud-rule) 60%, transparent);
 }
@@ -9909,20 +9909,6 @@ html[data-firstrun="1"] body::before {
   border-right: 1.5px dashed var(--aud-rule);
   text-align: center;
 }
-.aud-sketch path,
-.aud-sketch circle {
-  vector-effect: non-scaling-stroke;
-}
-.aud-sketch .aud-sketch-route {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: aud-draw 1.4s ease-out 0.2s forwards;
-}
-@keyframes aud-draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
 .aud-thinking {
   animation: aud-breathe 1.8s ease-in-out infinite;
 }
@@ -9932,10 +9918,6 @@ html[data-firstrun="1"] body::before {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .aud-sketch .aud-sketch-route {
-    animation: none;
-    stroke-dashoffset: 0;
-  }
   .aud-thinking {
     animation: none;
   }

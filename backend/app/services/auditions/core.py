@@ -389,6 +389,43 @@ def build_prep_steps(a: Audition, *, runs: int, piece_count: int) -> list[dict[s
     return steps
 
 
+CALLBACK_COPIES = (
+    "project", "role", "kind", "tz", "location", "casting", "through", "through_kind", "shoots",
+    "material_raw", "material", "bring", "user_script_id", "reminders_on",
+)
+
+
+def callback_of(db: Session, a: Audition) -> Optional[int]:
+    """The callback added from this audition, if it is still on the list."""
+    if a.status != "callback":
+        return None
+    rows = (
+        db.query(AuditionEvent.data)
+        .filter(AuditionEvent.audition_id == a.id, AuditionEvent.kind == "callback_added")
+        .order_by(AuditionEvent.id.desc())
+        .all()
+    )
+    for (data,) in rows:
+        cid = (data or {}).get("to")
+        if cid and get_owned(db, a.user_id, cid) is not None:
+            return cid
+    return None
+
+
+def add_callback(db: Session, a: Audition) -> Audition:
+    """The callback as its own audition: same show, people, place and sides, status
+    callback, no date yet (the actor sets it). The original moves to Callback too."""
+    data = {k: getattr(a, k) for k in CALLBACK_COPIES}
+    data["status"] = "callback"
+    new = create_audition(db, a.user_id, data, source="manual")
+    if a.status != "callback":
+        _event(db, a, "status_changed", {"from": a.status, "to": "callback"})
+        a.status = "callback"
+    _event(db, a, "callback_added", {"to": new.id})
+    db.commit()
+    return new
+
+
 def _iso(dt: Optional[datetime]) -> Optional[str]:
     dt = aware(dt)
     return dt.isoformat() if dt else None
@@ -422,11 +459,9 @@ def sides_preview(db: Session, a: Audition) -> Optional[dict[str, Any]]:
 def public_assist(raw: Any) -> dict[str, Any]:
     """The saved AI help without the cache keys."""
     raw = raw if isinstance(raw, dict) else {}
-    trip = raw.get("trip") if isinstance(raw.get("trip"), dict) else None
     read = raw.get("read") if isinstance(raw.get("read"), dict) else None
     asks = raw.get("asks") if isinstance(raw.get("asks"), list) else []
     return {
-        "trip": {k: v for k, v in trip.items() if k != "key"} if trip else None,
         "read": {k: v for k, v in read.items() if k != "key"} if read else None,
         "asks": asks,
     }
@@ -445,7 +480,7 @@ def serialize(db: Session, a: Audition, now: datetime, *, with_prep: bool = True
         "scope": scope_of(a, now), "created_at": _iso(a.created_at),
         "bring_list": bring_items(a), "through": a.through, "through_kind": a.through_kind,
         "shoots": a.shoots, "after_notes": a.after_notes or {},
-        "assist": public_assist(a.assist),
+        "assist": public_assist(a.assist), "callback_id": callback_of(db, a),
         "pieces": [
             {"id": p.id, "monologue_id": p.monologue_id, "scene_id": p.scene_id, "used": p.used,
              **labels.get(p.monologue_id, none)}

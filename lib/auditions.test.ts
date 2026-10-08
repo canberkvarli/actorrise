@@ -9,7 +9,7 @@ function a(over: Partial<Audition>): Audition {
     id: 1, project: "P", role: null, kind: "in_person", status: "scheduled", starts_at: null, due_at: null,
     when: null, tz: "UTC", location: null, casting: null, material_raw: null, material: null, bring: null,
     notes: null, tape_link: null, source: "manual", user_script_id: null, reminders_on: true, scope: "upcoming",
-    created_at: NOW.toISOString(), pieces: [], bring_list: [], through: null, through_kind: null, shoots: null, after_notes: {}, assist: { trip: null, read: null, asks: [] }, ...over,
+    created_at: NOW.toISOString(), pieces: [], bring_list: [], through: null, through_kind: null, shoots: null, after_notes: {}, assist: { read: null, asks: [] }, callback_id: null, ...over,
   };
 }
 
@@ -111,22 +111,26 @@ describe("nextStep: the one orange button", () => {
     expect(nextStep(a({ when: IN_5, prep: prep() }), NOW)).toBeNull();
   });
   it("afterwards asks how it went until it's written or they heard", () => {
-    expect(nextStep(a({ scope: "waiting", prep: prep(sides(false)) }), NOW)).toEqual({ kind: "scroll", label: "How did it go?", target: "after" });
-    expect(nextStep(a({ scope: "waiting", after_notes: { how: "fine" } }), NOW)).toBeNull();
+    expect(nextStep(a({ when: TODAY, scope: "waiting", prep: prep(sides(false)) }), NOW)).toEqual({ kind: "scroll", label: "How did it go?", target: "after" });
+    expect(nextStep(a({ when: TODAY, scope: "waiting", after_notes: { how: "fine" } }), NOW)).toBeNull();
     expect(nextStep(a({ scope: "past", status: "booked" }), NOW)).toBeNull();
+  });
+  it("a callback asks to be added, once", () => {
+    expect(nextStep(a({ when: TODAY, scope: "waiting", status: "callback" }), NOW)).toEqual({ kind: "callback", label: "Add the callback" });
+    expect(nextStep(a({ when: TODAY, scope: "waiting", status: "callback", callback_id: 7, after_notes: { how: "ok" } }), NOW)).toBeNull();
+  });
+  it("a callback with no date yet has nothing to ask", () => {
+    expect(nextStep(a({ scope: "waiting", status: "callback" }), NOW)).toBeNull();
   });
 });
 
 describe("sectionOrder", () => {
-  it("days out: the trip, the work, then packing", () => {
-    expect(sectionOrder(a({ when: IN_5 }), NOW)).toEqual(["trip", "sides", "bring", "after", "ask"]);
+  it("days out: the work, then packing", () => {
+    expect(sectionOrder(a({ when: IN_5 }), NOW)).toEqual(["sides", "bring", "after", "ask"]);
   });
-  it("the day before, bring comes first; on the day, the trip", () => {
+  it("the day before and on the day, bring comes first", () => {
     expect(sectionOrder(a({ when: TOMORROW }), NOW)[0]).toBe("bring");
-    expect(sectionOrder(a({ when: TODAY }), NOW).slice(0, 2)).toEqual(["trip", "bring"]);
-  });
-  it("a self tape never gets a trip", () => {
-    expect(sectionOrder(a({ when: IN_5, kind: "self_tape" }), NOW)).not.toContain("trip");
+    expect(sectionOrder(a({ when: TODAY }), NOW)[0]).toBe("bring");
   });
   it("afterwards the notes lead", () => {
     expect(sectionOrder(a({ scope: "waiting" }), NOW)[0]).toBe("after");

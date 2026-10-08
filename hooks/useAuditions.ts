@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import api, { API_URL, getAuthToken } from "@/lib/api";
-import type { Audition, ParseResult, Travel } from "@/lib/auditions";
+import type { Audition, ParseResult } from "@/lib/auditions";
 
 const KEY = ["auditions"] as const;
 
@@ -135,28 +135,11 @@ function useReplaceOne() {
     qc.setQueryData<Audition[]>(KEY, (list) => list?.map((a) => (a.id === fresh.id ? fresh : a)));
 }
 
-export function useTravel(enabled = true) {
-  return useQuery<Travel>({
-    queryKey: [...KEY, "travel"],
-    queryFn: async () => (await api.get<Travel>("/api/auditions/travel")).data,
-    enabled,
-    staleTime: 5 * 60_000,
-  });
-}
-
-export function useSaveTravel() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (body: Partial<Travel>) => (await api.put<Travel>("/api/auditions/travel", body)).data,
-    onSuccess: (travel) => qc.setQueryData([...KEY, "travel"], travel),
-  });
-}
-
-/** Ask the server to make (or hand back the saved) trip or read for one audition. */
+/** Ask the server to make (or hand back the saved) read on the scene for one audition. */
 export function useAssist() {
   const replace = useReplaceOne();
   return useMutation({
-    mutationFn: async ({ id, part }: { id: number; part: "trip" | "read" }) =>
+    mutationFn: async ({ id, part }: { id: number; part: "read" }) =>
       (await api.post<Audition>(`/api/auditions/${id}/assist/${part}`)).data,
     onSuccess: replace,
   });
@@ -167,5 +150,14 @@ export function useAskAudition() {
   return useMutation({
     mutationFn: async ({ id, q }: { id: number; q: string }) => (await api.post<Audition>(`/api/auditions/${id}/ask`, { q })).data,
     onSuccess: replace,
+  });
+}
+
+/** The callback as its own audition. Resolves to the new one so the page can open it. */
+export function useAddCallback() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => (await api.post<Audition>(`/api/auditions/${id}/callback`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 }

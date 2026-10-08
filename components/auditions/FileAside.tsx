@@ -4,9 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 
 import {
-  clockIn, directionsUrl, groupByScope, KIND_LABEL, safeTz, whenLabel, type Audition, type Travel,
+  clockIn, directionsUrl, groupByScope, KIND_LABEL, safeTz, whenLabel, type Audition,
 } from "@/lib/auditions";
-import { LeavingFrom } from "./GettingThere";
 
 const THROUGH_LABEL = { agent: "your agent", manager: "your manager", self: "you put yourself up" } as const;
 
@@ -20,8 +19,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 /** The facts, at a glance: when, where, for what, who's casting, who put you up. */
-export function FileDetails({ a, travel, onEdit }: { a: Audition; travel: Travel | undefined; onEdit: () => void }) {
-  const [leaving, setLeaving] = useState(false);
+export function FileDetails({ a, onEdit }: { a: Audition; onEdit: () => void }) {
   const inPerson = a.kind === "in_person";
   const early = inPerson && a.starts_at ? clockIn(new Date(new Date(a.starts_at).getTime() - 15 * 60_000).toISOString(), a.tz) : null;
   const [place, ...rest] = (a.location ?? "").split(",");
@@ -41,15 +39,6 @@ export function FileDetails({ a, travel, onEdit }: { a: Audition; travel: Travel
               <span className="mt-1 flex flex-wrap gap-x-3 text-[13px]">
                 <a className="aud-link" href={directionsUrl(a.location)} target="_blank" rel="noreferrer">Directions</a>
               </span>
-            )}
-            {inPerson && a.scope === "upcoming" && !travel?.leaving_from && (
-              leaving ? (
-                <LeavingFrom travel={travel} onDone={() => setLeaving(false)} />
-              ) : (
-                <button type="button" className="aud-link aud-cap-muted mt-1 block text-left text-[13px]" onClick={() => setLeaving(true)}>
-                  Tell me where you&apos;re leaving from and I&apos;ll plan the trip.
-                </button>
-              )
             )}
           </Row>
         )}

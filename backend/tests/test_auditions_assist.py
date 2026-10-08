@@ -1,5 +1,5 @@
-"""The audition file: bring checklist, notes after the room, and the AI help
-(getting there, a read on the scene, ask me), with Google and the model faked."""
+"""The audition file: bring checklist, notes after the room, callbacks, and the
+AI help (a read on the scene, ask me), with the model faked."""
 
 import json
 import unittest
@@ -17,14 +17,6 @@ from tests.dbfixture import memory_db, restore
 NOW = datetime(2026, 10, 7, 15, 0, tzinfo=timezone.utc)
 STARTS = datetime(2026, 10, 14, 18, 40, tzinfo=timezone.utc)  # 2:40 pm in New York
 TABLES = [Organization, User, UserScript, Audition, AuditionPiece, AuditionEvent, AuditionReminderSend, UserEvent]
-
-ROUTE = {
-    "minutes": 35,
-    "rides": [{"line": "A", "vehicle": "subway", "from": "Jay St", "to": "42 St", "stops": 7}],
-    "walk_minutes": 9,
-    "polyline": "_p~iF~ps|U_ulLnnqC_mqNvxq`@",
-}
-
 
 def _llm(payload):
     calls = []
@@ -113,83 +105,21 @@ class DetailsTests(Base):
         self.assertIsNone(d["through_kind"]["value"])
 
 
-class TripTests(Base):
-    def test_no_origin_no_trip_and_no_calls(self):
-        routes = mock.Mock()
-        self.assertIsNone(assist.plan_trip(self.db, self.a, None, None, routes_call=routes, llm_call=_llm({})))
-        routes.assert_not_called()
+class CallbackTests(Base):
+    def test_a_callback_is_its_own_audition_with_no_date(self):
+        core.update_audition(self.db, self.a, {"through": "Maya Chen", "through_kind": "agent", "casting": "Jane Okafor"})
+        cb = core.add_callback(self.db, self.a)
+        self.assertNotEqual(cb.id, self.a.id)
+        self.assertEqual((cb.project, cb.role, cb.casting, cb.through), ("The Long Winter", "Nora", "Jane Okafor", "Maya Chen"))
+        self.assertEqual(cb.status, "callback")
+        self.assertIsNone(cb.starts_at)
+        self.assertEqual(self.a.status, "callback")
+        self.assertEqual(core.serialize(self.db, self.a, NOW, with_prep=False)["callback_id"], cb.id)
 
-    def test_self_tape_never_gets_a_trip(self):
-        self.a.kind = "self_tape"
-        routes = mock.Mock()
-        self.assertIsNone(assist.plan_trip(self.db, self.a, "Brooklyn", None, routes_call=routes, llm_call=_llm({})))
-        routes.assert_not_called()
-
-    def test_plans_to_arrive_fifteen_minutes_early(self):
-        routes = mock.Mock(return_value=ROUTE)
-        llm = _llm({"line": "(leave by 1:50. the A to 42 St, then a short walk west. it's a buzzer building.)"})
-        trip = assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=routes, llm_call=llm)
-        origin, dest, mode, arrive = routes.call_args.args
-        self.assertEqual((origin, mode), ("Brooklyn", "transit"))
-        self.assertEqual(arrive, STARTS - timedelta(minutes=15))
-        self.assertEqual(trip["leave_at"], (STARTS - timedelta(minutes=50)).isoformat())
-        self.assertIn("buzzer", trip["line"])
-        self.assertTrue(trip["points"])
-        self.assertIn("origin=Brooklyn", trip["maps_url"])
-
-    def test_saved_trip_is_served_until_the_inputs_change(self):
-        routes = mock.Mock(return_value=ROUTE)
-        llm = _llm({"line": "(leave by 1:50. the A.)"})
-        first = assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=routes, llm_call=llm)
-        again = assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=routes, llm_call=llm)
-        self.assertEqual(again, first)
-        self.assertEqual(routes.call_count, 1)
-        assist.plan_trip(self.db, self.a, "Queens", "transit", routes_call=routes, llm_call=llm)
-        self.assertEqual(routes.call_count, 2)
-
-    def test_a_line_without_the_leave_time_is_replaced_by_the_plain_one(self):
-        llm = _llm({"line": "(take the C train, it's quicker)"})  # made up, and no leave time
-        trip = assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=lambda *a: ROUTE, llm_call=llm)
-        self.assertEqual(trip["line"], "(leave by 1:50. the A from Jay St to 42 St, about 9 minutes on foot all in. you're there by 2:25.)")
-
-    def test_dashes_never_reach_the_page(self):
-        llm = _llm({"line": "(leave by 1:50 — the A to 42 St.)"})
-        trip = assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=lambda *a: ROUTE, llm_call=llm)
-        self.assertNotIn("—", trip["line"])
-
-    def test_google_failing_means_no_trip(self):
-        self.assertIsNone(assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=lambda *a: None, llm_call=_llm({})))
-        self.assertIsNone(core.serialize(self.db, self.a, NOW, with_prep=False)["assist"]["trip"])
-
-    def test_cache_key_never_reaches_the_page(self):
-        assist.plan_trip(self.db, self.a, "Brooklyn", "transit", routes_call=lambda *a: ROUTE, llm_call=_llm({}))
-        out = core.serialize(self.db, self.a, NOW, with_prep=False)
-        self.assertNotIn("key", out["assist"]["trip"])
-
-    def test_polyline_and_sketch(self):
-        pts = assist.decode_polyline("_p~iF~ps|U_ulLnnqC_mqNvxq`@")
-        self.assertEqual(pts, [(38.5, -120.2), (40.7, -120.95), (43.252, -126.453)])
-        sketch = assist.sketch_points(pts)
-        self.assertTrue(all(0 <= x <= 1 and 0 <= y <= 1 for x, y in sketch))
-        self.assertEqual(sketch[-1][1], 0.0)  # the northmost point sits at the top
-
-    def test_routes_summary(self):
-        s = assist.summarize_route({
-            "duration": "2100s",
-            "polyline": {"encodedPolyline": "abc"},
-            "legs": [{"steps": [
-                {"travelMode": "WALK", "staticDuration": "300s"},
-                {"travelMode": "TRANSIT", "transitDetails": {
-                    "transitLine": {"nameShort": "A", "vehicle": {"type": "SUBWAY"}},
-                    "stopDetails": {"departureStop": {"name": "Jay St"}, "arrivalStop": {"name": "42 St"}},
-                    "stopCount": 7,
-                }},
-                {"travelMode": "WALK", "staticDuration": "240s"},
-            ]}],
-        })
-        self.assertEqual(s["minutes"], 35)
-        self.assertEqual(s["walk_minutes"], 9)
-        self.assertEqual(s["rides"], [{"line": "A", "vehicle": "subway", "from": "Jay St", "to": "42 St", "stops": 7}])
+    def test_a_removed_callback_frees_the_button(self):
+        cb = core.add_callback(self.db, self.a)
+        core.delete_audition(self.db, cb)
+        self.assertIsNone(core.callback_of(self.db, self.a))
 
 
 class ReadTests(Base):

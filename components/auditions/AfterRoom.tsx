@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 import { daysUntil, type AfterNotes, type Audition, type AuditionStatus } from "@/lib/auditions";
 import { useUpdateAudition } from "@/hooks/useAuditions";
 import { SAVE_FAILED } from "./SidesSection";
+import { useCallbackAction } from "./useCallbackAction";
 
 const PROMPTS: [keyof AfterNotes, string, string][] = [
   ["how", "How did it go?", "(write it while it's fresh)"],
@@ -26,6 +28,7 @@ export function AfterRoom({ a, now }: { a: Audition; now: Date }) {
   const open = a.scope !== "upcoming" || d === 0;
   const [notes, setNotes] = useState<AfterNotes>(a.after_notes);
   const [unfolded, setUnfolded] = useState(false);
+  const callback = useCallbackAction(a);
 
   function keep(k: keyof AfterNotes) {
     if ((notes[k] ?? "") === (a.after_notes[k] ?? "")) return;
@@ -80,6 +83,17 @@ export function AfterRoom({ a, now }: { a: Audition; now: Date }) {
                 </button>
               ))}
             </div>
+          )}
+          {open && a.status === "callback" && (
+            <p className="mt-3 text-[14px]">
+              {a.callback_id ? (
+                <Link href={`/auditions/${a.callback_id}`} className="aud-link">Open the callback</Link>
+              ) : (
+                <button type="button" className="aud-link" disabled={callback.busy} onClick={callback.go}>
+                  {callback.busy ? "Adding it" : "Add the callback as its own audition"}
+                </button>
+              )}
+            </p>
           )}
         </>
       )}

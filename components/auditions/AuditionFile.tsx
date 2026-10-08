@@ -7,15 +7,15 @@ import { toast } from "sonner";
 
 import { trackEvent } from "@/lib/events";
 import { eyebrow, KIND_LABEL, nextStep, sectionOrder, whenSentence, type Audition, type FileSection } from "@/lib/auditions";
-import { useDeleteAudition, useTravel, useUpdateAudition } from "@/hooks/useAuditions";
+import { useDeleteAudition, useUpdateAudition } from "@/hooks/useAuditions";
 import { AfterRoom } from "./AfterRoom";
 import { AskMe } from "./AskMe";
 import { BringList } from "./BringList";
 import { DraftCard } from "./DraftCard";
 import { errMessage, patchFromValues, valuesFromAudition, type DraftValues } from "./draftValues";
 import { FileDetails, OtherAuditions, ReminderLine } from "./FileAside";
-import { GettingThere } from "./GettingThere";
 import { SAVE_FAILED, SidesSection, useAddSides } from "./SidesSection";
+import { useCallbackAction } from "./useCallbackAction";
 
 /** One voice for a logged outcome from the morning-after email (AuditionsShell's ?logged=). */
 export const OUTCOME_NOTE: Record<"good" | "callback" | "no", string> = {
@@ -30,7 +30,15 @@ const PILL = "aud-pill aud-focus bg-primary text-primary-foreground inline-flex 
 function Primary({ a, now }: { a: Audition; now: Date }) {
   const step = nextStep(a, now);
   const add = useAddSides(a);
+  const callback = useCallbackAction(a);
   if (!step) return null;
+  if (step.kind === "callback") {
+    return (
+      <button type="button" className={PILL} disabled={callback.busy} onClick={callback.go}>
+        {callback.busy ? "Adding it" : step.label}
+      </button>
+    );
+  }
   if (step.kind === "link") {
     return (
       <Link
@@ -116,19 +124,19 @@ function Edit({ a, onClose }: { a: Audition; onClose: () => void }) {
 
 /**
  * One audition as its file: what it is and the next thing to do up top, then
- * the work in the order you live it (getting there, the sides, what to bring,
- * after the room, ask me), and the facts in a quiet column beside it.
+ * the work in the order you live it (the sides, what to bring, after the
+ * room, ask me), and the facts in a quiet column beside it.
  */
-export function AuditionFile({ a, list, now, next = false }: { a: Audition; list: Audition[]; now: Date; next?: boolean }) {
-  const [editing, setEditing] = useState(false);
-  const { data: travel } = useTravel();
+export function AuditionFile({ a, list, now, next = false, startEditing = false }: {
+  a: Audition; list: Audition[]; now: Date; next?: boolean; startEditing?: boolean;
+}) {
+  const [editing, setEditing] = useState(startEditing);
   if (editing) return <Edit a={a} onClose={() => setEditing(false)} />;
 
   const role = [a.role, a.kind !== "in_person" ? KIND_LABEL[a.kind] : null].filter(Boolean).join(" · ");
   const when = whenSentence(a);
   const place = a.location?.split(",")[0];
   const sections: Record<FileSection, React.ReactNode> = {
-    trip: <GettingThere a={a} travel={travel} />,
     sides: <SidesSection a={a} />,
     bring: <BringList a={a} />,
     after: <AfterRoom a={a} now={now} />,
@@ -158,7 +166,7 @@ export function AuditionFile({ a, list, now, next = false }: { a: Audition; list
       </div>
 
       <aside className="min-w-0 lg:pt-1">
-        <FileDetails a={a} travel={travel} onEdit={() => setEditing(true)} />
+        <FileDetails a={a} onEdit={() => setEditing(true)} />
         <ReminderLine a={a} />
         <OtherAuditions list={list} openId={a.id} />
       </aside>

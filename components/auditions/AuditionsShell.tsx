@@ -217,7 +217,14 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
         ) : failed ? (
           retry
         ) : open ? (
-          <AuditionFile key={open.id} a={open} list={list} now={now} next={open.id === fallback?.id && open.scope === "upcoming"} />
+          <AuditionFile
+            key={open.id}
+            a={open}
+            list={list}
+            now={now}
+            next={open.id === fallback?.id && open.scope === "upcoming"}
+            startEditing={params.get("edit") === "1" && open.id === selectedId}
+          />
         ) : selectedId != null ? (
           <p className="aud-muted text-sm">That audition isn&apos;t on your rail.</p>
         ) : null}

@@ -38,6 +38,8 @@ export type Audition = {
   shoots: string | null;
   after_notes: AfterNotes;
   assist: Assist;
+  /** The callback added from this one, if any. */
+  callback_id: number | null;
   /** The attached sides' first lines. Only on the list and one-audition reads. */
   sides?: { title: string | null; status: string | null; excerpt: string | null } | null;
 };
@@ -45,16 +47,11 @@ export type Audition = {
 export type ThroughKind = "agent" | "manager" | "self";
 export type BringItem = { text: string; done: boolean; src: "email" | "ai" | "me" };
 export type AfterNotes = Partial<Record<"how" | "differently" | "room", string>>;
-export type Trip = {
-  line: string; mode: "transit" | "drive"; minutes: number; leave_at: string; arrive_by: string;
-  points: [number, number][]; from_label: string | null; to_label: string | null; maps_url: string;
-};
 export type Assist = {
-  trip: Trip | null;
   read: { line: string | null; wear: string[] } | null;
   asks: { q: string; a: string; at: string }[];
 };
-export type Travel = { leaving_from: string | null; travel_mode: "transit" | "drive" };
+
 
 /** A piece the actor is bringing. title/character/play_title name a monologue; null for a scene. */
 export type AuditionPiece = {
@@ -219,12 +216,17 @@ export function whenSentence(a: Pick<Audition, "when" | "tz" | "kind">): string 
 export type NextStep =
   | { kind: "link"; label: string; href: string; step: PrepStep["key"] }
   | { kind: "upload"; label: string }
+  | { kind: "callback"; label: string }
   | { kind: "scroll"; label: string; target: "bring" | "after" };
 
 /** The one orange button: the next thing to do for this audition, or null when there is nothing. */
 export function nextStep(a: Audition, now: Date = new Date()): NextStep | null {
   const heard = a.status === "booked" || a.status === "passed";
-  if (a.scope !== "upcoming") return heard || a.after_notes?.how ? null : { kind: "scroll", label: "How did it go?", target: "after" };
+  if (a.scope !== "upcoming") {
+    if (!a.when) return null;
+    if (a.status === "callback" && !a.callback_id) return { kind: "callback", label: "Add the callback" };
+    return heard || a.after_notes?.how ? null : { kind: "scroll", label: "How did it go?", target: "after" };
+  }
   const todo = a.prep?.steps.find((s) => !s.done && s.key !== "bring");
   if (todo?.key === "upload") return { kind: "upload", label: "Add their sides" };
   if (todo?.href) return { kind: "link", label: todo.key === "sides" ? "Run your sides" : "Pick your piece", href: todo.href, step: todo.key };
@@ -237,14 +239,12 @@ export function nextStep(a: Audition, now: Date = new Date()): NextStep | null {
   return null;
 }
 
-export type FileSection = "trip" | "sides" | "bring" | "after" | "ask";
+export type FileSection = "sides" | "bring" | "after" | "ask";
 
 /** The order the main column runs in: the order the actor lives it, with today's job on top. */
 export function sectionOrder(a: Audition, now: Date = new Date()): FileSection[] {
   if (a.scope !== "upcoming") return ["after", "sides", "bring", "ask"];
   const d = daysUntil(a, now);
-  const trip: FileSection[] = a.kind === "in_person" ? ["trip"] : [];
-  if (d === 0) return [...trip, "bring", "sides", "after", "ask"];
-  if (d === 1) return ["bring", ...trip, "sides", "after", "ask"];
-  return [...trip, "sides", "bring", "after", "ask"];
+  if (d === 0 || d === 1) return ["bring", "sides", "after", "ask"];
+  return ["sides", "bring", "after", "ask"];
 }
