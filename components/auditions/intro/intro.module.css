@@ -1,0 +1,1069 @@
+/* The audition intro: a big dialog with one small looping scene per card.
+   Every scene is built from mini copies of the page (ticket, capture box,
+   prep room, a calendar), drawn on the dark "hero" stage in both themes.
+
+   Motion rule for every animated element below: its plain style IS the last
+   frame of the loop. Reduced motion just switches animation off, and what is
+   left is the finished picture, never an empty stage. */
+
+.root {
+  --i-surface: oklch(0.99 0.005 85);
+  --i-fg: oklch(0.16 0.01 45);
+  --i-muted: oklch(0.4 0.015 55);
+  --i-rule: oklch(0.8 0.02 75);
+  --i-press: oklch(0.13 0.015 50);
+  --i-focus: oklch(0.58 0.18 45);
+  --i-hero: oklch(0.13 0.015 50);
+  --i-hero-line: oklch(0.86 0.03 80);
+  --i-hero-fg: oklch(0.94 0.02 85);
+  --i-hero-muted: oklch(0.74 0.02 62);
+  --i-card: oklch(0.99 0.005 85);
+  --i-card-fg: oklch(0.16 0.01 45);
+  --i-card-muted: oklch(0.42 0.015 55);
+  --i-card-rule: oklch(0.8 0.02 75);
+  --i-gel: oklch(0.92 0.18 100);
+  --i-ink: oklch(0.13 0.015 50);
+  --i-lift: color-mix(in oklab, var(--i-hero-line) 20%, transparent);
+
+  position: fixed;
+  z-index: 10071;
+  outline: none;
+  color: var(--i-fg);
+  font-family: var(--t-body);
+}
+
+:global(.dark) .root {
+  --i-surface: oklch(0.16 0.018 52);
+  --i-fg: oklch(0.9 0.02 82);
+  --i-muted: oklch(0.72 0.02 62);
+  --i-rule: oklch(0.32 0.02 55);
+  --i-press: oklch(0.04 0.01 50);
+  --i-focus: oklch(0.92 0.18 100);
+  --i-hero: oklch(0.18 0.02 52);
+  --i-hero-line: oklch(0.82 0.03 80);
+  --i-hero-fg: oklch(0.9 0.02 82);
+  --i-hero-muted: oklch(0.7 0.02 62);
+  --i-card: oklch(0.24 0.02 52);
+  --i-card-fg: oklch(0.9 0.02 82);
+  --i-card-muted: oklch(0.72 0.02 62);
+  --i-card-rule: oklch(0.38 0.02 55);
+  --i-lift: oklch(0.06 0.01 50 / 0.7);
+}
+
+.scrim {
+  background: oklch(0.1 0.01 50 / 0.55);
+}
+:global(.dark) .scrim {
+  background: oklch(0.05 0.01 50 / 0.7);
+}
+
+/* ---- the dialog ------------------------------------------------------- */
+
+/* Phone: a full height sheet from the bottom, the scene on top. */
+.root {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(100dvh - 12px);
+  animation: sheetIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.panel {
+  display: grid;
+  grid-template-rows: minmax(190px, 1fr) auto;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--i-surface);
+  border-top: 1.5px solid var(--i-fg);
+}
+
+@media (min-width: 768px) {
+  .root {
+    left: 50%;
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    translate: -50% -50%;
+    width: min(1040px, 92vw);
+    height: min(640px, calc(100dvh - 48px));
+    animation-name: dialogIn;
+  }
+  .panel {
+    grid-template-rows: none;
+    grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+    border: 1.5px solid var(--i-fg);
+    box-shadow: 10px 10px 0 var(--i-press);
+    overflow: hidden;
+  }
+}
+
+@keyframes sheetIn {
+  from { transform: translateY(28px); opacity: 0; }
+}
+@keyframes dialogIn {
+  from { transform: translateY(10px) scale(0.985); opacity: 0; }
+}
+
+/* ---- text column ------------------------------------------------------ */
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 20px 20px calc(14px + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .copy {
+    padding: 64px 36px 28px;
+    overflow-y: auto;
+  }
+}
+
+.step {
+  margin: 0;
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--i-muted);
+}
+
+.title {
+  margin: 6px 0 0;
+  font-family: var(--t-display);
+  font-weight: 400;
+  font-size: clamp(30px, 3.6vw, 44px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+
+.body {
+  margin: 14px 0 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--i-fg);
+}
+@media (min-width: 768px) {
+  .body { font-size: 17px; }
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  background: var(--i-rule);
+  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.3s;
+}
+.dot[data-on="true"] {
+  width: 22px;
+  background: var(--i-fg);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.back {
+  height: 48px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--i-fg);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pill {
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  border: 1.5px solid var(--i-press);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--i-press);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.pill:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--i-press); }
+.pill:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--i-press); }
+.next {
+  border-color: var(--i-fg);
+  background: var(--i-fg);
+  color: var(--i-surface);
+}
+
+.close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--i-hero-line) 30%, transparent);
+  background: var(--i-hero);
+  color: var(--i-hero-fg);
+  cursor: pointer;
+}
+
+.back:focus-visible,
+.pill:focus-visible,
+.close:focus-visible {
+  outline: 3px solid var(--i-focus);
+  outline-offset: 3px;
+}
+
+/* ---- the stage -------------------------------------------------------- */
+
+.stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--i-hero);
+  border-bottom: 1.5px solid var(--i-fg);
+}
+@media (min-width: 768px) {
+  .stage {
+    border-bottom: 0;
+    border-right: 1.5px solid var(--i-fg);
+  }
+}
+
+/* A pool of light that drifts slowly behind the scene. */
+.glow {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 70%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--i-gel) 13%, transparent), transparent);
+  animation: drift 14s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes drift {
+  from { transform: translate(-4%, 2%); }
+  to { transform: translate(5%, -3%); }
+}
+
+/* Footlights along the floor, as on the page's own figure. */
+.footLights {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.footLights span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--i-gel);
+  opacity: 0.4;
+  box-shadow: 0 0 10px 2px color-mix(in oklab, var(--i-gel) 30%, transparent);
+}
+
+/* The scene is drawn on a fixed 560 x 440 canvas and scaled to the stage. */
+.canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 560px;
+  height: 440px;
+  transform: translate(-50%, -50%) scale(var(--k, 1));
+  color: var(--i-hero-fg);
+  font-family: var(--t-body);
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  animation: sceneIn 0.5s ease both;
+}
+@keyframes sceneIn {
+  from { opacity: 0; }
+}
+
+.dir {
+  position: absolute;
+  margin: 0;
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--i-hero-muted);
+  white-space: nowrap;
+}
+
+/* ---- mini ticket ------------------------------------------------------ */
+
+.tk {
+  position: absolute;
+  display: flex;
+  height: 68px;
+  background: var(--i-card);
+  color: var(--i-card-fg);
+  box-shadow: 4px 4px 0 var(--i-lift);
+}
+.tkStub {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  flex-shrink: 0;
+  border-right: 1.5px dashed var(--i-card-rule);
+}
+.tkN {
+  font-family: var(--t-display);
+  font-size: 30px;
+  line-height: 0.95;
+}
+.tkUnit {
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.tkOpen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.tkBody {
+  min-width: 0;
+  padding: 8px 10px;
+}
+.tkTitle {
+  font-family: var(--t-display);
+  font-size: 19px;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+.tkMeta {
+  margin-top: 2px;
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--i-card-muted);
+}
+.chip {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 0 5px;
+  border: 1px solid var(--i-card-rule);
+  font-size: 8.5px;
+  line-height: 14px;
+  color: var(--i-card-muted);
+}
+.chip[data-tone="gel"] {
+  border-color: var(--i-ink);
+  background: var(--i-gel);
+  color: var(--i-ink);
+}
+
+/* The soft cursor: a cream dot with an ink rim, so it reads on paper and on the stage. */
+.cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--i-ink);
+  background: oklch(0.96 0.02 85 / 0.92);
+  box-shadow: 0 0 0 6px oklch(0.96 0.02 85 / 0.16), 0 6px 14px oklch(0 0 0 / 0.35);
+  opacity: 0;
+  z-index: 5;
+}
+
+/* ===================================================================== */
+/* Card 1: an email pasted in, read, folded into a ticket on the rail.    */
+/* 9s loop.                                                               */
+/* ===================================================================== */
+
+.s1 { --loop: 9s; }
+.s1 * { animation-duration: var(--loop); animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+
+.cap {
+  position: absolute;
+  left: 24px;
+  top: 64px;
+  width: 290px;
+  height: 300px;
+  border-radius: 10px;
+  border: 1.5px solid var(--i-card-fg);
+  background: var(--i-card);
+  color: var(--i-card-fg);
+  box-shadow: 6px 6px 0 var(--i-lift);
+  overflow: hidden;
+}
+.capArea {
+  position: absolute;
+  inset: 0 0 86px 0;
+  padding: 16px 18px;
+}
+.capPlaceholder {
+  position: absolute;
+  inset: 16px 18px auto;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--i-card-muted);
+  animation-name: s1Placeholder;
+}
+@keyframes s1Placeholder {
+  0%, 5% { opacity: 1; }
+  7%, 62% { opacity: 0; }
+  70%, 100% { opacity: 1; }
+}
+
+.mail {
+  position: absolute;
+  inset: 16px 18px auto;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--i-card-muted);
+  transform-origin: 50% 0;
+  opacity: 0;
+  animation-name: s1Mail;
+}
+.mail b { color: var(--i-card-fg); font-weight: 650; }
+.mail p { margin: 0; }
+.mail p + p { margin-top: 1px; }
+.mailGap { height: 7px; }
+@keyframes s1Mail {
+  0%, 6% { opacity: 0; clip-path: inset(0 0 100% 0); transform: none; }
+  9.5% { opacity: 1; clip-path: inset(0 0 0 0); }
+  23% { opacity: 1; }
+  27%, 44% { opacity: 0.07; transform: none; clip-path: inset(0 0 0 0); }
+  50%, 100% { opacity: 0; transform: translateY(-14px) scaleY(0.3); clip-path: inset(0 0 0 0); }
+}
+
+.reading {
+  position: absolute;
+  inset: 0 0 86px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 22px;
+  background: color-mix(in oklab, var(--i-card) 82%, transparent);
+  opacity: 0;
+  animation-name: s1Reading;
+}
+@keyframes s1Reading {
+  0%, 24% { opacity: 0; }
+  27%, 45% { opacity: 1; }
+  49%, 100% { opacity: 0; }
+}
+.readLines {
+  position: relative;
+  height: 50px;
+}
+.readLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  margin: 0;
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 21px;
+  line-height: 1.15;
+  opacity: 0;
+}
+.readLine1 { animation-name: s1Line1; }
+.readLine2 { animation-name: s1Line2; }
+@keyframes s1Line1 {
+  0%, 25% { opacity: 0; transform: translateY(6px); }
+  28%, 33% { opacity: 1; transform: none; }
+  35%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes s1Line2 {
+  0%, 34% { opacity: 0; transform: translateY(6px); }
+  37% { opacity: 1; transform: none; }
+  39.5% { opacity: 0.55; }
+  40.5%, 100% { opacity: 1; transform: none; }
+}
+.track {
+  position: relative;
+  height: 2px;
+  margin-top: 14px;
+  background: var(--i-card-rule);
+  overflow: hidden;
+}
+.sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  animation: sweep 1.6s ease-in-out infinite !important;
+}
+@keyframes sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+.capFoot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 86px;
+  border-top: 1.5px dashed var(--i-card-rule);
+}
+.capFile {
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  right: 16px;
+  display: flex;
+  gap: 7px;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--i-card-muted);
+}
+.capFile u { color: var(--i-card-fg); font-weight: 600; text-underline-offset: 2px; }
+.readIt {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 84px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1.5px solid var(--i-ink);
+  box-shadow: 3px 3px 0 var(--i-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  animation-name: s1Press;
+}
+@keyframes s1Press {
+  0%, 20.5% { transform: none; box-shadow: 3px 3px 0 var(--i-ink); }
+  22% { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--i-ink); }
+  24.5%, 100% { transform: none; box-shadow: 3px 3px 0 var(--i-ink); }
+}
+
+.keycap {
+  position: absolute;
+  left: 184px;
+  top: 112px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1.5px solid var(--i-ink);
+  background: var(--i-gel);
+  color: var(--i-ink);
+  font-size: 11px;
+  font-weight: 700;
+  z-index: 6;
+  opacity: 0;
+  animation-name: s1Key;
+}
+@keyframes s1Key {
+  0%, 6.5% { opacity: 0; transform: translateY(4px); }
+  8%, 12% { opacity: 1; transform: none; }
+  14%, 100% { opacity: 0; transform: none; }
+}
+
+.s1Cursor { animation-name: s1Cursor; }
+@keyframes s1Cursor {
+  0%, 2% { opacity: 0; transform: translate(470px, 420px) scale(1); }
+  6% { opacity: 1; transform: translate(170px, 150px) scale(1); }
+  7% { transform: translate(170px, 150px) scale(0.8); }
+  8.5%, 13% { opacity: 1; transform: translate(170px, 150px) scale(1); }
+  19% { transform: translate(260px, 335px) scale(1); }
+  21.5% { transform: translate(260px, 335px) scale(0.78); }
+  24% { opacity: 1; transform: translate(260px, 335px) scale(1); }
+  29%, 100% { opacity: 0; transform: translate(300px, 380px) scale(1); }
+}
+
+.rail {
+  position: absolute;
+  left: 334px;
+  top: 0;
+  width: 206px;
+  height: 100%;
+}
+.rail .dir { left: 0; top: 64px; }
+
+.s1New {
+  left: 0;
+  top: 96px;
+  width: 206px;
+  z-index: 4;
+  animation-name: s1New;
+}
+@keyframes s1New {
+  0%, 45% { opacity: 0; transform: translate(-268px, 39px) scale(0.8); }
+  49% { opacity: 1; transform: translate(-268px, 39px) scale(0.92); animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+  62%, 88% { opacity: 1; transform: none; }
+  95%, 100% { opacity: 0; transform: none; }
+}
+.s1Glow {
+  position: absolute;
+  left: -10px;
+  top: 86px;
+  width: 226px;
+  height: 88px;
+  border-radius: 12px;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--i-gel) 32%, transparent), transparent);
+  opacity: 0;
+  animation-name: s1Glow;
+}
+@keyframes s1Glow {
+  0%, 58% { opacity: 0; }
+  65% { opacity: 1; }
+  82%, 100% { opacity: 0; }
+}
+.s1Shift {
+  position: absolute;
+  inset: 0;
+  animation-name: s1Shift;
+}
+@keyframes s1Shift {
+  0%, 46% { transform: translateY(-80px); }
+  56%, 90% { transform: none; }
+  98%, 100% { transform: translateY(-80px); }
+}
+
+/* ===================================================================== */
+/* Card 2: a ticket opens its prep room and the steps tick off. 8s loop.  */
+/* ===================================================================== */
+
+.s2 { --loop: 8s; }
+.s2 * { animation-duration: var(--loop); animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+
+.s2Rail {
+  position: absolute;
+  left: 24px;
+  top: 0;
+  width: 196px;
+  height: 100%;
+}
+.s2Rail .dir { left: 0; top: 74px; }
+
+.s2Pick {
+  transform: translateX(8px);
+  animation-name: s2Pick;
+}
+@keyframes s2Pick {
+  0%, 12.5% { transform: none; }
+  15.5%, 92% { transform: translateX(8px); }
+  98%, 100% { transform: none; }
+}
+.s2Stub { animation-name: s2Stub; }
+@keyframes s2Stub {
+  0%, 12.5% { opacity: 0; }
+  15%, 92% { opacity: 1; }
+  98%, 100% { opacity: 0; }
+}
+
+.s2Cursor { animation-name: s2Cursor; }
+@keyframes s2Cursor {
+  0%, 2% { opacity: 0; transform: translate(320px, 420px) scale(1); }
+  5% { opacity: 1; transform: translate(300px, 380px) scale(1); }
+  11% { transform: translate(122px, 140px) scale(1); }
+  12.5% { transform: translate(122px, 140px) scale(0.78); }
+  14.5% { opacity: 1; transform: translate(122px, 140px) scale(1); }
+  20%, 100% { opacity: 0; transform: translate(160px, 180px) scale(1); }
+}
+
+.room {
+  position: absolute;
+  left: 240px;
+  top: 74px;
+  width: 300px;
+  height: 316px;
+  padding: 18px 20px;
+  background: var(--i-card);
+  color: var(--i-card-fg);
+  box-shadow: 6px 6px 0 var(--i-lift);
+  animation-name: s2Room;
+}
+@keyframes s2Room {
+  0%, 14% { opacity: 0; transform: translateX(-14px); clip-path: inset(0 100% 0 0); }
+  26%, 90% { opacity: 1; transform: none; clip-path: inset(0 0 0 0); }
+  97%, 100% { opacity: 0; transform: none; clip-path: inset(0 0 0 0); }
+}
+.roomHead {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1.5px solid var(--i-card-fg);
+}
+.roomN {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.roomN .tkN { font-size: 46px; }
+.roomTitle {
+  font-family: var(--t-display);
+  font-size: 26px;
+  line-height: 1;
+}
+.roomDir {
+  margin: 14px 0 4px;
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--i-card-muted);
+}
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.steps li {
+  display: flex;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--i-card-rule);
+}
+.steps li:last-child { border-bottom: 0; }
+.box {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  border: 1.5px solid var(--i-card-rule);
+}
+.tick {
+  position: absolute;
+  inset: -1.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--i-ink);
+  background: var(--i-gel);
+  color: var(--i-ink);
+}
+.tick1 { animation-name: s2Tick1; }
+.tick2 { animation-name: s2Tick2; }
+.tick3 { animation-name: s2Tick3; }
+@keyframes s2Tick1 {
+  0%, 44% { opacity: 0; transform: scale(0.5); }
+  47% { opacity: 1; transform: scale(1.14); }
+  49.5%, 91% { opacity: 1; transform: none; }
+  97%, 100% { opacity: 0; transform: none; }
+}
+@keyframes s2Tick2 {
+  0%, 56% { opacity: 0; transform: scale(0.5); }
+  59% { opacity: 1; transform: scale(1.14); }
+  61.5%, 91% { opacity: 1; transform: none; }
+  97%, 100% { opacity: 0; transform: none; }
+}
+@keyframes s2Tick3 {
+  0%, 68% { opacity: 0; transform: scale(0.5); }
+  71% { opacity: 1; transform: scale(1.14); }
+  73.5%, 91% { opacity: 1; transform: none; }
+  97%, 100% { opacity: 0; transform: none; }
+}
+.stepLabel {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+.stepSub {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--i-card-muted);
+  white-space: nowrap;
+}
+
+/* "you've run it 3 times": the number and its word roll together. */
+.roll {
+  display: inline-block;
+  height: 15px;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+.rollCol {
+  display: flex;
+  flex-direction: column;
+  transform: translateY(-30px);
+  animation-name: s2Roll;
+}
+.rollCol span {
+  height: 15px;
+  line-height: 15px;
+}
+.rollN { font-weight: 700; color: var(--i-card-fg); }
+@keyframes s2Roll {
+  0%, 30% { transform: none; }
+  32.5%, 37% { transform: translateY(-15px); }
+  39.5%, 92% { transform: translateY(-30px); }
+  96%, 100% { transform: none; }
+}
+
+/* ===================================================================== */
+/* Card 3: three notes land on the week, the audition syncs in, and the   */
+/* morning after asks how it went. 9s loop.                              */
+/* ===================================================================== */
+
+.s3 { --loop: 9s; }
+.s3 * { animation-duration: var(--loop); animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+
+.cal {
+  position: absolute;
+  left: 24px;
+  top: 36px;
+  width: 512px;
+  height: 192px;
+  background: var(--i-card);
+  color: var(--i-card-fg);
+  box-shadow: 6px 6px 0 var(--i-lift);
+}
+.calHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 12px;
+  border-bottom: 1.5px solid var(--i-card-fg);
+}
+.calMonth {
+  font-family: var(--t-display);
+  font-size: 19px;
+}
+.feed {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--i-card-muted);
+}
+.feed svg { animation-name: s3Sync; }
+@keyframes s3Sync {
+  0%, 29% { transform: none; }
+  34%, 100% { transform: rotate(360deg); }
+}
+.days {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  height: 156px;
+}
+.day {
+  position: relative;
+  border-right: 1px solid var(--i-card-rule);
+  padding: 6px 0 0;
+  text-align: center;
+}
+.day:last-child { border-right: 0; }
+.dayName {
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--i-card-muted);
+}
+.dayNum {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.env {
+  position: absolute;
+  left: 50%;
+  top: 52px;
+  margin-left: -16px;
+  width: 32px;
+  height: 23px;
+  color: var(--i-card-fg);
+}
+.env1 { animation-name: s3Env1; }
+.env2 { animation-name: s3Env2; }
+.env3 { animation-name: s3Env3; }
+@keyframes s3Env1 {
+  0%, 5% { opacity: 0; transform: translateY(-42px) rotate(-10deg); }
+  9.5% { opacity: 1; transform: translateY(2px) rotate(3deg); }
+  11.5%, 90% { opacity: 1; transform: none; }
+  96%, 100% { opacity: 0; transform: none; }
+}
+@keyframes s3Env2 {
+  0%, 12% { opacity: 0; transform: translateY(-42px) rotate(8deg); }
+  16.5% { opacity: 1; transform: translateY(2px) rotate(-3deg); }
+  18.5%, 90% { opacity: 1; transform: none; }
+  96%, 100% { opacity: 0; transform: none; }
+}
+@keyframes s3Env3 {
+  0%, 19% { opacity: 0; transform: translateY(-42px) rotate(-8deg); }
+  23.5% { opacity: 1; transform: translateY(2px) rotate(3deg); }
+  25.5%, 40% { opacity: 1; transform: none; }
+  44% { opacity: 1; transform: translateY(-5px) scale(1.15); }
+  49%, 90% { opacity: 1; transform: none; }
+  96%, 100% { opacity: 0; transform: none; }
+}
+
+.event {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 86px;
+  height: 46px;
+  padding: 4px 5px;
+  border: 1.5px solid var(--i-ink);
+  background: var(--i-gel);
+  color: var(--i-ink);
+  text-align: left;
+  transform-origin: 50% 0;
+  animation-name: s3Event;
+}
+.event b { display: block; font-size: 9.5px; font-weight: 700; line-height: 1.2; }
+.event span { display: block; font-size: 9px; line-height: 1.3; }
+@keyframes s3Event {
+  0%, 29% { opacity: 0; transform: scaleY(0.2); }
+  34%, 90% { opacity: 1; transform: none; }
+  96%, 100% { opacity: 0; transform: none; }
+}
+
+.when {
+  position: absolute;
+  top: 240px;
+  translate: -50% 0;
+  font-size: 14px;
+}
+.when1 { animation-name: s3When1; }
+.when2 { animation-name: s3When2; }
+.when3 { animation-name: s3When3; }
+@keyframes s3When1 { 0%, 8% { opacity: 0; } 11.5%, 90% { opacity: 1; } 96%, 100% { opacity: 0; } }
+@keyframes s3When2 { 0%, 15% { opacity: 0; } 18.5%, 90% { opacity: 1; } 96%, 100% { opacity: 0; } }
+@keyframes s3When3 { 0%, 22% { opacity: 0; } 25.5%, 90% { opacity: 1; } 96%, 100% { opacity: 0; } }
+
+.note {
+  position: absolute;
+  left: 125px;
+  top: 276px;
+  width: 310px;
+  height: 140px;
+  padding: 14px 16px;
+  background: var(--i-card);
+  color: var(--i-card-fg);
+  border: 1.5px solid var(--i-card-fg);
+  box-shadow: 6px 6px 0 var(--i-lift);
+  transform-origin: 74% -40%;
+  animation-name: s3Note;
+}
+@keyframes s3Note {
+  0%, 44% { opacity: 0; transform: translateY(-120px) scale(0.12); }
+  47% { opacity: 1; }
+  55%, 90% { opacity: 1; transform: none; }
+  96%, 100% { opacity: 0; transform: none; }
+}
+.noteDir {
+  margin: 0;
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--i-card-muted);
+}
+.noteTitle {
+  margin: 2px 0 0;
+  font-family: var(--t-display);
+  font-size: 23px;
+  line-height: 1.1;
+}
+.answers {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 94px;
+  display: flex;
+  gap: 6px;
+}
+.answer {
+  position: relative;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1.5px solid var(--i-card-fg);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.answerOn {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation-name: s3Answer;
+}
+@keyframes s3Answer {
+  0%, 66% { opacity: 0; }
+  67.5%, 91% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+.s3Tap { animation-name: s3Tap; }
+@keyframes s3Tap {
+  0%, 65.5% { transform: none; }
+  67% { transform: scale(0.95); }
+  69.5%, 100% { transform: none; }
+}
+
+.s3Cursor { animation-name: s3Cursor; }
+@keyframes s3Cursor {
+  0%, 54% { opacity: 0; transform: translate(420px, 436px) scale(1); }
+  58% { opacity: 1; transform: translate(400px, 420px) scale(1); }
+  64% { transform: translate(275px, 384px) scale(1); }
+  66.5% { transform: translate(275px, 384px) scale(0.78); }
+  69% { opacity: 1; transform: translate(275px, 384px) scale(1); }
+  75%, 100% { opacity: 0; transform: translate(310px, 420px) scale(1); }
+}
+
+/* ---- motion switches ---------------------------------------------------- */
+
+.root[data-paused="true"] *,
+.root[data-paused="true"] *::before,
+.root[data-paused="true"] *::after {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .root *,
+  .root *::before,
+  .root *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
