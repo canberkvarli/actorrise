@@ -2436,6 +2436,17 @@
   --t-paper: oklch(0.99 0.005 85);
   --t-paper-2: oklch(0.97 0.015 85);
 
+  /* The wash behind your own speeches, and the rule beside the partner's.
+     Both used to be Tailwind literals — `bg-orange-50/50` and
+     `border-neutral-300` — which is a near-white tint and a light grey. Over
+     dark paper the first became a muddy tan slab and the second a bright bar,
+     so the script read as blocks of mud with a strip light down the side.
+     Tokens, so the mark means the same thing in both rooms: yours is warmer
+     paper, theirs is a hairline a shade off the page. */
+  --t-mine: oklch(0.975 0.022 62);
+  --t-cue-mine: oklch(0.72 0.15 48);
+  --t-cue-theirs: oklch(0.84 0.02 75);
+
   /* Text */
   --t-text: oklch(0.16 0.01 45);
   --t-text-soft: oklch(0.18 0.01 45);
@@ -7426,6 +7437,13 @@
 
   --t-paper: oklch(0.19 0.018 52);
   --t-paper-2: oklch(0.17 0.018 52);
+
+  /* Barely there on purpose. A tint strong enough to see as a box is a box;
+     what it has to say is only "this speech is yours", which the cue rule and
+     the accent already say louder. */
+  --t-mine: oklch(0.225 0.028 52);
+  --t-cue-mine: oklch(0.7 0.16 48);
+  --t-cue-theirs: oklch(0.36 0.03 55);
 
   --t-text: oklch(0.95 0.02 85);
   --t-text-soft: oklch(0.93 0.02 85);

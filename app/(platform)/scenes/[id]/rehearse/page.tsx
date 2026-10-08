@@ -2144,6 +2144,19 @@ function RehearsalPageInner() {
       // "If silent" means it. An actor mid-line is not silent, and skipping
       // them because the words haven't matched yet is the app cutting them off.
       if (heardAnySpeech()) return;
+      /* And it must not pretend. This path used to hand the WRITTEN line to
+         the deliver call as though it had been spoken, so a scene the actor
+         had said nothing to lit every word of their speech green and moved
+         on — Canberk watched it happen and read it, correctly, as the app
+         inventing a performance. The scene still has to move (that is what
+         the setting is for), but nothing is scored and the screen says who
+         moved it. */
+      setWordMatchResult(null);
+      setLiveMatchedIndices(new Set());
+      bestMatchedRef.current = new Set();
+      setToast('Heard nothing, moving on.');
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setToast(null), 3500);
       handleDeliverLine(currentUserLineText, 'silent_skip');
     }, sec);
     return () => {
@@ -3163,9 +3176,9 @@ function RehearsalPageInner() {
                       className={cn(
                         'px-3 sm:px-4 py-2 transition-colors duration-300',
                         !isCurrent && 'cursor-pointer hover:opacity-75',
-                        isCurrentUserLine && 'border-l-2 border-orange-400/70',
-                        isCurrentAiLine && 'border-l-2 border-neutral-300',
-                        isUser && highlightMyLines && 'bg-orange-50/50',
+                        isCurrentUserLine && 'border-l-2 border-[var(--t-cue-mine)]',
+                        isCurrentAiLine && 'border-l-2 border-[var(--t-cue-theirs)]',
+                        isUser && highlightMyLines && 'bg-[var(--t-mine)]',
                       )}
                       onClick={() => {
                         if (guided && isCurrentUserLine && coach === 'nudge') {
