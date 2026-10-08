@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -73,16 +74,16 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   const capture = useRef<HTMLDivElement>(null);
   const [intro, setIntro] = useState(false);
   const introChecked = useRef(false);
-  const adding = startOpen || source === "onboarding";
+  const cameToAdd = startOpen || source === "onboarding";
   useEffect(() => {
     if (introChecked.current || isLoading) return;
     // A beat after the rail paints, so the card lands on a page rather than a blank.
     const t = window.setTimeout(() => {
       introChecked.current = true;
-      if (shouldAutoShowIntro({ loading: false, failed, count: list.length, seen: readIntroSeen(), adding })) setIntro(true);
+      if (shouldAutoShowIntro({ loading: false, failed, count: list.length, seen: readIntroSeen(), adding: cameToAdd })) setIntro(true);
     }, 300);
     return () => window.clearTimeout(t);
-  }, [isLoading, failed, list.length, adding]);
+  }, [isLoading, failed, list.length, cameToAdd]);
   function introChange(next: boolean) {
     setIntro(next);
     if (!next) markIntroSeen();
@@ -99,6 +100,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
     return box && el && box.offsetParent !== null ? { box, el } : null;
   }
   function focusCapture(): boolean {
+    if (!captureTarget() && !empty) flushSync(() => setAdding(true));
     const t = captureTarget();
     if (!t) return false;
     t.el.focus({ preventScroll: true });
@@ -120,6 +122,21 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
       </button>
     </p>
   );
+
+  // With tickets on the rail the prep room is the page, so the capture box
+  // waits behind a button. It stays mounted while hidden: closing it mid-draft
+  // keeps what was typed. A new ticket closes it.
+  const [adding, setAdding] = useState(startOpen);
+  const count = list.length;
+  const lastCount = useRef(count);
+  useEffect(() => {
+    if (count > lastCount.current) setAdding(false);
+    lastCount.current = count;
+  }, [count]);
+  function openAdd() {
+    flushSync(() => setAdding(true));
+    captureTarget()?.el.focus();
+  }
 
   const howItWorks = (
     <button
@@ -163,13 +180,38 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
         <section className={`min-w-0 ${selectedId != null ? "max-md:hidden" : ""}`}>
           <div className="mb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
             <h1 className="aud-title text-4xl">Auditions</h1>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              {howItWorks}
+            <div className="flex items-center gap-3">
               {list.length > 0 && <CalendarToggle open={calOpen} onToggle={() => setCalOpen((v) => !v)} />}
+              <button
+                type="button"
+                aria-label="How it works"
+                title="How it works"
+                className="aud-help-q aud-focus"
+                onClick={() => setIntro(true)}
+              >
+                ?
+              </button>
             </div>
           </div>
           {calOpen && list.length > 0 && <CalendarPanel />}
-          <div ref={capture} className="mb-2">
+          {!adding && (
+            <button
+              type="button"
+              className="aud-pill aud-help aud-focus mb-4 inline-flex h-11 items-center gap-2 px-4 text-[15px]"
+              aria-controls="aud-add"
+              aria-expanded={false}
+              onClick={openAdd}
+            >
+              <span aria-hidden className="text-xl leading-none">+</span>
+              Add an audition
+            </button>
+          )}
+          <div id="aud-add" ref={capture} className={adding ? "mb-4" : "hidden"}>
+            <div className="mb-2 flex justify-end">
+              <button type="button" className="aud-link aud-cap-muted aud-focus text-sm font-medium" onClick={() => setAdding(false)}>
+                close
+              </button>
+            </div>
             <DropBox startOpen={startOpen} source={source} size="compact" firstOne={list.length === 0} />
           </div>
           {isLoading ? (
