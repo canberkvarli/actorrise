@@ -28,7 +28,10 @@ export function markIntroSeen(storage: GetStorage = local): void {
   }
 }
 
-/** Only someone with an empty rail, a loaded list and an unseen intro gets it unasked. */
-export function shouldAutoShowIntro(s: { loading: boolean; failed: boolean; count: number; seen: boolean }): boolean {
-  return !s.loading && !s.failed && s.count === 0 && !s.seen;
+/**
+ * Only someone with an empty rail, a loaded list and an unseen intro gets it
+ * unasked, and not when they arrived to add one (`adding`).
+ */
+export function shouldAutoShowIntro(s: { loading: boolean; failed: boolean; count: number; seen: boolean; adding?: boolean }): boolean {
+  return !s.loading && !s.failed && s.count === 0 && !s.seen && !s.adding;
 }

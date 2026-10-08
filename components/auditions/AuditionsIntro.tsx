@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent } from "react";
+import { flushSync } from "react-dom";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { IconX } from "@tabler/icons-react";
@@ -27,17 +28,22 @@ const SLIDES = [
  * Three cards on what /auditions is. Not a followspot tour: one centred card on
  * the same dark stage the tours use (`.theatre-tour` tokens, so the card flips
  * with the theme and the house stays dark). Radix gives the focus trap, Esc and
- * the dialog semantics. `onCapture` runs after the dialog has let go of focus,
- * so it can put the cursor in the drop box.
+ * the dialog semantics. The last card hands off to the drop box: `onCapture`
+ * focuses it inside the tap (iOS raises the keyboard for nothing else) and
+ * returns whether it could; `onCaptured` runs once the dialog has gone.
  */
 export function AuditionsIntro({
   open,
   onOpenChange,
   onCapture,
+  onCaptured,
+  firstOne,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCapture: () => void;
+  onCapture: () => boolean;
+  onCaptured: () => void;
+  firstOne: boolean;
 }) {
   const [i, setI] = useState(0);
   const [wasOpen, setWasOpen] = useState(open);
@@ -78,7 +84,7 @@ export function AuditionsIntro({
             if (!capture.current) return;
             capture.current = false;
             e.preventDefault();
-            onCapture();
+            onCaptured();
           }}
           className={`theatre-tokens theatre-tour ${theatreFontVars} fixed left-1/2 top-1/2 z-[10071] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 outline-none`}
         >
@@ -91,13 +97,6 @@ export function AuditionsIntro({
               boxShadow: "8px 8px 0 var(--t-gel), 0 24px 60px -20px rgb(0 0 0 / 0.7)",
             }}
           >
-            <DialogClose
-              aria-label="Close"
-              className="absolute right-1.5 top-1.5 flex size-11 items-center justify-center opacity-60 transition-opacity hover:opacity-100"
-            >
-              <IconX className="size-4" aria-hidden />
-            </DialogClose>
-
             <div className="flex items-center gap-3">
               <p
                 className="m-0 text-xs italic tracking-[0.08em]"
@@ -116,6 +115,7 @@ export function AuditionsIntro({
               </span>
             </div>
 
+            <div aria-live="polite">
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={i}
@@ -136,6 +136,7 @@ export function AuditionsIntro({
                 </DialogDescription>
               </motion.div>
             </AnimatePresence>
+            </div>
 
             <div className="mt-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-4" style={{ fontFamily: "var(--t-direction)", color: "var(--t-faint)" }}>
@@ -155,11 +156,13 @@ export function AuditionsIntro({
                   type="button"
                   className="bg-primary text-primary-foreground inline-flex h-11 items-center rounded-full px-5 text-sm font-bold"
                   onClick={() => {
+                    // Close first so the focus trap lets go, then focus in this same tap.
                     capture.current = true;
-                    change(false);
+                    flushSync(() => change(false));
+                    onCapture();
                   }}
                 >
-                  Add my first audition
+                  {firstOne ? "Add my first audition" : "Add an audition"}
                 </button>
               ) : (
                 <button
@@ -181,6 +184,14 @@ export function AuditionsIntro({
               )}
             </div>
           </div>
+          {/* Outside the scrolling panel, so a short landscape screen never scrolls it away. */}
+          <DialogClose
+            aria-label="Close"
+            className="absolute right-1.5 top-1.5 z-10 flex size-11 items-center justify-center opacity-60 transition-opacity hover:opacity-100"
+            style={{ color: "var(--t-text)" }}
+          >
+            <IconX className="size-4" aria-hidden />
+          </DialogClose>
         </DialogPrimitive.Content>
       </DialogPortal>
     </Dialog>

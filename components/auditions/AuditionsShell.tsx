@@ -48,33 +48,51 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   const failed = isError && list.length === 0;
 
   // The three-card intro opens by itself once per browser, and only on an
-  // empty rail: someone with auditions already knows what this page is.
+  // empty rail: someone with auditions already knows what this page is. Nor
+  // when they came here to add one (?new=1, onboarding): they are mid-task, and
+  // leaving it unseen lets it open on a later empty visit instead.
   const router = useRouter();
   const capture = useRef<HTMLDivElement>(null);
   const [intro, setIntro] = useState(false);
   const introChecked = useRef(false);
+  const adding = startOpen || source === "onboarding";
   useEffect(() => {
     if (introChecked.current || isLoading) return;
     // A beat after the rail paints, so the card lands on a page rather than a blank.
     const t = window.setTimeout(() => {
       introChecked.current = true;
-      if (shouldAutoShowIntro({ loading: false, failed, count: list.length, seen: readIntroSeen() })) setIntro(true);
+      if (shouldAutoShowIntro({ loading: false, failed, count: list.length, seen: readIntroSeen(), adding })) setIntro(true);
     }, 300);
     return () => window.clearTimeout(t);
-  }, [isLoading, failed, list.length]);
+  }, [isLoading, failed, list.length, adding]);
   function introChange(next: boolean) {
     setIntro(next);
     if (!next) markIntroSeen();
   }
-  // "Add my first audition": the paste box if it is showing, else whatever the
-  // capture area has open (the fill-it-in card). Hidden on a phone prep room, so go to the rail.
-  function toCapture() {
+  // "Add my first audition". Focus lands synchronously inside the click, because
+  // iOS only raises the keyboard for a focus() made in the tap itself. The paste
+  // box if it is showing, else the first field of whatever the capture area has
+  // open (the fill-it-in card). Hidden on a phone prep room, so go to the rail.
+  function captureTarget() {
     const box = capture.current;
-    const el = box?.querySelector<HTMLElement>("textarea:not([disabled])") ?? box?.querySelector<HTMLElement>("input:not([type=file]), textarea, button");
-    if (!box || !el || box.offsetParent === null) return void router.push("/auditions");
+    const el = box?.querySelector<HTMLElement>("textarea:not([disabled])")
+      ?? box?.querySelector<HTMLElement>("input:not([type=file]):not([disabled]), textarea:not([disabled])")
+      ?? box?.querySelector<HTMLElement>("button");
+    return box && el && box.offsetParent !== null ? { box, el } : null;
+  }
+  function focusCapture(): boolean {
+    const t = captureTarget();
+    if (!t) return false;
+    t.el.focus({ preventScroll: true });
+    return true;
+  }
+  // After the dialog has gone (its scroll lock with it): bring the box into view.
+  function revealCapture() {
+    const t = captureTarget();
+    if (!t) return void router.push("/auditions");
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    box.scrollIntoView({ block: "center", behavior: still ? "auto" : "smooth" });
-    el.focus({ preventScroll: true });
+    t.box.scrollIntoView({ block: "center", behavior: still ? "auto" : "smooth" });
+    if (document.activeElement !== t.el) t.el.focus({ preventScroll: true });
   }
   const retry = (
     <p className="aud-muted mt-6 text-sm">
@@ -133,7 +151,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
           ) : null}
         </section>
       </div>
-      <AuditionsIntro open={intro} onOpenChange={introChange} onCapture={toCapture} />
+      <AuditionsIntro open={intro} onOpenChange={introChange} onCapture={focusCapture} onCaptured={revealCapture} firstOne={list.length === 0} />
     </div>
   );
 }

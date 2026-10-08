@@ -37,5 +37,6 @@ describe("shouldAutoShowIntro", () => {
   it("not while loading", () => expect(shouldAutoShowIntro({ ...base, loading: true })).toBe(false));
   it("not when the list failed", () => expect(shouldAutoShowIntro({ ...base, failed: true })).toBe(false));
   it("not with auditions on the rail", () => expect(shouldAutoShowIntro({ ...base, count: 2 })).toBe(false));
+  it("not when they came to add one", () => expect(shouldAutoShowIntro({ ...base, adding: true })).toBe(false));
   it("not once seen", () => expect(shouldAutoShowIntro({ ...base, seen: true })).toBe(false));
 });
