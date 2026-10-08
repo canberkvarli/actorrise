@@ -241,6 +241,35 @@ order by e.created_at desc
 """
 
 
+# The audition tracker (services/auditions), moderators only while Canberk
+# tries it (2026-10-08), so for now these rows are his own. Staff is counted
+# separately rather than hidden, so the section is not blank until launch.
+AUDITIONS = """
+select coalesce(u.exclude_from_stats, false) staff,
+       count(*) filter (where a.created_at > now() - interval '7 days'),
+       count(*) filter (where a.created_at <= now() - interval '7 days' and a.created_at > now() - interval '14 days'),
+       count(*) filter (where a.status = 'scheduled'),
+       count(distinct a.user_id)
+from auditions a join users u on u.id = a.user_id
+where a.deleted_at is null group by 1 order by 1
+"""
+
+AUDITIONS_UPCOMING = """
+select coalesce(nullif(u.name, ''), u.email), a.project, coalesce(a.role, ''), a.kind,
+       coalesce(a.starts_at, a.due_at)::date, a.source,
+       exists (select 1 from audition_pieces x where x.audition_id = a.id) has_piece
+from auditions a join users u on u.id = a.user_id
+where a.deleted_at is null and coalesce(a.starts_at, a.due_at) between now() and now() + interval '7 days'
+order by 5 limit 10
+"""
+
+AUDITION_EVENTS = """
+select e.event_name, count(*), count(distinct e.user_id)
+from user_events e where e.event_name like 'audition_%' and e.created_at > now() - interval '7 days'
+group by 1 order by 2 desc
+"""
+
+
 def table(head: tuple[str, ...], rows: list[tuple]) -> str:
     if not rows:
         return "_nobody_\n"
@@ -359,6 +388,16 @@ def build(conn) -> str:
         table(("status", "plan", "people"), q(APP_SUBS)),
         "Events this week (purchases, renewals, trials, expirations), as Apple reported them:\n",
         table(("day", "type", "product", "period", "who"), q(APP_EVENTS)),
+        "## 7. Auditions, the tracker\n",
+        "Moderators only until Canberk opens it up, so `staff = true` is him trying it.",
+        "Created this week against last, how many are still scheduled, by how many people.\n",
+        table(("staff", "created, 7 days", "7 before", "scheduled now", "people"),
+              [("yes" if r[0] else "no",) + tuple(r[1:]) for r in q(AUDITIONS)]),
+        "### Coming up in the next 7 days\n",
+        table(("who", "project", "role", "kind", "when", "source", "piece attached"),
+              [r[:6] + ("yes" if r[6] else "no",) for r in q(AUDITIONS_UPCOMING)]),
+        "### What the tracker recorded this week\n",
+        table(("event", "times", "people"), q(AUDITION_EVENTS)),
     ]
     return "\n".join(parts)
 

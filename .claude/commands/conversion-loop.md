@@ -33,6 +33,14 @@ app's readers who signed in with a real address are ordinary actors and may be w
 under the same rules as section 5, but only if the brief lists them there; do not add
 people from section 6 to the five by hand. An anonymous app reader cannot be emailed.
 
+Section 7 is the audition tracker (Canberk, 2026-10-08: "add the auditions tab too"). It is
+moderators only until he opens it up, so the staff row is him trying it and the real-user
+row stays at zero until launch; print both. Read: how many auditions were added this week
+against last, what is coming up in the next 7 days and whether a piece is attached, and
+what the tracker recorded (created, parsed, reminders sent, outcomes logged). Once real
+users have auditions, someone with one coming up and no piece attached is the person to
+notice, but they are written to only if section 5 lists them.
+
 ## 2. The inbox
 
 Load the Gmail tools and search for replies since the last run (the date of the newest other
@@ -153,6 +161,11 @@ Ghost Light (7 days, against the 7 before)
   in app    <n> people read <n> pieces (<n> signed in, <n> anonymous)
   money     <n> paying, <n> in a trial; this week: <each RevenueCat event in a few words, or "no events">
   people    <two or three lines: who read what, in the app, by first name; "anonymous" for the rest>
+
+Auditions (7 days, against the 7 before)
+  added     <n> by real users (<change>), <n> by staff
+  coming up <n> in the next 7 days, <n> with a piece attached; <project, kind, day> for each real one
+  recorded  <created / parsed / reminders sent / outcomes logged, in a few words, or "nothing yet">
 
 Broken or odd: <anything that failed, any number that moved more than it should>
 ```

@@ -50,3 +50,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-10-06, 0 saved, 0 scenes finished, free
 **They said:** "I'm looking for something dramatic but also comedic that I can sink my emotional teeth into. I can play male teens to mid-20s. I prefer queer / LGBT themes. Something that is spoken TO and is actively affecting somebody, rather than just telling a story."
 **Heard as:** a search the product cannot express: "spoken to someone, not narrated" is not a filter; queer-themed male pieces for teens to mid 20s are thin in the corpus (no Angels, no Inheritance, no Spring Awakening)
+
+## 2026-10-08
+
+**Replying to:** a thread where Canberk had recommended six pieces by hand
+**Account:** signed up 2026-09-29, 6 saved, 0 scenes finished, free, 3 reads this month
+**They said:** "I was planning to read the monologues, but I found out they're only available in the paid version. I hadn't planned on buying it yet, but when I do decide to, I'll definitely choose something from what you suggested."
+**Heard as:** price; the free-read limit landed on pieces the founder had just recommended, so the wall read as the whole library being paid
