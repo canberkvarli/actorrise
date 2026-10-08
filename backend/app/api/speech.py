@@ -114,6 +114,13 @@ async def synthesize_speech(
 #: and `gpt-4o-transcribe` is materially more accurate on short, emotional,
 #: accented speech, which is the whole of what this endpoint ever receives.
 #: whisper-1 stays last so a model outage degrades instead of failing.
+# Live streaming runs on mini on purpose. The actor is reading a script we
+# already hold, and we hand that script over as the prompt, so the hard part of
+# transcription — guessing the words — is largely solved before the audio
+# arrives. Mini is a fraction of the cost per minute and a rehearsal holds the
+# session open for as long as the actor keeps working.
+LIVE_TRANSCRIBE_MODEL = "gpt-4o-mini-transcribe"
+
 TRANSCRIBE_MODELS = ("gpt-4o-transcribe", "gpt-4o-mini-transcribe", "whisper-1")
 
 
@@ -192,6 +199,96 @@ async def transcribe_speech(
                 os.unlink(tmp_path)
             except OSError:
                 pass
+
+
+class LiveSessionRequest(BaseModel):
+    """Open a live transcription session for one rehearsal."""
+
+    # The whole scene's text, trimmed, as a vocabulary hint. Not one line:
+    # the secret is minted once per rehearsal and the client re-points the
+    # prompt at the current speech over the data channel as the scene moves.
+    prompt: str = Field(default="", max_length=2000)
+
+
+@router.post("/live-session")
+async def create_live_session(
+    request: LiveSessionRequest,
+    current_user: User = Depends(get_current_user),
+    _gate: bool = Depends(FeatureGate("scene_partner", increment=False)),
+    _burst: bool = Depends(BurstLimiter("speech_live_session")),
+):
+    """
+    Mint an ephemeral key for a browser-side live transcription session.
+
+    Why this exists at all: /transcribe is a BATCH endpoint. The actor speaks,
+    we stop the recorder, upload a file, wait for a round trip, and only then
+    know what they said. That round trip is the lag — there is no moment in
+    that design where the app knows a word while the actor is still saying it,
+    so no amount of threshold tuning makes it feel live.
+
+    A Realtime transcription session streams instead: words arrive as deltas
+    while the actor is still speaking, and the server's own turn detection says
+    when they stopped. The browser talks to OpenAI directly over WebRTC, so the
+    audio never passes through us and there is no upload at all. This endpoint's
+    only job is to hand out a short-lived key so the real one never reaches the
+    page.
+
+    Cost: `gpt-4o-mini-transcribe`, billed per minute of audio actually sent.
+    The client keeps the microphone track disabled except on the actor's own
+    turn, which both halves the bill and stops the session transcribing our own
+    partner voice back out of the speakers.
+    """
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+
+    client = OpenAI(api_key=settings.openai_api_key)
+    try:
+        secret = client.realtime.client_secrets.create(
+            session={
+                "type": "transcription",
+                "audio": {
+                    "input": {
+                        "transcription": {
+                            "model": LIVE_TRANSCRIBE_MODEL,
+                            "language": "en",
+                            # The script itself, as a hint. A transcriber that
+                            # already knows the words is a different instrument
+                            # from one guessing at them: this is what keeps
+                            # period diction intact and stops proper nouns
+                            # being modernised into something that will never
+                            # match the page.
+                            "prompt": request.prompt[:2000],
+                        },
+                        # Semantic, not a volume gate. A volume gate cannot tell
+                        # a dramatic pause from a finished line, which is the
+                        # whole difficulty here — it cut actors off mid-speech
+                        # and stranded them on noisy rooms. This waits on a
+                        # model's read of whether the thought is complete.
+                        #
+                        # "low" is deliberate: patient, up to 8s. Being cut off
+                        # mid-line is a much worse failure than a held beat,
+                        # and the fast path does not wait on this at all. The
+                        # scene moves the instant the last word of the speech
+                        # lands in the transcript; this only catches a line
+                        # that was trailed off or misread.
+                        "turn_detection": {
+                            "type": "semantic_vad",
+                            "eagerness": "low",
+                        },
+                        "noise_reduction": {"type": "near_field"},
+                    }
+                },
+            }
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Realtime transcription session failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Live session unavailable")
+
+    return {
+        "client_secret": secret.value,
+        "expires_at": secret.expires_at,
+        "model": LIVE_TRANSCRIBE_MODEL,
+    }
 
 
 @router.get("/voices")

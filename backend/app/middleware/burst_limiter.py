@@ -31,6 +31,9 @@ BURST_LIMITS: dict[str, dict] = {
     "scene_partner": {"max_requests": 10, "window_seconds": 60},
     "speech_synthesize": {"max_requests": 20, "window_seconds": 60},
     "speech_transcribe": {"max_requests": 20, "window_seconds": 60},
+    # One ephemeral key covers a whole rehearsal, so a working actor needs a
+    # handful an hour. A page in a reconnect loop needs stopping.
+    "speech_live_session": {"max_requests": 12, "window_seconds": 60},
 }
 
 # How often to prune stale entries (seconds)
