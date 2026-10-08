@@ -219,6 +219,7 @@ def sync_analytics(db: Session, cfg: Config, days: int = 30) -> dict[str, Any]:
                     setattr(row, field, value)
                 if notes:
                     row.source_note = "; ".join(notes)[:200]
+                row.fetched_at = datetime.now(timezone.utc)
                 db.add(row)
                 out[key] += 1
             db.commit()
@@ -268,6 +269,9 @@ def sync_sales(db: Session, cfg: Config, days: int = 14) -> dict[str, Any]:
             drow = db.get(AppStoreDaily, day) or AppStoreDaily(day=day)
             drow.iap_units = iap_units
             drow.proceeds_usd = round(proceeds, 2)
+            # Updates touched the row but not the stamp, so "last fetched" on
+            # the admin page froze at the first sync (2026-10-08).
+            drow.fetched_at = datetime.now(timezone.utc)
             db.add(drow)
             out["sales_days"] += 1
         db.commit()
