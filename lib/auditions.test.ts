@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { countdown, whenLabel, groupByScope, toLocalInput, fromLocalInput, changedFields, type Audition } from "./auditions";
+import { countdown, whenLabel, groupByScope, toLocalInput, fromLocalInput, changedFields, momentsFor, type Audition } from "./auditions";
 
 const NOW = new Date("2026-10-07T15:00:00Z");
 
@@ -67,5 +67,21 @@ describe("changedFields", () => {
   });
   it("ignores objects that did not change", () => {
     expect(changedFields({ material: { genre: "comedic" } }, { material: { genre: "comedic" } })).toEqual([]);
+  });
+});
+
+describe("momentsFor", () => {
+  const a = { when: "2026-10-13T18:40:00Z", tz: "America/New_York", kind: "in_person" as const };
+  it("has no stops without a date", () => {
+    expect(momentsFor({ ...a, when: null })).toEqual([]);
+  });
+  it("marks only the stops behind you", () => {
+    const m = momentsFor(a, new Date("2026-10-11T12:00:00Z"));
+    expect(m.map((x) => x.key)).toEqual(["prep", "eve", "day", "after"]);
+    expect(m.map((x) => x.passed)).toEqual([true, false, false, false]);
+    expect(m[2].day).toBe("Tue");
+  });
+  it("calls the day a tape due for a self-tape", () => {
+    expect(momentsFor({ ...a, kind: "self_tape" })[2].label).toBe("tape due");
   });
 });

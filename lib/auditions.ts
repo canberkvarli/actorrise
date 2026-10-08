@@ -131,3 +131,24 @@ export function browserTz(): string {
 export function changedFields(parsed: Record<string, unknown>, saved: Record<string, unknown>): string[] {
   return Object.keys(saved).filter((k) => k in parsed && JSON.stringify(parsed[k] ?? null) !== JSON.stringify(saved[k] ?? null));
 }
+
+export type Moment = { key: "prep" | "eve" | "day" | "after"; label: string; day: string; at: number; passed: boolean };
+
+/**
+ * The four stops between now and the morning after, for the timeline under
+ * the next-up ticket. Approximate on purpose (the server owns the real send
+ * times): it only decides which stops are behind you.
+ */
+export function momentsFor(a: Pick<Audition, "when" | "tz" | "kind">, now: Date = new Date()): Moment[] {
+  if (!a.when) return [];
+  const t = new Date(a.when).getTime();
+  const timeZone = safeTz(a.tz);
+  const day = (ms: number) => new Date(ms).toLocaleDateString("en-US", { weekday: "short", timeZone });
+  const stops: [Moment["key"], string, number][] = [
+    ["prep", "three days out", t - 72 * HOUR],
+    ["eve", "the night before", t - 24 * HOUR],
+    ["day", a.kind === "self_tape" ? "tape due" : "the day", t],
+    ["after", "the morning after", t + 18 * HOUR],
+  ];
+  return stops.map(([key, label, at]) => ({ key, label, day: day(at), at, passed: at <= now.getTime() }));
+}

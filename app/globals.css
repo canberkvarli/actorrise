@@ -9508,6 +9508,56 @@ html[data-firstrun="1"] body::before {
   transform: translate(3px, 3px);
   box-shadow: 1px 1px 0 var(--aud-press);
 }
+/* The reel: tickets side by side, so the open one lifts instead of sliding. */
+.aud-reel {
+  scrollbar-width: thin;
+}
+.aud-reel .aud-ticket[data-open="true"] {
+  transform: translateY(-6px);
+}
+/* The timeline under the next-up ticket: a rule through four stops. */
+.aud-line li {
+  position: relative;
+  padding-top: 22px;
+  padding-right: 8px;
+}
+.aud-line li::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: var(--aud-rule);
+}
+.aud-line li[data-passed="true"]::before {
+  background: var(--aud-fg);
+}
+.aud-line li:last-child::before {
+  right: auto;
+  width: 14px;
+}
+.aud-line-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--aud-fg);
+  background: var(--aud-surface);
+}
+.aud-line li[data-passed="true"] .aud-line-dot {
+  background: var(--aud-fg);
+}
+.aud-line li[data-next="true"] .aud-line-dot {
+  background: var(--aud-brand);
+  border-color: var(--aud-brand);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--aud-brand) 25%, transparent);
+}
+.aud-step[data-done="true"] {
+  border-color: var(--aud-fg);
+}
 /* "How it works": a quiet pill, the brand stays on Read it. */
 .aud-help {
   background: var(--aud-surface);

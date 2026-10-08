@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { trackEvent } from "@/lib/events";
-import { countdown, STATUS_LABEL, STATUS_ORDER, whenLabel, type Audition, type AuditionPiece, type AuditionStatus } from "@/lib/auditions";
+import { countdown, KIND_LABEL, momentsFor, STATUS_LABEL, STATUS_ORDER, whenLabel, type Audition, type AuditionPiece, type AuditionStatus } from "@/lib/auditions";
 import { useAddPiece, useDeleteAudition, useLogOutcome, useRemovePiece, useUpdateAudition } from "@/hooks/useAuditions";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { useScript } from "@/hooks/useScripts";
@@ -22,7 +22,7 @@ export const OUTCOME_NOTE: Record<"good" | "callback" | "no", string> = {
 
 const SAVE_FAILED = "That didn't save. Try again in a moment.";
 
-export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
+export function PrepRoom({ a, now, next = false }: { a: Audition; now: Date; next?: boolean }) {
   const router = useRouter();
   const c = countdown(a.when, now, a.tz);
   // Digits and "?" get the big display size. Words ("Now", "Tomorrow", "Oct 12") stay at a size
@@ -91,69 +91,98 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
     );
   }
 
+  const moments = a.scope === "upcoming" ? momentsFor(a, now) : [];
+  const nextStop = moments.findIndex((m) => !m.passed);
+  const tiles = (a.prep?.steps.length ?? 0) + (a.bring ? 1 : 0);
+  const meta = [a.role, a.kind !== "in_person" ? KIND_LABEL[a.kind] : null].filter(Boolean).join(" · ");
+
   return (
-    <article className="aud-prep grid sm:grid-cols-[150px_1fr]">
-      <div className="aud-prep-stub bg-primary text-primary-foreground flex min-w-0 items-center gap-4 border-dashed px-4 py-3 max-sm:border-b-2 sm:flex-col sm:items-center sm:justify-start sm:border-r-2 sm:py-6 sm:text-center">
-        <div className="min-w-0 shrink-0 sm:w-full">
-          <p className={big ? "aud-stub-n text-6xl sm:text-8xl" : "aud-stub-n break-words text-3xl"}>{c.n}</p>
-          {c.unit && <p className="aud-dir text-[11px] font-semibold uppercase tracking-[0.12em]">{c.unit}</p>}
+    <article className="aud-prep grid md:grid-cols-[220px_1fr]">
+      <div className="aud-prep-stub bg-primary text-primary-foreground flex min-w-0 items-center gap-5 border-dashed px-5 py-4 max-md:border-b-2 md:flex-col md:justify-center md:border-r-2 md:py-8 md:text-center">
+        <div className="min-w-0 shrink-0 md:w-full">
+          <p className={big ? "aud-stub-n text-7xl md:text-[148px]" : "aud-stub-n break-words text-4xl md:text-5xl"}>{c.n}</p>
+          {c.unit && <p className="aud-dir mt-1 text-xs font-semibold uppercase tracking-[0.14em]">{c.unit}</p>}
         </div>
-        <p className="aud-dir min-w-0 text-[13px] font-medium leading-snug sm:mt-4">{whenLabel(a)}</p>
+        <p className="aud-dir min-w-0 text-sm font-medium leading-snug md:mt-6">{whenLabel(a)}</p>
       </div>
 
-      <div className="min-w-0 p-4 sm:p-6">
-        <p className="aud-dir aud-muted text-[11px] font-semibold uppercase tracking-[0.1em]">{STATUS_LABEL[a.status]}</p>
-        <h1 className="aud-title break-words text-3xl sm:text-4xl">{a.project}</h1>
-        {a.role && <p className="aud-muted mt-0.5 text-sm">{a.role}</p>}
-
-        <dl className="mt-3">
-          {rows.filter(([, v]) => v).map(([k, v]) => (
-            <div key={k} className="aud-row aud-dir grid grid-cols-[84px_1fr] items-baseline py-1.5 text-sm">
-              <dt>{k}</dt><dd className="min-w-0 break-words">{v}</dd>
-            </div>
-          ))}
-        </dl>
+      <div className="min-w-0 p-5 md:p-8">
+        <p className="aud-dir aud-muted text-xs font-semibold uppercase tracking-[0.12em]">{next ? "Next up" : STATUS_LABEL[a.status]}</p>
+        <h2 className="aud-title mt-1 break-words text-4xl md:text-6xl">{a.project}</h2>
+        {meta && <p className="mt-1.5 text-base md:text-lg">{meta}</p>}
+        {a.location && <p className="aud-muted mt-0.5 break-words text-sm md:text-base">{a.location}</p>}
 
         {a.prep && (
-          <ol className="mt-4 grid gap-2.5">
+          <ol className={`mt-6 grid gap-3 ${tiles >= 3 ? "md:grid-cols-3" : tiles === 2 ? "md:grid-cols-2" : ""}`}>
             {a.prep.steps.map((s) => (
-              <li key={s.key} className={`aud-step grid grid-cols-[22px_1fr_auto] gap-3 px-3 py-2.5 ${hasPieces(s.key) ? "items-start" : "items-center"}`}>
-                <span className="aud-box" data-done={s.done ? "true" : "false"} aria-label={s.done ? "done" : "not yet"} />
-                <span className="min-w-0 text-sm">
-                  {s.label}
-                  {s.key === "sides" && (
-                    <span className="aud-dir aud-muted block text-[12.5px]">{sidesNote(a.prep!.runs)}</span>
-                  )}
-                  {hasPieces(s.key) && <Pieces a={a} />}
+              <li key={s.key} className="aud-step flex min-w-0 flex-col gap-2 p-4" data-done={s.done ? "true" : "false"}>
+                <span className="flex items-start gap-2.5">
+                  <span className="aud-box mt-0.5 shrink-0" data-done={s.done ? "true" : "false"} aria-label={s.done ? "done" : "not yet"} />
+                  <span className="min-w-0 text-[15px] font-semibold leading-snug">{s.label}</span>
                 </span>
+                {s.key === "sides" && <span className="aud-dir aud-muted text-[13px]">{sidesNote(a.prep!.runs)}</span>}
+                {(s.key === "piece" || s.key === "bring") && <Pieces a={a} />}
                 {s.href && (
                   <Link
                     href={s.href}
                     onClick={() => s.key !== "bring" && trackEvent("audition_prep_started", { audition_id: a.id, kind: s.key === "sides" ? "sides" : "monologue" })}
-                    className={`t-cta whitespace-nowrap px-3 py-1.5 text-[12.5px] font-semibold ${s.done ? "border border-current" : "bg-primary text-primary-foreground"}`}
+                    className={`t-cta mt-auto self-start whitespace-nowrap px-3.5 py-2 text-[13px] font-semibold ${s.done ? "border border-current" : "bg-primary text-primary-foreground"}`}
                   >
                     {s.key === "sides"
-                      ? sidesReading ? "Open them" : a.prep!.runs ? "Run it again" : "Run it"
+                      ? sidesReading ? "Open them" : a.prep!.runs ? "Run it again" : "Run your sides"
                       : s.key === "piece" ? "See them" : "Your collection"}
                   </Link>
                 )}
               </li>
             ))}
+            {a.bring && (
+              <li className="aud-step flex min-w-0 flex-col gap-2 p-4">
+                <span className="text-[15px] font-semibold leading-snug">Pack</span>
+                <span className="aud-dir break-words text-sm">{a.bring}</span>
+              </li>
+            )}
           </ol>
         )}
         {/* A sides-only audition has no piece step, but the actor may still be bringing a monologue. */}
-        {a.prep && !a.prep.steps.some((s) => hasPieces(s.key)) && (
-          <div className="mt-3 px-3 text-sm">
+        {a.prep && !a.prep.steps.some((s) => s.key === "piece" || s.key === "bring") && (
+          <div className="mt-3 text-sm">
             <Pieces a={a} label="Bringing a monologue too?" />
           </div>
         )}
 
+        {moments.length > 0 && (
+          <div className="mt-8">
+            <ol className="aud-line grid grid-cols-4" aria-label="Between now and the morning after">
+              {moments.map((m, i) => (
+                <li key={m.key} data-passed={m.passed ? "true" : "false"} data-next={i === nextStop ? "true" : undefined}>
+                  <span className="aud-line-dot" aria-hidden />
+                  <span className="aud-hero-dir block text-[15px] leading-tight md:text-lg">{m.label}</span>
+                  <span className="aud-dir aud-muted block text-xs">{m.day}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="aud-muted mt-3 text-[13px]">
+              {a.reminders_on ? "I'll email you three days out, the night before, and the morning after." : "Reminders are off for this one."}
+            </p>
+          </div>
+        )}
+
+        {rows.some(([k, v]) => v && k !== "Where" && k !== "Bring") && (
+          <dl className="mt-6 grid gap-x-8 md:grid-cols-2">
+            {rows.filter(([k, v]) => v && k !== "Where" && k !== "Bring").map(([k, v]) => (
+              <div key={k} className="aud-row aud-dir grid grid-cols-[84px_1fr] items-baseline py-1.5 text-sm">
+                <dt>{k}</dt><dd className="min-w-0 break-words">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
         {past && a.status !== "booked" && a.status !== "passed" && answeredFor !== a.id && (
-          <div className="mt-5">
-            <p className="text-sm">How did it go?</p>
+          <div className="mt-6">
+            <p className="text-base">How did it go?</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {([["good", "Felt good"], ["callback", "Got a callback"], ["no", "Not this time"]] as const).map(([o, label]) => (
-                <button key={o} type="button" className="aud-chip px-2.5 py-1" disabled={outcome.isPending}
+                <button key={o} type="button" className="aud-chip px-3 py-1.5" disabled={outcome.isPending}
                   onClick={() => outcome.mutate({ id: a.id, outcome: o }, {
                     onSuccess: () => { setAnsweredFor(a.id); toast.success(OUTCOME_NOTE[o]); },
                     onError: () => toast.error(SAVE_FAILED),
@@ -165,7 +194,7 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
           </div>
         )}
 
-        <div className="mt-5 flex flex-wrap gap-1.5" role="group" aria-label="Status">
+        <div className="mt-6 flex flex-wrap gap-1.5" role="group" aria-label="Status">
           {STATUS_ORDER.map((s: AuditionStatus) => (
             <button key={s} type="button" className="aud-chip px-2 py-1" data-tone={s === a.status ? "gel" : undefined}
               aria-pressed={s === a.status} onClick={() => s !== a.status && save({ status: s })}>
@@ -200,8 +229,6 @@ export function PrepRoom({ a, now }: { a: Audition; now: Date }) {
     </article>
   );
 }
-
-const hasPieces = (key: string) => key === "piece" || key === "bring";
 
 function pieceName(p: AuditionPiece): string {
   if (!p.monologue_id) return "A scene";

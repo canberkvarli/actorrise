@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { trackEvent } from "@/lib/events";
@@ -18,9 +17,9 @@ import { GhostTicket } from "./GhostTicket";
 import { takeCalendarOffer } from "@/lib/calendarFeed";
 
 /**
- * One shell for /auditions and /auditions/[id]. Desktop: rail left, prep room
- * right. Phone: the rail is the page; with an id it is the prep room alone.
- * Visibility is Tailwind only (see globals.css AUDITIONS note).
+ * One shell for /auditions and /auditions/[id]. One column on every width:
+ * the open audition as one big ticket (the next one up, unless an id picks
+ * another), the rest as reels under it.
  */
 export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   const params = useSearchParams();
@@ -176,74 +175,61 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
           </section>
         </div>
       ) : (
-      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 md:grid-cols-[360px_1fr] md:py-10">
-        <section className={`min-w-0 ${selectedId != null ? "max-md:hidden" : ""}`}>
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
-            <h1 className="aud-title text-4xl">Auditions</h1>
-            <div className="flex items-center gap-3">
-              {list.length > 0 && <CalendarToggle open={calOpen} onToggle={() => setCalOpen((v) => !v)} />}
-              <button
-                type="button"
-                aria-label="How it works"
-                title="How it works"
-                className="aud-help-q aud-focus"
-                onClick={() => setIntro(true)}
-              >
-                ?
-              </button>
-            </div>
-          </div>
-          {calOpen && list.length > 0 && <CalendarPanel />}
-          {!adding && (
+      <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 md:pb-20 md:pt-10">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <h1 className="aud-title text-4xl">Auditions</h1>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {list.length > 0 && <CalendarToggle open={calOpen} onToggle={() => setCalOpen((v) => !v)} />}
             <button
               type="button"
-              className="aud-pill aud-help aud-focus mb-4 inline-flex h-11 items-center gap-2 px-4 text-[15px]"
-              aria-controls="aud-add"
-              aria-expanded={false}
-              onClick={openAdd}
+              aria-label="How it works"
+              title="How it works"
+              className="aud-help-q aud-focus"
+              onClick={() => setIntro(true)}
             >
-              <span aria-hidden className="text-xl leading-none">+</span>
-              Add an audition
+              ?
             </button>
-          )}
-          <div id="aud-add" ref={capture} className={adding ? "mb-4" : "hidden"}>
-            <div className="mb-2 flex justify-end">
-              <button type="button" className="aud-link aud-cap-muted aud-focus text-sm font-medium" onClick={() => setAdding(false)}>
-                close
+            {!adding && (
+              <button
+                type="button"
+                className="aud-pill aud-help aud-focus inline-flex h-11 items-center gap-2 px-4 text-[15px]"
+                aria-controls="aud-add"
+                aria-expanded={false}
+                onClick={openAdd}
+              >
+                <span aria-hidden className="text-xl leading-none">+</span>
+                Add an audition
               </button>
-            </div>
-            <DropBox startOpen={startOpen} source={source} size="compact" firstOne={list.length === 0} />
+            )}
           </div>
-          {isLoading ? (
-            <p className="aud-muted mt-6 text-sm">Loading your rail</p>
-          ) : failed ? (
-            retry
-          ) : list.length === 0 ? (
-            <p className="aud-muted mt-6 text-sm">Paste the next casting email you get. I&apos;ll handle the reminders.</p>
-          ) : (
-            <>
-              <TicketRail list={list} openId={open?.id ?? null} now={now} />
-              {offer && <div className="mt-5">{offer}</div>}
-            </>
-          )}
-        </section>
-
-        <section className={`min-w-0 ${selectedId == null ? "max-md:hidden" : ""}`}>
-          {selectedId != null && (
-            <Link href="/auditions" className="aud-dir aud-link aud-focus mb-3 inline-block text-sm font-medium md:hidden">all auditions</Link>
-          )}
-          {offer && <div className="mb-4 md:hidden">{offer}</div>}
-          {logged && (
-            <p role="status" className="aud-dir aud-muted mb-3 text-[13.5px]">{logged}</p>
-          )}
-          {open ? (
-            <PrepRoom a={open} now={now} />
-          ) : failed && selectedId != null ? (
-            <div className="md:hidden">{retry}</div>
-          ) : !isLoading && !failed && selectedId != null ? (
-            <p className="aud-muted text-sm">That audition isn&apos;t on your rail.</p>
-          ) : null}
-        </section>
+        </div>
+        {calOpen && list.length > 0 && <CalendarPanel />}
+        <div id="aud-add" ref={capture} className={adding ? "mx-auto mb-8 max-w-2xl" : "hidden"}>
+          <div className="mb-2 flex justify-end">
+            <button type="button" className="aud-link aud-cap-muted aud-focus text-sm font-medium" onClick={() => setAdding(false)}>
+              close
+            </button>
+          </div>
+          <DropBox startOpen={startOpen} source={source} size="compact" firstOne={list.length === 0} />
+        </div>
+        {logged && (
+          <p role="status" className="aud-dir aud-muted mb-3 text-[13.5px]">{logged}</p>
+        )}
+        {isLoading ? (
+          <p className="aud-muted mt-6 text-sm">Loading your rail</p>
+        ) : failed ? (
+          retry
+        ) : open ? (
+          <PrepRoom a={open} now={now} next={open.id === fallback?.id && open.scope === "upcoming"} />
+        ) : selectedId != null ? (
+          <p className="aud-muted text-sm">That audition isn&apos;t on your rail.</p>
+        ) : null}
+        {offer && <div className="mt-6">{offer}</div>}
+        {list.length > 1 && (
+          <div className="mt-12">
+            <TicketRail list={list} openId={open?.id ?? null} now={now} />
+          </div>
+        )}
       </div>
       )}
       <AuditionsIntro open={intro} onOpenChange={introChange} onCapture={focusCapture} onCaptured={revealCapture} firstOne={list.length === 0} />
