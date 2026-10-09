@@ -451,7 +451,6 @@ type DeliverVia =
   | 'sr_dropped_tail'  // most of the line matched, quiet for a beat
   | 'sr_trailed_off'   // some of the line matched, long quiet
   | 'whisper'          // take ended on silence, Whisper transcript matched
-  | 'silent_skip'      // skip-if-silent timer, nothing heard
   | 'manual';          // Skip line / Enter
 
 /**
@@ -532,27 +531,78 @@ function renderLineTokens(text: string, classForWord: (indices: number[]) => str
  * working perfectly. That engine is gone. The words come from a streaming
  * transcriber that was handed the script in advance.
  */
-function renderLineWithWordHighlights(text: string, result: WordMatchResult) {
-  return renderLineTokens(text, (indices) =>
-    indices.some(i => result.words[i]?.matched)
-      ? 'text-[var(--t-text)] transition-colors duration-200'
-      : 'text-[var(--t-muted-dark)] transition-colors duration-200',
-  );
-}
+/**
+ * How a line is inked, and the ONLY way any line on this page is drawn.
+ *
+ * This is why the active line used to flicker, and the flicker was not a
+ * styling problem — it was three different renderers taking turns.
+ * `renderTextWithStageDirections` returns a bare STRING for a line with no
+ * bracket in it; the highlight renderers return one `<span>` per word. So every
+ * time the state changed — the first transcript delta arriving, the AI sweep
+ * starting at -1 and then landing on word 0, a retry clearing the result, a
+ * line simply becoming the active one — React tore down a text node and mounted
+ * a dozen inline boxes, or the reverse. Different boxes break at different
+ * places, so the line re-wrapped and jumped. At delta rate that reads exactly
+ * as Canberk described it: "this section is flickering a lot".
+ *
+ * Now every line, active or not, mine or theirs, goes through
+ * `renderLineTokens`. The element tree is identical in all states, so React
+ * only ever changes a className and nothing remounts or reflows. Flicker is not
+ * tuned out here, it is made impossible.
+ */
+type LineInk =
+  /** As printed. Any line that is not the one happening right now. */
+  | { kind: 'plain' }
+  /** Mine to say: sits back, inks in word by word as the mic catches it. */
+  | { kind: 'mine'; result: WordMatchResult | null }
+  /** Theirs: swept by the voice. `spokenIndex` < 0 means the sweep isn't running. */
+  | { kind: 'theirs'; spokenIndex: number };
+
+/* Empty means "inherit the paragraph" — the printed state. Classes are only
+   ever added on top of that, never swapped for a different element. */
+const INK_PRINTED = '';
+const INK_HEARD = 'text-[var(--t-text)] transition-colors duration-200';
+const INK_AHEAD = 'text-[var(--t-muted-dark)] transition-colors duration-200';
+const INK_SPEAKING = 'text-primary transition-colors duration-150';
+const INK_SAID = 'opacity-50 transition-opacity duration-500';
+const INK_COMING = 'opacity-75';
 
 /**
- * The scene partner's line, swept as the voice speaks it.
+ * A line, inked for its moment.
  *
- * `spokenIndex` is the word being said right now; -1 means the sweep isn't
- * running, in which case the line simply sits at full weight.
+ * MINE inks in as it is spoken: the words still ahead sit back, the words
+ * already said come up to full weight. The line fills like handwriting rather
+ * than lighting up like a score — it used to turn each word ORANGE, which is
+ * the accent colour that means "you" everywhere else in the product, so a
+ * delivered line read as a row of ticks. Weight carries the same information
+ * without grading anything, which is what Canberk asked for: "not many
+ * indicators please be very simple, colors even might be confusing".
+ *
+ * What makes it worth showing at all is that it is finally TRUE. The old
+ * version ran on browser speech-recognition interim results, which on iOS
+ * Safari return the first word and then stop: saying "I won't" inked `I`, left
+ * `won't` dead, and read as "it cannot hear me" while the microphone was
+ * working perfectly. That engine is gone. These words come from a streaming
+ * transcriber that was handed the script in advance.
  */
-function renderLineWithSpokenSweep(text: string, spokenIndex: number) {
-  if (spokenIndex < 0) return renderLineTokens(text, () => '');
-
+function renderLine(text: string, ink: LineInk) {
   return renderLineTokens(text, (indices) => {
-    if (indices.some(i => i === spokenIndex)) return 'text-primary transition-colors duration-150';
-    if (indices.every(i => i < spokenIndex)) return 'opacity-50 transition-opacity duration-500';
-    return 'opacity-75';
+    switch (ink.kind) {
+      case 'mine': {
+        const result = ink.result;
+        if (!result) return INK_PRINTED;
+        return indices.some(i => result.words[i]?.matched) ? INK_HEARD : INK_AHEAD;
+      }
+      case 'theirs': {
+        const spoken = ink.spokenIndex;
+        if (spoken < 0) return INK_PRINTED;
+        if (indices.some(i => i === spoken)) return INK_SPEAKING;
+        if (indices.every(i => i < spoken)) return INK_SAID;
+        return INK_COMING;
+      }
+      default:
+        return INK_PRINTED;
+    }
   });
 }
 
@@ -756,7 +806,6 @@ function RehearsalPageInner() {
   const lastAiLineForFallbackRef = useRef<string | null>(null);
   const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speakDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const skipSilentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Refs to break stale closures — always point to latest versions
   const sessionRef = useRef(session);
@@ -780,10 +829,9 @@ function RehearsalPageInner() {
   const [rehearsalSettings] = useState<RehearsalSettings>(() => {
     const saved = typeof window !== 'undefined'
       ? getRehearsalSettings()
-      : { pauseBetweenLinesSeconds: 0.3, skipMyLineIfSilent: false, skipAfterSeconds: 10, countdownSeconds: 3, useAIVoice: true, highlightMyLines: true, autoAdvanceOnFinish: true };
-    // The guided scene runs on the coaching line, not a countdown, and never
-    // skips a line the actor has not said.
-    return guided ? { ...saved, countdownSeconds: 0, skipMyLineIfSilent: false, highlightMyLines: true } : saved;
+      : { pauseBetweenLinesSeconds: 0.3, countdownSeconds: 3, useAIVoice: true, highlightMyLines: true, autoAdvanceOnFinish: true };
+    // The guided scene runs on the coaching line, not a countdown.
+    return guided ? { ...saved, countdownSeconds: 0, highlightMyLines: true } : saved;
   });
   const highlightMyLines = rehearsalSettings.highlightMyLines;
   const [useAIVoice] = useState(() =>
@@ -1056,11 +1104,15 @@ function RehearsalPageInner() {
   /** Index of the word the scene partner is speaking; -1 when not speaking. */
   const [aiSpokenIndex, setAiSpokenIndex] = useState(-1);
   const aiHighlightRafRef = useRef<number | null>(null);
+  /* The last index pushed into state, so the rAF loop can tell a new word
+     from the same word sampled again sixty times. */
+  const lastSpokenRef = useRef(-1);
   const prewarmStreamRef = useRef(prewarmStream);
   prewarmStreamRef.current = prewarmStream;
 
   useEffect(() => {
     if (!isSpeakingAI) {
+      lastSpokenRef.current = -1;
       setAiSpokenIndex(-1);
       if (aiHighlightRafRef.current) cancelAnimationFrame(aiHighlightRafRef.current);
       return;
@@ -1083,7 +1135,18 @@ function RehearsalPageInner() {
       // Syllables, not characters or an even split: "through" and "away" are the
       // same length written down and nothing like it spoken.
       const words = stripStageDirections(lineText).split(/\s+/).filter(Boolean);
-      setAiSpokenIndex(spokenWordIndex(buildWordTimings(words, durationMs), elapsedMs));
+      /* Only on CHANGE. This ran `setAiSpokenIndex` on every animation frame —
+         sixty state updates a second on the component that renders the whole
+         script — to move a highlight that advances maybe three times a second.
+         The renders React could not skip were spent re-walking every line in
+         the scene, which is why the sweep itself arrived late: the work of
+         reporting the word cost more than saying it. A line now re-renders once
+         per word. */
+      const next = spokenWordIndex(buildWordTimings(words, durationMs), elapsedMs);
+      if (next !== lastSpokenRef.current) {
+        lastSpokenRef.current = next;
+        setAiSpokenIndex(next);
+      }
 
       // Open the microphone while the partner is still talking, so the actor's
       // first word doesn't land in the gap where it used to be opening. Nothing
@@ -1231,10 +1294,6 @@ function RehearsalPageInner() {
     // Prevent double-delivery of the same line without blocking subsequent lines
     if (lastDeliveredIndexRef.current === currentIdx) return;
     lastDeliveredIndexRef.current = currentIdx;
-    if (skipSilentTimerRef.current) {
-      clearTimeout(skipSilentTimerRef.current);
-      skipSilentTimerRef.current = null;
-    }
     // Capture audio blob + transcript for session review playback
     const blob = getRecordedBlob();
     if (blob) lineAudioBlobsRef.current.set(currentIdx, blob);
@@ -2056,38 +2115,21 @@ function RehearsalPageInner() {
     return () => { clearInterval(iv); try { source.disconnect(); } catch {} };
   }, [paused]);
 
-  // Skip-if-silent timer
-  useEffect(() => {
-    if (!session || !rehearsalSettings.skipMyLineIfSilent || !currentUserLineText || isProcessing || lastAiLine != null) return;
-    if (countdown !== null && countdown > 0) return;
-    const sec = rehearsalSettings.skipAfterSeconds * 1000;
-    skipSilentTimerRef.current = setTimeout(() => {
-      skipSilentTimerRef.current = null;
-      // "If silent" means it. An actor mid-line is not silent, and skipping
-      // them because the words haven't matched yet is the app cutting them off.
-      if (liveTranscript.trim()) return;
-      /* And it must not pretend. This path used to hand the WRITTEN line to
-         the deliver call as though it had been spoken, so a scene the actor
-         had said nothing to lit every word of their speech green and moved
-         on — Canberk watched it happen and read it, correctly, as the app
-         inventing a performance. The scene still has to move (that is what
-         the setting is for), but nothing is scored and the screen says who
-         moved it. */
-      setWordMatchResult(null);
-      setLiveMatchedIndices(new Set());
-      bestMatchedRef.current = new Set();
-      setToast('Heard nothing, moving on.');
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = setTimeout(() => setToast(null), 3500);
-      handleDeliverLine(currentUserLineText, 'silent_skip');
-    }, sec);
-    return () => {
-      if (skipSilentTimerRef.current) {
-        clearTimeout(skipSilentTimerRef.current);
-        skipSilentTimerRef.current = null;
-      }
-    };
-  }, [session?.id, rehearsalSettings.skipMyLineIfSilent, rehearsalSettings.skipAfterSeconds, currentUserLineText, countdown, isProcessing, lastAiLine]);
+  /* The skip-if-silent timer is GONE, and with it the last thing in the
+     rehearsal that could move the scene off a line the actor never spoke.
+
+     It was the eighth timer, and the only one with the authority to advance on
+     no evidence at all. I tried twice to make it behave: first it stopped
+     handing the written line to the scorer as though it had been performed,
+     then it only fired on an empty transcript. Both times it still did the one
+     thing Canberk reported — "i didnt say anything and it skipped forward" —
+     because advancing on silence IS what it was built to do, and no amount of
+     honesty about it makes being cut off acceptable mid-thought.
+
+     A ten-second pause is not a problem to be solved. An actor reaching for a
+     line is working, and the only correct response is to wait. Nothing now
+     leaves a line but the actor: their last word (`shouldHandOver`), or their
+     own tap on "Skip line". */
 
   // Cycle whimsical loading texts
   const hasSession = session !== null;
@@ -2333,16 +2375,22 @@ function RehearsalPageInner() {
      The words now come from the streaming transcriber, and the thing an actor
      could not tell before — "is it hearing me, and how much does it need
      before it moves on?" — is answered by the line itself filling up.
-     See renderLineWithWordHighlights for why it is weight and not colour. */
+     See renderLine for why it is weight and not colour.
+
+     Gated on its being the actor's line, NOT on `isListening`. Keying it to the
+     microphone made the ink come and go with a flag that flips several times
+     inside one turn, and each flip took the whole line's styling with it. The
+     line sits back from the moment it is theirs to say and fills as they say
+     it, which is also the clearest possible cue that the turn is theirs. */
   const liveWordResult: WordMatchResult | null = useMemo(() => {
-    if (!isListening || !currentUserLineText) return null;
+    if (!currentUserLineText) return null;
     const words = lineWords(stripStageDirections(currentUserLineText));
     if (!words.length) return null;
     return {
       words: words.map((word, i) => ({ word, matched: liveMatchedIndices.has(i) })),
       willAdvance: false,
     };
-  }, [isListening, currentUserLineText, liveMatchedIndices]);
+  }, [currentUserLineText, liveMatchedIndices]);
 
   const statusInfo = rehearseStatus({
     loadingVoice: isLoadingAI,
@@ -3006,16 +3054,10 @@ function RehearsalPageInner() {
               isUserLine={(name) => isMyLine(session, name, cueNamesRef.current)}
               activeIndex={activeLineIndex}
               renderUserLine={(text) =>
-                wordMatchResult
-                  ? renderLineWithWordHighlights(text, wordMatchResult)
-                  : liveWordResult
-                    ? renderLineWithWordHighlights(text, liveWordResult)
-                    : renderTextWithStageDirections(text)
+                renderLine(text, { kind: 'mine', result: wordMatchResult ?? liveWordResult })
               }
               renderPartnerLine={(text) =>
-                isSpeakingAI && aiSpokenIndex >= 0
-                  ? renderLineWithSpokenSweep(text, aiSpokenIndex)
-                  : renderTextWithStageDirections(text)
+                renderLine(text, { kind: 'theirs', spokenIndex: isSpeakingAI ? aiSpokenIndex : -1 })
               }
               coach={coach}
               tapMode={isMicBlocked}
@@ -3103,7 +3145,15 @@ function RehearsalPageInner() {
                         !isCurrent && 'cursor-pointer hover:opacity-75',
                         isCurrentUserLine && 'border-l-2 border-[var(--t-cue-mine)]',
                         isCurrentAiLine && 'border-l-2 border-[var(--t-cue-theirs)]',
-                        isUser && highlightMyLines && 'bg-[var(--t-mine)]',
+                        /* Three states, in order of how much they matter.
+                           Every one of the actor's speeches used to take the
+                           same wash, including the one they were saying, so
+                           the live line was the only thing on screen with
+                           nothing to distinguish it. The line being spoken now
+                           is the foreground; the rest are findable. */
+                        isCurrentUserLine
+                          ? 'bg-[var(--t-mine-live)]'
+                          : isUser && highlightMyLines && 'bg-[var(--t-mine)]',
                       )}
                       onClick={() => {
                         if (guided && isCurrentUserLine && coach === 'nudge') {
@@ -3198,14 +3248,17 @@ function RehearsalPageInner() {
 
                       {/* Line text — live highlights while listening, post-result highlights after */}
                       <p className="text-[17px] font-semibold leading-relaxed text-[var(--t-text)] text-center break-words whitespace-pre-wrap">
-                        {isCurrentUserLine && wordMatchResult
-                          ? renderLineWithWordHighlights(line.text, wordMatchResult)
-                          : isCurrentUserLine && liveWordResult
-                          ? renderLineWithWordHighlights(line.text, liveWordResult)
-                          : isCurrentAiLine && isSpeakingAI && aiSpokenIndex >= 0
-                          ? renderLineWithSpokenSweep(line.text, aiSpokenIndex)
-                          : renderTextWithStageDirections(line.text)
-                        }
+                        {/* One renderer for every state, so changing state
+                            changes a className and never the element tree.
+                            See LineInk. */}
+                        {renderLine(
+                          line.text,
+                          isCurrentUserLine
+                            ? { kind: 'mine', result: wordMatchResult ?? liveWordResult }
+                            : isCurrentAiLine
+                              ? { kind: 'theirs', spokenIndex: isSpeakingAI ? aiSpokenIndex : -1 }
+                              : { kind: 'plain' },
+                        )}
                       </p>
 
                       {/* Advance by hand. When speech is working this is a quiet

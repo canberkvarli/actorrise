@@ -7421,8 +7421,53 @@
 
    So this is the token half on its own. It mirrors the two blocks that define
    `.theatre-stage`'s palette; if either of those changes, change this too. */
+/* ============================================================
+   REHEARSAL: three layers, and they have to read apart.
+
+   Canberk, on both themes: "its too much like one color". He was right, and
+   it was measurable rather than a matter of taste. In light the page sat at
+   lightness 0.96, the script card at 0.99 and the actor's own speech at 0.975
+   — a three percent spread of one cream. In dark it was 0.11 / 0.19 / 0.225,
+   every token within a hair of hue 50. A screen built that way has no
+   foreground, so nothing on it can look like it is happening, which is the
+   same complaint as "i dont think ts alive" wearing different clothes.
+
+   There are exactly three layers here and the rehearsal only works if an
+   actor can tell them apart from arm's length, mid-line, without studying
+   the screen:
+
+     1. THE HOUSE   --page      the room the work happens in; it recedes
+     2. THE SCRIPT  --t-paper   the page the lines are printed on
+     3. THE LIVE SPEECH         --t-mine, and --t-mine-live for the one NOW
+
+   Separation comes from two axes, not one. Value gives the layering, and
+   warmth gives the variety: the house is cool, the paper is warm, the way a
+   script under a work light looks in a dark auditorium. That is also the
+   reason not to simply crank the contrast — a cool room with a warm page
+   reads as depth, where the same hue at two brightnesses reads as a flat
+   wash no matter how far apart you push it.
+   ============================================================ */
 .theatre-rehearsal {
-  --page: oklch(0.96 0.02 85);
+  /* The desk the script is lying on, not more paper. Darker and warmer than
+     the page so the card has an edge without needing a border drawn on it. */
+  --page: oklch(0.925 0.018 72);
+
+  --t-paper: oklch(0.995 0.004 85);
+  --t-paper-2: oklch(0.96 0.014 80);
+
+  /* Mine to say. Enough wash to find by scanning, since that is this
+     setting's whole job, and it is the quietest of the three states. */
+  --t-mine: oklch(0.97 0.022 70);
+  /* Mine to say NOW. The brightest thing on the screen, because it is the
+     only thing the actor is actually doing. */
+  --t-mine-live: oklch(0.99 0.035 78);
+
+  --t-cue-mine: oklch(0.66 0.17 48);
+  --t-cue-theirs: oklch(0.78 0.03 75);
+
+  --t-line-light: oklch(0.87 0.016 78);
+  --t-line-light-2: oklch(0.82 0.018 78);
+
   --t-muted-light: oklch(0.42 0.018 55);
   --t-muted-light-2: oklch(0.46 0.02 55);
   --t-muted-light-3: oklch(0.52 0.02 60);
@@ -7433,17 +7478,26 @@
 .dark .theatre-rehearsal {
   --t-gel-ink: var(--t-gel);
   --t-on-gel-ink: oklch(0.15 0.03 45);
-  --page: oklch(0.11 0.012 50);
+  /* The house at half light. Cool, and genuinely dark: everything warm on
+     top of it then reads as lit rather than as the same brown again. */
+  --page: oklch(0.085 0.016 265);
 
-  --t-paper: oklch(0.19 0.018 52);
-  --t-paper-2: oklch(0.17 0.018 52);
+  /* The script, under a work light. Warm, and a real step up from the house
+     rather than the old two percent. */
+  --t-paper: oklch(0.215 0.016 76);
+  --t-paper-2: oklch(0.165 0.014 76);
 
-  /* Barely there on purpose. A tint strong enough to see as a box is a box;
-     what it has to say is only "this speech is yours", which the cue rule and
-     the accent already say louder. */
-  --t-mine: oklch(0.225 0.028 52);
-  --t-cue-mine: oklch(0.7 0.16 48);
-  --t-cue-theirs: oklch(0.36 0.03 55);
+  /* Mine to say, and mine to say NOW. The old note here argued this should be
+     "barely there on purpose", on the grounds that a visible tint reads as a
+     box. That was true of a box drawn in the same colour as its surroundings;
+     what it produced was a screen where the live speech was 0.035 lightness
+     clear of everything else, i.e. nothing. The live line is the one thing
+     the actor is doing, so it is the brightest thing on the page. */
+  --t-mine: oklch(0.255 0.022 74);
+  --t-mine-live: oklch(0.325 0.034 76);
+
+  --t-cue-mine: oklch(0.74 0.17 48);
+  --t-cue-theirs: oklch(0.44 0.028 76);
 
   --t-text: oklch(0.95 0.02 85);
   --t-text-soft: oklch(0.93 0.02 85);
@@ -7451,8 +7505,8 @@
   --t-muted-dark-2: oklch(0.68 0.02 62);
   --t-faint: oklch(0.58 0.02 60);
 
-  --t-line-light: oklch(0.3 0.03 55);
-  --t-line-light-2: oklch(0.34 0.03 55);
+  --t-line-light: oklch(0.36 0.022 76);
+  --t-line-light-2: oklch(0.42 0.022 76);
 
   --t-muted-light: oklch(0.72 0.02 62);
   --t-muted-light-2: oklch(0.77 0.02 62);
