@@ -7,12 +7,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { trackEvent } from "@/lib/events";
 import { useAuditions } from "@/hooks/useAuditions";
-import { markIntroSeen, readIntroSeen, shouldAutoShowIntro } from "@/lib/auditionIntro";
+import { markIntroSeen } from "@/lib/auditionIntro";
 import { AuditionsIntro } from "./AuditionsIntro";
 import { DropBox } from "./DropBox";
 import { AuditionFile, OUTCOME_NOTE } from "./AuditionFile";
 import { CalendarOffer, CalendarPanel, CalendarToggle } from "./CalendarLink";
 import { FileSkeleton } from "./FileSkeleton";
+import { IntroLoop } from "./IntroLoop";
 import { takeCalendarOffer } from "@/lib/calendarFeed";
 
 /**
@@ -64,24 +65,11 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   const offerShown = calOffer != null && list.some((a) => a.id === calOffer);
   const offer = offerShown ? <CalendarOffer onDone={() => setCalOffer(null)} /> : null;
 
-  // The three-card intro opens by itself once per browser, and only on an
-  // empty rail: someone with auditions already knows what this page is. Nor
-  // when they came here to add one (?new=1, onboarding): they are mid-task, and
-  // leaving it unseen lets it open on a later empty visit instead.
+  // The empty page runs How it works inline (IntroLoop), so the dialog only
+  // opens from the ? once there are auditions.
   const router = useRouter();
   const capture = useRef<HTMLDivElement>(null);
   const [intro, setIntro] = useState(false);
-  const introChecked = useRef(false);
-  const cameToAdd = startOpen || source === "onboarding";
-  useEffect(() => {
-    if (introChecked.current || isLoading) return;
-    // A beat after the rail paints, so the card lands on a page rather than a blank.
-    const t = window.setTimeout(() => {
-      introChecked.current = true;
-      if (shouldAutoShowIntro({ loading: false, failed, count: list.length, seen: readIntroSeen(), adding: cameToAdd })) setIntro(true);
-    }, 300);
-    return () => window.clearTimeout(t);
-  }, [isLoading, failed, list.length, cameToAdd]);
   function introChange(next: boolean) {
     setIntro(next);
     if (!next) markIntroSeen();
@@ -137,17 +125,6 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
     captureTarget()?.el.focus();
   }
 
-  const howItWorks = (
-    <button
-      type="button"
-      className="aud-pill aud-help aud-focus inline-flex h-11 shrink-0 items-center gap-2.5 pl-1.5 pr-4 text-[15px]"
-      onClick={() => setIntro(true)}
-    >
-      <span aria-hidden className="aud-help-q">?</span>
-      How it works
-    </button>
-  );
-
   return (
     <div className={`theatre-tokens theatre-auditions ${theatreFontVars} min-h-[calc(100dvh-65px)] overflow-x-clip`}>
       {pending ? (
@@ -172,7 +149,9 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
             <div ref={capture} className="mt-9 w-full max-w-[720px] text-left">
               <DropBox startOpen={startOpen} source={source} size="hero" firstOne />
             </div>
-            <div className="mt-10 md:mt-12">{howItWorks}</div>
+            <div className="mt-12 w-full max-w-[720px] md:mt-14">
+              <IntroLoop />
+            </div>
           </section>
         </div>
       ) : (

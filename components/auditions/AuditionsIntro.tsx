@@ -11,7 +11,7 @@ import { theatreFontVars } from "@/lib/fonts/theatre";
 import { IntroStage, SceneCapture, SceneNotes, ScenePrep } from "./intro/IntroScenes";
 import s from "./intro/intro.module.css";
 
-const SLIDES = [
+export const SLIDES = [
   {
     title: "Every audition, one rail.",
     body: "Paste the casting email or drop the breakdown and I'll read it into a ticket. Or fill it in yourself, that's always free.",
@@ -19,8 +19,8 @@ const SLIDES = [
     picture: "A casting email is pasted into the box, read, and folded into a ticket at the top of the rail.",
   },
   {
-    title: "Each one opens a prep room.",
-    body: "Run your sides with ScenePartner, pick the piece you're bringing, and see what to pack. It ticks off as you go.",
+    title: "Each one gets its own page.",
+    body: "Read your sides right there, run them with ScenePartner, and tick off what to pack as you go.",
     scene: ScenePrep,
     picture: "A ticket opens its prep room and the three steps tick off one by one.",
   },
