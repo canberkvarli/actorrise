@@ -151,7 +151,6 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
             <div ref={capture} className="mt-9 w-full max-w-[720px] text-left">
               <DropBox startOpen={startOpen} source={source} size="hero" firstOne />
             </div>
-            <RecentlyDeleted startOpen className="mt-8 w-full max-w-[440px] text-left" />
             <div className="mt-12 w-full max-w-[720px] md:mt-14">
               <IntroLoop
                 onExpand={(step) => {
@@ -160,6 +159,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
                 }}
               />
             </div>
+            <RecentlyDeleted className="mt-10 w-full max-w-[720px] text-left" />
           </section>
         </div>
       ) : (
