@@ -853,6 +853,9 @@ export default function ProfileOnboardingFlow({
                 onClose={endFlow}
                 onBrowse={() => { endFlow(); router.push("/monologues"); }}
                 onOwnSides={() => { endFlow(); router.push("/practice"); }}
+                // A real audition's sides go through the tracker: same
+                // ScenePartner upload, plus the date and the reminders.
+                onAuditionSides={() => { endFlow(); router.push("/auditions?new=1&from=onboarding"); }}
                 onCollection={goToCollection}
               />
             </motion.div>
@@ -946,6 +949,7 @@ function OnboardingPayoff({
   onBrowse,
   onClose,
   onOwnSides,
+  onAuditionSides,
   onCollection,
 }: {
   answers: OnboardingAnswers;
@@ -955,6 +959,7 @@ function OnboardingPayoff({
   onBrowse: () => void;
   onClose: () => void;
   onOwnSides: () => void;
+  onAuditionSides: () => void;
   onCollection: () => void;
 }) {
   const summary = describeAnswers(answers);
@@ -1183,11 +1188,11 @@ function OnboardingPayoff({
             icon={<><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>}
           />
           <WayOn
-            onClick={leave("sides", onOwnSides)}
+            onClick={leave("sides", onAuditionSides)}
             busy={going === "sides"}
             dimmed={!!going && going !== "sides"}
             title="Bring your own sides"
-            note="A real audition script. I'll read every role that isn't yours."
+            note="A real audition? Drop the sides and the date. I'll read the other roles and remind you."
             icon={<path d="M12 16V4M6 10l6-6 6 6M4 20h16" />}
           />
         </div>

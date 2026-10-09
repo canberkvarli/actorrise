@@ -9,7 +9,6 @@ from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 from app.api.auditions import router
-from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.models.actor import UserScript
 from app.models.audition import Audition, AuditionEvent, AuditionPiece, AuditionReminderSend
@@ -68,25 +67,3 @@ class OutcomeLinkTests(unittest.TestCase):
         bad = "/api/auditions/outcome/nope"
         self.assertEqual(self.client.get(bad, params={"o": "good"}).status_code, 404)
         self.assertEqual(self.client.post(bad, params={"o": "good"}).status_code, 404)
-
-
-class ModeratorOnlyTests(OutcomeLinkTests):
-    """While Canberk tries it, the tracker answers moderators only."""
-
-    def _as(self, is_moderator):
-        u = self.db.query(User).first()
-        u.is_moderator = is_moderator
-        self.db.commit()
-        self.client.app.dependency_overrides[get_current_user] = lambda: u
-
-    def test_non_moderator_is_403(self):
-        self._as(False)
-        self.assertEqual(self.client.get("/api/auditions").status_code, 403)
-        self.assertEqual(self.client.get("/api/auditions/next").status_code, 403)
-
-    def test_moderator_is_200(self):
-        self._as(True)
-        r = self.client.get("/api/auditions")
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(len(r.json()), 1)
-

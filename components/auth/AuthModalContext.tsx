@@ -143,7 +143,10 @@ export function AuthModalProvider({ children }: AuthModalProviderProps) {
           </div>
 
           <div className="mt-5">
-            <AuthProgressiveDisclosure mode={mode} redirectTo="/practice" />
+            {/* A sign-in hops through /auditions/next (the prep room when one is
+                inside 14 days, else the Collection); a signup keeps /practice.
+                A ?redirect= on the URL still wins inside the disclosure. */}
+            <AuthProgressiveDisclosure mode={mode} redirectTo={mode === "login" ? "/auditions/next" : "/practice"} />
           </div>
         </DialogContent>
       </Dialog>
