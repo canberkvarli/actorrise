@@ -43,8 +43,6 @@ export function setScenePartnerAudioCheckDone(): void {
 /** Rehearsal settings (persisted per device) */
 export interface RehearsalSettings {
   pauseBetweenLinesSeconds: number;
-  skipMyLineIfSilent: boolean;
-  skipAfterSeconds: number;
   countdownSeconds: number;
   useAIVoice: boolean;
   highlightMyLines: boolean;
@@ -54,8 +52,6 @@ export interface RehearsalSettings {
 const KEY_REHEARSAL_SETTINGS = "scene_partner_rehearsal_settings";
 const DEFAULT_REHEARSAL_SETTINGS: RehearsalSettings = {
   pauseBetweenLinesSeconds: 0.3,
-  skipMyLineIfSilent: false,
-  skipAfterSeconds: 10,
   countdownSeconds: 3,
   useAIVoice: true,
   highlightMyLines: true,

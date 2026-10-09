@@ -25,7 +25,6 @@ interface Props {
   /** Mic blocked or recognition broken: the button is the only way through. */
   tapMode: boolean;
   isUserTurn: boolean;
-  isTranscribing: boolean;
   shouldShake: boolean;
   onSaidIt: () => void;
   /** The quiet way past a line that will not come. Same action, softer ask. */
@@ -58,7 +57,6 @@ export function GuidedStage({
   coach,
   tapMode,
   isUserTurn,
-  isTranscribing,
   shouldShake,
   onSaidIt,
   onSkip,
@@ -72,7 +70,7 @@ export function GuidedStage({
         const isCurrent = i === activeIndex;
         const past = activeIndex != null && i < activeIndex;
         const showSaidIt =
-          isCurrent && isUser && isUserTurn && !isTranscribing && (tapMode || coach === "nudge");
+          isCurrent && isUser && isUserTurn && (tapMode || coach === "nudge");
         return (
           <motion.div
             key={line.id}
@@ -112,8 +110,7 @@ export function GuidedStage({
             ) : (
               isCurrent &&
               isUser &&
-              isUserTurn &&
-              !isTranscribing && (
+              isUserTurn && (
                 <button
                   type="button"
                   className="g-skip"

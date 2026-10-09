@@ -4,7 +4,6 @@ import { rehearseStatus, type RehearseState } from "./rehearse-status";
 const idle: RehearseState = {
   loadingVoice: false,
   partnerSpeaking: false,
-  transcribing: false,
   listening: false,
   processing: false,
   userTurn: false,
@@ -16,7 +15,6 @@ describe("the screen always says something, not just a colour", () => {
       idle,
       { ...idle, loadingVoice: true },
       { ...idle, partnerSpeaking: true, partnerName: "Riley" },
-      { ...idle, transcribing: true },
       { ...idle, listening: true },
       { ...idle, listening: true, voiceHeard: true },
       { ...idle, processing: true },
@@ -87,5 +85,24 @@ describe("precedence", () => {
   it("idle reads as ready, never as an error", () => {
     expect(rehearseStatus(idle).text).toBe("ready");
     expect(rehearseStatus(idle).pulse).toBe(false);
+  });
+});
+
+describe("one colour", () => {
+  it("every state wears the same dot", () => {
+    // Amber, blue, green, orange and grey was a legend to learn and then read
+    // while acting. The word says what is happening; the dot only says that
+    // something is.
+    const states: RehearseState[] = [
+      idle,
+      { ...idle, loadingVoice: true },
+      { ...idle, partnerSpeaking: true, partnerName: "Riley" },
+      { ...idle, listening: true },
+      { ...idle, listening: true, voiceHeard: true },
+      { ...idle, processing: true },
+      { ...idle, userTurn: true },
+    ];
+    const colours = new Set(states.map((s) => rehearseStatus(s).color));
+    expect(colours.size).toBe(1);
   });
 });

@@ -29,8 +29,6 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
   const [settings, setSettings] = useState<RehearsalSettings>(() =>
     typeof window !== "undefined" ? getRehearsalSettings() : {
       pauseBetweenLinesSeconds: 0.3,
-      skipMyLineIfSilent: false,
-      skipAfterSeconds: 10,
       countdownSeconds: 3,
       useAIVoice: true,
       highlightMyLines: true,
@@ -127,34 +125,6 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <Label className="text-sm font-normal">Auto-skip when silent</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  If you don&apos;t speak for a while, move on automatically.
-                </p>
-              </div>
-              <Switch
-                checked={settings.skipMyLineIfSilent}
-                onCheckedChange={(v) => update({ skipMyLineIfSilent: v })}
-              />
-            </div>
-            {settings.skipMyLineIfSilent && (
-              <div className="space-y-2 pl-1">
-                <Label className="text-xs text-muted-foreground">Wait before skipping</Label>
-                <div className="flex items-center gap-2">
-                  <Slider
-                    value={settings.skipAfterSeconds}
-                    onValueChange={(v) => update({ skipAfterSeconds: v })}
-                    min={3}
-                    max={30}
-                    step={1}
-                    className="flex-1"
-                  />
-                  <span className="text-sm tabular-nums w-8">{settings.skipAfterSeconds}s</span>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="border-t border-border/60" />
