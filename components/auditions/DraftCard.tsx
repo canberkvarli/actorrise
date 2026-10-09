@@ -8,7 +8,7 @@ import { valuesFromDraft, type DraftValues } from "./draftValues";
 export { bodyFromValues, valuesFromDraft, type DraftValues } from "./draftValues";
 
 const LABEL = "aud-dir aud-muted text-[11px] font-semibold uppercase tracking-[0.08em]";
-const INPUT = "aud-field mt-1 w-full border border-[var(--t-line-light)] bg-[var(--t-paper)] px-2.5 py-2 text-sm";
+const INPUT = "aud-field mt-1 w-full border border-[var(--t-line-light)] bg-[var(--t-paper)] px-3 py-2.5 text-[16px]";
 
 export function DraftCard({
   draft, initialNotes = "", sidesName, saving, onSave, onCancel, editing,

@@ -32,8 +32,10 @@ OUTCOMES = {"good": None, "callback": "callback", "no": "passed"}  # outcome -> 
 EDITABLE = (
     "project", "role", "kind", "status", "starts_at", "due_at", "tz", "location", "casting",
     "material_raw", "material", "bring", "notes", "tape_link", "user_script_id", "reminders_on",
-    "bring_list", "through", "through_kind", "shoots", "after_notes",
+    "bring_list", "through", "through_kind", "shoots", "after_notes", "reminder_moments",
 )
+REMINDER_MOMENTS = ("prep", "eve", "after")  # mirrors reminders.MOMENTS, which imports from here
+RESTORE_DAYS = 30  # a removed audition can come back this long
 THROUGH_KINDS = ("agent", "manager", "self")
 BRING_SOURCES = ("email", "ai", "me")
 AFTER_KEYS = ("how", "differently", "room")
@@ -92,6 +94,11 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(f"through_kind must be one of {THROUGH_KINDS}")
     if "bring_list" in out and out["bring_list"] is not None:
         out["bring_list"] = clean_bring_list(out["bring_list"])
+    if "reminder_moments" in out and out["reminder_moments"] is not None:
+        picked = out["reminder_moments"]
+        if not isinstance(picked, list) or any(m not in REMINDER_MOMENTS for m in picked):
+            raise ValueError(f"reminder_moments must be a list drawn from {REMINDER_MOMENTS}")
+        out["reminder_moments"] = [m for m in REMINDER_MOMENTS if m in picked]
     if "after_notes" in out and out["after_notes"] is not None:
         if not isinstance(out["after_notes"], dict):
             raise ValueError("after_notes must be an object")
@@ -204,6 +211,28 @@ def update_audition(db: Session, a: Audition, changes: dict[str, Any]) -> Auditi
 def delete_audition(db: Session, a: Audition, *, now: Optional[datetime] = None) -> None:
     a.deleted_at = now or datetime.now(timezone.utc)
     db.commit()
+
+
+def recently_deleted(db: Session, user_id: int, now: datetime) -> list[Audition]:
+    """Removed in the last RESTORE_DAYS, newest first: the ones that can still come back."""
+    since = now - timedelta(days=RESTORE_DAYS)
+    rows = (
+        db.query(Audition)
+        .filter(Audition.user_id == user_id, Audition.deleted_at.isnot(None))
+        .all()
+    )
+    rows = [a for a in rows if aware(a.deleted_at) >= since]
+    rows.sort(key=lambda a: aware(a.deleted_at), reverse=True)
+    return rows
+
+
+def restore_audition(db: Session, user_id: int, audition_id: int, now: datetime) -> Optional[Audition]:
+    a = next((x for x in recently_deleted(db, user_id, now) if x.id == audition_id), None)
+    if a is None:
+        return None
+    a.deleted_at = None
+    db.commit()
+    return a
 
 
 def log_outcome(db: Session, a: Audition, outcome: str, *, via: str) -> Audition:
@@ -391,7 +420,7 @@ def build_prep_steps(a: Audition, *, runs: int, piece_count: int) -> list[dict[s
 
 CALLBACK_COPIES = (
     "project", "role", "kind", "tz", "location", "casting", "through", "through_kind", "shoots",
-    "material_raw", "material", "bring", "user_script_id", "reminders_on",
+    "material_raw", "material", "bring", "user_script_id", "reminders_on", "reminder_moments",
 )
 
 
@@ -456,6 +485,12 @@ def sides_preview(db: Session, a: Audition) -> Optional[dict[str, Any]]:
     return {"title": title, "status": status, "excerpt": (text or "").strip()[:SIDES_PREVIEW_CHARS] or None}
 
 
+def reminder_moments(a: Audition) -> list[str]:
+    """Which of the three emails this one gets. Null in the row means all three."""
+    picked = a.reminder_moments if isinstance(a.reminder_moments, list) else None
+    return list(REMINDER_MOMENTS) if picked is None else [m for m in REMINDER_MOMENTS if m in picked]
+
+
 def public_assist(raw: Any) -> dict[str, Any]:
     """The saved AI help without the cache keys."""
     raw = raw if isinstance(raw, dict) else {}
@@ -477,6 +512,7 @@ def serialize(db: Session, a: Audition, now: datetime, *, with_prep: bool = True
         "location": a.location, "casting": a.casting, "material_raw": a.material_raw, "material": a.material,
         "bring": a.bring, "notes": a.notes, "tape_link": a.tape_link, "source": a.source,
         "user_script_id": a.user_script_id, "reminders_on": a.reminders_on,
+        "reminder_moments": reminder_moments(a),
         "scope": scope_of(a, now), "created_at": _iso(a.created_at),
         "bring_list": bring_items(a), "through": a.through, "through_kind": a.through_kind,
         "shoots": a.shoots, "after_notes": a.after_notes or {},

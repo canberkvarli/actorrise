@@ -36,12 +36,21 @@ export function BringList({ a }: { a: Audition }) {
     <section id="aud-bring" aria-labelledby="aud-bring-h" className="scroll-mt-24">
       <div className="aud-sec-head">
         <h2 id="aud-bring-h" className="aud-sec-title text-[26px]">Bring</h2>
-        {items.length > 0 && <span className="aud-cap-muted text-[13px]">{packed} of {items.length} packed</span>}
+        {items.length > 0 && (
+          <span className="flex items-center gap-2.5 text-[13px]">
+            <span className="aud-pack-bar" aria-hidden>
+              <span style={{ transform: `scaleX(${packed / items.length})` }} />
+            </span>
+            <span className={packed === items.length ? "aud-pack-done font-semibold" : "aud-cap-muted"}>
+              {packed === items.length ? "all packed" : `${packed} of ${items.length} packed`}
+            </span>
+          </span>
+        )}
       </div>
       {items.length === 0 && <p className="aud-pencil-muted text-[18px]">(nothing on the list yet.)</p>}
       <ul>
         {items.map((item, i) => (
-          <li key={item.text} className="aud-tick-row group flex items-start gap-3 py-2.5 text-[15px]" data-on={item.done ? "true" : "false"}>
+          <li key={item.text} className="aud-tick-row aud-row-in group flex items-start gap-3 py-2.5 text-[15px]" data-on={item.done ? "true" : "false"}>
             <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
               <input
                 type="checkbox"
@@ -51,7 +60,7 @@ export function BringList({ a }: { a: Audition }) {
               />
               <span className="aud-check mt-0.5" data-on={item.done ? "true" : "false"} aria-hidden />
               <span className="aud-tick-text min-w-0 break-words">
-                {item.text}
+                <span className="aud-marker">{item.text}</span>
                 {item.src === "ai" && <span className="aud-pencil-muted text-[15px]"> (my idea)</span>}
               </span>
             </label>
@@ -81,13 +90,13 @@ export function BringList({ a }: { a: Audition }) {
         <label className="sr-only" htmlFor="aud-bring-add">Add something to bring</label>
         <input
           id="aud-bring-add"
-          className="aud-input min-w-0 flex-1 px-3 py-2 text-[15px]"
-          placeholder="add something"
+          className="aud-input min-w-0 flex-1 px-4 py-2.5 text-[17px]"
+          placeholder="add something to bring"
           maxLength={200}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
         />
-        {draft.trim() && <button type="submit" className="aud-quiet-chip aud-focus px-3.5 text-[14px] font-semibold">Add</button>}
+        {draft.trim() && <button type="submit" className="aud-ask-btn aud-row-in aud-focus px-4 text-[15px] font-semibold">Add</button>}
       </form>
     </section>
   );

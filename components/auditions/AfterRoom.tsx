@@ -48,14 +48,14 @@ export function AfterRoom({ a, now }: { a: Audition; now: Date }) {
         </p>
       ) : (
         <>
-          <div className="aud-card px-4">
+          <div className="aud-card aud-row-in px-4">
             {PROMPTS.map(([k, label, hint]) => (
               <label key={k} className="block border-b border-[var(--aud-rule-soft)] py-3.5 last:border-0">
                 <span className="aud-cap-muted block text-[12.5px] font-semibold">{label}</span>
                 <textarea
                   rows={k === "how" ? 2 : 1}
                   maxLength={4000}
-                  className="mt-1 block w-full resize-y bg-transparent text-[15.5px] leading-normal outline-none placeholder:font-[family-name:var(--t-display)] placeholder:text-[17px] placeholder:italic placeholder:text-[var(--aud-muted)] focus-visible:outline-none"
+                  className="mt-1 block w-full resize-y bg-transparent text-[17px] leading-normal outline-none placeholder:font-[family-name:var(--t-display)] placeholder:text-[19px] placeholder:italic placeholder:text-[var(--aud-muted)] focus-visible:outline-none"
                   placeholder={hint}
                   value={notes[k] ?? ""}
                   onChange={(e) => setNotes((n) => ({ ...n, [k]: e.target.value }))}

@@ -28,6 +28,8 @@ export type Audition = {
   source: "parse" | "manual" | "onboarding";
   user_script_id: number | null;
   reminders_on: boolean;
+  /** Which reminder emails this one gets. */
+  reminder_moments: ReminderMoment[];
   scope: AuditionScope;
   created_at: string;
   pieces: AuditionPiece[];
@@ -45,6 +47,10 @@ export type Audition = {
 };
 
 export type ThroughKind = "agent" | "manager" | "self";
+export type ReminderMoment = "prep" | "eve" | "after";
+export const REMINDER_MOMENTS: ReminderMoment[] = ["prep", "eve", "after"];
+/** A removed audition, still recoverable for 30 days. */
+export type DeletedAudition = Audition & { deleted_at: string };
 export type BringItem = { text: string; done: boolean; src: "email" | "ai" | "me" };
 export type AfterNotes = Partial<Record<"how" | "differently" | "room", string>>;
 export type Assist = {

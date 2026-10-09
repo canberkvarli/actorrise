@@ -97,10 +97,18 @@ export function CalendarToggle({ open, onToggle }: { open: boolean; onToggle: ()
   );
 }
 
-export function CalendarPanel() {
+export function CalendarPanel({ onClose }: { onClose: () => void }) {
   return (
-    <div id={CALENDAR_PANEL_ID} className="aud-cal-panel mb-4 px-4 py-3.5">
-      <p className="mb-3 text-sm">Every audition shows up next to everything else, and I keep it up to date.</p>
+    <div id={CALENDAR_PANEL_ID} className="aud-cal-panel mb-6 w-full max-w-[400px] px-5 pb-4 pt-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <p className="aud-sec-title text-[22px]">In your calendar</p>
+        <button type="button" className="aud-x aud-focus -mr-1.5" aria-label="Close" onClick={onClose}>
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+      <p className="aud-cap-muted mb-3.5 mt-1 text-[13.5px] leading-snug">Every audition shows up next to everything else, and I keep it up to date.</p>
       <CalendarOptions surface="header" />
     </div>
   );

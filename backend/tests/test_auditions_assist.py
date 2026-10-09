@@ -199,3 +199,53 @@ class AskTests(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AskVoiceAndForgetTests(Base):
+    def test_the_prompt_never_lets_the_helper_speak_as_the_actor(self):
+        llm = _llm({"answer": "I'm the helper on this page."})
+        assist.ask(self.db, self.a, "who are you?", NOW, llm_call=llm)
+        self.assertIn("You are not the actor", llm.calls[0])
+        self.assertIn("The person asking IS the actor", llm.calls[0])
+
+    def test_one_question_can_be_taken_off(self):
+        first = assist.ask(self.db, self.a, "where do I park?", NOW, llm_call=_llm({"answer": "Street parking."}))
+        assist.ask(self.db, self.a, "how long is it?", NOW + timedelta(minutes=1), llm_call=_llm({"answer": "Ten minutes."}))
+        self.assertTrue(assist.forget_ask(self.db, self.a, first["at"]))
+        self.assertEqual([x["q"] for x in core.public_assist(self.a.assist)["asks"]], ["how long is it?"])
+        self.assertFalse(assist.forget_ask(self.db, self.a, first["at"]))
+
+
+class RecentlyDeletedTests(Base):
+    def test_a_removed_audition_comes_back_within_thirty_days(self):
+        core.delete_audition(self.db, self.a, now=NOW)
+        self.assertEqual(core.list_auditions(self.db, self.user.id, NOW), [])
+        self.assertEqual([a.id for a in core.recently_deleted(self.db, self.user.id, NOW + timedelta(days=3))], [self.a.id])
+        back = core.restore_audition(self.db, self.user.id, self.a.id, NOW + timedelta(days=3))
+        self.assertIsNotNone(back)
+        self.assertEqual([a.id for a in core.list_auditions(self.db, self.user.id, NOW)], [self.a.id])
+
+    def test_after_thirty_days_it_is_gone_for_good(self):
+        core.delete_audition(self.db, self.a, now=NOW)
+        later = NOW + timedelta(days=31)
+        self.assertEqual(core.recently_deleted(self.db, self.user.id, later), [])
+        self.assertIsNone(core.restore_audition(self.db, self.user.id, self.a.id, later))
+
+
+class ReminderMomentsTests(Base):
+    def test_all_three_until_chosen(self):
+        self.assertEqual(core.serialize(self.db, self.a, NOW, with_prep=False)["reminder_moments"], ["prep", "eve", "after"])
+
+    def test_a_chosen_moment_is_the_only_one_sent(self):
+        from app.services.auditions import reminders
+
+        core.update_audition(self.db, self.a, {"reminder_moments": ["after", "eve"]})
+        self.assertEqual(self.a.reminder_moments, ["eve", "after"])
+        eve = reminders._at(self.a, -1, 19) + timedelta(minutes=5)
+        prep = reminders._at(self.a, -3, 18) + timedelta(minutes=5)
+        self.assertEqual(reminders.due_moments(self.a, eve), ["eve"])
+        self.assertEqual(reminders.due_moments(self.a, prep), [])
+
+    def test_a_moment_that_isnt_one_is_refused(self):
+        with self.assertRaises(ValueError):
+            core.update_audition(self.db, self.a, {"reminder_moments": ["lunch"]})

@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 import {
-  clockIn, directionsUrl, groupByScope, KIND_LABEL, safeTz, whenLabel, type Audition,
+  clockIn, directionsUrl, groupByScope, KIND_LABEL, REMINDER_MOMENTS, safeTz, whenLabel,
+  type Audition, type ReminderMoment,
 } from "@/lib/auditions";
+import { useDeletedAuditions, useUpdateAudition } from "@/hooks/useAuditions";
+import { SAVE_FAILED } from "./SidesSection";
+import { useRemoveAudition } from "./useRemoveAudition";
 
 const THROUGH_LABEL = { agent: "your agent", manager: "your manager", self: "you put yourself up" } as const;
 
@@ -64,29 +69,83 @@ export function FileDetails({ a, onEdit }: { a: Audition; onEdit: () => void }) 
           </Row>
         )}
       </dl>
-      <button type="button" className="aud-link aud-cap-muted mt-4 text-[13.5px]" onClick={onEdit}>
-        Edit details
-      </button>
       {a.notes && <p className="aud-cap-muted mt-4 whitespace-pre-wrap break-words text-[13.5px]">{a.notes}</p>}
+      <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[13.5px]">
+        <button type="button" className="aud-link aud-cap-muted" onClick={onEdit}>
+          Edit details
+        </button>
+        <RemoveLink a={a} />
+      </p>
     </div>
   );
 }
 
-/** One line on what I'll send, in my voice. */
+export function RemoveLink({ a }: { a: Audition }) {
+  const { remove, removing } = useRemoveAudition();
+  return (
+    <button type="button" className="aud-link aud-cap-muted" disabled={removing} onClick={() => remove(a)}>
+      {removing ? "Removing it" : "Remove this audition"}
+    </button>
+  );
+}
+
+const MOMENT_LABEL: Record<ReminderMoment, [string, string]> = {
+  prep: ["Three days out", "6 pm, what to work on"],
+  eve: ["The night before", "7 pm, where and when"],
+  after: ["The morning after", "9 am, how did it go?"],
+};
+
+/** The three emails I can send for this one; each can be switched off. */
 export function ReminderLine({ a }: { a: Audition }) {
+  const update = useUpdateAudition();
+  const saved = a.reminders_on ? a.reminder_moments : [];
+  const [picked, setPicked] = useState<ReminderMoment[]>(saved);
+  const [seen, setSeen] = useState(saved);
+  if (seen !== saved && seen.join() !== saved.join()) {
+    setSeen(saved);
+    setPicked(saved);
+  }
   if (a.scope !== "upcoming") return null;
+
+  function flip(m: ReminderMoment) {
+    const before = picked;
+    const next = REMINDER_MOMENTS.filter((x) => (x === m ? !picked.includes(x) : picked.includes(x)));
+    setPicked(next);
+    update.mutate({ id: a.id, reminder_moments: next, reminders_on: next.length > 0 }, {
+      onError: () => {
+        setPicked(before);
+        toast.error(SAVE_FAILED);
+      },
+    });
+  }
+
   return (
     <div className="mt-8">
       <div className="aud-sec-head !mb-2">
         <h2 className="aud-sec-title text-[22px]">I&apos;ll remind you</h2>
+        <span className="aud-cap-muted text-[12.5px]">by email</span>
       </div>
-      <p className="aud-pencil-muted text-[17px] leading-snug">
-        {a.reminders_on
-          ? a.kind === "self_tape"
-            ? "(three days before it's due, the night before, and the morning after.)"
-            : "(three days out, the night before, and the morning after.)"
-          : "(reminders are off for this one.)"}
-      </p>
+      <ul className="grid gap-0.5" aria-label="Reminder emails">
+        {REMINDER_MOMENTS.map((m) => {
+          const on = picked.includes(m);
+          const [label, hint] = MOMENT_LABEL[m];
+          return (
+            <li key={m}>
+              <label className="aud-remind-row flex cursor-pointer items-start gap-3 py-1.5" data-on={on ? "true" : "false"}>
+                <input type="checkbox" className="sr-only" checked={on} onChange={() => flip(m)} />
+                <span className="aud-check mt-0.5" data-on={on ? "true" : "false"} aria-hidden />
+                <span className="min-w-0">
+                  <span className="block text-[14.5px] leading-snug">
+                    {m === "prep" && a.kind === "self_tape" ? "Three days before it's due" : label}
+                  </span>
+                  <span className="aud-cap-muted block text-[12.5px]">{hint}</span>
+                </span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+      {picked.length === 0 && <p className="aud-pencil-muted aud-row-in mt-1.5 text-[16px]">(no emails for this one.)</p>}
     </div>
   );
 }
@@ -119,9 +178,8 @@ export function OtherAuditions({ list, openId }: { list: Audition[]; openId: num
   const g = groupByScope(list.filter((a) => a.id !== openId));
   const [logbook, setLogbook] = useState(false);
   const groups: [string, Audition[]][] = [["Also coming up", g.upcoming], ["Waiting to hear", g.waiting]];
-  if (!g.upcoming.length && !g.waiting.length && !g.past.length) return null;
   return (
-    <nav aria-label="Your other auditions" className="mt-8 grid gap-8">
+    <nav aria-label="Your other auditions" className="mt-8 grid gap-8 empty:hidden">
       {groups.filter(([, xs]) => xs.length).map(([title, xs]) => (
         <div key={title}>
           <div className="aud-sec-head !mb-1">
@@ -135,9 +193,52 @@ export function OtherAuditions({ list, openId }: { list: Audition[]; openId: num
           <button type="button" className="aud-link aud-cap-muted text-[13.5px]" aria-expanded={logbook} onClick={() => setLogbook((v) => !v)}>
             {logbook ? "Hide the logbook" : `The logbook, ${g.past.length} done`}
           </button>
-          {logbook && g.past.map((a) => <Mini key={a.id} a={a} />)}
+          <div className="aud-fold" data-open={logbook ? "true" : "false"} inert={!logbook}>
+            <div>{g.past.map((a) => <Mini key={a.id} a={a} />)}</div>
+          </div>
         </div>
       )}
+      <RecentlyDeleted />
     </nav>
+  );
+}
+
+function daysLeft(deletedAt: string): number {
+  const gone = new Date(deletedAt).getTime() + 30 * 86_400_000;
+  return Math.max(1, Math.ceil((gone - Date.now()) / 86_400_000));
+}
+
+/** What was removed in the last 30 days, one tap from coming back. */
+function RecentlyDeleted() {
+  const { data = [] } = useDeletedAuditions();
+  const { bringBack, restoring } = useRemoveAudition();
+  const [open, setOpen] = useState(false);
+  if (data.length === 0) return null;
+  return (
+    <div>
+      <button type="button" className="aud-link aud-cap-muted text-[13.5px]" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        {open ? "Hide recently deleted" : `Recently deleted, ${data.length}`}
+      </button>
+      <div className="aud-fold" data-open={open ? "true" : "false"} inert={!open}>
+        <ul className="grid gap-2 pt-2.5">
+          {data.map((a) => (
+            <li key={a.id} className="aud-gone flex items-center justify-between gap-3 px-3 py-2">
+              <span className="min-w-0">
+                <span className="block truncate text-[14px]">{a.project}</span>
+                <span className="aud-cap-muted block text-[12px]">gone for good in {daysLeft(a.deleted_at)} days</span>
+              </span>
+              <button
+                type="button"
+                className="aud-link shrink-0 text-[13px] font-semibold"
+                disabled={restoring}
+                onClick={() => bringBack(a.id, a.project)}
+              >
+                Bring it back
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }

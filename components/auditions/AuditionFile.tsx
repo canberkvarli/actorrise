@@ -2,18 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { trackEvent } from "@/lib/events";
 import { eyebrow, KIND_LABEL, nextStep, sectionOrder, whenSentence, type Audition, type FileSection } from "@/lib/auditions";
-import { useDeleteAudition, useUpdateAudition } from "@/hooks/useAuditions";
+import { useUpdateAudition } from "@/hooks/useAuditions";
 import { AfterRoom } from "./AfterRoom";
 import { AskMe } from "./AskMe";
 import { BringList } from "./BringList";
 import { DraftCard } from "./DraftCard";
 import { errMessage, patchFromValues, valuesFromAudition, type DraftValues } from "./draftValues";
-import { FileDetails, OtherAuditions, ReminderLine } from "./FileAside";
+import { FileDetails, OtherAuditions, ReminderLine, RemoveLink } from "./FileAside";
 import { SAVE_FAILED, SidesSection, useAddSides } from "./SidesSection";
 import { useCallbackAction } from "./useCallbackAction";
 
@@ -78,8 +77,6 @@ function Primary({ a, now }: { a: Audition; now: Date }) {
 
 function Edit({ a, onClose }: { a: Audition; onClose: () => void }) {
   const update = useUpdateAudition();
-  const del = useDeleteAudition();
-  const router = useRouter();
 
   function save(v: DraftValues) {
     const patch = patchFromValues(a, v);
@@ -95,28 +92,23 @@ function Edit({ a, onClose }: { a: Audition; onClose: () => void }) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="aud-file-in mx-auto max-w-2xl">
       <DraftCard draft={null} editing={valuesFromAudition(a)} sidesName={null} saving={update.isPending} onSave={save} onCancel={onClose} />
       <div className="aud-cap-muted mt-5 flex flex-wrap items-center gap-5 text-[13.5px]">
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
             checked={a.reminders_on}
-            onChange={(e) => update.mutate({ id: a.id, reminders_on: e.target.checked }, { onError: () => toast.error(SAVE_FAILED) })}
+            onChange={(e) => {
+              const on = e.target.checked;
+              // Back on with every moment switched off would still send nothing: start again from all three.
+              const reset = on && a.reminder_moments.length === 0 ? { reminder_moments: null } : {};
+              update.mutate({ id: a.id, reminders_on: on, ...reset }, { onError: () => toast.error(SAVE_FAILED) });
+            }}
           />
           email me about this one
         </label>
-        <button
-          type="button"
-          className="aud-link"
-          disabled={del.isPending}
-          onClick={() => {
-            if (!window.confirm(`Take ${a.project} off your list?`)) return;
-            del.mutate(a.id, { onSuccess: () => router.push("/auditions"), onError: () => toast.error(SAVE_FAILED) });
-          }}
-        >
-          remove this audition
-        </button>
+        <RemoveLink a={a} />
       </div>
     </div>
   );

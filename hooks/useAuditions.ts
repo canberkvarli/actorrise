@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import api, { API_URL, getAuthToken } from "@/lib/api";
-import type { Audition, ParseResult } from "@/lib/auditions";
+import type { Audition, DeletedAudition, ParseResult } from "@/lib/auditions";
 
 const KEY = ["auditions"] as const;
 
@@ -102,6 +102,24 @@ export function useDeleteAudition() {
   });
 }
 
+/** Removed in the last 30 days. */
+export function useDeletedAuditions(enabled = true) {
+  return useQuery<DeletedAudition[]>({
+    queryKey: [...KEY, "deleted"],
+    queryFn: async () => (await api.get<DeletedAudition[]>("/api/auditions/deleted")).data,
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useRestoreAudition() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => (await api.post<Audition>(`/api/auditions/${id}/restore`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
 export function useAddPiece() {
   const qc = useQueryClient();
   return useMutation({
@@ -149,6 +167,15 @@ export function useAskAudition() {
   const replace = useReplaceOne();
   return useMutation({
     mutationFn: async ({ id, q }: { id: number; q: string }) => (await api.post<Audition>(`/api/auditions/${id}/ask`, { q })).data,
+    onSuccess: replace,
+  });
+}
+
+export function useForgetAsk() {
+  const replace = useReplaceOne();
+  return useMutation({
+    mutationFn: async ({ id, at }: { id: number; at: string }) =>
+      (await api.delete<Audition>(`/api/auditions/${id}/ask?at=${encodeURIComponent(at)}`)).data,
     onSuccess: replace,
   });
 }

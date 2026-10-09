@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 from app.models.audition import CLOSED_STATUSES, Audition, AuditionEvent, AuditionReminderSend
 from app.models.email_do_not_contact import EmailDoNotContact
 from app.models.user import User
-from app.services.auditions.core import asks_for_own_piece, aware, count_runs, pieces_for, when
+from app.services.auditions.core import asks_for_own_piece, aware, count_runs, pieces_for, reminder_moments, when
 from app.services.email.marketing import build_unsubscribe_url
 from app.services.email.templates import EmailTemplates
 from app.services.events import record_user_event
@@ -69,7 +69,8 @@ def due_moments(a: Audition, now: datetime) -> list[str]:
         due.append("eve")
     if after_at <= now < after_at + WINDOW:
         due.append("after")
-    return due
+    wanted = reminder_moments(a)
+    return [m for m in due if m in wanted]
 
 
 def load_copy(moment: str) -> tuple[str, str]:

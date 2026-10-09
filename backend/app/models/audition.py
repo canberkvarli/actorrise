@@ -58,13 +58,15 @@ class Audition(Base):
     shoots = Column(String(300), nullable=True)  # dates, union, rate, as written
     # Private notes after the room: {"how", "differently", "room"}.
     after_notes = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
-    # Saved AI help (services/auditions/assist.py): {"trip", "read", "asks"}.
+    # Saved AI help (services/auditions/assist.py): {"read", "asks"}.
     assist = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
     notes = Column(Text, nullable=True)
     tape_link = Column(String(500), nullable=True)
     source = Column(String(16), nullable=False, default="manual")
     user_script_id = Column(Integer, ForeignKey("user_scripts.id", ondelete="SET NULL"), nullable=True)
     reminders_on = Column(Boolean, nullable=False, default=True)
+    # Which of prep / eve / after to send; null means all three.
+    reminder_moments = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True)
     outcome_token = Column(String(48), nullable=False, unique=True, default=_token)
     created_at = Column(DateTime(timezone=True), nullable=False, default=_now, server_default=sql_text("now()"))
     updated_at = Column(

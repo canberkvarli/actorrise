@@ -9496,10 +9496,13 @@ html[data-firstrun="1"] body::before {
 .aud-cap[data-size="compact"] textarea {
   min-height: 96px;
   padding: 14px 16px;
-  font-size: 15px;
+  font-size: 17px;
 }
 .aud-cap textarea::placeholder {
   color: var(--aud-muted);
+  font-family: var(--t-display);
+  font-style: italic;
+  font-size: 1.12em;
 }
 .aud-cap textarea:focus {
   outline: none;
@@ -9846,25 +9849,174 @@ html[data-firstrun="1"] body::before {
   border: 1.5px solid var(--aud-fg);
   border-radius: 5px;
 }
+.aud-check {
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+/* Ticked: the brand orange, with a little pop, and the stage lamp's yellow
+   swept under the words like a highlighter. */
 .aud-check[data-on="true"] {
-  background: var(--aud-fg);
+  background: var(--primary);
+  border-color: var(--primary);
+  animation: aud-tick-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .aud-check[data-on="true"]::after {
   content: "";
   width: 8px;
   height: 4px;
-  border: 2px solid var(--aud-surface);
+  border: 2px solid var(--primary-foreground);
   border-top: 0;
   border-right: 0;
   transform: rotate(-45deg) translate(1px, -1px);
 }
+@keyframes aud-tick-pop {
+  0% { transform: scale(0.7); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+label:hover > .aud-check[data-on="false"] {
+  border-color: var(--primary);
+}
 .aud-tick-row {
   border-bottom: 1px dashed var(--aud-rule-soft);
 }
-.aud-tick-row[data-on="true"] .aud-tick-text {
+.aud-marker {
+  background-image: linear-gradient(color-mix(in oklab, var(--t-gel) 70%, transparent), color-mix(in oklab, var(--t-gel) 70%, transparent));
+  background-repeat: no-repeat;
+  background-position: 0 85%;
+  background-size: 0% 45%;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: background-size 380ms cubic-bezier(0.22, 1, 0.36, 1), color 200ms;
+  padding: 0 2px;
+  margin: 0 -2px;
+}
+.aud-tick-row[data-on="true"] .aud-marker {
+  background-size: 100% 45%;
+}
+.dark .aud-tick-row[data-on="true"] .aud-marker {
+  color: var(--aud-fg);
+  background-image: linear-gradient(color-mix(in oklab, var(--t-gel) 32%, transparent), color-mix(in oklab, var(--t-gel) 32%, transparent));
+}
+/* Packing progress: lamp yellow filling to orange, and orange words when it's all in the bag. */
+.aud-pack-bar {
+  display: block;
+  width: 64px;
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--aud-rule-soft);
+}
+.aud-pack-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--t-gel), var(--primary));
+  transform-origin: left center;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.aud-pack-done {
+  color: var(--t-gel-ink);
+}
+.aud-remind-row[data-on="false"] > span:last-child {
+  opacity: 0.6;
+  transition: opacity 180ms;
+}
+/* The small round close: Ask me rows, the calendar card. */
+.aud-x {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 999px;
   color: var(--aud-muted);
-  text-decoration: line-through;
-  text-decoration-color: var(--aud-rule);
+  transition: background-color 150ms, color 150ms, opacity 150ms;
+}
+.aud-x:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+.aud-ask-row {
+  border-bottom: 1px dashed var(--aud-rule-soft);
+}
+.aud-ask-q {
+  border-left: 3px solid var(--t-gel-ink);
+  padding-left: 10px;
+}
+@media (hover: hover) {
+  .aud-ask-row .aud-x {
+    opacity: 0.35;
+  }
+  .aud-ask-row:hover .aud-x,
+  .aud-ask-row .aud-x:focus-visible {
+    opacity: 1;
+  }
+}
+.aud-ask-btn {
+  border-radius: 999px;
+  background: var(--t-gel);
+  color: oklch(0.2 0.02 60);
+  border: 1.5px solid var(--aud-fg);
+  transition: transform 150ms, box-shadow 150ms, opacity 150ms;
+}
+.aud-ask-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0 var(--aud-fg);
+}
+.aud-ask-btn:disabled {
+  opacity: 0.45;
+}
+.aud-gone {
+  border: 1px dashed var(--aud-rule);
+  border-radius: 8px;
+}
+.aud-add-plus {
+  display: inline-block;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.aud-add-plus[data-open="true"] {
+  transform: rotate(45deg);
+}
+
+/* Folding open and shut: the height animates (grid rows 0fr to 1fr) instead of
+   the block popping in or out. Closed folds are inert, so nothing in them takes focus. */
+.aud-fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition: grid-template-rows 340ms cubic-bezier(0.22, 1, 0.36, 1), opacity 240ms ease;
+}
+.aud-fold > * {
+  min-height: 0;
+  overflow: hidden;
+}
+.aud-fold[data-open="false"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 280ms cubic-bezier(0.4, 0, 0.2, 1), opacity 160ms ease;
+}
+/* A row arriving: a short rise into place. */
+.aud-row-in {
+  animation: aud-row-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes aud-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aud-check[data-on="true"],
+  .aud-row-in {
+    animation: none;
+  }
+  .aud-fold,
+  .aud-fold[data-open="false"],
+  .aud-marker,
+  .aud-pack-bar > span,
+  .aud-add-plus {
+    transition: none;
+  }
 }
 .aud-quiet-chip {
   border: 1px solid var(--aud-rule);
@@ -9886,6 +10038,7 @@ html[data-firstrun="1"] body::before {
 .aud-input::placeholder {
   font-family: var(--t-display);
   font-style: italic;
+  font-size: 1.1em;
   color: var(--aud-muted);
 }
 .aud-input:focus-visible {

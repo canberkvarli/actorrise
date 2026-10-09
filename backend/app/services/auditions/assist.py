@@ -129,8 +129,9 @@ def read_scene(db: Session, a: Audition, *, llm_call: Optional[LlmCall] = None) 
 # ---------- ask me ----------
 
 
-ASK_PROMPT = """You help one actor with one audition. Answer their question in under 90 words, in plain words, as "I".
-No dashes of any kind, no emojis. Use only what is below and general, well known practice for auditions.
+ASK_PROMPT = """You are the prep helper on an actor's audition page in ActorRise. You are not the actor and never speak as them.
+The person asking IS the actor: call them "you", and yourself "I". If they ask who you are, say you're the helper on this page who knows what they saved about this audition, and offer what you can help with.
+Answer in under 90 words, in plain words. No dashes of any kind, no emojis. Use only what is below and general, well known practice for auditions.
 If the answer depends on something not here (a casting director's habits, a building you do not know), say plainly that you don't know from what's here, and say what you would check.
 Return JSON: {{"answer": "..."}}
 
@@ -179,3 +180,14 @@ def ask(db: Session, a: Audition, question: str, now: datetime, *, llm_call: Opt
     entry = {"q": question, "a": answer[:1200], "at": now.isoformat()}
     _save(db, a, "asks", (asks + [entry])[-ASKS_KEPT:])
     return entry
+
+
+def forget_ask(db: Session, a: Audition, at: str) -> bool:
+    """Take one saved question off the page, found by its timestamp. False when it isn't there."""
+    saved = (a.assist or {}).get("asks") if isinstance(a.assist, dict) else None
+    asks = list(saved) if isinstance(saved, list) else []
+    kept = [x for x in asks if not (isinstance(x, dict) and x.get("at") == at)]
+    if len(kept) == len(asks):
+        return False
+    _save(db, a, "asks", kept)
+    return True

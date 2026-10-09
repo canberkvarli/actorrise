@@ -8,7 +8,7 @@ function a(over: Partial<Audition>): Audition {
   return {
     id: 1, project: "P", role: null, kind: "in_person", status: "scheduled", starts_at: null, due_at: null,
     when: null, tz: "UTC", location: null, casting: null, material_raw: null, material: null, bring: null,
-    notes: null, tape_link: null, source: "manual", user_script_id: null, reminders_on: true, scope: "upcoming",
+    notes: null, tape_link: null, source: "manual", user_script_id: null, reminders_on: true, reminder_moments: ["prep", "eve", "after"], scope: "upcoming",
     created_at: NOW.toISOString(), pieces: [], bring_list: [], through: null, through_kind: null, shoots: null, after_notes: {}, assist: { read: null, asks: [] }, callback_id: null, ...over,
   };
 }

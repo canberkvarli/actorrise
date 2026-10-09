@@ -96,7 +96,8 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
     const el = box?.querySelector<HTMLElement>("textarea:not([disabled])")
       ?? box?.querySelector<HTMLElement>("input:not([type=file]):not([disabled]), textarea:not([disabled])")
       ?? box?.querySelector<HTMLElement>("button");
-    return box && el && box.offsetParent !== null ? { box, el } : null;
+    // A folded box is still laid out (it animates shut), so inert is what says it's away.
+    return box && el && box.offsetParent !== null && !box.closest("[inert]") ? { box, el } : null;
   }
   function focusCapture(): boolean {
     if (!captureTarget() && !empty) flushSync(() => setAdding(true));
@@ -190,27 +191,33 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
           >
             ?
           </button>
-          {!adding && (
-            <button
-              type="button"
-              className="aud-quiet-chip aud-focus inline-flex h-10 items-center gap-1.5 px-4 text-[14px] font-semibold"
-              aria-controls="aud-add"
-              aria-expanded={false}
-              onClick={openAdd}
-            >
-              <span aria-hidden className="text-lg leading-none">+</span>
-              Add an audition
-            </button>
-          )}
+          <button
+            type="button"
+            className="aud-quiet-chip aud-add-chip aud-focus inline-flex h-10 items-center gap-1.5 px-4 text-[14px] font-semibold"
+            aria-controls="aud-add"
+            aria-expanded={adding}
+            onClick={() => (adding ? setAdding(false) : openAdd())}
+          >
+            <span aria-hidden className="aud-add-plus text-lg leading-none" data-open={adding ? "true" : "false"}>+</span>
+            {adding ? "Close" : "Add an audition"}
+          </button>
         </div>
-        {calOpen && list.length > 0 && <CalendarPanel />}
-        <div id="aud-add" ref={capture} className={adding ? "mx-auto mb-8 max-w-2xl" : "hidden"}>
-          <div className="mb-2 flex justify-end">
-            <button type="button" className="aud-link aud-cap-muted aud-focus text-sm font-medium" onClick={() => setAdding(false)}>
-              close
-            </button>
+        {list.length > 0 && (
+          <div className="aud-fold" data-open={calOpen ? "true" : "false"} inert={!calOpen}>
+            <div className="flex justify-end">
+              <CalendarPanel onClose={() => setCalOpen(false)} />
+            </div>
           </div>
-          <DropBox startOpen={startOpen} source={source} size="compact" firstOne={list.length === 0} />
+        )}
+        <div className="aud-fold" data-open={adding ? "true" : "false"} inert={!adding}>
+          <div id="aud-add" ref={capture} className="mx-auto mb-8 w-full max-w-2xl">
+            <div className="mb-2 flex justify-end">
+              <button type="button" className="aud-link aud-cap-muted aud-focus text-sm font-medium" onClick={() => setAdding(false)}>
+                close
+              </button>
+            </div>
+            <DropBox startOpen={startOpen} source={source} size="compact" firstOne={list.length === 0} />
+          </div>
         </div>
         {logged && (
           <p role="status" className="aud-dir aud-muted mb-3 text-[13.5px]">{logged}</p>
@@ -231,7 +238,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
         ) : selectedId != null ? (
           <p className="aud-muted text-sm">That audition isn&apos;t on your rail.</p>
         ) : null}
-        {offer && <div className="mt-6">{offer}</div>}
+        {offer && <div className="aud-row-in mt-6 max-w-[440px]">{offer}</div>}
       </div>
       )}
       <AuditionsIntro open={intro} onOpenChange={introChange} onCapture={focusCapture} onCaptured={revealCapture} firstOne={list.length === 0} />

@@ -92,6 +92,7 @@ class AuditionPatch(BaseModel):
     shoots: Optional[str] = Field(None, max_length=300)
     bring_list: Optional[list[dict[str, Any]]] = None
     after_notes: Optional[dict[str, Any]] = None
+    reminder_moments: Optional[list[str]] = None
 
 
 class PieceIn(BaseModel):
@@ -122,6 +123,16 @@ def get_next(db: Session = Depends(get_db), user: User = Depends(require_moderat
     now = _now()
     a = core.next_upcoming(db, int(user.id), now)
     return {"audition": core.serialize(db, a, now, with_prep=False) if a else None}
+
+
+@router.get("/deleted")
+def list_deleted(db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+    """Removed in the last 30 days, so a slip of the thumb can come back."""
+    now = _now()
+    return [
+        {**core.serialize(db, a, now, with_prep=False), "deleted_at": a.deleted_at.isoformat()}
+        for a in core.recently_deleted(db, int(user.id), now)
+    ]
 
 
 @router.get("/quota")
@@ -304,6 +315,15 @@ def delete(audition_id: int, db: Session = Depends(get_db), user: User = Depends
     return Response(status_code=204)
 
 
+@router.post("/{audition_id}/restore")
+def restore(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+    now = _now()
+    a = core.restore_audition(db, int(user.id), audition_id, now)
+    if a is None:
+        raise HTTPException(status_code=404, detail="Audition not found")
+    return core.serialize(db, a, now)
+
+
 @router.post("/{audition_id}/outcome")
 def outcome_in_app(audition_id: int, body: OutcomeIn, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     a = _owned(db, user, audition_id)
@@ -363,3 +383,16 @@ def ask(audition_id: int, body: AskIn, db: Session = Depends(get_db), user: User
         raise HTTPException(status_code=502, detail="I couldn't answer that just now. Try again in a moment.")
     record_user_event(int(user.id), "audition_asked", {"audition_id": a.id})
     return core.serialize(db, a, now)
+
+
+@router.delete("/{audition_id}/ask")
+def forget_ask(
+    audition_id: int,
+    at: str = Query(..., max_length=64),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_moderator),
+):
+    a = _owned(db, user, audition_id)
+    if not assist.forget_ask(db, a, at):
+        raise HTTPException(status_code=404, detail="Question not found")
+    return core.serialize(db, a, _now())

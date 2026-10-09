@@ -104,6 +104,23 @@
   from { transform: translateY(10px) scale(0.985); opacity: 0; }
 }
 
+/* Closing eases away instead of vanishing. Radix holds the node until the
+   animation ends, so the same element plays it on the way out. */
+.root[data-state="closed"] {
+  animation: sheetOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+}
+@media (min-width: 768px) {
+  .root[data-state="closed"] {
+    animation-name: dialogOut;
+  }
+}
+@keyframes sheetOut {
+  to { transform: translateY(36px); opacity: 0; }
+}
+@keyframes dialogOut {
+  to { transform: translateY(8px) scale(0.98); opacity: 0; }
+}
+
 /* ---- text column ------------------------------------------------------ */
 
 .copy {
