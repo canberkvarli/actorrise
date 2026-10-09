@@ -208,14 +208,17 @@ function daysLeft(deletedAt: string): number {
   return Math.max(1, Math.ceil((gone - Date.now()) / 86_400_000));
 }
 
-/** What was removed in the last 30 days, one tap from coming back. */
-function RecentlyDeleted() {
+/**
+ * What was removed in the last 30 days, one tap from coming back. Folded in
+ * the file's side column; open on the empty page, where it's the only way back.
+ */
+export function RecentlyDeleted({ startOpen = false, className = "" }: { startOpen?: boolean; className?: string }) {
   const { data = [] } = useDeletedAuditions();
   const { bringBack, restoring } = useRemoveAudition();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   if (data.length === 0) return null;
   return (
-    <div>
+    <div className={`aud-row-in ${className}`}>
       <button type="button" className="aud-link aud-cap-muted text-[13.5px]" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         {open ? "Hide recently deleted" : `Recently deleted, ${data.length}`}
       </button>
