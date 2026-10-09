@@ -66,6 +66,56 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* ==========================================================================
+   THE THREE LAYERS, named once.
+
+   Canberk, twice, about the whole product and not one screen: "the designs are
+   still old boring one color". He is right, and it was literally true rather
+   than a matter of taste. Every theatre surface in the app — the stage, the
+   collection, the monologue, the auditions rail, the rehearsal, the modals,
+   the toasts — hard-coded the SAME two values: oklch(0.96 0.02 85) for the
+   room and oklch(0.99 0.005 85) for the page in light, oklch(0.11 0.012 50)
+   and oklch(0.19 0.018 52) in dark. Nine copies of one paper colour. So the
+   product had exactly one colour with a couple of percent of lightness
+   wobble, on every screen, and no amount of work on a single page could fix
+   that.
+
+   There are three layers, and they are named here so there is one place to
+   change them:
+
+     --t-house    the room the work happens in; it recedes
+     --t-sheet    the page being read; it comes forward
+     --t-sheet-2  the sheet's quieter second surface
+
+   They separate on TWO axes, which is the part that was missing. Value gives
+   the layering; WARMTH gives the variety. The house is cool, the sheet is
+   warm — a script under a work light in a dark auditorium. One hue at two
+   brightnesses reads as a flat wash however far apart you push it, which is
+   why the old palette felt like one colour even where it had contrast.
+
+   Surfaces that deliberately deviate (the tour's always-dark overlay, the
+   monologue's cream) keep their own values and are left alone.
+   ========================================================================== */
+:root {
+  /* A desk, not more paper. The old room was oklch(0.96 0.02 85) against a
+     0.99 page: a 1.09x separation, which is why the page had no edge and the
+     whole screen read as one cream. 1.33x now. */
+  --t-house: oklch(0.90 0.022 72);
+  --t-sheet: oklch(0.995 0.004 85);
+  --t-sheet-2: oklch(0.965 0.012 80);
+}
+.dark {
+  /* The house, and it has to READ cool rather than merely be assigned a cool
+     hue. My first attempt was L 0.085 — at that lightness 0.016 chroma is
+     invisible and it rendered #010205, i.e. black, so the whole cool-room
+     idea existed only in the token. L 0.145 at 0.028 chroma renders #050a16,
+     which is visibly blue-black. Measured, not guessed. */
+  --t-house: oklch(0.145 0.028 265);
+  /* The script under a work light: warm, and 1.22x clear of the house. */
+  --t-sheet: oklch(0.245 0.020 78);
+  --t-sheet-2: oklch(0.195 0.018 78);
+}
+
 :root {
   --radius: 16px;
 
@@ -1354,7 +1404,7 @@
 
 /* Paper goes dark with the theme. */
 .dark .t-modal {
-  --t-paper: oklch(0.19 0.018 52);
+  --t-paper: var(--t-sheet);
   --t-text: oklch(0.95 0.02 85);
   --t-muted-dark: oklch(0.75 0.02 62);
   --t-muted-dark-2: oklch(0.68 0.02 62);
@@ -1786,7 +1836,7 @@
 }
 
 .dark .t-box-office {
-  --t-paper: oklch(0.19 0.018 52);
+  --t-paper: var(--t-sheet);
   --t-paper-2: oklch(0.15 0.015 52);
   --t-text: oklch(0.95 0.02 85);
   --t-muted-dark: oklch(0.75 0.02 62);
@@ -1918,7 +1968,7 @@
 .dark .t-offer,
 .t-offer--stage,
 .t-strip {
-  --t-paper: oklch(0.19 0.018 52);
+  --t-paper: var(--t-sheet);
   --t-text: oklch(0.95 0.02 85);
   --t-muted-dark: oklch(0.75 0.02 62);
   --t-muted-dark-2: oklch(0.68 0.02 62);
@@ -2144,7 +2194,7 @@
 }
 /* Paper goes dark with the theme, like every other surface in the system. */
 .dark [data-sonner-toast].actorrise-toast {
-  --t-paper: oklch(0.19 0.018 52);
+  --t-paper: var(--t-sheet);
   --t-text: oklch(0.95 0.02 85);
   --t-muted-dark-2: oklch(0.68 0.02 62);
   --t-on-text: oklch(0.15 0.03 45);
@@ -2433,8 +2483,8 @@
   --t-stage: oklch(0.16 0.018 52);
   --t-stage-card: oklch(0.2 0.02 52);
   --t-cream: oklch(0.96 0.02 85);
-  --t-paper: oklch(0.99 0.005 85);
-  --t-paper-2: oklch(0.97 0.015 85);
+  --t-paper: var(--t-sheet);
+  --t-paper-2: var(--t-sheet-2);
 
   /* The wash behind your own speeches, and the rule beside the partner's.
      Both used to be Tailwind literals — `bg-orange-50/50` and
@@ -2989,7 +3039,7 @@
 .theatre-search[data-search-mode="plays"],
 .t-outline-flash[data-search-mode="plays"] {
   --acc: oklch(0.58 0.18 45);
-  --page: oklch(0.96 0.02 85);
+  --page: var(--t-house);
 }
 
 /* The body face. Without this the page borrowed the app's Montserrat for
@@ -3043,7 +3093,7 @@
 .theatre-search[data-search-mode="film_tv"],
 .t-outline-flash[data-search-mode="film_tv"] {
   --acc: oklch(0.52 0.19 293);
-  --page: oklch(0.96 0.02 85);
+  --page: var(--t-house);
 }
 /* The dark values for both shelves live in the dark block further down, with
    the rest of the dark tokens — putting a second set here just loses to it on
@@ -5360,8 +5410,8 @@
   --acc: oklch(0.7 0.18 48);
 
   /* Surfaces: what was paper is now a raised dark card. */
-  --t-paper: oklch(0.19 0.018 52);
-  --t-paper-2: oklch(0.17 0.018 52);
+  --t-paper: var(--t-sheet);
+  --t-paper-2: var(--t-sheet-2);
   --t-cream: oklch(0.96 0.02 85);
 
   /* Text: the dark-text tokens become the light ones. */
@@ -6340,7 +6390,7 @@
    background, not behind the page — so it renders, reports the right computed
    colour, and is never seen. The collection's ground is its own element. */
 .theatre-collection {
-  --page: oklch(0.96 0.02 85);
+  --page: var(--t-house);
   --bench: oklch(0.13 0.015 50);
   --bench-bd: oklch(0.16 0.01 45);
   background: var(--page);
@@ -6981,7 +7031,7 @@
    nothing on a whole screen is a broken control, not a design decision.
    The paper flips; the lit things stay lit. */
 .theatre-stage {
-  --page: oklch(0.96 0.02 85);
+  --page: var(--t-house);
 
   /* `--t-muted-light*` means "muted, ON A DARK GROUND" — L 0.70-0.80, written
      when this room was ink in both themes. The room flips now, and nothing
@@ -7015,10 +7065,10 @@
 .dark .theatre-stage {
   --t-gel-ink: var(--t-gel);
   --t-on-gel-ink: oklch(0.15 0.03 45);
-  --page: oklch(0.11 0.012 50);
+  --page: var(--t-house);
 
-  --t-paper: oklch(0.19 0.018 52);
-  --t-paper-2: oklch(0.17 0.018 52);
+  --t-paper: var(--t-sheet);
+  --t-paper-2: var(--t-sheet-2);
 
   --t-text: oklch(0.95 0.02 85);
   --t-text-soft: oklch(0.93 0.02 85);
@@ -7046,12 +7096,12 @@
 .dark .theatre-collection {
   --t-gel-ink: var(--t-gel);
   --t-on-gel-ink: oklch(0.15 0.03 45);
-  --page: oklch(0.11 0.012 50);
+  --page: var(--t-house);
   --bench: oklch(0.195 0.02 52);
   --bench-bd: oklch(0.32 0.03 55);
 
-  --t-paper: oklch(0.19 0.018 52);
-  --t-paper-2: oklch(0.17 0.018 52);
+  --t-paper: var(--t-sheet);
+  --t-paper-2: var(--t-sheet-2);
 
   --t-text: oklch(0.95 0.02 85);
   --t-text-soft: oklch(0.93 0.02 85);
@@ -7128,7 +7178,7 @@
      read as one flat slab on a real screen, because oklch lightness is nearly
      flat down here (0.19 and 0.225 are Lab L* 6 and 10). */
   --t-paper: oklch(0.25 0.02 52);
-  --t-paper-2: oklch(0.17 0.018 52);
+  --t-paper-2: var(--t-sheet-2);
 
   /* Text: the dark-text tokens become the light ones. */
   --t-text: oklch(0.95 0.02 85);
@@ -7167,7 +7217,10 @@
    ========================================================================== */
 
 .theatre-monologue {
-  --page: var(--t-cream);
+  /* --t-cream is an INK token almost everywhere else (cream type on a dark
+     ground), so it is left alone and the room comes from --t-house like every
+     other surface. */
+  --page: var(--t-house);
   background: var(--page);
   color: var(--t-text);
 }
@@ -7179,10 +7232,10 @@
 .dark .theatre-monologue {
   --t-gel-ink: var(--t-gel);
   --t-on-gel-ink: oklch(0.15 0.03 45);
-  --page: oklch(0.11 0.012 50);
+  --page: var(--t-house);
 
-  --t-paper: oklch(0.19 0.018 52);
-  --t-paper-2: oklch(0.17 0.018 52);
+  --t-paper: var(--t-sheet);
+  --t-paper-2: var(--t-sheet-2);
 
   --t-text: oklch(0.95 0.02 85);
   --t-text-soft: oklch(0.93 0.02 85);
@@ -7448,25 +7501,27 @@
    wash no matter how far apart you push it.
    ============================================================ */
 .theatre-rehearsal {
-  /* The desk the script is lying on, not more paper. Darker and warmer than
-     the page so the card has an edge without needing a border drawn on it. */
-  --page: oklch(0.925 0.018 72);
+  /* --page, --t-paper and --t-paper-2 come from --t-house/--t-sheet now, so
+     the rehearsal sits in the same room as the rest of the product instead of
+     being the one screen with its own palette. Only what is specific to
+     rehearsing is set below. */
 
-  --t-paper: oklch(0.995 0.004 85);
-  --t-paper-2: oklch(0.96 0.014 80);
+  /* Mine to say, and mine to say NOW.
 
-  /* Mine to say. Enough wash to find by scanning, since that is this
-     setting's whole job, and it is the quietest of the three states. */
-  --t-mine: oklch(0.97 0.022 70);
-  /* Mine to say NOW. The brightest thing on the screen, because it is the
-     only thing the actor is actually doing. */
-  --t-mine-live: oklch(0.99 0.035 78);
+     In LIGHT the live line cannot be marked by being brighter, because the
+     page it sits on is already near-white — my first pass made it 0.99 against
+     a 0.995 sheet, a 1.04x difference, i.e. nothing. So here it is marked by
+     WARMTH: --t-mine-live carries sixteen times the paper's tint and reads as
+     a wash of light falling on the line, which is both visible and the same
+     warm family as everything else rather than a new signal colour. */
+  --t-mine: oklch(0.975 0.028 75);
+  --t-mine-live: oklch(0.96 0.055 80);
 
   --t-cue-mine: oklch(0.66 0.17 48);
   --t-cue-theirs: oklch(0.78 0.03 75);
 
-  --t-line-light: oklch(0.87 0.016 78);
-  --t-line-light-2: oklch(0.82 0.018 78);
+  --t-line-light: oklch(0.85 0.018 78);
+  --t-line-light-2: oklch(0.80 0.02 78);
 
   --t-muted-light: oklch(0.42 0.018 55);
   --t-muted-light-2: oklch(0.46 0.02 55);
@@ -7478,26 +7533,17 @@
 .dark .theatre-rehearsal {
   --t-gel-ink: var(--t-gel);
   --t-on-gel-ink: oklch(0.15 0.03 45);
-  /* The house at half light. Cool, and genuinely dark: everything warm on
-     top of it then reads as lit rather than as the same brown again. */
-  --page: oklch(0.085 0.016 265);
-
-  /* The script, under a work light. Warm, and a real step up from the house
-     rather than the old two percent. */
-  --t-paper: oklch(0.215 0.016 76);
-  --t-paper-2: oklch(0.165 0.014 76);
-
   /* Mine to say, and mine to say NOW. The old note here argued this should be
      "barely there on purpose", on the grounds that a visible tint reads as a
      box. That was true of a box drawn in the same colour as its surroundings;
      what it produced was a screen where the live speech was 0.035 lightness
      clear of everything else, i.e. nothing. The live line is the one thing
      the actor is doing, so it is the brightest thing on the page. */
-  --t-mine: oklch(0.255 0.022 74);
-  --t-mine-live: oklch(0.325 0.034 76);
+  --t-mine: oklch(0.285 0.026 76);
+  --t-mine-live: oklch(0.365 0.040 78);
 
   --t-cue-mine: oklch(0.74 0.17 48);
-  --t-cue-theirs: oklch(0.44 0.028 76);
+  --t-cue-theirs: oklch(0.46 0.028 78);
 
   --t-text: oklch(0.95 0.02 85);
   --t-text-soft: oklch(0.93 0.02 85);
@@ -7505,8 +7551,8 @@
   --t-muted-dark-2: oklch(0.68 0.02 62);
   --t-faint: oklch(0.58 0.02 60);
 
-  --t-line-light: oklch(0.36 0.022 76);
-  --t-line-light-2: oklch(0.42 0.022 76);
+  --t-line-light: oklch(0.40 0.024 78);
+  --t-line-light-2: oklch(0.46 0.024 78);
 
   --t-muted-light: oklch(0.72 0.02 62);
   --t-muted-light-2: oklch(0.77 0.02 62);
@@ -9334,7 +9380,7 @@ html[data-firstrun="1"] body::before {
    columns. Padding is left to markup (unlayered rules beat utilities).
    ============================================================ */
 .theatre-auditions {
-  --page: oklch(0.96 0.02 85);
+  --page: var(--t-house);
   background: var(--page);
   color: var(--t-text);
   font-family: var(--t-body);
@@ -9445,10 +9491,10 @@ html[data-firstrun="1"] body::before {
 }
 
 .dark .theatre-auditions {
-  --page: oklch(0.11 0.012 50);
+  --page: var(--t-house);
   --t-gel-ink: var(--t-gel);
-  --t-paper: oklch(0.19 0.018 52);
-  --t-paper-2: oklch(0.17 0.018 52);
+  --t-paper: var(--t-sheet);
+  --t-paper-2: var(--t-sheet-2);
   --t-text: oklch(0.95 0.02 85);
   --t-muted-dark: oklch(0.75 0.02 62);
   --t-line-light: oklch(0.3 0.03 55);
