@@ -1,4 +1,5 @@
-/* The audition intro: a big dialog with one small looping scene per card.
+/* The audition intro: a big dialog with one small looping scene per card,
+   and (.inline) the same scenes running on the empty /auditions page.
    Every scene is built from mini copies of the page (ticket, capture box,
    prep room, a calendar), drawn on the dark "hero" stage in both themes.
 
@@ -6,7 +7,8 @@
    frame of the loop. Reduced motion just switches animation off, and what is
    left is the finished picture, never an empty stage. */
 
-.root {
+.root,
+.inline {
   --i-surface: oklch(0.99 0.005 85);
   --i-fg: oklch(0.16 0.01 45);
   --i-muted: oklch(0.4 0.015 55);
@@ -25,14 +27,17 @@
   --i-ink: oklch(0.13 0.015 50);
   --i-lift: color-mix(in oklab, var(--i-hero-line) 20%, transparent);
 
-  position: fixed;
-  z-index: 10071;
-  outline: none;
   color: var(--i-fg);
   font-family: var(--t-body);
 }
+.root {
+  position: fixed;
+  z-index: 10071;
+  outline: none;
+}
 
-:global(.dark) .root {
+:global(.dark) .root,
+:global(.dark) .inline {
   --i-surface: oklch(0.16 0.018 52);
   --i-fg: oklch(0.9 0.02 82);
   --i-muted: oklch(0.72 0.02 62);
@@ -1072,11 +1077,103 @@
 
 .root[data-paused="true"] *,
 .root[data-paused="true"] *::before,
-.root[data-paused="true"] *::after {
+.root[data-paused="true"] *::after,
+.inline[data-paused="true"] *,
+.inline[data-paused="true"] *::before,
+.inline[data-paused="true"] *::after {
   animation-play-state: paused !important;
 }
 
+/* ---- inline, on the empty page ------------------------------------------ */
+
+.inline {
+  display: grid;
+  width: 100%;
+  overflow: hidden;
+  text-align: left;
+  background: var(--i-surface);
+  border: 1.5px solid var(--i-fg);
+  box-shadow: 6px 6px 0 var(--i-press);
+}
+.inline .stage {
+  height: 230px;
+}
+.inlineCopy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px 20px 20px;
+}
+.inlineTitle {
+  font-family: var(--t-display);
+  font-size: 26px;
+  line-height: 1.05;
+  animation: sceneIn 0.5s ease both;
+}
+.inlineBody {
+  color: var(--i-muted);
+  font-size: 15px;
+  line-height: 1.5;
+  animation: sceneIn 0.5s ease 0.08s both;
+}
+.inlineDots {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.inlineDot {
+  position: relative;
+  width: 26px;
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--i-rule);
+}
+.inlineDot::before {
+  content: "";
+  position: absolute;
+  inset: -10px 0;
+}
+.inlineDot > span {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--i-focus);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+.inlineDot[data-state="done"] > span {
+  transform: scaleX(1);
+}
+.inlineDot[data-state="now"] > span {
+  animation: dotFill var(--dot-ms) linear both;
+}
+@keyframes dotFill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.inlineDot:focus-visible {
+  outline: 2px solid var(--i-focus);
+  outline-offset: 3px;
+}
+@media (min-width: 768px) {
+  .inline {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
+  .inline .stage {
+    height: 270px;
+  }
+  .inlineCopy {
+    padding: 22px 26px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .inline,
+  .inline *,
+  .inline *::before,
+  .inline *::after,
   .root,
   .root *,
   .root *::before,
