@@ -102,6 +102,18 @@ export function useDeleteAudition() {
   });
 }
 
+/** The whole of an audition's sides, as text, for the reader on its page. */
+type SidesText = { title: string | null; status: string | null; text: string | null };
+
+export function useSidesText(id: number, enabled: boolean) {
+  return useQuery<SidesText>({
+    queryKey: [...KEY, id, "sides"],
+    queryFn: async () => (await api.get<SidesText>(`/api/auditions/${id}/sides`)).data,
+    enabled,
+    staleTime: 5 * 60_000,
+  });
+}
+
 /** Removed in the last 30 days. */
 export function useDeletedAuditions(enabled = true) {
   return useQuery<DeletedAudition[]>({

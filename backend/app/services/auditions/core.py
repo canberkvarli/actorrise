@@ -461,6 +461,7 @@ def _iso(dt: Optional[datetime]) -> Optional[str]:
 
 
 SIDES_PREVIEW_CHARS = 700
+SIDES_FULL_CHARS = 120_000  # the sides reader; a whole feature script is well under this
 
 
 def sides_text(db: Session, a: Audition) -> tuple[Optional[str], Optional[str], Optional[str]]:

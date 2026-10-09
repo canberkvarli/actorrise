@@ -315,6 +315,16 @@ def delete(audition_id: int, db: Session = Depends(get_db), user: User = Depends
     return Response(status_code=204)
 
 
+@router.get("/{audition_id}/sides")
+def get_sides(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+    """The whole of the attached sides as text, so they read on the audition's own page."""
+    a = _owned(db, user, audition_id)
+    title, status, text = core.sides_text(db, a)
+    if title is None and status is None:
+        raise HTTPException(status_code=404, detail="No sides on this audition")
+    return {"title": title, "status": status, "text": (text or "").strip()[: core.SIDES_FULL_CHARS] or None}
+
+
 @router.post("/{audition_id}/restore")
 def restore(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
     now = _now()

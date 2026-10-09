@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { trackEvent } from "@/lib/events";
 import type { Audition, AuditionPiece } from "@/lib/auditions";
 import { uploadSides, useAddPiece, useAssist, useRemovePiece, useUpdateAudition } from "@/hooks/useAuditions";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { useScript } from "@/hooks/useScripts";
+import { SidesReader } from "./SidesReader";
 
 export const SAVE_FAILED = "That didn't save. Try again in a moment.";
 
@@ -76,6 +78,16 @@ export function SidesSection({ a }: { a: Audition }) {
   const status = script?.processing_status ?? a.sides?.status ?? null;
   const loading = status === "processing" || status === "pending";
   const add = useAddSides(a);
+  const [reading, setReading] = useState(false);
+
+  // The sides finish reading in while the page is open: fetch the audition
+  // again so the pages appear here without a reload.
+  const qc = useQueryClient();
+  const wasLoading = useRef(loading);
+  useEffect(() => {
+    if (wasLoading.current && status === "completed") void qc.invalidateQueries({ queryKey: ["auditions"] });
+    wasLoading.current = loading;
+  }, [loading, status, qc]);
 
   // A read on the scene once the sides have loaded (or, with none, only what to wear).
   const assist = useAssist();
@@ -102,13 +114,19 @@ export function SidesSection({ a }: { a: Audition }) {
       {sidesStep && (
         <>
           {excerpt ? (
-            <div className="grid gap-3.5 sm:grid-cols-2">
+            <button
+              type="button"
+              className="aud-pages aud-focus grid w-full gap-3.5 text-left sm:grid-cols-2"
+              aria-label="Read your sides"
+              onClick={() => setReading(true)}
+            >
               {pages(excerpt).map((p, i) => p && (
-                <div key={i} className={`aud-page h-[150px] px-4 py-3.5 text-[12px] leading-[1.55] ${i ? "max-sm:hidden" : ""}`} data-tilt={i ? "r" : "l"}>
+                <span key={i} className={`aud-page block h-[150px] px-4 py-3.5 text-[12px] leading-[1.55] ${i ? "max-sm:hidden" : ""}`} data-tilt={i ? "r" : "l"}>
                   {p}
-                </div>
+                </span>
               ))}
-            </div>
+              <span className="aud-pages-cue" aria-hidden>Read them</span>
+            </button>
           ) : (
             <p className="aud-pencil-muted text-[18px]">
               {loading ? "(they're loading into ScenePartner. give it a minute.)" : status === "failed" ? "(those sides didn't read. open them in ScenePartner to try again.)" : `(${a.sides?.title ?? "your sides"} are attached.)`}
@@ -125,6 +143,11 @@ export function SidesSection({ a }: { a: Audition }) {
             </div>
           )}
           <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[14px]">
+            {(excerpt || status === "completed") && (
+              <button type="button" className="aud-link font-semibold" onClick={() => setReading(true)}>
+                read them here
+              </button>
+            )}
             <Link
               href={sidesStep.href!}
               className="aud-link"
@@ -137,6 +160,7 @@ export function SidesSection({ a }: { a: Audition }) {
             </button>
             {add.field}
           </p>
+          <SidesReader a={a} open={reading} onOpenChange={setReading} runHref={sidesStep.href ?? undefined} />
         </>
       )}
 

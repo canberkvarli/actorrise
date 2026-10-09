@@ -12,7 +12,6 @@ import { AuditionsIntro } from "./AuditionsIntro";
 import { DropBox } from "./DropBox";
 import { AuditionFile, OUTCOME_NOTE } from "./AuditionFile";
 import { CalendarOffer, CalendarPanel, CalendarToggle } from "./CalendarLink";
-import { GhostTicket } from "./GhostTicket";
 import { FileSkeleton } from "./FileSkeleton";
 import { takeCalendarOffer } from "@/lib/calendarFeed";
 
@@ -159,11 +158,10 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
         </div>
       ) : empty ? (
         <div className="mx-auto max-w-[1280px] px-4 pb-28 pt-6 sm:px-6 md:pb-20 md:pt-10 lg:px-8">
-          <div className="flex justify-end">{howItWorks}</div>
           {loggedNote && (
             <p role="status" className="aud-dir aud-muted mt-4 text-[13.5px]">{loggedNote}</p>
           )}
-          <section aria-labelledby="aud-ask" className="aud-rise mx-auto mt-4 flex max-w-[760px] flex-col items-center text-center md:mt-6">
+          <section aria-labelledby="aud-ask" className="aud-rise mx-auto mt-10 flex max-w-[760px] flex-col items-center text-center md:mt-14">
             <p className="aud-hero-dir aud-cap-muted text-lg md:text-xl">(house is dark. one lamp on.)</p>
             <h1 id="aud-ask" className="aud-hero-h mt-2.5">
               <span className="sr-only">Auditions. </span>Got one <em>coming up?</em>
@@ -174,7 +172,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
             <div ref={capture} className="mt-9 w-full max-w-[720px] text-left">
               <DropBox startOpen={startOpen} source={source} size="hero" firstOne />
             </div>
-            <GhostTicket />
+            <div className="mt-10 md:mt-12">{howItWorks}</div>
           </section>
         </div>
       ) : (
