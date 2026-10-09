@@ -14,6 +14,7 @@ import { AuditionFile, OUTCOME_NOTE } from "./AuditionFile";
 import { CalendarOffer, CalendarPanel, CalendarToggle } from "./CalendarLink";
 import { FileSkeleton } from "./FileSkeleton";
 import { IntroLoop } from "./IntroLoop";
+import { RecentlyDeleted } from "./FileAside";
 import { takeCalendarOffer } from "@/lib/calendarFeed";
 
 /**
@@ -70,6 +71,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   const router = useRouter();
   const capture = useRef<HTMLDivElement>(null);
   const [intro, setIntro] = useState(false);
+  const [introStep, setIntroStep] = useState(0);
   function introChange(next: boolean) {
     setIntro(next);
     if (!next) markIntroSeen();
@@ -150,8 +152,14 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
               <DropBox startOpen={startOpen} source={source} size="hero" firstOne />
             </div>
             <div className="mt-12 w-full max-w-[720px] md:mt-14">
-              <IntroLoop />
+              <IntroLoop
+                onExpand={(step) => {
+                  setIntroStep(step);
+                  setIntro(true);
+                }}
+              />
             </div>
+            <RecentlyDeleted className="mt-10 w-full max-w-[720px] text-left" />
           </section>
         </div>
       ) : (
@@ -164,7 +172,10 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
             aria-label="How it works"
             title="How it works"
             className="aud-help-q aud-focus"
-            onClick={() => setIntro(true)}
+            onClick={() => {
+              setIntroStep(0);
+              setIntro(true);
+            }}
           >
             ?
           </button>
@@ -218,7 +229,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
         {offer && <div className="aud-row-in mt-6 max-w-[440px]">{offer}</div>}
       </div>
       )}
-      <AuditionsIntro open={intro} onOpenChange={introChange} onCapture={focusCapture} onCaptured={revealCapture} firstOne={list.length === 0} />
+      <AuditionsIntro startAt={introStep} open={intro} onOpenChange={introChange} onCapture={focusCapture} onCaptured={revealCapture} firstOne={list.length === 0} />
     </div>
   );
 }

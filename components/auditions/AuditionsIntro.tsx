@@ -47,7 +47,9 @@ export function AuditionsIntro({
   onCapture,
   onCaptured,
   firstOne,
+  startAt = 0,
 }: {
+  startAt?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCapture: () => boolean;
@@ -59,10 +61,10 @@ export function AuditionsIntro({
   const [hidden, setHidden] = useState(false);
   const capture = useRef(false);
   const reduced = useReducedMotion();
-  // Every opening starts on the first card.
+  // Every opening starts on the first card, or the one it was opened from.
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setI(0);
+    if (open) setI(startAt);
   }
   const last = i === SLIDES.length - 1;
   const slide = SLIDES[i];
