@@ -1098,6 +1098,36 @@
 .inline .stage {
   height: 230px;
 }
+/* The whole stage is the way into the big version; the corner icon says so. */
+.inlineExpand {
+  position: absolute;
+  inset: 0;
+  cursor: zoom-in;
+  outline: none;
+}
+.inlineExpand svg {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  box-sizing: content-box;
+  padding: 8px;
+  border-radius: 999px;
+  color: var(--i-hero-fg);
+  background: color-mix(in oklab, var(--i-hero) 70%, transparent);
+  border: 1px solid color-mix(in oklab, var(--i-hero-line) 45%, transparent);
+  transition: transform 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+.inlineExpand:hover svg,
+.inlineExpand:focus-visible svg {
+  transform: scale(1.08);
+  background: var(--i-gel);
+  color: var(--i-ink);
+  border-color: var(--i-gel);
+}
+.inlineExpand:focus-visible svg {
+  outline: 2px solid var(--i-focus);
+  outline-offset: 2px;
+}
 .inlineCopy {
   display: flex;
   flex-direction: column;

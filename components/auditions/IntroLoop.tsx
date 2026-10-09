@@ -16,7 +16,7 @@ const LOOP_MS = [9000, 8000, 9000];
  * off screen and in a hidden tab, and with reduced motion it holds the first
  * finished picture until a dot is picked.
  */
-export function IntroLoop() {
+export function IntroLoop({ onExpand }: { onExpand: (step: number) => void }) {
   const [i, setI] = useState(0);
   const [visible, setVisible] = useState(true);
   const reduced = useReducedMotion();
@@ -57,9 +57,22 @@ export function IntroLoop() {
       className={s.inline}
       data-paused={paused ? "true" : undefined}
     >
-      <IntroStage key={`${i}-${paused}`}>
-        <Scene />
-      </IntroStage>
+      <div className="relative min-w-0">
+        <IntroStage key={`${i}-${paused}`}>
+          <Scene />
+        </IntroStage>
+        <button
+          type="button"
+          className={s.inlineExpand}
+          aria-label="Watch it bigger"
+          title="Watch it bigger"
+          onClick={() => onExpand(i)}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+          </svg>
+        </button>
+      </div>
       <div className={s.inlineCopy}>
         <p className="aud-eyebrow">How it works</p>
         <p key={`t${i}`} className={s.inlineTitle}>{slide.title}</p>
