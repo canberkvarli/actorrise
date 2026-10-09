@@ -2483,8 +2483,16 @@
   --t-stage: oklch(0.16 0.018 52);
   --t-stage-card: oklch(0.2 0.02 52);
   --t-cream: oklch(0.96 0.02 85);
-  --t-paper: var(--t-sheet);
-  --t-paper-2: var(--t-sheet-2);
+  /* The landing's paper is a prop: a white sheet on a dark stage, in BOTH
+     themes. Its ink tokens below (--t-text, --t-text-soft, --t-muted-dark*)
+     are dark and never flip, so the paper must stay light here. a40a694d
+     pointed these at --t-sheet, which is a dark card in dark mode, and the
+     search card on actorrise.com went black text on dark (2026-10-09). The
+     product surfaces that want a dark card in dark mode (.dark .theatre-search,
+     .dark .t-modal, the toast) override paper AND remap the ink together in
+     their own blocks; this base block is the one place that cannot. */
+  --t-paper: oklch(0.99 0.005 85);
+  --t-paper-2: oklch(0.97 0.015 85);
 
   /* The wash behind your own speeches, and the rule beside the partner's.
      Both used to be Tailwind literals — `bg-orange-50/50` and
