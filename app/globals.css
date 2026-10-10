@@ -7539,6 +7539,20 @@
   font-family: var(--t-body);
 }
 .dark .theatre-rehearsal {
+  /* The other half of the pair. `.theatre-tokens` keeps --t-paper light in
+     BOTH themes on purpose (its own ink never flips), and says there that a
+     surface wanting a dark card in dark mode must override the paper AND remap
+     the ink together. This block remapped the ink and forgot the paper, so in
+     dark mode the rehearsal drew --t-text cream on a cream card: the partner's
+     lines went invisible, the title went invisible, and --t-mine — a dark
+     brown — painted the actor's own speeches as grey slabs. One missing
+     declaration, six symptoms. Every sibling surface (.dark .theatre-stage,
+     .dark .theatre-collection, .dark .theatre-monologue, .dark
+     .theatre-auditions) already does this; the rehearsal was the only one that
+     did not. */
+  --t-paper: var(--t-sheet);
+  --t-paper-2: var(--t-sheet-2);
+
   --t-gel-ink: var(--t-gel);
   --t-on-gel-ink: oklch(0.15 0.03 45);
   /* Mine to say, and mine to say NOW. The old note here argued this should be
