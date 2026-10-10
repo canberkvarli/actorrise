@@ -187,6 +187,10 @@ export async function getCollectionMonologues(
     maxSeconds?: number;
     ages?: string[];
     sources?: string[];
+    /** Exact `plays.title` values: one play or show, under every title it is stored as. */
+    plays?: string[];
+    /** `monologues.themes` tags (a text array); any of these. */
+    themes?: string[];
   },
   limit = 30,
 ): Promise<CollectionMonologue[]> {
@@ -204,6 +208,9 @@ export async function getCollectionMonologues(
   if (filters.maxSeconds) q = q.lte("estimated_duration_seconds", filters.maxSeconds).gt("estimated_duration_seconds", 0);
   if (filters.ages?.length) q = q.in("character_age_range", filters.ages);
   if (filters.sources?.length) q = q.in("plays.source_type", filters.sources);
+  if (filters.plays?.length) q = q.in("plays.title", filters.plays);
+  // `overlaps` is PostgREST's `ov` (&&): a piece tagged with any of the themes.
+  if (filters.themes?.length) q = q.overlaps("themes", filters.themes);
   const { data, error } = await q
     .order("quality_score", { ascending: false, nullsFirst: false })
     .order("id", { ascending: true })

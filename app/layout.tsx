@@ -31,10 +31,19 @@ const montserrat = localFont({
   display: "swap",
 });
 
+/*
+ * Only the two faces every page paints above the fold are preloaded:
+ * Montserrat (body) and Playfair (the wordmark in the nav). next/font/local
+ * preloads by default, and with eight families that was eight font requests
+ * on every first visit before a line of text was needed. Vercel Hobby counts
+ * every edge request against a 1M-a-cycle cap (2026-10-10), so the rest load
+ * only when a page actually sets them, through the @font-face rule.
+ */
 const jetbrainsMono = localFont({
   variable: "--font-mono",
   src: [{ path: "../lib/fonts/files/jetbrains-mono-normal-100-800.woff2", weight: "100 800", style: "normal" }],
   display: "swap",
+  preload: false,
 });
 
 const cormorantGaramond = localFont({
@@ -42,6 +51,7 @@ const cormorantGaramond = localFont({
   src: [{ path: "../lib/fonts/files/cormorant-garamond-normal-300-700.woff2", weight: "300 700", style: "normal" }],
   display: "swap",
   adjustFontFallback: "Times New Roman",
+  preload: false,
 });
 
 /** Brand/logo font – use for "ActorRise" wordmark. Same font is in Canva as "Playfair Display". */
@@ -63,6 +73,7 @@ const bigShoulders = localFont({
   variable: "--font-playbill",
   src: [{ path: "../lib/fonts/files/big-shoulders-normal-100-900.woff2", weight: "100 900", style: "normal" }],
   display: "swap",
+  preload: false,
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";

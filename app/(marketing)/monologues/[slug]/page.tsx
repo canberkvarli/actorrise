@@ -114,7 +114,9 @@ export default async function PublicMonologuePage({ params }: Params) {
   const { slug } = await params;
   const collection = findCollection(slug);
   if (collection) {
-    const monologues = await getCollectionMonologues(collection.filters);
+    // A play page promises every speech from the play, so it is not capped at
+    // the thirty a keyword shelf shows; King Lear alone has sixty-nine.
+    const monologues = await getCollectionMonologues(collection.filters, collection.filters.plays ? 120 : 30);
     return <MonologueCollectionPage collection={collection} monologues={monologues} />;
   }
   const id = idFromSlug(slug);
