@@ -30,15 +30,6 @@ SITE_URL = os.getenv("SITE_URL", "https://actorrise.com")
 API_PUBLIC_URL = os.getenv("API_PUBLIC_URL", "https://api.actorrise.com")
 
 
-def require_moderator(user: User = Depends(get_current_user)) -> User:
-    """Moderators only while Canberk tries the tracker (same check as the admin
-    routers). The public token routes (email outcome links, calendar.ics?k=)
-    stay open; only a moderator can hold a token anyway."""
-    if not user.is_moderator:
-        raise HTTPException(status_code=403, detail="You do not have moderator permissions")
-    return user
-
-
 CALENDAR_PAST_DAYS = 30
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
@@ -119,14 +110,14 @@ def _owned(db: Session, user: User, audition_id: int) -> Audition:
 
 
 @router.get("/next")
-def get_next(db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def get_next(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     now = _now()
     a = core.next_upcoming(db, int(user.id), now)
     return {"audition": core.serialize(db, a, now, with_prep=False) if a else None}
 
 
 @router.get("/deleted")
-def list_deleted(db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def list_deleted(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """Removed in the last 30 days, so a slip of the thumb can come back."""
     now = _now()
     return [
@@ -136,7 +127,7 @@ def list_deleted(db: Session = Depends(get_db), user: User = Depends(require_mod
 
 
 @router.get("/quota")
-def get_quota(db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def get_quota(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     return parse.quota(db, int(user.id), _now())
 
 
@@ -146,7 +137,7 @@ async def parse_breakdown(
     tz: str = Form("UTC"),
     file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
-    user: User = Depends(require_moderator),
+    user: User = Depends(get_current_user),
 ):
     # Every DB call and the PDF read run in a worker thread: on the event loop
     # they block the whole API (see the comment in app/api/scripts.py).
@@ -179,7 +170,7 @@ async def parse_breakdown(
 
 
 @router.get("/calendar-link")
-def get_calendar_link(db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def get_calendar_link(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     if not user.calendar_feed_key:
         user.calendar_feed_key = secrets.token_urlsafe(24)
         db.commit()
@@ -187,7 +178,7 @@ def get_calendar_link(db: Session = Depends(get_db), user: User = Depends(requir
 
 
 @router.post("/calendar-link/reset")
-def reset_calendar_link(db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def reset_calendar_link(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     user.calendar_feed_key = secrets.token_urlsafe(24)
     db.commit()
     return {"url": f"{API_PUBLIC_URL}/api/auditions/calendar.ics?k={user.calendar_feed_key}"}
@@ -275,14 +266,14 @@ def outcome_from_email(
 def list_auditions(
     scope: Optional[str] = Query(None, pattern="^(upcoming|waiting|past)$"),
     db: Session = Depends(get_db),
-    user: User = Depends(require_moderator),
+    user: User = Depends(get_current_user),
 ):
     now = _now()
     return [core.serialize(db, a, now) for a in core.list_auditions(db, int(user.id), now, scope)]
 
 
 @router.post("", status_code=201)
-def create(body: AuditionIn, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def create(body: AuditionIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     data = body.model_dump(exclude={"source"})
     try:
         a = core.create_audition(db, int(user.id), data, source=body.source)
@@ -295,12 +286,12 @@ def create(body: AuditionIn, db: Session = Depends(get_db), user: User = Depends
 
 
 @router.get("/{audition_id}")
-def get_one(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def get_one(audition_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     return core.serialize(db, _owned(db, user, audition_id), _now())
 
 
 @router.patch("/{audition_id}")
-def patch(audition_id: int, body: AuditionPatch, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def patch(audition_id: int, body: AuditionPatch, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     a = _owned(db, user, audition_id)
     try:
         core.update_audition(db, a, body.model_dump(exclude_unset=True))
@@ -310,13 +301,13 @@ def patch(audition_id: int, body: AuditionPatch, db: Session = Depends(get_db), 
 
 
 @router.delete("/{audition_id}", status_code=204)
-def delete(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def delete(audition_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     core.delete_audition(db, _owned(db, user, audition_id))
     return Response(status_code=204)
 
 
 @router.get("/{audition_id}/sides")
-def get_sides(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def get_sides(audition_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """The whole of the attached sides as text, so they read on the audition's own page."""
     a = _owned(db, user, audition_id)
     title, status, text = core.sides_text(db, a)
@@ -326,7 +317,7 @@ def get_sides(audition_id: int, db: Session = Depends(get_db), user: User = Depe
 
 
 @router.post("/{audition_id}/restore")
-def restore(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def restore(audition_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     now = _now()
     a = core.restore_audition(db, int(user.id), audition_id, now)
     if a is None:
@@ -335,7 +326,7 @@ def restore(audition_id: int, db: Session = Depends(get_db), user: User = Depend
 
 
 @router.post("/{audition_id}/outcome")
-def outcome_in_app(audition_id: int, body: OutcomeIn, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def outcome_in_app(audition_id: int, body: OutcomeIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     a = _owned(db, user, audition_id)
     try:
         core.log_outcome(db, a, body.outcome, via="app")
@@ -345,7 +336,7 @@ def outcome_in_app(audition_id: int, body: OutcomeIn, db: Session = Depends(get_
 
 
 @router.post("/{audition_id}/pieces", status_code=201)
-def add_piece(audition_id: int, body: PieceIn, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def add_piece(audition_id: int, body: PieceIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     a = _owned(db, user, audition_id)
     try:
         core.add_piece(db, a, monologue_id=body.monologue_id, scene_id=body.scene_id)
@@ -355,7 +346,7 @@ def add_piece(audition_id: int, body: PieceIn, db: Session = Depends(get_db), us
 
 
 @router.delete("/{audition_id}/pieces/{piece_id}", status_code=204)
-def remove_piece(audition_id: int, piece_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def remove_piece(audition_id: int, piece_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     if not core.remove_piece(db, _owned(db, user, audition_id), piece_id):
         raise HTTPException(status_code=404, detail="Piece not found")
     return Response(status_code=204)
@@ -365,7 +356,7 @@ def remove_piece(audition_id: int, piece_id: int, db: Session = Depends(get_db),
 
 
 @router.post("/{audition_id}/assist/read")
-def assist_read(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def assist_read(audition_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     a = _owned(db, user, audition_id)
     before = (a.assist or {}).get("read") if isinstance(a.assist, dict) else None
     read = assist.read_scene(db, a)
@@ -375,14 +366,14 @@ def assist_read(audition_id: int, db: Session = Depends(get_db), user: User = De
 
 
 @router.post("/{audition_id}/callback", status_code=201)
-def add_callback(audition_id: int, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def add_callback(audition_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """A callback is its own appointment: a new audition carrying this one's details, no date yet."""
     a = _owned(db, user, audition_id)
     return core.serialize(db, core.add_callback(db, a), _now())
 
 
 @router.post("/{audition_id}/ask")
-def ask(audition_id: int, body: AskIn, db: Session = Depends(get_db), user: User = Depends(require_moderator)):
+def ask(audition_id: int, body: AskIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     a = _owned(db, user, audition_id)
     now = _now()
     q = assist.asks_quota(db, int(user.id), now)
@@ -400,7 +391,7 @@ def forget_ask(
     audition_id: int,
     at: str = Query(..., max_length=64),
     db: Session = Depends(get_db),
-    user: User = Depends(require_moderator),
+    user: User = Depends(get_current_user),
 ):
     a = _owned(db, user, audition_id)
     if not assist.forget_ask(db, a, at):

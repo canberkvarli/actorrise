@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { trackEvent } from "@/lib/events";
 import { useAuditions } from "@/hooks/useAuditions";
-import { markIntroSeen } from "@/lib/auditionIntro";
+import { markIntroSeen, readIntroSeen, shouldAutoShowIntro } from "@/lib/auditionIntro";
 import { AuditionsIntro } from "./AuditionsIntro";
 import { DropBox } from "./DropBox";
 import { AuditionFile, OUTCOME_NOTE } from "./AuditionFile";
@@ -66,12 +66,28 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   const offerShown = calOffer != null && list.some((a) => a.id === calOffer);
   const offer = offerShown ? <CalendarOffer onDone={() => setCalOffer(null)} /> : null;
 
-  // The empty page runs How it works inline (IntroLoop), so the dialog only
-  // opens from the ? once there are auditions.
+  // A first-timer on an empty page gets How it works opened big, once per
+  // browser; after that it runs small under the paste box (IntroLoop), and a
+  // tap on it, or the ? once there are auditions, opens it big again. Not when
+  // they came here to add one (?new=1, onboarding): they are mid-task.
   const router = useRouter();
   const capture = useRef<HTMLDivElement>(null);
   const [intro, setIntro] = useState(false);
   const [introStep, setIntroStep] = useState(0);
+  const introChecked = useRef(false);
+  const cameToAdd = startOpen || source === "onboarding";
+  useEffect(() => {
+    if (introChecked.current || isLoading) return;
+    // A beat after the page paints, so the card lands on a page rather than a blank.
+    const t = window.setTimeout(() => {
+      introChecked.current = true;
+      if (shouldAutoShowIntro({ loading: false, failed, count: list.length, seen: readIntroSeen(), adding: cameToAdd })) {
+        setIntroStep(0);
+        setIntro(true);
+      }
+    }, 600);
+    return () => window.clearTimeout(t);
+  }, [isLoading, failed, list.length, cameToAdd]);
   function introChange(next: boolean) {
     setIntro(next);
     if (!next) markIntroSeen();
