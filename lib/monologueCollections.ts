@@ -483,3 +483,71 @@ export const COLLECTIONS: Collection[] = [
 export function findCollection(slug: string): Collection | null {
   return COLLECTIONS.find((c) => c.slug === slug) ?? null;
 }
+
+/**
+ * The shelves a piece belongs on, most specific first, for the links at the
+ * foot of its page. The play page comes first when there is one, then the
+ * collections whose every filter the piece satisfies, ranked by how many
+ * filters they have (a "comedic, female, under two minutes" shelf says more
+ * about the piece than "monologues for women"). Nothing is guessed: a
+ * collection with a filter the piece cannot answer (an era the row does not
+ * carry) is skipped rather than assumed.
+ */
+export function collectionsForPiece(
+  p: {
+    playTitle: string | null;
+    gender: string | null;
+    tone: string | null;
+    era: string | null;
+    ageRange: string | null;
+    durationSeconds: number | null;
+    sourceType: string | null;
+    themes: string[];
+  },
+  limit = 3,
+): Collection[] {
+  const out: Collection[] = [];
+  const play = p.playTitle ? COLLECTIONS.find((c) => c.filters.plays?.includes(p.playTitle as string)) : undefined;
+  if (play) out.push(play);
+  const scored = COLLECTIONS.filter((c) => !c.filters.plays && c !== play)
+    .map((c) => {
+      const f = c.filters;
+      let score = 0;
+      if (f.gender) {
+        if (p.gender !== f.gender) return null;
+        score += 1;
+      }
+      if (f.tones) {
+        if (!p.tone || !f.tones.includes(p.tone)) return null;
+        score += 1;
+      }
+      if (f.era) {
+        if (p.era !== f.era) return null;
+        score += 1;
+      }
+      if (f.ages) {
+        if (!p.ageRange || !f.ages.includes(p.ageRange)) return null;
+        score += 1;
+      }
+      if (f.maxSeconds) {
+        if (!p.durationSeconds || p.durationSeconds > f.maxSeconds) return null;
+        score += 1;
+      }
+      if (f.sources) {
+        if (!p.sourceType || !f.sources.includes(p.sourceType as "play" | "film" | "tv")) return null;
+        score += 1;
+      }
+      if (f.themes) {
+        if (!f.themes.some((t) => p.themes.includes(t))) return null;
+        score += 1;
+      }
+      return score > 0 ? { c, score } : null;
+    })
+    .filter((x): x is { c: Collection; score: number } => x !== null)
+    .sort((a, b) => b.score - a.score);
+  for (const { c } of scored) {
+    if (out.length >= limit) break;
+    out.push(c);
+  }
+  return out;
+}

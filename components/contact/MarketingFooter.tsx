@@ -24,6 +24,21 @@ const LINKS = [
   { href: "/privacy", label: "Privacy" },
 ];
 
+/* The shelves, on every marketing page. Until 2026-10-10 nothing on the home
+   page linked the database or a single collection, so Google reached them
+   only through the sitemap. Eight is enough to say what is here; the
+   database page lists the rest. */
+const BROWSE = [
+  { href: "/monologue-database", label: "The monologue database" },
+  { href: "/monologues/hamlet-monologues", label: "Hamlet" },
+  { href: "/monologues/romeo-and-juliet-monologues", label: "Romeo and Juliet" },
+  { href: "/monologues/macbeth-monologues", label: "Macbeth" },
+  { href: "/monologues/monologues-about-love", label: "About love" },
+  { href: "/monologues/comedic-monologues-for-teens", label: "Comedic, for teens" },
+  { href: "/monologues/monologues-for-women-over-40", label: "Women over 40" },
+  { href: "/monologues/one-minute-monologues-for-men", label: "One minute, for men" },
+];
+
 /**
  * The footer on every marketing page, in the landing's voice.
  *
@@ -98,6 +113,19 @@ export function MarketingFooter() {
               </button>
             </nav>
           </div>
+
+          <nav
+            className="mt-5 flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 text-sm"
+            style={{ color: "var(--t-muted-light-2)" }}
+            aria-label="Browse monologues"
+          >
+            <span style={{ color: "var(--t-faint)" }}>Browse</span>
+            {BROWSE.map((l) => (
+              <Link prefetch={false} key={l.href} href={l.href} className={linkCls}>
+                {l.label}
+              </Link>
+            ))}
+          </nav>
 
           <div
             className="mt-8 max-w-2xl space-y-2 border-t pt-6 text-xs"

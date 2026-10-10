@@ -4,12 +4,13 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { GhostLightInlineCta } from "@/components/marketing/GhostLightInlineCta";
 import { MonologueCollectionPage } from "@/components/marketing/MonologueCollectionPage";
-import { COLLECTIONS, findCollection } from "@/lib/monologueCollections";
+import { COLLECTIONS, collectionsForPiece, findCollection } from "@/lib/monologueCollections";
 import {
   findReplacementMonologue,
   getCollectionMonologues,
   getIndexableMonologues,
   getPublicMonologue,
+  getSiblingMonologues,
   idFromSlug,
   monologueSlug,
   type PublicMonologue,
@@ -130,6 +131,20 @@ export default async function PublicMonologuePage({ params }: Params) {
   const title = displayTitle(m);
   const meta = [m.gender, m.tone, readableLength(m.durationSeconds)].filter(Boolean) as string[];
 
+  // The links out. Until 2026-10-10 this page linked to no other /monologues/
+  // page: 12,000 pages reachable only from the sitemap, passing nothing to
+  // each other or to the collection pages. Siblings are the same play's best
+  // speeches; shelves are the collections this piece actually satisfies.
+  const siblings = m.playId ? await getSiblingMonologues(m.playId, m.id) : [];
+  const shelves = collectionsForPiece(m);
+  const playPage = shelves.find((c) => c.filters.plays);
+
+  // What the ingest knows about the piece. On a copyrighted page it is the
+  // only thing a reader learns here, and the only words Google has to go on;
+  // 5,800 such pages were a title and "the full text isn't published here".
+  const about = [m.sceneDescription, m.characterDescription].filter(Boolean) as string[];
+  const tags = [m.primaryEmotion, ...m.themes].filter((t, i, a) => t && a.indexOf(t) === i) as string[];
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CreativeWork",
@@ -137,8 +152,23 @@ export default async function PublicMonologuePage({ params }: Params) {
     inLanguage: "en",
     ...(m.author ? { author: { "@type": "Person", name: m.author } } : {}),
     ...(m.playTitle ? { isPartOf: { "@type": "CreativeWork", name: m.playTitle } } : {}),
+    ...(m.sceneDescription ? { abstract: m.sceneDescription } : {}),
+    ...(m.themes.length ? { keywords: m.themes.join(", ") } : {}),
     ...(m.isPublicDomain ? { text: m.text } : {}),
     publisher: { "@type": "Organization", name: "ActorRise", url: siteUrl },
+  };
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Monologues", item: `${siteUrl}/monologue-database` },
+      ...(playPage
+        ? [{ "@type": "ListItem", position: 2, name: m.playTitle, item: `${siteUrl}/monologues/${playPage.slug}` }]
+        : m.playTitle
+          ? [{ "@type": "ListItem", position: 2, name: m.playTitle }]
+          : []),
+      { "@type": "ListItem", position: m.playTitle ? 3 : 2, name: title, item: `${siteUrl}/monologues/${monologueSlug(m)}` },
+    ],
   };
 
   return (
@@ -147,6 +177,10 @@ export default async function PublicMonologuePage({ params }: Params) {
         type="application/ld+json"
         // Escape "<" so monologue text can never break out of the script tag.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd).replace(/</g, "\\u003c") }}
       />
 
       <p className="text-sm uppercase tracking-[0.18em] text-primary mb-3">Monologue</p>
@@ -189,6 +223,22 @@ export default async function PublicMonologuePage({ params }: Params) {
         </div>
       )}
 
+      {(about.length > 0 || tags.length > 0) && (
+        <section className="mb-12">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground mb-3">About this piece</h2>
+          {about.map((line) => (
+            <p key={line} className="text-muted-foreground mb-2">
+              {line}
+            </p>
+          ))}
+          {tags.length > 0 && (
+            <p className="text-sm text-muted-foreground capitalize">
+              {[m.ageRange ? `${m.ageRange.replace("+", " and up")}` : null, ...tags].filter(Boolean).join("  ·  ")}
+            </p>
+          )}
+        </section>
+      )}
+
       {/* After the words, before the rehearse card. Someone who has just read the
           speech is the most qualified reader this site gets, and this page has
           never mentioned the app to them. Kept quiet on purpose so the primary
@@ -212,6 +262,65 @@ export default async function PublicMonologuePage({ params }: Params) {
           </Button>
         </div>
       </div>
+
+      {siblings.length > 0 && (
+        <section className="mt-14">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground mb-1">
+            More from {m.playTitle}
+          </h2>
+          {playPage && (
+            <p className="text-sm text-muted-foreground mb-4">
+              <Link prefetch={false} href={`/monologues/${playPage.slug}`} className="text-primary underline underline-offset-4">
+                Every speech from {m.playTitle}, printed in full
+              </Link>
+            </p>
+          )}
+          <ul className="divide-y divide-border">
+            {siblings.map((s) => (
+              <li key={s.id} className="py-2.5">
+                <Link
+                  prefetch={false}
+                  href={`/monologues/${monologueSlug({ id: s.id, character: s.character, playTitle: s.playTitle })}`}
+                  className="text-foreground hover:text-primary"
+                >
+                  {s.character}
+                </Link>
+                <span className="ml-3 text-sm text-muted-foreground capitalize">
+                  {[s.tone, readableLength(s.durationSeconds)].filter(Boolean).join(" · ")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {shelves.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground mb-3">Browse</h2>
+          <ul className="flex flex-wrap gap-2">
+            {shelves.map((c) => (
+              <li key={c.slug}>
+                <Link
+                  prefetch={false}
+                  href={`/monologues/${c.slug}`}
+                  className="inline-block rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                >
+                  {c.title.replace(/:.*$/, "")}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link
+                prefetch={false}
+                href="/monologue-database"
+                className="inline-block rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+              >
+                The whole database
+              </Link>
+            </li>
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
