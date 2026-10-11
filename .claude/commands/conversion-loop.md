@@ -41,6 +41,17 @@ what the tracker recorded (created, parsed, reminders sent, outcomes logged). On
 users have auditions, someone with one coming up and no piece attached is the person to
 notice, but they are written to only if section 5 lists them.
 
+**Who reaches the tab** (Canberk, 2026-10-11: "i need to know if ppl are reaching to it,
+staying in there"). The database only records what people DO in the tracker; whether they
+LOOK at it is in GA4. Each run, call the GA4 `run_report` tool on property `524936499`
+for yesterday and for the last 7 days: dimension `pagePath`, filter `pagePath` begins with
+`/auditions`, metrics `screenPageViews`, `activeUsers`, `userEngagementDuration`,
+`sessions`. Report people (activeUsers) and views, and the average time per person
+(`userEngagementDuration / activeUsers`, in seconds). GA4 counts Canberk's own visits
+too, so on a quiet day subtract the obvious one. Then from the brief's section 7, how many
+of those did anything (distinct real users with an `audition_*` event). Three numbers:
+reached, stayed, did. If GA4 is not connected, say so and print the DB numbers only.
+
 ## 2. The inbox
 
 Load the Gmail tools and search for replies since the last run (the date of the newest other
@@ -163,6 +174,7 @@ Ghost Light (7 days, against the 7 before)
   people    <two or three lines: who read what, in the app, by first name; "anonymous" for the rest>
 
 Auditions (7 days, against the 7 before)
+  reached   <n> people looked at /auditions yesterday (<n> this week), <n> views, about <n> seconds each; <n> of them did something
   added     <n> by real users (<change>), <n> by staff
   coming up <n> in the next 7 days, <n> with a piece attached; <project, kind, day> for each real one
   recorded  <created / parsed / reminders sent / outcomes logged, in a few words, or "nothing yet">
