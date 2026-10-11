@@ -11,6 +11,7 @@ import { Toaster } from "sonner";
 import { theatreFontVars, typewriterFontVar } from "@/lib/fonts/theatre";
 import { Analytics } from "@vercel/analytics/react";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { StaffFlag } from "@/components/analytics/StaffFlag";
 import { OAuthCallbackRedirect } from "@/components/auth/OAuthCallbackRedirect";
 import { LastAuthCookieSync } from "@/components/auth/LastAuthCookieSync";
 import { AttributionCapture } from "@/components/analytics/AttributionCapture";
@@ -264,6 +265,7 @@ export default function RootLayout({
             <LastAuthCookieSync />
           </Suspense>
           <AuthProviderWrapper>
+            <StaffFlag />
             <AuthModalProvider>{children}</AuthModalProvider>
           </AuthProviderWrapper>
           {/* `theatre-tokens` and the faces ride on the toaster itself.

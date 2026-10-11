@@ -3,7 +3,7 @@ const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 declare global {
   interface Window {
     gtag?: (
-      command: "config" | "event" | "js",
+      command: "config" | "event" | "js" | "set",
       targetId: string,
       config?: Record<string, unknown>
     ) => void;
@@ -37,6 +37,22 @@ export function event(
 ) {
   if (typeof window === "undefined" || !window.gtag || !GA_MEASUREMENT_ID) return;
   window.gtag("event", action, params);
+}
+
+/**
+ * Marks this browser's GA4 user as staff or not, as a user property. The
+ * admin dashboards already leave staff out (users.exclude_from_stats); GA4 had
+ * no such flag, so Canberk and the test accounts were inside every page-view
+ * count, which on a quiet feature like /auditions was most of the number
+ * (2026-10-12: "dont count me as the testers and my main account"). The
+ * property reaches reports only once it is registered in GA4 Admin as a
+ * user-scoped custom dimension named `staff`; until then it is carried and
+ * ignored. Set on every login state change, including "no", so a shared
+ * machine does not stay flagged after a staff logout.
+ */
+export function setStaff(staff: boolean) {
+  if (typeof window === "undefined" || !window.gtag || !GA_MEASUREMENT_ID) return;
+  window.gtag("set", "user_properties", { staff: staff ? "yes" : "no" });
 }
 
 export { GA_MEASUREMENT_ID };

@@ -36,6 +36,8 @@ interface User {
   last_seen_feature_id?: string | null;
   is_moderator?: boolean;
   can_approve_submissions?: boolean;
+  /** Staff and test accounts; the dashboards leave them out and so does GA4 (StaffFlag). */
+  exclude_from_stats?: boolean;
   is_founding_actor?: boolean;
 }
 

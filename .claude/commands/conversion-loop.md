@@ -47,10 +47,20 @@ LOOK at it is in GA4. Each run, call the GA4 `run_report` tool on property `5249
 for yesterday and for the last 7 days: dimension `pagePath`, filter `pagePath` begins with
 `/auditions`, metrics `screenPageViews`, `activeUsers`, `userEngagementDuration`,
 `sessions`. Report people (activeUsers) and views, and the average time per person
-(`userEngagementDuration / activeUsers`, in seconds). GA4 counts Canberk's own visits
-too, so on a quiet day subtract the obvious one. Then from the brief's section 7, how many
-of those did anything (distinct real users with an `audition_*` event). Three numbers:
+(`userEngagementDuration / activeUsers`, in seconds). Then from the brief's section 7, how
+many of those did anything (distinct real users with an `audition_*` event). Three numbers:
 reached, stayed, did. If GA4 is not connected, say so and print the DB numbers only.
+
+Leave staff out (Canberk, 2026-10-12: "dont count me as the testers and my main account").
+Since 2026-10-12 the site sets a GA4 user property `staff` = `yes` for every signed-in
+account with `exclude_from_stats` or `is_moderator` (`components/analytics/StaffFlag.tsx`),
+and `no` for everyone else. Add `dimension_filter`
+`{"not_expression": {"filter": {"field_name": "customUser:staff", "string_filter":
+{"match_type": "EXACT", "value": "yes"}}}}` to every GA4 call in this loop. It only works
+once the property is registered in GA4 Admin → Custom definitions → Custom dimensions →
+user scope, name `staff`; if the call errors on the field name, it has not been registered
+yet: say so, run the query without the filter, and mark the numbers "incl. staff". Data
+from before the registration cannot be filtered either way.
 
 ## 2. The inbox
 

@@ -304,6 +304,10 @@ def get_me(
         "last_seen_feature_id": current_user.last_seen_feature_id,
         "is_moderator": current_user.is_moderator,
         "can_approve_submissions": current_user.can_approve_submissions,
+        # Staff and test accounts. The client passes it to GA4 as a user
+        # property so page-view counts can leave them out, the way the admin
+        # dashboards already do.
+        "exclude_from_stats": bool(current_user.exclude_from_stats),
         "is_founding_actor": is_founding_actor,
         "headshot_url": headshot_url,
         # Lets the client fire signup_completed exactly once for genuinely new
