@@ -57,3 +57,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-09-29, 6 saved, 0 scenes finished, free, 3 reads this month
 **They said:** "I was planning to read the monologues, but I found out they're only available in the paid version. I hadn't planned on buying it yet, but when I do decide to, I'll definitely choose something from what you suggested."
 **Heard as:** price; the free-read limit landed on pieces the founder had just recommended, so the wall read as the whole library being paid
+
+## 2026-10-12
+
+**Replying to:** day10 ("what were you hoping actorrise would do for you?")
+**Account:** signed up 2026-09-29, 6 saved, 0 scenes finished, free; read 3 pieces in the Ghost Light app
+**They said:** "I installed this app to find monologues for self-improvement. I'm not quite motivated enough to really get into it yet, but I will soon."
+**Heard as:** not an actor with an audition; a self-improvement reader. No deadline, so no pull. The product's cliff for this person is the first read out loud, not search.
