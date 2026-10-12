@@ -51,7 +51,9 @@ def ensure(db: Session, vendor: str, voice: str, direction: str | None, text: st
 def _claim(db: Session, key: str) -> bool:
     now = datetime.now(timezone.utc)
     row = db.get(PartnerAudio, key)
-    if row is None or row.status == "ready":
+    # Failed stays failed: the admin regenerate endpoint deletes the row, and
+    # that is the only retry path. Otherwise every scene open re-queues it.
+    if row is None or row.status in ("ready", "failed"):
         return False
     if row.claimed_at is not None:
         claimed = row.claimed_at if row.claimed_at.tzinfo else row.claimed_at.replace(tzinfo=timezone.utc)

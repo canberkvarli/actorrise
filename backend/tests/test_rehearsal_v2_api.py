@@ -2,7 +2,7 @@
 import unittest
 from unittest import mock
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
@@ -10,8 +10,8 @@ from sqlalchemy.pool import StaticPool
 
 from app.api import rehearsal as api
 from app.api.auth import get_current_user
+from app.core.config import settings
 from app.core.database import get_db
-from app.middleware.burst_limiter import BurstLimiter
 from app.models.actor import FilmTvReference, Play, Scene, SceneLine, UserScript
 from app.models.organization import Organization
 from app.models.rehearsal import PartnerAudio, RehearsalEvent, RehearsalRun
@@ -26,14 +26,14 @@ _TABLES = (Organization, User, FilmTvReference, Play, UserScript, Scene, SceneLi
 
 class Api(unittest.TestCase):
     def setUp(self):
-        _, self._saved = memory_db(_TABLES)  # strips the Postgres column types
+        self._throwaway, self._saved = memory_db(_TABLES)  # strips the Postgres column types
         # TestClient serves from another thread, so the in-memory DB must be
         # shareable (same recipe as tests/test_auditions_api.py).
-        engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-        event.listens_for(engine, "connect")(lambda conn, _record: conn.execute("PRAGMA foreign_keys=ON"))
+        self.engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+        event.listens_for(self.engine, "connect")(lambda conn, _record: conn.execute("PRAGMA foreign_keys=ON"))
         for model in _TABLES:
-            model.__table__.create(engine)
-        self.db = sessionmaker(bind=engine)()
+            model.__table__.create(self.engine)
+        self.db = sessionmaker(bind=self.engine)()
         self.user = User(email="a@example.com", supabase_id="s1")
         play = Play(title="P", author="A", source_type="play",
                     genre="drama", category="classical", copyright_status="public_domain")
@@ -54,17 +54,19 @@ class Api(unittest.TestCase):
         # require_scene_partner is a factory; the router depends on the gate it
         # built once, so that is the object to override.
         app.dependency_overrides[api.SCENE_PARTNER_GATE] = lambda: True
+        self.app = app
         self.client = TestClient(app)
         self.patches = [
             mock.patch.object(api, "assert_can_rehearse"),
             mock.patch.object(api, "schedule_synthesis"),
+            mock.patch.object(api, "record_user_event"),
             mock.patch.object(partner_audio, "signed_url", side_effect=lambda p: f"https://signed/{p}"),
         ]
         for p in self.patches: p.start()
 
     def tearDown(self):
         for p in self.patches: p.stop()
-        self.db.close(); restore(self._saved)
+        self.db.close(); self._throwaway.close(); self.engine.dispose(); restore(self._saved)
 
     def test_scene_payload_has_contract_lines_voices_and_audio_slots(self):
         r = self.client.get(f"/api/rehearsal/scenes/{self.scene.id}")
@@ -102,3 +104,34 @@ class Api(unittest.TestCase):
     def test_bad_character_is_422(self):
         r = self.client.post("/api/rehearsal/runs", json={"scene_id": self.scene.id, "character": "NOBODY", "voices": {}})
         self.assertEqual(r.status_code, 422)
+
+    def test_client_cannot_declare_a_run_guided(self):
+        r = self.client.post("/api/rehearsal/runs", json={"scene_id": self.scene.id, "character": "ANNA", "is_guided": True})
+        self.assertEqual(r.status_code, 200, r.text)
+        api.assert_can_rehearse.assert_called_once()
+        self.assertFalse(self.db.get(RehearsalRun, r.json()["run_id"]).is_guided)
+
+    def test_guided_run_is_the_servers_call_and_skips_the_gate(self):
+        def refuse():
+            raise HTTPException(status_code=403, detail="metered")
+        self.app.dependency_overrides[api.SCENE_PARTNER_GATE] = refuse
+        with mock.patch.object(api, "guided_scene", return_value=self.scene):
+            r = self.client.post("/api/rehearsal/runs/guided")
+        self.assertEqual(r.status_code, 200, r.text)
+        body = r.json()
+        self.assertEqual((body["scene_id"], body["character"]), (self.scene.id, api.GUIDED_ACTOR))
+        self.assertTrue(self.db.get(RehearsalRun, body["run_id"]).is_guided)
+        api.assert_can_rehearse.assert_not_called()
+        api.record_user_event.assert_called_once_with(self.user.id, "guided_scene_started", {"platform": "web"})
+        with mock.patch.object(api, "guided_scene", return_value=None):
+            self.assertEqual(self.client.post("/api/rehearsal/runs/guided").status_code, 404)
+
+    def test_failed_audio_is_not_queued_again(self):
+        key = partner_audio.ensure(self.db, settings.partner_tts_vendor, "ash", None, "Where were you?")
+        row = self.db.get(PartnerAudio, key); row.status = "failed"; row.error = "boom"; self.db.commit()
+        body = self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()
+        self.assertEqual(body["audio"]["0"], {"key": key, "url": None})
+        r = self.client.post("/api/rehearsal/audio", json={"scene_id": self.scene.id, "line_index": 0, "voice": "ash"})
+        self.assertEqual((r.status_code, r.json()["url"]), (200, None))
+        api.schedule_synthesis.assert_not_called()
+        self.assertEqual(self.db.get(PartnerAudio, key).status, "failed")

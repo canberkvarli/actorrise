@@ -44,6 +44,13 @@ class Cache(unittest.TestCase):
         self.assertTrue(pa._claim(self.db, key))
         self.assertFalse(pa._claim(self.db, key))
 
+    def test_failed_row_is_not_claimed(self):
+        # Regenerate deletes the row; that is the only way a failed line is retried.
+        key = pa.ensure(self.db, "openai", "coral", None, "Out.")
+        row = self.db.get(PartnerAudio, key); row.status = "failed"; row.error = "boom"; self.db.commit()
+        self.assertFalse(pa._claim(self.db, key))
+        self.assertEqual(self.db.get(PartnerAudio, key).status, "failed")
+
     def test_failure_is_recorded_and_row_released(self):
         key = pa.ensure(self.db, "openai", "coral", None, "Out.")
         with mock.patch.object(pa, "synthesize", side_effect=RuntimeError("boom")):

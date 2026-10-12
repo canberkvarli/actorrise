@@ -49,6 +49,12 @@ class Journal(unittest.TestCase):
         journal.append(self.db, run.id, self.user.id, [ev(0, "started"), ev(1, "dance")])
         self.assertEqual(self.db.query(RehearsalEvent).count(), 1)
 
+    def test_malformed_events_are_dropped_not_fatal(self):
+        run = self.start()
+        journal.append(self.db, run.id, self.user.id, ["x", {"seq": 1, "type": "started", "at_ms": "abc"},
+                                                     {"seq": 2, "type": "started", "at_ms": 5}])
+        self.assertEqual(self.db.query(RehearsalEvent).count(), 1)
+
     def test_furthest_and_finished(self):
         run = self.start()
         journal.append(self.db, run.id, self.user.id, [ev(0, "started"), ev(1, "line_reached", 0), ev(2, "line_reached", 3)])

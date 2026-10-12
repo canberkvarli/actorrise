@@ -42,21 +42,31 @@ def _insert_ignore(db: Session, rows: list[dict]) -> None:
 
 
 def append(db: Session, run_id: int, user_id: int, events: list[dict]) -> int:
-    """Append a batch. Unknown types are dropped. Returns rows attempted."""
+    """Append a batch. Anything malformed (not a dict, unknown type, seq not an
+    int, at_ms or line_index not a number) is dropped, never fatal. Returns
+    rows attempted."""
     run = db.get(RehearsalRun, run_id)
     if run is None or run.user_id != user_id:
         raise PermissionError("not your run")
     rows = []
     for e in events:
+        if not isinstance(e, dict):
+            continue
         if e.get("type") not in EVENT_TYPES or not isinstance(e.get("seq"), int):
             continue
+        try:
+            at_ms = int(e.get("at_ms") or 0)
+            line_index = None if e.get("line_index") is None else int(e["line_index"])
+        except (TypeError, ValueError):
+            continue
+        payload = e.get("payload")
         rows.append({
             "run_id": run_id,
             "seq": e["seq"],
             "type": e["type"],
-            "line_index": e.get("line_index"),
-            "at_ms": int(e.get("at_ms") or 0),
-            "payload": e.get("payload") or {},
+            "line_index": line_index,
+            "at_ms": at_ms,
+            "payload": payload if isinstance(payload, dict) else {},
         })
     _insert_ignore(db, rows)
     db.commit()
