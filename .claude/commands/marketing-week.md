@@ -77,6 +77,14 @@ plus the week's folder. Each writes files there and reports back in under 200 wo
 > 2. **Follow-ups.** Rows whose `Reply?` is a yes and whose thread Canberk has not answered:
 >    list them in `followups.md` with what they said. Do not draft a second chase to anyone
 >    marked CLOSED or already followed up once.
+>    **The one chase.** Canberk, 2026-10-12: a first email from a stranger tends to land in
+>    spam, and the replies he gets come after the follow-up. So every organisation written to
+>    by this run 7 days ago (last week's `tracker-append.csv`) that has not replied and has
+>    not bounced gets ONE chase: a Gmail draft, a reply on the original thread (search
+>    `in:sent to:<address>` for the message id), 50 to 80 words, "quick follow-up on my note
+>    from last week, no rush", the offer restated in one line, "reply with a yes and I will
+>    set it up the same day", signed Canberk. Never a second chase. Write the chase into
+>    `followups.md` under "Chased this week" so next week's run knows.
 > 3. **New.** Pick ONE segment for the week and say why in a line. Look at which categories
 >    in the tracker got replies and which got none, and favour what answered. Find 8 new
 >    organisations in that segment with a named person or a real inbox, using web search.
