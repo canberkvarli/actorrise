@@ -7,6 +7,8 @@
  * Time is the audio clock, in seconds. A partner beat is scheduled on it to
  * the sample; the microphone opens at the beat's exact end; the handover
  * fires on the delta that completes the actor's line, not after a wait.
+ * Pause stops everything at the clock; resume goes on from the line it was on
+ * (mid-beat, the line sounding or the next one due), never from the top.
  */
 import { liveRead, shouldHandOver, type LiveRead, EMPTY_READ } from '../live-read';
 import type { EventType } from './contract';
@@ -21,7 +23,7 @@ export interface EnginePorts {
   player: {
     /** Decoded length in seconds, or null if the line is not ready yet. */
     duration: (lineIndex: number) => number | null;
-    /** Schedule the line at `at` on the audio clock. */
+    /** Schedule the line at `at` on the audio clock. False = not playable yet: held like a cold line. */
     play: (lineIndex: number, at: number) => boolean;
     stopAll: () => void;
   };
@@ -31,6 +33,8 @@ export interface EnginePorts {
     open: () => void;
     close: () => void;
   };
+  /** On the handover path, before the partner plays. MUST be O(1) and must not
+   *  perform I/O: buffer it; the hook flushes on a microtask. */
   journal: { emit: (type: EventType, lineIndex: number | null, atMs: number, payload?: Record<string, unknown>) => void };
   /** Run `fn` when the audio clock reaches `at`. Returns a cancel. */
   schedule: (at: number, fn: () => void) => () => void;
@@ -40,8 +44,7 @@ export type EngineState = 'ready' | 'partner' | 'actor' | 'paused' | 'ended';
 
 export interface Snapshot {
   state: EngineState;
-  /** The character the actor is reading. */
-  actor: string;
+  actor: string; // the character the actor is reading
   turnIndex: number;
   /** The line the actor is on, or the partner line currently sounding. */
   lineIndex: number;
@@ -61,8 +64,10 @@ export class Engine {
   private cancels: Array<() => void> = [];
   private startedAt = 0;
   private timeline = new Timeline();
-  /** A cold partner line the beat is holding on: its position in the beat and when it was due. */
-  private waiting: { line: number; position: number; due: number } | null = null;
+  private waiting: { line: number; position: number; due: number } | null = null; // a held cold line
+  private beat: { position: number; end: number }[] = []; // the lines scheduled, and their ends
+  private resumeFrom = 0; // position in the beat that resume goes on from
+  private primed = -1; // the actor turn last primed for; cleared by pause
   private listeners = new Set<() => void>();
 
   constructor(private script: Script, private ports: EnginePorts) {}
@@ -92,20 +97,30 @@ export class Engine {
     this.enter(0);
   }
 
-  /** Audio stopped at the clock, mic off. The turn index is what resume returns to. */
+  /** Audio stopped at the clock, mic off; remembers the line resume goes on from. */
   pause() {
     if (this.state !== 'partner' && this.state !== 'actor') return;
+    const now = this.ports.clock.now();
+    // The line sounding now, or the next one due (in a breath, or held cold).
+    this.resumeFrom = this.beat.find(b => b.end > now)?.position ?? this.waiting?.position ?? 0;
     this.silence();
+    this.primed = -1;
     this.state = 'paused';
     this.ports.journal.emit('paused', this.snapshot().lineIndex, this.atMs());
     this.changed();
   }
 
-  /** The same turn again, from its start. */
+  /** The same line again, at now: an actor line from its first word, a beat from the line it was on. */
   resume() {
     if (this.state !== 'paused') return;
     this.ports.journal.emit('resumed', this.snapshot().lineIndex, this.atMs());
-    this.enter(this.turnIndex);
+    const turn = this.script.turns[this.turnIndex];
+    this.read = EMPTY_READ;
+    this.waiting = null;
+    this.timeline.reset();
+    if (turn.kind === 'partner') this.startBeat(turn, this.resumeFrom);
+    else this.openMic(turn);
+    this.changed();
   }
 
   skip() {
@@ -121,7 +136,7 @@ export class Engine {
   }
 
   jumpTo(lineIndex: number) {
-    if (this.state === 'ready') return;
+    if (this.state === 'ready' || this.state === 'ended') return;
     const t = this.script.turnOfLine[lineIndex];
     if (t === undefined) return;
     this.jumpToTurn(t);
@@ -175,16 +190,9 @@ export class Engine {
 
   // ── transitions ──
 
-  private lineOfTurn(t: number) {
-    const turn = this.script.turns[t];
-    return turn.kind === 'actor' ? turn.lineIndex : turn.lineIndices[0];
-  }
+  private lineOfTurn(t: number) { const u = this.script.turns[t]; return u.kind === 'actor' ? u.lineIndex : u.lineIndices[0]; }
 
-  private silence() {
-    this.clearTimers();
-    this.ports.player.stopAll();
-    this.ports.mic.close();
-  }
+  private silence() { this.clearTimers(); this.ports.player.stopAll(); this.ports.mic.close(); }
 
   private enter(t: number) {
     this.clearTimers();
@@ -194,42 +202,60 @@ export class Engine {
     this.read = EMPTY_READ;
     this.sounding = null;
     this.waiting = null;
+    this.beat = [];
     this.timeline.reset();
     if (turn.kind === 'partner') {
-      this.state = 'partner';
       this.ports.journal.emit('line_reached', turn.lineIndices[0], this.atMs());
-      this.playBeat(turn, 0, this.ports.clock.now());
-      // Primed as the beat starts (after play, so it never delays the sound),
-      // so the transcriber is ready when the mic opens.
-      const next = this.script.turns[t + 1];
-      if (next?.kind === 'actor') this.ports.mic.prime(next.keywords);
+      this.startBeat(turn, 0);
     } else {
-      this.state = 'actor';
-      this.ports.mic.prime(turn.keywords);
-      this.ports.mic.open();
-      this.timeline.mark('mic_open', this.ports.clock.now());
+      this.openMic(turn);
       this.ports.journal.emit('line_reached', turn.lineIndex, this.atMs());
     }
     this.changed();
   }
 
+  private startBeat(turn: PartnerTurn, position: number) {
+    this.state = 'partner';
+    this.playBeat(turn, position, this.ports.clock.now());
+    // Primed as the beat starts (after play, so it never delays the sound),
+    // so the transcriber is ready when the mic opens.
+    this.prime(turn.index + 1);
+  }
+
+  private openMic(turn: ActorTurn) {
+    this.state = 'actor';
+    this.prime(turn.index);
+    this.ports.mic.open();
+    this.timeline.mark('mic_open', this.ports.clock.now());
+  }
+
+  /** Send turn `t`'s keywords, once: the beat before it usually already has. */
+  private prime(t: number) {
+    const turn = this.script.turns[t];
+    if (turn?.kind !== 'actor' || this.primed === t) return;
+    this.ports.mic.prime(turn.keywords);
+    this.primed = t;
+  }
+
   /**
    * Schedule the beat from `position` on, starting at `at`: each line follows
    * the last by its decoded length plus a breath, and the mic opens at the
-   * last line's end, on the clock. A cold line holds the beat there.
+   * last line's end, on the clock. A cold line (no duration, or play()
+   * refused) holds the beat there until audioReady.
    */
   private playBeat(turn: PartnerTurn, position: number, at: number) {
+    this.beat = [];
     let start = at;
     let end = at;
     for (let p = position; p < turn.lineIndices.length; p++) {
       const line = turn.lineIndices[p];
       const d = this.ports.player.duration(line);
-      if (d === null) {
+      if (d === null || !this.ports.player.play(line, start)) {
         this.waiting = { line, position: p, due: start };
         return;
       }
-      this.ports.player.play(line, start);
       const s = start;
+      this.beat.push({ position: p, end: s + d });
       this.cancels.push(this.ports.schedule(s, () => { this.sounding = line; this.changed(); }));
       this.ports.journal.emit('partner_line_played', line, (s - this.startedAt) * 1000);
       end = s + d;

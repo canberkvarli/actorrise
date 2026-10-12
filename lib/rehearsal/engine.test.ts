@@ -8,27 +8,45 @@ const L = (index: number, character: string, text: string): RehearsalLine => ({ 
 const LINES = [L(0, 'BEN', 'Where were you?'), L(1, 'BEN', 'I waited.'), L(2, 'ANNA', 'Out. Twenty-four hours.'),
   L(3, 'BEN', 'Fine.'), L(4, 'ANNA', 'Go.')];
 
-/** Callbacks handed to `schedule`, fired by `fire(upTo)` once the clock is at or past their time. */
+/**
+ * Callbacks handed to `schedule`, fired by `fire(upTo)` once the clock is at or
+ * past their time, earliest first. A cancel really removes one, including one
+ * cancelled by an earlier callback in the same `fire`.
+ */
 let timers: { at: number; fn: () => void }[] = [];
-const fire = (upTo: number) => { const due = timers.filter(t => t.at <= upTo); timers = timers.filter(t => t.at > upTo); due.forEach(t => t.fn()); };
+const fire = (upTo: number) => {
+  for (;;) {
+    const due = timers.filter(t => t.at <= upTo).sort((a, b) => a.at - b.at)[0];
+    if (!due) return;
+    timers = timers.filter(t => t !== due);
+    due.fn();
+  }
+};
 
 function fakePorts() {
   let now = 100;
   const scheduled: { line: number; at: number }[] = [];
   const durations: Record<number, number> = { 0: 1.0, 1: 0.5, 3: 0.4 };
-  const ports: EnginePorts & { now: () => number; tick: (s: number) => void; scheduled: typeof scheduled } = {
+  /** Plays and listener notifications, in the order they happened. */
+  const calls: string[] = [];
+  const ports: EnginePorts & { now: () => number; tick: (s: number) => void; scheduled: typeof scheduled; calls: string[] } = {
     now: () => now,
     tick: (s) => { now += s; },
     scheduled,
+    calls,
     clock: { now: () => now, outputLatency: () => 0.02 },
     player: {
       duration: (line) => durations[line] ?? null,
-      play: (line, at) => { scheduled.push({ line, at }); return true; },
+      play: (line, at) => { scheduled.push({ line, at }); calls.push(`play:${line}`); return true; },
       stopAll: vi.fn(),
     },
     mic: { prime: vi.fn(), open: vi.fn(), close: vi.fn() },
     journal: { emit: vi.fn() },
-    schedule: vi.fn((at: number, fn: () => void) => { timers.push({ at, fn }); return () => {}; }),
+    schedule: vi.fn((at: number, fn: () => void) => {
+      const timer = { at, fn };
+      timers.push(timer);
+      return () => { timers = timers.filter(t => t !== timer); };
+    }),
   };
   return ports;
 }
@@ -112,7 +130,104 @@ describe('Engine', () => {
     expect(ports.mic.close).toHaveBeenCalled();
     engine.resume();
     expect(engine.snapshot().state).toBe('partner');
-    expect(ports.scheduled.length).toBe(4); // first beat scheduled twice
+    // Paused before line 0 had started: the beat goes again from line 0, at now.
+    expect(ports.scheduled).toEqual([{ line: 0, at: 100 }, { line: 1, at: 100 + 1.0 + BREATH_S },
+      { line: 0, at: 100 }, { line: 1, at: 100 + 1.0 + BREATH_S }]);
+  });
+
+  it('resume goes on from the line that was sounding, not the top of the beat', () => {
+    engine.begin();
+    ports.tick(1.5); fire(101.5);
+    expect(engine.snapshot().sounding).toBe(1);
+    engine.pause();
+    engine.resume();
+    expect(ports.scheduled).toEqual([{ line: 0, at: 100 }, { line: 1, at: 100 + 1.0 + BREATH_S }, { line: 1, at: 101.5 }]);
+    ports.tick(0.5); fire(102);
+    expect(engine.snapshot()).toMatchObject({ state: 'actor', lineIndex: 2 });
+  });
+
+  it('paused in the breath between two lines, resume starts the next line', () => {
+    engine.begin();
+    ports.tick(1.1); fire(101.1);
+    engine.pause(); engine.resume();
+    expect(ports.scheduled.slice(2)).toEqual([{ line: 1, at: 101.1 }]);
+  });
+
+  it('resume on an actor line primes and opens the mic again with the read reset', () => {
+    engine.begin(); const end = 100 + 1.5 + BREATH_S; ports.tick(end - 100); fire(end);
+    engine.delta('out twenty');
+    expect(engine.snapshot().read.score).toBeGreaterThan(0);
+    engine.pause(); engine.resume();
+    expect(engine.snapshot()).toMatchObject({ state: 'actor', lineIndex: 2 });
+    expect(engine.snapshot().read.score).toBe(0);
+    expect(ports.mic.prime).toHaveBeenCalledTimes(2);
+    expect(ports.mic.open).toHaveBeenCalledTimes(2);
+  });
+
+  it('a pause cancels the beat: its end never opens the mic', () => {
+    engine.begin();
+    engine.pause();
+    fire(1e6);
+    expect(engine.snapshot().state).toBe('paused');
+    expect(ports.mic.open).not.toHaveBeenCalled();
+  });
+
+  it('a jump cancels the beat it left: its end never fires', () => {
+    engine.begin();
+    engine.jumpTo(4);
+    ports.tick(10); fire(1e6);
+    expect(engine.snapshot()).toMatchObject({ state: 'actor', lineIndex: 4 });
+    expect(ports.mic.open).toHaveBeenCalledTimes(1);
+  });
+
+  it('primes once per actor line: the beat before it does, the line itself does not again', () => {
+    engine.begin(); const end = 100 + 1.5 + BREATH_S; ports.tick(end - 100); fire(end);
+    expect(engine.snapshot().state).toBe('actor');
+    expect(ports.mic.prime).toHaveBeenCalledTimes(1);
+  });
+
+  it('on handover the partner plays before any listener hears about it', () => {
+    engine.begin(); const end = 100 + 1.5 + BREATH_S; ports.tick(end - 100); fire(end);
+    engine.subscribe(() => ports.calls.push('listener'));
+    ports.calls.length = 0;
+    engine.delta('out twenty four hours');
+    expect(ports.calls[0]).toBe('play:3');
+    expect(ports.calls).toContain('listener');
+  });
+
+  it('a line play() refuses is held like a cold one until audioReady', () => {
+    const p = fakePorts(); let ok = false;
+    p.player.play = (line, at) => { if (!ok) return false; p.scheduled.push({ line, at }); return true; };
+    const e = new Engine(buildScript(LINES, 'ANNA'), p);
+    e.begin();
+    fire(1e6);
+    expect(e.snapshot().state).toBe('partner');
+    expect(p.mic.open).not.toHaveBeenCalled();
+    ok = true; e.audioReady(0);
+    expect(p.scheduled[0]).toEqual({ line: 0, at: p.now() });
+  });
+
+  it('a cold line decoding while paused schedules nothing; resume plays it', () => {
+    const p = fakePorts(); const dur: Record<number, number | null> = { 0: null, 1: 0.5 };
+    p.player.duration = (l) => dur[l] ?? null;
+    const e = new Engine(buildScript(LINES, 'ANNA'), p);
+    e.begin(); e.pause();
+    dur[0] = 1.0; e.audioReady(0);
+    expect(p.scheduled).toEqual([]);
+    e.resume();
+    expect(p.scheduled[0]).toEqual({ line: 0, at: p.now() });
+  });
+
+  it('nothing moves after abandon: no jump, and never completed', () => {
+    engine.begin();
+    engine.abandon();
+    engine.jumpTo(2);
+    engine.back(); engine.resume(); engine.delta('out twenty four hours'); engine.quiet();
+    fire(1e6);
+    expect(engine.snapshot().state).toBe('ended');
+    const types = vi.mocked(ports.journal.emit).mock.calls.map(c => c[0]);
+    expect(types).not.toContain('jumped');
+    expect(types).not.toContain('completed');
   });
 
   it('jumpTo any line starts that turn', () => {
