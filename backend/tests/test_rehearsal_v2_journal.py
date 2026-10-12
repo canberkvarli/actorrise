@@ -26,6 +26,15 @@ class Journal(unittest.TestCase):
         self.db.add_all([self.user, play]); self.db.flush()
         self.scene = Scene(play_id=play.id, title="S", character_1_name="A", character_2_name="B", line_count=4, estimated_duration_seconds=0)
         self.db.add(self.scene); self.db.flush()
+        # line_order is deliberately not 0..3: a journal line_index is the
+        # position in the ordered list (contract.lines_for), never line_order.
+        self.db.add_all([
+            SceneLine(scene_id=self.scene.id, line_order=10, character_name="A", text="One.", word_count=1),
+            SceneLine(scene_id=self.scene.id, line_order=20, character_name="B", text="Two.", word_count=1),
+            SceneLine(scene_id=self.scene.id, line_order=30, character_name=" a ", text="Three.", word_count=1),
+            SceneLine(scene_id=self.scene.id, line_order=40, character_name="B", text="Four.", word_count=1),
+        ])
+        self.db.commit()
 
     def tearDown(self):
         self.db.close(); restore(self._saved)
@@ -63,7 +72,40 @@ class Journal(unittest.TestCase):
         journal.append(self.db, run.id, self.user.id, [ev(3, "completed", 3)])
         self.assertEqual(journal.furthest_line(self.db, run.id), 3)
         self.assertTrue(journal.is_finished(self.db, run.id))
+        # Finished drives resume and the list; it is not what earns anything.
+        self.assertFalse(journal.is_fully_read(self.db, run.id))
+        self.assertFalse(journal.user_has_finished_a_scene(self.db, self.user.id))
+
+    def test_fully_read_needs_a_read_of_every_actor_line_and_completed(self):
+        # The client writes the journal, so one forged `completed` must earn
+        # nothing. The actor's lines here are positions 0 and 2.
+        run = self.start()
+        journal.append(self.db, run.id, self.user.id, [ev(0, "started"), ev(1, "actor_line_read", 0), ev(2, "completed", 3)])
+        self.assertTrue(journal.is_finished(self.db, run.id))
+        self.assertFalse(journal.is_fully_read(self.db, run.id))
+        self.assertFalse(journal.user_has_finished_a_scene(self.db, self.user.id))
+        journal.append(self.db, run.id, self.user.id, [ev(3, "actor_line_read", 2)])
+        self.assertTrue(journal.is_fully_read(self.db, run.id))
         self.assertTrue(journal.user_has_finished_a_scene(self.db, self.user.id))
+
+    def test_reading_every_line_without_completing_is_not_finished(self):
+        run = self.start()
+        journal.append(self.db, run.id, self.user.id, [ev(0, "actor_line_read", 0), ev(1, "actor_line_read", 2)])
+        self.assertFalse(journal.is_fully_read(self.db, run.id))
+        self.assertFalse(journal.user_has_finished_a_scene(self.db, self.user.id))
+
+    def test_reading_the_partners_lines_does_not_count(self):
+        # Partner positions are 1 and 3; claiming those read says nothing.
+        run = self.start()
+        journal.append(self.db, run.id, self.user.id, [ev(0, "actor_line_read", 1), ev(1, "actor_line_read", 3),
+                                                     ev(2, "actor_line_read", 0), ev(3, "completed", 3)])
+        self.assertFalse(journal.is_fully_read(self.db, run.id))
+
+    def test_a_scene_with_no_lines_for_the_part_is_never_fully_read(self):
+        run = journal.create_run(self.db, self.user.id, self.scene.id, character="NOBODY", voices={})
+        journal.append(self.db, run.id, self.user.id, [ev(0, "completed", 3)])
+        self.assertFalse(journal.is_fully_read(self.db, run.id))
+        self.assertFalse(journal.user_has_finished_a_scene(self.db, self.user.id))
 
     def test_resumable_is_an_open_run_past_line_zero(self):
         self.assertIsNone(journal.resumable(self.db, self.user.id, self.scene.id))

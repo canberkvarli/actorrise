@@ -18,6 +18,7 @@ from app.models.actor import (
 )
 from app.models.billing import PricingTier, UsageMetrics, UserSubscription
 from app.models.organization import Organization
+from app.models.rehearsal import RehearsalEvent, RehearsalRun
 from app.models.user import User
 from app.models.user_event import UserEvent
 from app.services import events, trial_length
@@ -27,7 +28,7 @@ from tests.dbfixture import memory_db, restore
 _TABLES = (
     Organization, User, ActorProfile, FilmTvReference, Play, UserScript, Scene, SceneLine,
     RehearsalSession, RehearsalLineDelivery, UsageMetrics, UserEvent, PricingTier,
-    UserSubscription,
+    UserSubscription, RehearsalRun, RehearsalEvent,
 )
 
 
@@ -76,6 +77,43 @@ class TrialLengthTests(Fixture):
         self._session(self.user, "completed")
         self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 14)
         self.assertTrue(trial_length.has_finished_a_scene(self.db, self.user.id))
+
+    def _alex_line_indexes(self) -> list[int]:
+        # A journal line_index is the position in the ordered scene, see
+        # services/rehearsal/contract.lines_for.
+        rows = self.db.query(SceneLine).filter(SceneLine.scene_id == self.scene.id).order_by(SceneLine.line_order).all()
+        return [i for i, r in enumerate(rows) if r.character_name == "ALEX"]
+
+    def test_a_completed_v2_run_earns_the_long_trial(self):
+        from app.services.rehearsal import journal
+        own = self._alex_line_indexes()
+        self.assertEqual(len(own), 3)
+        run = journal.create_run(self.db, self.user.id, self.scene.id, "ALEX", {})
+        reads = [{"seq": i, "type": "actor_line_read", "line_index": idx, "at_ms": i, "payload": {}} for i, idx in enumerate(own)]
+        journal.append(self.db, run.id, self.user.id, reads + [
+            {"seq": len(own), "type": "completed", "line_index": 5, "at_ms": 9, "payload": {}},
+        ])
+        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), trial_length.EARNED_TRIAL_DAYS)
+        self.assertTrue(trial_length.has_finished_a_scene(self.db, self.user.id))
+
+    def test_a_forged_completed_event_alone_does_not(self):
+        # The journal is client-written. `completed` without the reads to back
+        # it is one POST, and one POST must not buy a week.
+        from app.services.rehearsal import journal
+        run = journal.create_run(self.db, self.user.id, self.scene.id, "ALEX", {})
+        journal.append(self.db, run.id, self.user.id, [
+            {"seq": 0, "type": "completed", "line_index": 5, "at_ms": 1, "payload": {}},
+        ])
+        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), trial_length.BASE_TRIAL_DAYS)
+
+    def test_a_v2_run_left_early_does_not(self):
+        from app.services.rehearsal import journal
+        run = journal.create_run(self.db, self.user.id, self.scene.id, "ALEX", {})
+        journal.append(self.db, run.id, self.user.id, [
+            {"seq": 0, "type": "started", "line_index": None, "at_ms": 0, "payload": {}},
+            {"seq": 1, "type": "line_reached", "line_index": 2, "at_ms": 10, "payload": {}},
+        ])
+        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), trial_length.BASE_TRIAL_DAYS)
 
     def test_a_scene_left_early_does_not(self):
         for status in ("in_progress", "abandoned", "timed_out"):

@@ -4,13 +4,16 @@ The second week belongs to anyone who has finished a scene. It is the one
 behaviour that shows the product working, and until now it won nothing: of the
 22 actors who started the guided scene in its first three days, 6 finished.
 
-"Finished" is the server's word, never the browser's. It means a
-rehearsal_sessions row the deliver endpoint closed as `completed`, which
-happens when the actor's last line arrives (api/scenes.py). The browser also
+"Finished" is the server's word, never the browser's. It means a v2 run that
+journal.is_fully_read accepts: a `completed` event AND an actor_line_read for
+every one of the actor's lines in that scene (the journal is client-written,
+so `completed` alone is one forged POST and buys nothing). Or, from before v2,
+a rehearsal_sessions row the old deliver endpoint closed as `completed`. Those
+old rows still count; nobody loses a week they earned. The browser also
 reports guided_scene_finished through POST /api/events, and that event is
 deliberately NOT read here: any signed-in client can post it, and a name a
-client can send must not be able to grant something. Checked 2026-09-29: all 6
-actors with that event, tap mode included, also hold a completed session, so
+client can send must not be able to grant something. Checked 2026-09-29: all
+6 actors with that event, tap mode included, also hold a completed session, so
 nothing is lost by ignoring it.
 
 Decided here and only here. Checkout asks this module, /api/subscriptions/me
@@ -32,6 +35,10 @@ EARNED_TRIAL_DAYS = 14
 
 def has_finished_a_scene(db, user_id: int) -> bool:
     try:
+        from app.services.rehearsal import journal
+
+        if journal.user_has_finished_a_scene(db, user_id):
+            return True
         return (
             db.query(RehearsalSession.id)
             .filter(

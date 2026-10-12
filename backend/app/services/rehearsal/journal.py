@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.models.actor import SceneLine
 from app.models.rehearsal import EVENT_TYPES, RehearsalEvent, RehearsalRun
 
 RESUME_WINDOW = timedelta(hours=24)
@@ -92,13 +93,54 @@ def is_closed(db: Session, run_id: int) -> bool:
     return _has(db, run_id, "completed", "abandoned")
 
 
-def user_has_finished_a_scene(db: Session, user_id: int) -> bool:
-    return (
-        db.query(RehearsalEvent.id)
-        .join(RehearsalRun, RehearsalRun.id == RehearsalEvent.run_id)
-        .filter(RehearsalRun.user_id == user_id, RehearsalEvent.type == "completed")
-        .first() is not None
+def _actor_line_indexes(db: Session, scene_id: int, character: str) -> set[int]:
+    """Positions (contract.lines_for numbering, not line_order) of every line
+    in the scene that belongs to `character`, matched the way same_character
+    matches: trimmed, case-insensitive."""
+    position = (func.row_number().over(order_by=SceneLine.line_order) - 1).label("position")
+    ordered = (
+        db.query(position, SceneLine.character_name.label("character_name"))
+        .filter(SceneLine.scene_id == scene_id)
+        .subquery()
     )
+    wanted = character.strip().lower()
+    rows = db.query(ordered.c.position).filter(func.lower(func.trim(ordered.c.character_name)) == wanted).all()
+    return {int(p) for (p,) in rows}
+
+
+def is_fully_read(db: Session, run_id: int) -> bool:
+    """Completed, and every one of the actor's lines has an actor_line_read.
+
+    The journal is client-written, so `completed` on its own is one forged
+    POST. is_finished stays the word for resume and the sessions list; this is
+    the word for anything that grants something (the trial rule). A part with
+    no lines in its scene is never fully read: there is nothing to have read.
+    """
+    run = db.get(RehearsalRun, run_id)
+    if run is None or not is_finished(db, run_id):
+        return False
+    own = _actor_line_indexes(db, run.scene_id, run.character or "")
+    if not own:
+        return False
+    read = {
+        int(i) for (i,) in db.query(RehearsalEvent.line_index)
+        .filter(RehearsalEvent.run_id == run_id, RehearsalEvent.type == "actor_line_read",
+                RehearsalEvent.line_index.isnot(None))
+        .distinct()
+    }
+    return own <= read
+
+
+def user_has_finished_a_scene(db: Session, user_id: int) -> bool:
+    """Any run of this user's that is fully read (see is_fully_read)."""
+    completed_runs = (
+        db.query(RehearsalRun.id)
+        .join(RehearsalEvent, RehearsalEvent.run_id == RehearsalRun.id)
+        .filter(RehearsalRun.user_id == user_id, RehearsalEvent.type == "completed")
+        .distinct()
+        .order_by(RehearsalRun.id.desc())
+    )
+    return any(is_fully_read(db, run_id) for (run_id,) in completed_runs)
 
 
 def resumable(db: Session, user_id: int, scene_id: int) -> dict | None:
