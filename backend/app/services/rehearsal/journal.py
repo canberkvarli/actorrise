@@ -25,6 +25,10 @@ def create_run(db: Session, user_id: int, scene_id: int, character: str, voices:
     return run
 
 
+def db_run(db: Session, run_id: int) -> RehearsalRun | None:
+    return db.get(RehearsalRun, run_id)
+
+
 def _insert_ignore(db: Session, rows: list[dict]) -> None:
     if not rows:
         return
