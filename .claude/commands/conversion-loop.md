@@ -41,26 +41,9 @@ what the tracker recorded (created, parsed, reminders sent, outcomes logged). On
 users have auditions, someone with one coming up and no piece attached is the person to
 notice, but they are written to only if section 5 lists them.
 
-**Who reaches the tab** (Canberk, 2026-10-11: "i need to know if ppl are reaching to it,
-staying in there"). The database only records what people DO in the tracker; whether they
-LOOK at it is in GA4. Each run, call the GA4 `run_report` tool on property `524936499`
-for yesterday and for the last 7 days: dimension `pagePath`, filter `pagePath` begins with
-`/auditions`, metrics `screenPageViews`, `activeUsers`, `userEngagementDuration`,
-`sessions`. Report people (activeUsers) and views, and the average time per person
-(`userEngagementDuration / activeUsers`, in seconds). Then from the brief's section 7, how
-many of those did anything (distinct real users with an `audition_*` event). Three numbers:
-reached, stayed, did. If GA4 is not connected, say so and print the DB numbers only.
-
-Leave staff out (Canberk, 2026-10-12: "dont count me as the testers and my main account").
-Since 2026-10-12 the site sets a GA4 user property `staff` = `yes` for every signed-in
-account with `exclude_from_stats` or `is_moderator` (`components/analytics/StaffFlag.tsx`),
-and `no` for everyone else. Add `dimension_filter`
-`{"not_expression": {"filter": {"field_name": "customUser:staff", "string_filter":
-{"match_type": "EXACT", "value": "yes"}}}}` to every GA4 call in this loop. It only works
-once the property is registered in GA4 Admin → Custom definitions → Custom dimensions →
-user scope, name `staff`; if the call errors on the field name, it has not been registered
-yet: say so, run the query without the filter, and mark the numbers "incl. staff". Data
-from before the registration cannot be filtered either way.
+Who reaches the Auditions tab (GA4) is a weekly question since 2026-10-12 and lives in
+`/marketing-week`. Here, section 7 is read for one thing only: the first real user to add
+an audition, which goes under "Moved" the day it happens.
 
 ## 2. The inbox
 
@@ -156,41 +139,32 @@ End with this, and nothing after it. Write it as plain text with the headings in
 inside a code fence: a fenced block renders in the terminal's code colour, which Canberk
 could not read on his theme (2026-10-01).
 
+Short. Canberk, 2026-10-12, asked whether the daily run was worth reading; the answer was
+that only the notes and the inbox are worth doing daily, and the numbers are worth reading
+weekly. So the daily summary is the notes, the inbox, and anything that actually moved.
+The funnel, Ghost Light and Auditions blocks live on the Monday page (`/marketing-week`)
+now; the brief still computes them every day, and they appear here ONLY under "Moved"
+when something did: a payment, a trial started or lapsed, a checkout, an app purchase or
+expiration, a first real audition, a zero-signup day, a bounce wave, a sync that failed.
+
 ```
 CONVERSION LOOP, <date>
 
-Funnel (7 days, against the 7 before)
-  saw a price       <n>  (<change>)
-  started checkout  <n>  (<change>)
-  started a trial   <n>  (<change>)
-  paid              <n>  (<change>)
-
-Inbox
-  <n> replies read
-  <n> opt-outs filed: <addresses>
-  <n> CURTAIN: <address> -> <full prefilled link to paste>
-  <n> drafts waiting in Gmail (replies, orgs, educators: still yours to send)
-
-Notes sent: <n> of 5
+Notes sent: <n> of <listed>
   <first name>: "<subject>", <one line on why them>
-Notes left as drafts: <n>, and which condition failed
+  left as drafts: <n>, which condition failed; skipped: <n>, why in a word
 
-Trials ending inside 3 days: <names, and whether each has used it>
+Inbox: <n> replies, <n> opt-outs filed, <n> bounces filed, <n> drafts waiting for you
+  <one line per reply that needs you, or "nothing needs you">
+  <CURTAIN, if any: address -> full prefilled link to paste>
 
-Ghost Light (7 days, against the 7 before)
-  store     impressions <n> (<change>), page views <n>, downloads <n>   [or: Apple has not published yet]
-  in app    <n> people read <n> pieces (<n> signed in, <n> anonymous)
-  money     <n> paying, <n> in a trial; this week: <each RevenueCat event in a few words, or "no events">
-  people    <two or three lines: who read what, in the app, by first name; "anonymous" for the rest>
+Moved: <one line per thing that moved, with the number, or "nothing">
 
-Auditions (7 days, against the 7 before)
-  reached   <n> people looked at /auditions yesterday (<n> this week), <n> views, about <n> seconds each; <n> of them did something
-  added     <n> by real users (<change>), <n> by staff
-  coming up <n> in the next 7 days, <n> with a piece attached; <project, kind, day> for each real one
-  recorded  <created / parsed / reminders sent / outcomes logged, in a few words, or "nothing yet">
-
-Broken or odd: <anything that failed, any number that moved more than it should>
+Broken: <what failed, or "nothing">
 ```
+
+Five lines on a quiet day. If a trial ends inside 3 days, that is a "Moved" line the day
+before it ends and the day after, with whether it paid.
 
 No Vercel line (Canberk, 2026-10-08: "drop it for vercel"). The site is on the Hobby plan
 since 2026-10-03 and `/v1/billing/charges` answered 404 `costs_not_found` for every day

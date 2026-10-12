@@ -54,12 +54,28 @@ plus the week's folder. Each writes files there and reports back in under 200 wo
 >    impressions to actorrise.com in the last 28 days, and the ten pages people land on.
 >    If a tool is not connected, say so in one line and move on. Do not guess a number.
 > 5. One line at the top: the single number that moved most, and by how much.
-> 6. Vercel ISR writes per day for the last 7 days, from `/v1/billing/charges`
->    (one-day windows, `ServiceName = "ISR Writes"`, sum `ConsumedQuantity`; token in
->    `~/Library/Application Support/com.vercel.cli/auth.json`). Canberk is moving
->    Vercel to the Hobby plan, whose cap is 200k a month, and AhrefsBot was blocked on
->    2026-10-02 to get under it. Print the seven numbers and say whether every day is
->    under 6,000. Drop this item once he has switched and a month has passed.
+> 6. Traffic, from GA4 (`mcp__analytics-mcp__run_report`, property `524936499`, load it
+>    with ToolSearch first): sessions per week for the last 5 weeks by `sessionSource` for
+>    google, (direct), chatgpt.com and bing (at most 4 date ranges per call). Since
+>    2026-10-10 the signup slide is a traffic slide; this is the line that shows it.
+> 7. Ghost Light, from section 6 of today's conversion brief (`outputs/conversion/<today>.md`;
+>    run `cd backend && uv run python scripts/conversion_brief.py --save` if it is not there):
+>    the store table (impressions, page views, downloads, purchases, proceeds, 7 days against
+>    7; "not from Apple yet" is a missing report, not a zero), how many people read how many
+>    pieces in the app and how many were signed in, and every RevenueCat event this week.
+> 8. Auditions. From section 7 of the brief: added by real users against staff, coming up
+>    in 7 days and whether a piece is attached, what the tracker recorded. From GA4: who
+>    reached the tab (Canberk, 2026-10-11, "i need to know if ppl are reaching to it,
+>    staying in there"): `pagePath` begins with `/auditions`, metrics `screenPageViews`,
+>    `activeUsers`, `userEngagementDuration`, `sessions`, this week against last. Report
+>    people, views, and seconds per person (`userEngagementDuration / activeUsers`), then
+>    how many of those did anything (distinct real users with an `audition_*` event).
+>    Leave staff out (Canberk, 2026-10-12): add `dimension_filter`
+>    `{"not_expression": {"filter": {"field_name": "customUser:staff", "string_filter":
+>    {"match_type": "EXACT", "value": "yes"}}}}`. It works once the `staff` user property
+>    is registered in GA4 Admin as a user-scoped custom dimension; if the field errors, run
+>    without it and mark the numbers "incl. staff".
+> 9. No Vercel item: the billing feed returns 404 on the Hobby plan (dropped 2026-10-08).
 >
 > A failed query is not a zero. If something errors, print the error and leave the row out.
 
@@ -150,6 +166,19 @@ code colour, which Canberk could not read on his theme, 2026-10-01):
 MARKETING WEEK <week>
 
 The number that moved: <one line from the analyst>
+
+Funnel (7 days, against the 7 before)
+  signed up <n> (<change>), onboarded <n>, saw a price <n>, checkout <n>, trial <n>, paid <n>
+  traffic: google <n> sessions this week (<the 5-week line>), chatgpt <n>, bing <n>
+
+Ghost Light (7 days, against the 7 before)
+  store     impressions <n>, page views <n>, downloads <n>   [or: Apple has not published yet]
+  in app    <n> people read <n> pieces (<n> signed in, <n> anonymous)
+  money     <n> paying; this week: <each RevenueCat event in a few words, or "no events">
+
+Auditions (7 days, against the 7 before)
+  reached   <n> people looked at /auditions, <n> views, about <n> seconds each; <n> did something
+  added     <n> by real users, <n> by staff; coming up <n>, <n> with a piece attached
 
 Waiting in Gmail
   <n> outreach drafts, segment: <segment>
