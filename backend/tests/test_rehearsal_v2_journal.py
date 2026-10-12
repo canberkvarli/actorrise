@@ -76,3 +76,10 @@ class Journal(unittest.TestCase):
         s = journal.summaries(self.db, self.user.id)[0]
         self.assertEqual((s["run_id"], s["scene_id"], s["finished"], s["furthest_line"], s["duration_ms"]), (run.id, self.scene.id, True, 3, 5000))
         self.assertEqual(s["median_handover_ms"], 31)
+
+    def test_stats_are_aggregates_over_every_run(self):
+        first, second = self.start(), self.start()
+        journal.append(self.db, first.id, self.user.id, [ev(0, "started"), ev(1, "actor_line_read", 0, 900),
+                                                       ev(2, "actor_line_read", 2, 1800), ev(3, "completed", 3, 5000)])
+        journal.append(self.db, second.id, self.user.id, [ev(0, "started"), ev(1, "actor_line_read", 0, 700)])
+        self.assertEqual(journal.stats(self.db, self.user.id), {"runs": 2, "finished": 1, "lines_read": 3, "scenes": 1})

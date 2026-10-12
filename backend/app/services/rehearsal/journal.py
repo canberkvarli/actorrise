@@ -143,10 +143,24 @@ def summaries(db: Session, user_id: int, limit: int = 50) -> list[dict]:
 
 
 def stats(db: Session, user_id: int) -> dict:
-    rows = summaries(db, user_id, limit=1000)
+    """Two aggregate queries. Never loads an event row."""
+    runs, scenes = (
+        db.query(func.count(RehearsalRun.id), func.count(func.distinct(RehearsalRun.scene_id)))
+        .filter(RehearsalRun.user_id == user_id)
+        .one()
+    )
+    finished, lines_read = (
+        db.query(
+            func.count(func.distinct(RehearsalEvent.run_id)).filter(RehearsalEvent.type == "completed"),
+            func.count(RehearsalEvent.id).filter(RehearsalEvent.type == "actor_line_read"),
+        )
+        .join(RehearsalRun, RehearsalRun.id == RehearsalEvent.run_id)
+        .filter(RehearsalRun.user_id == user_id)
+        .one()
+    )
     return {
-        "runs": len(rows),
-        "finished": sum(1 for r in rows if r["finished"]),
-        "lines_read": sum(r["lines_read"] for r in rows),
-        "scenes": len({r["scene_id"] for r in rows}),
+        "runs": int(runs or 0),
+        "finished": int(finished or 0),
+        "lines_read": int(lines_read or 0),
+        "scenes": int(scenes or 0),
     }
