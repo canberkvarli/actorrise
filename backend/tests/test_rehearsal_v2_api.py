@@ -1,5 +1,6 @@
 """The v2 endpoints, end to end against the in-memory database."""
 import unittest
+from datetime import datetime, timedelta, timezone
 from unittest import mock
 
 from fastapi import FastAPI, HTTPException
@@ -126,12 +127,28 @@ class Api(unittest.TestCase):
         with mock.patch.object(api, "guided_scene", return_value=None):
             self.assertEqual(self.client.post("/api/rehearsal/runs/guided").status_code, 404)
 
-    def test_failed_audio_is_not_queued_again(self):
+    def _failed(self, age: timedelta) -> str:
         key = partner_audio.ensure(self.db, settings.partner_tts_vendor, "ash", None, "Where were you?")
-        row = self.db.get(PartnerAudio, key); row.status = "failed"; row.error = "boom"; self.db.commit()
+        row = self.db.get(PartnerAudio, key)
+        row.status = "failed"; row.error = "boom"; row.claimed_at = datetime.now(timezone.utc) - age
+        self.db.commit()
+        return key
+
+    def test_failed_audio_is_not_queued_again(self):
+        key = self._failed(timedelta(minutes=1))
         body = self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()
         self.assertEqual(body["audio"]["0"], {"key": key, "url": None})
         r = self.client.post("/api/rehearsal/audio", json={"scene_id": self.scene.id, "line_index": 0, "voice": "ash"})
         self.assertEqual((r.status_code, r.json()["url"]), (200, None))
         api.schedule_synthesis.assert_not_called()
         self.assertEqual(self.db.get(PartnerAudio, key).status, "failed")
+
+    def test_failed_audio_is_queued_again_after_an_hour(self):
+        key = self._failed(timedelta(hours=2))
+        body = self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()
+        self.assertEqual(body["audio"]["0"], {"key": key, "url": None})
+        api.schedule_synthesis.assert_called_once_with([key], {key: ("Where were you?", None)})
+        api.schedule_synthesis.reset_mock()
+        r = self.client.post("/api/rehearsal/audio", json={"scene_id": self.scene.id, "line_index": 0, "voice": "ash"})
+        self.assertEqual((r.status_code, r.json()["url"]), (200, None))
+        api.schedule_synthesis.assert_called_once_with([key], {key: ("Where were you?", None)})

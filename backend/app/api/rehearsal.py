@@ -5,6 +5,7 @@ and the next; see docs/superpowers/specs/2026-10-12-scenepartner-v2-design.md.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
@@ -65,6 +66,12 @@ def schedule_synthesis(keys: list[str], text_for: dict[str, tuple[str, str | Non
         db.close()
 
 
+def _wants_synthesis(row: PartnerAudio, now: datetime) -> bool:
+    """Pending rows always; failed rows once FAILED_RETRY has passed. A fresh
+    failure waits, or for the admin regenerate path."""
+    return row.status == "pending" or partner_audio.retryable(row, now)
+
+
 @router.get("/scenes/{scene_id}")
 def get_rehearsal_scene(
     scene_id: int,
@@ -97,8 +104,8 @@ def get_rehearsal_scene(
         url = partner_audio.signed_url(row.storage_path) if row.status == "ready" and row.storage_path else None
         audio[str(index)] = {"key": key, "url": url}
     db.commit()
-    # A failed row stays failed; only the admin regenerate path retries it.
-    missing = [k for k in keys if db.get(PartnerAudio, k).status == "pending"]
+    now = datetime.now(timezone.utc)
+    missing = [k for k in keys if _wants_synthesis(db.get(PartnerAudio, k), now)]
     if missing:
         background.add_task(schedule_synthesis, missing, {k: text_for[k] for k in missing})
 
@@ -147,7 +154,7 @@ def audio_for_line(
     row = db.get(PartnerAudio, key)
     if row.status == "ready" and row.storage_path:
         return {"key": key, "url": partner_audio.signed_url(row.storage_path)}
-    if row.status == "pending":
+    if _wants_synthesis(row, datetime.now(timezone.utc)):
         background.add_task(schedule_synthesis, [key], {key: (line.text, line.direction)})
     return {"key": key, "url": None}
 

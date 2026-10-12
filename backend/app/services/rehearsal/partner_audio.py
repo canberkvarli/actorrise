@@ -24,10 +24,29 @@ logger = logging.getLogger(__name__)
 SIGNED_URL_SECONDS = 6 * 3600
 # A claim older than this is a worker that died mid-line; the row is retaken.
 STALE_CLAIM = timedelta(minutes=5)
+# A failed line is tried once more this long after it failed. The vendor was
+# most likely the problem (a 5xx, a rate limit), and an hour is long enough
+# that a scene opened ten times in a row does not hammer it ten times.
+FAILED_RETRY = timedelta(hours=1)
 
 
 def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _aware(moment: datetime) -> datetime:
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+def retryable(row: PartnerAudio, now: datetime) -> bool:
+    """A failed row whose failure is at least FAILED_RETRY old. `claimed_at` is
+    left set when a line fails, so it is the time of the failure. A failed row
+    with no claim time predates this rule and is old by definition."""
+    if row.status != "failed":
+        return False
+    if row.claimed_at is None:
+        return True
+    return now - _aware(row.claimed_at) >= FAILED_RETRY
 
 
 def audio_key(vendor: str, voice: str, direction: str | None, text: str) -> str:
@@ -51,14 +70,14 @@ def ensure(db: Session, vendor: str, voice: str, direction: str | None, text: st
 def _claim(db: Session, key: str) -> bool:
     now = datetime.now(timezone.utc)
     row = db.get(PartnerAudio, key)
-    # Failed stays failed: the admin regenerate endpoint deletes the row, and
-    # that is the only retry path. Otherwise every scene open re-queues it.
-    if row is None or row.status in ("ready", "failed"):
+    if row is None or row.status == "ready":
         return False
-    if row.claimed_at is not None:
-        claimed = row.claimed_at if row.claimed_at.tzinfo else row.claimed_at.replace(tzinfo=timezone.utc)
-        if now - claimed < STALE_CLAIM:
-            return False
+    # A fresh failure stays failed until FAILED_RETRY has passed; before that
+    # the admin regenerate endpoint (which deletes the row) is the only retry.
+    if row.status == "failed" and not retryable(row, now):
+        return False
+    if row.claimed_at is not None and now - _aware(row.claimed_at) < STALE_CLAIM:
+        return False
     row.claimed_at = now
     row.status = "pending"
     row.error = None
@@ -94,6 +113,10 @@ def synthesise_pending(db: Session, keys: list[str], text_for: dict[str, tuple[s
             logger.warning("partner audio %s failed: %s", key[:8], exc)
             row.status = "failed"
             row.error = str(exc)[:500]
+            # The claim stays: it is now the time of the failure, and the
+            # retry clock (FAILED_RETRY) runs from it.
+            db.commit()
+            continue
         row.claimed_at = None
         db.commit()
 
