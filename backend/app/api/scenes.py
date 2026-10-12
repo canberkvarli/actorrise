@@ -17,6 +17,8 @@ from app.models.user import User
 from app.services.ai.langchain.scene_partner import (ScenePartnerGraph,
                                                      ScenePartnerState)
 from app.services.benefits import get_effective_benefits
+from app.services.rehearsal.access import (FREE_LIBRARY_SCENE_TITLES,
+                                           is_free_library_scene as _is_free_library_scene)
 from app.services.character_names import (canonical_character_map,
                                           line_belongs_to,
                                           resolve_rehearsal_roles)
@@ -69,23 +71,6 @@ class SceneResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-# Curated free-tier library scenes (matched by title — stable across
-# environments, unlike ids). Free actors can rehearse these in full; the rest
-# of the library is a Plus perk. Spread across tone + difficulty so the free
-# taste feels generous, not stingy.
-FREE_LIBRARY_SCENE_TITLES = {
-    "Romeo and Juliet — The Balcony",
-    "The Importance of Being Earnest — Gwendolen and Cecily at Tea",
-    "A Midsummer Night's Dream — Helena Pursues Demetrius",
-    "Trifles — Mrs. Hale and Mrs. Peters",
-}
-
-
-def _is_free_library_scene(scene) -> bool:
-    """A library scene that free-tier actors can rehearse in full."""
-    return bool(scene.is_library) and scene.title in FREE_LIBRARY_SCENE_TITLES
 
 
 class SceneLineResponse(BaseModel):
