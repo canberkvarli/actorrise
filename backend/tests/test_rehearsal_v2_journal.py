@@ -55,6 +55,7 @@ class Journal(unittest.TestCase):
         self.assertEqual(journal.furthest_line(self.db, run.id), 3)
         self.assertFalse(journal.is_finished(self.db, run.id))
         journal.append(self.db, run.id, self.user.id, [ev(3, "completed", 3)])
+        self.assertEqual(journal.furthest_line(self.db, run.id), 3)
         self.assertTrue(journal.is_finished(self.db, run.id))
         self.assertTrue(journal.user_has_finished_a_scene(self.db, self.user.id))
 

@@ -60,8 +60,9 @@ def append(db: Session, run_id: int, user_id: int, events: list[dict]) -> int:
 
 
 def furthest_line(db: Session, run_id: int) -> int | None:
+    # A completed event carries the last line, and finishing is reaching it.
     return db.query(func.max(RehearsalEvent.line_index)).filter(
-        RehearsalEvent.run_id == run_id, RehearsalEvent.type == "line_reached").scalar()
+        RehearsalEvent.run_id == run_id, RehearsalEvent.type.in_(("line_reached", "completed"))).scalar()
 
 
 def _has(db: Session, run_id: int, *types: str) -> bool:
