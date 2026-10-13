@@ -163,6 +163,27 @@ def resumable(db: Session, user_id: int, scene_id: int) -> dict | None:
         return None
     return {"run_id": run.id, "line_index": line}
 
+def latest_resumable(db: Session, user_id: int) -> dict | None:
+    """The user's most recent open run, any scene, judged the way resumable
+    judges one scene: each scene by its latest run, newest scene first. A
+    scene whose latest run is closed is done, and the question moves to the
+    scene rehearsed before it. Only runs inside the window are looked at."""
+    since = datetime.now(timezone.utc) - RESUME_WINDOW
+    runs = (
+        db.query(RehearsalRun.scene_id)
+        .filter(RehearsalRun.user_id == user_id, RehearsalRun.started_at >= since)
+        .order_by(RehearsalRun.started_at.desc(), RehearsalRun.id.desc())
+    )
+    seen: set[int] = set()
+    for (scene_id,) in runs:
+        if scene_id in seen:
+            continue
+        seen.add(scene_id)
+        found = resumable(db, user_id, scene_id)
+        if found is not None:
+            return {"scene_id": scene_id, **found}
+    return None
+
 
 def summaries(db: Session, user_id: int, limit: int = 50) -> list[dict]:
     """One dict per run for the sessions list, newest first."""

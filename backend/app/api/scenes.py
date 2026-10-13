@@ -3,14 +3,14 @@ Scenes: browse, detail, favourites, what's next, the first-rehearsal pick, and
 upload. Rehearsing a scene lives in api/rehearsal.py (ScenePartner v2).
 """
 
-from datetime import datetime, timezone
 from typing import List, Optional
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
-from app.models.actor import (Play, RehearsalSession, Scene, SceneFavorite,
-                              SceneLine, UserScript)
+from app.models.actor import (Play, Scene, SceneFavorite, SceneLine,
+                              UserScript)
 from app.models.user import User
+from app.services.rehearsal import journal
 from app.services.rehearsal.access import (FREE_LIBRARY_SCENE_TITLES,
                                            is_free_library_scene as _is_free_library_scene)
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -214,7 +214,7 @@ def _line_payload(db: Session, scene_id: int, index: int) -> Optional[dict]:
 
 
 def _rung(rung: str, script, scene=None, line=None, character=None,
-          progress=None, session_id=None) -> dict:
+          progress=None, line_index=None) -> dict:
     return {
         "rung": rung,
         "script": {"id": script.id, "title": script.title, "genre": script.genre,
@@ -224,7 +224,7 @@ def _rung(rung: str, script, scene=None, line=None, character=None,
         "character": character,
         "line": line,
         "progress": progress,
-        "session_id": session_id,
+        "line_index": line_index,
     }
 
 
@@ -240,52 +240,27 @@ def whats_next(db: Session, user_id: int) -> Optional[dict]:
     status message. Most accounts have never rehearsed, so `start` is the common
     rung and gets the same treatment as `resume`.
     """
-    from datetime import datetime, timezone
-
-    from app.services.rehearsal_cleanup import is_session_stale
-
-    now = datetime.now(timezone.utc)
-
-    def as_utc(dt):
-        """These columns are DateTime without a zone, so they read back naive.
-
-        Comparing one against an aware now() raises rather than returning a
-        wrong answer, which would take the whole screen down for anyone with a
-        session open. They are written as UTC, so say so.
-        """
-        if dt is None:
-            return None
-        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-
-    # 1. Unfinished work. Stale ones are ghosts — the hourly sweep abandons them.
-    open_sessions = (
-        db.query(RehearsalSession)
-        .filter(
-            RehearsalSession.user_id == user_id,
-            RehearsalSession.status == "in_progress",
-        )
-        .order_by(RehearsalSession.started_at.desc(), RehearsalSession.id.desc())
-        .all()
-    )
-    for session in open_sessions:
-        last_activity = as_utc(session.updated_at or session.started_at)
-        if is_session_stale("in_progress", last_activity, now):
-            continue
-        scene = db.query(Scene).filter(Scene.id == session.scene_id).first()
-        if scene is None:
-            continue
-        script = (
-            db.query(UserScript).filter(UserScript.id == scene.user_script_id).first()
-            if scene.user_script_id else None
-        )
-        at = session.current_line_index or 0
-        return _rung(
-            "resume", script, scene,
-            line=_line_payload(db, scene.id, at),
-            character=session.user_character,
-            progress={"current": at, "total": session.max_lines or scene.line_count or 0},
-            session_id=session.id,
-        )
+    # 1. Unfinished work: the newest open run in the journal, inside the resume
+    #    window. The Curtain on the scene page re-reads the same journal and
+    #    offers "pick up at line N", so only the scene and the line travel.
+    open_run = journal.latest_resumable(db, user_id)
+    if open_run is not None:
+        scene = db.query(Scene).filter(Scene.id == open_run["scene_id"]).first()
+        run = journal.db_run(db, open_run["run_id"])
+        if scene is not None and run is not None:
+            script = (
+                db.query(UserScript).filter(UserScript.id == scene.user_script_id).first()
+                if scene.user_script_id else None
+            )
+            at = open_run["line_index"]
+            total = scene.line_count or db.query(SceneLine).filter(SceneLine.scene_id == scene.id).count()
+            return _rung(
+                "resume", script, scene,
+                line=_line_payload(db, scene.id, at),
+                character=run.character,
+                progress={"current": at, "total": total},
+                line_index=at,
+            )
 
     own = (
         db.query(UserScript)

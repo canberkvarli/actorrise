@@ -117,6 +117,23 @@ class Journal(unittest.TestCase):
         journal.append(self.db, run.id, self.user.id, [ev(3, "abandoned", 2)])
         self.assertIsNone(journal.resumable(self.db, self.user.id, self.scene.id))
 
+    def test_latest_resumable_is_the_newest_open_run_across_scenes(self):
+        self.assertIsNone(journal.latest_resumable(self.db, self.user.id))
+        other = Scene(play_id=self.scene.play_id, title="T", character_1_name="A", character_2_name="B", line_count=4, estimated_duration_seconds=0)
+        self.db.add(other); self.db.commit()
+        first = self.start()
+        journal.append(self.db, first.id, self.user.id, [ev(0, "line_reached", 2)])
+        second = journal.create_run(self.db, self.user.id, other.id, character="A", voices={})
+        journal.append(self.db, second.id, self.user.id, [ev(0, "line_reached", 1)])
+        self.assertEqual(journal.latest_resumable(self.db, self.user.id),
+                         {"scene_id": other.id, "run_id": second.id, "line_index": 1})
+        # Closing the newest one hands the question to the next scene back.
+        journal.append(self.db, second.id, self.user.id, [ev(1, "completed", 3)])
+        self.assertEqual(journal.latest_resumable(self.db, self.user.id),
+                         {"scene_id": self.scene.id, "run_id": first.id, "line_index": 2})
+        journal.append(self.db, first.id, self.user.id, [ev(1, "abandoned", 2)])
+        self.assertIsNone(journal.latest_resumable(self.db, self.user.id))
+
     def test_summary_for_sessions_list(self):
         run = self.start()
         journal.append(self.db, run.id, self.user.id, [ev(0, "started"), ev(1, "line_reached", 0),

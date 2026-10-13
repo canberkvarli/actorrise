@@ -23,7 +23,8 @@ export interface WhatsNext {
   character: string | null;
   line: { character: string; text: string } | null;
   progress: { current: number; total: number } | null;
-  session_id: number | null;
+  /** On the resume rung: the line the open run reached, 0-based. */
+  line_index: number | null;
 }
 
 export const WHATS_NEXT_QUERY_KEY = ["scenes", "whats-next"] as const;
