@@ -23,6 +23,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
+import { TurnItems } from '@/lib/rehearsal/turn-items';
 
 /**
  * How long the transcript may gain no new words before the actor counts as
@@ -126,25 +127,29 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
      their mouth. */
   const turnOpenRef = useRef(false);
 
-  /* Late words stay on their line. The turn's transcript is built from the
-     transcriber's items (by item_id), in arrival order; `completed` replaces
-     only its own item. An item seen in an earlier turn is retired, and any
-     delta or completed for it afterwards is dropped, so the tail of one line
-     (or its tidied-up `completed`) can never land on the next line when two
-     actor lines run back to back. Refs only: no React state in this path. */
-  const turnItemsRef = useRef(new Map<string, string>());
-  const staleItemsRef = useRef(new Set<string>());
-  /** event_ids of our own commits, so a server error about one is not a dropped session. */
-  const commitIdsRef = useRef(new Set<string>());
+  /* Late words stay on their line: the turn's text is built per transcriber
+     item, and items of earlier turns are dropped (see lib/rehearsal/turn-items).
+     Refs only: no React state in this path. */
+  const itemsRef = useRef(new TurnItems());
+
+  /* event_ids of the client events we sent (prime's session.update, the
+     commit), newest last, capped. A server `error` naming one of them is that
+     one request refused (a keyword list it did not like, an empty buffer),
+     not the session failing, so it is logged and the status stays. Fatal is
+     what the spec calls fatal: the session fails to open or disconnects; an
+     error naming no event of ours, a failed or closed peer connection, a
+     closed data channel. */
+  const ownIdsRef = useRef(new Set<string>());
+  const ownSeqRef = useRef(0);
+  const sendOwn = (dc: RTCDataChannel, event: Record<string, unknown>) => {
+    const event_id = `own_${++ownSeqRef.current}`;
+    ownIdsRef.current.add(event_id);
+    if (ownIdsRef.current.size > 64) ownIdsRef.current.delete(ownIdsRef.current.values().next().value as string);
+    dc.send(JSON.stringify({ ...event, event_id }));
+  };
 
   const optionsRef = useRef(options);
   optionsRef.current = options;
-
-  /** This turn's items become earlier-turn items; an id-less item is never retired (it would block every later one). */
-  const retireTurnItems = () => {
-    turnItemsRef.current.forEach((_t, id) => { if (id) staleItemsRef.current.add(id); });
-    turnItemsRef.current = new Map();
-  };
 
   const clearQuietTimer = () => {
     if (quietTimerRef.current) {
@@ -178,11 +183,9 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
       return;
     }
 
-    const id = evt.item_id ?? '';
-    const accepts = () => turnOpenRef.current && !staleItemsRef.current.has(id);
-    /* Something was heard on the open turn: rebuild its text from its items. */
+    /* Something was heard on the open turn: its text is its items, joined. */
     const heard = () => {
-      turnTextRef.current = [...turnItemsRef.current.values()].join(' ');
+      turnTextRef.current = itemsRef.current.text();
       const onTranscript = optionsRef.current.onTranscript;
       if (!onTranscript) setTranscript(turnTextRef.current);
       bumpQuietTimer();
@@ -194,8 +197,7 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
     switch (evt.type) {
       /* A word, while it is being said. The reason all of this exists. */
       case 'conversation.item.input_audio_transcription.delta': {
-        if (!evt.delta || !accepts()) return;
-        turnItemsRef.current.set(id, (turnItemsRef.current.get(id) ?? '') + evt.delta);
+        if (!turnOpenRef.current || !evt.delta || !itemsRef.current.delta(evt.item_id, evt.delta)) return;
         heard();
         return;
       }
@@ -205,17 +207,16 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
          it is never waited for, since by then the actor has usually stopped
          and the scene has usually moved. */
       case 'conversation.item.input_audio_transcription.completed': {
-        if (!evt.transcript || !accepts()) return;
-        turnItemsRef.current.set(id, evt.transcript);
+        if (!turnOpenRef.current || !evt.transcript || !itemsRef.current.completed(evt.item_id, evt.transcript)) return;
         heard();
         return;
       }
 
       case 'error': {
-        // Our own commit refused (an empty buffer, say) is not a broken session.
-        if (evt.error?.event_id && commitIdsRef.current.has(evt.error.event_id)) return;
         setError(evt.error?.message || 'Live transcription error');
-        // A server error on an open session is the session failing: say so in the status too.
+        // One of our requests refused: logged, not fatal (see ownIdsRef).
+        if (evt.error?.event_id && ownIdsRef.current.has(evt.error.event_id)) return;
+        // Anything else on an open session is the session failing.
         setStatus(s => (s === 'ready' ? 'error' : s));
         return;
       }
@@ -280,6 +281,12 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
           }
         });
 
+        // The events channel closing on its own is the session gone. Our own
+        // close() clears dcRef first-hand, so it does not land here.
+        dc.addEventListener('close', () => {
+          if (dcRef.current === dc) { setStatus('error'); setError('Live transcription disconnected'); }
+        });
+
         pcRef.current = pc;
         setStatus('ready');
       } catch (err: unknown) {
@@ -305,7 +312,8 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
   const prime = useCallback((keywords: string[]) => {
     const dc = dcRef.current;
     if (dc?.readyState !== 'open' || !keywords.length) return;
-    dc.send(JSON.stringify({
+    // Tagged with our event_id: a refused keyword list is not a dropped session.
+    try { sendOwn(dc, {
       type: 'session.update',
       session: {
         type: 'transcription',
@@ -314,11 +322,11 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
           keywords: keywords.filter(k => k && !/[<>\r\n]/.test(k)).slice(0, 100).map(k => k.slice(0, 80)),
         }, turn_detection: null } },
       },
-    }));
+    }); } catch { /* the channel is closing; its close handler says so */ }
   }, []);
 
   const beginTurn = useCallback((hint?: TurnHint) => {
-    retireTurnItems();
+    itemsRef.current.endTurn(); // anything left from a turn not ended is retired too
     turnTextRef.current = '';
     turnOpenRef.current = true;
     setTranscript('');
@@ -347,15 +355,13 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
        under an id already retired (and be dropped). Committing makes the next
        turn's audio a new item with a new id, which is what lets the late tail
        of THIS line be told apart from the next one. Only when something was
-       heard: committing an empty buffer is an error. Our event_ids are kept so
-       a refusal is not read as the session failing. */
+       heard: committing an empty buffer is an error. It goes out tagged
+       (sendOwn), so a refusal is not read as the session failing. */
+    const heardAny = itemsRef.current.endTurn();
     const dc = dcRef.current;
-    if (dc?.readyState === 'open' && [...turnItemsRef.current.values()].some(t => t.trim())) {
-      const event_id = `commit_${commitIdsRef.current.size + 1}`;
-      commitIdsRef.current.add(event_id);
-      try { dc.send(JSON.stringify({ type: 'input_audio_buffer.commit', event_id })); } catch { /* the session is going anyway */ }
+    if (heardAny && dc?.readyState === 'open') {
+      try { sendOwn(dc, { type: 'input_audio_buffer.commit' }); } catch { /* the session is going anyway */ }
     }
-    retireTurnItems();
   }, []);
 
   const close = useCallback(() => {
