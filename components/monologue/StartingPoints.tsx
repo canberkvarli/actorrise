@@ -22,11 +22,14 @@ import {
 
 const DOORS = [
   { Sketch: MasksSketch, label: "Something funny", query: "comedic monologue", rot: "-1.5deg" },
-  { Sketch: SkullSketch, label: "Shakespeare", query: "shakespeare monologue", rot: "1deg" },
+  { Sketch: SkullSketch, label: "Shakespeare", query: "shakespeare monologue", rot: "1deg", playsOnly: true },
   { Sketch: RoseSketch, label: "Love", query: "monologue about love", rot: "-1deg" },
   { Sketch: DaggerSketch, label: "Revenge", query: "monologue about revenge", rot: "1.5deg" },
   { Sketch: CrownSketch, label: "Power", query: "monologue about power", rot: "-0.5deg" },
 ];
+
+/* Shakespeare wrote plays, so on the film/TV tab that door led nowhere useful;
+   it is left out there. The other four are themes that hold for either tab. */
 
 export function StartingPoints({ mode = "plays" }: { mode?: "plays" | "film_tv" }) {
   return (
@@ -39,7 +42,7 @@ export function StartingPoints({ mode = "plays" }: { mode?: "plays" | "film_tv" 
         className="mt-4 grid gap-3.5"
         style={{ gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))" }}
       >
-        {DOORS.map(({ Sketch, label, query, rot }, i) => (
+        {DOORS.filter((d) => mode === "plays" || !d.playsOnly).map(({ Sketch, label, query, rot }, i) => (
           <Link
             key={label}
             href={`/monologues?mode=${mode}&q=${encodeURIComponent(query)}`}
