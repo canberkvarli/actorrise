@@ -6,7 +6,7 @@ describe("onboardingIsQuietOn", () => {
   it("is quiet on a rehearsal", () => {
     expect(onboardingIsQuietOn("/scenes/937/rehearse")).toBe(true);
     expect(onboardingIsQuietOn("/scenes/937/rehearse/")).toBe(true);
-    expect(onboardingIsQuietOn("/scenes/937/rehearse?session=1&guided=1".split("?")[0])).toBe(true);
+    expect(onboardingIsQuietOn("/scenes/937/rehearse?guided=1".split("?")[0])).toBe(true);
   });
 
   it("shows on the ScenePartner hub, which is where a new account lands", () => {

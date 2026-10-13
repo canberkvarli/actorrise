@@ -79,16 +79,13 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
 
   const sceneSlug = [scene?.act, scene?.scene_number].filter(Boolean).join(" · ");
 
-  /* The rehearse screen runs a session; it does not create one. Sent there
-     without ?session= it says "No active rehearsal", and without ?script= its
-     Back button falls through to /rehearse — the monologue Collection, which
-     has nothing to do with the script you came from. So only an already-open
-     session goes straight to the stage. Everything else goes to the scene
-     editor, which is where you pick your role and start the session properly. */
+  /* A run in progress goes straight to the stage: the rehearse screen opens
+     its own run and picks up where the journal says they stopped, so nothing
+     rides on the link. Everything else goes to the scene preview, which is
+     where you read the sides and pick your part. */
   const href =
-    rung === "resume" && scene && data.session_id
-      ? `/scenes/${scene.id}/rehearse?session=${data.session_id}` +
-        (script ? `&script=${script.id}` : "")
+    rung === "resume" && scene
+      ? `/scenes/${scene.id}/rehearse`
       : scene && script
         ? `/practice/${script.id}/scenes/${scene.id}`
         : "#";
