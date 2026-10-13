@@ -62,6 +62,7 @@ class Api(unittest.TestCase):
             mock.patch.object(api, "schedule_synthesis"),
             mock.patch.object(api, "record_user_event"),
             mock.patch.object(partner_audio, "signed_url", side_effect=lambda p: f"https://signed/{p}"),
+            mock.patch.object(partner_audio, "signed_urls", side_effect=lambda ps: {p: f"https://signed/{p}" for p in ps}),
         ]
         for p in self.patches: p.start()
 
@@ -79,6 +80,25 @@ class Api(unittest.TestCase):
         self.assertEqual(body["defaults"]["ANNA"]["BEN"], next(v["id"] for v in body["voices"] if v["gender"] == "male"))
         self.assertEqual(body["audio"]["0"], {"key": mock.ANY, "url": None})
         self.assertIsNone(body["resume"])
+
+    def test_scene_open_signs_every_ready_line_in_one_call(self):
+        # A third line so BEN has two partner lines for ANNA's pick (character
+        # 1 is ANNA, so the audio slots are BEN's lines).
+        self.db.add(SceneLine(scene_id=self.scene.id, line_order=2, character_name="BEN", text="Out where?", word_count=2))
+        self.db.commit()
+        body = self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()
+        keys = {i: body["audio"][i]["key"] for i in ("0", "2")}
+        for i, key in keys.items():
+            row = self.db.get(PartnerAudio, key); row.status = "ready"; row.storage_path = f"ab/{i}.mp3"
+        self.db.commit()
+        partner_audio.signed_urls.reset_mock()
+        body = self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()
+        partner_audio.signed_urls.assert_called_once()
+        self.assertEqual(sorted(partner_audio.signed_urls.call_args.args[0]), ["ab/0.mp3", "ab/2.mp3"])
+        self.assertEqual(body["audio"]["0"], {"key": keys["0"], "url": "https://signed/ab/0.mp3"})
+        self.assertEqual(body["audio"]["2"], {"key": keys["2"], "url": "https://signed/ab/2.mp3"})
+        self.assertNotIn("1", body["audio"])
+        partner_audio.signed_url.assert_not_called()
 
     def test_audio_endpoint_202_then_200(self):
         key = partner_audio.ensure(self.db, "openai", "ash", None, "Where were you?")

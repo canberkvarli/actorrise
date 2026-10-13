@@ -122,6 +122,7 @@ def synthesise_pending(db: Session, keys: list[str], text_for: dict[str, tuple[s
 
 
 def signed_url(path: str) -> str | None:
+    """One line (the per-line audio routes). A scene open uses signed_urls."""
     client = get_supabase_client()
     if client is None:
         return None
@@ -129,6 +130,25 @@ def signed_url(path: str) -> str | None:
     if isinstance(res, dict):
         return res.get("signedURL") or res.get("signedUrl")
     return None
+
+
+def signed_urls(paths: list[str]) -> dict[str, str | None]:
+    """Every path in one storage round trip (storage3's batch sign). A path
+    storage would not sign, or one missing from the reply, maps to None."""
+    out: dict[str, str | None] = {p: None for p in paths}
+    if not paths:
+        return out
+    client = get_supabase_client()
+    if client is None:
+        return out
+    res = client.storage.from_(settings.partner_audio_bucket).create_signed_urls(paths, SIGNED_URL_SECONDS)
+    for item in res or []:
+        if not isinstance(item, dict) or item.get("error"):
+            continue
+        path = item.get("path")
+        if path in out:
+            out[path] = item.get("signedURL") or item.get("signedUrl") or None
+    return out
 
 
 def delete_row(db: Session, key: str) -> None:

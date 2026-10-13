@@ -83,3 +83,32 @@ class Cache(unittest.TestCase):
         # clock runs from it.
         self.assertIsNotNone(row.claimed_at)
         self.assertFalse(pa._claim(self.db, key))
+
+
+class Signing(unittest.TestCase):
+    def _client(self, items):
+        bucket = mock.Mock()
+        bucket.create_signed_urls.return_value = items
+        client = mock.Mock()
+        client.storage.from_.return_value = bucket
+        return client, bucket
+
+    def test_signed_urls_is_one_call_keyed_by_path(self):
+        client, bucket = self._client([
+            {"path": "ab/x.mp3", "error": None, "signedURL": "https://s/ab/x", "signedUrl": "https://s/ab/x"},
+            {"path": "cd/y.mp3", "error": "not found", "signedURL": "", "signedUrl": ""},
+        ])
+        with mock.patch.object(pa, "get_supabase_client", return_value=client):
+            out = pa.signed_urls(["ab/x.mp3", "cd/y.mp3"])
+        self.assertEqual(out, {"ab/x.mp3": "https://s/ab/x", "cd/y.mp3": None})
+        bucket.create_signed_urls.assert_called_once_with(["ab/x.mp3", "cd/y.mp3"], pa.SIGNED_URL_SECONDS)
+
+    def test_signed_urls_with_nothing_to_sign_never_calls_storage(self):
+        client, bucket = self._client([])
+        with mock.patch.object(pa, "get_supabase_client", return_value=client):
+            self.assertEqual(pa.signed_urls([]), {})
+        bucket.create_signed_urls.assert_not_called()
+
+    def test_signed_urls_without_storage_is_all_none(self):
+        with mock.patch.object(pa, "get_supabase_client", return_value=None):
+            self.assertEqual(pa.signed_urls(["ab/x.mp3"]), {"ab/x.mp3": None})

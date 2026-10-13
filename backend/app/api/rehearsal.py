@@ -93,19 +93,27 @@ def get_rehearsal_scene(
     first = scene.character_1_name if any(same_character(scene.character_1_name or "", c) for c in characters) else characters[0] if characters else ""
     plan = _audio_plan(lines, first, defaults.get(first, {})) if first else []
 
-    keys: list[str] = []
+    # One pass over the lines to make sure every row exists, one query for the
+    # rows, one storage call for the URLs. A scene used to sign each ready
+    # line on its own round trip, which is what made a long scene slow to open.
+    key_for: dict[int, str] = {}
     text_for: dict[str, tuple[str, str | None]] = {}
-    audio: dict[str, dict[str, Any]] = {}
     for index, voice, text, direction in plan:
         key = partner_audio.ensure(db, settings.partner_tts_vendor, voice, direction, text)
-        keys.append(key)
+        key_for[index] = key
         text_for[key] = (text, direction)
-        row = db.get(PartnerAudio, key)
-        url = partner_audio.signed_url(row.storage_path) if row.status == "ready" and row.storage_path else None
-        audio[str(index)] = {"key": key, "url": url}
     db.commit()
+    keys = list(dict.fromkeys(key_for.values()))  # two identical lines share a key
+    rows = {r.key: r for r in db.query(PartnerAudio).filter(PartnerAudio.key.in_(keys))} if keys else {}
+    ready_paths = list(dict.fromkeys(r.storage_path for r in rows.values() if r.status == "ready" and r.storage_path))
+    urls = partner_audio.signed_urls(ready_paths) if ready_paths else {}
+    audio: dict[str, dict[str, Any]] = {}
+    for index, key in key_for.items():
+        row = rows.get(key)
+        path = row.storage_path if row is not None and row.status == "ready" else None
+        audio[str(index)] = {"key": key, "url": urls.get(path) if path else None}
     now = datetime.now(timezone.utc)
-    missing = [k for k in keys if _wants_synthesis(db.get(PartnerAudio, k), now)]
+    missing = [k for k in keys if k in rows and _wants_synthesis(rows[k], now)]
     if missing:
         background.add_task(schedule_synthesis, missing, {k: text_for[k] for k in missing})
 
