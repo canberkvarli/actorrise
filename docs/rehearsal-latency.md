@@ -65,6 +65,22 @@ explained, not so it can be fixed.
 It is never `null`. `0` means the browser gave no figure, not a zero-latency
 device.
 
+### `compute_ms`
+
+The number `handover_ms` cannot see. The hook wraps the `engine.delta()` (or
+`engine.quiet()`) call that produced the handover in `performance.now()` and
+writes the difference, in ms to two decimals, into the same `actor_line_read`
+payload. That span is the software path in one piece: tokenise and align the
+whole transcript, `shouldHandOver`, closing the mic, scheduling the next beat.
+It is on the wall clock, not the audio clock, so it is not quantised to render
+quanta the way `handover_ms` is.
+
+Present only on `actor_line_read` events produced by a delta or by quiet.
+Absent (the key is not in the payload) on `skipped`, since nothing was
+computed. Budget: under 5ms on a phone, the spec's alignment budget for a
+200-word line. A `compute_ms` that grows with line length is the signal that
+alignment is doing more than one pass per delta.
+
 ## 2. The production query
 
 The journal lands in `rehearsal_events`. Columns that matter here:
@@ -93,6 +109,23 @@ The `jsonb_typeof` guard drops the `null` rows before the cast. Budget:
 `last_word` p95 under 50ms on wired output. For `quiet` the p50 should sit at
 roughly `QUIET_AFTER_WORDS_MS`; a drift there means the quiet timer changed,
 not the handover.
+
+The software path on its own, `compute_ms` for `last_word` handovers, same
+window:
+
+```sql
+SELECT count(*)                                                                      AS lines,
+       percentile_cont(0.5)  WITHIN GROUP (ORDER BY (payload->>'compute_ms')::numeric) AS p50_ms,
+       percentile_cont(0.95) WITHIN GROUP (ORDER BY (payload->>'compute_ms')::numeric) AS p95_ms
+FROM rehearsal_events
+WHERE type = 'actor_line_read'
+  AND received_at > now() - interval '7 days'
+  AND payload->>'ended_by' = 'last_word'
+  AND jsonb_typeof(payload->'compute_ms') = 'number';
+```
+
+Budget: p95 under 5ms. The guard also skips rows written before the field
+existed. Cast to `numeric`, not `int`: the value carries two decimals.
 
 Rows where the device, not the code, is the problem (Bluetooth or similar):
 
