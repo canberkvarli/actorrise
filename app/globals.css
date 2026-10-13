@@ -2131,6 +2131,43 @@
   .t-curtain-out__say { animation: none; }
 }
 
+/* The lift, on whatever page logout lands on (CurtainLiftPaint marks <html>
+   before first paint). The same two halves, closed in the first frame, then
+   drawn off. On <html> itself so it covers the page before React exists and
+   needs no element of its own. */
+html[data-curtain="lift"]::before,
+html[data-curtain="lift"]::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 2147483000;
+  width: 51%;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgb(0 0 0 / 0) 0px,
+      rgb(0 0 0 / 0.32) 19px,
+      rgb(0 0 0 / 0.46) 27px,
+      rgb(255 255 255 / 0.05) 41px,
+      rgb(0 0 0 / 0) 59px
+    ),
+    linear-gradient(90deg, oklch(0.11 0.035 25), oklch(0.22 0.066 25) 55%, oklch(0.135 0.042 25));
+  animation: t-traveler-out 0.8s cubic-bezier(0.65, 0, 0.35, 1) 0.25s both;
+}
+html[data-curtain="lift"]::before { left: 0; --to: -101%; box-shadow: 16px 0 50px -10px rgb(0 0 0 / 0.8); }
+html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50px -10px rgb(0 0 0 / 0.8); }
+@keyframes t-traveler-out {
+  from { transform: none; }
+  to { transform: translateX(var(--to)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-curtain="lift"]::before,
+  html[data-curtain="lift"]::after { animation: t-curtain-fade 0.3s ease 0.1s both; }
+}
+@keyframes t-curtain-fade { to { opacity: 0; } }
+
 /* The toasts.
 
    `toastOptions.classNames` in app/layout.tsx has always named
@@ -5121,6 +5158,28 @@
     padding: 6px 10px;
   }
 }
+/* The tear's notches are punched in the room's own colour. */
+.t-win { --page: var(--t-paper); }
+
+/* In the dark room. `.dark .theatre-rehearsal` swaps --t-paper and --t-ink,
+   but this page is set in --t-text and the muted/line tokens, which stayed
+   light-paper ink: the title, the ticket and both doors went near-black on the
+   house (2026-10-13). A dark surface remaps the paper AND every ink it reads,
+   together. The ticket is lifted onto the warm sheet so it still reads as a
+   thing you are handed, not a hole in the house. */
+.dark .t-win {
+  --page: var(--t-house);
+  --t-text: oklch(0.95 0.02 85);
+  --t-muted-dark: oklch(0.78 0.02 62);
+  --t-muted-dark-2: oklch(0.7 0.02 62);
+  --t-faint: oklch(0.64 0.02 62);
+  --t-line-light: oklch(0.4 0.03 55);
+  --t-line-light-2: oklch(0.48 0.03 55);
+  --t-on-text: oklch(0.15 0.03 45);
+  --t-gel-ink: var(--t-gel);
+  --t-on-gel-ink: oklch(0.15 0.03 45);
+}
+.dark .t-win__ticket { background: var(--t-sheet); }
 
 /* The review's head, for every scene after the first: the same direction and
    the same display face, at the size of a title rather than a whole page. */
@@ -5713,6 +5772,16 @@
   font-weight: 700;
   color: var(--bar-active-fg);
 }
+/* Until the light is measured (useHeaderLight sets data-lit on the nav), the
+   active tab carries its own fill. The server HTML has the tab inverted and the
+   light at width 0, so the first frames painted cream type on a cream bar.
+   Same colour and radius as the light, so the hand-over is invisible. */
+.t-appbar__tab[data-active="true"] {
+  background: var(--bar-active);
+}
+[data-lit="true"] .t-appbar__tab[data-active="true"] {
+  background: transparent;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .t-appbar,
@@ -5849,6 +5918,11 @@
   cursor: pointer;
   transition: all 0.3s;
 }
+/* Who you are arrives a tick after the page (the cached account is read on
+   mount). Until then the pill holds its place empty, rather than printing "?"
+   and "Account" and swapping them for a face and a name a beat later. */
+.t-account > * { transition: opacity 0.25s ease; }
+.t-account:not([data-ready="true"]) > * { opacity: 0; }
 .t-account[data-open="true"],
 .t-account:hover {
   border-color: var(--bar-gel);

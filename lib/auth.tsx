@@ -9,6 +9,7 @@ import { setStoredLastAuthMethod } from "./last-auth-method";
 import { clearSwrCache, clearReactQueryCache, clearUserSpecificQueryCache } from "./swrCache";
 import { suppressCachePersist } from "@/components/providers/AuthProviderWrapper";
 import { safeClientPath } from "./safe-redirect";
+import { CURTAIN_LIFT_KEY } from "@/components/transition/CurtainLiftPaint";
 
 interface User {
   id: number;
@@ -57,7 +58,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOGOUT_TRANSITION_MS = 420;
+/**
+ * How long the logout curtain plays before the page leaves. The halves meet at
+ * 0.62s and the goodbye line is fully in at 1.0s (globals.css .t-curtain-out);
+ * it was 420ms after signOut, which left mid-sweep with the line half drawn.
+ */
+const LOGOUT_TRANSITION_MS = 1150;
 const USER_CACHE_KEY = "actorrise_user_v1";
 
 function getCachedUser(): User | null {
@@ -84,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
   const isInitializedRef = useRef(false);
+  const loggingOutRef = useRef(false);
   const lastSyncRef = useRef(0);
 
   const syncUserWithBackend = useCallback(async (shouldSetLoading = false) => {
@@ -166,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         // Fire-and-forget — must catch to prevent unhandled promise rejection
         syncUserWithBackend(false).catch(() => {});
-      } else {
+      } else if (!loggingOutRef.current) {
         setUser(null);
       }
     });
@@ -300,15 +307,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // already seen tours they have never seen.
     clearFirstRunSession();
 
-    await supabase.auth.signOut();
+    // The app stays exactly as it was until the curtain has closed over it.
+    // `user` is NOT set to null here, and the auth listener ignores the
+    // SIGNED_OUT event while this runs: either one re-rendered the header as a
+    // stranger (avatar "?", "Account") and set pages refetching into their
+    // skeletons while the curtain was still fading in. Nothing behind the
+    // drape needs to know; the full load below starts the next page clean.
+    loggingOutRef.current = true;
+    await Promise.all([
+      supabase.auth.signOut().catch(() => {}),
+      new Promise((r) => setTimeout(r, LOGOUT_TRANSITION_MS)),
+    ]);
     setCachedUser(null);
     clearSwrCache();
     suppressCachePersist(); // prevent beforeunload from re-persisting stale cache
     clearReactQueryCache();
-    setUser(null);
 
-    // Brief delay so UI can play fade-out animation before redirect
-    await new Promise((r) => setTimeout(r, LOGOUT_TRANSITION_MS));
+    // The next page opens the same curtain (CurtainLiftPaint).
+    try { sessionStorage.setItem(CURTAIN_LIFT_KEY, "1"); } catch { /* private mode */ }
     window.location.href = "/auth/signout?redirect=/";
   }, [isLoggingOut]);
 

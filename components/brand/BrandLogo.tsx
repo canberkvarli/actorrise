@@ -1,8 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 
 /** Icon-only logo (e.g. favicon, auth). Use transparent_logo.png for icon-only. */
 const LOGO_ICON = "/transparent_logo.png";
@@ -50,10 +48,6 @@ export function BrandLogo({
   /** Force the white-text wordmark for surfaces that are always dark (e.g. the stage header). */
   onDark?: boolean;
 }) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
   const { iconClass, fullLogoClass } = sizes[size];
 
   if (iconOnly) {
@@ -70,17 +64,43 @@ export function BrandLogo({
     );
   }
 
-  const logoSrc =
-    !onDark && mounted && resolvedTheme === "light" ? LOGO_WITH_TEXT_DARK : LOGO_WITH_TEXT;
+  if (onDark) {
+    return (
+      <Image
+        src={LOGO_WITH_TEXT}
+        alt="ActorRise"
+        width={LOGO_TEXT_ASPECT.w}
+        height={LOGO_TEXT_ASPECT.h}
+        className={fullLogoClass}
+        priority
+      />
+    );
+  }
 
+  /* Both wordmarks, with the theme class choosing. It used to pick one after
+     mount from useTheme(), so the server sent the light-text logo, a light page
+     painted it cream-on-cream, and the dark one swapped in a beat later.
+     next-themes puts `.dark` on <html> before first paint; CSS can read it in
+     the first frame and React cannot. */
   return (
-    <Image
-      src={logoSrc}
-      alt="ActorRise"
-      width={LOGO_TEXT_ASPECT.w}
-      height={LOGO_TEXT_ASPECT.h}
-      className={fullLogoClass}
-      priority
-    />
+    <>
+      <Image
+        src={LOGO_WITH_TEXT_DARK}
+        alt="ActorRise"
+        width={LOGO_TEXT_ASPECT.w}
+        height={LOGO_TEXT_ASPECT.h}
+        className={`${fullLogoClass} dark:hidden`}
+        priority
+      />
+      <Image
+        src={LOGO_WITH_TEXT}
+        alt=""
+        aria-hidden
+        width={LOGO_TEXT_ASPECT.w}
+        height={LOGO_TEXT_ASPECT.h}
+        className={`${fullLogoClass} hidden dark:block`}
+        priority
+      />
+    </>
   );
 }

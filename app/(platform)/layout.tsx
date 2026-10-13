@@ -420,6 +420,7 @@ export default function PlatformLayout({
                   aria-haspopup="menu"
                   className="t-account"
                   data-open={profileDropdownOpen}
+                  data-ready={mounted && !!user}
                 >
                   <span className="t-account__avatar flex shrink-0 items-center justify-center overflow-hidden text-xs font-medium">
                     {headshotUrl ? (

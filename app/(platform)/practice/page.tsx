@@ -7,7 +7,7 @@ import { useScripts } from "@/hooks/useScripts";
 import { useAuth } from "@/lib/auth";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LibrarySkeleton } from "@/components/practice/LibrarySkeleton";
 
 import { PracticeLibrary } from "@/components/practice/PracticeLibrary";
 import { theatreFontVars } from "@/lib/fonts/theatre";
@@ -30,29 +30,6 @@ import { isOnboardingDoneThisSession, subscribeFirstRun } from "@/lib/firstRun";
  * desk. The shelf sits beside it and only takes over when you reach for a
  * script. See WhatsNext for the ladder that decides what the stage holds.
  */
-/** The room's shape, held while the scripts resolve. */
-function LibrarySkeleton() {
-  return (
-    <div aria-hidden className="grid gap-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:gap-12">
-      <div>
-        <Skeleton className="h-4 w-56 opacity-40" />
-        <Skeleton className="mt-4 h-24 w-full max-w-2xl opacity-40" />
-        <Skeleton className="mt-10 h-4 w-24 opacity-40" />
-        <Skeleton className="mt-3 h-6 w-80 max-w-full opacity-40" />
-        <Skeleton className="mt-10 h-16 w-48 rounded-full opacity-40" />
-      </div>
-      <div>
-        <Skeleton className="h-4 w-32 opacity-40" />
-        <div className="mt-5 space-y-3">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-[74px] w-full rounded-[14px] opacity-40" />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function PracticePage() {
   // Hooks must run on every render — call before any feature-flag early return.
   const { user, loading: authLoading, isDemoUser } = useAuth();
@@ -164,23 +141,11 @@ export default function PracticePage() {
           the whole rollout being shoved around by the content it was hiding.
           It stays on the screens it means something on. */}
 
+      {/* The same shape as the library's own Suspense fallback below. This
+          was a generic title-and-rows skeleton, so a load showed it, blinked,
+          and then showed LibrarySkeleton: two different skeletons in a row. */}
       {isLoading ? (
-        <div className="space-y-8 sm:space-y-10">
-          <Skeleton className="h-12 w-3/4 max-w-md" />
-          <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-10">
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-9 w-full rounded-md" />
-              ))}
-            </div>
-            <div className="space-y-2">
-              <Skeleton className="h-9 w-1/2 mb-4" />
-              {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-lg" />
-              ))}
-            </div>
-          </div>
-        </div>
+        <LibrarySkeleton />
       ) : !user ? (
         // Should be handled by middleware/layout, but render a noop just in case.
         <div className="py-20 text-center text-muted-foreground text-sm">

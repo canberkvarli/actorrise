@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FirstRunPaint } from "@/components/onboarding/FirstRunPaint";
+import { CurtainLiftPaint } from "@/components/transition/CurtainLiftPaint";
 import Script from "next/script";
 import { Suspense } from "react";
 import localFont from "next/font/local";
@@ -218,6 +219,7 @@ export default function RootLayout({
             had already been parsed, and that is exactly the dashboard the
             actor saw flash. */}
         <FirstRunPaint />
+        <CurtainLiftPaint />
         {/* No logo preload here. It used to warm /transparent_textlogo.png for the
             auth modal, but BrandLogo renders that wordmark through next/image, so
             the browser asks for /_next/image?url=... instead and the raw file in
