@@ -1,6 +1,6 @@
 /**
  * Parse a 403 feature-gate error from the backend into a structured upgrade prompt.
- * Works with both Axios errors and TTSError from useOpenAITTS.
+ * Works with Axios errors and with any error shaped { status, detail }.
  */
 
 export interface UpgradeErrorInfo {

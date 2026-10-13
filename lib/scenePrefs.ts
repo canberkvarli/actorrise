@@ -2,14 +2,14 @@
  * What an actor has decided about a scene, before they rehearse it.
  *
  * Two things: which part is theirs, and what the other parts sound like. Both
- * are per-scene, both live in the browser, and both are now needed in two
- * places — the scene preview and the scene editor — so they live here instead
- * of once in each.
+ * are per-scene and both live in the browser. The part is written by the scene
+ * preview and read by the Curtain. The voices are read by the Curtain only:
+ * nothing writes them any more (the preview's picker went when the Curtain
+ * became the one place to choose voices), the reader stays so a value saved
+ * before that still opens the run on it.
  *
  * The voice key and its shape are UNCHANGED (`scene_partner_voices_v3`, keyed
- * by scene id, character name → voice id). The editor has been writing it for
- * a while and the rehearsal page reads what it produces; moving the functions
- * without moving the data is the whole point.
+ * by scene id, character name → voice id).
  */
 
 export interface Voice {
@@ -35,11 +35,6 @@ export const AI_VOICES: readonly Voice[] = [
   { id: "ballad", label: "Ballad", desc: "Melodic, theatrical", gender: "neutral", color: "bg-violet-600" },
 ] as const;
 
-/** Handed out in order, so two characters in one scene never start alike. */
-export const DEFAULT_VOICE_CYCLE = [
-  "coral", "ash", "ballad", "sage", "onyx", "nova", "fable", "shimmer", "alloy", "echo",
-];
-
 export function voiceById(id: string | null | undefined): Voice {
   return AI_VOICES.find((v) => v.id === id) ?? AI_VOICES[4]; // coral
 }
@@ -60,39 +55,6 @@ export function getCharacterVoices(sceneId: number): CharacterVoices {
   } catch {
     return {};
   }
-}
-
-export function setCharacterVoices(sceneId: number, voices: CharacterVoices): void {
-  try {
-    const raw = localStorage.getItem(VOICE_KEY);
-    const all = raw ? (JSON.parse(raw) as Record<string, CharacterVoices>) : {};
-    all[String(sceneId)] = voices;
-    localStorage.setItem(VOICE_KEY, JSON.stringify(all));
-  } catch {
-    /* private mode — the defaults below still give everyone a voice */
-  }
-}
-
-/**
- * Fill in anyone who has not been cast yet, without disturbing a choice the
- * actor made. Returns a complete map for the characters given.
- */
-export function withDefaultVoices(
-  cast: string[],
-  chosen: CharacterVoices,
-): Record<string, string> {
-  const out: Record<string, string> = {};
-  let next = 0;
-  for (const name of cast) {
-    const picked = chosen[name];
-    if (picked) {
-      out[name] = picked;
-      continue;
-    }
-    out[name] = DEFAULT_VOICE_CYCLE[next % DEFAULT_VOICE_CYCLE.length];
-    next += 1;
-  }
-  return out;
 }
 
 /**

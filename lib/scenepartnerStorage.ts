@@ -1,10 +1,9 @@
 /**
  * ScenePartner onboarding state (localStorage).
- * Tutorial and audio check are per-device; no backend required.
+ * The tutorial flag is per-device; no backend required.
  */
 
 const KEY_TUTORIAL_SEEN = "scene_partner_tutorial_seen";
-const KEY_AUDIO_CHECK_DONE = "scene_partner_audio_check_done";
 
 export function getScenePartnerTutorialSeen(): boolean {
   if (typeof window === "undefined") return false;
@@ -18,23 +17,6 @@ export function getScenePartnerTutorialSeen(): boolean {
 export function setScenePartnerTutorialSeen(): void {
   try {
     localStorage.setItem(KEY_TUTORIAL_SEEN, "1");
-  } catch {
-    // ignore
-  }
-}
-
-export function getScenePartnerAudioCheckDone(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return localStorage.getItem(KEY_AUDIO_CHECK_DONE) === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function setScenePartnerAudioCheckDone(): void {
-  try {
-    localStorage.setItem(KEY_AUDIO_CHECK_DONE, "1");
   } catch {
     // ignore
   }

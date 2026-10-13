@@ -2,33 +2,17 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { castPalette, castColorVars } from "@/lib/castColors";
-import { VoiceMark } from "@/components/scenepartner/VoiceMark";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { motion, useReducedMotion } from "framer-motion";
-import {
-  IconArrowLeft,
-  IconPlayerPlay,
-  IconPlayerStopFilled,
-  IconVolume,
-} from "@tabler/icons-react";
+import { IconArrowLeft, IconPlayerPlay } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import api from "@/lib/api";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { entrance } from "@/lib/motion";
 import { formatSceneDuration } from "@/lib/scenes";
-import {
-  AI_VOICES,
-  getCharacterVoices,
-  getMyRoles,
-  setCharacterVoices,
-  setMyRoles,
-  voiceById,
-  withDefaultVoices,
-  type CharacterVoices,
-} from "@/lib/scenePrefs";
-import { useOpenAITTS } from "@/hooks/useOpenAITTS";
+import { getMyRoles, setMyRoles } from "@/lib/scenePrefs";
 import { ScenePreviewSkeleton } from "@/components/practice/ScenePreviewSkeleton";
 
 /**
@@ -41,15 +25,16 @@ import { ScenePreviewSkeleton } from "@/components/practice/ScenePreviewSkeleton
  * preview and did not behave like one, so nobody could tell what pressing
  * anything would do.
  *
- * This is the preview. It answers the three questions you actually have
- * standing in front of a scene — what is this, who am I, what do the others
- * sound like — and then has one loud way on. It is sides: the scene's own
- * head, the cast, and the top of the dialogue set on paper.
+ * This is the preview. It answers the two questions you actually have
+ * standing in front of a scene — what is this, who am I — and then has one
+ * loud way on. It is sides: the scene's own head, the cast, and the dialogue
+ * set on paper.
  *
  * Everything editable is still there, one tap away under "edit the scene". The
- * two decisions that belong to rehearsing rather than editing — which part is
- * yours, and the voices — are made HERE, because they are the two things you
- * must settle before a run and the only two the old editor made you hunt for.
+ * one decision that belongs to rehearsing rather than editing — which part is
+ * yours — is made HERE and remembered, so the Curtain opens on it. The voices
+ * are chosen at the Curtain, the one place that picks them; a second picker
+ * here showed a voice the run might not use.
  */
 
 interface SceneLine {
@@ -97,16 +82,14 @@ export default function ScenePreviewPage() {
     { revalidateOnFocus: false },
   );
 
-  /* Overrides, not state-of-record. Both of these are DERIVED from storage and
-     only replaced once the actor touches them — an effect that seeded state
-     after mount would be a setState in an effect, which is the cascading
-     render this repo's React rules reject, and it would also flash the default
-     role for a frame before the saved one landed. Nothing here is read until
-     `scene` exists, which only happens client-side, so there is no snapshot to
+  /* An override, not state-of-record. It is DERIVED from storage and only
+     replaced once the actor touches it — an effect that seeded state after
+     mount would be a setState in an effect, which is the cascading render this
+     repo's React rules reject, and it would also flash the default role for a
+     frame before the saved one landed. Nothing here is read until `scene`
+     exists, which only happens client-side, so there is no snapshot to
      mismatch on hydration. */
   const [rolesPicked, setRolesPicked] = useState<string[] | null>(null);
-  const [voicesPicked, setVoicesPicked] = useState<CharacterVoices | null>(null);
-  const [auditioning, setAuditioning] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   /* Fixing a line where you read it. Deliberately small: across the whole
      library exactly 4 scenes have ever had their text changed, 3 a character
@@ -115,11 +98,6 @@ export default function ScenePreviewPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<{ who: string; text: string }>({ who: "", text: "" });
   const [savingLine, setSavingLine] = useState(false);
-
-  const tts = useOpenAITTS({
-    onEnd: () => setAuditioning(null),
-    onError: () => setAuditioning(null),
-  });
 
   /** Everyone who speaks, in the order they first speak. */
   const cast = useMemo(() => {
@@ -146,11 +124,6 @@ export default function ScenePreviewPage() {
     return saved.length ? saved : [cast[0]];
   }, [rolesPicked, scene, cast]);
 
-  const voices = useMemo(
-    () => voicesPicked ?? (scene ? getCharacterVoices(scene.id) : {}),
-    [voicesPicked, scene],
-  );
-
   const mine = roles[0] ?? "";
 
   /* A colour per character, dealt in order of appearance.
@@ -163,37 +136,12 @@ export default function ScenePreviewPage() {
     () => castPalette((scene?.lines ?? []).map((l) => l.character_name)),
     [scene?.lines],
   );
-  const theirs = useMemo(() => cast.filter((c) => !roles.includes(c)), [cast, roles]);
-  const fullVoices = useMemo(() => withDefaultVoices(cast, voices), [cast, voices]);
 
   const chooseRole = (name: string) => {
     if (!scene) return;
     const next = [name];
     setRolesPicked(next);
     setMyRoles(scene.id, next);
-  };
-
-  const chooseVoice = (character: string, voiceId: string) => {
-    if (!scene) return;
-    const next = { ...fullVoices, [character]: voiceId };
-    setVoicesPicked(next);
-    setCharacterVoices(scene.id, next);
-  };
-
-  /** Hear a voice on a real line of theirs, not on a stock sentence. */
-  const audition = (character: string) => {
-    if (!scene) return;
-    if (auditioning === character) {
-      tts.cancel();
-      setAuditioning(null);
-      return;
-    }
-    const line =
-      scene.lines.find((l) => l.character_name === character && l.text.trim().length > 12) ??
-      scene.lines.find((l) => l.character_name === character);
-    const text = line?.text?.trim() || "Is all our company here?";
-    setAuditioning(character);
-    void tts.speak(text.slice(0, 220), fullVoices[character] ?? "coral");
   };
 
   const beginEdit = (line: { id: number; character_name: string; text: string }) => {
@@ -291,9 +239,9 @@ export default function ScenePreviewPage() {
           )}
         </motion.header>
 
-        {/* The two decisions. */}
+        {/* The one decision. The voices are the Curtain's. */}
         <motion.section {...entrance(1, { reduce })} className="mt-7">
-          <div className="t-prev__casting">
+          <div className="t-prev__casting t-prev__casting--solo">
             <div>
               <p className="t-prev__label">You play</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -312,73 +260,6 @@ export default function ScenePreviewPage() {
                     </button>
                   );
                 })}
-              </div>
-            </div>
-
-            <div className="t-prev__casting-rule" aria-hidden />
-
-            <div>
-              <p className="t-prev__label">I read</p>
-              <div className="t-prev__castlist mt-2">
-                {theirs.length === 0 ? (
-                  <p className="m-0 text-[13px]" style={{ color: "var(--t-faint)" }}>
-                    Everyone in this scene is yours. Drop one to hear it read back.
-                  </p>
-                ) : (
-                  theirs.map((name) => {
-                    const v = voiceById(fullVoices[name]);
-                    const busy = auditioning === name;
-                    return (
-                      <div
-                        key={name}
-                        className="t-prev__castrow"
-                        style={castColorVars(name, palette)}
-                      >
-                        <span className="t-prev__who-cell">
-                          <span className="t-prev__voicemark" aria-hidden>
-                            <VoiceMark voiceId={v.id} size={15} />
-                          </span>
-                          <span className="t-prev__them">{name}</span>
-                        </span>
-                        <select
-                            aria-label={`Voice for ${name}`}
-                            className="t-prev__voice"
-                            value={v.id}
-                            onChange={(e) => chooseVoice(name, e.target.value)}
-                          >
-                            {/* Grouped, because ten voices in a flat list is
-                                ten things to read; three kinds is a choice. */}
-                            {(["female", "male", "neutral"] as const).map((g) => (
-                              <optgroup
-                                key={g}
-                                label={g === "neutral" ? "Either" : g === "female" ? "Feminine" : "Masculine"}
-                              >
-                                {AI_VOICES.filter((voice) => voice.gender === g).map((voice) => (
-                                  <option key={voice.id} value={voice.id}>
-                                    {voice.label} — {voice.desc}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            onClick={() => audition(name)}
-                            className="t-prev__hear"
-                            data-on={busy}
-                            aria-label={busy ? `Stop ${name}` : `Hear ${name}`}
-                          >
-                            {busy ? (
-                              <IconPlayerStopFilled className="h-3.5 w-3.5" />
-                            ) : (
-                              <IconVolume className="h-3.5 w-3.5" />
-                            )}
-                            {busy ? "stop" : "hear"}
-                          </button>
-                      </div>
-                    );
-                  })
-                )}
               </div>
             </div>
           </div>
@@ -438,20 +319,6 @@ export default function ScenePreviewPage() {
                   ) : (
                     <>
                       <p className="t-prev__who" style={castColorVars(line.character_name, palette)}>
-                        {/* The voice, not the character's own initial.
-                            An H beside HORATIO is the same word twice. What
-                            cannot be read off the page is which of the ten
-                            voices reads this part, and whether two characters
-                            have been handed the same one. */}
-                        {!isMine && (
-                          <span className="t-prev__chip">
-                            <VoiceMark
-                              voiceId={fullVoices[line.character_name]}
-                              label={voiceById(fullVoices[line.character_name]).label}
-                              size={13}
-                            />
-                          </span>
-                        )}
                         <span className="t-prev__name">{line.character_name}</span>
                         {isMine && <span className="t-prev__yours">you</span>}
                         {/* Fix it where you read it. The editor was the only
