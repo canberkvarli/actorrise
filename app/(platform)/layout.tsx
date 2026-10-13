@@ -15,7 +15,6 @@ import { useProfile } from "@/hooks/useDashboardData";
 import { SWRConfig } from "swr";
 import { localStorageProvider } from "@/lib/swrCache";
 import { useSubscription } from "@/hooks/useSubscription";
-import { AnimatePresence, motion } from "framer-motion";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageTransition } from "@/components/transition/PageTransition";
 import { UploadProvider } from "@/components/practice/UploadProvider";
@@ -267,13 +266,12 @@ export default function PlatformLayout({
           font-family declaration and makes the element inherit — the goodbye
           has been rendering in the app's Montserrat since it shipped. Same
           omission as /monologues (a589aa3f). */}
-      <AnimatePresence>
-        {isLoggingOut && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+      {/* No fade on the layer itself. It faded in over 200ms while the halves
+          swept, so for a quarter second the whole app sat under a grey film
+          with the travelers sliding across it: the flicker. The halves are
+          opaque and do the covering; only the house dims (globals.css). */}
+      {isLoggingOut && (
+          <div
             className={`t-curtain-out theatre-tokens ${theatreFontVars}`}
             aria-live="polite"
             aria-label="Logging out"
@@ -291,9 +289,8 @@ export default function PlatformLayout({
               </p>
               <p className="t-curtain-out__line">See you at the next call.</p>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+      )}
       {/* Navigation */}
       {!isImmersive && (
       /* Dark theatrical shell: the chrome always lives on the warm stage and
@@ -574,10 +571,9 @@ export default function PlatformLayout({
                     <div className="t-playbill-menu__foot">
                       <span className="t-playbill-menu__dir m-0 p-0">(curtain call.)</span>
                       <button
-                        onClick={() => {
-                          setProfileDropdownOpen(false);
-                          void logout();
-                        }}
+                        /* The menu stays open: the curtain closes over it.
+                           Shutting it first made the click land as a flash. */
+                        onClick={() => void logout()}
                         disabled={isLoggingOut}
                         className="t-playbill-menu__out"
                       >
@@ -823,7 +819,6 @@ export default function PlatformLayout({
               className="t-sheet__row"
               disabled={isLoggingOut}
               onClick={() => {
-                setMobileMenuOpen(false);
                 void logout();
               }}
             >

@@ -172,7 +172,12 @@ export function useTrialOffer(trigger: TrialOfferTrigger, active: boolean, varia
 
   const href = useMemo(() => checkoutHref(trigger), [trigger]);
 
-  return { visible, dismiss, accept, href };
+  /* Whether `visible` is the answer yet. The slot is claimed in an effect, so
+     the first render always reads "not visible" for an ask that is about to
+     be. A caller that lays a page out around the offer waits for this. */
+  const settled = !isLoading && (!wanted || held);
+
+  return { visible, settled, dismiss, accept, href };
 }
 
 /* ── Presentations ───────────────────────────────────────────────── */
