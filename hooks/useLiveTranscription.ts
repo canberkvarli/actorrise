@@ -86,6 +86,15 @@ interface OpenOptions {
    * microphone, one stream, three consumers.
    */
   getStream: () => Promise<MediaStream | null>;
+  /**
+   * Called synchronously with the turn's transcript on every delta, after the
+   * state is set. The rehearsal engine hands over from here, so no React
+   * render sits between the last word and the partner's line. Never called
+   * with an empty string or outside an open turn.
+   */
+  onTranscript?: (transcript: string) => void;
+  /** Called when `turnEnded` goes true, synchronously. */
+  onQuiet?: () => void;
 }
 
 const CALLS_URL = 'https://api.openai.com/v1/realtime/calls';
@@ -135,7 +144,7 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
       // quiet having transcribed nothing is a room, not a performance, and
       // `shouldHandOver` refuses it anyway — but saying so here keeps the flag
       // honest for anything else reading it.
-      if (turnTextRef.current.trim()) setTurnEnded(true);
+      if (turnTextRef.current.trim()) { setTurnEnded(true); optionsRef.current.onQuiet?.(); }
     }, QUIET_AFTER_WORDS_MS);
   }, []);
 
@@ -154,6 +163,9 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
         turnTextRef.current += evt.delta;
         setTranscript(turnTextRef.current);
         bumpQuietTimer();
+        // Last: a handover here may end this turn and begin the next, and
+        // those resets must land after the state set above, not before it.
+        optionsRef.current.onTranscript?.(turnTextRef.current);
         return;
       }
 
@@ -166,6 +178,7 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
         turnTextRef.current = evt.transcript;
         setTranscript(evt.transcript);
         bumpQuietTimer();
+        optionsRef.current.onTranscript?.(evt.transcript);
         return;
       }
 
