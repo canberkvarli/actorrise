@@ -12,25 +12,30 @@ export class AudioPlayer {
   private sources = new Set<AudioBufferSourceNode>();
   onInterrupted: (() => void) | null = null;
 
+  /** The one place a context is made, so the interruption listener is always on it. */
+  private create(): AudioContext {
+    const ctx = new AudioContext({ latencyHint: 'interactive' });
+    ctx.addEventListener('statechange', () => {
+      if (this.ctx === ctx && ctx.state !== 'running') this.onInterrupted?.();
+    });
+    return ctx;
+  }
+
   /** Call from a user gesture. */
   unlock(): AudioContext {
-    if (!this.ctx) {
-      this.ctx = new AudioContext({ latencyHint: 'interactive' });
-      this.ctx.addEventListener('statechange', () => {
-        if (this.ctx && this.ctx.state !== 'running') this.onInterrupted?.();
-      });
-    }
-    if (this.ctx.state !== 'running') void this.ctx.resume();
-    return this.ctx;
+    const ctx = this.context();
+    if (ctx.state !== 'running') void ctx.resume();
+    return ctx;
   }
 
   context(): AudioContext {
-    if (!this.ctx) this.ctx = new AudioContext({ latencyHint: 'interactive' });
+    if (!this.ctx) this.ctx = this.create();
     return this.ctx;
   }
 
   now() { return this.context().currentTime; }
-  outputLatency() { const c = this.context(); return c.outputLatency ?? c.baseLatency ?? 0; }
+  /** Safari reports outputLatency as 0; baseLatency is the honest floor then. */
+  outputLatency() { const c = this.context(); return c.outputLatency || c.baseLatency || 0; }
 
   async decode(lineIndex: number, bytes: ArrayBuffer) {
     const buf = await this.context().decodeAudioData(bytes.slice(0));

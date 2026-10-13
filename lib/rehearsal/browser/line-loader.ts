@@ -19,6 +19,7 @@ export class LineLoader {
   private order: number[] = [];
   private sources = new Map<number, LineSource>();
   private started = new Set<number>();
+  private inflight = 0;
   private stopped = false;
   onReady: ((lineIndex: number) => void) | null = null;
   onFailed: ((lineIndex: number, why: string) => void) | null = null;
@@ -27,27 +28,31 @@ export class LineLoader {
 
   set(lineIndex: number, src: LineSource) { this.sources.set(lineIndex, src); if (!this.order.includes(lineIndex)) this.order.push(lineIndex); }
 
-  /** Load the first `n` lines in order, then keep going. Resolves when line 0 is decoded. */
+  /** Load `firstLine` and set the rest going in order. Resolves when `firstLine` is decoded (or failed). */
   async start(firstLine: number): Promise<void> {
     this.stopped = false;
     const first = this.load(firstLine);
-    void this.pump();
+    this.pump();
     await first;
   }
 
   /** Make sure the lines after `lineIndex` are moving. Called on every handover. */
-  ahead(lineIndex: number) { void this.pump(lineIndex); }
+  ahead(lineIndex: number) { this.pump(lineIndex); }
 
-  private async pump(from = -1) {
+  /** Start loads for the next lines after `from`, up to `concurrency` in flight at once. */
+  private pump(from = -1) {
+    const room = this.concurrency - this.inflight;
+    if (room <= 0 || this.stopped) return;
     const pending = this.order.filter(i => i > from && !this.started.has(i) && !this.player.has(i));
-    for (const i of pending.slice(0, this.concurrency)) void this.load(i);
+    for (const i of pending.slice(0, room)) void this.load(i);
   }
 
   private async load(i: number): Promise<void> {
-    if (this.started.has(i) || this.player.has(i)) return;
-    this.started.add(i);
     const src = this.sources.get(i);
-    if (!src) return;
+    if (!src || this.started.has(i) || this.player.has(i)) return; // no source yet: a later set() still loads it
+    this.started.add(i);
+    this.inflight++;
+    let decoded = false;
     try {
       let url = src.url;
       while (!url && !this.stopped) {
@@ -55,16 +60,22 @@ export class LineLoader {
         const res = await api.get<{ key: string; url: string | null }>(`/api/rehearsal/audio/${src.key}`);
         if (res.status === 200) url = res.data.url;
       }
-      if (!url) return;
+      if (!url) return; // stopped while polling
       const bytes = await fetch(url).then(r => { if (!r.ok) throw new Error(`audio ${r.status}`); return r.arrayBuffer(); });
       await this.player.decode(i, bytes);
-      this.onReady?.(i);
-      void this.pump(i);
+      decoded = true;
     } catch (e) {
       this.started.delete(i);
       this.onFailed?.(i, e instanceof Error ? e.message : String(e));
+    } finally {
+      this.inflight--;
     }
+    if (decoded) { this.onReady?.(i); this.pump(i); }
   }
 
-  stop() { this.stopped = true; }
+  /** Stop polling. Lines not yet decoded are forgotten as started, so a later start() loads them again. */
+  stop() {
+    this.stopped = true;
+    for (const i of this.started) if (!this.player.has(i)) this.started.delete(i);
+  }
 }
