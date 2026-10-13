@@ -7546,18 +7546,42 @@
   background: var(--r-pool), var(--t-house);
 }
 
-.r-script { font-family: var(--t-direction); font-size: var(--r-script-size); line-height: var(--r-script-lead); }
 .r-chrome { font-family: var(--t-body); }
 .r-title { font-family: var(--font-serif); }
-
-.r-word { color: var(--r-soft); transition: color 120ms ease-out, font-weight 120ms ease-out; }
-.r-word[data-heard="true"] { color: var(--t-ink); font-weight: 700; }
-.r-line--theirs { color: var(--r-theirs); }
-.r-line--mine { color: var(--t-ink); }
-.r-direction { color: var(--r-direction); font-style: italic; }
-.r-cue { color: var(--r-direction); letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.8em; }
-.r-line--mine .r-cue { color: var(--r-soft); }
 .r-soft { color: var(--r-soft); }
+
+/* The Stage prints the sides exactly as the scene preview does: the
+   `.t-prev__paper` card on the `.theatre-monologue` house, `.t-prev__line`
+   cues, chip and rule (Stage.tsx puts those classes on). Only what a RUN
+   adds lives here. The tokens come from .theatre-monologue on the scroller,
+   so the paper is cream in light and ink in dark, as the preview's is.
+
+   Where the run is: the live line (the actor's line being said, or the
+   partner line sounding) gets the full rule, 3px of gel-ink, on partner lines
+   too; the actor's other lines keep the preview's rule at part strength;
+   lines already passed sit back. Scoped under .r-sides so these outrank the
+   .t-prev__line rules declared further down the file. Rule width plus padding stays 16px, which
+   the -16px margin cancels, so the text never shifts when the rule moves. */
+.r-stage { background: var(--page); }
+.r-sides { margin-bottom: 0; }
+.r-sides .t-prev__text { font-size: var(--r-script-size); line-height: var(--r-script-lead); }
+.r-sides .r-line { transition: opacity 240ms ease-out; }
+.r-sides .r-line[data-mine="true"] { border-left-color: color-mix(in oklab, var(--t-gel-ink) 28%, transparent); }
+.r-sides .r-line[data-when="live"] {
+  margin-left: -16px;
+  padding-left: 13px;
+  border-left: 3px solid var(--t-gel-ink);
+}
+.r-sides .r-line[data-when="past"] { opacity: 0.42; }
+
+/* Heard words carry the weight. On the live line the words still to say are
+   softer, so the next one is where the ink stops; everywhere else a line is
+   in full ink, as on the preview. */
+.r-word { transition: color 120ms ease-out, font-weight 120ms ease-out; }
+.r-word[data-heard="true"] { color: var(--t-text); font-weight: 700; }
+.r-line[data-when="live"] .r-word[data-heard="false"] {
+  color: color-mix(in oklab, var(--t-text) 58%, var(--t-paper));
+}
 
 .r-begin { color: var(--r-soft); opacity: 0.6; transition: color 200ms ease-out, opacity 200ms ease-out; }
 .r-begin[data-ready="true"] { color: var(--t-ink); opacity: 1; }
