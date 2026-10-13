@@ -7600,8 +7600,6 @@
     background: var(--t-line-light);
   }
 }
-/* One decision only (the voices moved to the Curtain): no rule, one column. */
-.t-prev__casting--solo { grid-template-columns: minmax(0, 1fr); }
 .t-prev__label {
   margin: 0;
   font-family: var(--t-direction);
