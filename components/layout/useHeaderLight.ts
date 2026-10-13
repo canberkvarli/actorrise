@@ -33,7 +33,14 @@ export function useHeaderLight(routeKey: string, locked = false) {
   const lockedRef = useRef(locked);
   const hiddenRef = useRef(false);
 
-  const place = useCallback(() => {
+  const placedRef = useRef(false);
+
+  /* Only a change of route is a move the eye should follow. The first
+     placement and every re-measure after a reflow (a font landing, the account
+     button learning a name) snap: animating those swept the light in from the
+     left edge on every load and wobbled it under the tab as the bar settled,
+     which read as the header "finding its place". */
+  const place = useCallback((animate = false) => {
     const nav = navRef.current;
     const light = lightRef.current;
     if (!nav || !light) return;
@@ -42,13 +49,21 @@ export function useHeaderLight(routeKey: string, locked = false) {
       light.style.opacity = "0";
       return;
     }
+    const snap = !animate || !placedRef.current;
+    if (snap) light.style.transition = "none";
     light.style.opacity = "1";
     light.style.left = `${active.offsetLeft}px`;
     light.style.width = `${active.offsetWidth}px`;
+    if (snap) {
+      void light.offsetWidth; // commit the jump before transitions return
+      light.style.transition = "";
+    }
+    placedRef.current = true;
+    nav.dataset.lit = "true";
   }, []);
 
   useEffect(() => {
-    place();
+    place(true);
 
     /* A single re-measure on a timer is not enough, and this is how the lamp
        ended up stranded at the left of the bar on /practice with the active
@@ -74,12 +89,13 @@ export function useHeaderLight(routeKey: string, locked = false) {
 
     /* Belt and braces for the font, which can land before the observer is
        attached on a warm cache. */
-    document.fonts?.ready.then(place).catch(() => {});
+    document.fonts?.ready.then(() => place()).catch(() => {});
 
-    window.addEventListener("resize", place);
+    const onResize = () => place();
+    window.addEventListener("resize", onResize);
     return () => {
       ro?.disconnect();
-      window.removeEventListener("resize", place);
+      window.removeEventListener("resize", onResize);
     };
   }, [place, routeKey]);
 

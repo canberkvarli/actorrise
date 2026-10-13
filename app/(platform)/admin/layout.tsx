@@ -45,20 +45,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // A failed poll shows no badge rather than an error in the nav.
   const badgeFor = (key?: BadgeKey) => (key ? pulse?.[key] ?? 0 : 0);
 
+  /* Held empty, not labelled. A "Loading..." line here was a first loading
+     state ahead of the admin page's own skeleton, and for a moderator with a
+     cached account it showed for a single frame: a flash, not information. */
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+    return <div className="min-h-screen" aria-busy="true" />;
   }
 
   if (!user?.is_moderator) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Redirecting...</p>
-      </div>
-    );
+    return <div className="min-h-screen" aria-busy="true" />;
   }
 
   const renderLink = (item: NavItem, layout: "side" | "strip") => {

@@ -131,15 +131,18 @@ export function RehearseHub() {
     });
   };
 
+  /* The skeleton is drawn as-is, never faded: the route's Suspense fallback is
+     this same shape, and fading it in from 0 blinked one skeleton out and a
+     second one in. Only the arrival of the real shelf is animated. */
+  if (!showContent) return <BenchSkeleton />;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
     >
-      {!showContent ? (
-        <BenchSkeleton />
-      ) : isEmpty ? (
+      {isEmpty ? (
         <div className="t-bare">
           {/* An empty slot on the shelf, drawn rather than described. */}
           <div aria-hidden className="t-bare__slot">?</div>
