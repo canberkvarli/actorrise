@@ -44,7 +44,7 @@ export function Curtain({ payload, guided, chosen, canBegin, error, upgradeUrl, 
   };
 
   return (
-    <main className="r-chrome mx-auto flex min-h-dvh w-full max-w-md flex-col justify-start px-6 pb-12 pt-[18vh]">
+    <section className="r-chrome mx-auto flex min-h-dvh w-full max-w-md flex-col justify-start px-6 pb-12 pt-[18vh]">
       {payload.scene.play_title && <p className="r-soft text-sm">{payload.scene.play_title}</p>}
       <h1 className="r-title mt-1 text-4xl leading-tight [overflow-wrap:anywhere]">{payload.scene.title}</h1>
 
@@ -96,6 +96,6 @@ export function Curtain({ payload, guided, chosen, canBegin, error, upgradeUrl, 
         disabled={!canBegin} onClick={onBegin}>
         Begin
       </button>
-    </main>
+    </section>
   );
 }

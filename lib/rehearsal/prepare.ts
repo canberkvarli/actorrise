@@ -151,6 +151,6 @@ export function runFailure(e: unknown): RunFailure {
   return {
     kind: 'gate',
     message: (detail.message as string).trim(),
-    upgradeUrl: typeof url === 'string' && /^\/(?!\/)/.test(url) ? url : null,
+    upgradeUrl: typeof url === 'string' && /^\/(?![\/\\])/.test(url) ? url : null,
   };
 }

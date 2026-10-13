@@ -180,6 +180,7 @@ describe('runFailure', () => {
   it('never links off the site', () => {
     expect(runFailure(thrown(403, { detail: { ...gate, upgrade_url: 'https://evil.example' } })).upgradeUrl).toBeNull();
     expect(runFailure(thrown(403, { detail: { ...gate, upgrade_url: '//evil.example' } })).upgradeUrl).toBeNull();
+    expect(runFailure(thrown(403, { detail: { ...gate, upgrade_url: '/\\evil.com' } })).upgradeUrl).toBeNull();
   });
   it('is other for anything that is not the gate shape', () => {
     const other = { kind: 'other', message: plainError('other'), upgradeUrl: null };

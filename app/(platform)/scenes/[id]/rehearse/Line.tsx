@@ -49,7 +49,9 @@ function LineView({ line, mine, heard, tappable, onTap }: Props) {
           onPointerDown={e => { down.current = { x: e.clientX, y: e.clientY }; }}
           onClick={e => {
             const d = down.current;
-            if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > TAP_SLOP_PX) return;
+            down.current = null;
+            // detail 0 is a keyboard activation: there was no pointer, so no drag to rule out.
+            if (e.detail !== 0 && d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > TAP_SLOP_PX) return;
             onTap(line.index);
           }}>
           {body}
