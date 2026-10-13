@@ -1,7 +1,8 @@
 /**
- * Decision 2: act on the script. Tap a line to start from it (the Stage does
- * that itself); tap empty space to pause; swipe left to skip, right to go
- * back; Space / → / ← on a keyboard. Returns a teardown.
+ * Decision 2: act on the script. A tap on the stage (`[data-pause-target]`)
+ * calls `pause`, which the screen toggles: pause while running, resume while
+ * paused. A tap that began a drag is a scroll, not a tap. Swipe left to skip,
+ * right to go back; Space / → / ← on a keyboard. Returns a teardown.
  */
 export interface GestureHandlers { pause: () => void; skip: () => void; back: () => void }
 

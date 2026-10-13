@@ -113,7 +113,7 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   return (
     <div ref={rootRef} className="relative h-dvh overflow-hidden">
       <Stage lines={payload.lines} actor={snapshot?.actor ?? goPart ?? ''} snapshot={snapshot}
-        paused={state === 'paused'} onTapLine={jumpTo} />
+        paused={state === 'paused'} />
       {waitingTap && !error && (
         <button type="button" className="fixed inset-0 block w-full cursor-default" onClick={begin}>
           <motion.span className="r-chrome r-soft absolute inset-x-0 top-[42dvh] text-center text-base"

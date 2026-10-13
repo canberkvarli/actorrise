@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useMemo, useRef } from 'react';
+import { memo, useMemo } from 'react';
 import type { RehearsalLine } from '@/lib/rehearsal/contract';
 import { displayRuns } from '@/lib/rehearsal/display-words';
 
@@ -8,23 +8,20 @@ interface Props {
   line: RehearsalLine; mine: boolean;
   /** For the actor's lines: indices of words heard. Undefined for partner lines. */
   heard?: Set<number>;
-  /** Paused: the line is a button that jumps to it. Running: it lets taps through to the stage, which pauses. */
-  tappable: boolean;
-  onTap: (index: number) => void;
 }
-
-/** While paused, a drag (a scroll, a swipe) that ends on a line is not a tap on it. */
-const TAP_SLOP_PX = 10;
 
 /**
  * One line of the sides: the cue, the direction, the words. On the actor's
  * lines every word is a span whose weight carries whether it was heard; one
  * span per matcher token, so index `i` is the word actually said. Nothing
  * else on a line changes while the scene runs.
+ *
+ * A line is never a button. A tap on it is a tap on the stage, which pauses
+ * or resumes; jumping to a line by tapping it was landing on the line under
+ * the second tap of every pause and resume.
  */
-function LineView({ line, mine, heard, tappable, onTap }: Props) {
+function LineView({ line, mine, heard }: Props) {
   const words = useMemo(() => displayRuns(line.text), [line.text]);
-  const down = useRef<{ x: number; y: number } | null>(null);
 
   const body = (
     <>
@@ -42,23 +39,8 @@ function LineView({ line, mine, heard, tappable, onTap }: Props) {
   );
 
   return (
-    <li data-line={line.index}
-      className={`${tappable ? 'pointer-events-auto' : 'pointer-events-none'} ${mine ? 'r-line--mine' : 'r-line--theirs'}`}>
-      {tappable ? (
-        <button type="button" className="block w-full py-3 text-left"
-          onPointerDown={e => { down.current = { x: e.clientX, y: e.clientY }; }}
-          onClick={e => {
-            const d = down.current;
-            down.current = null;
-            // detail 0 is a keyboard activation: there was no pointer, so no drag to rule out.
-            if (e.detail !== 0 && d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > TAP_SLOP_PX) return;
-            onTap(line.index);
-          }}>
-          {body}
-        </button>
-      ) : (
-        <div className="py-3">{body}</div>
-      )}
+    <li data-line={line.index} className={mine ? 'r-line--mine' : 'r-line--theirs'}>
+      <div className="py-3">{body}</div>
     </li>
   );
 }
@@ -72,4 +54,4 @@ function sameWords(a?: Set<number>, b?: Set<number>): boolean {
 
 /** The engine publishes a snapshot a frame; only the line whose heard words changed re-renders. */
 export const Line = memo(LineView, (p, n) =>
-  p.line === n.line && p.mine === n.mine && p.tappable === n.tappable && p.onTap === n.onTap && sameWords(p.heard, n.heard));
+  p.line === n.line && p.mine === n.mine && sameWords(p.heard, n.heard));
