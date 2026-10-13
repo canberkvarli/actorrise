@@ -153,6 +153,19 @@ describe('Engine', () => {
     expect(ports.scheduled.slice(2)).toEqual([{ line: 1, at: 101.1 }]);
   });
 
+  it('paused after the beat had finished (its end not yet run), resume goes on to the actor turn', () => {
+    engine.begin();
+    ports.tick(2); // past 101.8, the end of line 1; the end timer has not fired
+    engine.pause();
+    expect(engine.snapshot().state).toBe('paused');
+    engine.resume();
+    expect(engine.snapshot()).toMatchObject({ state: 'actor', lineIndex: 2 });
+    expect(ports.mic.open).toHaveBeenCalledTimes(1);
+    expect(ports.scheduled).toHaveLength(2);
+    fire(1e6);
+    expect(engine.snapshot().state).toBe('actor');
+  });
+
   it('resume on an actor line primes and opens the mic again with the read reset', () => {
     engine.begin(); const end = 100 + 1.5 + BREATH_S; ports.tick(end - 100); fire(end);
     engine.delta('out twenty');
@@ -186,6 +199,14 @@ describe('Engine', () => {
     expect(ports.mic.prime).toHaveBeenCalledTimes(1);
   });
 
+  it('a jump to an actor line primes it again: the mic was closed in between', () => {
+    engine.begin(); // the beat primed line 2
+    vi.mocked(ports.mic.prime).mockClear();
+    engine.jumpTo(2);
+    expect(ports.mic.prime).toHaveBeenCalledTimes(1);
+    expect(ports.mic.prime).toHaveBeenCalledWith(expect.arrayContaining(['Anna', 'Ben']));
+  });
+
   it('on handover the partner plays before any listener hears about it', () => {
     engine.begin(); const end = 100 + 1.5 + BREATH_S; ports.tick(end - 100); fire(end);
     engine.subscribe(() => ports.calls.push('listener'));
@@ -205,6 +226,17 @@ describe('Engine', () => {
     expect(p.mic.open).not.toHaveBeenCalled();
     ok = true; e.audioReady(0);
     expect(p.scheduled[0]).toEqual({ line: 0, at: p.now() });
+  });
+
+  it('a refused play on the next beat leaves handover_ms null, even with a duration', () => {
+    const p = fakePorts();
+    p.player.play = (line, at) => { if (line === 3) return false; p.scheduled.push({ line, at }); return true; };
+    const e = new Engine(buildScript(LINES, 'ANNA'), p);
+    e.begin(); const end = 100 + 1.5 + BREATH_S; p.tick(end - 100); fire(end);
+    p.tick(1); e.delta('out twenty four hours');
+    expect(p.journal.emit).toHaveBeenCalledWith('actor_line_read', 2, expect.any(Number),
+      expect.objectContaining({ ended_by: 'last_word', handover_ms: null }));
+    expect(e.snapshot().state).toBe('partner');
   });
 
   it('a cold line decoding while paused schedules nothing; resume plays it', () => {

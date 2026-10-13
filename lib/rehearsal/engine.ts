@@ -66,8 +66,8 @@ export class Engine {
   private timeline = new Timeline();
   private waiting: { line: number; position: number; due: number } | null = null; // a held cold line
   private beat: { position: number; end: number }[] = []; // the lines scheduled, and their ends
-  private resumeFrom = 0; // position in the beat that resume goes on from
-  private primed = -1; // the actor turn last primed for; cleared by pause
+  private resumeFrom = 0; // position in the beat that resume goes on from; -1 = the next turn
+  private primed = -1; // the actor turn last primed for; cleared with the mic
   private listeners = new Set<() => void>();
 
   constructor(private script: Script, private ports: EnginePorts) {}
@@ -102,9 +102,9 @@ export class Engine {
     if (this.state !== 'partner' && this.state !== 'actor') return;
     const now = this.ports.clock.now();
     // The line sounding now, or the next one due (in a breath, or held cold).
-    this.resumeFrom = this.beat.find(b => b.end > now)?.position ?? this.waiting?.position ?? 0;
+    // None, in a beat, means it had finished: resume goes on to the next turn.
+    this.resumeFrom = this.beat.find(b => b.end > now)?.position ?? this.waiting?.position ?? (this.state === 'partner' ? -1 : 0);
     this.silence();
-    this.primed = -1;
     this.state = 'paused';
     this.ports.journal.emit('paused', this.snapshot().lineIndex, this.atMs());
     this.changed();
@@ -114,12 +114,12 @@ export class Engine {
   resume() {
     if (this.state !== 'paused') return;
     this.ports.journal.emit('resumed', this.snapshot().lineIndex, this.atMs());
+    if (this.resumeFrom < 0) { this.enter(this.turnIndex + 1); return; } // the beat had finished
     const turn = this.script.turns[this.turnIndex];
     this.read = EMPTY_READ;
     this.waiting = null;
     this.timeline.reset();
-    if (turn.kind === 'partner') this.startBeat(turn, this.resumeFrom);
-    else this.openMic(turn);
+    if (turn.kind === 'partner') this.startBeat(turn, this.resumeFrom); else this.openMic(turn);
     this.changed();
   }
 
@@ -192,34 +192,34 @@ export class Engine {
 
   private lineOfTurn(t: number) { const u = this.script.turns[t]; return u.kind === 'actor' ? u.lineIndex : u.lineIndices[0]; }
 
-  private silence() { this.clearTimers(); this.ports.player.stopAll(); this.ports.mic.close(); }
+  private silence() { this.clearTimers(); this.ports.player.stopAll(); this.ports.mic.close(); this.primed = -1; }
 
-  private enter(t: number) {
+  /** Start turn `t` at now. `finished` journals the actor line just read, once its partner is scheduled. */
+  private enter(t: number, finished?: (scheduled: boolean) => void) {
     this.clearTimers();
     const turn = this.script.turns[t];
-    if (!turn) { this.end(); return; } // past the last turn; the snapshot stays on it
+    if (!turn) { finished?.(false); this.end(); return; } // past the last turn; the snapshot stays on it
     this.turnIndex = t;
     this.read = EMPTY_READ;
     this.sounding = null;
     this.waiting = null;
     this.beat = [];
-    this.timeline.reset();
-    if (turn.kind === 'partner') {
-      this.ports.journal.emit('line_reached', turn.lineIndices[0], this.atMs());
-      this.startBeat(turn, 0);
-    } else {
-      this.openMic(turn);
-      this.ports.journal.emit('line_reached', turn.lineIndex, this.atMs());
-    }
+    this.timeline = new Timeline(); // `finished` still reads the old one
+    let scheduled = false;
+    if (turn.kind === 'partner') scheduled = this.startBeat(turn, 0); else this.openMic(turn);
+    finished?.(scheduled);
+    this.ports.journal.emit('line_reached', this.lineOfTurn(t), this.atMs());
     this.changed();
   }
 
-  private startBeat(turn: PartnerTurn, position: number) {
+  /** True if the line at `position` was scheduled; false if it is held cold. */
+  private startBeat(turn: PartnerTurn, position: number): boolean {
     this.state = 'partner';
-    this.playBeat(turn, position, this.ports.clock.now());
+    const scheduled = this.playBeat(turn, position, this.ports.clock.now());
     // Primed as the beat starts (after play, so it never delays the sound),
     // so the transcriber is ready when the mic opens.
     this.prime(turn.index + 1);
+    return scheduled;
   }
 
   private openMic(turn: ActorTurn) {
@@ -241,9 +241,10 @@ export class Engine {
    * Schedule the beat from `position` on, starting at `at`: each line follows
    * the last by its decoded length plus a breath, and the mic opens at the
    * last line's end, on the clock. A cold line (no duration, or play()
-   * refused) holds the beat there until audioReady.
+   * refused) holds the beat there until audioReady. True if the line at
+   * `position` was scheduled.
    */
-  private playBeat(turn: PartnerTurn, position: number, at: number) {
+  private playBeat(turn: PartnerTurn, position: number, at: number): boolean {
     this.beat = [];
     let start = at;
     let end = at;
@@ -252,7 +253,7 @@ export class Engine {
       const d = this.ports.player.duration(line);
       if (d === null || !this.ports.player.play(line, start)) {
         this.waiting = { line, position: p, due: start };
-        return;
+        return p > position;
       }
       const s = start;
       this.beat.push({ position: p, end: s + d });
@@ -263,28 +264,28 @@ export class Engine {
     }
     this.timeline.mark('partner_end', end);
     this.cancels.push(this.ports.schedule(end, () => this.enter(this.turnIndex + 1)));
+    return true;
   }
 
   private finishActorTurn(endedBy: 'last_word' | 'quiet' | 'skipped') {
     const turn = this.script.turns[this.turnIndex] as ActorTurn;
-    const now = this.ports.clock.now();
     this.ports.mic.close();
-    const next = this.script.turns[this.turnIndex + 1];
-    this.timeline.mark('handover', now);
-    // The next beat is scheduled at `now` by enter() below, in this same call.
-    if (next?.kind === 'partner' && this.ports.player.duration(next.lineIndices[0]) !== null) {
-      this.timeline.mark('partner_scheduled', now);
-    }
+    this.timeline.mark('handover', this.ports.clock.now());
     this.heard.set(turn.lineIndex, new Set(this.read.matched));
-    this.ports.journal.emit('actor_line_read', turn.lineIndex, this.atMs(), {
-      ended_by: endedBy,
-      matched: [...this.read.matched].sort((a, b) => a - b),
-      score: this.read.score,
-      // null when nothing was measured (a skip with no delta, a cold partner line).
-      handover_ms: this.timeline.handoverMs(),
-      output_latency_ms: Math.round(this.ports.clock.outputLatency() * 1000),
+    const marks = this.timeline, read = this.read;
+    // The next beat is scheduled at now by enter(), in this same call. The mark
+    // is set only once play() has taken its first line: refused, it stays unset.
+    this.enter(this.turnIndex + 1, (scheduled) => {
+      if (scheduled) marks.mark('partner_scheduled', this.ports.clock.now());
+      this.ports.journal.emit('actor_line_read', turn.lineIndex, this.atMs(), {
+        ended_by: endedBy,
+        matched: [...read.matched].sort((a, b) => a - b),
+        score: read.score,
+        // null when nothing was measured (a skip with no delta, a cold or refused partner line).
+        handover_ms: marks.handoverMs(),
+        output_latency_ms: Math.round(this.ports.clock.outputLatency() * 1000),
+      });
     });
-    this.enter(this.turnIndex + 1);
   }
 
   private end() {
