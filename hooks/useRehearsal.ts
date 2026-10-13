@@ -12,6 +12,10 @@
  *   rest. A guided run (`opts.guided`) opens with POST /runs/guided and uses
  *   the character and voices THAT returns; the arguments are ignored and
  *   `payload` must be the guided scene's (GET /api/rehearsal/guided names it).
+ *   Picking a run up (`opts.resumeRunId`, from `payload.resume`) goes through
+ *   POST /runs/{id}/resume, which is not metered: the run was paid for when
+ *   it was opened. The part, the voices and the line to start on are the
+ *   run's, not the arguments'.
  * - Deltas reach engine.delta synchronously from the data channel
  *   (`onTranscript`), so nothing renders or awaits between the actor's last
  *   word and player.play.
@@ -26,7 +30,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, API_URL, getAuthToken, getCachedAuthToken } from '@/lib/api';
 import { useLiveCapture } from '@/hooks/useLiveCapture';
 import { useLiveTranscription } from '@/hooks/useLiveTranscription';
-import type { GuidedRun, ScenePayload } from '@/lib/rehearsal/contract';
+import type { GuidedRun, ResumedRun, ScenePayload } from '@/lib/rehearsal/contract';
 import { Engine, type Snapshot } from '@/lib/rehearsal/engine';
 import { Journal, type JournalTransport } from '@/lib/rehearsal/journal';
 import { buildScript } from '@/lib/rehearsal/script';
@@ -42,7 +46,7 @@ export interface Rehearsal {
   /** `line1 && stt && !error`. */
   canBegin: boolean;
   /** Once per mount, after the actor has chosen a part and voices. Rejects if the run cannot be opened (the Plus gate). */
-  prepare: (character: string, voices: Record<string, string>, opts?: { guided?: boolean; resumeLine?: number }) => Promise<void>;
+  prepare: (character: string, voices: Record<string, string>, opts?: { guided?: boolean; resumeLine?: number; resumeRunId?: number }) => Promise<void>;
   /** Call from the Begin tap itself: the audio context is unlocked synchronously inside it. */
   begin: () => void;
   pause: () => void; resume: () => void; skip: () => void; back: () => void; jumpTo: (line: number) => void;
@@ -129,11 +133,18 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     if (preparedRef.current) return;
     preparedRef.current = true;
     let run: Opened;
+    let resumeLine: number | null = opts?.resumeLine ?? null;
     try {
-      run = opts?.guided
-        ? (await api.post<GuidedRun>('/api/rehearsal/runs/guided')).data
-        : { scene_id: payload.scene.id, character, ...(await api.post<{ run_id: number; voices: Record<string, string> }>(
-            '/api/rehearsal/runs', { scene_id: payload.scene.id, character, voices })).data };
+      if (opts?.resumeRunId !== undefined) {
+        const picked = (await api.post<ResumedRun>(`/api/rehearsal/runs/${opts.resumeRunId}/resume`)).data;
+        run = picked;
+        resumeLine = picked.line_index;
+      } else {
+        run = opts?.guided
+          ? (await api.post<GuidedRun>('/api/rehearsal/runs/guided')).data
+          : { scene_id: payload.scene.id, character, ...(await api.post<{ run_id: number; voices: Record<string, string> }>(
+              '/api/rehearsal/runs', { scene_id: payload.scene.id, character, voices })).data };
+      }
     } catch (e) {
       preparedRef.current = false;
       // The Plus gate or the meter is an answer, not a breakage: its message goes on the Curtain with the plans link.
@@ -167,7 +178,6 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
       } },
       schedule: (at, fn) => player.schedule(at, fn),
     });
-    const resumeLine = opts?.resumeLine ?? null;
     resumeLineRef.current = resumeLine;
     const first = firstNeededLine(script, resumeLine);
     const start = first ?? resumeLine ?? 0;

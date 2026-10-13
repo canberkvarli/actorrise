@@ -17,7 +17,7 @@ from app.models.actor import FilmTvReference, Play, Scene, SceneLine, UserScript
 from app.models.organization import Organization
 from app.models.rehearsal import PartnerAudio, RehearsalEvent, RehearsalRun
 from app.models.user import User
-from app.services.rehearsal import partner_audio
+from app.services.rehearsal import journal, partner_audio
 from tests.dbfixture import memory_db, restore
 
 # FilmTvReference is here only because plays.film_tv_reference_id points at it
@@ -156,6 +156,67 @@ class Api(unittest.TestCase):
         self.assertEqual(r.status_code, 200, r.text)
         self.db.expire_all()
         self.assertTrue(self.db.get(User, self.user.id).has_seen_first_rehearsal)
+
+    # ── picking a run up ──────────────────────────────────────────────────
+
+    def _open_run(self, user=None, reached: int | None = 1, started_ago: timedelta | None = None) -> int:
+        run = journal.create_run(self.db, (user or self.user).id, self.scene.id, "ANNA", {"BEN": "ash"})
+        if started_ago is not None:
+            run.started_at = datetime.now(timezone.utc) - started_ago
+        evs = [{"seq": 0, "type": "started", "line_index": None, "at_ms": 0, "payload": {}}]
+        if reached is not None:
+            evs.append({"seq": 1, "type": "line_reached", "line_index": reached, "at_ms": 10, "payload": {}})
+        journal.append(self.db, run.id, (user or self.user).id, evs)
+        self.db.commit()
+        return run.id
+
+    def test_resume_hands_back_the_run_as_it_was_opened(self):
+        run_id = self._open_run()
+        r = self.client.post(f"/api/rehearsal/runs/{run_id}/resume")
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json(), {"run_id": run_id, "scene_id": self.scene.id, "character": "ANNA",
+                                    "voices": {"BEN": "ash"}, "line_index": 1})
+        # No new run was opened and the meter was not consulted.
+        self.assertEqual(self.db.query(RehearsalRun).count(), 1)
+        api.assert_can_rehearse.assert_not_called()
+
+    def test_resume_does_not_pass_the_scene_partner_gate(self):
+        def refuse():
+            raise HTTPException(status_code=403, detail="metered")
+        self.app.dependency_overrides[api.SCENE_PARTNER_GATE] = refuse
+        run_id = self._open_run()
+        self.assertEqual(self.client.post(f"/api/rehearsal/runs/{run_id}/resume").status_code, 200)
+        # The gate still guards a fresh run.
+        r = self.client.post("/api/rehearsal/runs", json={"scene_id": self.scene.id, "character": "ANNA"})
+        self.assertEqual(r.status_code, 403)
+
+    def test_resume_is_404_for_another_users_run(self):
+        other = User(email="b@example.com", supabase_id="s2")
+        self.db.add(other); self.db.commit()
+        run_id = self._open_run(user=other)
+        self.assertEqual(self.client.post(f"/api/rehearsal/runs/{run_id}/resume").status_code, 404)
+
+    def test_resume_is_404_for_a_closed_run(self):
+        run_id = self._open_run()
+        journal.append(self.db, run_id, self.user.id,
+                       [{"seq": 2, "type": "abandoned", "line_index": 1, "at_ms": 20, "payload": {}}])
+        self.db.commit()
+        self.assertEqual(self.client.post(f"/api/rehearsal/runs/{run_id}/resume").status_code, 404)
+        done = self._open_run()
+        journal.append(self.db, done, self.user.id,
+                       [{"seq": 2, "type": "completed", "line_index": 1, "at_ms": 20, "payload": {}}])
+        self.db.commit()
+        self.assertEqual(self.client.post(f"/api/rehearsal/runs/{done}/resume").status_code, 404)
+
+    def test_resume_is_404_outside_the_window_or_for_no_run(self):
+        stale = self._open_run(started_ago=journal.RESUME_WINDOW + timedelta(minutes=1))
+        self.assertEqual(self.client.post(f"/api/rehearsal/runs/{stale}/resume").status_code, 404)
+        self.assertEqual(self.client.post("/api/rehearsal/runs/999999/resume").status_code, 404)
+
+    def test_resume_of_a_run_that_reached_nothing_starts_at_the_top(self):
+        run_id = self._open_run(reached=None)
+        r = self.client.post(f"/api/rehearsal/runs/{run_id}/resume")
+        self.assertEqual((r.status_code, r.json()["line_index"]), (200, 0))
 
     def _failed(self, age: timedelta) -> str:
         key = partner_audio.ensure(self.db, settings.partner_tts_vendor, "ash", None, "Where were you?")

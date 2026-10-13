@@ -10,7 +10,8 @@ interface Props {
   payload: ScenePayload; guided: boolean; chosen: string | null; canBegin: boolean; error: string | null;
   /** With a gate message: where the plans are. */
   upgradeUrl?: string | null;
-  onChoose: (character: string, voices: Record<string, string>, resumeLine?: number) => void;
+  /** With `resume`: pick that run up (it is not metered) instead of opening a new one. */
+  onChoose: (character: string, voices: Record<string, string>, resume?: { runId: number; lineIndex: number }) => void;
   onBegin: () => void;
 }
 
@@ -31,9 +32,9 @@ export function Curtain({ payload, guided, chosen, canBegin, error, upgradeUrl, 
   const mine = chosen || picked;
   const locked = Boolean(chosen);
 
-  const commit = (character: string, resumeLine?: number) => {
+  const commit = (character: string, pickUp?: { runId: number; lineIndex: number }) => {
     const partners = payload.characters.filter(c => !sameCharacter(c, character) && voices[c]);
-    onChoose(character, Object.fromEntries(partners.map(c => [c, voices[c]])), resumeLine);
+    onChoose(character, Object.fromEntries(partners.map(c => [c, voices[c]])), pickUp);
   };
   const tapPart = (c: string) => {
     if (locked) return;
@@ -75,7 +76,7 @@ export function Curtain({ payload, guided, chosen, canBegin, error, upgradeUrl, 
 
       {resume && picked && !locked && (
         <div className="mt-8 flex flex-col items-start">
-          <button type="button" className="min-h-11 text-lg" onClick={() => commit(picked, resume.line_index)}>
+          <button type="button" className="min-h-11 text-lg" onClick={() => commit(picked, { runId: resume.run_id, lineIndex: resume.line_index })}>
             Pick up at line {resume.line_index + 1}
           </button>
           <button type="button" className="min-h-11 text-lg" onClick={() => commit(picked)}>From the top</button>

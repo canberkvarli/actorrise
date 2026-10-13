@@ -233,6 +233,27 @@ def start_guided_run(
     return {"run_id": run.id, "scene_id": scene.id, "character": GUIDED_ACTOR, "voices": voices}
 
 
+@router.post("/runs/{run_id}/resume")
+def resume_run(
+    run_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    _burst: bool = Depends(BurstLimiter("scene_partner")),
+):
+    """Pick an open run up where it stopped. The run was paid for when it was
+    opened, so there is no meter and no tier check here: resuming is not a
+    second session. 404 for a run that is not the actor's, is closed, or is
+    older than the resume window (the same tests GET /scenes applies before
+    it offers the run)."""
+    run = journal.db_run(db, run_id)
+    if run is None or run.user_id != user.id or journal.is_closed(db, run_id) or not journal.in_resume_window(run):
+        raise HTTPException(status_code=404, detail="Run not found")
+    return {
+        "run_id": run.id, "scene_id": run.scene_id, "character": run.character, "voices": run.voices or {},
+        "line_index": journal.furthest_line(db, run_id) or 0,
+    }
+
+
 @router.post("/runs/{run_id}/events", status_code=204)
 async def append_events(
     run_id: int,

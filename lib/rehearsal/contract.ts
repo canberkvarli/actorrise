@@ -22,6 +22,9 @@ export interface ScenePayload {
 /** What the guided run endpoint hands back: the run it opened and the voices it picked. */
 export interface GuidedRun { run_id: number; scene_id: number; character: string; voices: Record<string, string> }
 
+/** POST /runs/{id}/resume: the open run as it was opened, and the furthest line it reached. */
+export interface ResumedRun extends GuidedRun { line_index: number }
+
 export type EventType =
   | 'started' | 'line_reached' | 'actor_line_read' | 'partner_line_played'
   | 'paused' | 'resumed' | 'jumped' | 'completed' | 'abandoned';

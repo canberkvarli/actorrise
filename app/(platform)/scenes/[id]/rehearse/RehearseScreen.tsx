@@ -37,11 +37,11 @@ export function RehearseScreen({ payload, guided }: { payload: ScenePayload; gui
   const state = snapshot?.state ?? 'ready';
   const error = readiness.error ?? prepError;
 
-  const choose = useCallback(async (character: string, voices: Record<string, string>, resumeLine?: number) => {
+  const choose = useCallback(async (character: string, voices: Record<string, string>, pickUp?: { runId: number; lineIndex: number }) => {
     setPrepError(null);
     setChosen(character);
     try {
-      await prepare(character, voices, { resumeLine });
+      await prepare(character, voices, { resumeRunId: pickUp?.runId, resumeLine: pickUp?.lineIndex });
     } catch {
       // The Plus gate, or a run the server would not open. One line; the actor may tap again.
       setChosen(null);

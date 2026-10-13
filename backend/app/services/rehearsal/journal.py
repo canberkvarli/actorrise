@@ -143,6 +143,17 @@ def user_has_finished_a_scene(db: Session, user_id: int) -> bool:
     return any(is_fully_read(db, run_id) for (run_id,) in completed_runs)
 
 
+def in_resume_window(run: RehearsalRun, since: datetime | None = None) -> bool:
+    """Started inside RESUME_WINDOW (SQLite hands started_at back naive)."""
+    since = since or datetime.now(timezone.utc) - RESUME_WINDOW
+    started = run.started_at
+    if started is None:
+        return True
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=timezone.utc)
+    return started >= since
+
+
 def resumable(db: Session, user_id: int, scene_id: int) -> dict | None:
     since = datetime.now(timezone.utc) - RESUME_WINDOW
     run = (
@@ -151,12 +162,7 @@ def resumable(db: Session, user_id: int, scene_id: int) -> dict | None:
         .order_by(RehearsalRun.started_at.desc(), RehearsalRun.id.desc())
         .first()
     )
-    if run is None or is_closed(db, run.id):
-        return None
-    started = run.started_at
-    if started is not None and started.tzinfo is None:
-        started = started.replace(tzinfo=timezone.utc)
-    if started is not None and started < since:
+    if run is None or is_closed(db, run.id) or not in_resume_window(run, since):
         return None
     line = furthest_line(db, run.id)
     if not line:  # None or 0: nothing worth resuming
