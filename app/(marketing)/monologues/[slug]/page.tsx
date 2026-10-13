@@ -157,6 +157,9 @@ export default async function PublicMonologuePage({ params }: Params) {
     ...(m.isPublicDomain ? { text: m.text } : {}),
     publisher: { "@type": "Organization", name: "ActorRise", url: siteUrl },
   };
+  // Every crumb but the last needs an `item` URL; Search Console flagged the
+  // play crumb without one as a critical issue on 2026-10-13. A play with no
+  // page of its own is left out of the trail rather than listed without a link.
   const breadcrumbLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -164,10 +167,8 @@ export default async function PublicMonologuePage({ params }: Params) {
       { "@type": "ListItem", position: 1, name: "Monologues", item: `${siteUrl}/monologue-database` },
       ...(playPage
         ? [{ "@type": "ListItem", position: 2, name: m.playTitle, item: `${siteUrl}/monologues/${playPage.slug}` }]
-        : m.playTitle
-          ? [{ "@type": "ListItem", position: 2, name: m.playTitle }]
-          : []),
-      { "@type": "ListItem", position: m.playTitle ? 3 : 2, name: title, item: `${siteUrl}/monologues/${monologueSlug(m)}` },
+        : []),
+      { "@type": "ListItem", position: playPage ? 3 : 2, name: title, item: `${siteUrl}/monologues/${monologueSlug(m)}` },
     ],
   };
 
