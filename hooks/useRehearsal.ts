@@ -86,6 +86,20 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
   const resumeLineRef = useRef<number | null>(null);
   const preparedRef = useRef(false);
   const failedRef = useRef(new Map<number, string>()); // partner line → why it failed to load
+  // handover_ms is read off the audio clock, which does not advance inside one
+  // JS task, so on a last-word handover it is 0 by construction and never
+  // measures our work. compute_ms is that work: from the words (or the quiet)
+  // arriving to the engine returning. The port keeps the actor_line_read
+  // payload the engine emits during the call; the flush is a microtask away,
+  // so the field lands before the batch is sent.
+  const readRef = useRef<Record<string, unknown> | null>(null);
+  const timed = (fn: () => void) => {
+    const t0 = performance.now();
+    readRef.current = null;
+    fn();
+    const read = readRef.current as Record<string, unknown> | null; // fn() may have set it; TS cannot see through the call
+    if (read) { read.compute_ms = Math.round((performance.now() - t0) * 100) / 100; readRef.current = null; }
+  };
 
   const fail = useCallback((error: string) => setBase(b => (b.error ? b : { ...b, error })), []);
 
@@ -99,8 +113,8 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
   const { open, prime, beginTurn, endTurn, status } = useLiveTranscription({
     getStream,
     keywords: payload.characters,
-    onTranscript: t => { if (t) engineRef.current?.delta(t); },
-    onQuiet: () => engineRef.current?.quiet(),
+    onTranscript: t => { if (t) timed(() => engineRef.current?.delta(t)); },
+    onQuiet: () => timed(() => engineRef.current?.quiet()),
   });
 
   const publish = useCallback(() => {
@@ -146,7 +160,11 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
       clock: { now: () => player.now(), outputLatency: () => player.outputLatency() },
       player: { duration: l => player.duration(l), play: (l, at) => player.play(l, at), stopAll: () => player.stopAll() },
       mic: { prime, open: () => beginTurn(), close: endTurn },
-      journal: { emit: (type, line, at, p) => { journal.emit(type, line, at, p); flush(); } },
+      journal: { emit: (type, line, at, p) => {
+        const payload = p ?? {};
+        if (type === 'actor_line_read') readRef.current = payload; // timed() stamps compute_ms on it
+        journal.emit(type, line, at, payload); flush();
+      } },
       schedule: (at, fn) => player.schedule(at, fn),
     });
     const resumeLine = opts?.resumeLine ?? null;
