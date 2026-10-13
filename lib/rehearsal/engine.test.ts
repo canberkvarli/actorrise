@@ -91,11 +91,15 @@ describe('Engine', () => {
     expect(ports.mic.close).not.toHaveBeenCalled();
   });
 
-  it('quiet after some words hands over; quiet after nothing does not', () => {
+  it('quiet after most of the line hands over; quiet after nothing, or a first word, does not', () => {
     engine.begin(); const end = 100 + 1.5 + BREATH_S; ports.tick(end - 100); fire(end);
     engine.quiet();
     expect(engine.snapshot().state).toBe('actor');
-    engine.delta('out twenty');
+    engine.delta('out');
+    engine.quiet();
+    expect(engine.snapshot().state).toBe('actor');
+    expect(ports.mic.close).not.toHaveBeenCalled();
+    engine.delta('out twenty four');
     engine.quiet();
     expect(engine.snapshot().state).toBe('partner');
     expect(ports.journal.emit).toHaveBeenCalledWith('actor_line_read', 2, expect.any(Number), expect.objectContaining({ ended_by: 'quiet' }));

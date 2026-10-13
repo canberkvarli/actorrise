@@ -65,8 +65,39 @@ describe('shouldHandOver', () => {
     expect(shouldHandOver({ ...r, turnEnded: false })).toBe(false);
   });
 
-  it('moves when the turn ends on a partly heard line', () => {
+  it('does not move when the turn ends early in the line: the actor paused, they did not finish', () => {
+    // Prod, Hamlet I.i: "Nay," then a breath, and the scene took the line away.
     const r = read('twenty four and');
+    expect(shouldHandOver({ ...r, turnEnded: true })).toBe(false);
+  });
+
+  it('a 7-word line with only its first word heard does not move on quiet', () => {
+    const words = lineWords('Nay, answer me. Stand and unfold yourself.');
+    expect(words).toHaveLength(7);
+    expect(shouldHandOver({ ...liveRead(words, 'nay'), turnEnded: true })).toBe(false);
+  });
+
+  it('a 7-word line with five words heard moves on quiet', () => {
+    const words = lineWords('Nay, answer me. Stand and unfold yourself.');
+    const r = liveRead(words, 'nay answer me stand and');
+    expect(r.lastWordMatched).toBe(false);
+    expect(shouldHandOver({ ...r, turnEnded: true })).toBe(true);
+  });
+
+  it('a long line whose tail was heard moves on quiet even when most of it was misheard', () => {
+    const words = lineWords('one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty');
+    expect(words).toHaveLength(20);
+    const r = liveRead(words, 'one two three four five twenty');
+    expect(r.lastWordMatched).toBe(true);
+    expect(r.score).toBeCloseTo(0.3);
+    expect(shouldHandOver({ ...r, turnEnded: false })).toBe(false);
+    expect(shouldHandOver({ ...r, turnEnded: true })).toBe(true);
+  });
+
+  it('the second-to-last word counts as reaching the tail', () => {
+    const words = lineWords('one two three four five six seven eight nine ten');
+    const r = liveRead(words, 'one two nine');
+    expect(r.lastWordMatched).toBe(false);
     expect(shouldHandOver({ ...r, turnEnded: true })).toBe(true);
   });
 

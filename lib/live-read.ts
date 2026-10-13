@@ -20,12 +20,16 @@
  * while the actor speaks, so the decision here has two clauses:
  *
  *   1. The last word of the speech has been heard. Go now.
- *   2. The actor has stopped and we heard some of it. Go.
+ *   2. The actor has stopped and we heard most of it, or its tail. Go.
  *
  * Clause 1 is the common case and waits on nothing, which is why it feels
  * immediate: an actor who reads to the end of their line hands over on the
  * final syllable, with no silence to sit through at all. Clause 2 is the only
- * safety net, for a line trailed off or misheard.
+ * safety net, for a line trailed off or misheard. It does not fire on a line
+ * the actor is in the middle of: a quiet after "Nay," is a breath, not an
+ * ending (prod, Hamlet I.i, the first line of the first real run was taken
+ * away 1.4s after its first word). Below the bar, quiet does nothing; the
+ * actor keeps going, or swipes to skip.
  *
  * "Stopped" is decided off TRANSCRIPT PROGRESS, not microphone level — see
  * `QUIET_AFTER_WORDS_MS` in hooks/useLiveTranscription.ts. That distinction is
@@ -44,6 +48,8 @@ export interface LiveRead {
   matched: Set<number>;
   /** Has the final word of the line been heard? */
   lastWordMatched: boolean;
+  /** Has one of the last two words been heard? The tail of a long line whose middle was misheard. */
+  tailMatched: boolean;
   /** Fraction of the line reached, 0–1. */
   score: number;
 }
@@ -52,6 +58,7 @@ export interface LiveRead {
 export const EMPTY_READ: LiveRead = {
   matched: new Set(),
   lastWordMatched: false,
+  tailMatched: false,
   score: 0,
 };
 
@@ -66,12 +73,14 @@ export const EMPTY_READ: LiveRead = {
  */
 export function liveRead(expectedWords: string[], transcript: string): LiveRead {
   if (!expectedWords.length) {
-    return { matched: new Set(), lastWordMatched: true, score: 1 };
+    return { matched: new Set(), lastWordMatched: true, tailMatched: true, score: 1 };
   }
   const matched = alignWords(expectedWords, tokenize(transcript));
+  const last = expectedWords.length - 1;
   return {
     matched,
-    lastWordMatched: matched.has(expectedWords.length - 1),
+    lastWordMatched: matched.has(last),
+    tailMatched: matched.has(last) || matched.has(last - 1),
     score: matched.size / expectedWords.length,
   };
 }
@@ -95,6 +104,12 @@ export function lineWords(text: string): string[] {
  */
 const ENDING_MIN_SCORE = 0.5;
 
+/**
+ * How much of the line a quiet needs behind it to count as the line's end.
+ * Below it the actor has paused, not finished.
+ */
+export const QUIET_MIN_SCORE = 0.6;
+
 export interface HandOverState extends LiveRead {
   /**
    * Has the actor stopped speaking?
@@ -111,17 +126,19 @@ export interface HandOverState extends LiveRead {
 export function shouldHandOver({
   matched,
   lastWordMatched,
+  tailMatched,
   score,
   turnEnded,
 }: HandOverState): boolean {
   // They reached the end of the line. This is the whole point: no wait at all.
   if (lastWordMatched && score >= ENDING_MIN_SCORE) return true;
 
-  /* The turn is over and something was heard. Guarded on having heard
-     anything, because a turn that ends with an empty transcript is a room
-     noise false positive, and moving the scene on for an actor who has not
-     spoken is the failure that started all of this. */
-  if (turnEnded && matched.size > 0) return true;
+  /* The turn is over and the line was substantially said: most of it, or
+     its tail. Guarded on having heard anything, because a turn that ends
+     with an empty transcript is a room noise false positive, and moving the
+     scene on for an actor who has not spoken is the failure that started all
+     of this. */
+  if (turnEnded && matched.size > 0 && (score >= QUIET_MIN_SCORE || tailMatched)) return true;
 
   return false;
 }
