@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RehearsalLine, ScenePayload } from './contract';
 import { buildScript } from './script';
-import { canBegin, firstNeededLine, limit, liveFailureKind, makeFlusher, neededFailure, plainError, planPartnerAudio } from './prepare';
+import { canBegin, firstNeededLine, limit, liveFailureKind, makeFlusher, runFailure, neededFailure, plainError, planPartnerAudio } from './prepare';
 
 const L = (index: number, character: string, text = 'Some words here.'): RehearsalLine => ({ index, character, text, direction: null });
 
@@ -159,5 +159,34 @@ describe('plainError', () => {
   it('blames the microphone only when no stream was obtained', () => {
     expect(liveFailureKind(false)).toBe('mic');
     expect(liveFailureKind(true)).toBe('stt');
+  });
+});
+
+describe('runFailure', () => {
+  const thrown = (status: number, data: unknown) => Object.assign(new Error('x'), { response: { status, statusText: '', data } });
+  const gate = {
+    error: 'library_upgrade_required',
+    message: 'This scene is part of the full library. Upgrade to Plus for the whole catalog.',
+    upgrade_url: '/pricing',
+  };
+
+  it('reads the Plus gate: its own message and the plans link', () => {
+    expect(runFailure(thrown(403, { detail: gate }))).toEqual({ kind: 'gate', message: gate.message, upgradeUrl: '/pricing' });
+  });
+  it('reads the session meter the same way, 403 or 429', () => {
+    const meter = { error: 'scene_partner_limit_exceeded', message: "You've reached your limit.", limit: 3, used: 3, upgrade_url: '/pricing' };
+    expect(runFailure(thrown(429, { detail: meter })).kind).toBe('gate');
+  });
+  it('never links off the site', () => {
+    expect(runFailure(thrown(403, { detail: { ...gate, upgrade_url: 'https://evil.example' } })).upgradeUrl).toBeNull();
+    expect(runFailure(thrown(403, { detail: { ...gate, upgrade_url: '//evil.example' } })).upgradeUrl).toBeNull();
+  });
+  it('is other for anything that is not the gate shape', () => {
+    const other = { kind: 'other', message: plainError('other'), upgradeUrl: null };
+    expect(runFailure(thrown(403, { detail: 'Forbidden' }))).toEqual(other);
+    expect(runFailure(thrown(500, { detail: gate }))).toEqual(other);
+    expect(runFailure(thrown(422, { detail: [{ msg: 'bad' }] }))).toEqual(other);
+    expect(runFailure(new Error('Backend unreachable'))).toEqual(other);
+    expect(runFailure(null)).toEqual(other);
   });
 });

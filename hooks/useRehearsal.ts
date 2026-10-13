@@ -30,7 +30,7 @@ import type { GuidedRun, ScenePayload } from '@/lib/rehearsal/contract';
 import { Engine, type Snapshot } from '@/lib/rehearsal/engine';
 import { Journal, type JournalTransport } from '@/lib/rehearsal/journal';
 import { buildScript } from '@/lib/rehearsal/script';
-import { type AudioSlot, canBegin, firstNeededLine, limit, liveFailureKind, makeFlusher, neededFailure, plainError, planPartnerAudio, type Readiness } from '@/lib/rehearsal/prepare';
+import { type AudioSlot, canBegin, firstNeededLine, limit, liveFailureKind, makeFlusher, neededFailure, plainError, planPartnerAudio, runFailure, type Readiness } from '@/lib/rehearsal/prepare';
 import { AudioPlayer } from '@/lib/rehearsal/browser/audio-player';
 import { LineLoader, type LineSource } from '@/lib/rehearsal/browser/line-loader';
 
@@ -75,7 +75,7 @@ function transportFor(runId: number, token: { current: string | undefined }): Jo
 
 export function useRehearsal(payload: ScenePayload): Rehearsal {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [base, setBase] = useState<Omit<Readiness, 'stt'>>({ line1: false, mic: false, error: null });
+  const [base, setBase] = useState<Omit<Readiness, 'stt'>>({ line1: false, mic: false, error: null, upgradeUrl: null });
   const [lineError, setLineError] = useState<string | null>(null); // a failed partner line the run still needs
   const engineRef = useRef<Engine | null>(null);
   const playerRef = useRef<AudioPlayer | null>(null);
@@ -120,7 +120,13 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
         ? (await api.post<GuidedRun>('/api/rehearsal/runs/guided')).data
         : { scene_id: payload.scene.id, character, ...(await api.post<{ run_id: number; voices: Record<string, string> }>(
             '/api/rehearsal/runs', { scene_id: payload.scene.id, character, voices })).data };
-    } catch (e) { preparedRef.current = false; throw e; }
+    } catch (e) {
+      preparedRef.current = false;
+      // The Plus gate or the meter is an answer, not a breakage: its message goes on the Curtain with the plans link.
+      const why = runFailure(e);
+      if (why.kind === 'gate') { setBase(b => ({ ...b, error: why.message, upgradeUrl: why.upgradeUrl })); return; }
+      throw e;
+    }
     if (run.scene_id !== payload.scene.id) {
       fail(plainError('other')); // not the guided scene
       // The run the server opened has no page: close it, and let a later prepare open another.

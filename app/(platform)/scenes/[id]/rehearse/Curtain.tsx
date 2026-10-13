@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { sameCharacter, type ScenePayload } from '@/lib/rehearsal/contract';
 
 interface Props {
   payload: ScenePayload; guided: boolean; chosen: string | null; canBegin: boolean; error: string | null;
+  /** With a gate message: where the plans are. */
+  upgradeUrl?: string | null;
   onChoose: (character: string, voices: Record<string, string>, resumeLine?: number) => void;
   onBegin: () => void;
 }
@@ -23,7 +26,7 @@ function defaultVoice(payload: ScenePayload, character: string): string {
  * the voices are set first. With a run to pick up, the part tap is followed by
  * where to start. A guided run shows the title and Begin, nothing else.
  */
-export function Curtain({ payload, guided, chosen, canBegin, error, onChoose, onBegin }: Props) {
+export function Curtain({ payload, guided, chosen, canBegin, error, upgradeUrl, onChoose, onBegin }: Props) {
   const [voices, setVoices] = useState<Record<string, string>>(
     () => Object.fromEntries(payload.characters.map(c => [c, defaultVoice(payload, c)])));
   const [picked, setPicked] = useState<string | null>(null); // a part, waiting for where to start
@@ -83,6 +86,11 @@ export function Curtain({ payload, guided, chosen, canBegin, error, onChoose, on
       )}
 
       {error && <p className="mt-8 text-sm">{error}</p>}
+      {error && upgradeUrl && (
+        <Link href={upgradeUrl} className="inline-flex min-h-11 items-center self-start text-sm underline underline-offset-4">
+          See plans
+        </Link>
+      )}
 
       <button type="button" className="r-begin mt-12 min-h-11 self-start text-2xl" data-ready={canBegin}
         disabled={!canBegin} onClick={onBegin}>

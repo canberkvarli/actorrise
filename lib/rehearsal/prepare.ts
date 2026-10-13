@@ -13,7 +13,10 @@ export interface Readiness {
   stt: boolean;
   /** A microphone stream was obtained. */
   mic: boolean;
+  /** One plain sentence (see `plainError`), or the Plus gate's own message. */
   error: string | null;
+  /** Set with a gate error: where the actor can see the plans. */
+  upgradeUrl?: string | null;
 }
 
 export const canBegin = (r: Readiness) => r.line1 && r.stt && !r.error;
@@ -107,14 +110,18 @@ export function neededFailure(failed: Map<number, string>, cursor: number): numb
  * - `stt`: the live transcription failed to open or dropped
  * - `mic`: no microphone stream (permission denied, or no device)
  * - `line`: a partner line the run still needs could not load
+ * - `gate`: the Plus gate or the session meter said no. Not a breakage: the
+ *   server's own message (written by us, in the API) is shown with a link to
+ *   the plans. See `runFailure`.
  * - `other`: anything else (the run would not open, the wrong page)
  */
-export type ErrorKind = 'stt' | 'mic' | 'line' | 'other';
+export type ErrorKind = 'stt' | 'mic' | 'line' | 'gate' | 'other';
 
 const PLAIN: Record<ErrorKind, string> = {
   stt: 'The live microphone dropped. Reload to run again.',
   mic: 'The microphone is blocked. Allow it in your browser and reload.',
   line: 'A partner line could not load. Reload to run again.',
+  gate: 'This scene needs Plus.', // only when a gate reply carries no message of its own
   other: 'Something broke. Reload to run again.',
 };
 
@@ -122,3 +129,28 @@ export const plainError = (kind: ErrorKind): string => PLAIN[kind];
 
 /** The live session failed: it is the microphone's fault when no stream was ever obtained. */
 export const liveFailureKind = (micObtained: boolean): ErrorKind => (micObtained ? 'stt' : 'mic');
+
+export interface RunFailure { kind: 'gate' | 'other'; message: string; upgradeUrl: string | null }
+
+/**
+ * Why POST /runs said no, as the Curtain says it. A 403 or 429 whose `detail`
+ * is our gate shape (`{error, message, upgrade_url}`, from the Plus gate in
+ * services/rehearsal/access.py or the session meter) is a gate: its message is
+ * shown and the actor gets a link to the plans. The link must be one of ours
+ * (a path), never wherever a body points. Everything else is `other`.
+ * `e` is what `lib/api` throws: an Error with `response: {status, data}`.
+ */
+export function runFailure(e: unknown): RunFailure {
+  const res = (e as { response?: { status?: unknown; data?: unknown } } | null)?.response;
+  const detail = (res?.data as { detail?: unknown } | undefined)?.detail as
+    { error?: unknown; message?: unknown; upgrade_url?: unknown } | undefined;
+  const gated = (res?.status === 403 || res?.status === 429) && typeof detail === 'object' && detail !== null
+    && typeof detail.error === 'string' && typeof detail.message === 'string' && detail.message.trim() !== '';
+  if (!gated) return { kind: 'other', message: plainError('other'), upgradeUrl: null };
+  const url = detail.upgrade_url;
+  return {
+    kind: 'gate',
+    message: (detail.message as string).trim(),
+    upgradeUrl: typeof url === 'string' && /^\/(?!\/)/.test(url) ? url : null,
+  };
+}

@@ -73,7 +73,7 @@ export function RehearseScreen({ payload, guided }: { payload: ScenePayload; gui
   if (phase === 'curtain') {
     return (
       <Curtain payload={payload} guided={guided} chosen={chosen} canBegin={canBegin}
-        error={error} onChoose={choose} onBegin={onBegin} />
+        error={error} upgradeUrl={readiness.error ? readiness.upgradeUrl : null} onChoose={choose} onBegin={onBegin} />
     );
   }
 
