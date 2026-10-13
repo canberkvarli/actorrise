@@ -49,6 +49,14 @@ export interface Rehearsal {
   prepare: (character: string, voices: Record<string, string>, opts?: { guided?: boolean; resumeLine?: number; resumeRunId?: number }) => Promise<void>;
   /** Call from the Begin tap itself: the audio context is unlocked synchronously inside it. */
   begin: () => void;
+  /**
+   * Starting with no tap of its own (`?go=1`): unlock the context and say
+   * whether it is running now. True on desktop, or when the preview's tap still
+   * counts; false on iOS, where only a tap inside the page starts audio.
+   */
+  tryUnlock: () => boolean;
+  /** The Plus gate (or the meter) refused the run; its message is `readiness.error`. */
+  gated: boolean;
   pause: () => void; resume: () => void; skip: () => void; back: () => void; jumpTo: (line: number) => void;
   leave: () => void;
 }
@@ -81,6 +89,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [base, setBase] = useState<Omit<Readiness, 'stt'>>({ line1: false, mic: false, error: null, upgradeUrl: null });
   const [lineError, setLineError] = useState<string | null>(null); // a failed partner line the run still needs
+  const [gated, setGated] = useState(false);
   const engineRef = useRef<Engine | null>(null);
   const playerRef = useRef<AudioPlayer | null>(null);
   const loaderRef = useRef<LineLoader | null>(null);
@@ -149,7 +158,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
       preparedRef.current = false;
       // The Plus gate or the meter is an answer, not a breakage: its message goes on the Curtain with the plans link.
       const why = runFailure(e);
-      if (why.kind === 'gate') { setBase(b => ({ ...b, error: why.message, upgradeUrl: why.upgradeUrl })); return; }
+      if (why.kind === 'gate') { setGated(true); setBase(b => ({ ...b, error: why.message, upgradeUrl: why.upgradeUrl })); return; }
       throw e;
     }
     if (run.scene_id !== payload.scene.id) {
@@ -224,6 +233,8 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     engine.begin(resumeLineRef.current ?? undefined);
   }, []);
 
+  const tryUnlock = useCallback(() => playerRef.current?.unlock().state === 'running', []);
+
   // The live session failed to open or dropped: the run stops there.
   useEffect(() => {
     if (status !== 'error') return;
@@ -275,5 +286,5 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     stt: status === 'ready',
     error: base.error ?? lineError ?? (status === 'error' ? plainError(liveFailureKind(base.mic)) : null),
   };
-  return { snapshot, readiness, canBegin: canBegin(readiness), prepare, begin, ...controls };
+  return { snapshot, readiness, canBegin: canBegin(readiness), prepare, begin, tryUnlock, gated, ...controls };
 }

@@ -41,8 +41,8 @@ export function Curtain({ payload, guided, chosen, canBegin, error, upgradeUrl, 
     onChoose(character, Object.fromEntries(partners.map(c => [c, voices[c]])), pickUp);
   };
   const tapPart = (c: string) => { if (!locked) { if (resume) setPicked(c); else commit(c); } };
-  useEffect(() => { // once, on mount; the ref keeps a re-render from committing twice
-    if (committed.current || !saved || !autoCommits(saved, { resume: Boolean(resume), guided })) return;
+  useEffect(() => { // once, on mount; the ref keeps a re-render from committing twice. Already chosen (a `?go=1` run the gate stopped): nothing to commit.
+    if (committed.current || chosen || !saved || !autoCommits(saved, { resume: Boolean(resume), guided })) return;
     committed.current = true;
     commit(saved);
   });

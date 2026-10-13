@@ -10,7 +10,8 @@ import { RehearseScreen } from './RehearseScreen';
 
 /**
  * /scenes/<id>/rehearse — fetch the scene, hand off. `?guided=1` is the first
- * run, where the server picks the part.
+ * run, where the server picks the part. `?go=1` comes from the scene preview,
+ * where the actor already cast it: no Curtain when the saved part fits.
  *
  * No skeleton and no spinner: the page is paper until the script is there.
  * `.theatre-rehearsal` carries the palette (app/globals.css); the font vars
@@ -18,7 +19,9 @@ import { RehearseScreen } from './RehearseScreen';
  */
 export default function RehearsePage() {
   const { id } = useParams<{ id: string }>();
-  const guided = useSearchParams().get('guided') === '1';
+  const search = useSearchParams();
+  const guided = search.get('guided') === '1';
+  const go = search.get('go') === '1';
   const [payload, setPayload] = useState<ScenePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +36,7 @@ export default function RehearsePage() {
   return (
     <div className={`theatre-tokens theatre-rehearsal overflow-x-clip ${theatreFontVars} ${typewriterFontVar}`}>
       {error && <p className="r-chrome mx-auto max-w-prose px-6 py-16">{error}</p>}
-      {payload && <RehearseScreen payload={payload} guided={guided} />}
+      {payload && <RehearseScreen payload={payload} guided={guided} go={go} />}
     </div>
   );
 }
