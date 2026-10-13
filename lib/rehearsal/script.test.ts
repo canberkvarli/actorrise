@@ -30,4 +30,20 @@ describe('buildScript', () => {
     expect(t.kind === 'actor' && t.keywords).toContain('Anna');
     expect(t.kind === 'actor' && t.keywords).toContain('Ben');
   });
+  it('after the actor\'s last line, the trailing beat is only its first line (the cue response)', () => {
+    // Prod: FRANCISCO's last line was L16 and L17..L59 played as one 10-minute beat.
+    const lines = [...LINES, L(5, 'BEN', 'And?'), L(6, 'MAID', 'Nothing.'), L(7, 'BEN', 'Then good night.')];
+    const s = buildScript(lines, 'ANNA');
+    const last = s.turns.at(-1)!;
+    expect(last.kind === 'partner' && last.lineIndices).toEqual([5]);
+    expect(s.turns).toHaveLength(5);
+    expect(s.turnOfLine[7]).toBe(4);
+  });
+  it('leading partner lines before the actor\'s first line are untouched', () => {
+    const s = buildScript(LINES, 'ANNA');
+    expect(s.turns[0].kind === 'partner' && s.turns[0].lineIndices).toEqual([0, 1]);
+    const t = buildScript(LINES, 'NOBODY');
+    expect(t.turns).toHaveLength(1);
+    expect(t.turns[0].kind === 'partner' && t.turns[0].lineIndices).toEqual([0, 1, 2, 3, 4]);
+  });
 });

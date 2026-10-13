@@ -4,6 +4,11 @@
  * Consecutive partner lines become one beat so they play as one continuous
  * thing, not two clips with a seam. Actor lines carry their words, tokenised
  * once here so the page and the matcher cannot disagree about what a word is.
+ *
+ * Once the actor has said their last line, the scene is over for them: the
+ * partner answers the cue and the run ends. The trailing beat keeps only its
+ * first line. Without that, a part that leaves early (FRANCISCO, Hamlet I.i,
+ * gone at L16 of 60) sat through ten minutes of everybody else.
  */
 import { lineWords } from '../live-read';
 import { type RehearsalLine, sameCharacter } from './contract';
@@ -53,5 +58,7 @@ export function buildScript(lines: RehearsalLine[], actor: string): Script {
     }
     turnOfLine[line.index] = turns.length - 1;
   }
+  const tail = turns[turns.length - 1];
+  if (tail?.kind === 'partner' && turns.some(t => t.kind === 'actor')) tail.lineIndices.length = 1;
   return { lines, actor, turns, turnOfLine };
 }

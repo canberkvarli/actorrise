@@ -115,6 +115,20 @@ describe('Engine', () => {
     expect(ports.journal.emit).toHaveBeenCalledWith('completed', 4, expect.any(Number), {});
   });
 
+  it('after the actor\'s last line, one partner line plays and then the run completes', () => {
+    const lines = [...LINES.slice(0, 4), L(4, 'MAID', 'Dinner, madam.'), L(5, 'BEN', 'Not now.')];
+    const e = new Engine(buildScript(lines, 'ANNA'), ports);
+    e.begin(); const end = 100 + 1.5 + BREATH_S; ports.tick(end - 100); fire(end);
+    e.delta('out twenty four hours');
+    expect(ports.scheduled.map(s => s.line)).toEqual([0, 1, 3]);
+    expect(e.snapshot().state).toBe('partner');
+    const t = ports.now() + 0.4; ports.tick(0.4); fire(t);
+    expect(e.snapshot().state).toBe('ended');
+    expect(ports.scheduled.map(s => s.line)).toEqual([0, 1, 3]);
+    expect(ports.journal.emit).toHaveBeenCalledWith('completed', expect.any(Number), expect.any(Number), {});
+    expect(ports.mic.open).toHaveBeenCalledTimes(1);
+  });
+
   it('skip moves on with ended_by skipped; back returns to the previous actor line', () => {
     engine.begin(); const end = 100 + 1.5 + BREATH_S; ports.tick(end - 100); fire(end);
     engine.skip();
