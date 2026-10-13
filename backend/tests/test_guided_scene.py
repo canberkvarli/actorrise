@@ -18,13 +18,15 @@ from app.models.actor import (
 )
 from app.models.billing import UsageMetrics
 from app.models.organization import Organization
+from app.models.rehearsal import RehearsalEvent, RehearsalRun
 from app.models.user import User
 from scripts.seed_sample_script import seed_late
 from tests.dbfixture import memory_db, restore
 
+# RehearsalRun/RehearsalEvent: whats_next reads the journal for its resume rung.
 _TABLES = (
     Organization, User, ActorProfile, FilmTvReference, Play, UserScript, Scene, SceneLine,
-    RehearsalSession, RehearsalLineDelivery, UsageMetrics,
+    RehearsalSession, RehearsalLineDelivery, RehearsalRun, RehearsalEvent, UsageMetrics,
 )
 
 
