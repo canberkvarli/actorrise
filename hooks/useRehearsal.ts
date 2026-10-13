@@ -242,12 +242,23 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     playerRef.current?.close();
   }, []);
 
-  const controls = useMemo(() => ({
-    pause: () => engineRef.current?.pause(), resume: () => engineRef.current?.resume(),
-    skip: () => engineRef.current?.skip(), back: () => engineRef.current?.back(),
-    jumpTo: (l: number) => engineRef.current?.jumpTo(l),
-    leave: () => { engineRef.current?.abandon('left'); journalRef.current?.beacon(); },
-  }), []);
+  // Every control that can start a partner line unlocks first, synchronously,
+  // like begin: iOS suspends the context when the tab hides or the mic moves,
+  // and only a call inside the tap itself brings it back.
+  const controls = useMemo(() => {
+    const unlocked = (fn: (engine: Engine) => void) => {
+      playerRef.current?.unlock();
+      if (engineRef.current) fn(engineRef.current);
+    };
+    return {
+      pause: () => engineRef.current?.pause(),
+      resume: () => unlocked(e => e.resume()),
+      skip: () => unlocked(e => e.skip()),
+      back: () => unlocked(e => e.back()),
+      jumpTo: (l: number) => unlocked(e => e.jumpTo(l)),
+      leave: () => { engineRef.current?.abandon('left'); journalRef.current?.beacon(); },
+    };
+  }, []);
 
   const readiness: Readiness = {
     ...base,
