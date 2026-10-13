@@ -2006,7 +2006,10 @@
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: oklch(0.08 0.012 50);
+  /* Transparent: the two halves are opaque and meet at the middle, so they do
+     the covering. An opaque layer here had to be faded in, and the fade was
+     the flicker (the app under a grey film while the travelers swept). */
+  background: transparent;
 }
 
 /* Velvet, in two layers, because one is always wallpaper: a broad wash for how
@@ -2076,6 +2079,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  animation: t-curtain-dim 0.62s ease both;
   background-image:
     radial-gradient(120% 70% at 50% 52%, rgb(0 0 0 / 0) 40%, rgb(0 0 0 / 0.5) 100%),
     linear-gradient(
@@ -2124,6 +2128,14 @@
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
 }
+@keyframes t-curtain-dim { from { opacity: 0; } }
+/* The line goes before the page does (lib/auth.tsx sets data-leaving), so the
+   next page's curtain, which carries no words, takes over a drape that already
+   looks like it. It used to vanish in the cut between documents. */
+.t-curtain-out[data-leaving] .t-curtain-out__say {
+  animation: t-curtain-unsay 0.22s ease forwards;
+}
+@keyframes t-curtain-unsay { to { opacity: 0; transform: translateY(-4px); } }
 
 @media (prefers-reduced-motion: reduce) {
   /* Closed already, and the line simply there. */

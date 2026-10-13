@@ -64,6 +64,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  * it was 420ms after signOut, which left mid-sweep with the line half drawn.
  */
 const LOGOUT_TRANSITION_MS = 1150;
+/** The goodbye line's exit (globals.css t-curtain-unsay), before the redirect. */
+const LOGOUT_LINE_OUT_MS = 220;
 const USER_CACHE_KEY = "actorrise_user_v1";
 
 function getCachedUser(): User | null {
@@ -323,7 +325,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     suppressCachePersist(); // prevent beforeunload from re-persisting stale cache
     clearReactQueryCache();
 
-    // The next page opens the same curtain (CurtainLiftPaint).
+    // The goodbye leaves before the page does, then the next page opens the
+    // same curtain (CurtainLiftPaint).
+    document.querySelector(".t-curtain-out")?.setAttribute("data-leaving", "");
+    await new Promise((r) => setTimeout(r, LOGOUT_LINE_OUT_MS));
     try { sessionStorage.setItem(CURTAIN_LIFT_KEY, "1"); } catch { /* private mode */ }
     window.location.href = "/auth/signout?redirect=/";
   }, [isLoggingOut]);
