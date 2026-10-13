@@ -287,6 +287,32 @@ describe('Engine', () => {
     expect(ports.journal.emit).toHaveBeenCalledWith('jumped', 4, expect.any(Number), { from: 0 });
   });
 
+  it('jumpTo a line inside a beat starts the beat on that line, not its first', () => {
+    engine.begin(); engine.jumpTo(4);
+    ports.scheduled.length = 0;
+    engine.jumpTo(1);
+    expect(ports.scheduled[0]).toEqual({ line: 1, at: ports.now() });
+    expect(ports.scheduled).toHaveLength(1);
+    expect(ports.journal.emit).toHaveBeenCalledWith('jumped', 1, expect.any(Number), { from: 4 });
+  });
+
+  it('skip while the partner speaks goes on to the next line', () => {
+    engine.begin(); fire(100); // line 0 sounding
+    ports.scheduled.length = 0;
+    engine.skip();
+    expect(ports.scheduled[0]).toEqual({ line: 1, at: ports.now() });
+    engine.skip();
+    expect(engine.snapshot()).toMatchObject({ state: 'actor', lineIndex: 2 });
+  });
+
+  it('skip on the last partner line ends the scene', () => {
+    const e = new Engine(buildScript([...LINES, L(5, 'BEN', 'Bye.')], 'ANNA'), ports);
+    ports.player.duration = () => 0.3;
+    e.begin(); e.jumpTo(5);
+    e.skip();
+    expect(e.snapshot().state).toBe('ended');
+  });
+
   it('a partner line whose audio is missing waits for it, then plays', () => {
     const p = fakePorts(); const dur: Record<number, number | null> = { 0: null, 1: 0.5 };
     p.player.duration = (l) => dur[l] ?? null;

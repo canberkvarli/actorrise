@@ -124,7 +124,14 @@ export class Engine {
     this.changed();
   }
 
-  skip() { if (this.state === 'actor') this.finishActorTurn('skipped'); }
+  /** The actor's line: read as skipped. A partner line: on to the line after it, or the end. */
+  skip() {
+    if (this.state === 'actor') { this.finishActorTurn('skipped'); return; }
+    if (this.state !== 'partner') return;
+    const next = this.snapshot().lineIndex + 1;
+    if (this.script.turnOfLine[next] === undefined) { this.silence(); this.enter(this.script.turns.length); return; }
+    this.jumpTo(next);
+  }
 
   back() {
     if (this.state === 'ended' || this.state === 'ready') return;
@@ -133,11 +140,13 @@ export class Engine {
     this.jumpToTurn(Math.max(i, 0));
   }
 
+  /** Start at `lineIndex`: an actor line from its first word, a partner line inside its beat from that line on. */
   jumpTo(lineIndex: number) {
     if (this.state === 'ready' || this.state === 'ended') return;
     const t = this.script.turnOfLine[lineIndex];
     if (t === undefined) return;
-    this.jumpToTurn(t);
+    const turn = this.script.turns[t];
+    this.jumpToTurn(t, turn.kind === 'partner' ? Math.max(0, turn.lineIndices.indexOf(lineIndex)) : 0);
   }
 
   /** `reason` lands in the event's payload: stt_failed, left, unmounted... */
@@ -149,11 +158,12 @@ export class Engine {
     this.changed();
   }
 
-  private jumpToTurn(t: number) {
+  private jumpToTurn(t: number, position = 0) {
     const from = this.snapshot().lineIndex;
+    const turn = this.script.turns[t];
     this.silence();
-    this.ports.journal.emit('jumped', this.lineOfTurn(t), this.atMs(), { from });
-    this.enter(t);
+    this.ports.journal.emit('jumped', turn.kind === 'partner' ? turn.lineIndices[position] : turn.lineIndex, this.atMs(), { from });
+    this.enter(t, undefined, position);
   }
 
   // ── inputs from the transcriber ──
@@ -194,20 +204,22 @@ export class Engine {
   private silence() { this.clearTimers(); this.ports.player.stopAll(); this.ports.mic.close(); this.primed = -1; }
 
   /** Start turn `t` at now. `finished` journals the actor line just read, once its partner is scheduled. */
-  private enter(t: number, finished?: (scheduled: boolean) => void) {
+  private enter(t: number, finished?: (scheduled: boolean) => void, position = 0) {
     this.clearTimers();
     const turn = this.script.turns[t];
     if (!turn) { finished?.(false); this.end(); return; } // past the last turn; the snapshot stays on it
     this.turnIndex = t;
     this.read = EMPTY_READ;
-    this.sounding = null;
+    // The line the beat starts on is the live one from now, not only once its
+    // audio is due: a jump into a beat must not show its first line meanwhile.
+    this.sounding = turn.kind === 'partner' ? turn.lineIndices[position] : null;
     this.waiting = null;
     this.beat = [];
     this.timeline = new Timeline(); // `finished` still reads the old one
     let scheduled = false;
-    if (turn.kind === 'partner') scheduled = this.startBeat(turn, 0); else this.openMic(turn);
+    if (turn.kind === 'partner') scheduled = this.startBeat(turn, position); else this.openMic(turn);
     finished?.(scheduled);
-    this.ports.journal.emit('line_reached', this.lineOfTurn(t), this.atMs());
+    this.ports.journal.emit('line_reached', this.sounding ?? this.lineOfTurn(t), this.atMs());
     this.changed();
   }
 
