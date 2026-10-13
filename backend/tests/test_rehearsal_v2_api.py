@@ -127,6 +127,16 @@ class Api(unittest.TestCase):
         with mock.patch.object(api, "guided_scene", return_value=None):
             self.assertEqual(self.client.post("/api/rehearsal/runs/guided").status_code, 404)
 
+    def test_guided_run_marks_the_first_rehearsal_seen(self):
+        """What the old start-guided route did: the hub stops inviting because
+        the server flipped the flag, not because the client remembered to."""
+        self.assertFalse(bool(self.user.has_seen_first_rehearsal))
+        with mock.patch.object(api, "guided_scene", return_value=self.scene):
+            r = self.client.post("/api/rehearsal/runs/guided")
+        self.assertEqual(r.status_code, 200, r.text)
+        self.db.expire_all()
+        self.assertTrue(self.db.get(User, self.user.id).has_seen_first_rehearsal)
+
     def _failed(self, age: timedelta) -> str:
         key = partner_audio.ensure(self.db, settings.partner_tts_vendor, "ash", None, "Where were you?")
         row = self.db.get(PartnerAudio, key)

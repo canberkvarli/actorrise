@@ -216,6 +216,11 @@ def start_guided_run(
     lines = lines_for(db, scene.id)
     voices = default_voices(scene, lines, GUIDED_ACTOR)
     run = journal.create_run(db, user.id, scene.id, GUIDED_ACTOR, voices, is_guided=True)
+    # Answering IS seeing the first rehearsal. This flag is what stops the hub
+    # inviting again (lib/guided-invite reads it); has_ever_rehearsed is
+    # computed from the meter, which this route deliberately does not touch.
+    user.has_seen_first_rehearsal = True
+    db.commit()
     record_user_event(user.id, "guided_scene_started", {"platform": "web"})
     return {"run_id": run.id, "scene_id": scene.id, "character": GUIDED_ACTOR, "voices": voices}
 

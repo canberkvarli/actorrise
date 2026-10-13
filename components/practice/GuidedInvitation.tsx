@@ -116,14 +116,12 @@ export function GuidedInvitation() {
       platform: /iPhone|iPad/.test(ua) ? "ios" : /Android/.test(ua) ? "android" : "desktop",
     });
     router.push(`/scenes/${id}/rehearse?guided=1`);
-    // Answering IS seeing the first rehearsal. The old guided endpoint set
-    // this flag on the server; POST /api/rehearsal/runs/guided does not,
-    // so it is set from here (lib/guided-invite reads it), then the user is
-    // pulled so the hub does not invite again if they come straight back.
-    // After the cut, not before: refreshing first re-rendered this page as the
-    // shelf for the beat the route change took, which read as two pages
-    // flashing past.
-    void api.patch("/api/auth/onboarding", { has_seen_first_rehearsal: true }).catch(() => {});
+    // Answering IS seeing the first rehearsal. POST /api/rehearsal/runs/guided
+    // sets has_seen_first_rehearsal on the server (lib/guided-invite reads it);
+    // the user is pulled afterwards so the hub does not invite again if they
+    // come straight back. After the cut, not before: refreshing first
+    // re-rendered this page as the shelf for the beat the route change took,
+    // which read as two pages flashing past.
     setTimeout(() => void refreshUser(), 4000);
   };
 
