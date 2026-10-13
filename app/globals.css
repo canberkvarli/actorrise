@@ -5754,7 +5754,7 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
   align-items: center;
   gap: 8px;
   height: 38px;
-  padding: 0 14px;
+  padding: 0 12px;
   border-radius: 999px;
   font-family: var(--t-body, inherit);
   font-size: 13px;
@@ -5771,6 +5771,17 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
 .t-appbar__tab[data-active="true"]:hover {
   font-weight: 700;
   color: var(--bar-active-fg);
+}
+/* The wordmark a size down in this bar: at its 56px lockup the bar ran out of
+   room for four labelled tabs, the Admin tab and the account pill together. */
+.t-appbar__logo img { height: 48px; min-height: 0; }
+/* Hung off the end of the tab group rather than placed in it, so its arrival
+   with the user does not re-centre the other tabs (see the nav in the
+   platform layout). */
+.t-appbar__tab--hang {
+  position: absolute;
+  left: 100%;
+  margin-left: 2px;
 }
 /* Until the light is measured (useHeaderLight sets data-lit on the nav), the
    active tab carries its own fill. The server HTML has the tab inverted and the
@@ -5806,6 +5817,13 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
   font-size: 12px;
   letter-spacing: 0.06em;
   transition: border-color 0.3s, color 0.3s;
+}
+/* The icon and the head count share one slot of fixed width, so the house
+   waking up does not shove the tabs sideways. */
+.t-lamp > :last-child {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 3ch;
 }
 .t-lamp:hover,
 .t-lamp[data-active="true"] {
@@ -5921,6 +5939,16 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
 /* Who you are arrives a tick after the page (the cached account is read on
    mount). Until then the pill holds its place empty, rather than printing "?"
    and "Account" and swapping them for a face and a name a beat later. */
+/* The tabs are centred in whatever the logo and the utilities leave, so
+   anything in those that changes width after paint moves every tab. Each
+   piece that learns something late (a name, a tier, a head count) gets a box
+   whose size does not depend on what it learns. From xl the pill is a fixed
+   width and the name truncates to make room for the tier; below xl it is the
+   avatar and the chevron only, and the tier lives in the playbill menu. */
+@media (min-width: 1280px) {
+  .t-account { width: 10rem; }
+  .t-account__name { flex: 1 1 0; min-width: 0; text-align: left; }
+}
 .t-account > * { transition: opacity 0.25s ease; }
 .t-account:not([data-ready="true"]) > * { opacity: 0; }
 .t-account[data-open="true"],

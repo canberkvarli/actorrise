@@ -335,12 +335,13 @@ export default function PlatformLayout({
               {/* The wordmark is the widest thing in the bar and the least
                   useful: on a phone you are already inside the app, so it is
                   spending ~110px to tell you the name of the product you are
-                  looking at. The mark alone from below md; the full lockup
-                  from md up, where there is room for it. */}
-              <span className="inline-flex md:hidden">
+                  looking at. The mark alone below lg; the full lockup from lg
+                  up. Between md and lg the lockup's 187px was the width the
+                  tabs needed, and they spilled over it. */}
+              <span className="inline-flex lg:hidden">
                 <BrandLogo size="header" iconOnly />
               </span>
-              <span className="hidden md:inline-flex">
+              <span className="t-appbar__logo hidden lg:inline-flex">
                 <BrandLogo size="header" />
               </span>
             </Link>
@@ -359,11 +360,19 @@ export default function PlatformLayout({
                 box rather than animated per-item, so adding a nav item needs
                 no new state — and it makes the move read as a followspot
                 finding the next actor, which is the whole idea. */}
+            {/* Measured 2026-10-13: the four labelled tabs are 515px, and from
+                768 to ~1100 the nav had 252 to 442px of it, so the tabs ran
+                under the logo and the account button. Labels show from xl; below
+                that the tabs are their icons, named for screen readers and on
+                hover. The group is its own positioned box so the Admin tab can
+                hang off its end: it arrives with the user, a tick after paint,
+                and inside the group it re-centred every tab when it did. */}
             <nav
               ref={navRef}
               aria-label="Primary"
-              className="relative hidden min-w-0 flex-1 items-center justify-center gap-0.5 md:flex"
+              className="hidden min-w-0 flex-1 items-center justify-center md:flex"
             >
+              <div className="relative flex items-center gap-0.5">
               <span ref={lightRef} aria-hidden className="t-appbar__light" />
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -376,9 +385,10 @@ export default function PlatformLayout({
                     aria-current={isActive ? "page" : undefined}
                     className="t-appbar__tab"
                     data-active={isActive}
+                    title={item.label}
                   >
                     <Icon className="size-4 shrink-0" />
-                    {item.label}
+                    <span className="sr-only xl:not-sr-only">{item.label}</span>
                   </Link>
                 );
               })}
@@ -387,13 +397,15 @@ export default function PlatformLayout({
                   href="/admin"
                   data-nav="/admin"
                   aria-current={pathname.startsWith("/admin") ? "page" : undefined}
-                  className="t-appbar__tab"
+                  className="t-appbar__tab t-appbar__tab--hang"
                   data-active={pathname.startsWith("/admin")}
+                  title="Admin"
                 >
                   <IconShieldCheck className="size-4 shrink-0" />
-                  Admin
+                  <span className="sr-only">Admin</span>
                 </Link>
               )}
+              </div>
             </nav>
 
             {/* Desktop Profile Dropdown - right aligned */}
@@ -420,7 +432,7 @@ export default function PlatformLayout({
                   aria-haspopup="menu"
                   className="t-account"
                   data-open={profileDropdownOpen}
-                  data-ready={mounted && !!user}
+                  data-ready={mounted && (!!user || !loading)}
                 >
                   <span className="t-account__avatar flex shrink-0 items-center justify-center overflow-hidden text-xs font-medium">
                     {headshotUrl ? (
@@ -437,11 +449,11 @@ export default function PlatformLayout({
                       profileInitial
                     )}
                   </span>
-                  <span className="hidden max-w-[8rem] truncate text-[13px] font-semibold lg:inline">
+                  <span className="t-account__name hidden truncate text-[13px] font-semibold xl:inline">
                     {displayName || "Account"}
                   </span>
                   {userTier && userTier !== "free" && (
-                    <span className="t-account__tier">{userTier}</span>
+                    <span className="t-account__tier hidden xl:inline">{userTier}</span>
                   )}
                   <IconChevronDown
                     className={`size-3 shrink-0 transition-transform ${
