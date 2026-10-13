@@ -41,7 +41,11 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
     if (params.get("from") === "login" && selectedId) trackEvent("audition_landing_shown", { audition_id: selectedId });
   }, [params, selectedId]);
 
+  // ?new=1 opens the fill-it-in card (onboarding's "I have sides" step).
+  // ?new=paste opens the paste box instead (the Collection/search ask): the
+  // capture area is unfolded, but the box itself starts at the paste.
   const startOpen = params.get("new") === "1";
+  const startPaste = params.get("new") === "paste";
   const source = params.get("from") === "onboarding" ? "onboarding" : "parse";
   // The outcome email's confirm button lands on /auditions/{id}?logged=<o>&ar=after.
   const loggedParam = params.get("logged");
@@ -75,7 +79,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   const [intro, setIntro] = useState(false);
   const [introStep, setIntroStep] = useState(0);
   const introChecked = useRef(false);
-  const cameToAdd = startOpen || source === "onboarding";
+  const cameToAdd = startOpen || startPaste || source === "onboarding";
   useEffect(() => {
     if (introChecked.current || isLoading) return;
     // A beat after the page paints, so the card lands on a page rather than a blank.
@@ -131,7 +135,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   // With tickets on the rail the prep room is the page, so the capture box
   // waits behind a button. It stays mounted while hidden: closing it mid-draft
   // keeps what was typed. A new ticket closes it.
-  const [adding, setAdding] = useState(startOpen);
+  const [adding, setAdding] = useState(startOpen || startPaste);
   const count = list.length;
   const lastCount = useRef(count);
   useEffect(() => {
