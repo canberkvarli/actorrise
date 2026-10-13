@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ScenePayload } from './contract';
-import { defaultVoice, initialVoices, savedPart } from './prefs';
+import { autoCommits, defaultVoice, initialVoices, savedPart } from './prefs';
 
 const payload = {
   characters: ['ANNA', 'BEN'],
@@ -20,6 +20,24 @@ describe('savedPart', () => {
 
   it('only looks at the primary role, the first entry', () => {
     expect(savedPart(payload.characters, ['HAMLET', 'BEN'])).toBeNull();
+  });
+});
+
+describe('autoCommits', () => {
+  it('opens the run on a saved part when nothing is waiting and the run is not guided', () => {
+    expect(autoCommits('ANNA', { resume: false, guided: false })).toBe(true);
+  });
+
+  it('waits when a run can be picked up: the actor says where to start', () => {
+    expect(autoCommits('ANNA', { resume: true, guided: false })).toBe(false);
+  });
+
+  it('does nothing without a saved part', () => {
+    expect(autoCommits(null, { resume: false, guided: false })).toBe(false);
+  });
+
+  it('does nothing on a guided run, where the server picks the part', () => {
+    expect(autoCommits('ANNA', { resume: false, guided: true })).toBe(false);
   });
 });
 

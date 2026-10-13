@@ -5,11 +5,20 @@
  */
 import { sameCharacter, type ScenePayload } from './contract';
 
-/** The saved primary role, if it is one of this scene's characters. Never opens the run by itself. */
+/** The saved primary role, if it is one of this scene's characters. Whether it opens the run is `autoCommits`. */
 export function savedPart(characters: string[], roles: string[]): string | null {
   const primary = roles[0];
   if (!primary) return null;
   return characters.find(c => sameCharacter(c, primary)) ?? null;
+}
+
+/**
+ * Whether the Curtain opens the run on the saved part by itself, as if the actor
+ * had tapped it. Not with a run waiting to be picked up (the actor must say
+ * where to start) and not on a guided run (the server picks the part).
+ */
+export function autoCommits(saved: string | null, opts: { resume: boolean; guided: boolean }): boolean {
+  return saved !== null && !opts.resume && !opts.guided;
 }
 
 /** A character's voice when someone else is reading opposite them: the server's default, else the first voice. */
