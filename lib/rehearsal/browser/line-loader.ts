@@ -36,14 +36,15 @@ export class LineLoader {
     await first;
   }
 
-  /** Make sure the lines after `lineIndex` are moving. Called on every handover. */
+  /** Make sure `lineIndex` and the lines after it are moving. Called on every engine change,
+   *  so a jump or back onto a line that was never loaded loads it. */
   ahead(lineIndex: number) { this.pump(lineIndex); }
 
-  /** Start loads for the next lines after `from`, up to `concurrency` in flight at once. */
-  private pump(from = -1) {
+  /** Start loads for `from` and the lines after it, up to `concurrency` in flight at once. */
+  private pump(from = 0) {
     const room = this.concurrency - this.inflight;
     if (room <= 0 || this.stopped) return;
-    const pending = this.order.filter(i => i > from && !this.started.has(i) && !this.player.has(i));
+    const pending = this.order.filter(i => i >= from && !this.started.has(i) && !this.player.has(i));
     for (const i of pending.slice(0, room)) void this.load(i);
   }
 

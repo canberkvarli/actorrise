@@ -30,7 +30,7 @@ import type { GuidedRun, ScenePayload } from '@/lib/rehearsal/contract';
 import { Engine, type Snapshot } from '@/lib/rehearsal/engine';
 import { Journal, type JournalTransport } from '@/lib/rehearsal/journal';
 import { buildScript } from '@/lib/rehearsal/script';
-import { type AudioSlot, canBegin, firstNeededLine, makeFlusher, planPartnerAudio, type Readiness } from '@/lib/rehearsal/prepare';
+import { type AudioSlot, canBegin, firstNeededLine, limit, makeFlusher, neededFailure, planPartnerAudio, type Readiness } from '@/lib/rehearsal/prepare';
 import { AudioPlayer } from '@/lib/rehearsal/browser/audio-player';
 import { LineLoader, type LineSource } from '@/lib/rehearsal/browser/line-loader';
 
@@ -76,6 +76,7 @@ function transportFor(runId: number, token: { current: string | undefined }): Jo
 export function useRehearsal(payload: ScenePayload): Rehearsal {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [base, setBase] = useState<Omit<Readiness, 'stt'>>({ line1: false, mic: false, error: null });
+  const [lineError, setLineError] = useState<string | null>(null); // a failed partner line the run still needs
   const engineRef = useRef<Engine | null>(null);
   const playerRef = useRef<AudioPlayer | null>(null);
   const loaderRef = useRef<LineLoader | null>(null);
@@ -84,6 +85,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
   const frameRef = useRef<number | null>(null);
   const resumeLineRef = useRef<number | null>(null);
   const preparedRef = useRef(false);
+  const failedRef = useRef(new Map<number, string>()); // partner line → why it failed to load
 
   const fail = useCallback((error: string) => setBase(b => (b.error ? b : { ...b, error })), []);
 
@@ -119,7 +121,14 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
         : { scene_id: payload.scene.id, character, ...(await api.post<{ run_id: number; voices: Record<string, string> }>(
             '/api/rehearsal/runs', { scene_id: payload.scene.id, character, voices })).data };
     } catch (e) { preparedRef.current = false; throw e; }
-    if (run.scene_id !== payload.scene.id) { fail('This page is not the guided scene.'); return; }
+    if (run.scene_id !== payload.scene.id) {
+      fail('This page is not the guided scene.');
+      // The run the server opened has no page: close it, and let a later prepare open another.
+      void api.post(`/api/rehearsal/runs/${run.run_id}/events`, { events: [
+        { seq: 0, type: 'abandoned', line_index: null, at_ms: 0, payload: { reason: 'scene_mismatch' } }] }).catch(() => {});
+      preparedRef.current = false;
+      return;
+    }
 
     void open();
     const player = (playerRef.current ??= new AudioPlayer());
@@ -134,45 +143,55 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
       journal: { emit: (type, line, at, p) => { journal.emit(type, line, at, p); flush(); } },
       schedule: (at, fn) => player.schedule(at, fn),
     });
-    engine.subscribe(publish);
+    const resumeLine = opts?.resumeLine ?? null;
+    resumeLineRef.current = resumeLine;
+    const first = firstNeededLine(script, resumeLine);
+    const start = first ?? resumeLine ?? 0;
+    // Where the run is (or starts from, before Begin). The loader follows it,
+    // so a jump or back onto a line never loaded loads it; a failed line is an
+    // error only while the run has not passed it.
+    const cursor = () => { const s = engine.snapshot(); return s.state === 'ready' ? start : s.lineIndex; };
+    const follow = () => {
+      const at = cursor();
+      loader.ahead(at);
+      setLineError(neededFailure(failedRef.current, at));
+    };
+    let last = -1;
+    engine.subscribe(() => { publish(); const at = cursor(); if (at !== last) { last = at; follow(); } });
     engineRef.current = engine;
     if (process.env.NODE_ENV !== 'production') (window as Window & { __rehearsal?: Engine }).__rehearsal = engine;
     publish();
 
-    const resumeLine = opts?.resumeLine ?? null;
-    resumeLineRef.current = resumeLine;
-    const first = firstNeededLine(script, resumeLine);
     if (first === null) setBase(b => ({ ...b, line1: true }));
-    loader.onReady = l => { engine.audioReady(l); if (l === first) setBase(b => ({ ...b, line1: true })); };
-    loader.onFailed = (_l, why) => fail(`A partner line could not load (${why}).`);
+    const failed = (l: number, why: string) => { failedRef.current.set(l, why); follow(); };
+    loader.onReady = l => {
+      engine.audioReady(l);
+      if (failedRef.current.delete(l)) follow();
+      if (l === first) setBase(b => ({ ...b, line1: true }));
+    };
+    loader.onFailed = failed;
     player.onInterrupted = () => engine.pause();
 
-    const from = (first ?? resumeLine ?? 0) - 1;
+    const slow = limit(4); // per-line POST /audio, at most 4 in flight
     const set = (s: AudioSlot) => (s.source ? Promise.resolve(s.source)
-      : api.post<LineSource>('/api/rehearsal/audio', { scene_id: payload.scene.id, line_index: s.lineIndex, voice: s.voice }).then(r => r.data))
-      .then(src => { loader.set(s.lineIndex, src); loader.ahead(from); });
+      : slow(() => api.post<LineSource>('/api/rehearsal/audio', { scene_id: payload.scene.id, line_index: s.lineIndex, voice: s.voice })).then(r => r.data))
+      .then(src => { loader.set(s.lineIndex, src); loader.ahead(cursor()); },
+        e => failed(s.lineIndex, e instanceof Error ? e.message : String(e)));
     const slots = planPartnerAudio(payload, script, run.voices);
     const head = slots.find(s => s.lineIndex === first);
-    try {
-      if (head) await set(head);
-      await Promise.all(slots.filter(s => s !== head).map(set));
-    } catch (e) { fail(`A partner line could not load (${e instanceof Error ? e.message : String(e)}).`); }
+    if (head) await set(head);
+    await Promise.all(slots.filter(s => s !== head).map(set));
   }, [payload, open, prime, beginTurn, endTurn, publish, fail]);
 
   const begin = useCallback(() => {
     const engine = engineRef.current, player = playerRef.current;
     if (!engine || !player) return;
     player.unlock(); // first and synchronous: iOS starts a context only inside the tap
-    engine.begin();
-    if (resumeLineRef.current !== null) engine.jumpTo(resumeLineRef.current);
+    engine.begin(resumeLineRef.current ?? undefined);
   }, []);
 
   // The live session failed to open or dropped: the run stops there.
-  useEffect(() => { if (status === 'error') engineRef.current?.abandon(); }, [status]);
-
-  // Keep the loader ahead of the scene on every handover.
-  const line = snapshot?.lineIndex;
-  useEffect(() => { if (line !== undefined) loaderRef.current?.ahead(line); }, [line]);
+  useEffect(() => { if (status === 'error') engineRef.current?.abandon('stt_failed'); }, [status]);
 
   // Hidden: pause and send what is pending. Visible again: the context resumes, the scene does not.
   useEffect(() => {
@@ -187,8 +206,9 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
   }, []);
 
   useEffect(() => () => {
-    engineRef.current?.abandon();
+    engineRef.current?.abandon('unmounted');
     journalRef.current?.beacon();
+    if (process.env.NODE_ENV !== 'production') delete (window as Window & { __rehearsal?: Engine }).__rehearsal;
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     loaderRef.current?.stop();
     playerRef.current?.close();
@@ -198,13 +218,13 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     pause: () => engineRef.current?.pause(), resume: () => engineRef.current?.resume(),
     skip: () => engineRef.current?.skip(), back: () => engineRef.current?.back(),
     jumpTo: (l: number) => engineRef.current?.jumpTo(l),
-    leave: () => { engineRef.current?.abandon(); journalRef.current?.beacon(); },
+    leave: () => { engineRef.current?.abandon('left'); journalRef.current?.beacon(); },
   }), []);
 
   const readiness: Readiness = {
     ...base,
     stt: status === 'ready',
-    error: base.error ?? (status === 'error' ? (liveError ?? 'The live microphone could not start.') : null),
+    error: base.error ?? lineError ?? (status === 'error' ? (liveError ?? 'The live microphone could not start.') : null),
   };
   return { snapshot, readiness, canBegin: canBegin(readiness), prepare, begin, ...controls };
 }

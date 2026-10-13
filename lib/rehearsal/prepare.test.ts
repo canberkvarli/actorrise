@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RehearsalLine, ScenePayload } from './contract';
 import { buildScript } from './script';
-import { canBegin, firstNeededLine, makeFlusher, planPartnerAudio } from './prepare';
+import { canBegin, firstNeededLine, limit, makeFlusher, neededFailure, planPartnerAudio } from './prepare';
 
 const L = (index: number, character: string, text = 'Some words here.'): RehearsalLine => ({ index, character, text, direction: null });
 
@@ -112,5 +112,39 @@ describe('makeFlusher', () => {
     request();
     await new Promise(r => setTimeout(r, 0));
     expect(flush).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('limit', () => {
+  it('keeps at most n in flight, and starts the next as one settles', async () => {
+    const run = limit(2);
+    let inflight = 0, peak = 0;
+    const releases: Array<() => void> = [];
+    const task = () => run(() => new Promise<void>(r => { inflight++; peak = Math.max(peak, inflight); releases.push(() => { inflight--; r(); }); }));
+    const all = Promise.all([task(), task(), task(), task(), task()]);
+    await Promise.resolve();
+    expect(releases.length).toBe(2);
+    while (releases.length) { releases.shift()!(); await new Promise(r => setTimeout(r, 0)); }
+    await all;
+    expect(peak).toBe(2);
+  });
+
+  it('a rejection frees its slot and reaches the caller', async () => {
+    const run = limit(1);
+    await expect(run(async () => { throw new Error('x'); })).rejects.toThrow('x');
+    await expect(run(async () => 5)).resolves.toBe(5);
+  });
+});
+
+describe('neededFailure', () => {
+  const failed = new Map([[2, 'audio 500'], [6, 'audio 404']]);
+  it('names the first failed line the run has not passed', () => {
+    expect(neededFailure(failed, 0)).toBe('A partner line could not load (audio 500).');
+    expect(neededFailure(failed, 2)).toBe('A partner line could not load (audio 500).');
+    expect(neededFailure(failed, 3)).toBe('A partner line could not load (audio 404).');
+  });
+  it('is null once every failed line is behind the run', () => {
+    expect(neededFailure(failed, 7)).toBeNull();
+    expect(neededFailure(new Map(), 0)).toBeNull();
   });
 });

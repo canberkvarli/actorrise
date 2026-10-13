@@ -78,3 +78,24 @@ export function makeFlusher(flush: () => Promise<void>, defer: (fn: () => void) 
   };
   return () => { if (!queued) { queued = true; defer(() => { void run(); }); } };
 }
+
+/** At most `n` of the wrapped calls in flight; the rest wait their turn, in order. */
+export function limit(n: number) {
+  let active = 0;
+  const waiting: Array<() => void> = [];
+  return async <T>(fn: () => Promise<T>): Promise<T> => {
+    // A finishing call hands its slot straight to the next waiter, so a new caller cannot take it in between.
+    if (active >= n) await new Promise<void>(r => waiting.push(r)); else active++;
+    try { return await fn(); } finally { const next = waiting.shift(); if (next) next(); else active--; }
+  };
+}
+
+/**
+ * A partner line that failed to load matters only while the run still needs
+ * it: the first failed line at or after `cursor` (the line the run is on, or
+ * starts from). Null once the run is past every failed line.
+ */
+export function neededFailure(failed: Map<number, string>, cursor: number): string | null {
+  const line = [...failed.keys()].filter(l => l >= cursor).sort((a, b) => a - b)[0];
+  return line === undefined ? null : `A partner line could not load (${failed.get(line)}).`;
+}

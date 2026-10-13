@@ -90,7 +90,9 @@ interface OpenOptions {
    * Called synchronously with the turn's transcript on every delta, after the
    * state is set. The rehearsal engine hands over from here, so no React
    * render sits between the last word and the partner's line. Never called
-   * with an empty string or outside an open turn.
+   * with an empty string or outside an open turn. When given, the hook does
+   * NOT set `transcript` / `turnEnded` state per delta (the caller renders on
+   * its own clock, one frame at a time): read the callback, not the state.
    */
   onTranscript?: (transcript: string) => void;
   /** Called when `turnEnded` goes true, synchronously. */
@@ -124,8 +126,25 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
      their mouth. */
   const turnOpenRef = useRef(false);
 
+  /* Late words stay on their line. The turn's transcript is built from the
+     transcriber's items (by item_id), in arrival order; `completed` replaces
+     only its own item. An item seen in an earlier turn is retired, and any
+     delta or completed for it afterwards is dropped, so the tail of one line
+     (or its tidied-up `completed`) can never land on the next line when two
+     actor lines run back to back. Refs only: no React state in this path. */
+  const turnItemsRef = useRef(new Map<string, string>());
+  const staleItemsRef = useRef(new Set<string>());
+  /** event_ids of our own commits, so a server error about one is not a dropped session. */
+  const commitIdsRef = useRef(new Set<string>());
+
   const optionsRef = useRef(options);
   optionsRef.current = options;
+
+  /** This turn's items become earlier-turn items; an id-less item is never retired (it would block every later one). */
+  const retireTurnItems = () => {
+    turnItemsRef.current.forEach((_t, id) => { if (id) staleItemsRef.current.add(id); });
+    turnItemsRef.current = new Map();
+  };
 
   const clearQuietTimer = () => {
     if (quietTimerRef.current) {
@@ -137,35 +156,47 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
   /** Restart the "they have stopped" clock. Called on every delta. */
   const bumpQuietTimer = useCallback(() => {
     clearQuietTimer();
-    setTurnEnded(false);
+    // With a callback the caller renders on its own clock: no state per delta.
+    if (!optionsRef.current.onTranscript) setTurnEnded(false);
     quietTimerRef.current = setTimeout(() => {
       quietTimerRef.current = null;
       // Only meaningful if something was actually heard. A turn that goes
       // quiet having transcribed nothing is a room, not a performance, and
       // `shouldHandOver` refuses it anyway — but saying so here keeps the flag
       // honest for anything else reading it.
-      if (turnTextRef.current.trim()) { setTurnEnded(true); optionsRef.current.onQuiet?.(); }
+      if (!turnTextRef.current.trim()) return;
+      if (!optionsRef.current.onTranscript) setTurnEnded(true);
+      optionsRef.current.onQuiet?.();
     }, QUIET_AFTER_WORDS_MS);
   }, []);
 
   const handleEvent = useCallback((raw: string) => {
-    let evt: { type?: string; delta?: string; transcript?: string; error?: { message?: string } };
+    let evt: { type?: string; item_id?: string; delta?: string; transcript?: string; error?: { message?: string; event_id?: string } };
     try {
       evt = JSON.parse(raw);
     } catch {
       return;
     }
 
+    const id = evt.item_id ?? '';
+    const accepts = () => turnOpenRef.current && !staleItemsRef.current.has(id);
+    /* Something was heard on the open turn: rebuild its text from its items. */
+    const heard = () => {
+      turnTextRef.current = [...turnItemsRef.current.values()].join(' ');
+      const onTranscript = optionsRef.current.onTranscript;
+      if (!onTranscript) setTranscript(turnTextRef.current);
+      bumpQuietTimer();
+      // Last: a handover here may end this turn and begin the next, and those
+      // resets must land after everything above, not before it.
+      onTranscript?.(turnTextRef.current);
+    };
+
     switch (evt.type) {
       /* A word, while it is being said. The reason all of this exists. */
       case 'conversation.item.input_audio_transcription.delta': {
-        if (!turnOpenRef.current || !evt.delta) return;
-        turnTextRef.current += evt.delta;
-        setTranscript(turnTextRef.current);
-        bumpQuietTimer();
-        // Last: a handover here may end this turn and begin the next, and
-        // those resets must land after the state set above, not before it.
-        optionsRef.current.onTranscript?.(turnTextRef.current);
+        if (!evt.delta || !accepts()) return;
+        turnItemsRef.current.set(id, (turnItemsRef.current.get(id) ?? '') + evt.delta);
+        heard();
         return;
       }
 
@@ -174,16 +205,18 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
          it is never waited for, since by then the actor has usually stopped
          and the scene has usually moved. */
       case 'conversation.item.input_audio_transcription.completed': {
-        if (!turnOpenRef.current || !evt.transcript) return;
-        turnTextRef.current = evt.transcript;
-        setTranscript(evt.transcript);
-        bumpQuietTimer();
-        optionsRef.current.onTranscript?.(evt.transcript);
+        if (!evt.transcript || !accepts()) return;
+        turnItemsRef.current.set(id, evt.transcript);
+        heard();
         return;
       }
 
       case 'error': {
+        // Our own commit refused (an empty buffer, say) is not a broken session.
+        if (evt.error?.event_id && commitIdsRef.current.has(evt.error.event_id)) return;
         setError(evt.error?.message || 'Live transcription error');
+        // A server error on an open session is the session failing: say so in the status too.
+        setStatus(s => (s === 'ready' ? 'error' : s));
         return;
       }
 
@@ -285,6 +318,7 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
   }, []);
 
   const beginTurn = useCallback((hint?: TurnHint) => {
+    retireTurnItems();
     turnTextRef.current = '';
     turnOpenRef.current = true;
     setTranscript('');
@@ -307,6 +341,21 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
       trackRef.current.enabled = false;
       setListening(false);
     }
+    /* Close this turn's item on the server. With `turn_detection: null` the
+       server never commits the audio buffer by itself, so without this one
+       item could run on across turns and the next line's words would arrive
+       under an id already retired (and be dropped). Committing makes the next
+       turn's audio a new item with a new id, which is what lets the late tail
+       of THIS line be told apart from the next one. Only when something was
+       heard: committing an empty buffer is an error. Our event_ids are kept so
+       a refusal is not read as the session failing. */
+    const dc = dcRef.current;
+    if (dc?.readyState === 'open' && [...turnItemsRef.current.values()].some(t => t.trim())) {
+      const event_id = `commit_${commitIdsRef.current.size + 1}`;
+      commitIdsRef.current.add(event_id);
+      try { dc.send(JSON.stringify({ type: 'input_audio_buffer.commit', event_id })); } catch { /* the session is going anyway */ }
+    }
+    retireTurnItems();
   }, []);
 
   const close = useCallback(() => {
