@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useRehearsal } from '@/hooks/useRehearsal';
 import type { ScenePayload } from '@/lib/rehearsal/contract';
 import { bindGestures } from '@/lib/rehearsal/browser/gestures';
+import { plainError } from '@/lib/rehearsal/prepare';
 import { Curtain } from './Curtain';
 import { Stage } from './Stage';
 import { PauseSheet } from './PauseSheet';
 import { Ending } from './Ending';
 import { FirstRunHint } from './FirstRunHint';
 
-const failure = (e: unknown) => (e instanceof Error ? e.message : 'This run could not be opened.');
+/** Whatever the server said, the actor reads one plain sentence. */
+const failure = () => plainError('other');
 
 /**
  * Which panel is up, and the gestures. Two phases: the Curtain (choose a part,
@@ -40,10 +42,10 @@ export function RehearseScreen({ payload, guided }: { payload: ScenePayload; gui
     setChosen(character);
     try {
       await prepare(character, voices, { resumeLine });
-    } catch (e) {
+    } catch {
       // The Plus gate, or a run the server would not open. One line; the actor may tap again.
       setChosen(null);
-      setPrepError(failure(e));
+      setPrepError(failure());
     }
   }, [prepare]);
 
@@ -51,7 +53,7 @@ export function RehearseScreen({ payload, guided }: { payload: ScenePayload; gui
   useEffect(() => {
     if (!guided || guidedStarted.current) return;
     guidedStarted.current = true;
-    prepare('', {}, { guided: true }).catch(e => setPrepError(failure(e)));
+    prepare('', {}, { guided: true }).catch(() => setPrepError(failure()));
   }, [guided, prepare]);
 
   const onBegin = () => { begin(); setPhase('run'); };
@@ -78,7 +80,7 @@ export function RehearseScreen({ payload, guided }: { payload: ScenePayload; gui
   return (
     <div ref={rootRef} className="relative h-dvh overflow-hidden">
       <Stage lines={payload.lines} actor={snapshot?.actor ?? ''} snapshot={snapshot}
-        dimmed={state === 'paused'} onTapLine={jumpTo} />
+        paused={state === 'paused'} onTapLine={jumpTo} />
       {state === 'paused' && !error && <PauseSheet onResume={resume} onRestart={() => jumpTo(0)} onLeave={onLeave} />}
       {ended && !error && <Ending scene={payload.scene} onAgain={onAgain} onLeave={onLeave} />}
       {error && (

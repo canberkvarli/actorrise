@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { theatreFontVars, typewriterFontVar } from '@/lib/fonts/theatre';
 import type { ScenePayload } from '@/lib/rehearsal/contract';
+import { plainError } from '@/lib/rehearsal/prepare';
 import { RehearseScreen } from './RehearseScreen';
 
 /**
@@ -25,7 +26,7 @@ export default function RehearsePage() {
     let alive = true;
     api.get<ScenePayload>(`/api/rehearsal/scenes/${id}`)
       .then(r => { if (alive) setPayload(r.data); })
-      .catch(e => { if (alive) setError(e instanceof Error ? e.message : 'This scene could not be opened.'); });
+      .catch(() => { if (alive) setError(plainError('other')); });
     return () => { alive = false; };
   }, [id]);
 

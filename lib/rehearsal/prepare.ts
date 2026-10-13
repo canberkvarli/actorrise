@@ -93,9 +93,32 @@ export function limit(n: number) {
 /**
  * A partner line that failed to load matters only while the run still needs
  * it: the first failed line at or after `cursor` (the line the run is on, or
- * starts from). Null once the run is past every failed line.
+ * starts from), by line index. Null once the run is past every failed line.
+ * The reason it failed stays in the map; the screen only ever says `plainError('line')`.
  */
-export function neededFailure(failed: Map<number, string>, cursor: number): string | null {
+export function neededFailure(failed: Map<number, string>, cursor: number): number | null {
   const line = [...failed.keys()].filter(l => l >= cursor).sort((a, b) => a - b)[0];
-  return line === undefined ? null : `A partner line could not load (${failed.get(line)}).`;
+  return line === undefined ? null : line;
 }
+
+/**
+ * What can go wrong, as the screen says it. A server's or a browser's own
+ * message never reaches the actor: every failure is one of these four.
+ * - `stt`: the live transcription failed to open or dropped
+ * - `mic`: no microphone stream (permission denied, or no device)
+ * - `line`: a partner line the run still needs could not load
+ * - `other`: anything else (the run would not open, the wrong page)
+ */
+export type ErrorKind = 'stt' | 'mic' | 'line' | 'other';
+
+const PLAIN: Record<ErrorKind, string> = {
+  stt: 'The live microphone dropped. Reload to run again.',
+  mic: 'The microphone is blocked. Allow it in your browser and reload.',
+  line: 'A partner line could not load. Reload to run again.',
+  other: 'Something broke. Reload to run again.',
+};
+
+export const plainError = (kind: ErrorKind): string => PLAIN[kind];
+
+/** The live session failed: it is the microphone's fault when no stream was ever obtained. */
+export const liveFailureKind = (micObtained: boolean): ErrorKind => (micObtained ? 'stt' : 'mic');

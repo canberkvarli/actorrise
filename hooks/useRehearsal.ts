@@ -30,7 +30,7 @@ import type { GuidedRun, ScenePayload } from '@/lib/rehearsal/contract';
 import { Engine, type Snapshot } from '@/lib/rehearsal/engine';
 import { Journal, type JournalTransport } from '@/lib/rehearsal/journal';
 import { buildScript } from '@/lib/rehearsal/script';
-import { type AudioSlot, canBegin, firstNeededLine, limit, makeFlusher, neededFailure, planPartnerAudio, type Readiness } from '@/lib/rehearsal/prepare';
+import { type AudioSlot, canBegin, firstNeededLine, limit, liveFailureKind, makeFlusher, neededFailure, plainError, planPartnerAudio, type Readiness } from '@/lib/rehearsal/prepare';
 import { AudioPlayer } from '@/lib/rehearsal/browser/audio-player';
 import { LineLoader, type LineSource } from '@/lib/rehearsal/browser/line-loader';
 
@@ -96,7 +96,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     if (streamRef.current) setBase(b => ({ ...b, mic: true }));
     return streamRef.current;
   }, [prewarmStream, streamRef]);
-  const { open, prime, beginTurn, endTurn, status, error: liveError } = useLiveTranscription({
+  const { open, prime, beginTurn, endTurn, status } = useLiveTranscription({
     getStream,
     keywords: payload.characters,
     onTranscript: t => { if (t) engineRef.current?.delta(t); },
@@ -122,7 +122,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
             '/api/rehearsal/runs', { scene_id: payload.scene.id, character, voices })).data };
     } catch (e) { preparedRef.current = false; throw e; }
     if (run.scene_id !== payload.scene.id) {
-      fail('This page is not the guided scene.');
+      fail(plainError('other')); // not the guided scene
       // The run the server opened has no page: close it, and let a later prepare open another.
       void api.post(`/api/rehearsal/runs/${run.run_id}/events`, { events: [
         { seq: 0, type: 'abandoned', line_index: null, at_ms: 0, payload: { reason: 'scene_mismatch' } }] }).catch(() => {});
@@ -154,7 +154,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     const follow = () => {
       const at = cursor();
       loader.ahead(at);
-      setLineError(neededFailure(failedRef.current, at));
+      setLineError(neededFailure(failedRef.current, at) === null ? null : plainError('line'));
     };
     let last = -1;
     engine.subscribe(() => { publish(); const at = cursor(); if (at !== last) { last = at; follow(); } });
@@ -191,7 +191,11 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
   }, []);
 
   // The live session failed to open or dropped: the run stops there.
-  useEffect(() => { if (status === 'error') engineRef.current?.abandon('stt_failed'); }, [status]);
+  useEffect(() => {
+    if (status !== 'error') return;
+    engineRef.current?.abandon('stt_failed');
+    loaderRef.current?.stop(); // nothing will play: stop polling for partner audio
+  }, [status]);
 
   // Hidden: pause and send what is pending. Visible again: the context resumes, the scene does not.
   useEffect(() => {
@@ -224,7 +228,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
   const readiness: Readiness = {
     ...base,
     stt: status === 'ready',
-    error: base.error ?? lineError ?? (status === 'error' ? (liveError ?? 'The live microphone could not start.') : null),
+    error: base.error ?? lineError ?? (status === 'error' ? plainError(liveFailureKind(base.mic)) : null),
   };
   return { snapshot, readiness, canBegin: canBegin(readiness), prepare, begin, ...controls };
 }

@@ -20,7 +20,7 @@ export function FirstRunHint() {
   if (!show) return null;
   return (
     <p className="r-chrome r-soft pointer-events-none fixed inset-x-0 top-[calc(1rem+env(safe-area-inset-top,0px))] px-6 text-center text-sm">
-      Tap a line to start there. Tap anywhere else to pause. Swipe left to skip your line, right to go back.
+      Tap to pause. While paused, tap a line to start from it. Swipe left to skip your line, right to take it again.
     </p>
   );
 }

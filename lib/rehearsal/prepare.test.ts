@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RehearsalLine, ScenePayload } from './contract';
 import { buildScript } from './script';
-import { canBegin, firstNeededLine, limit, makeFlusher, neededFailure, planPartnerAudio } from './prepare';
+import { canBegin, firstNeededLine, limit, liveFailureKind, makeFlusher, neededFailure, plainError, planPartnerAudio } from './prepare';
 
 const L = (index: number, character: string, text = 'Some words here.'): RehearsalLine => ({ index, character, text, direction: null });
 
@@ -139,12 +139,25 @@ describe('limit', () => {
 describe('neededFailure', () => {
   const failed = new Map([[2, 'audio 500'], [6, 'audio 404']]);
   it('names the first failed line the run has not passed', () => {
-    expect(neededFailure(failed, 0)).toBe('A partner line could not load (audio 500).');
-    expect(neededFailure(failed, 2)).toBe('A partner line could not load (audio 500).');
-    expect(neededFailure(failed, 3)).toBe('A partner line could not load (audio 404).');
+    expect(neededFailure(failed, 0)).toBe(2);
+    expect(neededFailure(failed, 2)).toBe(2);
+    expect(neededFailure(failed, 3)).toBe(6);
   });
   it('is null once every failed line is behind the run', () => {
     expect(neededFailure(failed, 7)).toBeNull();
     expect(neededFailure(new Map(), 0)).toBeNull();
+  });
+});
+
+describe('plainError', () => {
+  it('says each failure in the spec sentence, never the raw message', () => {
+    expect(plainError('stt')).toBe('The live microphone dropped. Reload to run again.');
+    expect(plainError('mic')).toBe('The microphone is blocked. Allow it in your browser and reload.');
+    expect(plainError('line')).toBe('A partner line could not load. Reload to run again.');
+    expect(plainError('other')).toBe('Something broke. Reload to run again.');
+  });
+  it('blames the microphone only when no stream was obtained', () => {
+    expect(liveFailureKind(false)).toBe('mic');
+    expect(liveFailureKind(true)).toBe('stt');
   });
 });

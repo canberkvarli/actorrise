@@ -7,7 +7,7 @@ import type { Snapshot } from '@/lib/rehearsal/engine';
 import { Line } from './Line';
 
 interface Props {
-  lines: RehearsalLine[]; actor: string; snapshot: Snapshot | null; dimmed: boolean;
+  lines: RehearsalLine[]; actor: string; snapshot: Snapshot | null; paused: boolean;
   onTapLine: (index: number) => void;
 }
 
@@ -22,12 +22,13 @@ const NO_WORDS = new Set<number>();
  * on a partner line that is the line's cue, on the actor's line it is the next
  * word to say, so a line that wraps scrolls up a row as the actor reads.
  *
- * Taps: a line jumps to itself. Empty space pauses, and only empty space
- * carries `data-pause-target`: a backdrop under the text, with the list and
- * spacers passing pointers through to it. Nothing that holds a line is a pause
- * target, so a tap on a line never pauses as well.
+ * Taps. Running: a tap anywhere on the stage pauses. The whole scroller is
+ * the pause target and the lines let pointers through. Paused: the script
+ * stays up behind the sheet and each line is a button that jumps to it (which
+ * also resumes). The scroller stops being a pause target then, since it holds
+ * the buttons; a tap between lines lands on the backdrop and resumes.
  */
-export function Stage({ lines, actor, snapshot, dimmed, onTapLine }: Props) {
+export function Stage({ lines, actor, snapshot, paused, onTapLine }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const motion = useRef<AnimationPlaybackControls | null>(null);
   const placed = useRef(false);
@@ -52,7 +53,8 @@ export function Stage({ lines, actor, snapshot, dimmed, onTapLine }: Props) {
   useEffect(() => () => motion.current?.stop(), []);
 
   return (
-    <div ref={scroller} className={`r-script h-dvh overflow-y-auto overscroll-contain ${dimmed ? 'r-dim' : ''}`}>
+    <div ref={scroller} className={`r-script h-dvh overflow-y-auto overscroll-contain ${paused ? 'r-dim' : ''}`}
+      data-pause-target={paused ? undefined : ''}>
       <div className="relative">
         <div aria-hidden className="absolute inset-0" data-pause-target />
         <div aria-hidden className="pointer-events-none relative h-[42dvh]" />
@@ -63,7 +65,7 @@ export function Stage({ lines, actor, snapshot, dimmed, onTapLine }: Props) {
             const heard = !mine ? undefined
               : live && snapshot ? snapshot.read.matched
               : snapshot?.heard.get(line.index) ?? NO_WORDS;
-            return <Line key={line.index} line={line} mine={mine} heard={heard} onTap={onTapLine} />;
+            return <Line key={line.index} line={line} mine={mine} heard={heard} tappable={paused} onTap={onTapLine} />;
           })}
         </ol>
         <div aria-hidden className="pointer-events-none relative h-[58dvh]" />
