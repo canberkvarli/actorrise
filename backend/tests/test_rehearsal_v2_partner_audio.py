@@ -47,7 +47,7 @@ class Cache(unittest.TestCase):
 
     def test_failed_row_is_not_claimed(self):
         # A fresh failure is left alone, so every scene open does not hammer a
-        # vendor that just said no. After an hour it is tried once more.
+        # vendor that just said no. After five minutes it is tried once more.
         key = pa.ensure(self.db, "openai", "coral", None, "Out.")
         row = self.db.get(PartnerAudio, key)
         row.status = "failed"; row.error = "boom"; row.claimed_at = datetime.now(timezone.utc); self.db.commit()
@@ -59,13 +59,15 @@ class Cache(unittest.TestCase):
         again = self.db.get(PartnerAudio, key)
         self.assertEqual((again.status, again.error), ("pending", None))
 
-    def test_retryable_is_an_hour_after_the_failure(self):
+    def test_retryable_is_five_minutes_after_the_failure(self):
         now = datetime.now(timezone.utc)
-        self.assertEqual(pa.FAILED_RETRY, timedelta(hours=1))
+        self.assertEqual(pa.FAILED_RETRY, timedelta(minutes=5))
         failed = lambda **kw: PartnerAudio(key="k", vendor="openai", voice="coral", status="failed", **kw)  # noqa: E731
         self.assertFalse(pa.retryable(failed(claimed_at=now), now))
-        self.assertFalse(pa.retryable(failed(claimed_at=now - timedelta(minutes=59)), now))
-        self.assertTrue(pa.retryable(failed(claimed_at=now - timedelta(hours=1)), now))
+        self.assertFalse(pa.retryable(failed(claimed_at=now - timedelta(minutes=1)), now))
+        self.assertFalse(pa.retryable(failed(claimed_at=now - timedelta(minutes=4)), now))
+        self.assertTrue(pa.retryable(failed(claimed_at=now - timedelta(minutes=5)), now))
+        self.assertTrue(pa.retryable(failed(claimed_at=now - timedelta(minutes=10)), now))
         self.assertTrue(pa.retryable(failed(claimed_at=now - timedelta(hours=2)), now))
         # A failure recorded before the retry rule has no claim time; it is old.
         self.assertTrue(pa.retryable(failed(claimed_at=None), now))

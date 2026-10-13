@@ -25,9 +25,10 @@ SIGNED_URL_SECONDS = 6 * 3600
 # A claim older than this is a worker that died mid-line; the row is retaken.
 STALE_CLAIM = timedelta(minutes=5)
 # A failed line is tried once more this long after it failed. The vendor was
-# most likely the problem (a 5xx, a rate limit), and an hour is long enough
-# that a scene opened ten times in a row does not hammer it ten times.
-FAILED_RETRY = timedelta(hours=1)
+# most likely the problem (a 5xx, a rate limit): five minutes is long enough
+# that a scene opened ten times in a row does not hammer it ten times, and
+# short enough that an actor who comes back after a cup of tea hears the line.
+FAILED_RETRY = timedelta(minutes=5)
 
 
 def _norm(text: str) -> str:

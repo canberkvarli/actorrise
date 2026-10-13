@@ -173,8 +173,8 @@ class Api(unittest.TestCase):
         api.schedule_synthesis.assert_not_called()
         self.assertEqual(self.db.get(PartnerAudio, key).status, "failed")
 
-    def test_failed_audio_is_queued_again_after_an_hour(self):
-        key = self._failed(timedelta(hours=2))
+    def _retries(self, age: timedelta) -> None:
+        key = self._failed(age)
         body = self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()
         self.assertEqual(body["audio"]["0"], {"key": key, "url": None})
         api.schedule_synthesis.assert_called_once_with([key], {key: ("Where were you?", None)})
@@ -182,3 +182,9 @@ class Api(unittest.TestCase):
         r = self.client.post("/api/rehearsal/audio", json={"scene_id": self.scene.id, "line_index": 0, "voice": "ash"})
         self.assertEqual((r.status_code, r.json()["url"]), (200, None))
         api.schedule_synthesis.assert_called_once_with([key], {key: ("Where were you?", None)})
+
+    def test_failed_audio_is_queued_again_after_ten_minutes(self):
+        self._retries(timedelta(minutes=10))
+
+    def test_failed_audio_is_queued_again_after_two_hours(self):
+        self._retries(timedelta(hours=2))
