@@ -64,3 +64,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-09-29, 6 saved, 0 scenes finished, free; read 3 pieces in the Ghost Light app
 **They said:** "I installed this app to find monologues for self-improvement. I'm not quite motivated enough to really get into it yet, but I will soon."
 **Heard as:** not an actor with an audition; a self-improvement reader. No deadline, so no pull. The product's cliff for this person is the first read out loud, not search.
+
+## 2026-10-13
+
+**Replying to:** a personal note about two searches and a saved piece
+**Account:** signed up 2026-10-12, 1 saved, 4 read this month, free
+**They said:** "There's no specific audition or a self tape with a deadline that I'm looking these kinds of monologues for. I just wanted to expend my repertoire and have some tapes prepared for future opportunities. I did like Jack's monologue from 101 breakups and even added it to my options. Now I'm trying to find more monologues that would fill some styles that are missing on my list (such as classical comic, etc.)"
+**Heard as:** repertoire builder, not a deadline; wants pieces by style to fill a list. A "browse by style for my book" use the product does not offer as such.
