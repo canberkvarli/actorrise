@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { sameCharacter, type ScenePayload } from '@/lib/rehearsal/contract';
+import { initialVoices, savedPart } from '@/lib/rehearsal/prefs';
+import { getCharacterVoices, getMyRoles } from '@/lib/scenePrefs';
 
 interface Props {
   payload: ScenePayload; guided: boolean; chosen: string | null; canBegin: boolean; error: string | null;
@@ -12,24 +14,19 @@ interface Props {
   onBegin: () => void;
 }
 
-/** A character's voice when someone else is reading opposite them: the server's default, else the first voice. */
-function defaultVoice(payload: ScenePayload, character: string): string {
-  for (const [actor, v] of Object.entries(payload.defaults)) {
-    if (!sameCharacter(actor, character) && v[character]) return v[character];
-  }
-  return payload.voices[0]?.id ?? '';
-}
-
 /**
  * Before the run: the title, the parts as plain tappable lines with the voice
  * under each, Begin. Tapping a part is the commitment (it opens the run), so
  * the voices are set first. With a run to pick up, the part tap is followed by
  * where to start. A guided run shows the title and Begin, nothing else.
+ * The part and voices the preview chose (lib/scenePrefs) are where it opens;
+ * a saved part is only preselected, the tap is still the commitment.
  */
 export function Curtain({ payload, guided, chosen, canBegin, error, upgradeUrl, onChoose, onBegin }: Props) {
   const [voices, setVoices] = useState<Record<string, string>>(
-    () => Object.fromEntries(payload.characters.map(c => [c, defaultVoice(payload, c)])));
-  const [picked, setPicked] = useState<string | null>(null); // a part, waiting for where to start
+    () => initialVoices(payload, getCharacterVoices(payload.scene.id)));
+  const [picked, setPicked] = useState<string | null>( // a part, waiting for where to start
+    () => guided ? null : savedPart(payload.characters, getMyRoles(payload.scene.id)));
   const resume = guided ? null : payload.resume;
   const mine = chosen || picked;
   const locked = Boolean(chosen);
