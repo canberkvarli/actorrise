@@ -7525,10 +7525,10 @@
   --r-soft: oklch(0.44 0.012 50);       /* a word of mine not yet heard */
   --r-theirs: oklch(0.54 0.018 60);     /* the partner's lines */
   --r-direction: oklch(0.6 0.015 60);
-  --r-pool: transparent;                /* the lamp; only in dark */
+  --r-pool: radial-gradient(80% 36% at 50% 40%, oklch(0.995 0.03 92) 0%, transparent 72%); /* the light at the eye line */
   --r-script-size: 1.125rem;
   --r-script-lead: 1.6;
-  background: var(--t-paper);
+  background: var(--r-pool), var(--t-paper);
   color: var(--t-ink);
   font-family: var(--t-body);
   min-height: 100dvh;
@@ -7542,7 +7542,7 @@
   --r-soft: oklch(0.76 0.02 80);
   --r-theirs: oklch(0.64 0.02 78);
   --r-direction: oklch(0.56 0.02 78);
-  --r-pool: radial-gradient(60% 45% at 50% 42%, oklch(0.27 0.03 75) 0%, oklch(0.2 0.025 72) 55%, var(--t-house) 100%);
+  --r-pool: radial-gradient(60% 40% at 50% 40%, oklch(0.27 0.03 75) 0%, oklch(0.2 0.025 72) 55%, var(--t-house) 100%);
   background: var(--r-pool), var(--t-house);
 }
 
@@ -7550,43 +7550,282 @@
 .r-title { font-family: var(--font-serif); }
 .r-soft { color: var(--r-soft); }
 
-/* The Stage prints the sides exactly as the scene preview does: the
-   `.t-prev__paper` card on the `.theatre-monologue` house, `.t-prev__line`
-   cues, chip and rule (Stage.tsx puts those classes on). Only what a RUN
-   adds lives here. The tokens come from .theatre-monologue on the scroller,
-   so the paper is cream in light and ink in dark, as the preview's is.
-
-   Where the run is: the live line (the actor's line being said, or the
-   partner line sounding) gets the full rule, 3px of gel-ink, on partner lines
-   too; the actor's other lines keep the preview's rule at part strength;
-   lines already passed sit back. Scoped under .r-sides so these outrank the
-   .t-prev__line rules declared further down the file. Rule width plus padding stays 16px, which
-   the -16px margin cancels, so the text never shifts when the rule moves. */
-.r-stage { background: var(--page); }
-.r-sides { margin-bottom: 0; }
-.r-sides .t-prev__text { font-size: var(--r-script-size); line-height: var(--r-script-lead); }
-.r-sides .r-line { transition: opacity 240ms ease-out; }
-.r-sides .r-line[data-mine="true"] { border-left-color: color-mix(in oklab, var(--t-gel-ink) 28%, transparent); }
-.r-sides .r-line[data-when="live"] {
-  margin-left: -16px;
-  padding-left: 13px;
-  border-left: 3px solid var(--t-gel-ink);
+/* --- The stage: the prompt corner ----------------------------------------
+   No card. The script runs full bleed down one column and falls off into the
+   house top and bottom (the mask), with a pool of light at the eye line,
+   where the live line is held (Stage.tsx, EYE_LINE 0.4). The margin left of
+   every line holds its cue light, lit only on the live one, in the colour of
+   whoever has the floor: the gel for the actor, the cast ink for a partner.
+   It breathes while the mic listens, so "it is waiting for me" needs no word.
+   Any line but the live one is a tap target; the hover and the press say so.
+   The top bar and the dock sit over the fall-off, on the page's own colour. */
+.r-stage {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 24%, #000 66%, transparent 92%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 24%, #000 66%, transparent 92%);
 }
-.r-sides .r-line[data-when="past"] { opacity: 0.42; }
+.r-stage { scrollbar-width: none; }
+.r-stage::-webkit-scrollbar { display: none; }
+.dark .r-line[data-when="live"] { background: color-mix(in oklab, var(--t-gel) 8%, transparent); }
+.dark .r-line[data-when="live"][data-mine="false"] { background: color-mix(in oklab, var(--cast-ink) 12%, transparent); }
+.r-script { list-style: none; margin-top: 0; margin-bottom: 0; transition: opacity 200ms ease-out; }
+.r-stage--paused .r-script { opacity: 0.7; }
+
+.r-line {
+  position: relative;
+  padding: 12px 14px 12px 40px;
+  border-radius: 6px;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 280ms ease-out, background-color 200ms ease-out;
+}
+.r-line + .r-line { margin-top: 6px; }
+.r-line[data-when="next"] { opacity: 0.8; }
+.r-line[data-when="past"] { opacity: 0.32; }
+.r-line[data-when="live"] { background: color-mix(in oklab, var(--t-gel) 16%, transparent); }
+.r-line[data-when="live"][data-mine="false"] { background: color-mix(in oklab, var(--cast-ink) 8%, transparent); }
+.r-line[data-jumpable="true"] { cursor: pointer; }
+.r-line[data-jumpable="true"]:active { background: color-mix(in oklab, var(--t-ink) 9%, transparent); }
+.r-line:focus-visible { box-shadow: inset 0 0 0 2px var(--t-gel-ink); }
+@media (hover: hover) {
+  .r-line[data-jumpable="true"]:hover { opacity: 1; background: color-mix(in oklab, var(--t-ink) 5%, transparent); }
+  .r-line[data-jumpable="true"]:hover .r-light { opacity: 0.35; transform: scale(0.7); }
+}
+
+.r-light {
+  position: absolute;
+  left: 15px;
+  top: 16px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  color: var(--cast-ink);
+  background: currentColor;
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity 220ms ease-out, transform 220ms ease-out, box-shadow 220ms ease-out;
+}
+.r-line[data-mine="true"] .r-light { color: var(--t-gel-ink); }
+.r-line[data-when="live"] .r-light {
+  opacity: 1;
+  transform: scale(1);
+  box-shadow: 0 0 0 4px color-mix(in oklab, currentColor 22%, transparent), 0 0 18px 3px color-mix(in oklab, currentColor 55%, transparent);
+}
+.r-line[data-speaking="listening"] .r-light { animation: r-breathe 1.6s ease-in-out infinite; }
+.r-line[data-speaking="held"] .r-light { box-shadow: none; opacity: 0.5; }
+@keyframes r-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+}
+
+.r-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-family: var(--t-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cast-ink);
+}
+.dark .r-who { color: color-mix(in oklab, var(--cast-ink) 55%, white); }
+.r-line[data-mine="true"] .r-who { color: var(--t-ink); }
+.r-you {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--t-gel);
+  color: var(--t-on-gel, oklch(0.15 0.03 45));
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+.r-dir {
+  margin: 0 0 4px;
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--r-direction);
+}
+.r-dir::before { content: "("; }
+.r-dir::after { content: ")"; }
+.r-text {
+  margin: 0;
+  font-family: var(--t-direction);
+  font-size: var(--r-script-size);
+  line-height: var(--r-script-lead);
+  color: var(--r-theirs);
+}
+.r-line[data-mine="true"] .r-text,
+.r-line[data-when="live"] .r-text { color: var(--t-ink); }
 
 /* Heard words carry the weight. On the live line the words still to say are
-   softer, so the next one is where the ink stops; everywhere else a line is
-   in full ink, as on the preview. */
+   softer, so the next one is where the ink stops. */
 .r-word { transition: color 120ms ease-out, font-weight 120ms ease-out; }
-.r-word[data-heard="true"] { color: var(--t-text); font-weight: 700; }
+.r-word[data-heard="true"] { color: var(--t-ink); font-weight: 700; }
 .r-line[data-when="live"] .r-word[data-heard="false"] {
-  color: color-mix(in oklab, var(--t-text) 58%, var(--t-paper));
+  color: color-mix(in oklab, var(--t-ink) 55%, var(--t-paper));
+}
+
+/* The top bar: leave, the scene, the count, and the run sheet under them. */
+.r-top {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 20;
+  padding: calc(env(safe-area-inset-top, 0px) + 6px) 8px 10px;
+  background: linear-gradient(var(--t-paper) 70%, transparent);
+  font-family: var(--t-body);
+}
+.r-top__row {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  max-width: 38rem;
+  margin: 0 auto;
+}
+.r-top__title {
+  margin: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+.r-top__count {
+  margin: 0;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.r-top__count span { color: var(--r-soft); font-weight: 400; }
+.r-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  color: var(--t-ink);
+}
+.r-sheet {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 9px;
+  max-width: 38rem;
+  margin: 4px auto 0;
+  padding: 0 6px;
+  list-style: none;
+}
+.r-sheet li {
+  flex: 1;
+  height: 4px;
+  border-radius: 1px;
+  background: color-mix(in oklab, var(--t-ink) 13%, transparent);
+  transition: background-color 300ms ease-out;
+}
+.r-sheet li[data-mine="true"] { height: 9px; }
+.r-sheet li[data-when="past"] { background: color-mix(in oklab, var(--t-ink) 42%, transparent); }
+.r-sheet li[data-when="live"] { background: var(--t-gel-ink); }
+
+/* The dock: one word of state over back, play/pause, skip. */
+.r-dock {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px calc(env(safe-area-inset-bottom, 0px) + 14px);
+  background: linear-gradient(transparent, var(--t-paper) 40%);
+  font-family: var(--t-body);
+}
+.r-dock__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t-ink);
+}
+.r-dock__who { color: var(--cast-ink); font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; }
+.dark .r-dock__who { color: color-mix(in oklab, var(--cast-ink) 55%, white); }
+.r-mic {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--t-gel-ink);
+  animation: r-breathe 1.6s ease-in-out infinite;
+}
+.r-dock__sep { color: var(--r-soft); }
+.r-dock__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.r-dock__row { display: flex; align-items: center; gap: 28px; }
+.r-ctl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 64px;
+  min-height: 56px;
+  border-radius: 14px;
+  color: var(--t-ink);
+  font-size: 11px;
+  font-weight: 500;
+  transition: opacity 160ms ease-out, background-color 160ms ease-out;
+}
+.r-ctl:disabled { opacity: 0.3; }
+.r-play {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 8px 24px -8px color-mix(in oklab, var(--primary) 75%, transparent);
+  transition: transform 120ms ease-out, opacity 160ms ease-out;
+}
+.r-play:active { transform: scale(0.94); }
+.r-play:disabled { opacity: 0.4; }
+.r-play--wide { width: auto; height: 52px; padding: 0 30px; font-size: 16px; font-weight: 600; }
+@media (hover: hover) {
+  .r-icon:hover, .r-ctl:not(:disabled):hover { background: color-mix(in oklab, var(--t-ink) 7%, transparent); }
+}
+
+/* The end of a run that is not the first scene: a card at the foot. */
+.r-end {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 20;
+  padding: 48px 24px calc(env(safe-area-inset-bottom, 0px) + 28px);
+  background: linear-gradient(transparent, var(--t-paper) 32%);
+  font-family: var(--t-body);
+  text-align: center;
+}
+.r-end__dir { margin: 0 0 4px; font-family: var(--t-direction); font-style: italic; font-size: 14px; color: var(--r-direction); }
+.r-end__title { margin: 0 0 18px; font-family: var(--font-serif); font-size: 28px; }
+.r-end__row { display: flex; align-items: center; justify-content: center; gap: 20px; }
+.r-end__leave { min-height: 48px; padding: 0 12px; color: var(--r-soft); }
+.r-win { background: var(--r-pool), var(--t-paper); }
+
+@media (prefers-reduced-motion: reduce) {
+  .r-light, .r-mic { animation: none !important; }
 }
 
 .r-begin { color: var(--r-soft); opacity: 0.6; transition: color 200ms ease-out, opacity 200ms ease-out; }
 .r-begin[data-ready="true"] { color: var(--t-ink); opacity: 1; }
 
-.r-dim { opacity: 0.55; transition: opacity 180ms ease-out; }
 /* Controls do not inherit a face from the UA sheet; without this every button
    in the room keeps the app's Montserrat while the type around it moves. */
 .theatre-rehearsal button,

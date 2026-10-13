@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-const KEY = 'actorrise.rehearsal.hint.v3';
+const KEY = 'actorrise.rehearsal.hint.v4';
 const SHOWN_MS = 6000;
 
 /** The one gesture hint: once per browser, six seconds, then gone. */
@@ -19,8 +19,8 @@ export function FirstRunHint() {
   }, [show]);
   if (!show) return null;
   return (
-    <p className="r-chrome r-soft pointer-events-none fixed inset-x-0 top-[calc(1rem+env(safe-area-inset-top,0px))] px-6 text-center text-sm">
-      Tap to pause, tap again to go on. Swipe left to skip your line, right to take it again.
+    <p className="r-chrome r-soft pointer-events-none fixed inset-x-0 top-[calc(4.5rem+env(safe-area-inset-top,0px))] z-20 px-6 text-center text-sm">
+      Tap any line to start from there. Swipe left to skip, right to go back.
     </p>
   );
 }
