@@ -21,6 +21,7 @@ import { Monologue } from "@/types/actor";
 import { Bench } from "@/components/rehearse/Bench";
 import { Shelf } from "@/components/rehearse/Shelf";
 import { RecentlyRemoved } from "@/components/rehearse/RecentlyRemoved";
+import { AuditionStrip } from "@/components/auditions/AuditionStrip";
 
 function BenchSkeleton() {
   return (
@@ -96,6 +97,13 @@ export function RehearseHub() {
   const settling = isLoading || isFetching;
   const isEmpty = !settling && all.length === 0;
   const showContent = mounted && !isLoading;
+  /* The audition ask waits for the shelf to settle (the cached list can be
+     the wrong length, see above), then stays: a background refetch later must
+     not pull it out from under a thumb. It used to sit outside this component,
+     so it painted under the skeleton and then jumped down when the shelf
+     arrived. Adjusting state during render is React's own pattern for this. */
+  const [settledOnce, setSettledOnce] = useState(false);
+  if (showContent && !settling && !settledOnce) setSettledOnce(true);
 
   const handleRemove = (monologue: Monologue) => {
     toggleFavorite.mutate({ monologueId: monologue.id, isFavorited: true });
@@ -208,6 +216,9 @@ export function RehearseHub() {
           firing this on a bare collection would spend the tour on a room the
           actor cannot see yet, and they would never be offered it again. */}
       {showContent && !isEmpty && showTour && <CollectionTour onDismiss={dismissTour} />}
+
+      {/* Last on the page, so when its own fetch lands nothing below it moves. */}
+      {settledOnce && <AuditionStrip surface="rehearse" />}
     </motion.div>
   );
 }

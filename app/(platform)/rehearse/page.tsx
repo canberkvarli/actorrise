@@ -1,6 +1,5 @@
 "use client";
 
-import { AuditionStrip } from "@/components/auditions/AuditionStrip";
 import { Suspense } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,7 +41,6 @@ export default function RehearsePage() {
         <Suspense fallback={<RehearseFallback />}>
           <RehearseHub />
         </Suspense>
-        <AuditionStrip surface="rehearse" />
       </div>
     </div>
   );
