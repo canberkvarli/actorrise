@@ -90,11 +90,12 @@ export class Engine {
 
   // ── inputs from the actor ──
 
-  begin() {
+  /** Start at `fromLine`'s turn (a resume), or at the top. A beat starts from its first line. */
+  begin(fromLine?: number) {
     if (this.state !== 'ready') return;
     this.startedAt = this.ports.clock.now();
-    this.ports.journal.emit('started', null, 0);
-    this.enter(0);
+    this.ports.journal.emit('started', fromLine ?? null, 0);
+    this.enter(fromLine === undefined ? 0 : this.script.turnOfLine[fromLine] ?? 0);
   }
 
   /** Audio stopped at the clock, mic off; remembers the line resume goes on from. */
@@ -123,10 +124,7 @@ export class Engine {
     this.changed();
   }
 
-  skip() {
-    if (this.state !== 'actor') return;
-    this.finishActorTurn('skipped');
-  }
+  skip() { if (this.state === 'actor') this.finishActorTurn('skipped'); }
 
   back() {
     if (this.state === 'ended' || this.state === 'ready') return;
@@ -142,10 +140,11 @@ export class Engine {
     this.jumpToTurn(t);
   }
 
-  abandon() {
+  /** `reason` lands in the event's payload: stt_failed, left, unmounted... */
+  abandon(reason?: string) {
     if (this.state === 'ended' || this.state === 'ready') return;
     this.silence();
-    this.ports.journal.emit('abandoned', this.snapshot().lineIndex, this.atMs());
+    this.ports.journal.emit('abandoned', this.snapshot().lineIndex, this.atMs(), reason ? { reason } : {});
     this.state = 'ended';
     this.changed();
   }

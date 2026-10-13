@@ -290,6 +290,35 @@ describe('Engine', () => {
     expect(p.scheduled).toEqual([{ line: 0, at: 100 }, { line: 1, at: 100 + 1.0 + BREATH_S }]);
   });
 
+  it('begin(fromLine) enters that line\'s turn directly: no line 0, no jump', () => {
+    engine.begin(4);
+    expect(engine.snapshot()).toMatchObject({ state: 'actor', lineIndex: 4 });
+    const calls = vi.mocked(ports.journal.emit).mock.calls;
+    expect(calls.map(c => [c[0], c[1]])).toEqual([['started', 4], ['line_reached', 4]]);
+    expect(ports.scheduled).toEqual([]);
+  });
+
+  it('begin(fromLine) on a partner line plays its beat from the beat\'s first line', () => {
+    engine.begin(3);
+    expect(engine.snapshot().state).toBe('partner');
+    expect(ports.scheduled).toEqual([{ line: 3, at: 100 }]);
+    expect(vi.mocked(ports.journal.emit).mock.calls[0].slice(0, 2)).toEqual(['started', 3]);
+  });
+
+  it('begin() journals started with no line', () => {
+    engine.begin();
+    expect(ports.journal.emit).toHaveBeenNthCalledWith(1, 'started', null, 0);
+  });
+
+  it('abandon(reason) journals the reason; without one, an empty payload', () => {
+    engine.begin();
+    engine.abandon('stt_failed');
+    expect(ports.journal.emit).toHaveBeenLastCalledWith('abandoned', 0, expect.any(Number), { reason: 'stt_failed' });
+    const e = new Engine(buildScript(LINES, 'ANNA'), ports);
+    e.begin(); e.abandon();
+    expect(ports.journal.emit).toHaveBeenLastCalledWith('abandoned', 0, expect.any(Number), {});
+  });
+
   it('snapshot names the actor', () => {
     expect(engine.snapshot().actor).toBe('ANNA');
   });
