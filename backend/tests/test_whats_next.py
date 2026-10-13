@@ -5,14 +5,13 @@ a filing order, not a working one. The page's own code carried the admission:
 "FUTURE: when recent-rehearsal data lands, default to the most recently
 practiced scene instead."
 
-That data has been there all along. rehearsal_sessions stores status,
-current_line_index, max_lines and started_at, and /scenes/{id}/resumable-session
-already knows how to judge staleness. It was just never asked across all scenes
-at once.
+That data has been there all along. The run journal (ScenePartner v2) knows
+which run is open and the furthest line it reached, and journal.resumable
+already judges one scene. It was just never asked across all scenes at once.
 
 whats_next answers "what is the next real thing to do", as a ladder:
 
-  resume  an unfinished session, with the line it stopped on
+  resume  an unfinished run, with the line it stopped on
   start   no session, but scenes are ready, so the first line of the newest one
   cut     a script arrived but has no scenes yet
   demo    nothing of your own, so the sample play's opening line
@@ -29,21 +28,21 @@ from datetime import datetime, timedelta, timezone
 from app.models.actor import (
     FilmTvReference,
     Play,
-    RehearsalLineDelivery,
-    RehearsalSession,
     Scene,
     SceneFavorite,
     SceneLine,
     UserScript,
 )
+from app.models.rehearsal import RehearsalEvent, RehearsalRun
 from app.models.user import User
 from app.api.scenes import whats_next
 from app.models.organization import Organization
+from app.services.rehearsal import journal
 from tests.dbfixture import memory_db, restore
 
 _TABLES = (
     Organization, User, FilmTvReference, Play, UserScript, Scene, SceneLine,
-    RehearsalSession, RehearsalLineDelivery, SceneFavorite,
+    RehearsalRun, RehearsalEvent, SceneFavorite,
 )
 
 LINES = [
@@ -100,67 +99,101 @@ class Fixture(unittest.TestCase):
         self.db.commit()
         return scene
 
-    def _session(self, scene, status="in_progress", at_line=1, when=None, owner=None):
-        session = RehearsalSession(
-            user_id=(owner or self.user).id, scene_id=scene.id,
-            user_character="THESEUS", ai_character="HIPPOLYTA",
-            status=status, current_line_index=at_line, max_lines=len(LINES),
-            started_at=when or datetime.now(timezone.utc).replace(tzinfo=None),
-        )
-        self.db.add(session)
-        self.db.commit()
-        return session
+    def _run(self, scene, at_line=1, when=None, owner=None, closed=None):
+        """A journal run that reached `at_line`. `closed` is the event that
+        ended it ("completed" or "abandoned"), or None for one still open."""
+        who = owner or self.user
+        run = journal.create_run(self.db, who.id, scene.id, "THESEUS", {"HIPPOLYTA": "ash"})
+        if when is not None:
+            run.started_at = when
+            self.db.commit()
+        events = [{"seq": 0, "type": "started", "line_index": None, "at_ms": 0, "payload": {}},
+                  {"seq": 1, "type": "line_reached", "line_index": at_line, "at_ms": 10, "payload": {}}]
+        if closed:
+            events.append({"seq": 2, "type": closed, "line_index": at_line, "at_ms": 20, "payload": {}})
+        journal.append(self.db, run.id, who.id, events)
+        return run
 
 
 class TheTopRungIsUnfinishedWork(Fixture):
-    def test_an_open_session_wins(self):
+    def test_an_open_run_wins(self):
         scene = self._scene(self._script())
-        self._session(scene, at_line=1)
+        self._run(scene, at_line=1)
 
         nxt = whats_next(self.db, self.user.id)
         self.assertEqual(nxt["rung"], "resume")
         self.assertEqual(nxt["scene"]["id"], scene.id)
+        self.assertNotIn("session_id", nxt)
 
     def test_it_carries_the_line_you_stopped_on(self):
         """Not a progress bar. The actual words, so the screen shows writing."""
         scene = self._scene(self._script())
-        self._session(scene, at_line=1)
+        self._run(scene, at_line=1)
 
         nxt = whats_next(self.db, self.user.id)
         self.assertEqual(nxt["line"]["character"], "THESEUS")
         self.assertIn("More strange than true", nxt["line"]["text"])
+        self.assertEqual(nxt["character"], "THESEUS")
 
     def test_it_reports_where_you_are(self):
         scene = self._scene(self._script())
-        self._session(scene, at_line=2)
+        self._run(scene, at_line=2)
 
         nxt = whats_next(self.db, self.user.id)
+        self.assertEqual(nxt["line_index"], 2)
         self.assertEqual(nxt["progress"], {"current": 2, "total": 4})
 
-    def test_the_most_recent_session_wins(self):
+    def test_the_most_recent_run_wins(self):
         first = self._scene(self._script("Old"), act="Act 1")
         second = self._scene(self._script("New"), act="Act 5")
-        self._session(first, when=datetime(2026, 9, 1))
-        self._session(second, when=datetime(2026, 9, 4))
+        now = datetime.now(timezone.utc)
+        self._run(first, when=now - timedelta(hours=3))
+        self._run(second, when=now - timedelta(hours=1))
 
         self.assertEqual(whats_next(self.db, self.user.id)["scene"]["id"], second.id)
 
-    def test_a_finished_session_is_not_unfinished_work(self):
+    def test_a_closed_newer_run_does_not_hide_an_older_open_one(self):
+        """The journal judges each scene by its latest run. A scene finished
+        an hour ago is done; the one left open before it is still the work."""
+        first = self._scene(self._script("Old"), act="Act 1")
+        second = self._scene(self._script("New"), act="Act 5")
+        now = datetime.now(timezone.utc)
+        self._run(first, when=now - timedelta(hours=3))
+        self._run(second, when=now - timedelta(hours=1), closed="completed")
+
+        nxt = whats_next(self.db, self.user.id)
+        self.assertEqual(nxt["rung"], "resume")
+        self.assertEqual(nxt["scene"]["id"], first.id)
+
+    def test_a_finished_run_is_not_unfinished_work(self):
         scene = self._scene(self._script())
-        self._session(scene, status="completed")
+        self._run(scene, closed="completed")
 
         self.assertEqual(whats_next(self.db, self.user.id)["rung"], "start")
 
-    def test_a_stale_session_is_not_offered(self):
-        """The hourly sweep abandons these. Offering one is offering a ghost."""
+    def test_an_abandoned_run_is_not_unfinished_work(self):
         scene = self._scene(self._script())
-        self._session(scene, when=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=14))
+        self._run(scene, closed="abandoned")
 
         self.assertEqual(whats_next(self.db, self.user.id)["rung"], "start")
 
-    def test_someone_elses_session_is_never_offered(self):
+    def test_a_run_that_never_left_the_first_line_is_not_offered(self):
+        """Nothing to pick up: from the top is the same place."""
         scene = self._scene(self._script())
-        self._session(scene, owner=self.other)
+        self._run(scene, at_line=0)
+
+        self.assertEqual(whats_next(self.db, self.user.id)["rung"], "start")
+
+    def test_a_stale_run_is_not_offered(self):
+        """Past the resume window. Offering one is offering a ghost."""
+        scene = self._scene(self._script())
+        self._run(scene, when=datetime.now(timezone.utc) - timedelta(days=14))
+
+        self.assertEqual(whats_next(self.db, self.user.id)["rung"], "start")
+
+    def test_someone_elses_run_is_never_offered(self):
+        scene = self._scene(self._script())
+        self._run(scene, owner=self.other)
 
         self.assertEqual(whats_next(self.db, self.user.id)["rung"], "start")
 

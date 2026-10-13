@@ -4,12 +4,18 @@ from datetime import date, datetime, time, timedelta
 from typing import Any, Optional
 
 from app.api.admin.stats import require_moderator
+from app.api.rehearsal import schedule_synthesis
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.actor import Play, RehearsalLineDelivery, RehearsalSession, Scene
 from app.models.user import User
 from app.services.admin_filters import test_user_filter
+from app.services.rehearsal import partner_audio
+from app.services.rehearsal.contract import lines_for
+from app.services.rehearsal.voices import voice_by_id
 from app.services.rehearsal_cleanup import TIMED_OUT_STATUS, UNFINISHED_STATUSES
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
 
@@ -432,3 +438,40 @@ def get_session_line_deliveries(
             for l in lines
         ],
     }
+
+
+# ── ScenePartner v2: the partner-line cache ──────────────────────────────────
+
+class Regenerate(BaseModel):
+    scene_id: int
+    line_index: int
+    voice: str
+
+
+@router.post("/rehearsal/audio/regenerate", status_code=202)
+def regenerate_partner_audio(
+    req: Regenerate,
+    background: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, str]:
+    """Throw one cached partner line away and make it again, for every actor.
+
+    The row stores only the hash of what was said, so the caller names the
+    line (scene, index, voice) and the key is rebuilt from the scene's text.
+    202: the row is pending again and a worker has the line."""
+    if voice_by_id(req.voice) is None:
+        raise HTTPException(status_code=422, detail="Unknown voice")
+    scene = db.get(Scene, req.scene_id)
+    if scene is None:
+        raise HTTPException(status_code=404, detail="Scene not found")
+    lines = lines_for(db, scene.id)
+    if not 0 <= req.line_index < len(lines):
+        raise HTTPException(status_code=404, detail="No such line")
+    line = lines[req.line_index]
+    key = partner_audio.audio_key(settings.partner_tts_vendor, req.voice, line.direction, line.text)
+    partner_audio.delete_row(db, key)
+    partner_audio.ensure(db, settings.partner_tts_vendor, req.voice, line.direction, line.text)
+    db.commit()
+    background.add_task(schedule_synthesis, [key], {key: (line.text, line.direction)})
+    return {"key": key}

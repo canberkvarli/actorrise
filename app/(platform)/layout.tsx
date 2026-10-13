@@ -257,7 +257,7 @@ export default function PlatformLayout({
           64/80px offsets the rest of the app measures against are unchanged.
           Shares one dismissal key with the marketing bar: dismiss it anywhere,
           it is gone everywhere. */}
-      <AppLaunchBar />
+      {!isImmersive && <AppLaunchBar />}
 
       {/* Logout transition overlay.
 

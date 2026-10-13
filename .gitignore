@@ -118,6 +118,10 @@ data-gym-cache/
 /outputs/conversion/
 /outputs/marketing/
 
+# The TTS vendor benchmark (backend/scripts/bench_tts.py) writes its sample
+# mp3s here. Regenerable, and never source.
+/outputs/bench_tts/
+
 # Editor swap and backup files. app/.globals.css.swp was committed once from a
 # live Vim session; nothing stopped it.
 *.swp

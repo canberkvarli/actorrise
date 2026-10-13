@@ -53,6 +53,10 @@ class Settings:
 
     # OpenAI (script parsing, scene partner, embeddings)
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
+    elevenlabs_api_key: str | None = os.getenv("ELEVENLABS_API_KEY")
+    # "openai" (gpt-4o-mini-tts) or "elevenlabs". Decided by scripts/bench_tts.py.
+    partner_tts_vendor: str = os.getenv("PARTNER_TTS_VENDOR", "openai")
+    partner_audio_bucket: str = os.getenv("PARTNER_AUDIO_BUCKET", "partner-lines")
 
 
 settings = Settings()

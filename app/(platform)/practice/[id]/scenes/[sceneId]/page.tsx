@@ -5,7 +5,7 @@ import { castPalette, castColorVars } from "@/lib/castColors";
 import { VoiceMark } from "@/components/scenepartner/VoiceMark";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   IconArrowLeft,
   IconPlayerPlay,
@@ -29,8 +29,6 @@ import {
   type CharacterVoices,
 } from "@/lib/scenePrefs";
 import { useOpenAITTS } from "@/hooks/useOpenAITTS";
-import { parseUpgradeError } from "@/lib/upgradeError";
-import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { ScenePreviewSkeleton } from "@/components/practice/ScenePreviewSkeleton";
 
 /**
@@ -117,10 +115,6 @@ export default function ScenePreviewPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<{ who: string; text: string }>({ who: "", text: "" });
   const [savingLine, setSavingLine] = useState(false);
-  const [upgrade, setUpgrade] = useState<{ open: boolean; message: string }>({
-    open: false,
-    message: "",
-  });
 
   const tts = useOpenAITTS({
     onEnd: () => setAuditioning(null),
@@ -226,38 +220,13 @@ export default function ScenePreviewPage() {
     }
   }, [editingId, savingLine, scriptId, sceneId, draft, mutate]);
 
-  const rehearse = useCallback(async () => {
+  /* The rehearse screen opens its own run, holds the Plus gate and asks who
+     you are at the curtain; this page only walks you to the door. */
+  const rehearse = useCallback(() => {
     if (!scene || !mine || starting) return;
     setStarting(true);
-    try {
-      const { data } = await api.post<{ id: number } & Record<string, unknown>>(
-        "/api/scenes/rehearse/start",
-        { scene_id: scene.id, user_character: mine, user_characters: roles },
-      );
-      // The rehearsal page reads both of these to skip a round trip and to use
-      // the voices chosen here rather than its own defaults.
-      try {
-        sessionStorage.setItem(`actorrise_session_${data.id}`, JSON.stringify(data));
-        const withMeta: Record<string, { id: string; label: string; color: string }> = {};
-        for (const [char, vid] of Object.entries(fullVoices)) {
-          const v = voiceById(vid);
-          withMeta[char] = { id: v.id, label: v.label, color: v.color };
-        }
-        sessionStorage.setItem(`actorrise_voice_map_${data.id}`, JSON.stringify(withMeta));
-      } catch {
-        /* quota — rehearsal falls back to fetching and to its own defaults */
-      }
-      const aiVoice = theirs[0] ? fullVoices[theirs[0]] : "coral";
-      router.push(
-        `/scenes/${scene.id}/rehearse?session=${data.id}&script=${scriptId}&voice=${aiVoice}`,
-      );
-    } catch (err: unknown) {
-      setStarting(false);
-      const up = parseUpgradeError(err);
-      if (up) setUpgrade({ open: true, message: up.message });
-      else toast.error(err instanceof Error ? err.message : "Couldn't start that run");
-    }
-  }, [scene, mine, roles, fullVoices, theirs, router, scriptId, starting]);
+    router.push(`/scenes/${scene.id}/rehearse`);
+  }, [scene, mine, router, starting]);
 
   const shell = `theatre-monologue theatre-tokens t-m__body ${theatreFontVars} min-h-screen pb-32`;
   const column = "mx-auto w-full max-w-[880px] px-5 pt-7 sm:px-6 sm:pt-10";
@@ -529,17 +498,6 @@ export default function ScenePreviewPage() {
           </button>
         </div>
       </div>
-
-      <AnimatePresence>
-        {upgrade.open && (
-          <UpgradeModal
-            open={upgrade.open}
-            onOpenChange={(o) => setUpgrade((u) => ({ ...u, open: o }))}
-            feature="ScenePartner"
-            message={upgrade.message}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
