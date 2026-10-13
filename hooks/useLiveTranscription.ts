@@ -55,6 +55,8 @@ export interface LiveTranscription {
 
   /** Open the session. Safe to call more than once; later calls are no-ops. */
   open: () => Promise<void>;
+  /** Tell the transcriber what is coming. Sent when the partner starts, so it is ready when the mic opens. */
+  prime: (keywords: string[]) => void;
   /** The actor's turn starts: clear the transcript and enable the microphone. */
   beginTurn: (hint?: TurnHint) => void;
   /** The actor's turn ends: disable the microphone. */
@@ -250,6 +252,25 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
     return run;
   }, [handleEvent]);
 
+  /* Re-point the transcriber at the words about to be said. The session is
+     already open, so this costs one data-channel message and no round trip —
+     and it is where most of the accuracy comes from, because we know what
+     the actor is about to say and can simply tell it. */
+  const prime = useCallback((keywords: string[]) => {
+    const dc = dcRef.current;
+    if (dc?.readyState !== 'open' || !keywords.length) return;
+    dc.send(JSON.stringify({
+      type: 'session.update',
+      session: {
+        type: 'transcription',
+        audio: { input: { transcription: {
+          model: 'gpt-live-transcribe', delay: 'low', languages: ['en'],
+          keywords: keywords.filter(k => k && !/[<>\r\n]/.test(k)).slice(0, 100).map(k => k.slice(0, 80)),
+        }, turn_detection: null } },
+      },
+    }));
+  }, []);
+
   const beginTurn = useCallback((hint?: TurnHint) => {
     turnTextRef.current = '';
     turnOpenRef.current = true;
@@ -257,39 +278,13 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
     setTurnEnded(false);
     clearQuietTimer();
 
-    /* Re-point the transcriber at the words about to be said. The session is
-       already open, so this costs one data-channel message and no round trip —
-       and it is where most of the accuracy comes from, because we know what
-       the actor is about to say and can simply tell it. */
-    const dc = dcRef.current;
-    if (dc?.readyState === 'open' && hint?.keywords?.length) {
-      dc.send(JSON.stringify({
-        type: 'session.update',
-        session: {
-          type: 'transcription',
-          audio: {
-            input: {
-              transcription: {
-                model: 'gpt-live-transcribe',
-                delay: 'low',
-                languages: ['en'],
-                keywords: hint.keywords
-                  .filter(k => k && !/[<>\r\n]/.test(k))
-                  .slice(0, 100)
-                  .map(k => k.slice(0, 80)),
-              },
-              turn_detection: null,
-            },
-          },
-        },
-      }));
-    }
+    if (hint?.keywords?.length) prime(hint.keywords);
 
     if (trackRef.current) {
       trackRef.current.enabled = true;
       setListening(true);
     }
-  }, []);
+  }, [prime]);
 
   const endTurn = useCallback(() => {
     turnOpenRef.current = false;
@@ -320,6 +315,6 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
 
   return {
     status, error, transcript, turnEnded, listening,
-    open, beginTurn, endTurn, close,
+    open, prime, beginTurn, endTurn, close,
   };
 }
