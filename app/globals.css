@@ -7508,82 +7508,61 @@
    reads as depth, where the same hue at two brightnesses reads as a flat
    wash no matter how far apart you push it.
    ============================================================ */
+/* ScenePartner v2: the sides, and nothing else. See the spec's visual
+   direction. Light is a rehearsal room in daylight; dark is the house at
+   half-light with one lamp on the page. Nothing moves but the script.
+
+   The actor's lines are the darkest thing on the page, so a word not yet
+   heard (--r-soft) sits ABOVE the partner's lines (--r-theirs) in weight of
+   ink, and a heard word goes to full ink and bold. Directions sit back
+   furthest. The colour names are --r-*, not --t-*: `.theatre-tokens` already
+   uses --t-direction for the typewriter face, and this page reads it.
+   Faces are written as one var() each, never var() plus a fallback list (the
+   build drops that whole rule). */
 .theatre-rehearsal {
-  /* --page, --t-paper and --t-paper-2 come from --t-house/--t-sheet now, so
-     the rehearsal sits in the same room as the rest of the product instead of
-     being the one screen with its own palette. Only what is specific to
-     rehearsing is set below. */
-
-  /* Mine to say, and mine to say NOW.
-
-     In LIGHT the live line cannot be marked by being brighter, because the
-     page it sits on is already near-white — my first pass made it 0.99 against
-     a 0.995 sheet, a 1.04x difference, i.e. nothing. So here it is marked by
-     WARMTH: --t-mine-live carries sixteen times the paper's tint and reads as
-     a wash of light falling on the line, which is both visible and the same
-     warm family as everything else rather than a new signal colour. */
-  --t-mine: oklch(0.975 0.028 75);
-  --t-mine-live: oklch(0.96 0.055 80);
-
-  --t-cue-mine: oklch(0.66 0.17 48);
-  --t-cue-theirs: oklch(0.78 0.03 75);
-
-  --t-line-light: oklch(0.85 0.018 78);
-  --t-line-light-2: oklch(0.80 0.02 78);
-
-  --t-muted-light: oklch(0.42 0.018 55);
-  --t-muted-light-2: oklch(0.46 0.02 55);
-  --t-muted-light-3: oklch(0.52 0.02 60);
-  --t-faint: oklch(0.5 0.02 60);
-  --t-faint-2: oklch(0.55 0.02 62);
-  font-family: var(--t-body);
-}
-.dark .theatre-rehearsal {
-  /* The other half of the pair. `.theatre-tokens` keeps --t-paper light in
-     BOTH themes on purpose (its own ink never flips), and says there that a
-     surface wanting a dark card in dark mode must override the paper AND remap
-     the ink together. This block remapped the ink and forgot the paper, so in
-     dark mode the rehearsal drew --t-text cream on a cream card: the partner's
-     lines went invisible, the title went invisible, and --t-mine — a dark
-     brown — painted the actor's own speeches as grey slabs. One missing
-     declaration, six symptoms. Every sibling surface (.dark .theatre-stage,
-     .dark .theatre-collection, .dark .theatre-monologue, .dark
-     .theatre-auditions) already does this; the rehearsal was the only one that
-     did not. */
   --t-paper: var(--t-sheet);
-  --t-paper-2: var(--t-sheet-2);
-
-  --t-gel-ink: var(--t-gel);
-  --t-on-gel-ink: oklch(0.15 0.03 45);
-  /* Mine to say, and mine to say NOW. The old note here argued this should be
-     "barely there on purpose", on the grounds that a visible tint reads as a
-     box. That was true of a box drawn in the same colour as its surroundings;
-     what it produced was a screen where the live speech was 0.035 lightness
-     clear of everything else, i.e. nothing. The live line is the one thing
-     the actor is doing, so it is the brightest thing on the page. */
-  --t-mine: oklch(0.285 0.026 76);
-  --t-mine-live: oklch(0.365 0.040 78);
-
-  --t-cue-mine: oklch(0.74 0.17 48);
-  --t-cue-theirs: oklch(0.46 0.028 78);
-
-  --t-text: oklch(0.95 0.02 85);
-  --t-text-soft: oklch(0.93 0.02 85);
-  --t-muted-dark: oklch(0.75 0.02 62);
-  --t-muted-dark-2: oklch(0.68 0.02 62);
-  --t-faint: oklch(0.58 0.02 60);
-
-  --t-line-light: oklch(0.40 0.024 78);
-  --t-line-light-2: oklch(0.46 0.024 78);
-
-  --t-muted-light: oklch(0.72 0.02 62);
-  --t-muted-light-2: oklch(0.77 0.02 62);
-  --t-muted-light-3: oklch(0.82 0.02 70);
-  --t-faint-2: oklch(0.62 0.02 62);
-
-  --t-on-text: oklch(0.15 0.03 45);
-  --t-hard-shadow: oklch(0.07 0.01 45);
+  --t-ink: oklch(0.16 0.01 45);
+  --r-soft: oklch(0.44 0.012 50);       /* a word of mine not yet heard */
+  --r-theirs: oklch(0.54 0.018 60);     /* the partner's lines */
+  --r-direction: oklch(0.6 0.015 60);
+  --r-pool: transparent;                /* the lamp; only in dark */
+  --r-script-size: 1.125rem;
+  --r-script-lead: 1.6;
+  background: var(--t-paper);
+  color: var(--t-ink);
+  font-family: var(--t-body);
+  min-height: 100dvh;
 }
+@media (min-width: 640px) { .theatre-rehearsal { --r-script-size: 1.1875rem; } }
+
+.dark .theatre-rehearsal {
+  /* A dark surface overrides the paper AND the ink together. */
+  --t-paper: var(--t-house);
+  --t-ink: oklch(0.95 0.02 85);
+  --r-soft: oklch(0.76 0.02 80);
+  --r-theirs: oklch(0.64 0.02 78);
+  --r-direction: oklch(0.56 0.02 78);
+  --r-pool: radial-gradient(60% 45% at 50% 42%, oklch(0.27 0.03 75) 0%, oklch(0.2 0.025 72) 55%, var(--t-house) 100%);
+  background: var(--r-pool), var(--t-house);
+}
+
+.r-script { font-family: var(--t-direction); font-size: var(--r-script-size); line-height: var(--r-script-lead); }
+.r-chrome { font-family: var(--t-body); }
+.r-title { font-family: var(--font-serif); }
+
+.r-word { color: var(--r-soft); transition: color 120ms ease-out, font-weight 120ms ease-out; }
+.r-word[data-heard="true"] { color: var(--t-ink); font-weight: 700; }
+.r-line--theirs { color: var(--r-theirs); }
+.r-line--mine { color: var(--t-ink); }
+.r-direction { color: var(--r-direction); font-style: italic; }
+.r-cue { color: var(--r-direction); letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.8em; }
+.r-line--mine .r-cue { color: var(--r-soft); }
+.r-soft { color: var(--r-soft); }
+
+.r-begin { color: var(--r-soft); opacity: 0.6; transition: color 200ms ease-out, opacity 200ms ease-out; }
+.r-begin[data-ready="true"] { color: var(--t-ink); opacity: 1; }
+
+.r-dim { opacity: 0.55; transition: opacity 180ms ease-out; }
 /* Controls do not inherit a face from the UA sheet; without this every button
    in the room keeps the app's Montserrat while the type around it moves. */
 .theatre-rehearsal button,
