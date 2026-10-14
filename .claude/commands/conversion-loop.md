@@ -161,7 +161,21 @@ Inbox: <n> replies, <n> opt-outs filed, <n> bounces filed, <n> drafts waiting fo
 Moved: <one line per thing that moved, with the number, or "nothing">
 
 Broken: <what failed, or "nothing">
+
+Best move today: <one line: the biggest leak and the one action for it; and whether yesterday's move worked>
 ```
+
+**Best move today** (Canberk, 2026-10-14: "be on the look out for this, everyday, relate,
+compare, find the best move"). Compare the steps from the brief, 14 days: wall or ask shown
+→ CTA clicked → checkout started → trial started (Stripe session `complete`) → paid; plus
+signups → rehearsed, educators and students on comps → paying, app payers. Name the step
+that loses the most people who were closest to paying, and the single action that would
+move it, sized in people. Read yesterday's file in `outputs/conversion/` for yesterday's
+move and say in a clause whether it happened and what changed. One line. The baseline
+(2026-10-14, 16 days): soft asks shown to ~38 people, ~0 clicked; hard walls hit by ~10,
+5 clicked, 4 reached Stripe, 1 trial, 3 abandoned at the card step (two on iOS Safari).
+Stripe sessions: `stripe.checkout.Session.list(created={"gte": <14 days ago>})`, status
+`expired` = abandoned at Stripe.
 
 Five lines on a quiet day. If a trial ends inside 3 days, that is a "Moved" line the day
 before it ends and the day after, with whether it paid.
