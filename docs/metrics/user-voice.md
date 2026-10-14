@@ -85,3 +85,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-10-12, free
 **They said:** "I needed Brecht's monologues for a research project ... I ended up finding what I needed by looking through the original texts ... great work on the site!"
 **Heard as:** content gap (Brecht), research use, not an actor
+
+## 2026-10-14
+
+**Replying to:** hand-picked detective, lawyer and teen pieces, one day into her Ghost Light trial
+**Account:** signed up 2026-09-29, in the app trial
+**They said:** "Thank you so much, without your help, I would have been searching for a very long time!"
+**Heard as:** happy; the value was the hand-picking, not the search
