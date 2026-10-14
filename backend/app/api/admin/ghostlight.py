@@ -30,6 +30,17 @@ MONTHLY_PRICE = 4.99
 ANNUAL_PRICE = 29.99
 
 
+def _in_trial(sub: UserSubscription) -> bool:
+    """Active but in Apple's free trial: nothing paid yet. The webhook sets
+    trial_end on a TRIAL event and clears it on the first NORMAL one."""
+    end = sub.trial_end
+    if end is None:
+        return False
+    if end.tzinfo is None:
+        end = end.replace(tzinfo=timezone.utc)
+    return end > datetime.now(timezone.utc)
+
+
 def _monthly_value(billing_period: str | None) -> float:
     if billing_period == "annual":
         return round(ANNUAL_PRICE / 12, 2)
@@ -91,10 +102,14 @@ def ghostlight_overview(db: Session = Depends(get_db), _=Depends(require_moderat
     )
     rows = []
     active_paid = 0
+    in_trial = 0
     mrr = 0.0
     for sub, user in subs:
         on_tier = monologues is not None and sub.tier_id == monologues.id
-        if on_tier and sub.status == "active":
+        trialing = on_tier and sub.status == "active" and _in_trial(sub)
+        if trialing:
+            in_trial += 1
+        elif on_tier and sub.status == "active":
             active_paid += 1
             mrr += _monthly_value(sub.billing_period)
         rows.append(
@@ -103,7 +118,7 @@ def ghostlight_overview(db: Session = Depends(get_db), _=Depends(require_moderat
                 "email": user.email,
                 "name": user.name or "",
                 "tier": "monologues" if on_tier else "free",
-                "status": sub.status,
+                "status": "trial" if trialing else sub.status,
                 "billing_period": sub.billing_period or "",
                 "cancel_at_period_end": bool(sub.cancel_at_period_end),
                 "current_period_end": sub.current_period_end.isoformat() if sub.current_period_end else None,
@@ -154,6 +169,7 @@ def ghostlight_overview(db: Session = Depends(get_db), _=Depends(require_moderat
         "store": _store_section(db),
         "money": {
             "active_paid": active_paid,
+            "in_trial": in_trial,
             "cancelling": sum(1 for r in rows if r["cancel_at_period_end"] and r["status"] == "active"),
             "past_due": sum(1 for r in rows if r["status"] == "past_due"),
             "expired": sum(1 for r in rows if r["status"] == "expired"),
@@ -182,6 +198,8 @@ def app_revenue(db: Session = Depends(get_db), _=Depends(require_moderator)):
     for sub in subs:
         if not (monologues and sub.tier_id == monologues.id and sub.status == "active"):
             continue
+        if _in_trial(sub):
+            continue  # a free week is not money
         paying += 1
         if sub.billing_period == "annual":
             amortised += ANNUAL_PRICE / 12

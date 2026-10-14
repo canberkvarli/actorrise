@@ -1041,11 +1041,21 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
         sub.status = "active"
         sub.cancel_at_period_end = False
         sub.canceled_at = None
-        period = event.get("period_type")
-        sub.billing_period = "annual" if event.get("expiration_at_ms") and period == "NORMAL" else sub.billing_period
+        # The plan comes from the product, not from whether it is a trial: an
+        # annual product in its free week is still the annual plan. Until
+        # 2026-10-14 a trial on the annual product was recorded as monthly.
+        product = (event.get("product_id") or "").lower()
+        if "annual" in product or "year" in product:
+            sub.billing_period = "annual"
+        elif "month" in product:
+            sub.billing_period = "monthly"
         exp_ms = event.get("expiration_at_ms")
         if exp_ms:
             sub.current_period_end = datetime.utcfromtimestamp(int(exp_ms) / 1000)
+        # A trial is active but unpaid. trial_end marks it so the admin money
+        # figures can leave it out (they counted two trials as payers on
+        # 2026-10-14); the first NORMAL renewal clears it.
+        sub.trial_end = sub.current_period_end if event.get("period_type") == "TRIAL" else None
         db.commit()
         logger.info("RevenueCat %s → granted Monologues to user %s", event_type, user.id)
         if event.get("period_type") == "TRIAL":
