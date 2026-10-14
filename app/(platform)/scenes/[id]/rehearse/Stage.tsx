@@ -11,6 +11,8 @@ interface Props {
   lines: RehearsalLine[]; actor: string; snapshot: Snapshot | null; paused: boolean;
   /** Start the run at this line. Absent while it cannot jump (not begun, or over). */
   onJump?: (line: number) => void;
+  /** The run starts by itself and is not there yet: the first line's light glows while it gets ready. */
+  warming?: boolean;
 }
 
 /** Fraction of the viewport height where the live word is held: the middle of the pool of light. */
@@ -35,7 +37,7 @@ const NO_WORDS = new Set<number>();
  * Scrolling by hand to find a line is left alone for a few seconds, then the
  * script follows the run again on its next move.
  */
-export function Stage({ lines, actor, snapshot, paused, onJump }: Props) {
+export function Stage({ lines, actor, snapshot, paused, onJump, warming = false }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const motion = useRef<AnimationPlaybackControls | null>(null);
   const placed = useRef(false);
@@ -93,12 +95,14 @@ export function Stage({ lines, actor, snapshot, paused, onJump }: Props) {
         onClick={onClick} onKeyDown={onKey}>
         {lines.map(line => {
           const mine = sameCharacter(line.character, actor);
-          const live = snapshot?.lineIndex === line.index && snapshot.state !== 'ready';
+          const ready = !snapshot || snapshot.state === 'ready';
+          const live = line.index === current && (!ready || warming);
           const when: When = live ? 'live' : snapshot && snapshot.state !== 'ready' && line.index < current ? 'past' : 'next';
           const heard = !mine ? undefined
             : live && snapshot ? snapshot.read.matched
             : snapshot?.heard.get(line.index) ?? NO_WORDS;
-          const speaking = live ? (snapshot?.state === 'actor' ? 'listening' : snapshot?.state === 'partner' ? 'sounding' : 'held') : undefined;
+          const speaking = !live ? undefined : ready ? 'warming'
+            : snapshot?.state === 'actor' ? 'listening' : snapshot?.state === 'partner' ? 'sounding' : 'held';
           return <Line key={line.index} line={line} mine={mine} when={when} heard={heard} speaking={speaking}
             jumpable={Boolean(onJump) && !live} cueStyle={cues.get(line.character)} />;
         })}

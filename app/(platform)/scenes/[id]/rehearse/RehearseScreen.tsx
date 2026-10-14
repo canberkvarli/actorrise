@@ -124,11 +124,11 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   return (
     <div ref={rootRef} className="relative h-dvh overflow-hidden">
       <Stage lines={payload.lines} actor={actor} snapshot={snapshot}
-        paused={state === 'paused'} onJump={running ? jumpTo : undefined} />
+        paused={state === 'paused'} onJump={running ? jumpTo : undefined} warming={straight && !error} />
       <TopBar title={payload.scene.title} lines={payload.lines} actor={l => sameCharacter(l.character, actor)}
         current={current} started={state !== 'ready'} onLeave={onLeave} />
       {!ended && <Dock snapshot={snapshot} partner={partner} onToggle={toggle} onSkip={skip} onBack={back}
-        onRestart={() => jumpTo(0)} />}
+        onRestart={() => jumpTo(0)} getting={straight && !canBegin && !error} />}
       {waitingTap && !error && (
         <button type="button" className="fixed inset-0 z-40 block w-full cursor-default" onClick={begin}>
           <motion.span className="r-chrome r-soft absolute inset-x-0 top-[40dvh] text-center text-base"
