@@ -6,8 +6,8 @@ import { displayRuns } from '@/lib/rehearsal/display-words';
 
 /** Where the line sits against the run: already said, being said now, still to come. */
 export type When = 'past' | 'live' | 'next';
-/** On the live line, who has the floor: the partner sounding, the mic listening, neither (paused), or the run still getting ready. */
-export type Speaking = 'sounding' | 'listening' | 'held' | 'warming';
+/** On the live line, who has the floor: the partner sounding, the mic listening, or neither (paused). */
+export type Speaking = 'sounding' | 'listening' | 'held';
 
 interface Props {
   line: RehearsalLine; mine: boolean; when: When;

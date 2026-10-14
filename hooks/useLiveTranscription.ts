@@ -151,25 +151,6 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
-  /* The keywords last asked for. A run that opens on a partner line no longer
-     waits for this session (lib/rehearsal/prepare canBegin), so `prime` can
-     come before the events channel is open; it is kept here and sent when the
-     channel opens. */
-  const wantedKeywordsRef = useRef<string[] | null>(null);
-  const sendKeywords = useCallback((dc: RTCDataChannel, keywords: string[]) => {
-    // Tagged with our event_id: a refused keyword list is not a dropped session.
-    try { sendOwn(dc, {
-      type: 'session.update',
-      session: {
-        type: 'transcription',
-        audio: { input: { transcription: {
-          model: 'gpt-live-transcribe', delay: 'low', languages: ['en'],
-          keywords: keywords.filter(k => k && !/[<>\r\n]/.test(k)).slice(0, 100).map(k => k.slice(0, 80)),
-        }, turn_detection: null } },
-      },
-    }); } catch { /* the channel is closing; its close handler says so */ }
-  }, []);
-
   const clearQuietTimer = () => {
     if (quietTimerRef.current) {
       clearTimeout(quietTimerRef.current);
@@ -277,10 +258,6 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
 
         const dc = pc.createDataChannel('oai-events');
         dc.addEventListener('message', (e: MessageEvent) => handleEvent(e.data));
-        dc.addEventListener('open', () => {
-          const k = wantedKeywordsRef.current;
-          if (k && dcRef.current === dc) sendKeywords(dc, k);
-        });
         dcRef.current = dc;
 
         const offer = await pc.createOffer();
@@ -312,8 +289,6 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
 
         pcRef.current = pc;
         setStatus('ready');
-        // The actor's turn came before the session did: listen from now.
-        if (turnOpenRef.current) { track.enabled = true; setListening(true); }
       } catch (err: unknown) {
         setStatus('error');
         setError(err instanceof Error ? err.message : 'Could not start live transcription');
@@ -328,18 +303,27 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
 
     openingRef.current = run;
     return run;
-  }, [handleEvent, sendKeywords]);
+  }, [handleEvent]);
 
   /* Re-point the transcriber at the words about to be said. The session is
      already open, so this costs one data-channel message and no round trip —
      and it is where most of the accuracy comes from, because we know what
      the actor is about to say and can simply tell it. */
   const prime = useCallback((keywords: string[]) => {
-    if (!keywords.length) return;
-    wantedKeywordsRef.current = keywords;
     const dc = dcRef.current;
-    if (dc?.readyState === 'open') sendKeywords(dc, keywords); // else sent as the channel opens
-  }, [sendKeywords]);
+    if (dc?.readyState !== 'open' || !keywords.length) return;
+    // Tagged with our event_id: a refused keyword list is not a dropped session.
+    try { sendOwn(dc, {
+      type: 'session.update',
+      session: {
+        type: 'transcription',
+        audio: { input: { transcription: {
+          model: 'gpt-live-transcribe', delay: 'low', languages: ['en'],
+          keywords: keywords.filter(k => k && !/[<>\r\n]/.test(k)).slice(0, 100).map(k => k.slice(0, 80)),
+        }, turn_detection: null } },
+      },
+    }); } catch { /* the channel is closing; its close handler says so */ }
+  }, []);
 
   const beginTurn = useCallback((hint?: TurnHint) => {
     itemsRef.current.endTurn(); // anything left from a turn not ended is retired too

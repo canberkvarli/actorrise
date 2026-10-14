@@ -25,12 +25,6 @@ describe('canBegin', () => {
     expect(canBegin({ line1: true, stt: false, mic: true, error: null })).toBe(false);
     expect(canBegin({ line1: true, stt: true, mic: true, error: 'x' })).toBe(false);
   });
-
-  it('a run that opens on a partner line does not wait for the transcriber', () => {
-    expect(canBegin({ line1: true, stt: false, mic: false, error: null, partnerFirst: true })).toBe(true);
-    expect(canBegin({ line1: false, stt: false, mic: false, error: null, partnerFirst: true })).toBe(false);
-    expect(canBegin({ line1: true, stt: false, mic: false, error: 'x', partnerFirst: true })).toBe(false);
-  });
 });
 
 describe('firstNeededLine', () => {
