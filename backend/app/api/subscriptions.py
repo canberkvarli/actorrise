@@ -385,6 +385,18 @@ async def create_checkout_session(
             "metadata": subscription_metadata,
         }
         create_params["payment_method_collection"] = "always"
+        # The terms, said once, above the button. Three of the four people who
+        # reached this page between 2026-09-28 and 10-12 left at the card form;
+        # a surprise charge is what people fear there, and a charge nobody saw
+        # coming comes back as a dispute.
+        create_params["custom_text"] = {
+            "submit": {
+                "message": (
+                    f"Free for {trial_period_days} days. Cancel any time from your "
+                    "account before then and you pay nothing."
+                )
+            }
+        }
     else:
         create_params["subscription_data"] = {"metadata": subscription_metadata}
 

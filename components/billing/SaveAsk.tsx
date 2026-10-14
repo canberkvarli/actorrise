@@ -22,7 +22,20 @@ const SAVES_WORTH_ASKING_AT = [3, 4];
  * already fetches and fires only on a count that went UP while the page was
  * open: arriving with three pieces saved is not the same as saving a third.
  */
+/**
+ * Off since 2026-10-14. In the 16 days to then the soft asks (this one and
+ * the reads meter's trial link) were shown to about 38 people and clicked by
+ * none, while the hard walls were clicked by half the people who hit them.
+ * The walls carry the message now. Flip to true to bring the ask back.
+ */
+const SAVE_ASK_ON = false;
+
 export function SaveAsk() {
+  if (!SAVE_ASK_ON) return null;
+  return <SaveAskWatcher />;
+}
+
+function SaveAskWatcher() {
   const { count, isLoading } = useBookmarkCount();
   const pathname = usePathname();
   const previous = useRef<number | null>(null);

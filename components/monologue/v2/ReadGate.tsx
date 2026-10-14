@@ -8,6 +8,7 @@ import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
 import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
+import { ClassRoute } from "@/components/billing/ClassRoute";
 
 /**
  * The end of the free reads, laid over the text that stops early.
@@ -96,6 +97,7 @@ export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
           Card on file, cancel before it renews.{" "}
           <EarnSecondWeek />
         </p>
+        <ClassRoute className="m-0 mt-1.5 text-[12px]" style={{ color: "var(--t-faint)" }} />
       </div>
     </div>
   );

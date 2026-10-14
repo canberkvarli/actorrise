@@ -9,6 +9,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
 import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
 import { cap } from "@/lib/trial";
+import { ClassRoute } from "@/components/billing/ClassRoute";
 
 interface MonologuePaywallModalProps {
   open: boolean;
@@ -110,6 +111,7 @@ export function MonologuePaywallModal({
           lineClassName="m-0 mt-3 text-center text-[12px]"
           lineStyle={{ color: "var(--t-muted-dark-2)" }}
         />
+        <ClassRoute className="m-0 mt-1.5 text-center text-[12px]" style={{ color: "var(--t-muted-dark-2)" }} />
       </DialogContent>
     </Dialog>
   );

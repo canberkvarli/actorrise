@@ -7,6 +7,7 @@ import { useTrialWords } from "@/hooks/useTrialWords";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
 import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
+import { ClassRoute } from "@/components/billing/ClassRoute";
 
 interface MonologueWallProps {
   /** Where the wall fired, for begin_checkout attribution. */
@@ -82,6 +83,7 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
         Card on file, cancel before it renews.{" "}
         <EarnSecondWeek />
       </p>
+      <ClassRoute className="t-wall__body" style={{ marginTop: 6, fontSize: 12 }} />
     </div>
   );
 }
