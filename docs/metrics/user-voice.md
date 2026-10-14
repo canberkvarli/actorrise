@@ -71,3 +71,17 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-10-12, 1 saved, 4 read this month, free
 **They said:** "There's no specific audition or a self tape with a deadline that I'm looking these kinds of monologues for. I just wanted to expend my repertoire and have some tapes prepared for future opportunities. I did like Jack's monologue from 101 breakups and even added it to my options. Now I'm trying to find more monologues that would fill some styles that are missing on my list (such as classical comic, etc.)"
 **Heard as:** repertoire builder, not a deadline; wants pieces by style to fill a list. A "browse by style for my book" use the product does not offer as such.
+
+## 2026-10-14
+
+**Replying to:** a thread of hand-picked recommendations, after the free reads ran out
+**Account:** signed up 2026-09-29, 6 saved, free on web; started the Ghost Light app trial 2026-10-13
+**They said:** "I finally signed up for the trial period and read the monologues you sent me. I've chosen "10 things I hate about you" and "She said". I hope to try to break them down and record them. I'd also like to ask if you could recommend a monologue in the detective genre? A role as a detective or a lawyer or perhaps the action genre. And also a role for a teenager aged 17 to 19."
+**Heard as:** happy; the hand-picked list converted to a trial (in the app, not the web). Wants pieces by genre and by occupation, which search does not do.
+
+## 2026-10-14
+
+**Replying to:** a personal note about Brecht searches
+**Account:** signed up 2026-10-12, free
+**They said:** "I needed Brecht's monologues for a research project ... I ended up finding what I needed by looking through the original texts ... great work on the site!"
+**Heard as:** content gap (Brecht), research use, not an actor
