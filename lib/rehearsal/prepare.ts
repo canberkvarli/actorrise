@@ -5,12 +5,20 @@
 import { type ScenePayload, sameCharacter } from './contract';
 import type { Script } from './script';
 
-/** What the Curtain waits on. Begin needs `line1 && stt && !error`; `mic` is shown, not required. */
+/**
+ * What Begin waits on: `line1`, no `error`, and `stt` unless the run opens on a
+ * partner line (`partnerFirst`). Then the transcriber has that line's length to
+ * come up, and waiting for it was a second of silence before the first word
+ * (useLiveTranscription opens the mic late if the actor's turn beats it). `mic`
+ * is shown, not required.
+ */
 export interface Readiness {
   /** The first partner line the run will play is decoded, or the actor speaks first. */
   line1: boolean;
   /** The live transcription session is open. */
   stt: boolean;
+  /** The run opens on a partner line, so it need not wait for `stt`. */
+  partnerFirst?: boolean;
   /** A microphone stream was obtained. */
   mic: boolean;
   /** One plain sentence (see `plainError`), or the Plus gate's own message. */
@@ -19,7 +27,7 @@ export interface Readiness {
   upgradeUrl?: string | null;
 }
 
-export const canBegin = (r: Readiness) => r.line1 && r.stt && !r.error;
+export const canBegin = (r: Readiness) => r.line1 && (r.stt || Boolean(r.partnerFirst)) && !r.error;
 
 /**
  * The partner line that must be decoded before Begin: the first line of the

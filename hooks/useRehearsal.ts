@@ -123,7 +123,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     if (streamRef.current) setBase(b => ({ ...b, mic: true }));
     return streamRef.current;
   }, [prewarmStream, streamRef]);
-  const { open, prime, beginTurn, endTurn, status } = useLiveTranscription({
+  const { open, close, prime, beginTurn, endTurn, status } = useLiveTranscription({
     getStream,
     keywords: payload.characters,
     onTranscript: t => { if (t) timed(() => engineRef.current?.delta(t)); },
@@ -143,6 +143,10 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     preparedRef.current = true;
     let run: Opened;
     let resumeLine: number | null = opts?.resumeLine ?? null;
+    // The live session takes about a second to come up (a token, the mic, a
+    // WebRTC handshake with OpenAI). It does not depend on the run, so it
+    // opens alongside the request for one instead of after it.
+    void open();
     try {
       if (opts?.resumeRunId !== undefined) {
         const picked = (await api.post<ResumedRun>(`/api/rehearsal/runs/${opts.resumeRunId}/resume`)).data;
@@ -157,11 +161,13 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     } catch (e) {
       preparedRef.current = false;
       // The Plus gate or the meter is an answer, not a breakage: its message goes on the Curtain with the plans link.
+      close(); // no run, no session to pay for
       const why = runFailure(e);
       if (why.kind === 'gate') { setGated(true); setBase(b => ({ ...b, error: why.message, upgradeUrl: why.upgradeUrl })); return; }
       throw e;
     }
     if (run.scene_id !== payload.scene.id) {
+      close();
       fail(plainError('other')); // not the guided scene
       // The run the server opened has no page: close it, and let a later prepare open another.
       void api.post(`/api/rehearsal/runs/${run.run_id}/events`, { events: [
@@ -170,7 +176,6 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
       return;
     }
 
-    void open();
     const player = (playerRef.current ??= new AudioPlayer());
     const loader = (loaderRef.current ??= new LineLoader(player));
     const journal = (journalRef.current = new Journal(transportFor(run.run_id, tokenRef)));
@@ -205,7 +210,8 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     if (process.env.NODE_ENV !== 'production') (window as Window & { __rehearsal?: Engine }).__rehearsal = engine;
     publish();
 
-    if (first === null) setBase(b => ({ ...b, line1: true }));
+    // A partner line first: Begin waits on its audio, not on the transcriber (prepare canBegin).
+    setBase(b => ({ ...b, line1: b.line1 || first === null, partnerFirst: first !== null }));
     const failed = (l: number, why: string) => { failedRef.current.set(l, why); follow(); };
     loader.onReady = l => {
       engine.audioReady(l);
@@ -224,7 +230,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     const head = slots.find(s => s.lineIndex === first);
     if (head) await set(head);
     await Promise.all(slots.filter(s => s !== head).map(set));
-  }, [payload, open, prime, beginTurn, endTurn, publish, fail]);
+  }, [payload, open, close, prime, beginTurn, endTurn, publish, fail]);
 
   const begin = useCallback(() => {
     const engine = engineRef.current, player = playerRef.current;
