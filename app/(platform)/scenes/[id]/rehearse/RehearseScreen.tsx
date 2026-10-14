@@ -124,7 +124,7 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   return (
     <div ref={rootRef} className="relative h-dvh overflow-hidden">
       <Stage lines={payload.lines} actor={actor} snapshot={snapshot}
-        paused={state === 'paused'} onJump={running ? jumpTo : undefined} />
+        paused={state === 'paused'} onJump={running ? jumpTo : undefined} warming={straight && !error} />
       <TopBar title={payload.scene.title} lines={payload.lines} actor={l => sameCharacter(l.character, actor)}
         current={current} started={state !== 'ready'} onLeave={onLeave} />
       {!ended && <Dock snapshot={snapshot} partner={partner} onToggle={toggle} onSkip={skip} onBack={back}
