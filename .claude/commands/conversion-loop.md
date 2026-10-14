@@ -33,6 +33,19 @@ app's readers who signed in with a real address are ordinary actors and may be w
 under the same rules as section 5, but only if the brief lists them there; do not add
 people from section 6 to the five by hand. An anonymous app reader cannot be emailed.
 
+Then check the app's money against RevenueCat itself, which does not depend on the webhook:
+
+```bash
+cd backend && uv run python scripts/revenuecat_report.py
+```
+
+Every app subscription ever, with status (trialing, active, expired) and whether it renews.
+Compare against yesterday's file: a new row, a `trialing` that went `active` (paid) or
+`expired` (lapsed), or a `will_renew` that became `will_not_renew` (they turned off renewal;
+an annual one has already paid for the year) is a "Moved" line. If it disagrees with
+section 6, the webhook missed something: say so under "Broken". If it fails, say so and do
+not read it as zero.
+
 Section 7 is the audition tracker (Canberk, 2026-10-08: "add the auditions tab too"). It is
 moderators only until he opens it up, so the staff row is him trying it and the real-user
 row stays at zero until launch; print both. Read: how many auditions were added this week
