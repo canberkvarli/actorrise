@@ -86,6 +86,13 @@ plus the week's folder. Each writes files there and reports back in under 200 wo
 > one month for educators, students come through their teacher, never promise three months),
 > and the voice rules.
 >
+> 0. Before drafting to any organisation, run
+>    `cd backend && uv run --with openpyxl python scripts/contact_log.py check <address> --org "<org>"`
+>    and search Gmail `in:sent to:<domain>`. A hit on the address, the domain or the
+>    organisation name means someone there has heard from Canberk: no new thread. After
+>    each draft, `scripts/contact_log.py add <address> --kind outreach --org "<org>"
+>    --subject "DRAFT <subject>"` (Canberk, 2026-10-14: no duplicates, and never two people
+>    at the same organisation).
 > 1. Open `ActorRise_Outreach_Tracker.xlsx` read-only
 >    (`uv run --with openpyxl python`). It is the record of everyone already written to. Do
 >    not write to the file. Never contact an address or an organisation that is in it, in

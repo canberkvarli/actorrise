@@ -116,6 +116,26 @@ Do not draft to anyone on `email_do_not_contact`, anyone with `marketing_opt_in`
 anyone who had a lifecycle email in the last 7 days. The brief already filters for all three.
 Check again if more than an hour has passed since it ran.
 
+**Before every draft or send, check the contact log** (Canberk, 2026-10-14: "always track
+the emails we sent, to whom and what; no duplicates, and not two different people at the
+same organization"):
+`cd backend && uv run --with openpyxl python scripts/contact_log.py check <address> --org "<org>"`.
+It reads `outputs/conversion/contacts.csv`, `written.txt`, every `tracker-append.csv` and the outreach
+tracker, and matches the address, the organisation's domain, and the organisation name.
+Also search Gmail `in:sent (to:<address> OR to:<domain>)` for anything it cannot see. A
+hit means: do not open a new thread. Either it is the one chase (below), or it is nothing.
+After every draft or send: `scripts/contact_log.py add <address> --kind <note|educator|
+checkin|chase|reply> --subject "<DRAFT or SENT> <subject>" --org "<org>"`. When Canberk
+sends a draft, the next run sees it in Gmail sent and the log row stays as written.
+
+**Teachers get followed up** (Canberk, 2026-10-14: "teachers tell their students, please
+follow up with them for sure"). Each run: every educator written to 7 or more days ago with
+no reply gets ONE chase draft on the original thread (50 to 80 words, "quick follow-up, no
+rush, first emails land in the wrong folder", the offer in one line, "reply with a yes and
+I'll set it up the same day"). Every educator whose comp ends within 10 days gets one
+check-in draft: the date it ends, "longer if you want it", and the students line. Logged
+like any other draft. Never a second chase.
+
 ## 4. What people said
 
 Append to `docs/metrics/user-voice.md`, newest at the bottom. Create it if it is missing.
