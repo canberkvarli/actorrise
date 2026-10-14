@@ -40,8 +40,6 @@ interface DockProps {
   /** The name on the partner line sounding, with its cast colour. */
   partner: { name: string; style?: CSSProperties } | null;
   onToggle: () => void; onSkip: () => void; onBack: () => void; onRestart: () => void;
-  /** The run starts by itself and its first line is not ready yet. */
-  getting?: boolean;
 }
 
 /**
@@ -50,14 +48,13 @@ interface DockProps {
  * the mic breathing), the partner's name, or Paused, which also offers the
  * top of the scene.
  */
-export function Dock({ snapshot, partner, onToggle, onSkip, onBack, onRestart, getting = false }: DockProps) {
+export function Dock({ snapshot, partner, onToggle, onSkip, onBack, onRestart }: DockProps) {
   const state = snapshot?.state ?? 'ready';
   const paused = state === 'paused';
   const running = state === 'actor' || state === 'partner';
   return (
     <div className="r-dock" data-state={state}>
       <div className="r-dock__status" aria-live="polite">
-        {state === 'ready' && getting && <><span className="r-spin" aria-hidden />Getting ready</>}
         {state === 'actor' && <><span className="r-mic" aria-hidden />Your line</>}
         {state === 'partner' && partner && <span className="r-dock__who" style={partner.style}>{partner.name}</span>}
         {paused && (

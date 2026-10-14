@@ -128,7 +128,13 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
       <TopBar title={payload.scene.title} lines={payload.lines} actor={l => sameCharacter(l.character, actor)}
         current={current} started={state !== 'ready'} onLeave={onLeave} />
       {!ended && <Dock snapshot={snapshot} partner={partner} onToggle={toggle} onSkip={skip} onBack={back}
-        onRestart={() => jumpTo(0)} getting={straight && !canBegin && !error} />}
+        onRestart={() => jumpTo(0)} />}
+      {straight && !canBegin && !error && state === 'ready' && (
+        <div role="status" className="r-getting">
+          <span className="r-spin r-spin--big" aria-hidden />
+          <span>Getting ready</span>
+        </div>
+      )}
       {waitingTap && !error && (
         <button type="button" className="fixed inset-0 z-40 block w-full cursor-default" onClick={begin}>
           <motion.span className="r-chrome r-soft absolute inset-x-0 top-[40dvh] text-center text-base"
