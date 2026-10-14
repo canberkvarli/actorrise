@@ -56,6 +56,8 @@ export interface LiveTranscription {
 
   /** Open the session. Safe to call more than once; later calls are no-ops. */
   open: () => Promise<void>;
+  /** Ask for the session's key now, ahead of open(), so open() does not wait on it. */
+  warm: () => void;
   /** Tell the transcriber what is coming. Sent when the partner starts, so it is ready when the mic opens. */
   prime: (keywords: string[]) => void;
   /** The actor's turn starts: clear the transcript and enable the microphone. */
@@ -115,6 +117,9 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
   const streamRef = useRef<MediaStream | null>(null);
   const quietTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openingRef = useRef<Promise<void> | null>(null);
+  /* The session key, asked for early by warm(). Only the first open() takes it:
+     a key is good for one session. */
+  const secretRef = useRef<Promise<string> | null>(null);
 
   /* The turn's transcript, as a ref as well as state.
      Deltas arrive faster than React re-renders, so appending to the state
@@ -226,6 +231,18 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
     }
   }, [bumpQuietTimer]);
 
+  const askSecret = useCallback(() => api.post<{ client_secret: string }>(
+    '/api/speech/live-session',
+    { prompt: optionsRef.current.prompt ?? '', keywords: optionsRef.current.keywords ?? [] },
+  ).then(r => r.data.client_secret), []);
+
+  const warm = useCallback(() => {
+    if (pcRef.current || openingRef.current || secretRef.current) return;
+    const asked = askSecret();
+    asked.catch(() => { if (secretRef.current === asked) secretRef.current = null; });
+    secretRef.current = asked;
+  }, [askSecret]);
+
   const open = useCallback(async () => {
     if (pcRef.current) return;
     if (openingRef.current) return openingRef.current;
@@ -234,15 +251,14 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
       setStatus('connecting');
       setError(null);
       try {
-        const { data } = await api.post<{ client_secret: string }>(
-          '/api/speech/live-session',
-          {
-            prompt: optionsRef.current.prompt ?? '',
-            keywords: optionsRef.current.keywords ?? [],
-          },
-        );
-
-        const stream = await optionsRef.current.getStream();
+        // The key and the microphone do not wait on each other. A key asked for
+        // early that failed is asked for again here.
+        const early = secretRef.current;
+        secretRef.current = null;
+        const [secret, stream] = await Promise.all([
+          early ? early.catch(() => askSecret()) : askSecret(),
+          optionsRef.current.getStream(),
+        ]);
         if (!stream) throw new Error('No microphone');
         streamRef.current = stream;
         const track = stream.getAudioTracks()[0];
@@ -267,7 +283,7 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
           method: 'POST',
           body: offer.sdp,
           headers: {
-            Authorization: `Bearer ${data.client_secret}`,
+            Authorization: `Bearer ${secret}`,
             'Content-Type': 'application/sdp',
           },
         });
@@ -303,7 +319,7 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
 
     openingRef.current = run;
     return run;
-  }, [handleEvent]);
+  }, [handleEvent, askSecret]);
 
   /* Re-point the transcriber at the words about to be said. The session is
      already open, so this costs one data-channel message and no round trip —
@@ -383,6 +399,6 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
 
   return {
     status, error, transcript, turnEnded, listening,
-    open, prime, beginTurn, endTurn, close,
+    open, warm, prime, beginTurn, endTurn, close,
   };
 }

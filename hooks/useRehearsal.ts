@@ -123,7 +123,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     if (streamRef.current) setBase(b => ({ ...b, mic: true }));
     return streamRef.current;
   }, [prewarmStream, streamRef]);
-  const { open, prime, beginTurn, endTurn, status } = useLiveTranscription({
+  const { open, warm, prime, beginTurn, endTurn, status } = useLiveTranscription({
     getStream,
     keywords: payload.characters,
     onTranscript: t => { if (t) timed(() => engineRef.current?.delta(t)); },
@@ -141,6 +141,10 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
   const prepare = useCallback<Rehearsal['prepare']>(async (character, voices, opts) => {
     if (preparedRef.current) return;
     preparedRef.current = true;
+    // The live session's key is asked for while the run opens, not after it.
+    // It costs nothing until open() connects, and the gate refuses it as it
+    // refuses the run.
+    warm();
     let run: Opened;
     let resumeLine: number | null = opts?.resumeLine ?? null;
     try {
@@ -224,7 +228,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     const head = slots.find(s => s.lineIndex === first);
     if (head) await set(head);
     await Promise.all(slots.filter(s => s !== head).map(set));
-  }, [payload, open, prime, beginTurn, endTurn, publish, fail]);
+  }, [payload, open, warm, prime, beginTurn, endTurn, publish, fail]);
 
   const begin = useCallback(() => {
     const engine = engineRef.current, player = playerRef.current;
