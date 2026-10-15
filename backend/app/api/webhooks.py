@@ -704,6 +704,38 @@ def handle_subscription_updated(
     except Exception as e:
         print(f"Warning: trial_ended not recorded: {e}")
 
+    # Cancelled mid-trial: still trialing, but now set to end instead of
+    # charge. Until 2026-10-15 this was silent until the trial ran out.
+    # The portal sets cancel_at_period_end or cancel_at depending on the API
+    # version, so watch both flip from unset to set.
+    try:
+        prev = previous_attributes or {}
+        still_trialing = stripe_subscription.get("status") == "trialing"
+        flipped = (
+            ("cancel_at_period_end" in prev and not prev["cancel_at_period_end"]
+             and stripe_subscription.get("cancel_at_period_end"))
+            or ("cancel_at" in prev and not prev["cancel_at"] and stripe_subscription.get("cancel_at"))
+        )
+        if still_trialing and flipped:
+            user = db.query(User).filter(User.id == subscription.user_id).first()
+            tier = db.query(PricingTier).filter(PricingTier.id == subscription.tier_id).first()
+            if user:
+                from app.services.email.notifications import send_trial_ended_notification
+
+                threading.Thread(
+                    target=send_trial_ended_notification,
+                    kwargs={
+                        "user_name": user.name or "",
+                        "user_email": user.email,
+                        "tier_display_name": tier.display_name if tier else "Plus",
+                        "outcome": "trial_cancel_requested",
+                        "stripe_status": "trialing, set to cancel",
+                    },
+                    daemon=True,
+                ).start()
+    except Exception as e:
+        print(f"Warning: trial cancel notice not sent: {e}")
+
 
 def handle_trial_will_end(stripe_subscription: dict, db: Session):
     """Stripe's 3-day warning before a trial converts.
@@ -1070,7 +1102,9 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
         sub.cancel_at_period_end = True
         sub.canceled_at = datetime.now()
         db.commit()
-        _rc_notify("app_cancelled")
+        # A trial cancelled before the first charge is a lost payer; a paid
+        # period with renewal off has already paid. Different news.
+        _rc_notify("app_trial_cancelled" if event.get("period_type") == "TRIAL" else "app_cancelled")
 
     elif event_type == "EXPIRATION":
         free_tier = db.query(PricingTier).filter(PricingTier.name == "free").first()

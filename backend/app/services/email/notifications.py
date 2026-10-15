@@ -309,6 +309,14 @@ _TRIAL_OUTCOME_COPY = {
     "app_renewal": ("App: renewed", "Another period paid through the App Store."),
     "app_trial": ("App: trial started", "A free trial in the app. Apple charges when it ends unless they cancel."),
     "app_cancelled": ("App: auto-renew off", "They cancelled in the App Store. Access stays until the period ends."),
+    "app_trial_cancelled": (
+        "App: trial cancelled",
+        "They cancelled the free trial in the App Store, so Apple will not charge them. Access stays until the trial ends.",
+    ),
+    "trial_cancel_requested": (
+        "Trial cancelled early",
+        "They cancelled during the free trial, so the card will not be charged. Access stays until the trial ends.",
+    ),
     "app_expired": ("App: expired", "The subscription lapsed. Back on Free."),
     "app_billing_issue": ("App: billing issue", "Apple could not charge the card. Grace period; a renewal clears it."),
 }
