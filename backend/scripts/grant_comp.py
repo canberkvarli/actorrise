@@ -14,10 +14,13 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+backend_dir = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(backend_dir))
+load_dotenv(backend_dir / ".env")
 
 PRESETS = {
     "educator-month": ("educator", 30),
@@ -38,7 +41,9 @@ def main() -> None:
 
     from app.api.admin.users import AdminGrantRequest, _expires_label, grant_admin_user_membership
     from app.core.database import SessionLocal
+    import app.models  # noqa: F401  registers the mappers users.* points at
     from app.models.billing import PricingTier, UserSubscription
+    from app.models.organization import Organization  # noqa: F401  not in app.models
     from app.models.user import User
     from app.services.email.notifications import send_membership_granted_email
 
