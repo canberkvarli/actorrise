@@ -167,6 +167,17 @@ to collect her class list. So in educator emails, always include the "send me
 your students' emails and I'll do the same for them" line. That line IS the
 student funnel.
 
+CLASS LINKS replace the class list (2026-10-16). Once a teacher has said yes,
+make them a link (`cd backend && uv run python scripts/class_link.py make
+<teacher email> --code <school-firstname> --label <first name> --school <short
+school>`) and send it in the reply: every student who signs up through
+actorrise.com/join/<code> is on the student month by themselves, no addresses
+to collect. A teacher who already has comped Plus gets their link in the
+follow-up or check-in. The FIRST email to a teacher still carries no link: it
+offers Plus and asks for a reply. The Gmail connector wraps URLs, so drafts say
+[LINK] and Canberk pastes the link. `class_link.py list` shows who joined.
+Ticking "student" at signup gives nobody anything, on purpose.
+
 Frame it as a gift, not a discount ("I don't run a discount, I just give it to you free"). This replaces any "reply CURTAIN" language for educator/student contexts. Prefer it over the trial whenever the audience is educators or students.
 
 In the admin, `/admin/users/<id>` → Grant comp membership has one-tap presets for
