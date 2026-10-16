@@ -55,3 +55,21 @@ class ClassLinkJoin(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     outcome = Column(String(16), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), default=_now, nullable=False)
+
+
+class ClassLinkInvite(Base):
+    """An address the teacher already sent, approved before it has an account.
+
+    When an account with this email is created, it joins the link's class by
+    itself (services/class_links.claim_invites), so a teacher who sent a class
+    list does nothing more: no link to pass on. Lowercased on the way in.
+    """
+
+    __tablename__ = "class_link_invites"
+    __table_args__ = (UniqueConstraint("class_link_id", "email", name="uq_class_link_invites_link_email"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    class_link_id = Column(Integer, ForeignKey("class_links.id", ondelete="CASCADE"), nullable=False, index=True)
+    email = Column(String, nullable=False, index=True)
+    claimed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), default=_now, nullable=False)

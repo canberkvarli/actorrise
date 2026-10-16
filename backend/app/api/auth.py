@@ -84,6 +84,16 @@ def attribution_from_request(request: Request | None) -> dict[str, str]:
     return out
 
 
+def _claim_class_invites(db: Session, user: User) -> None:
+    """A teacher's class list approved this address before it had an account."""
+    try:
+        from app.services.class_links import claim_invites
+
+        claim_invites(db, user)
+    except Exception:
+        db.rollback()  # never fail a login over a comp
+
+
 def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -196,6 +206,7 @@ def get_current_user(
                 "signup_completed",
                 {"provider": (token_data.get("app_metadata") or {}).get("provider")},
             )
+            _claim_class_invites(db, user)
     else:
         # An anonymous account that has since upgraded now carries a real email:
         # backfill it (and opt into marketing + a belated welcome).
@@ -219,6 +230,7 @@ def get_current_user(
                     "upgraded_from_anonymous": True,
                 },
             )
+            _claim_class_invites(db, user)
         # Update name if it's in the token and different from stored value
         elif name and user.name != name:
             user.name = name

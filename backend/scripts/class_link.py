@@ -1,6 +1,7 @@
 """Make, list and switch off teachers' class links (app/models/class_link.py).
 
     uv run python scripts/class_link.py make t@school.edu --code nmu-bobby --label Bobby --school NMU
+    uv run python scripts/class_link.py invite nmu-bobby a@nmu.edu b@nmu.edu
     uv run python scripts/class_link.py list
     uv run python scripts/class_link.py off nmu-bobby
 
@@ -34,6 +35,9 @@ def main() -> None:
     mk.add_argument("--org-id", type=int, default=None, help="defaults to the teacher's own organization")
     mk.add_argument("--days", type=int, default=30)
     mk.add_argument("--max-uses", type=int, default=60)
+    inv = sub.add_parser("invite", help="approve a class list ahead of signup")
+    inv.add_argument("code")
+    inv.add_argument("emails", nargs="+")
     sub.add_parser("list")
     off = sub.add_parser("off")
     off.add_argument("code")
@@ -43,7 +47,7 @@ def main() -> None:
 
     import app.models  # noqa: F401  registers the mappers
     from app.core.database import SessionLocal
-    from app.models.class_link import ClassLink, ClassLinkJoin
+    from app.models.class_link import ClassLink, ClassLinkInvite, ClassLinkJoin
     from app.models.organization import Organization  # noqa: F401  not in app.models
     from app.models.user import User
     from app.services.class_links import CODE_RE
@@ -73,6 +77,16 @@ def main() -> None:
         print(f"{SITE}/join/{code}  ({args.days} days, up to {args.max_uses} grants)")
         return
 
+    if args.cmd == "invite":
+        from app.services.class_links import invite
+
+        link = db.query(ClassLink).filter(ClassLink.code == args.code.strip().lower()).first()
+        if link is None:
+            sys.exit(f"{args.code}: no such link")
+        for email, outcome in invite(db, link, args.emails).items():
+            print(f"{email}: {outcome}")
+        return
+
     if args.cmd in ("off", "on"):
         link = db.query(ClassLink).filter(ClassLink.code == args.code.strip().lower()).first()
         if link is None:
@@ -88,6 +102,11 @@ def main() -> None:
         counts: dict[str, int] = {}
         for j in joins:
             counts[j.outcome] = counts.get(j.outcome, 0) + 1
+        waiting = db.query(ClassLinkInvite).filter(
+            ClassLinkInvite.class_link_id == link.id, ClassLinkInvite.claimed_at.is_(None)
+        ).count()
+        if waiting:
+            counts["invited, no account yet"] = waiting
         tally = ", ".join(f"{k} {v}" for k, v in sorted(counts.items())) or "nobody yet"
         state = "on" if link.active else "OFF"
         print(f"{link.code:24} {state:3}  {teacher.email if teacher else '?':28} {tally}")

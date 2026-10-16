@@ -53,6 +53,20 @@ STATEMENTS = [
         """
     ),
     text("CREATE INDEX IF NOT EXISTS ix_class_link_joins_user_id ON class_link_joins (user_id)"),
+    text(
+        """
+        CREATE TABLE IF NOT EXISTS class_link_invites (
+            id SERIAL PRIMARY KEY,
+            class_link_id INTEGER NOT NULL REFERENCES class_links(id) ON DELETE CASCADE,
+            email VARCHAR NOT NULL,
+            claimed_at TIMESTAMP WITH TIME ZONE,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            CONSTRAINT uq_class_link_invites_link_email UNIQUE (class_link_id, email)
+        )
+        """
+    ),
+    text("CREATE INDEX IF NOT EXISTS ix_class_link_invites_email ON class_link_invites (email)"),
+    text("ALTER TABLE class_link_invites ENABLE ROW LEVEL SECURITY"),
     # RLS on, no policies: the API reaches these with the service connection,
     # and anon must not read who is in whose class (rls-lockdown 2026-08-23).
     text("ALTER TABLE class_links ENABLE ROW LEVEL SECURITY"),
@@ -64,7 +78,7 @@ def main() -> None:
     with engine.begin() as conn:
         for stmt in STATEMENTS:
             conn.execute(stmt)
-    print("Done: class_links and class_link_joins exist.")
+    print("Done: class_links, class_link_joins and class_link_invites exist.")
 
 
 if __name__ == "__main__":

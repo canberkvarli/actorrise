@@ -23,7 +23,7 @@ from app.models.community import CommunityEvent
 
 from app.models.admin_seen import AdminSeen
 
-from app.models.class_link import ClassLink, ClassLinkJoin  # noqa: F401
+from app.models.class_link import ClassLink, ClassLinkInvite, ClassLinkJoin  # noqa: F401
 
 from app.models.audition import Audition, AuditionEvent, AuditionPiece, AuditionReminderSend
 

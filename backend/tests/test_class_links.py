@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from unittest import mock
 
 from app.models.billing import AdminAuditLog, PricingTier, UserSubscription
-from app.models.class_link import ClassLink, ClassLinkJoin
+from app.models.class_link import ClassLink, ClassLinkInvite, ClassLinkJoin
 from app.models.organization import Organization
 from app.models.user import User
 from app.services import class_links
@@ -23,7 +23,7 @@ class _SyncThread:
 class ClassLinkJoinTest(unittest.TestCase):
     def setUp(self):
         self.db, self.saved = memory_db(
-            [Organization, User, PricingTier, UserSubscription, AdminAuditLog, ClassLink, ClassLinkJoin]
+            [Organization, User, PricingTier, UserSubscription, AdminAuditLog, ClassLink, ClassLinkJoin, ClassLinkInvite]
         )
         org = Organization(name="Northern Michigan University", kind="school", created_at=datetime.now(timezone.utc))
         self.db.add(org)
@@ -141,6 +141,29 @@ class ClassLinkJoinTest(unittest.TestCase):
     def test_find_link_rejects_junk_codes(self):
         self.assertIsNone(class_links.find_link(self.db, "../etc"))
         self.assertIsNotNone(class_links.find_link(self.db, "NMU-Teach"))
+
+    def test_an_invited_address_is_granted_when_its_account_appears(self):
+        out = class_links.invite(self.db, self.link, ["New@NMU.edu", "new@nmu.edu"])
+        self.assertEqual(out, {"new@nmu.edu": "invited"})
+        self.assertEqual(self.mailed, [])
+        s = self._student("new@nmu.edu")
+        results = class_links.claim_invites(self.db, s)
+        self.assertEqual([r.outcome for r in results], ["granted"])
+        self.assertTrue(self._sub(s).is_active)
+        self.assertEqual(class_links.claim_invites(self.db, s), [])  # claimed once
+
+    def test_inviting_an_existing_account_grants_now(self):
+        s = self._student("have@nmu.edu")
+        self.assertEqual(class_links.invite(self.db, self.link, ["have@nmu.edu"]), {"have@nmu.edu": "granted"})
+        self.assertEqual(self.db.query(ClassLinkInvite).count(), 0)
+
+    def test_a_switched_off_link_does_not_claim(self):
+        class_links.invite(self.db, self.link, ["late@nmu.edu"])
+        self.link.active = False
+        self.db.commit()
+        s = self._student("late@nmu.edu")
+        self.assertEqual(class_links.claim_invites(self.db, s), [])
+        self.assertIsNone(self._sub(s))
 
 
 if __name__ == "__main__":

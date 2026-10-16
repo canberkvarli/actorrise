@@ -23,7 +23,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.billing import PricingTier, UserSubscription
-from app.models.class_link import ClassLink, ClassLinkJoin
+from app.models.class_link import ClassLink, ClassLinkInvite, ClassLinkJoin
 from app.models.user import User
 
 ADMIN_EMAIL = "canberk@actorrise.com"
@@ -107,6 +107,53 @@ def join(db: Session, link: ClassLink, user: User) -> JoinResult:
 
     record_user_event(user.id, "class_link_joined", {"class_link_id": link.id, "outcome": outcome})
     return JoinResult(outcome, _aware(sub.trial_end) if sub else None)
+
+
+def invite(db: Session, link: ClassLink, emails: list[str]) -> dict[str, str]:
+    """Approve a teacher's class list ahead of time. Returns {email: outcome}.
+
+    An address that already has an account joins now; the rest are held as
+    invites and join the moment that account is created (claim_invites).
+    """
+    out: dict[str, str] = {}
+    for raw in emails:
+        email = raw.strip().lower()
+        if "@" not in email or email in out:
+            continue
+        user = db.query(User).filter(User.email.ilike(email)).first()
+        if user is not None:
+            out[email] = join(db, link, user).outcome
+            continue
+        held = (
+            db.query(ClassLinkInvite)
+            .filter(ClassLinkInvite.class_link_id == link.id, ClassLinkInvite.email == email)
+            .first()
+        )
+        if held is None:
+            db.add(ClassLinkInvite(class_link_id=link.id, email=email))
+            db.commit()
+        out[email] = "invited"
+    return out
+
+
+def claim_invites(db: Session, user: User) -> list[JoinResult]:
+    """Join every class that invited this address. Called once, at signup."""
+    email = (user.email or "").strip().lower()
+    if not email or email.endswith("@anon.actorrise.com"):
+        return []
+    held = (
+        db.query(ClassLinkInvite)
+        .filter(ClassLinkInvite.email == email, ClassLinkInvite.claimed_at.is_(None))
+        .all()
+    )
+    results = []
+    for inv in held:
+        link = db.get(ClassLink, inv.class_link_id)
+        inv.claimed_at = datetime.now(timezone.utc)
+        db.commit()
+        if link is not None and link.active:
+            results.append(join(db, link, user))
+    return results
 
 
 def _grant(db: Session, link: ClassLink, user: User) -> None:
