@@ -8,9 +8,11 @@ import { dropClassCode, holdClassCode } from "@/lib/classLink";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 
 /* A comp: the free ticket held at the box office under the teacher's name.
-   The checkout ticket with a tear-off stub (globals.css, .t-ticket--comp). */
+   The checkout ticket with a tear-off stub (globals.css, .t-ticket--comp).
+   The link is read on the server (page.tsx), so the ticket is in the first
+   paint and only the buttons wait for the session. */
 
-type LinkInfo = { teacher: string; school: string | null; days: number; active: boolean };
+export type LinkInfo = { teacher: string; school: string | null; days: number; active: boolean };
 type JoinAnswer = { outcome: string; until: string | null; teacher: string };
 
 const shell = `t-box-office theatre-tokens ${theatreFontVars} container mx-auto max-w-2xl px-4 pb-20 pt-32 md:pt-40`;
@@ -31,14 +33,14 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <div className="t-ticket__row">
       <span className="t-ticket__label">{label}</span>
       <span className="t-ticket__lead" aria-hidden />
-      {children}
+      <span className="t-ticket__val">{children}</span>
     </div>
   );
 }
 
 function Closed({ dir, title }: { dir: string; title: string }) {
   return (
-    <div className={shell}>
+    <div className={`${shell} t-comp-enter`}>
       <p className="t-box-office__dir">{dir}</p>
       <h1 className="t-box-office__title">{title}</h1>
       <div className="t-ticket">
@@ -53,24 +55,28 @@ function Closed({ dir, title }: { dir: string; title: string }) {
   );
 }
 
-export function JoinClass({ code }: { code: string }) {
+const NOTES: Record<string, (until: string | null) => { title: string; body?: string }> = {
+  granted: (u) => ({ title: "You're in.", body: u ? `Plus runs until ${u}.` : undefined }),
+  joined: (u) => ({ title: "You're already in.", body: u ? `Plus runs until ${u}.` : undefined }),
+  already: (u) => ({ title: "You already have Plus.", body: u ? `It runs until ${u}, so nothing changes.` : undefined }),
+  paying: () => ({ title: "You're on a paid plan.", body: "I left it as it is." }),
+  own_link: () => ({ title: "This is your own link.", body: "Students who open it get the comp." }),
+  full: () => ({ title: "The house is full on my end.", body: "Write to me at canberk@actorrise.com and I'll add you by hand." }),
+};
+
+export function JoinClass({ code, info }: { code: string; info: LinkInfo | null }) {
   const { user, loading } = useAuth();
-  const [info, setInfo] = useState<LinkInfo | null>(null);
-  const [missing, setMissing] = useState(false);
   const [joining, setJoining] = useState(false);
   const [answer, setAnswer] = useState<JoinAnswer | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    api
-      .get<LinkInfo>(`/api/class-links/${encodeURIComponent(code)}`)
-      .then((r) => {
-        setInfo(r.data);
-        // Held for after signup, which may leave the site through Google.
-        if (r.data.active) holdClassCode(code);
-      })
-      .catch(() => setMissing(true));
-  }, [code]);
+    // Held for after signup, which may leave the site through Google.
+    if (info?.active) holdClassCode(code);
+  }, [code, info?.active]);
+
+  if (!info) return <Closed dir="(no name on the list.)" title="That link doesn't open anything." />;
+  if (!info.active) return <Closed dir="(the house is closed.)" title="This link is switched off." />;
 
   const join = async () => {
     setJoining(true);
@@ -86,38 +92,18 @@ export function JoinClass({ code }: { code: string }) {
     }
   };
 
-  if (missing) return <Closed dir="(no name on the list.)" title="That link doesn't open anything." />;
-  if (!info) {
-    return (
-      <div className={shell}>
-        <p className="t-box-office__dir">(the box office.)</p>
-        <h1 className="t-box-office__title">One moment.</h1>
-      </div>
-    );
-  }
-  if (!info.active) return <Closed dir="(the house is closed.)" title="This link is switched off." />;
-
   const until = dateLabel(answer?.until ?? null);
-  const admitted = answer && ["granted", "joined", "already"].includes(answer.outcome);
-  const note: { title: string; body?: string } | null = answer
-    ? ({
-        granted: { title: "You're in.", body: until ? `Plus runs until ${until}.` : undefined },
-        joined: { title: "You're already in.", body: until ? `Plus runs until ${until}.` : undefined },
-        already: { title: "You already have Plus.", body: until ? `It runs until ${until}, so nothing changes.` : undefined },
-        paying: { title: "You're on a paid plan.", body: "I left it as it is." },
-        own_link: { title: "This is your own link.", body: "Students who open it get the comp." },
-        full: { title: "The house is full on my end.", body: "Write to me at canberk@actorrise.com and I'll add you by hand." },
-      } as Record<string, { title: string; body?: string }>)[answer.outcome] ?? { title: "Done." }
-    : null;
+  const admitted = !!answer && ["granted", "joined", "already"].includes(answer.outcome);
+  const note = answer ? (NOTES[answer.outcome]?.(until) ?? { title: "Done." }) : null;
 
   return (
     <div className={shell}>
-      <p className="t-box-office__dir">(held at the box office.)</p>
-      <h1 className="t-box-office__title">
+      <p className="t-box-office__dir t-comp-enter">(held at the box office.)</p>
+      <h1 className="t-box-office__title t-comp-enter" style={{ animationDelay: "60ms" }}>
         A seat for <em>{info.teacher}&rsquo;s class.</em>
       </h1>
 
-      <div className="t-ticket t-ticket--comp">
+      <div className="t-ticket t-ticket--comp t-comp-enter" style={{ animationDelay: "140ms" }}>
         <div className="t-comp__stub" aria-hidden>
           <span>Admit one</span>
         </div>
@@ -130,46 +116,41 @@ export function JoinClass({ code }: { code: string }) {
 
           <hr className="t-ticket__rule" />
           <Row label="Class">
-            <span className="t-ticket__val">
-              {info.teacher}
-              {info.school ? ` · ${info.school}` : ""}
-            </span>
+            {info.teacher}
+            {info.school ? ` · ${info.school}` : ""}
           </Row>
-          <Row label="Runs">
-            <span className="t-ticket__val">{until ? `Until ${until}` : runsFor(info.days)}</span>
-          </Row>
-          <Row label="Due today">
-            <span className="t-ticket__total">$0</span>
-          </Row>
+          <Row label="Runs">{until ? `Until ${until}` : runsFor(info.days)}</Row>
 
           {note && (
-            <div className="t-ticket__note">
+            <div className="t-ticket__note t-comp-fade">
               <p className="t-ticket__note-title">{note.title}</p>
               {note.body && <p className="t-ticket__note-body">{note.body}</p>}
             </div>
           )}
           {failed && (
-            <div className="t-ticket__note t-ticket__note--bad">
+            <div className="t-ticket__note t-ticket__note--bad t-comp-fade">
               <p className="t-ticket__note-title">That didn&rsquo;t go through.</p>
               <p className="t-ticket__note-body">Try again, or write to me at canberk@actorrise.com.</p>
             </div>
           )}
 
-          <div className="t-ticket__foot">
+          {/* Holds its height while the session loads, so nothing below moves
+              when the buttons arrive. */}
+          <div className="t-ticket__foot t-comp__foot">
             {answer ? (
-              <Link href="/monologues" className="t-ticket__cta">
+              <Link href="/monologues" className="t-ticket__cta t-comp-fade">
                 Find a monologue
               </Link>
             ) : loading ? null : user ? (
-              <button type="button" onClick={join} disabled={joining} className="t-ticket__cta">
+              <button type="button" onClick={join} disabled={joining} className="t-ticket__cta t-comp-fade">
                 {joining ? "Taking your seat" : "Take your seat"}
               </button>
             ) : (
               <>
-                <Link href="/signup?redirect=/monologues" className="t-ticket__cta">
+                <Link href="/signup?redirect=/monologues" className="t-ticket__cta t-comp-fade">
                   Take your seat
                 </Link>
-                <Link href="/login?redirect=/monologues" className="t-ticket__quiet">
+                <Link href="/login?redirect=/monologues" className="t-ticket__quiet t-comp-fade">
                   I already have an account
                 </Link>
               </>

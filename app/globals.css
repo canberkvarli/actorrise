@@ -1845,8 +1845,39 @@
     transform: rotate(-8deg) scale(1);
   }
 }
+/* The entrance: the line, the title, then the ticket ease up in turn, and the
+   buttons fade in where their space was already held. */
+.t-comp-enter {
+  animation: t-comp-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes t-comp-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.t-comp-fade {
+  animation: t-comp-fade 0.4s ease-out both;
+}
+@keyframes t-comp-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.t-comp__foot {
+  min-height: 48px;
+}
 @media (prefers-reduced-motion: reduce) {
-  .t-comp__stamp {
+  .t-comp__stamp,
+  .t-comp-enter,
+  .t-comp-fade {
     animation: none;
   }
 }
