@@ -1786,6 +1786,89 @@
   border-color: var(--t-text);
 }
 
+/* ── /join/<code>: a comp ────────────────────────────────────────────────
+   A teacher's class link. In a theatre a comp is the free ticket held at the
+   box office under someone's name, which is exactly this, so it is the
+   checkout ticket with a tear-off stub: ADMIT ONE down the side, perforated
+   off the body. Once the student is in, the body takes a stamp. */
+.t-ticket--comp {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  padding: 0;
+  overflow: hidden;
+}
+.t-comp__stub {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1.5px dashed var(--t-line-light);
+  background: color-mix(in oklab, var(--t-gel) 14%, transparent);
+}
+.t-comp__stub span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--t-muted-dark);
+  white-space: nowrap;
+}
+.t-comp__body {
+  position: relative;
+  padding: 26px;
+  min-width: 0;
+}
+.t-comp__stamp {
+  position: absolute;
+  top: 22px;
+  right: 20px;
+  padding: 6px 12px;
+  border: 2px solid var(--t-gel-ink);
+  color: var(--t-gel-ink);
+  font-family: var(--t-direction);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+  animation: t-comp-stamp 0.45s var(--t-spring) both;
+}
+@keyframes t-comp-stamp {
+  from {
+    opacity: 0;
+    transform: rotate(-8deg) scale(1.6);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-8deg) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-comp__stamp {
+    animation: none;
+  }
+}
+/* At phone width the stub turns into a strip across the top. */
+@media (max-width: 480px) {
+  .t-ticket--comp {
+    grid-template-columns: 1fr;
+  }
+  .t-comp__stub {
+    padding: 10px 0;
+    border-right: 0;
+    border-bottom: 1.5px dashed var(--t-line-light);
+  }
+  .t-comp__stub span {
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
+  .t-comp__body {
+    padding: 22px 20px;
+  }
+}
+
 /* The billing switch, said as a stage direction rather than a toggle. */
 .t-switch {
   display: inline-flex;
