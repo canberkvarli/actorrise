@@ -54,6 +54,8 @@ SERVER_EVENT_NAMES = frozenset(
         "audition_assist_made",  # {audition_id, part: read}: an AI helper was made fresh (a saved one served again is not counted)
         "audition_asked",  # {audition_id}: one "ask me" question answered; counts against the monthly allowance
         "audition_reminder_sent",  # {audition_id, moment: prep|eve|after}
+        # A student came in through a teacher's class link (services/class_links).
+        "class_link_joined",  # {class_link_id, outcome: granted|paying|already|full}
     }
 )
 

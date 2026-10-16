@@ -65,6 +65,7 @@ import { useHeaderLight } from "@/components/layout/useHeaderLight";
 import { HouseLightsRow, HouseLightsSwitch } from "@/components/layout/HouseLightsSwitch";
 import { SaveAsk } from "@/components/billing/SaveAsk";
 import { EmailClickBeacon } from "@/components/analytics/EmailClickBeacon";
+import { ClassLinkRedeemer } from "@/components/billing/ClassLinkRedeemer";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -850,6 +851,8 @@ export default function PlatformLayout({
       <SignupTracker />
       <FirstRehearsalGate />
       <SaveAsk />
+      {/* A class code held from /join/<code>, spent once signed in. */}
+      <ClassLinkRedeemer />
       {/* useSearchParams: needs its own boundary or the whole layout leaves
           the static shell. */}
       <Suspense fallback={null}>
