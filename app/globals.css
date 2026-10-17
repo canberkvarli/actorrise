@@ -6271,7 +6271,7 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
   /* The home indicator, once. Everything that has to clear this bar (the
      toaster, the upload banner, the run bar) adds the same env() on top of
      its own offset, so the whole stack still moves together. */
-  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  padding: 10px 10px calc(8px + env(safe-area-inset-bottom, 0px));
   border-radius: 20px 20px 0 0;
   /* Solid. The pill was 92% ink over a blur, and where the blur does not
      paint the page read straight through the labels. */
@@ -6294,13 +6294,13 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
 .t-tabbar__tab {
   flex: 1;
   min-width: 0;
-  min-height: 48px;
+  min-height: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  border-radius: 14px;
+  border-radius: 12px;
   background: transparent;
   color: oklch(0.75 0.02 62);
   font-size: 10px;
