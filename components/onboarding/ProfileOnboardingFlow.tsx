@@ -9,6 +9,9 @@ import api from "@/lib/api";
 import { trackEvent } from "@/lib/events";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { markOnboardingDone } from "@/components/onboarding/useTourTrigger";
+import { fetchGuidedSceneId, startGuidedScene } from "@/lib/guided-start";
+import { GUIDED_ACTOR, GUIDED_LINE_COUNT, GUIDED_PARTNER, titleCase } from "@/lib/guided-scene";
+import { noteOnboardingPicksKept } from "@/lib/onboardingPicks";
 import { Glyph } from "@/components/brand/glyphs";
 import LampSketch from "@/components/onboarding/LampSketch";
 import { clothFor, emblemFor } from "@/components/monologue/PlayCover";
@@ -25,6 +28,7 @@ import {
   buildProfileWrite,
   buildPayoffParams,
   describeAnswers,
+  shouldFetchPicks,
   type OnboardingAnswers,
 } from "@/lib/onboardingFilters";
 
@@ -290,7 +294,12 @@ export default function ProfileOnboardingFlow({
   // being written and the first search has not come back. It used to be a
   // disabled button with a spinner label; it is now the only moment in the
   // product that says out loud what it is doing with the answers.
-  const [phase, setPhase] = useState<"q" | "settling" | "payoff">("q");
+  // "ending" is the new-account close: one line to say, not a list. The
+  // backfill variant (an actor who already has a shelf) keeps the payoff.
+  const [phase, setPhase] = useState<"q" | "settling" | "ending" | "payoff">("q");
+  const guidedIdRef = useRef<number | null>(null);
+  const [answering, setAnswering] = useState(false);
+  const [answerFailed, setAnswerFailed] = useState(false);
   const [picks, setPicks] = useState<Monologue[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -418,6 +427,10 @@ export default function ProfileOnboardingFlow({
     setSubmitting(true);
     setDirection(1);
     setPhase("settling");
+    // The scene id, fetched while the profile writes, so Answer is instant.
+    if (variant === "new") {
+      void fetchGuidedSceneId().then((id) => { guidedIdRef.current = id; }).catch(() => {});
+    }
     try {
       await persist();
     } catch {
@@ -427,13 +440,55 @@ export default function ProfileOnboardingFlow({
       setSubmitting(false);
       return;
     }
-    // The search is run HERE, not inside the payoff, so the whole wait is one
-    // mount of one lamp. Fetching it in the payoff meant the card drew the
-    // lamp for the profile write, unmounted, and drew it again from the first
-    // frame for the search — the same three seconds, played twice.
-    setPicks(await fetchPicks(answers));
-    setPhase("payoff");
-  }, [submitting, persist, answers]);
+    if (variant === "backfill") {
+      // The search is run HERE, not inside the payoff, so the whole wait is one
+      // mount of one lamp. Fetching it in the payoff meant the card drew the
+      // lamp for the profile write, unmounted, and drew it again from the first
+      // frame for the search — the same three seconds, played twice.
+      setPicks(await fetchPicks(answers));
+      setPhase("payoff");
+      return;
+    }
+    // A new account: the picks are a side effect, kept without being shown,
+    // and only when there is a lever to pick by. Skipping casting AND age used
+    // to end on "six pieces for you" that were the top of an unfiltered
+    // search (22 of 170 finishers, Oct 2 to 17). Then the scene.
+    if (shouldFetchPicks(answers)) {
+      const list = await fetchPicks(answers);
+      if (list.length) {
+        keepsInFlight.current = list.map((m) =>
+          api.post(`/api/monologues/${m.id}/favorite`).catch(() => {}),
+        );
+        noteOnboardingPicksKept(list.length);
+        trackEvent("onboarding_picks_kept", { count: list.length });
+      }
+    }
+    trackEvent("onboarding_ending_shown");
+    setPhase("ending");
+    setSubmitting(false);
+  }, [submitting, persist, answers, variant]);
+
+  /** Answer on the ending: the same tap as the hub's invitation. */
+  const answerScene = useCallback(async () => {
+    if (answering) return;
+    setAnswering(true);
+    setAnswerFailed(false);
+    trackEvent("onboarding_ending_answer");
+    try {
+      const route = await startGuidedScene("onboarding", guidedIdRef.current);
+      endFlow();
+      router.push(route);
+    } catch {
+      setAnswerFailed(true);
+      setAnswering(false);
+    }
+  }, [answering, endFlow, router]);
+
+  const skipScene = useCallback(() => {
+    trackEvent("onboarding_ending_skip");
+    endFlow();
+    router.push("/monologues");
+  }, [endFlow, router]);
 
   // "skip" skips THIS question. Until 2026-10-02 it closed the whole card:
   // one tap on the first screen a stranger saw, and all seven questions were
@@ -531,7 +586,7 @@ export default function ProfileOnboardingFlow({
 
   const isQuestion = phase === "q";
   const current = questions[step];
-  const numeral = isQuestion ? NUMERAL[current.key] : phase === "payoff" ? "✦" : undefined;
+  const numeral = isQuestion ? NUMERAL[current.key] : phase === "payoff" || phase === "ending" ? "✦" : undefined;
 
   return (
     <motion.div
@@ -829,7 +884,7 @@ export default function ProfileOnboardingFlow({
                   <CtaPill onClick={() => goTo(1)} disabled={!stepValid}>Continue</CtaPill>
                 ) : (
                   <CtaPill onClick={handleFinishQuestions} disabled={!stepValid || submitting}>
-                    Show me my monologues
+                    {variant === "new" ? "Set my stage" : "Show me my monologues"}
                   </CtaPill>
                 )}
               </div>
@@ -837,6 +892,16 @@ export default function ProfileOnboardingFlow({
           ) : phase === "settling" ? (
             <motion.div key="settling" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={stepTransition}>
               <SettingTheStage />
+            </motion.div>
+          ) : phase === "ending" ? (
+            <motion.div
+              key="ending"
+              initial={{ opacity: 0, x: 28 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -28 }}
+              transition={stepTransition}
+            >
+              <OnboardingEnding onAnswer={answerScene} onSkip={skipScene} answering={answering} failed={answerFailed} />
             </motion.div>
           ) : (
             <motion.div
@@ -940,6 +1005,68 @@ async function fetchPicks(answers: OnboardingAnswers): Promise<Monologue[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * The last beat for a new account: not a list of pieces, one line to say.
+ *
+ * Four in five actors who met "You're late" on the hub after this card went
+ * and searched instead (2026-09-29 to 10-17: 179 saw it, 35 answered, 9
+ * finished). The card had just trained them to think in monologues, then the
+ * hub handed them a scene they had not asked for. So the card ends on the
+ * scene, and the picks it would have shown are already on the shelf; the
+ * win screen says so (SceneWin, `kept`).
+ */
+function OnboardingEnding({
+  onAnswer,
+  onSkip,
+  answering,
+  failed,
+}: {
+  onAnswer: () => void;
+  onSkip: () => void;
+  answering: boolean;
+  failed: boolean;
+}) {
+  const partner = titleCase(GUIDED_PARTNER);
+  const actor = titleCase(GUIDED_ACTOR);
+  return (
+    <div className="px-5 pb-[48px] pt-10 text-center sm:px-7 sm:pb-[60px] sm:pt-12">
+      <p
+        className="text-[13px] italic tracking-[0.06em]"
+        style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}
+      >
+        (before anything.)
+      </p>
+      <h2
+        className="mt-2 font-normal leading-none tracking-[-0.02em]"
+        style={{ fontFamily: "var(--t-display)", fontSize: "clamp(1.9rem, 4.5vw, 2.6rem)" }}
+      >
+        Say <em className="italic" style={{ color: "var(--acc)" }}>one line.</em>
+      </h2>
+      <p className="mx-auto mt-4 max-w-[34ch] text-[15px] leading-relaxed" style={{ color: "var(--t-muted-dark)" }}>
+        {answering
+          ? `${partner} is waiting.`
+          : `I'll read ${partner}. You're ${actor}. ${GUIDED_LINE_COUNT} lines, under a minute.`}
+      </p>
+      <div className="mx-auto mt-7 flex max-w-[280px] justify-center">
+        <CtaPill onClick={onAnswer} disabled={answering}>
+          {answering ? "One moment" : "Answer"}
+        </CtaPill>
+      </div>
+      {failed && (
+        <p role="alert" className="mt-3 text-[13px]" style={{ color: "var(--t-muted-dark)" }}>
+          That didn&apos;t start. Try once more.
+        </p>
+      )}
+      <p
+        className="mt-6 text-[13px]"
+        style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}
+      >
+        <FootLink onClick={onSkip}>skip, take me to the library</FootLink>
+      </p>
+    </div>
+  );
 }
 
 function OnboardingPayoff({

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { SceneWin } from '@/components/rehearse/SceneWin';
+import { takeOnboardingPicksKept } from '@/lib/onboardingPicks';
 import { useTrialOffer } from '@/components/billing/TrialOffer';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTrialWords } from '@/hooks/useTrialWords';
@@ -80,6 +81,9 @@ export function Ending({ scene, guided, onAgain, onLeave }: Props) {
 function GuidedEnd({ onAgain, onLeave }: { onAgain: () => void; onLeave: () => void }) {
   const offer = useTrialOffer('scene_completed', true, GATE_COPY.scene_completed.variant);
   const trial = useTrialWords();
+  /* Read once: the flag is about this sitting, and a second run of the
+     scene should not claim the shelf again. */
+  const [kept] = useState(() => takeOnboardingPicksKept());
   /* The offer takes its slot in an effect, a tick after mount, so its first
      render is always "no ticket". Drawn then, the page came up in its no-offer
      layout and re-laid itself a frame later with the ticket in: the flash at
@@ -94,7 +98,7 @@ function GuidedEnd({ onAgain, onLeave }: { onAgain: () => void; onLeave: () => v
     <motion.div className="r-win fixed inset-0 z-30 overflow-auto"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, ease: 'easeOut' }}>
       <SceneWin offer={offer} trial={trial} onAgain={onAgain} restarting={false}
-        onLeave={onLeave} leaveLabel="back to the room" />
+        onLeave={onLeave} leaveLabel="back to the room" kept={kept} />
     </motion.div>
   );
 }
