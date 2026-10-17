@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { hasSeenTourThisSession } from "@/components/onboarding/TourSpotlight";
+import { hasSeenTourThisSession, markTourSeen } from "@/components/onboarding/TourSpotlight";
+import { isPhoneViewport } from "@/lib/viewport";
 
 /**
  * "Onboarding finished in this tab", set by the first-run card on every exit it
@@ -73,6 +74,13 @@ export function useTourTrigger(
     // answer there is to stay quiet rather than show the tour on every load.
     if ((user as unknown as Record<string, unknown>)[flag] !== false) return;
     if (hasSeenTourThisSession(flag)) return;
+    // A spotlight over a phone screen is chaos: it dims the whole page for a
+    // callout that covers half of it. Phones skip the tour and latch it for
+    // the session so a later desktop resize does not fire it mid-task.
+    if (isPhoneViewport()) {
+      markTourSeen(flag);
+      return;
+    }
 
     // A beat, so the page has laid out and the anchors exist to be measured.
     const t = setTimeout(() => setShow(true), delay);

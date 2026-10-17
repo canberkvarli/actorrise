@@ -29,6 +29,7 @@ from app.models.actor import (Monologue, MonologueBeat, MonologueFavorite,
                               Play)
 from app.models.user import User
 from app.services.search.grounding import query_is_unservable
+from app.services.search.originality import originality_cap
 from app.services.search.query_optimizer import (correct_query_typos,
                                                  is_filter_only_query,
                                                  validate_query)
@@ -444,10 +445,15 @@ async def search_monologues(
         filters['scene'] = scene
     if max_duration:
         filters['max_duration'] = max_duration
-    if max_overdone_score is not None:
-        filters['max_overdone_score'] = max_overdone_score
-    elif exclude_overdone:
-        filters['max_overdone_score'] = 0.3  # Only show "fresh" pieces (0.0 = fresh, 1.0 = extremely overdone)
+    # Originality is a Plus filter: the cap is dropped for free accounts, so a
+    # typed URL cannot do what the sheet refuses (see originality_cap).
+    sub = current_user.subscription
+    cap = originality_cap(
+        max_overdone_score, exclude_overdone,
+        is_paid=bool(sub and sub.is_active and sub.is_paid_tier),
+    )
+    if cap is not None:
+        filters['max_overdone_score'] = cap
     if source_type:
         parts = [s.strip() for s in source_type.split(",") if s.strip()]
         filters['source_type'] = parts if len(parts) > 1 else parts[0]

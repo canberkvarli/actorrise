@@ -74,7 +74,6 @@ export function IntroLoop({ onExpand }: { onExpand: (step: number) => void }) {
         </button>
       </div>
       <div className={s.inlineCopy}>
-        <p className="aud-eyebrow">How it works</p>
         <p key={`t${i}`} className={s.inlineTitle}>{slide.title}</p>
         <p key={`b${i}`} className={s.inlineBody}>{slide.body}</p>
         <p className="sr-only">{slide.picture}</p>

@@ -6,6 +6,7 @@ import { SearchTour } from "@/components/onboarding/SearchTour";
 import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { MonologueWall } from "@/components/monologue/MonologueWall";
+import { ReadWallModal } from "@/components/monologue/ReadWallModal";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/events";
@@ -2106,22 +2107,25 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             the caption's width came straight off the chips — the last one
             ("Under 2 min") was cut mid-word at every desktop size, which
             reads as a rendering fault rather than a scroll affordance. */}
-        <div className={isPhone ? "mt-4 flex items-center gap-2" : "mt-5"}>
-          {isPhone && (
-            <button
-              id="search-find-for-me"
-              type="button"
-              onClick={handleFindForMe}
-              disabled={isLoading}
-              className="t-find-for-me flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full px-3 text-[12px] font-semibold disabled:opacity-50"
-              style={{ borderWidth: 1.5 }}
-            >
-              <IconSparkles className="size-[14px]" />
-              Find for me
-            </button>
-          )}
-          <div className="min-w-0 flex-1">
+        <div className={isPhone ? "mt-4" : "mt-5"}>
+          {/* On phones Find for me is the FIRST chip inside the scrolling row.
+              It used to sit in front of the row, fixed, so chips slid under
+              it and came out cut ("dic"). */}
+          <div className="min-w-0">
             <QuickFilterChips
+              leading={isPhone ? (
+                <button
+                  id="search-find-for-me"
+                  type="button"
+                  onClick={handleFindForMe}
+                  disabled={isLoading}
+                  className="t-find-for-me flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full px-3 text-[12px] font-semibold disabled:opacity-50"
+                  style={{ borderWidth: 1.5 }}
+                >
+                  <IconSparkles className="size-[14px]" />
+                  Find for me
+                </button>
+              ) : undefined}
               filters={filters}
               onToggle={(key, value) => setFilters({ ...filters, [key]: value })}
               hideCategory={searchMode === "film_tv"}
@@ -2938,7 +2942,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <MonologueText text={selectedMonologue.text} />
                       </p>
                       {selectedMonologue.paywalled && (
-                        <MonologueWall feature="monologue_read_panel" />
+                        <>
+                          <MonologueWall feature="monologue_read_panel" />
+                          <ReadWallModal monologueId={selectedMonologue.id} />
+                        </>
                       )}
                     </div>
                       </motion.div>
@@ -2951,7 +2958,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         transition={{ duration: 0.2 }}
                       >
                   {selectedMonologue.paywalled && (
-                    <MonologueWall feature="monologue_read_panel" />
+                    <>
+                      <MonologueWall feature="monologue_read_panel" />
+                      <ReadWallModal monologueId={selectedMonologue.id} />
+                    </>
                   )}
                   <MonologueDetailContent
                     monologue={selectedMonologue}

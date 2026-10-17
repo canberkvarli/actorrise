@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 
+import { PHONE_QUERY } from "@/lib/viewport";
+
 /**
  * Is this a phone-width screen?
  *
@@ -20,7 +22,7 @@ import { useSyncExternalStore } from "react";
  * 768px matches `md` and the tab bar's own breakpoint, so "phone" means the
  * same thing here as it does in the stylesheet.
  */
-const QUERY = "(max-width: 767.98px)";
+const QUERY = PHONE_QUERY;
 
 function subscribe(onChange: () => void) {
   if (typeof window === "undefined" || !window.matchMedia) return () => {};

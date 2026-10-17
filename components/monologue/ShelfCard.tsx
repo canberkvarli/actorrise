@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Monologue } from "@/types/actor";
-import { MonologueSourceTag } from "@/components/search/SourceTag";
+import { MonologueSourceTag, sourceTagOf } from "@/components/search/SourceTag";
 
 /**
  * The card used by both pre-search shelves — "Picked for your type" and
@@ -25,6 +25,7 @@ import { MonologueSourceTag } from "@/components/search/SourceTag";
 export function ShelfCard({ m, rank }: { m: Monologue; rank?: number }) {
   const mins = Math.round((m.estimated_duration_seconds || 0) / 60);
   const meta = [m.character_age_range, m.tone, mins ? `${mins} min` : null].filter(Boolean);
+  const kind = sourceTagOf(m);
 
   /* Nothing rather than an echo. A title role ("Hamlet" from Hamlet) printed
      both lines identically, which reads as a rendering fault, not two facts. */
@@ -39,15 +40,20 @@ export function ShelfCard({ m, rank }: { m: Monologue; rank?: number }) {
         </span>
       )}
 
-      <span className="min-w-0 flex-1">
+      <span className="t-shelf-row__main min-w-0 flex-1">
         <span className="t-shelf-row__name">{m.character_name}</span>
         <span className="t-shelf-row__sub">
           {showPlay && <span className="truncate">{m.play_title}</span>}
+          {/* The pill on desktop. On phones it is hidden and the source rides
+              the meta line as plain text (.t-shelf-row__src). */}
           <MonologueSourceTag monologue={m} />
         </span>
       </span>
 
-      <span className="t-shelf-row__meta">{meta.join(" · ")}</span>
+      <span className="t-shelf-row__meta">
+        {kind && <span className="t-shelf-row__src">{kind} · </span>}
+        {meta.join(" · ")}
+      </span>
     </Link>
   );
 }

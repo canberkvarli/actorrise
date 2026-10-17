@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { IconX, IconSparkles } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import ProfileOnboardingFlow from "@/components/onboarding/ProfileOnboardingFlow";
 
 const DISMISS_KEY = "arc.profileBackfillDismissed";
@@ -17,6 +18,9 @@ const DISMISS_KEY = "arc.profileBackfillDismissed";
  */
 export default function ProfileBackfillCard() {
   const { user, loading } = useAuth();
+  // Not on phones: a corner card over a 390px screen is a third of it, and
+  // the five taps it offers are the same ones the first-run card already asked.
+  const isPhone = useIsPhone();
   // Rendered with ssr:false, so localStorage is available at mount — read it via
   // lazy initial state (no effect, no flash).
   const [dismissed, setDismissed] = useState<boolean>(() => {
@@ -30,6 +34,7 @@ export default function ProfileBackfillCard() {
 
   const eligible =
     !loading &&
+    !isPhone &&
     !!user &&
     user.has_completed_onboarding === true &&
     user.has_completed_profile_onboarding === false;

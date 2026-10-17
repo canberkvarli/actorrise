@@ -6,6 +6,7 @@ import { MonologueTextRenderer } from "@/components/monologue/MonologueTextRende
 import { GhostLightSketch } from "@/components/brand/sketches";
 import { isBibliographicText, stageDirectionPercentage } from "@/lib/monologueText";
 import { ReadGate } from "@/components/monologue/v2/ReadGate";
+import { ReadWallModal } from "@/components/monologue/ReadWallModal";
 
 /**
  * Read mode: the piece as written, at a size you choose.
@@ -140,7 +141,12 @@ export function ReadView({
             ))}
         </div>
 
-        {monologue.paywalled && <ReadGate />}
+        {monologue.paywalled && (
+          <>
+            <ReadGate />
+            <ReadWallModal monologueId={monologue.id} />
+          </>
+        )}
       </div>
 
       {/* A piece should finish somewhere, not just stop. Nothing to finish
