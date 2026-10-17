@@ -6,6 +6,7 @@ import { SearchTour } from "@/components/onboarding/SearchTour";
 import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { MonologueWall } from "@/components/monologue/MonologueWall";
+import { ReadWallModal } from "@/components/monologue/ReadWallModal";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/events";
@@ -2941,7 +2942,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <MonologueText text={selectedMonologue.text} />
                       </p>
                       {selectedMonologue.paywalled && (
-                        <MonologueWall feature="monologue_read_panel" />
+                        <>
+                          <MonologueWall feature="monologue_read_panel" />
+                          <ReadWallModal monologueId={selectedMonologue.id} />
+                        </>
                       )}
                     </div>
                       </motion.div>
@@ -2954,7 +2958,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         transition={{ duration: 0.2 }}
                       >
                   {selectedMonologue.paywalled && (
-                    <MonologueWall feature="monologue_read_panel" />
+                    <>
+                      <MonologueWall feature="monologue_read_panel" />
+                      <ReadWallModal monologueId={selectedMonologue.id} />
+                    </>
                   )}
                   <MonologueDetailContent
                     monologue={selectedMonologue}

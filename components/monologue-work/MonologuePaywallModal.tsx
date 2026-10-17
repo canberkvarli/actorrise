@@ -23,6 +23,10 @@ interface MonologuePaywallModalProps {
    * with different answers.
    */
   feature?: string;
+  /** The small direction line above the title. */
+  dir?: string;
+  /** The quiet way out. */
+  quietLabel?: string;
 }
 
 const PLUS_BENEFITS = [
@@ -56,6 +60,8 @@ export function MonologuePaywallModal({
   title,
   description,
   feature = "monologue_rehearsal",
+  dir = "(the house is still open.)",
+  quietLabel = "Maybe later",
 }: MonologuePaywallModalProps) {
   const { subscription } = useSubscription();
   const currentTier = subscription?.tier_name ?? "free";
@@ -78,7 +84,7 @@ export function MonologuePaywallModal({
       <DialogContent
         className={`t-modal theatre-tokens ${theatreFontVars} max-w-[26rem] border-0 p-7`}
       >
-        <p className="t-modal__dir">(the house is still open.)</p>
+        <p className="t-modal__dir">{dir}</p>
         <DialogTitle className="t-modal__title">{title ?? DEFAULT_TITLE}</DialogTitle>
         <DialogDescription className="t-modal__body">
           {description ?? defaultDescription(words.span)}
@@ -104,7 +110,7 @@ export function MonologuePaywallModal({
             {words.cta}
           </Link>
           <button type="button" onClick={() => onOpenChange(false)} className="t-modal__quiet">
-            Maybe later
+            {quietLabel}
           </button>
         </div>
         <EarnSecondWeek
