@@ -11,7 +11,10 @@ import {
   GUIDED_LINE_COUNT,
   GUIDED_OPENING_LINE,
   GUIDED_PARTNER,
+  guidedRoute,
+  titleCase,
 } from "@/lib/guided-scene";
+import { fetchGuidedSceneId, startGuidedScene } from "@/lib/guided-start";
 import { useUpload } from "@/components/practice/UploadProvider";
 
 /**
@@ -68,13 +71,11 @@ export function GuidedInvitation() {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await api.get<{ scene_id: number; character: string }>(
-          "/api/rehearsal/guided",
-        );
+        const id = await fetchGuidedSceneId();
         if (cancelled) return;
-        setSceneId(data.scene_id);
-        router.prefetch(`/scenes/${data.scene_id}/rehearse`);
-        await api.get(`/api/rehearsal/scenes/${data.scene_id}`);
+        setSceneId(id);
+        router.prefetch(guidedRoute(id));
+        await api.get(`/api/rehearsal/scenes/${id}`);
       } catch {}
     })();
     return () => {
@@ -86,36 +87,17 @@ export function GuidedInvitation() {
     if (starting) return;
     setStarting(true);
     setFailed(false);
-    // Ask for the mic here, inside the tap, with the line still on screen. On
-    // phones the first day's runs on iOS and Android both ended at the mic
-    // prompt inside five seconds; asked once here, the rehearse page's Curtain
-    // finds it granted and does not ask again. The tracks are released at
-    // once; only the permission is kept.
+    // The tap itself lives in lib/guided-start (the onboarding card ends on
+    // the same scene): mic asked for inside the gesture, the scene found, the
+    // start logged. If the scene id has not arrived yet it asks once more
+    // rather than send them to a page that cannot open.
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
-    } catch {}
-    // The page opens the guided run itself when it sees ?guided=1; this
-    // component only navigates. If the scene id has not arrived yet, ask once
-    // more rather than send them to a page that cannot open.
-    let id = sceneId;
-    if (id === null) {
-      try {
-        const { data } = await api.get<{ scene_id: number; character: string }>(
-          "/api/rehearsal/guided",
-        );
-        id = data.scene_id;
-      } catch {
-        setFailed(true);
-        setStarting(false);
-        return;
-      }
+      router.push(await startGuidedScene("hub", sceneId));
+    } catch {
+      setFailed(true);
+      setStarting(false);
+      return;
     }
-    const ua = navigator.userAgent;
-    trackEvent("guided_scene_started", {
-      platform: /iPhone|iPad/.test(ua) ? "ios" : /Android/.test(ua) ? "android" : "desktop",
-    });
-    router.push(`/scenes/${id}/rehearse?guided=1`);
     // Answering IS seeing the first rehearsal. POST /api/rehearsal/runs/guided
     // sets has_seen_first_rehearsal on the server (lib/guided-invite reads it);
     // the user is pulled afterwards so the hub does not invite again if they
@@ -162,6 +144,3 @@ export function GuidedInvitation() {
   );
 }
 
-function titleCase(name: string): string {
-  return name.charAt(0) + name.slice(1).toLowerCase();
-}

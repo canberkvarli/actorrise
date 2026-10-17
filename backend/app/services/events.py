@@ -63,6 +63,10 @@ SERVER_EVENT_NAMES = frozenset(
 CLIENT_EVENT_NAMES = frozenset(
     {
         "onboarding_step_viewed",  # {step, key}
+        "onboarding_ending_shown",  # the new-account card reached "say one line"
+        "onboarding_ending_answer",  # tapped Answer on the ending
+        "onboarding_ending_skip",  # "skip, take me to the library"
+        "onboarding_picks_kept",  # {count} picks favourited silently on the way to the scene
         "onboarding_question_skipped",  # {step, key, variant}: skip skips one question since 2026-10-02
         "search_box_focused",  # once per /monologues mount
         # Collection depth: 167 favorites, 2 cuts, 2 notes, 13 memorized. These
