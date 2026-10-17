@@ -3456,14 +3456,18 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
 /* Phones: three short doors a row. Two tall ones per row with a query line
    under each took most of the first screen before a single result. */
 @media (max-width: 767.98px) {
-  .t-doors { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .t-doors { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  /* Glyph beside the label, not above it: a door is one line tall. */
   .t-door {
-    padding: 10px 12px;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
     border-radius: 14px;
     box-shadow: 3px 3px 0 var(--t-hard-shadow);
   }
-  .t-door__glyph { width: 20px; height: 20px; }
-  .t-door__label { font-size: 14px; }
+  .t-door__glyph { width: 20px; height: 20px; flex-shrink: 0; }
+  .t-door__label { font-size: 14px; line-height: 1.2; }
   .t-door__query { display: none; }
 }
 
