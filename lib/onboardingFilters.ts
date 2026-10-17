@@ -92,3 +92,10 @@ export function describeAnswers(a: OnboardingAnswers): string {
   if (stage) bits.push(stage.label.toLowerCase());
   return bits.join(", ");
 }
+
+/** Picks are only worth keeping when the search has a lever to pull. Without
+ *  casting or age the "picks" are the top of an unfiltered search, which is
+ *  not a pick. */
+export function shouldFetchPicks(a: OnboardingAnswers): boolean {
+  return Boolean(a.casting) || Boolean(a.ageRange);
+}

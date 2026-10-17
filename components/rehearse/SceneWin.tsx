@@ -17,6 +17,8 @@ interface SceneWinProps {
   restarting: boolean;
   onLeave: () => void;
   leaveLabel: string;
+  /** Pieces the onboarding card kept on the way here; 0 says nothing. */
+  kept?: number;
 }
 
 /**
@@ -58,6 +60,7 @@ export function SceneWin({
   restarting,
   onLeave,
   leaveLabel,
+  kept = 0,
 }: SceneWinProps) {
   const asking = !!offer?.visible;
 
@@ -102,6 +105,11 @@ export function SceneWin({
         <Link href="/monologues" className="t-win__alt">
           Find a monologue
         </Link>
+        {kept > 0 && (
+          <Link href="/rehearse" className="t-win__alt">
+            {kept} {kept === 1 ? "piece is" : "pieces are"} on your shelf
+          </Link>
+        )}
       </div>
 
       <div className="t-win__foot">
