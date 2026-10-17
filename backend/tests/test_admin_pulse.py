@@ -254,6 +254,8 @@ class UnseenCountTests(unittest.TestCase):
 from fastapi import HTTPException
 
 from app.api.admin.pulse import admin_pulse, mark_surface_seen
+from app.models.audition import Audition
+from app.models.actor import UserScript
 from app.models.actor import Monologue, Play
 from app.models.feedback import ResultFeedback
 
@@ -271,6 +273,8 @@ class EndpointTests(unittest.TestCase):
                 Play,
                 Monologue,
                 ResultFeedback,
+                UserScript,
+                Audition,
             ]
         )
         self.admin = User(
@@ -326,8 +330,43 @@ class EndpointTests(unittest.TestCase):
         pulse = admin_pulse(db=self.db, _mod=self.admin)
         self.assertEqual(
             set(pulse),
-            {"feedback", "review", "requests", "searches", "revenue"},
+            {"feedback", "review", "requests", "searches", "revenue", "auditions"},
         )
+
+
+from app.api.admin.pulse import unseen_auditions
+
+
+class UnseenAuditionTests(unittest.TestCase):
+    def setUp(self):
+        self.db, self.saved = memory_db([Organization, User, UserScript, Audition])
+        self.actor = User(email="actor@gmail.com", hashed_password="x")
+        self.staff = User(email="canberkvarli@gmail.com", hashed_password="x")
+        self.db.add_all([self.actor, self.staff])
+        self.db.commit()
+        self.cutoff = datetime(2026, 10, 1, tzinfo=timezone.utc)
+
+    def tearDown(self):
+        self.db.close()
+        restore(self.saved)
+
+    def add(self, user, days, deleted=False):
+        self.db.add(Audition(
+            user_id=user.id, project="Play", role="Lead",
+            created_at=self.cutoff + timedelta(days=days),
+            deleted_at=self.cutoff + timedelta(days=days) if deleted else None,
+        ))
+        self.db.commit()
+
+    def test_counts_real_actors_after_the_cutoff(self):
+        self.add(self.actor, 1)
+        self.add(self.actor, -1)
+        self.assertEqual(unseen_auditions(self.db, self.cutoff), 1)
+
+    def test_staff_and_deleted_auditions_do_not_badge(self):
+        self.add(self.staff, 1)
+        self.add(self.actor, 1, deleted=True)
+        self.assertEqual(unseen_auditions(self.db, self.cutoff), 0)
 
 
 if __name__ == "__main__":

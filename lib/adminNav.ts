@@ -1,5 +1,6 @@
 import {
   IconBuilding,
+  IconCalendarEvent,
   IconChartBar,
   IconClipboardCheck,
   IconDeviceMobile,
@@ -19,12 +20,13 @@ export const BADGE_KEYS = [
   "requests",
   "searches",
   "revenue",
+  "auditions",
 ] as const;
 
 export type BadgeKey = (typeof BADGE_KEYS)[number];
 
-/** Surfaces whose badge clears by visiting them (the `admin_seen` three). */
-export const SEEN_SURFACES = ["requests", "searches", "revenue"] as const;
+/** Surfaces whose badge clears by visiting them (the `admin_seen` ones). */
+export const SEEN_SURFACES = ["requests", "searches", "revenue", "auditions"] as const;
 
 export type SeenSurface = (typeof SEEN_SURFACES)[number];
 
@@ -63,6 +65,12 @@ export const ADMIN_NAV: NavGroup[] = [
       },
       { href: "/admin/sessions", label: "Sessions", icon: IconMicrophone },
       { href: "/admin/ghostlight", label: "Ghost Light", icon: IconDeviceMobile },
+      {
+        href: "/admin/auditions",
+        label: "Auditions",
+        icon: IconCalendarEvent,
+        badgeKey: "auditions",
+      },
       {
         href: "/admin/feedback",
         label: "Feedback",

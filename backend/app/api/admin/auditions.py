@@ -134,3 +134,56 @@ def auditions_panel(_: User = Depends(require_moderator), db: Session = Depends(
         "habit": habit,
         "winback_users": len(winback_users),
     }
+
+
+@router.get("/list")
+def auditions_list(_: User = Depends(require_moderator), db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Every audition a real actor has added, newest first, with who and what's attached."""
+    from app.models.actor import Monologue
+    from app.models.audition import AuditionPiece
+
+    rows = (
+        db.query(Audition, User.email, User.name)
+        .join(User, User.id == Audition.user_id)
+        .filter(Audition.deleted_at.is_(None), Audition.user_id.in_(real_user_ids_query(db)))
+        .order_by(Audition.created_at.desc())
+        .limit(200)
+        .all()
+    )
+    ids = [a.id for a, _, _ in rows]
+    pieces: dict[int, list[str]] = {}
+    if ids:
+        found = db.query(AuditionPiece).filter(AuditionPiece.audition_id.in_(ids)).all()
+        titles = dict(
+            db.query(Monologue.id, Monologue.title)
+            .filter(Monologue.id.in_([p.monologue_id for p in found if p.monologue_id]))
+            .all()
+        ) if found else {}
+        for p in found:
+            label = titles.get(p.monologue_id) if p.monologue_id else "a scene"
+            pieces.setdefault(p.audition_id, []).append(label or "a monologue")
+
+    def iso(v):
+        v = aware(v)
+        return v.isoformat() if v else None
+
+    return {
+        "auditions": [
+            {
+                "id": a.id,
+                "user_id": a.user_id,
+                "email": email,
+                "name": name,
+                "project": a.project,
+                "role": a.role,
+                "kind": a.kind,
+                "status": a.status,
+                "source": a.source,
+                "when": iso(a.starts_at or a.due_at),
+                "tz": a.tz,
+                "created_at": iso(a.created_at),
+                "pieces": pieces.get(a.id, []),
+            }
+            for a, email, name in rows
+        ]
+    }

@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 #: Every surface that carries an unseen badge driven by this table. Feedback and
 #: Review are deliberately absent -- they keep their own per-row read flags.
-SURFACES = ("requests", "searches", "revenue")
+SURFACES = ("requests", "searches", "revenue", "auditions")
 
 
 class AdminSeen(Base):

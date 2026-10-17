@@ -15,6 +15,7 @@ from typing import Any
 from app.api.admin.stats import require_moderator
 from app.core.database import get_db
 from app.models.actor import Monologue
+from app.models.audition import Audition
 from app.models.admin_seen import SURFACES, last_seen_at, mark_seen
 from app.models.content_request import ContentRequest
 from app.services.content_request_resolution import OPEN_STATUSES
@@ -118,6 +119,18 @@ def unseen_conversions(db: Session, since: datetime) -> int:
     return q.scalar() or 0
 
 
+def unseen_auditions(db: Session, since: datetime) -> int:
+    """Auditions real actors added since `since`. Deleted ones and staff ones don't count."""
+    staff = _staff_ids(db)
+    q = db.query(func.count(Audition.id)).filter(
+        Audition.created_at > since,
+        Audition.deleted_at.is_(None),
+    )
+    if staff:
+        q = q.filter(Audition.user_id.notin_(staff))
+    return q.scalar() or 0
+
+
 def _unread_feedback(db: Session) -> int:
     """Mirrors `admin/feedback.py::feedback_summary`'s `unread`."""
     return (
@@ -163,6 +176,9 @@ def admin_pulse(
             db, last_seen_at(db, _mod.id, "searches", floor)
         ),
         "revenue": unseen_conversions(db, last_seen_at(db, _mod.id, "revenue", floor)),
+        "auditions": unseen_auditions(
+            db, last_seen_at(db, _mod.id, "auditions", floor)
+        ),
     }
 
 
