@@ -13,7 +13,7 @@ import { DropBox } from "./DropBox";
 import { AuditionFile, OUTCOME_NOTE } from "./AuditionFile";
 import { CalendarOffer, CalendarPanel, CalendarToggle } from "./CalendarLink";
 import { FileSkeleton } from "./FileSkeleton";
-import { IntroLoop } from "./IntroLoop";
+import { HowItWorks } from "./HowItWorks";
 import { RecentlyDeleted } from "./FileAside";
 import { takeCalendarOffer } from "@/lib/calendarFeed";
 
@@ -172,7 +172,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
               <DropBox startOpen={startOpen} source={source} size="hero" firstOne />
             </div>
             <div className="mt-12 w-full max-w-[720px] md:mt-14">
-              <IntroLoop
+              <HowItWorks
                 onExpand={(step) => {
                   setIntroStep(step);
                   setIntro(true);

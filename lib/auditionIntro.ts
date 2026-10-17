@@ -35,3 +35,23 @@ export function markIntroSeen(storage: GetStorage = local): void {
 export function shouldAutoShowIntro(s: { loading: boolean; failed: boolean; count: number; seen: boolean; adding?: boolean }): boolean {
   return !s.loading && !s.failed && s.count === 0 && !s.seen && !s.adding;
 }
+
+export const AUDITION_LOOP_KEY = "arc.auditionsLoopOpen";
+
+/** Whether the small How-it-works loop is open under the paste box. */
+export function readLoopOpen(fallback: boolean, storage: GetStorage = local): boolean {
+  try {
+    const v = storage().getItem(AUDITION_LOOP_KEY);
+    return v === null ? fallback : v === "1";
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeLoopOpen(open: boolean, storage: GetStorage = local): void {
+  try {
+    storage().setItem(AUDITION_LOOP_KEY, open ? "1" : "0");
+  } catch {
+    /* private mode: it just comes back next visit */
+  }
+}

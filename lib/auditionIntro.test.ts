@@ -40,3 +40,25 @@ describe("shouldAutoShowIntro", () => {
   it("not when they came to add one", () => expect(shouldAutoShowIntro({ ...base, adding: true })).toBe(false));
   it("not once seen", () => expect(shouldAutoShowIntro({ ...base, seen: true })).toBe(false));
 });
+
+import { AUDITION_LOOP_KEY, readLoopOpen, writeLoopOpen } from "./auditionIntro";
+
+describe("how it works loop open flag", () => {
+  it("falls back when nothing is stored", () => {
+    const s = memory();
+    expect(readLoopOpen(true, s)).toBe(true);
+    expect(readLoopOpen(false, s)).toBe(false);
+  });
+  it("remembers a choice", () => {
+    const s = memory();
+    writeLoopOpen(false, s);
+    expect(readLoopOpen(true, s)).toBe(false);
+    expect(s().getItem(AUDITION_LOOP_KEY)).toBe("0");
+    writeLoopOpen(true, s);
+    expect(readLoopOpen(false, s)).toBe(true);
+  });
+  it("falls back when storage throws", () => {
+    expect(readLoopOpen(true, throwing)).toBe(true);
+    expect(() => writeLoopOpen(true, throwing)).not.toThrow();
+  });
+});

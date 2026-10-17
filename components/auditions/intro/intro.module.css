@@ -64,22 +64,29 @@
 
 /* ---- the dialog ------------------------------------------------------- */
 
-/* Phone: a full height sheet from the bottom, the scene on top. */
+/* Phone: a centred modal capped at 70% of the screen, the scene on top. It
+   was a full-height sheet, which on a first visit covered the whole page with
+   a demo; a modal with the page visible round it reads as "a demo", which is
+   what it is. */
 .root {
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: calc(100dvh - 12px);
-  animation: sheetIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  left: 16px;
+  right: 16px;
+  top: 50%;
+  translate: 0 -50%;
+  max-height: 70dvh;
+  border-radius: 20px;
+  overflow: hidden;
+  animation: dialogIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .panel {
   display: grid;
-  grid-template-rows: minmax(190px, 1fr) auto;
-  height: 100%;
+  grid-template-rows: 160px auto;
+  max-height: 70dvh;
   overflow-y: auto;
   background: var(--i-surface);
-  border-top: 1.5px solid var(--i-fg);
+  border: 1.5px solid var(--i-fg);
+  border-radius: 20px;
 }
 
 @media (min-width: 768px) {
@@ -91,20 +98,20 @@
     translate: -50% -50%;
     width: min(1040px, 92vw);
     height: min(640px, calc(100dvh - 48px));
-    animation-name: dialogIn;
+    max-height: none;
+    border-radius: 0;
   }
   .panel {
     grid-template-rows: none;
     grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
-    border: 1.5px solid var(--i-fg);
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
     box-shadow: 10px 10px 0 var(--i-press);
     overflow: hidden;
   }
 }
 
-@keyframes sheetIn {
-  from { transform: translateY(28px); opacity: 0; }
-}
 @keyframes dialogIn {
   from { transform: translateY(10px) scale(0.985); opacity: 0; }
 }
@@ -112,15 +119,7 @@
 /* Closing eases away instead of vanishing. Radix holds the node until the
    animation ends, so the same element plays it on the way out. */
 .root[data-state="closed"] {
-  animation: sheetOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
-}
-@media (min-width: 768px) {
-  .root[data-state="closed"] {
-    animation-name: dialogOut;
-  }
-}
-@keyframes sheetOut {
-  to { transform: translateY(36px); opacity: 0; }
+  animation: dialogOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
 }
 @keyframes dialogOut {
   to { transform: translateY(8px) scale(0.98); opacity: 0; }
