@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { IconAdjustments } from "@tabler/icons-react";
 import type { SearchFiltersState } from "@/components/search/SearchFiltersSheet";
 import type { SourceTagKind } from "@/components/search/SourceTag";
@@ -73,11 +75,14 @@ interface QuickFilterChipsProps {
   mode?: "plays" | "film_tv";
   onOpenFilters?: () => void;
   activeFilterCount?: number;
+  /** Rendered as the first item INSIDE the scroll row (phones put Find for me here). */
+  leading?: React.ReactNode;
 }
 
 export function QuickFilterChips({
   filters,
   onToggle,
+  leading,
   hideCategory,
   mode = "plays",
   onOpenFilters,
@@ -93,7 +98,15 @@ export function QuickFilterChips({
     // filter row scrolls horizontally (otherwise the off-screen filters are
     // invisible until you happen to swipe).
     <div className="relative">
-      <div className="-my-2 flex items-center gap-2 overflow-x-auto py-2 pr-6 sm:pr-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div
+        className="-mx-4 -my-2 flex items-center gap-2 overflow-x-auto px-4 py-2 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        style={{
+          // Both edges fade, so a cut chip reads as "more this way" and not a fault.
+          maskImage: "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)",
+          WebkitMaskImage: "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)",
+        }}
+      >
+        {leading}
         {groups.flatMap((group) =>
           group.options.map((opt) => {
             const isActive = filters[group.key as keyof SearchFiltersState] === opt.value;
