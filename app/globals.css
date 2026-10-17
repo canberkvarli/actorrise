@@ -3420,7 +3420,13 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
 
 /* Pinned-up cards: paper on a hard ink shadow, each at its own slight angle,
    straightening as you reach for them. */
+.t-doors {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
 .t-door {
+  padding: 16px;
   background: var(--t-paper);
   border: 1.5px solid var(--t-text);
   border-radius: 20px;
@@ -3445,6 +3451,20 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
 }
 .t-door:hover .t-door__glyph {
   color: var(--acc);
+}
+.t-door__label { font-size: 16px; }
+/* Phones: three short doors a row. Two tall ones per row with a query line
+   under each took most of the first screen before a single result. */
+@media (max-width: 767.98px) {
+  .t-doors { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .t-door {
+    padding: 10px 12px;
+    border-radius: 14px;
+    box-shadow: 3px 3px 0 var(--t-hard-shadow);
+  }
+  .t-door__glyph { width: 20px; height: 20px; }
+  .t-door__label { font-size: 14px; }
+  .t-door__query { display: none; }
 }
 
 .t-shelf-row {
@@ -3658,6 +3678,29 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
   text-align: right;
   white-space: nowrap;
   color: var(--t-muted-dark);
+}
+/* Phones: the row stacks. Two columns forced play titles into "#V…" because
+   the source pill ate the left column. Name, title on its own line, then one
+   meta line with the source as text instead of a pill. */
+.t-shelf-row__src { display: none; }
+@media (max-width: 767.98px) {
+  .t-shelf-row {
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    padding: 12px 14px;
+  }
+  .t-shelf-row:hover { transform: none; }
+  .t-shelf-row__name { font-size: 15px; }
+  .t-shelf-row__sub .t-src { display: none; }
+  .t-shelf-row__sub > .truncate { display: block; min-width: 0; }
+  .t-shelf-row__meta {
+    flex-basis: 100%;
+    text-align: left;
+    white-space: normal;
+    font-weight: 500;
+  }
+  .t-shelf-row__rank ~ .t-shelf-row__meta { padding-left: 28px; }
+  .t-shelf-row__src { display: inline; }
 }
 
 /* Shelf headings: Instrument Serif with the tail in the mode accent. */

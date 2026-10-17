@@ -6,7 +6,7 @@ import {
   CrownSketch,
   DaggerSketch,
   MasksSketch,
-  RoseSketch,
+  TicketSketch,
   SkullSketch,
 } from "@/components/brand/sketches";
 
@@ -23,7 +23,7 @@ import {
 const DOORS = [
   { Sketch: MasksSketch, label: "Something funny", query: "comedic monologue", rot: "-1.5deg" },
   { Sketch: SkullSketch, label: "Shakespeare", query: "shakespeare monologue", rot: "1deg", playsOnly: true },
-  { Sketch: RoseSketch, label: "Love", query: "monologue about love", rot: "-1deg" },
+  { Sketch: TicketSketch, label: "Love", query: "monologue about love", rot: "-1deg" },
   { Sketch: DaggerSketch, label: "Revenge", query: "monologue about revenge", rot: "1.5deg" },
   { Sketch: CrownSketch, label: "Power", query: "monologue about power", rot: "-0.5deg" },
 ];
@@ -38,22 +38,20 @@ export function StartingPoints({ mode = "plays" }: { mode?: "plays" | "film_tv" 
         (or start somewhere.)
       </p>
 
-      <div
-        className="mt-4 grid gap-3.5"
-        style={{ gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))" }}
-      >
+      <div className="t-doors mt-4">
         {DOORS.filter((d) => mode === "plays" || !d.playsOnly).map(({ Sketch, label, query, rot }, i) => (
           <Link
             key={label}
             href={`/monologues?mode=${mode}&q=${encodeURIComponent(query)}`}
-            className="t-door group flex flex-col gap-2 p-4"
+            className="t-door group flex flex-col gap-2"
             style={{ ["--rot" as string]: rot }}
           >
             <Sketch size={28} delay={0.1 + i * 0.08} className="t-door__glyph" />
-            <span className="text-base font-bold" style={{ color: "var(--t-text)" }}>
+            <span className="t-door__label font-bold" style={{ color: "var(--t-text)" }}>
               {label}
             </span>
             <span
+              className="t-door__query"
               style={{
                 fontFamily: "var(--t-direction)",
                 fontSize: 12,
