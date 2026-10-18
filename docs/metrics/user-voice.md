@@ -92,3 +92,38 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-09-29, in the app trial
 **They said:** "Thank you so much, without your help, I would have been searching for a very long time!"
 **Heard as:** happy; the value was the hand-picking, not the search
+
+## 2026-10-15
+
+**Replying to:** search note (Motherland not in the library)
+**Account:** signed up 2026-10-15, 6 saved, free
+**They said:** "Was just checking out your app and was looking for some scenes from that tv show - wanting to put down something like that for a tape"
+**Heard as:** content gap, contemporary British TV comedy for women; wants a self-tape piece in that tone
+
+## 2026-10-16
+
+**Replying to:** educator thread (free Plus for teacher and students)
+**Account:** university acting teacher, signed up 2026-08-25, gave the site to two classes
+**They said:** "you may start seeing an influx of NMU email addresses coming through. I just started 2 new classes this week and my acting majors, in particular, were excited about trying the site and said they happily provide feedback to you."
+**Heard as:** happy; teacher route working, feedback from acting majors coming in the next few weeks
+
+## 2026-10-16
+
+**Replying to:** an educator thread (the class list)
+**Account:** educator, comped Plus, a school drama programme
+**They said:** "The non-majors don't necessarily need the same access. And if there is particular feedback you're looking for, let me know? I don't know if you want to create some sort of form to compile all of it or I can just capture what they tell me and share it that way with you."
+**Heard as:** happy; the teacher route is delivering a full class list and offering structured feedback
+
+## 2026-10-17
+
+**Replying to:** day10
+**Account:** signed up 2026-10-06, 4 saved, hit the wall 7 times, searched long film monologues for women (Lady Bird, Fleabag, One Day), free
+**They said:** "I honestly needed a monologue for school but I am still looking."
+**Heard as:** content gap, long contemporary film pieces for women (Lady Bird has one short piece, One Day has none)
+
+## 2026-10-18
+
+**Replying to:** daily search note (Midnight Mass / Father Paul)
+**Account:** signed up 2026-10-17, 1 read, searched Fall of the House of Usher and Dexter, free
+**They said:** "Honestly I'm just playing with things. I'm a 50 year old character actor re entering the field after a 15 year hiatus. But I'm drawn to darker, more theatrical type characters. Flanagan's writing definitely has that"
+**Heard as:** happy; returning older actor, wants dark theatrical roles; content gap on other Flanagan series (Usher, Bly Manor)
