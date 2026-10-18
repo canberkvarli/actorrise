@@ -127,3 +127,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-10-17, 1 read, searched Fall of the House of Usher and Dexter, free
 **They said:** "Honestly I'm just playing with things. I'm a 50 year old character actor re entering the field after a 15 year hiatus. But I'm drawn to darker, more theatrical type characters. Flanagan's writing definitely has that"
 **Heard as:** happy; returning older actor, wants dark theatrical roles; content gap on other Flanagan series (Usher, Bly Manor)
+
+## 2026-10-18
+
+**Replying to:** Canberk's reply on the day10 thread (Lady Bird, Fleabag)
+**Account:** signed up 2026-10-06, 4 saved, hit the wall 7 times, abandoned a Stripe checkout 2026-10-06, free
+**They said:** "The school asks for a monologue around 2 minutes but the genre is up to me. Personally i would prefer something dark comedy. Would appreciate if you would help."
+**Heard as:** could not find the feature; there is no dark-comedy or duration filter she could see, so a 2 minute dark comedy took a human to find
