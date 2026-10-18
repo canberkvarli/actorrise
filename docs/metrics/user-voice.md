@@ -134,3 +134,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-10-06, 4 saved, hit the wall 7 times, abandoned a Stripe checkout 2026-10-06, free
 **They said:** "The school asks for a monologue around 2 minutes but the genre is up to me. Personally i would prefer something dark comedy. Would appreciate if you would help."
 **Heard as:** could not find it herself; a 2 minute dark comedy for a school audition took a human to pick out
+
+## 2026-10-19
+
+**Replying to:** Canberk's personal search note (2026-10-12, a piece for a man over 55, and a search for his own title)
+**Account:** signed up 2026-10-11, 1 saved, free
+**They said:** "Thank you so much for your respinse. I will keep your site in mind. Silver: Werewolf Hunter is my novel soon to be screenplay and then TV series. I appreciate you getting back to me. You have a great website by the way."
+**Heard as:** happy; a writer searching for his own unpublished title, not a content gap
