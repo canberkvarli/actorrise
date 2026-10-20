@@ -119,7 +119,10 @@ class Play(Base):
     translator = Column(String, nullable=True)  # Translator/adaptor — important for translated classical work
 
     # Full text storage (public domain only)
-    full_text = Column(Text, nullable=True)  # Only for public domain
+    # deferred(): ~100KB a play (3MB at most), read only by the ingest scripts.
+    # Loaded eagerly it rode along on every monologue+play join and was 97% of
+    # the Supabase egress (2026-10-20). Touching play.full_text still loads it.
+    full_text = deferred(Column(Text, nullable=True))  # Only for public domain
     full_text_url = Column(String, nullable=True)  # External link
     text_format = Column(String, nullable=True)  # plain, tei_xml, html
 
