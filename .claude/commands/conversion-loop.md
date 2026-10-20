@@ -183,6 +183,9 @@ expiration, a first real audition, a zero-signup day, a bounce wave, a sync that
 ```
 CONVERSION LOOP, <date>
 
+Money: $<total> a month (web $<stripe>, app $<app>), <n> payers; last 30 days collected $<cash>
+  <one line only if it changed since yesterday: who paid, who stopped>
+
 Notes sent: <n> of <listed>
   <first name>: "<subject>", <one line on why them>
   left as drafts: <n>, which condition failed; skipped: <n>, why in a word
@@ -197,6 +200,16 @@ Broken: <what failed, or "nothing">
 
 Best move today: <one line: the biggest leak and the one action for it; and whether yesterday's move worked>
 ```
+
+**Money, first line, every day** (Canberk, 2026-10-20: "you have to tell me how much I'm
+making in a month as well, I know it fluctuates but it's important"). Gross, before fees:
+- Web: Stripe subscriptions whose last paid invoice charged more than $0, each turned into a
+  monthly amount (a yearly price divided by 12). 100%-off comps and trials charge $0 and
+  never count. Cash: the sum of `amount_paid` on `status='paid'` invoices in the last 30 days.
+- App: RevenueCat's MRR from `revenuecat_report.py` (trials are $0 there already).
+- Payers: the web subscriptions that count plus the app ones that are `active` and paid.
+If either source fails, print what came back and say which part is missing; never a
+guessed total. Baseline 2026-10-20: web $60 (5 payers at $12), app $7, about $67 a month.
 
 **Best move today** (Canberk, 2026-10-14: "be on the look out for this, everyday, relate,
 compare, find the best move"). Compare the steps from the brief, 14 days: wall or ask shown
