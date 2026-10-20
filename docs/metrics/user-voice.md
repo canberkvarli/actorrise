@@ -141,3 +141,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-10-11, 7 saved, free
 **They said:** "Thank you so much for your respinse. I will keep your site in mind. Silver: Werewolf Hunter is my novel soon to be screenplay and then TV series. I appreciate you getting back to me. You have a great website by the way."
 **Heard as:** happy; a writer searching for his own unpublished title, not a content gap
+
+## 2026-10-20
+
+**Replying to:** personal search note
+**Account:** signed up 2026-10-19, 6 saved (onboarding picks), 2 opened, free
+**They said:** "I'm currently looking for a monologue for an acting class I'm taking. I don't have a specific scene in mind yet, but I'm searching for film monologues that incorporate physical action rather than just being a speech."
+**Heard as:** content gap, no way to search for pieces with physical action
