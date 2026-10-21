@@ -13,6 +13,8 @@ export interface PricingTier {
   features: {
     ai_searches_per_month: number;
     monologue_sessions?: number;
+    /** Served by /api/pricing/tiers from the read wall's constant; -1 = unlimited. */
+    monologue_reads_per_month?: number;
     bookmarks_limit: number;
     recommendations: boolean;
     scene_partner_scripts?: number;
@@ -40,7 +42,8 @@ export const DEFAULT_PRICING_TIERS: PricingTier[] = [
     annual_price_cents: 0,
     features: {
       ai_searches_per_month: 10,
-      monologue_sessions: 3,
+      monologue_sessions: 2,
+      monologue_reads_per_month: 3,
       bookmarks_limit: 10,
       recommendations: true,
       download_formats: ["pdf", "docx"],

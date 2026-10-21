@@ -10,6 +10,7 @@ import time
 from typing import Any
 
 from app.core.database import get_db
+from app.middleware.rate_limiting import FREE_MONOLOGUE_READ_LIMIT
 from app.models.billing import PricingTier
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -41,6 +42,19 @@ class PricingTierResponse(BaseModel):
         from_attributes = True
 
 
+def _out(tier: PricingTier) -> PricingTierResponse:
+    """The tier as served, plus the monthly read allowance.
+
+    The read wall's number is a constant in rate_limiting, not a tier feature,
+    so the pricing cards never said it. Added here so the card and the wall
+    read the same number and cannot drift apart.
+    """
+    out = PricingTierResponse.model_validate(tier)
+    reads = FREE_MONOLOGUE_READ_LIMIT if tier.name == "free" else -1
+    out.features = {**(out.features or {}), "monologue_reads_per_month": reads}
+    return out
+
+
 def _get_tiers_uncached(db: Session) -> list[PricingTier]:
     return db.query(PricingTier).filter(PricingTier.is_active == True).order_by(PricingTier.sort_order).all()
 
@@ -56,11 +70,11 @@ async def get_pricing_tiers(db: Session = Depends(get_db)):
     global _TIERS_CACHE, _TIERS_CACHE_AT
     now = time.monotonic()
     if _TIERS_CACHE is not None and (now - _TIERS_CACHE_AT) < _TIERS_TTL_SECONDS:
-        return _TIERS_CACHE
+        return [_out(t) for t in _TIERS_CACHE]
     tiers = _get_tiers_uncached(db)
     _TIERS_CACHE = tiers
     _TIERS_CACHE_AT = now
-    return tiers
+    return [_out(t) for t in tiers]
 
 
 @router.get("/tiers/{tier_name}", response_model=PricingTierResponse)
@@ -76,7 +90,7 @@ async def get_pricing_tier(tier_name: str, db: Session = Depends(get_db)):
     if _TIERS_CACHE is not None and (now - _TIERS_CACHE_AT) < _TIERS_TTL_SECONDS:
         for t in _TIERS_CACHE:
             if t.name == tier_name.lower():
-                return t
+                return _out(t)
         raise HTTPException(status_code=404, detail=f"Pricing tier '{tier_name}' not found")
 
     tier = db.query(PricingTier).filter(
@@ -87,4 +101,4 @@ async def get_pricing_tier(tier_name: str, db: Session = Depends(get_db)):
     # Warm the list cache for next time
     _TIERS_CACHE = _get_tiers_uncached(db)
     _TIERS_CACHE_AT = time.monotonic()
-    return tier
+    return _out(tier)

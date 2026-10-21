@@ -56,6 +56,12 @@ const faqs = [
 function getFeaturesList(tier: PricingTier): string[] {
   const features: string[] = [];
 
+  // Full pieces a month. The read wall's own number, served with the tier.
+  const reads = tier.features.monologue_reads_per_month;
+  if (reads && reads > 0) {
+    features.push(`${reads} full monologues a month`);
+  }
+
   // Monologue rehearsals — the core value
   const rehearsals = tier.features.monologue_sessions;
   if (rehearsals === -1) {
