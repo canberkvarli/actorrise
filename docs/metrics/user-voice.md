@@ -148,3 +148,15 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-10-19, 6 saved (onboarding picks), 2 opened, free
 **They said:** "I'm currently looking for a monologue for an acting class I'm taking. I don't have a specific scene in mind yet, but I'm searching for film monologues that incorporate physical action rather than just being a speech."
 **Heard as:** content gap, no way to search for pieces with physical action
+
+## 2026-10-21
+
+**Replying to:** personal search note
+**Account:** signed up 2026-10-21, 5 read, 8 saved, free
+**They said:** "lovely site you've built. I've never had to find a monologue for an audition before and it has been really helpful. I'm auditioning for a show and I'm actually leaning more towards Mags' monologue from My Personal Mermaid, it fits well with the ideas this character has about beauty and her relationship with her mother."
+**Heard as:** happy, found a piece for a real audition
+
+**Replying to:** search_followup (automated, "did you find one?")
+**Account:** 50-year-old character actor returning after 15 years, free
+**They said:** "I did, thank you. I'm in a slow amp right now to just start building a monologue depository for myself. I'm not rushing, but rather trying to find the right material. I haven't visited the site in a few days but I truly appreciate the support."
+**Heard as:** happy, slow builder; got the automated follow-up while already in a personal thread
