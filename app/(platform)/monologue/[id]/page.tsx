@@ -37,6 +37,7 @@ import { useProfileFormData } from "@/hooks/useDashboardData";
 import { computeProfileMatch } from "@/lib/profileMatch";
 import { estimateDurationSeconds } from "@/lib/estimateDuration";
 import { applyCut } from "@/lib/monologueSegments";
+import { tapRun, type RunSurface } from "@/lib/runEntry";
 
 /**
  * One piece, three ways of looking at it — with a margin.
@@ -109,6 +110,24 @@ export default function MonologueDetailPage() {
       applyCut(monologue.text, monologue.cut_start_line, monologue.cut_end_line),
     );
   }, [monologue, hasCut, fullSeconds]);
+
+  /* Run it: the next step on this page. opened -> run is the number this is
+     for (34% on 2026-10-21), so the offer is counted where it is made: once per
+     piece per page view, and only when it is actually on screen, which a piece
+     behind the free-read wall is not. Wide screens see it under the title, a
+     phone sees the bar at the foot. */
+  const shownRunRef = useRef<number | null>(null);
+  const runOffered = Boolean(monologue) && !monologue?.paywalled;
+  useEffect(() => {
+    if (!runOffered || !monologue || shownRunRef.current === monologue.id) return;
+    shownRunRef.current = monologue.id;
+    const wide = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+    trackEvent("run_entry_shown", { monologue_id: monologue.id, surface: wide ? "sheet" : "bar" });
+  }, [runOffered, monologue]);
+  const run = (surface: RunSurface) => {
+    if (!monologue) return;
+    router.push(tapRun(monologue.id, surface));
+  };
 
   // Saving used to be a silent bookmark: 889 opens produced 45 saves, and the
   // things that turn a save into a working piece (a cut, a note) sat two scrolls
@@ -379,6 +398,8 @@ export default function MonologueDetailPage() {
         inLane={inLane}
         laneReason={laneMatch?.reasons[0]}
         onBack={() => router.back()}
+        onRun={monologue.paywalled ? undefined : () => run("sheet")}
+        runSeconds={cutSeconds}
       />
 
       <main className="mx-auto w-full max-w-[1000px] px-5 sm:px-6">
@@ -529,14 +550,14 @@ export default function MonologueDetailPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => router.push(`/monologue/${monologue.id}/work`)}
+                        onClick={() => run("saved")}
                         className="h-10 rounded-full px-4 text-[13px] font-bold"
                         style={{
                           background: "var(--t-cta-bg)",
                           color: "var(--t-cta-fg)",
                         }}
                       >
-                        Rehearse it
+                        Run it
                       </button>
                     </div>
                   </div>
@@ -640,7 +661,7 @@ export default function MonologueDetailPage() {
               fullSeconds={fullSeconds}
               hasCut={Boolean(hasCut)}
               outOfReads={monologue.paywalled}
-              onRehearse={() => router.push(`/monologue/${monologue.id}/work`)}
+              onRehearse={() => run("margin")}
               onMemorize={() => router.push(`/monologue/${monologue.id}/memorize`)}
             />
           </div>
@@ -708,7 +729,7 @@ export default function MonologueDetailPage() {
       </main>
 
       {!monologue.paywalled && (
-        <RunBar onRehearse={() => router.push(`/monologue/${monologue.id}/work`)} />
+        <RunBar onRehearse={() => run("bar")} seconds={cutSeconds} />
       )}
       {/* Says the free reads are running out while there are still some left.
           Rendered only once the piece is on screen, which is after the server

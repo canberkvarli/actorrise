@@ -118,6 +118,15 @@ CLIENT_EVENT_NAMES = frozenset(
         # scene_line_delivered carries guided=true on those runs.
         "guided_scene_shown",  # {}
         "guided_scene_started",  # {platform}
+        # Running a monologue from its own page (2026-10-21). 122 people opened
+        # a piece in 14 days and 41 started a run; nothing said how many of the
+        # other 81 were ever shown a way in, or got as far as the start screen
+        # and stopped there. shown/tapped make opened -> run a measured step;
+        # client_platform rides on every event (api/events.with_device).
+        "run_entry_shown",  # {monologue_id, surface: sheet|bar}, once per page view
+        "run_entry_tapped",  # {monologue_id, surface: sheet|bar|margin|saved}
+        "run_start_screen_shown",  # {monologue_id, reason}: the room asked for a tap before starting
+        "run_hear_finished",  # {monologue_id, lines, take: first|rest, fallback_lines}
         "guided_scene_finished",  # {lines_heard, tap_mode, take_ms_total}
         # The money. On 2026-09-27 real charges were $60 a month from five
         # people, and nothing in Postgres said how many actors ever saw a price:

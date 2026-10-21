@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
 import { MonologueCueing } from "@/components/monologue-work/MonologueCueing";
@@ -48,6 +48,8 @@ function useRemainingViewportHeight() {
 export default function MonologueWorkPage() {
   const id = useParams().id as string;
   const router = useRouter();
+  // "Run it" on the piece page sends go=hear: read the piece first.
+  const autoHear = useSearchParams().get("go") === "hear";
   const [monologue, setMonologue] = useState<Monologue | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "notfound" | "error">("loading");
   const { ref, height } = useRemainingViewportHeight();
@@ -107,7 +109,7 @@ export default function MonologueWorkPage() {
       )}
 
       {status === "ready" && monologue && (
-        <MonologueCueing monologue={monologue} onExit={() => router.back()} />
+        <MonologueCueing monologue={monologue} onExit={() => router.back()} autoHear={autoHear} />
       )}
     </div>
   );

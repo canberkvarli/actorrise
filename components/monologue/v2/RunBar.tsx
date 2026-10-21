@@ -1,6 +1,7 @@
 "use client";
 
 import { IconPlayerPlay } from "@tabler/icons-react";
+import { runClock } from "@/lib/runClock";
 
 /**
  * The one thing you came here to do, on a phone.
@@ -13,7 +14,7 @@ import { IconPlayerPlay } from "@tabler/icons-react";
  * bottom-[88px] clears the 65px platform tab strip with air; lg:hidden because
  * from lg up the margin has it.
  */
-export function RunBar({ onRehearse }: { onRehearse: () => void }) {
+export function RunBar({ onRehearse, seconds }: { onRehearse: () => void; seconds?: number }) {
   return (
     <div
       /* Clears the tab bar and the home indicator together. At a flat 76px it
@@ -32,7 +33,12 @@ export function RunBar({ onRehearse }: { onRehearse: () => void }) {
           className="inline-flex h-14 flex-1 items-center justify-between gap-3 rounded-full pl-5 pr-2 text-base font-bold shadow-[0_14px_40px_-12px_rgb(0_0_0/0.5)] transition-transform active:scale-[0.98]"
           style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
         >
-          Rehearse this
+          <span>
+            Run it
+            {seconds ? (
+              <span className="ml-2 font-medium opacity-70">{runClock(seconds)}</span>
+            ) : null}
+          </span>
           <span
             className="inline-flex h-10 w-10 items-center justify-center rounded-full"
             style={{

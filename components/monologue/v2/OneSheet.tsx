@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft, IconPlayerPlayFilled } from "@tabler/icons-react";
 
 import { Monologue } from "@/types/actor";
 import { displayableAuthor } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { posterAt, overdoneBand } from "@/lib/poster";
 import { PlayCover, clothFor } from "@/components/monologue/PlayCover";
 import { PieceWhisper } from "@/components/community/Whisper";
 import { usePieceActivity } from "@/hooks/useCallboardPulse";
+import { runClock } from "@/lib/runClock";
 
 /**
  * The one-sheet.
@@ -82,12 +83,17 @@ export function OneSheet({
   inLane,
   laneReason,
   onBack,
+  onRun,
+  runSeconds,
 }: {
   monologue: Monologue;
   /** The recommender's fit for this actor — see lib/profileMatch. */
   inLane?: boolean;
   laneReason?: string;
   onBack: () => void;
+  /** Absent when the piece is behind the free-read wall: no run is offered. */
+  onRun?: () => void;
+  runSeconds?: number;
 }) {
   const author = displayableAuthor(monologue.author);
   const facts = castingFacts(monologue);
@@ -242,6 +248,24 @@ export function OneSheet({
             )}
 
             <PieceActivityLine monologueId={monologue.id} />
+
+            {/* The next step, under the billing, on wide screens. It used to
+                sit in the margin below the fold (y 785 on a 723px window), so a
+                desktop actor scrolled to find the one thing the page is for.
+                A phone has the bar at the foot of the screen instead. */}
+            {onRun && (
+              <button
+                type="button"
+                onClick={onRun}
+                className="mt-6 hidden h-12 items-center gap-2.5 rounded-full bg-primary pl-5 pr-6 font-sans text-[15px] font-bold text-primary-foreground transition-colors hover:bg-primary/90 lg:inline-flex"
+              >
+                <IconPlayerPlayFilled className="h-4 w-4" />
+                Run it
+                {runSeconds ? (
+                  <span className="font-medium opacity-75">{runClock(runSeconds)}</span>
+                ) : null}
+              </button>
+            )}
           </div>
         </div>
 

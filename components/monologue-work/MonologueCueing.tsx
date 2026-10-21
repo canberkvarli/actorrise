@@ -35,6 +35,9 @@ import {
 import { useToggleMemorized } from "@/hooks/useMemorized";
 import { displayableAuthor } from "@/lib/utils";
 import { MicWaveform } from "@/components/scenepartner/MicWaveform";
+import { firstTakeEnd } from "@/lib/firstTake";
+import { primeRunAudio, audioRecentlyPrimed } from "@/lib/runAudio";
+import { useHearIt } from "@/components/monologue-work/useHearIt";
 
 /** How far through the line (in order) you must read before it advances — high
  *  enough that it won't jump mid-sentence, low enough that a dropped word or two
@@ -43,8 +46,11 @@ const MATCH_THRESHOLD = 0.85;
 /** Silence (ms) on the current line before we cue it (reveal the text). */
 const STALL_MS = 3000;
 
-/** Typewriter face — reserved for the monologue TEXT itself (never titles/UI). */
-const SCRIPT = "var(--font-typewriter), 'Courier Prime', 'Courier New', monospace";
+/** Typewriter face — reserved for the monologue TEXT itself (never titles/UI).
+ *  The variable next/font binds on <body>, not `--font-typewriter`: that one is
+ *  declared in globals.css's theme block, which never reaches the page as a
+ *  runtime variable, so every run line was quietly rendering in Montserrat. */
+const SCRIPT = "var(--font-theatre-direction), 'Courier Prime', 'Courier New', monospace";
 
 /**
  * Which device this is, for the input-mode telemetry only.
@@ -75,7 +81,16 @@ function lineFontSize(len: number): string {
 interface MonologueCueingProps {
   monologue: Monologue;
   onExit?: () => void;
+  /** Arrived from "Run it" on the piece page: read the piece aloud first, and
+   *  stop the first run at the first take. Other doors keep the old room. */
+  autoHear?: boolean;
 }
+
+/**
+ * What the started room is doing. hear: the piece is read to you. turn: the
+ * read is over and the room waits for you. say: you say it back.
+ */
+type Phase = "hear" | "turn" | "say";
 
 function linesFromMonologue(m: Monologue): string[] {
   const dialogue = (m.text_segments ?? [])
@@ -86,10 +101,27 @@ function linesFromMonologue(m: Monologue): string[] {
   return toDeliverableLines(dialogue || m.text || "");
 }
 
-export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
+export function MonologueCueing({ monologue, onExit, autoHear = false }: MonologueCueingProps) {
   const lines = useMemo(() => linesFromMonologue(monologue), [monologue]);
 
   const [started, setStarted] = useState(false);
+  const [phase, setPhase] = useState<Phase>("say");
+  /** The stretch of the piece this run covers: [sectionStart, sectionEnd).
+   *  The whole piece unless this is a first take. */
+  const [sectionStart, setSectionStart] = useState(0);
+  const [sectionEnd, setSectionEnd] = useState(lines.length);
+  const hearIt = useHearIt(monologue.id, lines);
+  const { hear: hearLines, stop: stopHearing, resume: resumeHearing } = hearIt;
+  /**
+   * Phones run by tap unless the actor asks for the mic. In the 14 days to
+   * 2026-10-21 the voice moved a line in 3 iOS runs out of 20 and in no
+   * Android run out of 12; the iOS finishes all came from tapping. Voice is
+   * still one tap away in the dock.
+   */
+  const platform = useMemo(() => detectPlatform(), []);
+  const isPhone = platform === "ios" || platform === "android";
+  const [voiceOptIn, setVoiceOptIn] = useState(false);
+  const preferTap = isPhone && !voiceOptIn;
   /** False until the permission probe has answered, so the gate never flashes
    *  up for the half second before we auto-begin. */
   const [gateChecked, setGateChecked] = useState(false);
@@ -126,7 +158,12 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     : 0;
   const inTrial = trialDaysLeft > 0;
 
-  const completed = started && activeIndex >= lines.length;
+  const completed = started && phase === "say" && activeIndex >= lines.length;
+  /** A first take reached its last line with more of the piece still to come. */
+  const takeDone =
+    started && phase === "say" && !completed && sectionEnd < lines.length && activeIndex >= sectionEnd;
+  /** The actor is saying it right now: the mic and the timers run only here. */
+  const sayLive = started && phase === "say" && activeIndex < sectionEnd;
 
   /**
    * The off-book mark, claimable from the curtain call. Same pair of calls the
@@ -174,8 +211,22 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     trackEvent("monologue_work_finished", {
       monologue_id: monologue.id,
       lines: lines.length,
+      take: "full",
     });
   }, [completed, lines.length, monologue.id]);
+
+  // Finishing the first take is finishing a run: the take is the whole ask of a
+  // first run, so it is counted in the same event, marked as a take.
+  const takeDoneRef = useRef(false);
+  useEffect(() => {
+    if (!takeDone || takeDoneRef.current) return;
+    takeDoneRef.current = true;
+    trackEvent("monologue_work_finished", {
+      monologue_id: monologue.id,
+      lines: sectionEnd,
+      take: "first",
+    });
+  }, [takeDone, sectionEnd, monologue.id]);
 
   // Advancing past line 0 means they actually spoke it (or tapped through it).
   useEffect(() => {
@@ -262,7 +313,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   // No Web Speech API at all, or it died on us → run as a tap-to-advance
   // teleprompter instead of silently failing. Voice-follow is a bonus, not a
   // requirement, so the whole feature works on every device.
-  const tapToAdvance = !isSupported || micDead || listenExhausted;
+  const tapToAdvance = preferTap || !isSupported || micDead || listenExhausted;
 
   /**
    * Which mode the run actually settled into, and why it moved if it moved.
@@ -281,7 +332,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
    */
   const modeReportedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!started || completed) return;
+    if (!sayLive) return;
     const mode = tapToAdvance ? "tap" : "voice";
     const reason = !isSupported
       ? "unsupported"
@@ -289,7 +340,9 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
         ? "mic_error"
         : listenExhausted
           ? "listen_exhausted"
-          : "none";
+          : preferTap
+            ? "phone_default"
+            : "none";
     const key = `${mode}:${reason}`;
     if (modeReportedRef.current === key) return;
     modeReportedRef.current = key;
@@ -301,12 +354,12 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
       monologue_id: monologue.id,
     });
   }, [
-    started,
-    completed,
+    sayLive,
     tapToAdvance,
     isSupported,
     micDead,
     listenExhausted,
+    preferTap,
     speechError,
     monologue.id,
   ]);
@@ -344,17 +397,17 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
 
   // Stall timer: quiet on the current line → cue it (reveal the text).
   useEffect(() => {
-    if (!started || completed || !isListening) return;
+    if (!sayLive || !isListening) return;
     const t = setTimeout(() => setRevealCurrent(true), STALL_MS);
     return () => clearTimeout(t);
-  }, [transcript, activeIndex, started, completed, isListening]);
+  }, [transcript, activeIndex, sayLive, isListening]);
 
   // Advance once you've read most of the current line, measured against the
   // cumulative transcript (so a mid-line pause never loses progress). Two paths
   // so a missed word doesn't strand you: the in-order highlight reached ~the end
   // (tolerant of dropped words via lookahead), OR nearly every word was heard.
   useEffect(() => {
-    if (!started || completed || tapToAdvance) return;
+    if (!sayLive || tapToAdvance) return;
     const current = lines[activeIndex];
     if (!current) return;
     const wordCount = current.split(/\s+/).filter(Boolean).length;
@@ -377,23 +430,27 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   }, [
     transcript,
     activeIndex,
-    started,
-    completed,
+    sayLive,
     tapToAdvance,
     lines,
     goToLineAndReset,
     monologue.id,
   ]);
 
+  // The line the spotlight sits on: the one being read to you, or yours.
+  const spotIndex = phase === "hear" ? hearIt.index : activeIndex;
+
   // Keep the active line centered as the spotlight moves down the piece.
   useEffect(() => {
     if (!started || completed) return;
     activeRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [activeIndex, started, completed]);
+  }, [spotIndex, started, completed]);
 
+  // The mic is for saying it. Off while the piece is read, between takes and
+  // at the curtain.
   useEffect(() => {
-    if (completed && isListening) stopListening();
-  }, [completed, isListening, stopListening]);
+    if (!sayLive && isListening) stopListening();
+  }, [sayLive, isListening, stopListening]);
 
   /**
    * The other way a run silently stalls. Chrome ends a "continuous" session on
@@ -419,7 +476,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   }, [transcript]);
 
   useEffect(() => {
-    if (!started || completed || tapToAdvance || isListening || listenExhausted) return;
+    if (!sayLive || tapToAdvance || isListening || listenExhausted) return;
     if (restartsRef.current >= RESTART_BUDGET) {
       setListenExhausted(true);
       return;
@@ -429,7 +486,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
       startListening();
     }, 400);
     return () => clearTimeout(t);
-  }, [started, completed, tapToAdvance, isListening, listenExhausted, startListening]);
+  }, [sayLive, tapToAdvance, isListening, listenExhausted, startListening]);
 
   const resetRun = useCallback(() => {
     resetTranscript();
@@ -443,30 +500,87 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     modeReportedRef.current = null;
   }, [resetTranscript]);
 
-  const begin = useCallback(async () => {
+  /** The metered start. One per run, whichever way the run begins. False when
+   *  the free cap answered with the paywall. */
+  const meter = useCallback(async (): Promise<boolean> => {
     try {
       await api.post("/api/monologue-work/start", { monologue_id: monologue.id });
     } catch (error) {
       const code = (error as Error & { response?: { status?: number } })?.response?.status;
       if (code === 403) {
         setPaywallOpen(true);
-        /* Reveal the gate behind the modal. begin() returns here without
+        /* Reveal the gate behind the modal. The caller returns here without
            setting started, so on the auto-begin path there would be nothing
            underneath the paywall: dismiss it and you are looking at an empty
            room with no way back into the piece. */
         setGateChecked(true);
-        return;
+        return false;
       }
     }
-    resetRun();
+    return true;
+  }, [monologue.id]);
+
+  /** Into the say phase at line `from`, with the lines hidden or not. */
+  const startSay = useCallback(
+    (from: number, hidden: boolean) => {
+      resetRun();
+      setActiveIndex(from);
+      setOffBook(hidden);
+      setPhase("say");
+      if (isSupported && !preferTap) startListening();
+    },
+    [resetRun, isSupported, preferTap, startListening],
+  );
+
+  /** "Say it now": the old room. The whole piece, no read first. */
+  const begin = useCallback(async () => {
+    if (!(await meter())) return;
+    setSectionStart(0);
+    setSectionEnd(lines.length);
     setStarted(true);
-    if (isSupported) startListening();
-  }, [monologue.id, resetRun, isSupported, startListening]);
+    startSay(0, offBook);
+  }, [meter, lines.length, startSay, offBook]);
+
+  /** Read [from, to) aloud, then hand over. `take` names the stretch in the
+   *  event so the first take and the rest of the piece can be told apart. */
+  const hearSection = useCallback(
+    (from: number, to: number, take: "first" | "rest") => {
+      setSectionStart(from);
+      setSectionEnd(to);
+      setActiveIndex(from);
+      setPhase("hear");
+      void hearLines(from, to, (fallbackLines) => {
+        trackEvent("run_hear_finished", {
+          monologue_id: monologue.id,
+          lines: to - from,
+          take,
+          fallback_lines: fallbackLines,
+        });
+        setPhase("turn");
+      });
+    },
+    [hearLines, monologue.id],
+  );
+
+  /** "Hear it first": the run the piece page's Run it starts. */
+  const beginHear = useCallback(async () => {
+    if (!(await meter())) return;
+    setStarted(true);
+    hearSection(0, firstTakeEnd(lines), "first");
+  }, [meter, hearSection, lines]);
 
   const restart = useCallback(() => {
-    resetRun();
-    if (isSupported && !isListening) startListening();
-  }, [resetRun, isSupported, isListening, startListening]);
+    stopHearing();
+    setSectionStart(0);
+    setSectionEnd(lines.length);
+    startSay(0, offBook);
+  }, [stopHearing, lines.length, startSay, offBook]);
+
+  /** After the first take: read the rest, then say the rest. */
+  const keepGoing = useCallback(() => {
+    primeRunAudio();
+    hearSection(sectionEnd, lines.length, "rest");
+  }, [hearSection, sectionEnd, lines.length]);
 
   /**
    * Walk straight on stage when we are allowed to.
@@ -492,6 +606,19 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   useEffect(() => {
     if (autoBeganRef.current || started) return;
     autoBeganRef.current = true;
+
+    /* From "Run it": the tap on the piece page already unlocked the audio, so
+       the read can start with no second tap. A reload or a shared link has no
+       such tap behind it, and the browser would refuse to play, so the start
+       screen asks for one. */
+    if (autoHear) {
+      if (audioRecentlyPrimed()) {
+        void beginHear();
+        return;
+      }
+      setGateChecked(true);
+      return;
+    }
 
     /* Show the gate rather than returning early. An early return here leaves
        gateChecked false forever, and since the stage only renders once started
@@ -527,10 +654,33 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     return () => {
       cancelled = true;
     };
-  }, [started, isSupported, begin]);
+  }, [started, isSupported, begin, autoHear, beginHear]);
+
+  // Every time the room asks for a tap before starting. Tapped -> started is
+  // the step this screen can lose, and nothing counted it before.
+  const startScreenVisible = !started && gateChecked;
+  useEffect(() => {
+    if (!startScreenVisible) return;
+    trackEvent("run_start_screen_shown", {
+      monologue_id: monologue.id,
+      reason: autoHear ? "audio_locked" : !isSupported ? "no_speech" : "mic_check",
+    });
+  }, [startScreenVisible, autoHear, isSupported, monologue.id]);
+
+  /** In tap mode with the lines hidden, the first tap shows the line and the
+   *  second moves on: say it, check it, go. */
+  const tapStage = useCallback(() => {
+    if (offBook && !revealCurrent) {
+      setRevealCurrent(true);
+      return;
+    }
+    goToLineAndReset(activeIndex + 1);
+  }, [offBook, revealCurrent, goToLineAndReset, activeIndex]);
 
   // Live per-word progress for the current line.
-  const currentLine = lines[activeIndex] ?? "";
+  const currentLine = lines[spotIndex] ?? "";
+  /** The stage itself is the tap target only while the actor is saying it. */
+  const tapLive = sayLive && tapToAdvance;
   const currentWords = useMemo(() => currentLine.split(/\s+/).filter(Boolean), [currentLine]);
   const spokenCount = spokenPrefixCount(currentLine, transcript);
 
@@ -586,9 +736,9 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
           <p className="truncate text-sm text-[var(--stage-fg)]/55">{monologue.title}</p>
         </div>
         <div className="ml-auto flex items-center gap-4">
-          {started && !completed && (
+          {started && !completed && !takeDone && phase !== "turn" && (
             <span className="text-[0.7rem] uppercase tracking-[0.22em] text-[var(--stage-fg)]/45">
-              {Math.min(activeIndex + 1, lines.length)} / {lines.length}
+              {Math.min(spotIndex + 1, sectionEnd)} / {sectionEnd}
             </span>
           )}
           <button
@@ -632,9 +782,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                   are instead. */}
               <span className="stage-direction text-xs text-[var(--stage-fg)]/45">(places.)</span>
               <p className="max-w-md text-2xl font-medium leading-snug text-[var(--stage-fg)]">
-                {tapToAdvance
-                  ? "Run it at your own pace. Tap to move through it."
-                  : "Say it out loud. I’ll follow along."}
+                Hear it once, then say it back.
               </p>
               <p className="text-sm text-[var(--stage-fg)]/45">
                 {monologue.play_title}
@@ -645,7 +793,6 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                 {monologue.estimated_duration_seconds
                   ? ` · about ${Math.max(1, Math.round(monologue.estimated_duration_seconds / 60))} min`
                   : ""}
-                {tapToAdvance && " · tap anywhere to advance"}
               </p>
               {inTrial && (
                 <p className="text-xs uppercase tracking-[0.2em] text-primary/85">
@@ -654,29 +801,109 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
               )}
             </div>
 
+            {/* Hear it first is the run the piece page starts. The tap that
+                lands here is also what lets the browser play the voice, which
+                is why this screen exists for a reload or a shared link. */}
             <button
-              onClick={() => void begin()}
-              className="group inline-flex items-center gap-2.5 rounded-full bg-primary px-8 py-3.5 text-sm font-semibold tracking-wide text-primary-foreground shadow-[0_0_40px_-8px_rgba(203,75,0,0.7)] transition-all hover:bg-primary/90 hover:shadow-[0_0_55px_-6px_rgba(203,75,0,0.85)]"
+              onClick={() => {
+                primeRunAudio();
+                void beginHear();
+              }}
+              className="group inline-flex h-12 items-center gap-2.5 rounded-full bg-primary px-8 text-sm font-semibold tracking-wide text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <IconPlayerPlayFilled className="h-4 w-4" />
-              Begin
+              Hear it first
             </button>
 
-            {/* The only choice on this screen, so it should look like one. It
-                was a tiny all-caps line that read as a footnote. */}
             <button
-              onClick={() => setOffBook((v) => !v)}
-              aria-pressed={offBook}
-              className={`rounded-full border px-4 py-2 text-xs transition-colors ${
-                offBook
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-[var(--stage-fg)]/15 text-[var(--stage-fg)]/50 hover:border-[var(--stage-fg)]/35 hover:text-[var(--stage-fg)]/80"
-              }`}
+              onClick={() => void begin()}
+              className="rounded-full border border-[var(--stage-fg)]/15 px-5 py-2.5 text-sm text-[var(--stage-fg)]/70 transition-colors hover:border-[var(--stage-fg)]/35 hover:text-[var(--stage-fg)]"
             >
-              {offBook ? "Lines hidden — tap to show them" : "Hide the lines · harder"}
+              Skip to saying it
             </button>
 
             <MonologuePaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
+          </motion.div>
+        )}
+
+        {/* ---------- Your turn ----------
+            Between the read and the say. One tap, on purpose: it is the
+            actor's go, and on a phone it is the gesture the mic needs. */}
+        {started && phase === "turn" && (
+          <motion.div
+            key="turn"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="relative z-10 flex flex-1 flex-col items-center justify-center gap-7 px-6 text-center"
+          >
+            <div className="flex flex-col items-center gap-3">
+              <span className="stage-direction text-xs text-[var(--stage-fg)]/45">(your turn.)</span>
+              <p className="max-w-md text-2xl font-medium leading-snug text-[var(--stage-fg)]">
+                Now say it back.
+              </p>
+              <p className="max-w-xs text-sm text-[var(--stage-fg)]/50">
+                {tapToAdvance
+                  ? "The lines are hidden. Say one, tap to check it, tap again to go on."
+                  : "The lines are hidden. Go quiet and I’ll show you the line."}
+              </p>
+            </div>
+            <button
+              onClick={() => startSay(sectionStart, true)}
+              className="inline-flex h-12 items-center gap-2.5 rounded-full bg-primary px-8 text-sm font-semibold tracking-wide text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Say it back
+            </button>
+            <button
+              onClick={() => {
+                primeRunAudio();
+                hearSection(sectionStart, sectionEnd, sectionStart === 0 ? "first" : "rest");
+              }}
+              className="text-sm text-[var(--stage-fg)]/50 underline-offset-4 transition-colors hover:text-[var(--stage-fg)]/80 hover:underline"
+            >
+              Hear it again
+            </button>
+          </motion.div>
+        )}
+
+        {/* ---------- First take done ----------
+            The first run is the opening stretch, and getting through it is a
+            finish. The rest is offered, never forced. */}
+        {takeDone && (
+          <motion.div
+            key="take"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-10 text-center"
+          >
+            <span className="stage-direction text-xs text-[var(--stage-fg)]/45">(first take.)</span>
+            <h2 className="text-3xl font-medium text-[var(--stage-fg)]/90">That&apos;s the opening.</h2>
+            <p className="max-w-xs text-sm leading-relaxed text-[var(--stage-fg)]/50">
+              {lines.length - sectionEnd} more line{lines.length - sectionEnd === 1 ? "" : "s"} to the end.
+            </p>
+            <button
+              onClick={keepGoing}
+              className="inline-flex h-12 items-center gap-2.5 rounded-full bg-primary px-8 text-sm font-semibold tracking-wide text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Keep going
+            </button>
+            <button
+              onClick={() => startSay(sectionStart, true)}
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--stage-fg)]/15 px-6 py-3 text-sm font-medium text-[var(--stage-fg)]/80 transition-colors hover:border-primary hover:text-[var(--stage-fg)]"
+            >
+              <IconRefresh className="h-4 w-4" />
+              Run the opening again
+            </button>
+            {onExit && (
+              <button
+                onClick={onExit}
+                className="text-sm text-[var(--stage-fg)]/40 underline-offset-4 transition-colors hover:text-[var(--stage-fg)]/70 hover:underline"
+              >
+                Back to the piece
+              </button>
+            )}
           </motion.div>
         )}
 
@@ -754,7 +981,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             Rises rather than fades. Coming straight off a tap, a plain opacity
             swap reads as a page load; a short lift reads as the lights coming
             up on something that was already there. */}
-        {started && !completed && (
+        {started && phase !== "turn" && !completed && !takeDone && (
           <motion.div
             key="stage"
             initial={{ opacity: 0, y: 14 }}
@@ -768,24 +995,24 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                 so you never wait for a line to "come in". */}
             <div
               ref={scrollRef}
-              role={tapToAdvance ? "button" : undefined}
-              tabIndex={tapToAdvance ? 0 : undefined}
-              aria-label={tapToAdvance ? "Tap to advance" : undefined}
-              onClick={tapToAdvance ? () => goToLineAndReset(activeIndex + 1) : undefined}
+              role={tapLive ? "button" : undefined}
+              tabIndex={tapLive ? 0 : undefined}
+              aria-label={tapLive ? (offBook && !revealCurrent ? "Tap to see the line" : "Tap to advance") : undefined}
+              onClick={tapLive ? tapStage : undefined}
               onKeyDown={
-                tapToAdvance
+                tapLive
                   ? (e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        goToLineAndReset(activeIndex + 1);
+                        tapStage();
                       }
                     }
                   : undefined
               }
-              className={`flex min-h-0 flex-1 flex-col items-center gap-5 overflow-y-auto pt-[22vh] pb-[46vh] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden${tapToAdvance ? " cursor-pointer select-none" : ""}`}
+              className={`flex min-h-0 flex-1 flex-col items-center gap-5 overflow-y-auto pt-[22vh] pb-[46vh] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden${tapLive ? " cursor-pointer select-none" : ""}`}
             >
-              {lines.map((line, i) => {
-                if (i === activeIndex) {
+              {lines.slice(0, sectionEnd).map((line, i) => {
+                if (i === spotIndex) {
                   return (
                     <p
                       key={i}
@@ -794,8 +1021,8 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                       style={{ fontFamily: SCRIPT, fontSize: lineFontSize(line.length) }}
                     >
                       {currentWords.map((word, wi) => {
-                        const spoken = wi < spokenCount;
-                        const masked = offBook && !revealCurrent && !spoken;
+                        const spoken = phase === "say" && wi < spokenCount;
+                        const masked = phase === "say" && offBook && !revealCurrent && !spoken;
                         return (
                           <span
                             key={wi}
@@ -828,12 +1055,13 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                     </p>
                   );
                 }
-                const done = i < activeIndex;
+                const done = i < spotIndex;
+                const hidden = phase === "say" && offBook;
                 return (
                   <p
                     key={i}
                     className={`w-full max-w-2xl text-center leading-relaxed transition-all duration-500 ${
-                      done ? "text-[var(--stage-fg)]/25" : offBook ? "text-[var(--stage-fg)]/20 blur-[5px]" : "text-[var(--stage-fg)]/40"
+                      done ? "text-[var(--stage-fg)]/25" : hidden ? "text-[var(--stage-fg)]/20 blur-[5px]" : "text-[var(--stage-fg)]/40"
                     }`}
                     style={{ fontFamily: SCRIPT, fontSize: "clamp(0.95rem, 2vw, 1.2rem)" }}
                   >
@@ -861,14 +1089,23 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                 scrolls, not the page). Pinned, it also stops moving about as
                 lines change length. */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-2.5 bg-gradient-to-t from-[var(--stage)] via-[var(--stage)]/85 to-transparent pb-4 pt-14">
-              {tapToAdvance ? (
+              {phase === "hear" ? (
+                <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/55">
+                  <StatusDot state="listening" />
+                  {hearIt.state === "loading" ? "Getting the voice ready" : "Listen first"}
+                </span>
+              ) : tapToAdvance ? (
                 <>
                   <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/45">
                     <StatusDot state="tap" />
                     {/* If the mic dropped out mid-run, say so. Switching the rules
                         of the screen without a word is how the old silent failure
                         read as the app being broken. */}
-                    {micDead || listenExhausted ? "Mic dropped · tap to advance" : "Tap to advance"}
+                    {micDead || listenExhausted
+                      ? "Mic dropped · tap to advance"
+                      : offBook && !revealCurrent
+                        ? "Say it · tap to check"
+                        : "Tap to go on"}
                   </span>
                   {/* iOS Safari is where the web rehearsal fails: 19 of the 32
                       mobile sessions on record, every one of them finishing
@@ -877,7 +1114,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                       it appears only here, only on iOS, only once the run has
                       already fallen back to tapping. `ct=rehearse_fallback`
                       makes it countable in App Store Connect. */}
-                  {detectPlatform() === "ios" && (
+                  {platform === "ios" && (micDead || listenExhausted) && (
                     <a
                       href={appStoreUrl("rehearse_fallback")}
                       target="_blank"
@@ -899,16 +1136,41 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                   better home for it anyway: you read it through once, then hide
                   the lines when you feel ready, rather than guessing before you
                   have said a word. */}
-              <div className="pointer-events-auto flex items-center justify-center gap-2">
-                {offBook && <DockButton onClick={() => setRevealCurrent(true)}>Reveal</DockButton>}
-                <DockButton onClick={() => { setOffBook((v) => !v); setRevealCurrent(false); }}>
-                  {offBook ? "Show lines" : "Hide lines"}
-                </DockButton>
-                {!tapToAdvance && (
-                  <DockButton onClick={() => skipLine(activeIndex + 1)}>Skip</DockButton>
-                )}
-                <DockButton onClick={restart}>Restart</DockButton>
-              </div>
+              {phase === "hear" ? (
+                <div className="pointer-events-auto flex items-center justify-center gap-2">
+                  {hearIt.state === "blocked" && <DockButton onClick={resumeHearing}>Play</DockButton>}
+                  <DockButton
+                    onClick={() => {
+                      stopHearing();
+                      setPhase("turn");
+                    }}
+                  >
+                    My turn
+                  </DockButton>
+                </div>
+              ) : (
+                <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-2">
+                  {offBook && !tapToAdvance && <DockButton onClick={() => setRevealCurrent(true)}>Reveal</DockButton>}
+                  <DockButton onClick={() => { setOffBook((v) => !v); setRevealCurrent(false); }}>
+                    {offBook ? "Show lines" : "Hide lines"}
+                  </DockButton>
+                  {!tapToAdvance && (
+                    <DockButton onClick={() => skipLine(activeIndex + 1)}>Skip</DockButton>
+                  )}
+                  {/* Voice is a choice on a phone, not the default; see preferTap. */}
+                  {preferTap && isSupported && !micDead && (
+                    <DockButton
+                      onClick={() => {
+                        setVoiceOptIn(true);
+                        startListening();
+                      }}
+                    >
+                      Use my voice
+                    </DockButton>
+                  )}
+                  <DockButton onClick={restart}>Restart</DockButton>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

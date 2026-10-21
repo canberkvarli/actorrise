@@ -159,7 +159,7 @@ export function MarginRail({
             className="inline-flex h-[60px] w-full items-center justify-between gap-3 rounded-full pl-6 pr-2 text-[17px] font-bold transition-transform duration-300 hover:scale-[1.03] hover:-rotate-1"
             style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
           >
-            Rehearse this
+            Run it
             <span
               className="inline-flex h-[42px] w-[42px] items-center justify-center rounded-full"
               style={{ background: "var(--t-cta-dot-bg)", color: "var(--t-cta-dot-fg)" }}
