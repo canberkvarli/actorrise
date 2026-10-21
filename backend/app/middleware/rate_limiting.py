@@ -388,13 +388,15 @@ def record_total_search(user_id: int, db: Session) -> None:
 # monthly cap is the same wall twelve times a year and keeps them coming back
 # to hit it.
 #
-# Separate means separate: the counts do not pool. Reading five pieces on the
+# Separate means separate: the counts do not pool. Reading three pieces on the
 # web must not arrive in the app as a spent trial, so the wall counts only the
 # views belonging to the client that is asking (MonologueView.client).
 CLIENT_WEB = "web"
 CLIENT_GHOSTLIGHT = "ghostlight"
 
-FREE_MONOLOGUE_READ_LIMIT = 5
+# 3 since 2026-10-21 (was 5), Canberk's call: five a month was most of what a
+# free actor ever reads, so the wall rarely came up at all.
+FREE_MONOLOGUE_READ_LIMIT = 3
 FREE_MONOLOGUE_READ_LIMIT_GHOSTLIGHT = 3
 
 

@@ -38,6 +38,45 @@ export function warmUpMic(): void {
   })();
 }
 
+/**
+ * Give the microphone back. The pipeline above used to be opened once and held
+ * for the life of the tab, so the browser's recording light stayed on after a
+ * run had finished and even after leaving the page. Waits for a warm-up still in
+ * flight so a stream that lands late is closed too.
+ */
+export async function releaseMic(): Promise<void> {
+  const pending = _initPromise;
+  if (!pending) return;
+  await pending;
+  if (_initPromise !== pending) return;
+  _stream?.getTracks().forEach((t) => t.stop());
+  void _audioCtx?.close().catch(() => {});
+  _stream = null;
+  _audioCtx = null;
+  _analyser = null;
+  _freqData = null;
+  _initPromise = null;
+}
+
+/** Listening flickers off between takes and while Chrome restarts a session;
+ *  release only once it has stayed off this long, so the mic is not reopened
+ *  every few seconds mid-run. */
+const RELEASE_AFTER_MS = 1500;
+let _releaseTimer: ReturnType<typeof setTimeout> | null = null;
+
+function cancelRelease() {
+  if (_releaseTimer) clearTimeout(_releaseTimer);
+  _releaseTimer = null;
+}
+
+function scheduleRelease() {
+  cancelRelease();
+  _releaseTimer = setTimeout(() => {
+    _releaseTimer = null;
+    void releaseMic();
+  }, RELEASE_AFTER_MS);
+}
+
 export function MicWaveform({ active, className }: MicWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
@@ -47,12 +86,24 @@ export function MicWaveform({ active, className }: MicWaveformProps) {
   // Init mic pipeline only when we actually need it (active=true).
   // Avoids racing getUserMedia against SpeechRecognition on mount.
   useEffect(() => {
-    if (!active) return;
+    if (!active) {
+      scheduleRelease();
+      return;
+    }
+    cancelRelease();
     warmUpMic();
     if (_audioCtx?.state === "suspended") {
       _audioCtx.resume();
     }
   }, [active]);
+
+  // Leaving the page (back, or the end of the run) lets the mic go at once.
+  useEffect(() => {
+    return () => {
+      cancelRelease();
+      void releaseMic();
+    };
+  }, []);
 
   // Animation loop — always runs when mounted
   useEffect(() => {

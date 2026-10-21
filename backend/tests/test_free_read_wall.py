@@ -170,8 +170,9 @@ class TestSeparateTrialsPerClient:
     arrive in the app as a spent trial, in either direction.
     """
 
-    def test_the_two_limits_differ(self):
-        assert free_read_limit(CLIENT_WEB) == 5
+    def test_each_client_has_its_own_limit(self):
+        # Equal since 2026-10-21 (web went 5 -> 3); the counts still do not pool.
+        assert free_read_limit(CLIENT_WEB) == 3
         assert free_read_limit(CLIENT_GHOSTLIGHT) == 3
 
     def test_web_reads_do_not_spend_the_app_trial(self, db):

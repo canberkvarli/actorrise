@@ -49,7 +49,9 @@ def canonical_tiers() -> list[PricingTier]:
                 # anything landed. The trial offer fires on COMPLETION as well as at
                 # the cap, so a third run feeds the ask rather than weakening it.
                 "scene_partner_sessions": 3,
-                "monologue_sessions": 3,  # kept level with scene sessions; paid tiers stay -1.
+                # 2 since 2026-10-21 (was 3, level with scene sessions), Canberk's call.
+                # Paid tiers stay -1. Live value is in pricing_tiers.features.
+                "monologue_sessions": 2,
                 "scene_partner_trial_only": True,
             },
             is_active=True,
