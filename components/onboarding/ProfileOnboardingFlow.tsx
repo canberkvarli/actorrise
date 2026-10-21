@@ -463,7 +463,10 @@ export default function ProfileOnboardingFlow({
         trackEvent("onboarding_picks_kept", { count: list.length });
       }
     }
-    trackEvent("onboarding_ending_shown");
+    // variant: the skip waits and speaks quietly since 2026-10-21. Before it,
+    // 26 of 57 skipped; the 31 who answered opened monologues just as often
+    // (58% vs 54%) and 15 of them finished a scene. Compare on this tag.
+    trackEvent("onboarding_ending_shown", { variant: "quiet_skip" });
     setPhase("ending");
     setSubmitting(false);
   }, [submitting, persist, answers, variant]);
@@ -1017,6 +1020,8 @@ async function fetchPicks(answers: OnboardingAnswers): Promise<Monologue[]> {
  * scene, and the picks it would have shown are already on the shelf; the
  * win screen says so (SceneWin, `kept`).
  */
+const SKIP_DELAY_MS = 4000;
+
 function OnboardingEnding({
   onAnswer,
   onSkip,
@@ -1030,6 +1035,14 @@ function OnboardingEnding({
 }) {
   const partner = titleCase(GUIDED_PARTNER);
   const actor = titleCase(GUIDED_ACTOR);
+  // The way out to the library stays, but it is not the first thing on the
+  // card any more: it arrives after a few seconds, smaller. Long enough to
+  // read the invitation, short enough that nobody in a hurry is held.
+  const [skipShown, setSkipShown] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setSkipShown(true), SKIP_DELAY_MS);
+    return () => window.clearTimeout(t);
+  }, []);
   return (
     <div className="px-5 pb-[48px] pt-10 text-center sm:px-7 sm:pb-[60px] sm:pt-12">
       <p
@@ -1060,10 +1073,16 @@ function OnboardingEnding({
         </p>
       )}
       <p
-        className="mt-6 text-[13px]"
-        style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}
+        className="mt-6 text-[12px] transition-opacity duration-700 motion-reduce:transition-none"
+        style={{
+          fontFamily: "var(--t-direction)",
+          color: "var(--t-muted-dark-2)",
+          opacity: skipShown ? 0.7 : 0,
+          visibility: skipShown ? "visible" : "hidden",
+        }}
+        aria-hidden={!skipShown}
       >
-        <FootLink onClick={onSkip}>skip, take me to the library</FootLink>
+        <FootLink onClick={onSkip}>later, take me to the library</FootLink>
       </p>
     </div>
   );
