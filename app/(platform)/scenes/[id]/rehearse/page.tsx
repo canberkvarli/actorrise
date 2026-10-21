@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { theatreFontVars, typewriterFontVar } from '@/lib/fonts/theatre';
 import type { ScenePayload } from '@/lib/rehearsal/contract';
 import { plainError } from '@/lib/rehearsal/prepare';
@@ -24,6 +25,17 @@ export default function RehearsePage() {
   const go = search.get('go') === '1';
   const [payload, setPayload] = useState<ScenePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { refreshUser } = useAuth();
+
+  // The guided run sets has_seen_first_rehearsal on the server. Pull the user
+  // again on the way out, so the next page does not invite them to the scene
+  // they have just played from a cached copy of the account.
+  useEffect(() => {
+    if (!guided) return;
+    return () => {
+      void refreshUser().catch(() => undefined);
+    };
+  }, [guided, refreshUser]);
 
   useEffect(() => {
     let alive = true;

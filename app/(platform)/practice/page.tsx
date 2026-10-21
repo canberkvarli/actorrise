@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState, useSyncExternalStore } from "react";
+import { Suspense, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 
 import { useScripts } from "@/hooks/useScripts";
@@ -32,7 +32,7 @@ import { isOnboardingDoneThisSession, subscribeFirstRun } from "@/lib/firstRun";
  */
 export default function PracticePage() {
   // Hooks must run on every render — call before any feature-flag early return.
-  const { user, loading: authLoading, isDemoUser } = useAuth();
+  const { user, loading: authLoading, isDemoUser, refreshUser } = useAuth();
   const { data: scripts, isLoading: scriptsLoading, isFetched: scriptsFetched } = useScripts();
 
   /* Whether this browser has been shown the playbill. Read through
@@ -73,7 +73,28 @@ export default function PracticePage() {
   // scripts fetch too put a skeleton in front of the first-time actor for the
   // length of a round trip; a brand-new account has no scripts, and if the
   // fetch says otherwise the library takes over when it lands.
-  const invite = !!user && shouldInvite(user, scriptsFetched ? ownScriptCount : 0, isDemoUser);
+  const inviteCandidate =
+    !!user && shouldInvite(user, scriptsFetched ? ownScriptCount : 0, isDemoUser);
+  // The user object can be a cached copy from before the guided run, which is
+  // what set has_seen_first_rehearsal on the server. Finishing Late from the
+  // signup card and walking in here showed the invitation to Late again
+  // (Canberk, iOS Safari, 2026-10-21). So the invitation is only shown once a
+  // fresh copy agrees; until then the room holds its skeleton.
+  const [inviteChecked, setInviteChecked] = useState(false);
+  useEffect(() => {
+    if (!inviteCandidate || inviteChecked) return;
+    let alive = true;
+    refreshUser()
+      .catch(() => undefined)
+      .finally(() => {
+        if (alive) setInviteChecked(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [inviteCandidate, inviteChecked, refreshUser]);
+  const invite = inviteCandidate && inviteChecked;
+  const inviteChecking = inviteCandidate && !inviteChecked;
   // The onboarding card shows on this page now (lib/onboarding-routes), over
   // the top of whatever is here. The invitation waits for it: mounted under
   // the card it would count itself as shown to someone who is looking at a
@@ -88,7 +109,8 @@ export default function PracticePage() {
   const stillOnboarding = user?.has_completed_onboarding === false && !onboardingDone;
 
   const hasCachedData = scriptsFetched || safeScripts.length > 0;
-  const isLoading = (authLoading && !user) || (scriptsLoading && !hasCachedData && !invite);
+  const isLoading =
+    (authLoading && !user) || inviteChecking || (scriptsLoading && !hasCachedData && !invite);
 
   // The playbill introduces itself to first-timers only, then lives behind (?).
   // Two gates, because either alone is wrong: the seen-flag is per-browser, so

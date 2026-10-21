@@ -95,9 +95,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loggingOutRef = useRef(false);
   const lastSyncRef = useRef(0);
 
-  const syncUserWithBackend = useCallback(async (shouldSetLoading = false) => {
+  const syncUserWithBackend = useCallback(async (shouldSetLoading = false, force = false) => {
     const now = Date.now();
-    if (now - lastSyncRef.current < 3000) {
+    // The throttle is for the automatic syncs. An explicit refreshUser() is
+    // asked for because something just changed on the server, and skipping it
+    // left the page on the old account (the Late invitation shown again).
+    if (!force && now - lastSyncRef.current < 3000) {
       if (shouldSetLoading) setLoading(false);
       return;
     }
@@ -334,7 +337,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isLoggingOut]);
 
   const refreshUser = useCallback(async () => {
-    await syncUserWithBackend(false);
+    await syncUserWithBackend(false, true);
   }, [syncUserWithBackend]);
 
   const isDemoUser = !!user && user.email === DEMO_EMAIL;
