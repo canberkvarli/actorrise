@@ -8,6 +8,9 @@ import {
   IconArrowLeft,
   IconBulb,
   IconBulbFilled,
+  IconEye,
+  IconEyeOff,
+  IconPlayerTrackNext,
 } from "@tabler/icons-react";
 import type { Monologue } from "@/types/actor";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
@@ -113,7 +116,9 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
   const platform = useMemo(() => detectPlatform(), []);
   const isPhone = platform === "ios" || platform === "android";
   const [voiceOptIn, setVoiceOptIn] = useState(false);
-  const preferTap = isPhone && !voiceOptIn;
+  /** The other way round: voice was on and the actor would rather tap. */
+  const [tapOptIn, setTapOptIn] = useState(false);
+  const preferTap = (isPhone && !voiceOptIn) || tapOptIn;
   /** False until the permission probe has answered, so the gate never flashes
    *  up for the half second before we auto-begin. */
   const [gateChecked, setGateChecked] = useState(false);
@@ -332,7 +337,9 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
         ? "mic_error"
         : listenExhausted
           ? "listen_exhausted"
-          : preferTap
+          : tapOptIn
+            ? "chose_tap"
+            : preferTap
             ? "phone_default"
             : "none";
     const key = `${mode}:${reason}`;
@@ -352,6 +359,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
     micDead,
     listenExhausted,
     preferTap,
+    tapOptIn,
     speechError,
     monologue.id,
   ]);
@@ -1002,71 +1010,109 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
                 scrolls, not the page). Pinned, it also stops moving about as
                 lines change length. */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-2.5 bg-gradient-to-t from-[var(--stage)] via-[var(--stage)]/85 to-transparent pb-4 pt-14">
-              {tapToAdvance ? (
-                <>
-                  <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/45">
+              {/* Status, and the voice/tap switch beside it. The switch is
+                  text in this row, not a button in the row below, so turning
+                  it on or off never moves the controls. */}
+              <div className="flex h-6 items-center gap-3 font-sans text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/50">
+                {tapToAdvance ? (
+                  <span className="pointer-events-none flex select-none items-center gap-2">
                     <StatusDot state="tap" />
                     {/* If the mic dropped out mid-run, say so. Switching the rules
                         of the screen without a word is how the old silent failure
                         read as the app being broken. */}
-                    {micDead || listenExhausted
-                      ? "Mic dropped · tap to advance"
-                      : offBook && !revealCurrent
-                        ? "Say it · tap to check"
-                        : "Tap to go on"}
+                    {micDead || listenExhausted ? "Mic dropped" : "Tap mode"}
                   </span>
-                  {/* iOS Safari is where the web rehearsal fails: 19 of the 32
-                      mobile sessions on record, every one of them finishing
-                      zero times. The native app hears fine. This is the one
-                      place a download link is an answer rather than an ad, so
-                      it appears only here, only on iOS, only once the run has
-                      already fallen back to tapping. `ct=rehearse_fallback`
-                      makes it countable in App Store Connect. */}
-                  {platform === "ios" && (micDead || listenExhausted) && (
-                    <a
-                      href={appStoreUrl("rehearse_fallback")}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="pointer-events-auto font-sans text-[0.78rem] text-[var(--stage-fg)]/70 underline decoration-[var(--stage-fg)]/30 underline-offset-4 hover:text-[var(--stage-fg)]"
-                    >
-                      Safari can&apos;t hear you here. The Ghost Light app can.
-                    </a>
-                  )}
-                </>
-              ) : (
-                <span className="pointer-events-none flex select-none items-center gap-2.5 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/55">
-                  <MicWaveform active={isListening} className="w-20" />
-                  {isListening ? "Listening" : "Paused"}
-                </span>
+                ) : (
+                  <span className="pointer-events-none flex select-none items-center gap-2.5">
+                    <MicWaveform active={isListening} className="w-16" />
+                    {isListening ? "Listening" : "Paused"}
+                  </span>
+                )}
+                {tapToAdvance && isSupported && !micDead && !listenExhausted && (
+                  <button
+                    onClick={() => {
+                      setTapOptIn(false);
+                      setVoiceOptIn(true);
+                      startListening();
+                    }}
+                    className="pointer-events-auto normal-case tracking-normal text-[0.78rem] text-[var(--stage-fg)]/70 underline decoration-[var(--stage-fg)]/30 underline-offset-4 hover:text-[var(--stage-fg)]"
+                  >
+                    Use my voice
+                  </button>
+                )}
+                {!tapToAdvance && (
+                  <button
+                    onClick={() => {
+                      setTapOptIn(true);
+                      stopListening();
+                    }}
+                    className="pointer-events-auto normal-case tracking-normal text-[0.78rem] text-[var(--stage-fg)]/70 underline decoration-[var(--stage-fg)]/30 underline-offset-4 hover:text-[var(--stage-fg)]"
+                  >
+                    Tap instead
+                  </button>
+                )}
+              </div>
+              {/* iOS Safari is where the web rehearsal fails. The native app
+                  hears fine, so the link shows only on iOS and only once the
+                  mic has already dropped. `ct=rehearse_fallback` makes it
+                  countable in App Store Connect. */}
+              {platform === "ios" && (micDead || listenExhausted) && (
+                <a
+                  href={appStoreUrl("rehearse_fallback")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pointer-events-auto font-sans text-[0.78rem] text-[var(--stage-fg)]/70 underline decoration-[var(--stage-fg)]/30 underline-offset-4 hover:text-[var(--stage-fg)]"
+                >
+                  Safari can&apos;t hear you here. The Ghost Light app can.
+                </a>
               )}
-              {/* "Hide the lines" used to live only on the screen you now walk
-                  straight past, so it needed somewhere to go. Mid-run is a
-                  better home for it anyway: you read it through once, then hide
-                  the lines when you feel ready, rather than guessing before you
-                  have said a word. */}
-              {(
-                <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-2">
-                  {offBook && !tapToAdvance && <DockButton onClick={() => setRevealCurrent(true)}>Reveal</DockButton>}
-                  <DockButton onClick={() => { setOffBook((v) => !v); setRevealCurrent(false); }}>
-                    {offBook ? "Show lines" : "Hide lines"}
-                  </DockButton>
-                  {!tapToAdvance && (
-                    <DockButton onClick={() => skipLine(activeIndex + 1)}>Skip</DockButton>
+              {/* Three fixed slots: Restart, the one thing to do next, the
+                  lines switch. Every slot keeps its place and its width in
+                  every mode, so a thumb learns where each one is. Reveal and
+                  Skip used to be separate pills that came and went, and the
+                  row reflowed each time. They are the middle button now. */}
+              <div className="pointer-events-auto grid w-full max-w-sm grid-cols-[1fr_auto_1fr] items-center gap-3 px-4">
+                <button
+                  onClick={restart}
+                  className="flex flex-col items-center gap-1 justify-self-start font-sans text-[0.68rem] text-[var(--stage-fg)]/55 transition-colors hover:text-[var(--stage-fg)]"
+                >
+                  <IconRefresh size={20} stroke={1.6} />
+                  Restart
+                </button>
+                <button
+                  onClick={() => {
+                    if (offBook && !revealCurrent) setRevealCurrent(true);
+                    else if (tapToAdvance) tapStage();
+                    else skipLine(activeIndex + 1);
+                  }}
+                  className="flex h-14 w-44 items-center justify-center gap-2 rounded-full bg-primary font-sans text-[0.95rem] font-semibold text-primary-foreground shadow-lg transition-transform active:scale-[0.97]"
+                >
+                  {offBook && !revealCurrent ? (
+                    <>
+                      <IconEye size={20} stroke={1.8} />
+                      Show line
+                    </>
+                  ) : (
+                    <>
+                      Next line
+                      <IconPlayerTrackNext size={18} stroke={1.8} />
+                    </>
                   )}
-                  {/* Voice is a choice on a phone, not the default; see preferTap. */}
-                  {preferTap && isSupported && !micDead && (
-                    <DockButton
-                      onClick={() => {
-                        setVoiceOptIn(true);
-                        startListening();
-                      }}
-                    >
-                      Use my voice
-                    </DockButton>
-                  )}
-                  <DockButton onClick={restart}>Restart</DockButton>
-                </div>
-              )}
+                </button>
+                <button
+                  onClick={() => {
+                    setOffBook((v) => !v);
+                    setRevealCurrent(false);
+                  }}
+                  aria-pressed={offBook}
+                  className={`flex flex-col items-center gap-1 justify-self-end font-sans text-[0.68rem] transition-colors ${
+                    offBook ? "text-primary" : "text-[var(--stage-fg)]/55 hover:text-[var(--stage-fg)]"
+                  }`}
+                >
+                  {offBook ? <IconEyeOff size={20} stroke={1.6} /> : <IconEye size={20} stroke={1.6} />}
+                  {offBook ? "Lines off" : "Lines on"}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -1090,16 +1136,3 @@ function StatusDot({ state }: { state: "listening" | "paused" | "tap" }) {
     </span>
   );
 }
-
-/** A clearly-tappable dock action — bordered pill, distinct from the status. */
-function DockButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className="rounded-full border border-[var(--stage-fg)]/15 px-3.5 py-1.5 text-[0.7rem] uppercase tracking-[0.14em] text-[var(--stage-fg)]/60 transition-colors hover:border-primary/60 hover:text-[var(--stage-fg)]"
-    >
-      {children}
-    </button>
-  );
-}
-
