@@ -22,8 +22,8 @@ interface SceneWinProps {
 }
 
 /**
- * What Plus adds over free, and nothing it does not. Free is three runs a
- * month, one script and three monologue sessions (pricing_tiers); Plus is
+ * What Plus adds over free, and nothing it does not. Free is one run a
+ * month, one script and two monologue sessions (pricing_tiers); Plus is
  * unlimited runs, five scripts and every monologue. If the tiers change, this
  * list changes with them.
  */

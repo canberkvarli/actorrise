@@ -43,12 +43,12 @@ def canonical_tiers() -> list[PricingTier]:
                 # never their own sides — the one thing the product is actually for.
                 # Sessions stay the meter: upload is the taste, volume is the ask.
                 "scene_partner_scripts": 1,
-                # 3, not 2. The average run delivers 3.1 lines and only 35% of
+                # Was 3 until 2026-10-21, for this reason: the average run delivers 3.1 lines and only 35% of
                 # sessions complete, so two attempts often did not buy one finished
                 # scene: a mic hiccup or a restart ate half the allowance before
                 # anything landed. The trial offer fires on COMPLETION as well as at
                 # the cap, so a third run feeds the ask rather than weakening it.
-                "scene_partner_sessions": 3,
+                "scene_partner_sessions": 1,  # 1 since 2026-10-21 (was 3), Canberk. The guided first scene is unmetered (POST /runs/guided).
                 # 2 since 2026-10-21 (was 3, level with scene sessions), Canberk's call.
                 # Paid tiers stay -1. Live value is in pricing_tiers.features.
                 "monologue_sessions": 2,
