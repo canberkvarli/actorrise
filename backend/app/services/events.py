@@ -126,7 +126,6 @@ CLIENT_EVENT_NAMES = frozenset(
         "run_entry_shown",  # {monologue_id, surface: sheet|bar}, once per page view
         "run_entry_tapped",  # {monologue_id, surface: sheet|bar|margin|saved}
         "run_start_screen_shown",  # {monologue_id, reason}: the room asked for a tap before starting
-        "run_hear_finished",  # {monologue_id, lines, take: first|rest, fallback_lines}
         "guided_scene_finished",  # {lines_heard, tap_mode, take_ms_total}
         # The money. On 2026-09-27 real charges were $60 a month from five
         # people, and nothing in Postgres said how many actors ever saw a price:

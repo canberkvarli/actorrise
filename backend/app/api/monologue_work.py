@@ -11,23 +11,14 @@ being read off `rehearsal_sessions` alone, which covers the two-person
 ScenePartner and nothing else, so working a monologue was invisible.
 """
 
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel
 
 from app.api.auth import get_current_user
 from app.api.events import with_device
-from app.core.database import SessionLocal, get_db
-from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_monologue_work
-from app.models.actor import Monologue
-from app.models.rehearsal import PartnerAudio
 from app.models.user import User
-from app.services import monologue_audio
 from app.services.events import record_user_event
-from app.services.rehearsal import partner_audio
 
 router = APIRouter(prefix="/api/monologue-work", tags=["monologue-work"])
 
@@ -65,73 +56,3 @@ def start_session(
         # instrumentation can never be what fails an actor's rehearsal.
         pass
     return {"ok": True}
-
-
-class AudioRequest(BaseModel):
-    monologue_id: int
-    lines: list[str] = Field(min_length=1, max_length=monologue_audio.MAX_LINES)
-
-
-def _synthesise(keys: list[str], text_for: dict[str, tuple[str, str | None]]) -> None:
-    """BackgroundTask with its own session: the request is long gone."""
-    db = SessionLocal()
-    try:
-        partner_audio.synthesise_pending(db, keys, text_for)
-    finally:
-        db.close()
-
-
-@router.post("/audio")
-def audio_for_lines(
-    req: AudioRequest,
-    background: BackgroundTasks,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _burst: bool = Depends(BurstLimiter("monologue_audio")),
-    _hourly: bool = Depends(BurstLimiter("monologue_audio_hour")),
-):
-    """The read-aloud for "Hear it": one {key, url} per line, in order.
-
-    `url` is null while a line is still being made; the browser polls
-    GET /api/rehearsal/audio/{key} for it, the same route partner lines use.
-    Not metered against the free runs: the run was metered by /start, which the
-    browser calls before it asks for any audio. Burst-limited per minute and
-    per hour, because every cold piece is a paid synthesis.
-    """
-    monologue = db.get(Monologue, req.monologue_id)
-    if monologue is None:
-        raise HTTPException(status_code=404, detail="No such monologue")
-    source = monologue_audio.source_text(monologue.text, monologue.text_segments)
-    if not monologue_audio.lines_belong(req.lines, source):
-        raise HTTPException(status_code=422, detail="Those lines are not from this piece")
-
-    voice = monologue_audio.voice_for(monologue.character_gender)
-    keys: list[str] = []
-    text_for: dict[str, tuple[str, str | None]] = {}
-    for line in req.lines:
-        text = monologue_audio.clean_line(line)
-        key = partner_audio.ensure(db, voice.vendor, voice.id, None, text)
-        keys.append(key)
-        text_for[key] = (text, None)
-    db.commit()
-
-    rows = {k: db.get(PartnerAudio, k) for k in set(keys)}
-    ready_paths = [r.storage_path for r in rows.values() if r.status == "ready" and r.storage_path]
-    urls = partner_audio.signed_urls(ready_paths)
-
-    now = datetime.now(timezone.utc)
-    missing = [k for k in dict.fromkeys(keys) if rows[k].status == "pending" or partner_audio.retryable(rows[k], now)]
-    if missing:
-        background.add_task(_synthesise, missing, {k: text_for[k] for k in missing})
-
-    return {
-        "voice": voice.id,
-        "lines": [
-            {
-                "key": k,
-                "url": urls.get(rows[k].storage_path) if rows[k].status == "ready" and rows[k].storage_path else None,
-                "failed": rows[k].status == "failed" and k not in missing,
-            }
-            for k in keys
-        ],
-    }

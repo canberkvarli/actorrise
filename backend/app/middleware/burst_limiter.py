@@ -30,12 +30,6 @@ BURST_LIMITS: dict[str, dict] = {
     "film_tv_search": {"max_requests": 15, "window_seconds": 60},
     "scene_partner": {"max_requests": 10, "window_seconds": 60},
     "speech_synthesize": {"max_requests": 20, "window_seconds": 60},
-    # "Hear it" on a monologue run (api/monologue_work.audio_for_lines). One
-    # call per stretch read: the first take, the rest, a "hear it again". Each
-    # cold piece costs a synthesis, so the hour cap is what stops one account
-    # walking the library; a real actor runs a handful of pieces an hour.
-    "monologue_audio": {"max_requests": 6, "window_seconds": 60},
-    "monologue_audio_hour": {"max_requests": 30, "window_seconds": 3600},
     "speech_transcribe": {"max_requests": 20, "window_seconds": 60},
     # One ephemeral key covers a whole rehearsal, so a working actor needs a
     # handful an hour. A page in a reconnect loop needs stopping.

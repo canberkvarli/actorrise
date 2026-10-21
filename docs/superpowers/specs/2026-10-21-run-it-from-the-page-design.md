@@ -1,5 +1,14 @@
 # Run it from the page: findings and three designs
 
+**REVISED the same day (Canberk, after using it): "i dont like the listen first
+thing, i dont want to listen".** The read-aloud and the "your turn" screen are
+gone, with their route, events and rate limits. Run it now drops the actor
+straight onto the first line with the lines showing (`/work?go=run`; `go=hear`
+still works). He also pasted a piece that the run had cut into one tap per
+two-word sentence; sentences are now grouped into thoughts of about 8 to 24
+words (`lib/runLines.ts`). The first take, the phone tap default, the entry
+events and the font fix stay. Everything below about "Hear it" is history.
+
 Status: Design B BUILT 2026-10-21. Canberk: "idk your answers just do it.
 default whatever." Defaults taken for the four open decisions:
 

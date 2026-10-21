@@ -48,8 +48,10 @@ function useRemainingViewportHeight() {
 export default function MonologueWorkPage() {
   const id = useParams().id as string;
   const router = useRouter();
-  // "Run it" on the piece page sends go=hear: read the piece first.
-  const autoHear = useSearchParams().get("go") === "hear";
+  // "Run it" on the piece page sends go=run: start on arrival. go=hear is the
+  // same door from the first build (2026-10-21), kept so a link already out works.
+  const go = useSearchParams().get("go");
+  const autoStart = go === "run" || go === "hear";
   const [monologue, setMonologue] = useState<Monologue | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "notfound" | "error">("loading");
   const { ref, height } = useRemainingViewportHeight();
@@ -109,7 +111,7 @@ export default function MonologueWorkPage() {
       )}
 
       {status === "ready" && monologue && (
-        <MonologueCueing monologue={monologue} onExit={() => router.back()} autoHear={autoHear} />
+        <MonologueCueing monologue={monologue} onExit={() => router.back()} autoStart={autoStart} />
       )}
     </div>
   );

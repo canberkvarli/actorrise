@@ -124,9 +124,9 @@ export default function MonologueDetailPage() {
     const wide = typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
     trackEvent("run_entry_shown", { monologue_id: monologue.id, surface: wide ? "sheet" : "bar" });
   }, [runOffered, monologue]);
-  const run = (surface: RunSurface) => {
+  const run = async (surface: RunSurface) => {
     if (!monologue) return;
-    router.push(tapRun(monologue.id, surface));
+    router.push(await tapRun(monologue.id, surface));
   };
 
   // Saving used to be a silent bookmark: 889 opens produced 45 saves, and the

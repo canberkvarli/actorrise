@@ -33,7 +33,6 @@ export type UserEventName =
   | "run_entry_shown"
   | "run_entry_tapped"
   | "run_start_screen_shown"
-  | "run_hear_finished"
   | "guided_scene_finished"
   | "upgrade_modal_viewed"
   | "trial_offer_shown"
