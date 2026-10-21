@@ -7,6 +7,7 @@ import { IconArrowRight } from "@tabler/icons-react";
 import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
+import { TASTE_OVER_BODY, TASTE_OVER_TITLE, plusHref } from "@/lib/trial";
 import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
 import { ClassRoute } from "@/components/billing/ClassRoute";
 
@@ -33,7 +34,7 @@ export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
 
   // ?from= so checkout can attribute the conversion to THIS gate.
   // begin_checkout fires there, not here, or every conversion counts twice.
-  const href = `/checkout?tier=plus&period=monthly&trial=1&from=${feature}`;
+  const href = plusHref(feature, words.tasted);
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[62%] items-end justify-center pb-2">
@@ -52,14 +53,20 @@ export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
             goes stale silently — the same reason MonologuePaywallModal refuses
             to count. */}
         <p className="t-m__display m-0 mt-2 text-[28px] leading-[1.05]">
-          That&rsquo;s your free reads for the month.
+          {words.tasted ? TASTE_OVER_TITLE : <>That&rsquo;s your free reads for the month.</>}
         </p>
         <p
           className="m-0 mt-2.5 text-[14px]"
           style={{ color: "var(--t-muted-dark)" }}
         >
-          Plus opens every piece in the library, start to finish. Anything
-          you&rsquo;ve already saved stays open either way.
+          {words.tasted ? (
+            TASTE_OVER_BODY
+          ) : (
+            <>
+              Plus opens every piece in the library, start to finish. Anything
+              you&rsquo;ve already saved stays open either way.
+            </>
+          )}
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           <Link
@@ -94,7 +101,7 @@ export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
           className="m-0 mt-3.5 text-[12px]"
           style={{ color: "var(--t-faint)" }}
         >
-          Card on file, cancel before it renews.{" "}
+          {words.terms}{" "}
           <EarnSecondWeek />
         </p>
         <ClassRoute className="m-0 mt-1.5 text-[12px]" style={{ color: "var(--t-faint)" }} />

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
+import { TASTE_OVER_BODY, TASTE_OVER_TITLE, plusHref } from "@/lib/trial";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
 import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
@@ -39,7 +40,7 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
 
   // ?from= so the checkout page can attribute the conversion to THIS wall.
   // begin_checkout is fired there, not here, or every conversion counts twice.
-  const href = `/checkout?tier=plus&period=monthly&trial=1&from=${feature}`;
+  const href = plusHref(feature, words.tasted);
 
   return (
     /* theatre-tokens and the faces ride on the wall itself. The monologue
@@ -60,10 +61,18 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
       {/* No number. The cap has already moved once and copy that names it
           goes stale silently, which is the same reason MonologuePaywallModal
           refuses to count. */}
-      <p className="t-wall__title">That&rsquo;s your free reads for the month.</p>
+      <p className="t-wall__title">
+        {words.tasted ? TASTE_OVER_TITLE : <>That&rsquo;s your free reads for the month.</>}
+      </p>
       <p className="t-wall__body">
-        Plus opens every piece in the library, start to finish. Anything
-        you&rsquo;ve already saved stays open either way.
+        {words.tasted ? (
+          TASTE_OVER_BODY
+        ) : (
+          <>
+            Plus opens every piece in the library, start to finish. Anything
+            you&rsquo;ve already saved stays open either way.
+          </>
+        )}
       </p>
 
       <div className="t-wall__foot">
@@ -80,7 +89,7 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
       </div>
 
       <p className="t-wall__body" style={{ marginTop: 14, fontSize: 12 }}>
-        Card on file, cancel before it renews.{" "}
+        {words.terms}{" "}
         <EarnSecondWeek />
       </p>
       <ClassRoute className="t-wall__body" style={{ marginTop: 6, fontSize: 12 }} />
