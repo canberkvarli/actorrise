@@ -23,6 +23,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from sqlalchemy import or_
+
 from app.models.billing import PricingTier, UserSubscription
 from app.models.user import User
 
@@ -50,6 +52,8 @@ def expiring_comps(
             UserSubscription.stripe_subscription_id.is_(None),
             UserSubscription.status == "trialing",
             UserSubscription.trial_end.isnot(None),
+            # Three-day tastes end by themselves, dozens a week; not a comp.
+            or_(UserSubscription.source.is_(None), UserSubscription.source != "taste"),
             UserSubscription.trial_end >= now - timedelta(hours=lookback_hours),
             UserSubscription.trial_end <= now + timedelta(days=within_days),
         )

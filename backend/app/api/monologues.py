@@ -11,6 +11,7 @@ from app.api.auth import get_current_user, get_current_user_optional
 from app.api.public import record_demo_search
 from app.middleware.rate_limiting import (
     CLIENT_GHOSTLIGHT,
+    CLIENT_WEB,
     distinct_reads,
     free_read_limit,
     normalise_client,
@@ -118,6 +119,9 @@ class MonologueResponse(BaseModel):
     # has spent their lifetime reads. `text` then carries only the opening lines
     # (the teaser the paywall shows); the rest never leaves the server.
     paywalled: bool = False
+    # Web only: set on the one response that opened a three-day taste of Plus
+    # (services/taste.py), so the page can say so. {"ends_at": iso}.
+    taste: Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -1621,9 +1625,23 @@ async def get_monologue(
             exclude_monologue_id=monologue_id,
         )
         if already_read >= free_read_limit(view_client):
-            resp.text = _teaser(resp.text)
-            resp.text_segments = None
-            resp.paywalled = True
+            # The first time a web reader runs out, they get three days of
+            # Plus instead of the wall (services/taste.py). Once, ever.
+            ends = None
+            if view_client == CLIENT_WEB:
+                from app.services import taste
+
+                from app.services.rehearsal_client import client_platform
+
+                ends = taste.grant(
+                    db, current_user, client_platform(request.headers.get("user-agent"))
+                )
+            if ends is not None:
+                resp.taste = {"ends_at": ends.isoformat()}
+            else:
+                resp.text = _teaser(resp.text)
+                resp.text_segments = None
+                resp.paywalled = True
 
     return resp
 

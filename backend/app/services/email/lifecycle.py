@@ -74,12 +74,15 @@ SUBJECTS = {
 
 def _paid_user_ids(db) -> set[int]:
     rows = (
-        db.query(UserSubscription.user_id)
+        db.query(UserSubscription)
         .join(PricingTier, UserSubscription.tier_id == PricingTier.id)
         .filter(UserSubscription.status.in_(["active", "trialing"]), PricingTier.name != "free")
         .all()
     )
-    return {r[0] for r in rows}
+    # is_active, not the status: an expired comp (or three-day taste) keeps
+    # status "trialing" forever and would otherwise read as paid, and lose
+    # every email, for good.
+    return {r.user_id for r in rows if r.is_active}
 
 
 def _active_since(db, uid: int, since: datetime) -> bool:

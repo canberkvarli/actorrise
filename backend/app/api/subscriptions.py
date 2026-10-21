@@ -53,6 +53,10 @@ class SubscriptionResponse(BaseModel):
     # prints this number rather than carrying its own.
     trial_days: int = 7
     trial_earned: bool = False
+    # The three days of Plus given at the first read wall (services/taste.py).
+    # {had, active, ends_at}. Once had, trial_days is 0: checkout gives no
+    # second free stretch, and the walls ask for the money.
+    taste: dict[str, Any] | None = None
 
     class Config:
         from_attributes = True
@@ -61,8 +65,13 @@ class SubscriptionResponse(BaseModel):
 def _trial_fields(db: Session, user_id: int) -> dict[str, Any]:
     from app.services.trial_length import EARNED_TRIAL_DAYS, trial_days_for
 
+    from app.services import taste
+
+    state = taste.status(db, user_id)
+    if state["had"]:
+        return {"trial_days": 0, "trial_earned": False, "taste": state}
     days = trial_days_for(db, user_id)
-    return {"trial_days": days, "trial_earned": days == EARNED_TRIAL_DAYS}
+    return {"trial_days": days, "trial_earned": days == EARNED_TRIAL_DAYS, "taste": state}
 
 
 class CreateCheckoutSessionRequest(BaseModel):
@@ -266,6 +275,13 @@ async def create_checkout_session(
     discounts = []
     trial_period_days: int | None = None
     trial_earned = False
+    # After the three-day taste the free stretch has been had: whatever the
+    # page asked for, this is a straight purchase at the period they picked.
+    if request.trial:
+        from app.services import taste
+
+        if taste.had_taste(db, int(current_user.id)):
+            request.trial = False
     if request.trial:
         if tier.name != "plus":
             raise HTTPException(
@@ -461,7 +477,9 @@ async def get_usage_limits(request: Request, current_user: User = Depends(get_cu
     # Get user's subscription and tier
     subscription = db.query(UserSubscription).filter(UserSubscription.user_id == current_user.id).first()
 
-    if subscription and subscription.tier_id:
+    # An expired comp or taste still carries the Plus tier id; it reads as
+    # free, or the meter says unlimited while the server walls.
+    if subscription and subscription.tier_id and subscription.is_active:
         tier = db.query(PricingTier).get(subscription.tier_id)
     else:
         # Default to Free tier

@@ -165,6 +165,13 @@ def select_candidates(db, touch: str, now: datetime | None = None) -> list[dict]
     paid = lifecycle._paid_user_ids(db)
     blocked = _blocked_emails(db)
     former = _has_held_a_subscription(db) if trigger.offers_trial else set()
+    if trigger.offers_trial:
+        # Had the three-day taste: no trial left to offer, and an email the day
+        # after it ran out would read as a trial-ending email, which Canberk
+        # ruled out (2026-09-29). The wall is the ask.
+        from app.services import taste
+
+        former |= taste.tasted_user_ids(db)
 
     users = db.query(User).filter(User.id.in_(anchors)).all()
     out: list[dict] = []
