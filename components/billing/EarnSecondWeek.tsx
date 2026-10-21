@@ -32,7 +32,7 @@ export function EarnSecondWeek({
   lineStyle,
 }: EarnSecondWeekProps) {
   const words = useTrialWords();
-  if (words.earned) return null;
+  if (words.earned || words.tasted) return null;
 
   const link = (
     <Link href="/practice" className={className}>

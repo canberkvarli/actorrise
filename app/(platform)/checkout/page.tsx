@@ -81,8 +81,10 @@ function CheckoutContent() {
     tier?.name === "plus" &&
     period === "monthly" &&
     !subscription?.has_stripe_customer;
+  // After the three days of Plus from the read wall there is no trial left;
+  // the server refuses one too (subscriptions.create_checkout_session).
   const isTrial =
-    searchParams.get("trial") === "0" ? false : explicitTrial || trialEligible;
+    words.tasted || searchParams.get("trial") === "0" ? false : explicitTrial || trialEligible;
 
   useEffect(() => {
     if (!tierName) {
@@ -386,7 +388,7 @@ function CheckoutContent() {
                   </div>
                 )}
 
-                {tier?.name === "plus" && (
+                {tier?.name === "plus" && !words.tasted && (
                   <div className="t-ticket__note">
                     <p className="t-ticket__note-title">
                       First time on Plus? Take {words.span} free.

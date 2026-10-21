@@ -8,7 +8,7 @@ import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
 import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
-import { cap } from "@/lib/trial";
+import { cap, plusHref } from "@/lib/trial";
 import { ClassRoute } from "@/components/billing/ClassRoute";
 
 interface MonologuePaywallModalProps {
@@ -41,8 +41,10 @@ const PLUS_BENEFITS = [
 const DEFAULT_TITLE = "Keep going";
 // The trial length is the server's to say (lib/trial.ts), so the sentence that
 // names it is built at render.
-const defaultDescription = (span: string) =>
-  `That's your free rehearsals for this month. Plus takes the cap off, and lets you bring your own sides in too. ${cap(span)} free, card on file, cancel before it renews.`;
+const defaultDescription = (span: string, tasted: boolean) =>
+  tasted
+    ? "That's your free rehearsals for this month. Plus takes the cap off, and lets you bring your own sides in too. $12 a month or $99 a year, cancel any time."
+    : `That's your free rehearsals for this month. Plus takes the cap off, and lets you bring your own sides in too. ${cap(span)} free, card on file, cancel before it renews.`;
 
 /**
  * Shown when a free user hits a monologue-side wall. Leads with continuing
@@ -74,7 +76,7 @@ export function MonologuePaywallModal({
 
   // ?from= so begin_checkout can attribute the conversion to THIS wall. Without
   // it entry_point falls back to document.referrer and every wall looks alike.
-  const href = `/checkout?tier=plus&period=monthly&trial=1&from=${feature}`;
+  const href = plusHref(feature, words.tasted);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -87,7 +89,7 @@ export function MonologuePaywallModal({
         <p className="t-modal__dir">{dir}</p>
         <DialogTitle className="t-modal__title">{title ?? DEFAULT_TITLE}</DialogTitle>
         <DialogDescription className="t-modal__body">
-          {description ?? defaultDescription(words.span)}
+          {description ?? defaultDescription(words.span, words.tasted)}
         </DialogDescription>
 
         <ul className="t-modal__list">

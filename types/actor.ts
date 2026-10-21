@@ -59,6 +59,8 @@ export interface Monologue {
    * to check this first, or it operates on forty words and looks broken.
    */
   paywalled?: boolean;
+  /** Set on the one response that opened three days of Plus (no card) at the read wall. */
+  taste?: { ends_at: string } | null;
   notes?: string | null;
   last_studied_at?: string | null;
   /** When it was saved. Present on collection payloads only. */

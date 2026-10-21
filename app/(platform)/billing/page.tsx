@@ -38,7 +38,7 @@ import {
   type UsageLimits,
 } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
-import { cap } from "@/lib/trial";
+import { cap, plusHref } from "@/lib/trial";
 
 /** What each tier opens. Copy only — the numbers come from the same table the
  *  pricing page quotes, and nothing here is derived from the user's account. */
@@ -204,10 +204,10 @@ export default function BillingPage() {
               {isFree ? (
                 <>
                   <Link
-                    href="/checkout?tier=plus&period=monthly&trial=1"
+                    href={plusHref("billing", words.tasted)}
                     className="t-cta t-cta--paper t-cta--stub"
                   >
-                    {cap(words.span)} of Plus, free
+                    {words.tasted ? "Get Plus, $12 a month" : `${cap(words.span)} of Plus, free`}
                     <span className="t-cta__dot" aria-hidden>
                       <IconGift className="h-4 w-4" />
                     </span>

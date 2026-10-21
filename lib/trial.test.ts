@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cap, trialWords } from "./trial";
+import { cap, trialWords, plusHref } from "./trial";
 
 describe("trialWords", () => {
   it("a week", () => {
@@ -36,5 +36,29 @@ describe("cap", () => {
     expect(cap("a week")).toBe("A week");
     expect(cap("two weeks")).toBe("Two weeks");
     expect(cap("")).toBe("");
+  });
+});
+
+describe("after the three-day taste", () => {
+  it("offers no trial and names the price", () => {
+    const w = trialWords(0, false, true);
+    expect(w.tasted).toBe(true);
+    expect(w.cta).toBe("Keep Plus");
+    expect(w.short).not.toMatch(/free/i);
+    expect(w.terms).toMatch(/\$12 a month or \$99 a year/);
+  });
+
+  it("leaves the untasted words alone", () => {
+    const w = trialWords(7);
+    expect(w.tasted).toBe(false);
+    expect(w.cta).toBe("Start 1 week free");
+    expect(w.terms).toBe("Card on file, cancel before it renews.");
+  });
+
+  it("drops the trial from the checkout link once tasted", () => {
+    expect(plusHref("monologue_read", true)).toBe(
+      "/checkout?tier=plus&period=monthly&trial=0&from=monologue_read",
+    );
+    expect(plusHref("monologue_read", false)).toContain("trial=1");
   });
 });

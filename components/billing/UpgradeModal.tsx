@@ -58,7 +58,8 @@ export function UpgradeModal({
   const yearlyNote = isPlus ? "or $199/year (save 31%)" : "or $99/year (save 31%)";
   const benefits = isPlus ? PRO_BENEFITS : PLUS_BENEFITS;
   // Free users can start a Plus trial ($0 today). Pro upsell stays paid.
-  const canTrial = !isPlus;
+  // No trial once the three days from the read wall have been had.
+  const canTrial = !isPlus && !words.tasted;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

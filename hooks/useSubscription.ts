@@ -28,6 +28,8 @@ export interface SubscriptionData {
   /** How long a trial would run if started now: 7, or 14 once a scene is finished. */
   trial_days?: number;
   trial_earned?: boolean;
+  /** The three days of Plus given at the first read wall. Once had, no trial is left. */
+  taste?: { had: boolean; active: boolean; ends_at: string | null } | null;
 }
 
 export interface UsageLimits {

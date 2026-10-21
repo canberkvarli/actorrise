@@ -7,6 +7,7 @@ import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { MonologueWall } from "@/components/monologue/MonologueWall";
 import { ReadWallModal } from "@/components/monologue/ReadWallModal";
+import { TasteNote } from "@/components/billing/TasteNote";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/events";
@@ -2235,7 +2236,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           onOpenChange={(o) => { if (!o) { setSearchUpgradeUrl(null); setSearchError(null); } }}
           feature="monologue_search"
           title="You&apos;ve used your free searches this month"
-          description={`Keep exploring with ${trialWords.span} of Plus, free. Unlimited searches, nothing charged now, card on file, cancel anytime.`}
+          description={
+            trialWords.tasted
+              ? "Keep exploring with Plus. Unlimited searches, $12 a month or $99 a year, cancel any time."
+              : `Keep exploring with ${trialWords.span} of Plus, free. Unlimited searches, nothing charged now, card on file, cancel anytime.`
+          }
         />
 
         {/* Results */}
@@ -2963,6 +2968,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       <ReadWallModal monologueId={selectedMonologue.id} />
                     </>
                   )}
+                  {selectedMonologue.taste && <TasteNote granted />}
                   <MonologueDetailContent
                     monologue={selectedMonologue}
                     onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}

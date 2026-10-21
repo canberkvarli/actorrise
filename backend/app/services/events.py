@@ -32,6 +32,8 @@ SERVER_EVENT_NAMES = frozenset(
         # computed at all.
         "checkout_completed",  # {subscription_id, tier, billing_period, trial}
         "trial_started",  # {subscription_id, trial_days, earned}
+        # Three days of Plus, no card, at the first read wall (services/taste.py).
+        "taste_started",  # {client_platform, hours}
         # One row per lifecycle or triggered email that actually left.
         "email_sent",  # {touch}
         # What a searcher actually does next. 240 of the 242 people who

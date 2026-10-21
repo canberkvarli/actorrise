@@ -42,8 +42,7 @@ A user is granted a taste only when all of these are true:
 - They have no Ghost Light / RevenueCat subscription or record. RevenueCat webhooks write
   to the same subscription row and could overwrite the taste.
 - They are not on a comp now, and are not an educator or a student.
-- They have never had a taste (`users.taste_started_at IS NULL`).
-- The admin switch `wall_taste_enabled` is on.
+- They have never had a taste (no `taste_started` user_event).
 - The request is from the web. The Ghost Light read limit is unchanged.
 
 If any check fails, the wall behaves exactly as it does today.
@@ -55,19 +54,17 @@ If any check fails, the wall behaves exactly as it does today.
   `POST /monologues/{id}/read`.
   - It reuses the comp mechanism that admin grants, `grant_comp.py` and class links already
     use: `status="trialing"`, `source="taste"`, `trial_end = now + 72h`, no Stripe id.
-  - In the same transaction it sets `users.taste_started_at` (a new nullable timestamp,
-    added before the deploy).
+  - In the same transaction it writes the `taste_started` user_event. That event is the
+    once-ever record, so no schema change is needed.
   - The response carries `taste: {started: true, ends_at}` so the client can show the banner.
 - **Expiry:** none needed. `is_active` already goes false once `trial_end` passes, at read
   time.
-- **After a taste, checkout has no trial.** The trial logic in `trial_length.py` and the
-  `trial=1` checkout path both give 0 trial days when `taste_started_at` is set.
-- **Wall copy:** if `taste_started_at` is set and the taste is no longer active, the wall
+- **After a taste, checkout has no trial.** `/me` reports `trial_days: 0` and checkout ignores `trial=1`.
+- **Wall copy:** if a taste was had and the taste is no longer active, the wall
   components show the "Your 3 days are up" copy and link to checkout without `trial=1`. The
   components are ReadGate, MonologueWall, ReadWallModal, the panel on /monologues and
   MonologuePaywallModal.
-- **Switch:** `wall_taste_enabled` in /admin, next to the other switches. It is off on
-  deploy, and Canberk turns it on.
+- **No switch** (Canberk, 2026-10-21). It is live on deploy. To stop it, revert the commit.
 
 ## Gaps fixed in the same change
 
@@ -78,25 +75,22 @@ These are existing gaps that the taste would expose:
 2. `lifecycle._paid_user_ids` (email/lifecycle.py:75-82) reads only the status, so an
    expired comp stays "trialing" and is silently cut off from every lifecycle email. It will
    check `is_active`.
-3. `paywall_seen_no_trial` (email/triggered.py) skips anyone with `taste_started_at` set, so
+3. `paywall_seen_no_trial` (email/triggered.py) skips anyone who has had a taste, so
    no email can read as a trial-ending email.
 4. The founder's comp-expiry digest (comp_expiry.py) leaves out `source="taste"`.
 5. The grant refuses any row with a Stripe or RevenueCat id. It never overwrites a payer.
 
 ## Measurement
 
-New events, each with `client_platform`:
-
-- `taste_started`
-- `taste_ended`, with outcome `paid` or `lapsed`, written on the first wall or `/me` after
-  `trial_end`
-- `taste_converted`: a paid invoice within 7 days after the taste ends
+One new event: `taste_started` with `client_platform`. The outcome is read from data
+already there: a `billing_history` row with status `succeeded` after the taste is a
+conversion, and no row means it lapsed.
 
 **Baseline (30 days):** about 49 people reached the limit, 7 started checkout, 1 paid.
 
 **Read at 14 days:** how many tastes started, how many converted, and checkouts started
 against completed. Success means at least 3 payers from tastes in the first 14 days, more
-than the 1 per month we see now. If it does worse than the baseline, turn the switch off.
+than the 1 per month we see now. If it does worse than the baseline, revert it.
 
 ## Not in scope
 
@@ -113,6 +107,5 @@ than the 1 per month we see now. If it does worse than the baseline, turn the sw
 - **Expiry:** after `trial_end`, reads wall again, `/usage-limits` shows the free limit and
   checkout has 0 trial days.
 - **Payers untouched:** Stripe and RevenueCat rows are never modified.
-- **Switch off:** today's behaviour, byte for byte.
 - **Lifecycle:** an expired comp counts as free in `_paid_user_ids`. `paywall_seen_no_trial`
   skips tasters.
