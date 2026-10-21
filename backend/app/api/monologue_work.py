@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.api.auth import get_current_user
 from app.api.events import with_device
 from app.core.database import SessionLocal, get_db
+from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_monologue_work
 from app.models.actor import Monologue
 from app.models.rehearsal import PartnerAudio
@@ -86,13 +87,16 @@ def audio_for_lines(
     background: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    _burst: bool = Depends(BurstLimiter("monologue_audio")),
+    _hourly: bool = Depends(BurstLimiter("monologue_audio_hour")),
 ):
     """The read-aloud for "Hear it": one {key, url} per line, in order.
 
     `url` is null while a line is still being made; the browser polls
     GET /api/rehearsal/audio/{key} for it, the same route partner lines use.
-    Not metered here: the run was metered by /start, which the browser calls
-    before it asks for any audio.
+    Not metered against the free runs: the run was metered by /start, which the
+    browser calls before it asks for any audio. Burst-limited per minute and
+    per hour, because every cold piece is a paid synthesis.
     """
     monologue = db.get(Monologue, req.monologue_id)
     if monologue is None:

@@ -112,6 +112,35 @@ class TheRoute(unittest.TestCase):
         self.assertEqual(ctx.exception.status_code, 422)
 
 
+class TheRouteIsRateLimited(unittest.TestCase):
+    """Every cold piece is a paid synthesis; one account must not walk the library."""
+
+    def test_both_windows_are_configured(self):
+        from app.middleware.burst_limiter import BURST_LIMITS
+
+        self.assertIn("monologue_audio", BURST_LIMITS)
+        self.assertEqual(BURST_LIMITS["monologue_audio_hour"]["window_seconds"], 3600)
+
+    def test_the_route_depends_on_both(self):
+        import inspect
+        from app.api.monologue_work import audio_for_lines
+
+        features = {
+            p.default.dependency.feature
+            for p in inspect.signature(audio_for_lines).parameters.values()
+            if hasattr(p.default, "dependency") and hasattr(p.default.dependency, "feature")
+        }
+        self.assertEqual(features, {"monologue_audio", "monologue_audio_hour"})
+
+    def test_the_hour_cap_trips(self):
+        from app.middleware.burst_limiter import _check_burst
+
+        uid = 987654
+        results = [_check_burst("monologue_audio_hour", uid) for _ in range(31)]
+        self.assertTrue(all(r is None for r in results[:30]))
+        self.assertIsNotNone(results[30])
+
+
 class TheEntryIsMeasured(unittest.TestCase):
     def test_shown_and_tapped_are_client_events(self):
         self.assertTrue({"run_entry_shown", "run_entry_tapped"} <= CLIENT_EVENT_NAMES)
