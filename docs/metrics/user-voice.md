@@ -174,3 +174,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-10-22, hit the originality filter wall the same day
 **They said:** "I was hoping for something more recognizable in the highschool community"
 **Heard as:** content gap, pieces teens know (musicals, teen TV and film)
+
+## 2026-10-23
+
+**Replying to:** class link (teacher, high school drama)
+**Account:** educator on comped Plus; about 20 students joined through the link in one class period on 2026-10-22
+**They said:** "I rolled it out with my Musical Theater class today and they all were using the link at the same time - so they had a couple of issues, but in the end everyone got on." Offered a student pros and cons form in a few weeks, and a comparison with Act On Cue from the advanced class.
+**Heard as:** happy; bug, a class signing up at once (two school accounts made in that period never got the class month)
