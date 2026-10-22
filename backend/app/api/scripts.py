@@ -508,6 +508,9 @@ async def upload_script(
                 "character_2_name": scene_data.get("character_2", "Character 2"),
                 "description": scene.description,
                 "lines": original_lines,
+                # How the model read the scene (items, character readings,
+                # whether it was flagged). See services/scene_reader.
+                "reading": scene_data.get("reading"),
             }
 
             scenes_created.append(scene)
@@ -857,6 +860,7 @@ async def upload_script_stream(
                     "character_2_name": scene_data.get("character_2", "Character 2"),
                     "description": scene.description,
                     "lines": original_lines,
+                    "reading": scene_data.get("reading"),
                 }
                 scenes_created.append(scene)
 
@@ -1062,6 +1066,9 @@ async def create_script_from_text(
                 "character_2_name": scene_data.get("character_2", "Character 2"),
                 "description": scene.description,
                 "lines": original_lines,
+                # How the model read the scene (items, character readings,
+                # whether it was flagged). See services/scene_reader.
+                "reading": scene_data.get("reading"),
             }
             scenes_created.append(scene)
 
@@ -2336,6 +2343,9 @@ def _build_scenes(db: Session, user_script, play_id: int, scenes_data: list) -> 
             "character_2_name": scene_data.get("character_2", "Character 2"),
             "description": scene.description,
             "lines": snapshot,
+            # How the model read the scene (items, character readings, whether
+            # it was flagged for the shelf to show). See services/scene_reader.
+            "reading": scene_data.get("reading"),
         }
         created.append(scene)
 

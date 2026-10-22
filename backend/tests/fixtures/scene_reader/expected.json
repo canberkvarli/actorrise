@@ -1,0 +1,454 @@
+{
+  "almost_a_therapist": [
+    {
+      "kind": "direction",
+      "character": "",
+      "text": "Esther is in the park with Mark.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "I nailed it … hit out of the ballpark. And all I did was talk like you talk.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "Do I get royalties?",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "You are my muse.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "Then how come you never listen to me?",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "Of course I listen to you. You’re my funny-bone muse.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "I don’t want to be a funny-bone muse.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "Well you are sweetheart. And all I had to do was pretend I was you … “You know what I hate about being a therapist - People coming to me with their problems.” You were a hit baby.",
+      "delivery": ""
+    },
+    {
+      "kind": "direction",
+      "character": "",
+      "text": "Mark continues with his act.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "“So yesterday my day was shit - I even had to tell this client to try to be more sensitive … I was feeling a bit fragile and wasn’t sure I could cope with all his problems. But he just went on and on, talking about himself like I should be interested for fuck’s sake. What I really wanted to say was - Get it together man. Come back when you’ve sorted out your issues.”",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "This is not funny Mark.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "“Then the other afternoon some dumb ass woman sitting across from me suggested I might a narcissist … ‘of course I’m a narcissist,’ I told her, ‘how else could I respond to your stupid questions without having to listen to you?’”",
+      "delivery": "continuing his act"
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "Stop it.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "“Besides, I need to spend my time thinking about me. My issues. Am I lovable? Am I as stupid as you? Why do I wear my heart on my sleeve? Is it too late to be a singer? Why do I throttle my passion? Why am I a coward … a coward … a coward? And how do I turn off the repeat button inside my head?” What I really wanted to say was “Listen little lady, if it wasn’t for me your words wouldn’t exist.” You know something Esther. Being you is a dream.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "Stop.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "What?",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "I mean Stop.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "What’s wrong?",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "Buster died …",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "Oh honey … I’m so sorry.",
+      "delivery": ""
+    },
+    {
+      "kind": "direction",
+      "character": "",
+      "text": "They stop walking.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "Breaks my heart really.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "I’m sure… I’m sure it does.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "Only knew him for a few hours and it just breaks my heart.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "Can I do anything?",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "No, I think I have a girlfriend.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "That’s great. A girlfriend?",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "Maybe.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "What about me?",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "Don’t be a narcissist.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "Do you think I’m a narcissist?",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "I think you’re … I love you.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "I love you too.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "I have to go get dressed for the memorial service.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "For the bow-wow.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "Yes Mark, for the bow-wow.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "Can I come? I can do some stand-up, some doggie stand-up.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "No.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MARK",
+      "text": "Okay - see you there. Where is it?",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "ESTHER",
+      "text": "I said no.",
+      "delivery": ""
+    }
+  ],
+  "hamlet_nunnery": [
+    {
+      "kind": "line",
+      "character": "OPHELIA",
+      "text": "At home, my lord.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "HAMLET",
+      "text": "Let the doors be shut upon him, that he may play the fool nowhere but in’s own house. Farewell.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "OPHELIA",
+      "text": "O help him, you sweet heavens!",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "HAMLET",
+      "text": "If thou dost marry, I’ll give thee this plague for thy dowry. Be thou as chaste as ice, as pure as snow, thou shalt not escape calumny. Get thee to a nunnery, go: farewell. Or if thou wilt needs marry, marry a fool; for wise men know well enough what monsters you make of them. To a nunnery, go; and quickly too. Farewell.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "OPHELIA",
+      "text": "O heavenly powers, restore him!",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "HAMLET",
+      "text": "I have heard of your paintings too, well enough. God hath given you one face, and you make yourselves another. You jig, you amble, and you lisp, and nickname God’s creatures, and make your wantonness your ignorance. Go to, I’ll no more on’t, it hath made me mad. I say, we will have no more marriages. Those that are married already, all but one, shall live; the rest shall keep as they are. To a nunnery, go.",
+      "delivery": ""
+    },
+    {
+      "kind": "direction",
+      "character": "",
+      "text": "Exit.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "OPHELIA",
+      "text": "O, what a noble mind is here o’erthrown! The courtier’s, soldier’s, scholar’s, eye, tongue, sword, Th’expectancy and rose of the fair state, The glass of fashion and the mould of form, Th’observ’d of all observers, quite, quite down! And I, of ladies most deject and wretched, That suck’d the honey of his music vows, Now see that noble and most sovereign reason, Like sweet bells jangled out of tune and harsh, That unmatch’d form and feature of blown youth Blasted with ecstasy. O woe is me, T’have seen what I have seen, see what I see.",
+      "delivery": ""
+    },
+    {
+      "kind": "direction",
+      "character": "",
+      "text": "Enter King and Polonius.",
+      "delivery": ""
+    }
+  ],
+  "diner_screenplay": [
+    {
+      "kind": "direction",
+      "character": "",
+      "text": "Rain against the window. JUNE (40s) stirs a coffee she has no intention of drinking. LEO (30s) slides into the booth across from her.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "LEO",
+      "text": "You came.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "JUNE",
+      "text": "I said I would.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "LEO",
+      "text": "You said a lot of things.",
+      "delivery": "beat"
+    },
+    {
+      "kind": "direction",
+      "character": "",
+      "text": "June pushes the coffee across the table.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "JUNE",
+      "text": "Drink that. You look terrible.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "LEO",
+      "text": "Thanks.",
+      "delivery": ""
+    },
+    {
+      "kind": "direction",
+      "character": "",
+      "text": "He doesn't touch it.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "LEO",
+      "text": "When did he tell you?",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "JUNE",
+      "text": "Last night. He's selling the house.",
+      "delivery": "quietly"
+    },
+    {
+      "kind": "line",
+      "character": "LEO",
+      "text": "He can't. Mom's piano is still in the front room.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "JUNE",
+      "text": "He can, Leo. It's his house.",
+      "delivery": ""
+    }
+  ],
+  "ring_sides": [
+    {
+      "kind": "line",
+      "character": "MAYA",
+      "text": "You kept it.",
+      "delivery": "beat"
+    },
+    {
+      "kind": "line",
+      "character": "THEO",
+      "text": "Of course I kept it.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MAYA",
+      "text": "I thought you'd throw it out.",
+      "delivery": "quietly"
+    },
+    {
+      "kind": "line",
+      "character": "THEO",
+      "text": "I almost did.",
+      "delivery": ""
+    },
+    {
+      "kind": "direction",
+      "character": "",
+      "text": "beat",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "THEO",
+      "text": "Then I didn't.",
+      "delivery": ""
+    },
+    {
+      "kind": "direction",
+      "character": "",
+      "text": "She takes the ring out of the box.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "MAYA",
+      "text": "It still fits.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "THEO",
+      "text": "It was always going to.",
+      "delivery": "not looking at her"
+    },
+    {
+      "kind": "line",
+      "character": "MAYA",
+      "text": "Theo. Look at me.",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "THEO",
+      "text": "I can't.",
+      "delivery": ""
+    },
+    {
+      "kind": "direction",
+      "character": "",
+      "text": "beat",
+      "delivery": ""
+    },
+    {
+      "kind": "line",
+      "character": "THEO",
+      "text": "Not yet.",
+      "delivery": ""
+    }
+  ]
+}
