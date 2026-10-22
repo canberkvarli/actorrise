@@ -30,6 +30,7 @@ from app.services.script_parser import parse_dialogue
 from app.services.script_structure import (
     _detect_screenplay,
     _detect_stage_play,
+    _match_act,
     _match_scene,
     _match_slug_line,
 )
@@ -516,6 +517,54 @@ def pages_for_selection(picked: Iterable[dict]) -> set:
             lo, hi = hi, lo
         pages.update(range(lo, hi + 1))
     return pages
+
+
+def _heading_for(act_label: str) -> str:
+    """Print a group label back as the heading that produced it.
+
+    "Episode 1: Boundaries" goes back to EPISODE 1 with BOUNDARIES under it,
+    the shape `_episode_title` reads, so the label survives the second read.
+    """
+    head, _, title = act_label.partition(": ")
+    return f"{head.upper()}\n\n{title.upper()}\n\n" if title else f"{head.upper()}\n\n"
+
+
+def text_for_selection(text: str, picked: Iterable[dict]) -> Optional[str]:
+    """Only the ticked scenes of a text upload, each under its act or episode.
+
+    A PDF is cut by page (`pages_for_selection`). Text has no pages, so it used
+    to be read whole: one ticked scene of a Word file built all 36 (2026-10-22).
+    It is cut by the character span the scan reported instead. The scan and the
+    build decode the same bytes the same way, so the offsets point at the same
+    text.
+
+    None when the selection carries no usable span, and the caller reads it all.
+    """
+    ranges = []
+    for scene in picked or []:
+        try:
+            lo, hi = int(scene.get("char_start")), int(scene.get("char_end"))
+        except (TypeError, ValueError, AttributeError):
+            continue
+        lo, hi = max(0, min(lo, hi)), min(len(text), max(lo, hi))
+        if hi > lo:
+            ranges.append((lo, hi, scene.get("act_label")))
+    if not ranges:
+        return None
+
+    parts: List[str] = []
+    last_act = None
+    for lo, hi, act in sorted(ranges):
+        chunk = text[lo:hi]
+        # The first scene of a group already opens on the group's heading,
+        # folded in by `_absorb_bare_act_headers`. Printing it again would
+        # make an empty group.
+        first_line = chunk.lstrip().split("\n", 1)[0]
+        if act and act != last_act and not _match_act(first_line):
+            parts.append(_heading_for(act))
+        last_act = act or last_act
+        parts.append(chunk.rstrip() + "\n\n")
+    return "".join(parts)
 
 
 # ---------------------------------------------------------------------------

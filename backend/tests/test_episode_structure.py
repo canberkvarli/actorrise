@@ -47,3 +47,25 @@ def test_scene_words_past_nine():
     assert _match_scene("SCENE TEN") == "Scene 10"
     assert _match_scene("SCENE SEVENTEEN") == "Scene 17"
     assert _match_scene("SCENE SEVEN") == "Scene 7"
+
+
+def test_a_picked_text_upload_builds_only_the_picked_scenes():
+    # One ticked scene of a Word file built all 36: text has no pages to cut by.
+    from app.services.scene_map import text_for_selection
+
+    spans = detect_scene_spans(SERIES)
+    picked = [
+        {"char_start": s.char_start, "char_end": s.char_end, "act_label": s.act_label}
+        for s in (spans[1], spans[4])
+    ]
+    rebuilt = detect_scene_spans(text_for_selection(SERIES, picked))
+    assert [(s.act_label, s.scene_label) for s in rebuilt] == [
+        ("Episode 1: Boundaries", "Scene 2"),
+        ("Episode 2", "Scene 2"),
+    ]
+
+
+def test_a_selection_with_no_spans_reads_everything():
+    from app.services.scene_map import text_for_selection
+
+    assert text_for_selection(SERIES, [{"page_start": 1, "page_end": 2}]) is None

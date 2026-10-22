@@ -2627,13 +2627,15 @@ async def upload_script_background(
     from app.services.scene_map import pages_for_selection
 
     picked_pages = None
+    picked_scenes: list = []
     if scenes:
         try:
             picked = _json.loads(scenes)
-            found = pages_for_selection(picked if isinstance(picked, list) else [])
+            picked_scenes = picked if isinstance(picked, list) else []
+            found = pages_for_selection(picked_scenes)
             # An empty set means the scenes carried no page numbers — a TXT
             # upload — not that nothing was picked. Reading nothing would hand
-            # back an empty script.
+            # back an empty script. Text is cut by character span below.
             picked_pages = found or None
         except (ValueError, TypeError):
             picked_pages = None
@@ -2651,6 +2653,10 @@ async def upload_script_background(
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
+    if file_ext != "pdf" and picked_scenes:
+        from app.services.scene_map import text_for_selection
+
+        raw_text = text_for_selection(raw_text, picked_scenes) or raw_text
     if not raw_text or len(raw_text) < 100:
         raise HTTPException(status_code=400, detail="File appears to be empty or too short")
 

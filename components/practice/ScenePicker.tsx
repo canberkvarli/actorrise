@@ -76,6 +76,19 @@ function pageRange(scene: ScannedScene): string | null {
   return end === scene.page_start ? `p. ${scene.page_start}` : `pp. ${scene.page_start}-${end}`;
 }
 
+/**
+ * ScenePartner reads the other part, so a scene needs two speakers to build.
+ * A one-voice scene (a series opening on a therapy session where the client
+ * never speaks) used to be tickable and then vanish from the build, which read
+ * as Scene 1 going missing.
+ *
+ * Exactly one, not fewer than two: an empty cast means the quick read could
+ * not parse the layout, and the full build may still find both parts.
+ */
+function isSolo(scene: ScannedScene): boolean {
+  return scene.characters.length === 1;
+}
+
 /** Strip the extension. The filename is the only title we have at this point. */
 function scriptName(fileName: string): string {
   return fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "Your script";
@@ -111,7 +124,10 @@ export function ScenePicker({
   const atLimit = limit != null && picked.size >= limit;
   const overLimit = limit != null && scenes.length > limit;
 
+  const pickable = useMemo(() => scenes.filter((s) => !isSolo(s)), [scenes]);
+
   const toggle = (scene: ScannedScene) => {
+    if (isSolo(scene)) return;
     setPicked((prev) => {
       const next = new Set(prev);
       if (next.has(scene.index)) next.delete(scene.index);
@@ -123,6 +139,7 @@ export function ScenePicker({
   // A series is picked an episode at a time, not a box at a time. Fills up to
   // the plan's limit, like the single toggle does.
   const toggleGroup = (groupScenes: ScannedScene[]) => {
+    groupScenes = groupScenes.filter((s) => !isSolo(s));
     setPicked((prev) => {
       const next = new Set(prev);
       if (groupScenes.every((s) => next.has(s.index))) {
@@ -138,11 +155,11 @@ export function ScenePicker({
   };
 
   // How many this plan will let them build in one go.
-  const allowance = limit == null ? scenes.length : Math.min(limit, scenes.length);
+  const allowance = limit == null ? pickable.length : Math.min(limit, pickable.length);
   const hasAllowance = picked.size >= allowance;
 
   const takeAllowance = () => {
-    setPicked(new Set(scenes.slice(0, allowance).map((s) => s.index)));
+    setPicked(new Set(pickable.slice(0, allowance).map((s) => s.index)));
   };
 
   return (
@@ -174,7 +191,7 @@ export function ScenePicker({
             limit — so anyone whose plan builds everything had no way to say
             "all of it" and ticked nine boxes by hand. It is a real button now,
             where the choice is made rather than under it. */}
-        {scenes.length > 1 && (
+        {pickable.length > 1 && (
           <button
             type="button"
             onClick={() => (hasAllowance ? setPicked(new Set()) : takeAllowance())}
@@ -188,8 +205,8 @@ export function ScenePicker({
           >
             {hasAllowance
               ? "Clear"
-              : allowance === scenes.length
-                ? `Build the whole thing · ${scenes.length} scenes`
+              : allowance === pickable.length
+                ? `Build the whole thing · ${pickable.length} scenes`
                 : `Build the first ${allowance}`}
           </button>
         )}
@@ -210,13 +227,15 @@ export function ScenePicker({
                   {act}
                 </h3>
                 <span aria-hidden className="h-px flex-1 bg-paper-rule" />
-                {actScenes.length > 1 && (
+                {actScenes.filter((s) => !isSolo(s)).length > 1 && (
                   <button
                     type="button"
                     onClick={() => toggleGroup(actScenes)}
                     className="shrink-0 font-typewriter text-[12.5px] tracking-wide text-paper-muted transition-colors hover:text-primary"
                   >
-                    {actScenes.every((s) => picked.has(s.index)) ? "clear" : `all ${actScenes.length}`}
+                    {actScenes.every((s) => isSolo(s) || picked.has(s.index))
+                      ? "clear"
+                      : `all ${actScenes.filter((s) => !isSolo(s)).length}`}
                   </button>
                 )}
               </div>
@@ -224,7 +243,8 @@ export function ScenePicker({
             <ul className="space-y-0.5">
               {actScenes.map((scene, i) => {
                 const isPicked = picked.has(scene.index);
-                const blocked = !isPicked && atLimit;
+                const solo = isSolo(scene);
+                const blocked = solo || (!isPicked && atLimit);
                 const size = sceneSize(scene);
                 const pages = pageRange(scene);
                 return (
@@ -318,6 +338,7 @@ export function ScenePicker({
                                 ? ` · +${scene.characters.length - 4}`
                                 : "")
                             : "No dialogue found"}
+                          {solo && " · solo, no partner part"}
                         </span>
                       </span>
 
