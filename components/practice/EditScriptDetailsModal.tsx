@@ -5,7 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { GenreSelect } from "@/components/ui/genre-select";
+import { SCRIPT_GENRES } from "@/lib/genreOptions";
+import { cn } from "@/lib/utils";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { clothFor, emblemFor } from "@/components/monologue/PlayCover";
 import { Glyph } from "@/components/brand/glyphs";
@@ -18,8 +19,11 @@ interface EditScriptDetailsModalProps {
   script: UserScript;
 }
 
+/** A script can be more than one thing ("Comedy, Drama"), but not everything. */
+const MAX_GENRES = 3;
+
 /**
- * Edit a script's metadata: title, author, genre, synopsis.
+ * Edit a script's metadata: title, author, genres, synopsis.
  *
  * It was a stack of four grey shadcn fields under "Edit details" in the sans
  * face — a settings dialog, opened from a room set in Playfair on paper. What
@@ -37,9 +41,34 @@ export function EditScriptDetailsModal({
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(script.title ?? "");
   const [author, setAuthor] = useState(script.author ?? "");
-  const [genre, setGenre] = useState(script.genre ?? "");
+  const [genres, setGenres] = useState<string[]>(
+    script.genres?.length ? script.genres : script.genre ? [script.genre] : [],
+  );
   const [description, setDescription] = useState(script.description ?? "");
   const [saving, setSaving] = useState(false);
+  const [writing, setWriting] = useState(false);
+  const genre = genres[0] ?? "";
+  // The list, plus anything this script already carries that is not on it.
+  const genreChoices = [...SCRIPT_GENRES, ...genres.filter((g) => !(SCRIPT_GENRES as readonly string[]).includes(g))];
+
+  /** Tap order is rank: the first one picked is the main genre and sets the cloth. */
+  const toggleGenre = (g: string) =>
+    setGenres((cur) =>
+      cur.includes(g) ? cur.filter((x) => x !== g) : cur.length >= MAX_GENRES ? cur : [...cur, g],
+    );
+
+  /** A fresh synopsis from the script itself. Fills the field; saving is still theirs. */
+  const writeSynopsis = async () => {
+    setWriting(true);
+    try {
+      const res = await api.post<{ synopsis: string }>(`/api/scripts/${script.id}/synopsis`);
+      setDescription(res.data.synopsis);
+    } catch {
+      toast.error("Couldn't write one just now. Try again.");
+    } finally {
+      setWriting(false);
+    }
+  };
   const [touchedTitle, setTouchedTitle] = useState(false);
 
   const titleMissing = touchedTitle && !title.trim();
@@ -64,7 +93,8 @@ export function EditScriptDetailsModal({
     const update = {
       title: title.trim(),
       author: author.trim(),
-      genre: genre.trim(),
+      genre,
+      genres,
       description: description.trim(),
     };
     setSaving(true);
@@ -161,17 +191,54 @@ export function EditScriptDetailsModal({
 
               <div>
                 <label className="t-field__label">
-                  Genre <em>sets the cloth</em>
+                  Genre <em>up to {MAX_GENRES}, the first sets the cloth</em>
                 </label>
-                <GenreSelect value={genre} onValueChange={setGenre} />
+                <div className="flex flex-wrap gap-1.5">
+                  {genreChoices.map((g) => {
+                    const rank = genres.indexOf(g);
+                    const on = rank >= 0;
+                    const full = !on && genres.length >= MAX_GENRES;
+                    return (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => toggleGenre(g)}
+                        disabled={full}
+                        aria-pressed={on}
+                        className={cn(
+                          "rounded-full border px-2.5 py-1 text-[12.5px] transition-colors",
+                          on
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-current/20 opacity-80 hover:opacity-100",
+                          full && "cursor-not-allowed opacity-35 hover:opacity-35",
+                        )}
+                      >
+                        {g}
+                        {on && genres.length > 1 && rank === 0 && (
+                          <span className="ml-1 opacity-75">· main</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
 
           <div className="mt-4">
-            <label className="t-field__label" htmlFor="edit-script-synopsis">
-              Synopsis <em>optional</em>
-            </label>
+            <div className="flex items-baseline justify-between gap-3">
+              <label className="t-field__label" htmlFor="edit-script-synopsis">
+                Synopsis <em>optional</em>
+              </label>
+              <button
+                type="button"
+                onClick={writeSynopsis}
+                disabled={writing}
+                className="text-[12.5px] text-primary underline decoration-primary/40 underline-offset-4 transition-colors hover:decoration-primary disabled:opacity-50"
+              >
+                {writing ? "Reading the script…" : description.trim() ? "Write it again" : "Write it for me"}
+              </button>
+            </div>
             <textarea
               id="edit-script-synopsis"
               className="t-field__area"

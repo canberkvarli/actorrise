@@ -16,6 +16,8 @@ export interface UserScript {
   processing_error?: string;
   ai_extraction_completed: boolean;
   genre?: string;
+  /** Up to three, main first. `genre` is the first of them. Null on older scripts. */
+  genres?: string[] | null;
   estimated_length_minutes?: number;
   num_characters: number;
   num_scenes_extracted: number;

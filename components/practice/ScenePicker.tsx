@@ -28,6 +28,9 @@ interface ScenePickerProps {
   onConfirm: (picked: ScannedScene[]) => void;
   onCancel: () => void;
   onUpgrade: () => void;
+  /** Rows already on the shelf ("Choose more scenes"). Shown ticked, locked, and
+   *  counted against `limit`, which is per script. */
+  built?: number[];
 }
 
 /** "Act 1" → the run of scenes under it. Unlabelled scenes group under "". */
@@ -117,21 +120,29 @@ export function ScenePicker({
   onConfirm,
   onCancel,
   onUpgrade,
+  built = [],
 }: ScenePickerProps) {
   const [picked, setPicked] = useState<Set<number>>(() => new Set());
+  const builtSet = useMemo(() => new Set(built), [built]);
+  const isBuilt = (scene: ScannedScene) => builtSet.has(scene.index);
+  // What this plan has left on this script. A first upload has built nothing.
+  const room = limit == null ? null : Math.max(0, limit - builtSet.size);
 
   const groups = useMemo(() => byAct(scenes), [scenes]);
-  const atLimit = limit != null && picked.size >= limit;
-  const overLimit = limit != null && scenes.length > limit;
+  const atLimit = room != null && picked.size >= room;
 
-  const pickable = useMemo(() => scenes.filter((s) => !isSolo(s)), [scenes]);
+  const pickable = useMemo(
+    () => scenes.filter((s) => !isSolo(s) && !builtSet.has(s.index)),
+    [scenes, builtSet],
+  );
+  const overLimit = room != null && pickable.length > room;
 
   const toggle = (scene: ScannedScene) => {
-    if (isSolo(scene)) return;
+    if (isSolo(scene) || isBuilt(scene)) return;
     setPicked((prev) => {
       const next = new Set(prev);
       if (next.has(scene.index)) next.delete(scene.index);
-      else if (limit == null || next.size < limit) next.add(scene.index);
+      else if (room == null || next.size < room) next.add(scene.index);
       return next;
     });
   };
@@ -139,7 +150,8 @@ export function ScenePicker({
   // A series is picked an episode at a time, not a box at a time. Fills up to
   // the plan's limit, like the single toggle does.
   const toggleGroup = (groupScenes: ScannedScene[]) => {
-    groupScenes = groupScenes.filter((s) => !isSolo(s));
+    groupScenes = groupScenes.filter((s) => !isSolo(s) && !builtSet.has(s.index));
+    if (groupScenes.length === 0) return;
     setPicked((prev) => {
       const next = new Set(prev);
       if (groupScenes.every((s) => next.has(s.index))) {
@@ -147,7 +159,7 @@ export function ScenePicker({
         return next;
       }
       for (const s of groupScenes) {
-        if (limit != null && next.size >= limit) break;
+        if (room != null && next.size >= room) break;
         next.add(s.index);
       }
       return next;
@@ -155,7 +167,7 @@ export function ScenePicker({
   };
 
   // How many this plan will let them build in one go.
-  const allowance = limit == null ? pickable.length : Math.min(limit, pickable.length);
+  const allowance = room == null ? pickable.length : Math.min(room, pickable.length);
   const hasAllowance = picked.size >= allowance;
 
   const takeAllowance = () => {
@@ -183,7 +195,9 @@ export function ScenePicker({
           {pageCount === 1 ? "page" : "pages"}
         </p>
         <p className="mx-auto mt-2.5 max-w-sm text-[14.5px] leading-relaxed text-paper-muted">
-          Choose what to build now. The rest keep, and you can come back for them.
+          {builtSet.size > 0
+            ? `${builtSet.size} built already. Tick the ones you want to add.`
+            : "Choose what to build now. The rest keep, and you can come back for them."}
         </p>
 
         {/* Taking the whole play was a dotted-underline link at 12.5px in the
@@ -227,15 +241,15 @@ export function ScenePicker({
                   {act}
                 </h3>
                 <span aria-hidden className="h-px flex-1 bg-paper-rule" />
-                {actScenes.filter((s) => !isSolo(s)).length > 1 && (
+                {actScenes.filter((s) => !isSolo(s) && !isBuilt(s)).length > 1 && (
                   <button
                     type="button"
                     onClick={() => toggleGroup(actScenes)}
                     className="shrink-0 font-typewriter text-[12.5px] tracking-wide text-paper-muted transition-colors hover:text-primary"
                   >
-                    {actScenes.every((s) => isSolo(s) || picked.has(s.index))
+                    {actScenes.every((s) => isSolo(s) || isBuilt(s) || picked.has(s.index))
                       ? "clear"
-                      : `all ${actScenes.filter((s) => !isSolo(s)).length}`}
+                      : `all ${actScenes.filter((s) => !isSolo(s) && !isBuilt(s)).length}`}
                   </button>
                 )}
               </div>
@@ -244,7 +258,8 @@ export function ScenePicker({
               {actScenes.map((scene, i) => {
                 const isPicked = picked.has(scene.index);
                 const solo = isSolo(scene);
-                const blocked = solo || (!isPicked && atLimit);
+                const done = isBuilt(scene);
+                const blocked = solo || done || (!isPicked && atLimit);
                 const size = sceneSize(scene);
                 const pages = pageRange(scene);
                 return (
@@ -288,15 +303,20 @@ export function ScenePicker({
                           "peer-focus-visible:ring-2 peer-focus-visible:ring-primary/50 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-paper",
                           isPicked
                             ? "border-primary bg-primary"
-                            : blocked
-                              ? "border-paper-rule"
-                              : "border-paper-ink/30 group-hover:border-paper-ink/55",
+                            : done
+                              ? "border-paper-ink/25 bg-paper-ink/15"
+                              : blocked
+                                ? "border-paper-rule"
+                                : "border-paper-ink/30 group-hover:border-paper-ink/55",
                         )}
                       >
-                        {isPicked && (
+                        {(isPicked || done) && (
                           <svg
                             viewBox="0 0 12 12"
-                            className="h-[11px] w-[11px] text-primary-foreground"
+                            className={cn(
+                              "h-[11px] w-[11px]",
+                              isPicked ? "text-primary-foreground" : "text-paper-ink/60",
+                            )}
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2.2"
@@ -339,6 +359,7 @@ export function ScenePicker({
                                 : "")
                             : "No dialogue found"}
                           {solo && " · solo, no partner part"}
+                          {done && " · built"}
                         </span>
                       </span>
 
@@ -373,7 +394,7 @@ export function ScenePicker({
       <footer className="shrink-0 border-t border-paper-rule bg-paper px-5 py-4 sm:px-8">
         {overLimit && (
           <p className="mb-3 text-[14px] leading-relaxed text-paper-muted">
-            Your plan builds {limit} {limit === 1 ? "scene" : "scenes"} at a time.{" "}
+            Your plan builds {limit} {limit === 1 ? "scene" : "scenes"} from a script.{" "}
             <button
               type="button"
               onClick={onUpgrade}
@@ -391,7 +412,7 @@ export function ScenePicker({
             ) : (
               <>
                 <span className="font-bold text-primary">{picked.size}</span> of{" "}
-                {scenes.length} chosen
+                {pickable.length} chosen
               </>
             )}
           </span>

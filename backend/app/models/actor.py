@@ -548,6 +548,13 @@ class UserScript(Base):
     # samples belong to no one and every actor sees the same rows.
     shelf_order = Column(Integer, nullable=True, index=True)
 
+    # The whole script as read at upload. raw_text is only what was built, so a
+    # picked upload kept one scene's text and could never offer the rest.
+    # deferred(): a full script, read only when choosing more scenes.
+    source_text = deferred(Column(Text, nullable=True))
+    # Up to three, in order. `genre` stays as the first, for the colours.
+    genres = Column(JSONB, nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
     updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
 

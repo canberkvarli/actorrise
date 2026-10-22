@@ -32,6 +32,7 @@ from app.models.actor import (
 )
 from app.services.docx_text import SUPPORTED_EXTS, UNSUPPORTED_MESSAGE, normalize_upload
 from app.services.script_tags import normalize_tag_list
+from app.services.script_additions import apply_genres, clean_genres
 from app.models.user import User
 from app.services.character_names import canonicalize_scene_characters
 from app.services.script_parser import PARSER_VERSION, ScriptParser
@@ -56,6 +57,7 @@ class UserScriptResponse(BaseModel):
     processing_error: Optional[str]
     ai_extraction_completed: bool
     genre: Optional[str]
+    genres: Optional[List[str]] = None
     estimated_length_minutes: Optional[int]
     num_characters: int
     num_scenes_extracted: int
@@ -99,6 +101,8 @@ class ScriptMetadataUpdate(BaseModel):
     author: Optional[str] = None
     description: Optional[str] = None
     genre: Optional[str] = None
+    # Up to three, first is the main one. Wins over `genre` when both are sent.
+    genres: Optional[List[str]] = None
 
 
 class AddSceneToScriptRequest(BaseModel):
@@ -391,8 +395,10 @@ async def upload_script(
         file_size_bytes=file_size,
         processing_status="processing",
         raw_text=result["raw_text"],
+        source_text=result["raw_text"],
         characters=metadata.get("characters", []),
-        genre=metadata.get("genre"),
+        genre=(clean_genres(metadata.get("genres") or metadata.get("genre")) or [None])[0],
+        genres=clean_genres(metadata.get("genres") or metadata.get("genre")) or None,
         estimated_length_minutes=metadata.get("estimated_length_minutes"),
         num_characters=len(metadata.get("characters", [])),
     )
@@ -750,8 +756,10 @@ async def upload_script_stream(
                 file_size_bytes=file_size,
                 processing_status="processing",
                 raw_text=result["raw_text"],
+                source_text=result["raw_text"],
                 characters=metadata.get("characters", []),
-                genre=metadata.get("genre"),
+                genre=(clean_genres(metadata.get("genres") or metadata.get("genre")) or [None])[0],
+                genres=clean_genres(metadata.get("genres") or metadata.get("genre")) or None,
                 estimated_length_minutes=metadata.get("estimated_length_minutes"),
                 num_characters=len(metadata.get("characters", [])),
             )
@@ -953,8 +961,10 @@ async def create_script_from_text(
         file_path=None,
         processing_status="processing",
         raw_text=result["raw_text"],
+        source_text=result["raw_text"],
         characters=metadata.get("characters", []),
-        genre=metadata.get("genre"),
+        genre=(clean_genres(metadata.get("genres") or metadata.get("genre")) or [None])[0],
+        genres=clean_genres(metadata.get("genres") or metadata.get("genre")) or None,
         estimated_length_minutes=metadata.get("estimated_length_minutes"),
         num_characters=len(metadata.get("characters", [])),
     )
@@ -1419,6 +1429,10 @@ async def update_script_metadata(
         script.description = update.description
     if update.genre is not None:
         script.genre = update.genre
+    if update.genres is not None:
+        cleaned = clean_genres(update.genres)
+        script.genres = cleaned or None
+        script.genre = cleaned[0] if cleaned else None
 
     db.commit()
     db.refresh(script)
@@ -2455,8 +2469,13 @@ def extraction_outcome(created: list) -> tuple:
 
 
 def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
-                           file_ext: str, filename: str, mode: str, file_hash: str) -> None:
-    """Finish reading a script after the request that uploaded it has gone."""
+                           file_ext: str, filename: str, mode: str, file_hash: str,
+                           source_pdf: Optional[bytes] = None) -> None:
+    """Finish reading a script after the request that uploaded it has gone.
+
+    `source_pdf` is the original file of a picked PDF upload, read in full after
+    the scenes are built so the rest of it can be offered later.
+    """
     db = SessionLocal()
     cancel_event = threading.Event()
     with _EXTRACTION_CANCELS_LOCK:
@@ -2485,7 +2504,7 @@ def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
         )
         script.characters = metadata.get("characters", [])
         script.num_characters = len(script.characters or [])
-        script.genre = metadata.get("genre") or script.genre
+        apply_genres(script, metadata.get("genres") or metadata.get("genre"))
         script.estimated_length_minutes = metadata.get("estimated_length_minutes")
         if not script.description:
             script.description = metadata.get("synopsis")
@@ -2508,6 +2527,9 @@ def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
         script.ai_extraction_completed = True
         script.processing_status, script.processing_error = extraction_outcome(created)
         db.commit()
+
+        if source_pdf is not None:
+            _store_pdf_source(db, script, parser, source_pdf)
 
         try:
             db.query(ExtractionCache).filter(ExtractionCache.file_hash == file_hash).delete()
@@ -2541,6 +2563,17 @@ def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
         db.close()
 
 
+def _store_pdf_source(db: Session, script, parser, pdf_bytes: bytes) -> None:
+    """Read the whole PDF and keep it as the script's source. Best effort: the
+    scenes are already safe, and without this the actor is asked for the file
+    once if they ever want more."""
+    try:
+        script.source_text = parser.extract_text_from_pdf(pdf_bytes)
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
 @router.post("/{script_id}/cancel-extraction")
 async def cancel_extraction(
     script_id: int,
@@ -2571,6 +2604,15 @@ async def cancel_extraction(
         )
 
     was_running = cancel_background_extraction(script_id)
+
+    # Adding scenes to a script that has some: stop, keep everything built.
+    # Deleting here would take the actor's earlier scenes with the cancel.
+    has_scenes = db.query(Scene.id).filter(Scene.user_script_id == script.id).first() is not None
+    if has_scenes:
+        script.processing_status = "completed"
+        script.processing_error = None
+        db.commit()
+        return {"cancelled": True, "was_running": was_running, "kept": True}
 
     # Give back the upload the actor never got to keep.
     if (current_user.total_scripts_uploaded or 0) > 0:
@@ -2653,6 +2695,10 @@ async def upload_script_background(
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
+    # The whole script, kept so "Choose more scenes" can offer the rest. A
+    # picked PDF was only read for its picked pages; the thread reads the rest
+    # once the scenes are built, so nobody waits on it.
+    full_text = raw_text if (file_ext != "pdf" or not picked_pages) else None
     if file_ext != "pdf" and picked_scenes:
         from app.services.scene_map import text_for_selection
 
@@ -2672,6 +2718,7 @@ async def upload_script_background(
         file_size_bytes=file_size,
         processing_status="processing",
         raw_text=raw_text,
+        source_text=full_text,
         characters=[],
         num_characters=0,
     )
@@ -2688,7 +2735,11 @@ async def upload_script_background(
         target=_extract_in_background,
         args=(user_script.id, current_user.id, raw_text.encode("utf-8"), "txt", file.filename,
               mode if mode in ("quick", "full") else "full",
-              hashlib.sha256(file_content).hexdigest()),
+              # A picked build is cached under the text it read, not the file:
+              # keyed on the file, uploading the same script whole later was
+              # handed back only the scenes picked the first time.
+              hashlib.sha256(raw_text.encode("utf-8") if picked_scenes else file_content).hexdigest(),
+              file_content if full_text is None else None),
         daemon=True,
     ).start()
 
@@ -2828,3 +2879,275 @@ async def dev_clear_extraction_cache(
     deleted = db.query(ExtractionCache).delete()
     db.commit()
     return {"deleted": deleted}
+
+
+# ============================================================================
+# Choose more scenes
+# ============================================================================
+
+def _scene_allowance(db: Session, user: User) -> Optional[int]:
+    """Scenes this plan may hold per script; None is unlimited."""
+    from app.core.config import settings
+    from app.models.billing import PricingTier, UserSubscription
+    from app.services.script_additions import SCENE_ALLOWANCE
+
+    emails = [e.strip().lower() for e in (settings.superuser_emails or "").split(",") if e.strip()]
+    if user.email and user.email.lower() in emails:
+        return None
+    sub = db.query(UserSubscription).filter(UserSubscription.user_id == user.id).first()
+    tier_name = "free"
+    if sub and sub.is_active:
+        tier = db.query(PricingTier).get(sub.tier_id)
+        tier_name = (tier.name if tier else "free") or "free"
+    return SCENE_ALLOWANCE.get(tier_name.lower())
+
+
+def _owned_script(db: Session, script_id: int, user: User) -> UserScript:
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == user.id,
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+    return script
+
+
+async def _read_upload(file: UploadFile) -> tuple:
+    if not file.filename or file.filename.rsplit(".", 1)[-1].lower() not in SUPPORTED_EXTS:
+        raise HTTPException(status_code=400, detail=UNSUPPORTED_MESSAGE)
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+    try:
+        return normalize_upload(file.filename, content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{script_id}/scene-map")
+async def script_scene_map(
+    script_id: int,
+    file: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Every scene in a shelved script, with the built ones marked.
+
+    Read from the stored source when there is one. Scripts from before it was
+    kept answer `needs_file`, and the picker asks for the same file once.
+    """
+    from app.services.script_additions import built_indices, built_keys
+
+    script = _owned_script(db, script_id, current_user)
+    if file is not None:
+        content, ext = await _read_upload(file)
+    elif script.source_text:
+        content, ext = script.source_text.encode("utf-8"), "txt"
+    else:
+        return {"needs_file": True}
+
+    scan = await run_in_threadpool(_scan_file, content, ext)
+    built = db.query(Scene).filter(Scene.user_script_id == script.id).all()
+    return {
+        "needs_file": False,
+        "scan": scan,
+        "built": built_indices(scan.scenes, built_keys(built)),
+        "built_count": len(built),
+        "limit": _scene_allowance(db, current_user),
+    }
+
+
+@router.post("/{script_id}/add-scenes", response_model=UserScriptResponse)
+async def add_scenes_to_script(
+    script_id: int,
+    scenes: str = Form(...),
+    file: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Build more scenes into a script, leaving what is built alone.
+
+    Runs on a thread like an upload; the shelf polls the script's status. The
+    plan's scene allowance counts what is built already.
+    """
+    from app.services.scene_map import pages_for_selection, text_for_selection
+    from app.services.script_additions import built_keys, unbuilt_picks
+
+    script = _owned_script(db, script_id, current_user)
+    if script.processing_status in ("processing", "pending"):
+        raise HTTPException(status_code=409, detail="That script is still being read. Try again in a moment.")
+
+    try:
+        picked = _json.loads(scenes)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Bad scene selection")
+    existing = db.query(Scene).filter(Scene.user_script_id == script.id).all()
+    keys = built_keys(existing)
+    picked = unbuilt_picks(picked if isinstance(picked, list) else [], keys)
+    if not picked:
+        raise HTTPException(status_code=400, detail="Those scenes are built already.")
+
+    limit = _scene_allowance(db, current_user)
+    if limit is not None and len(existing) + len(picked) > limit:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "feature_not_available",
+                "message": "More scenes from one script come with Plus.",
+                "upgrade_url": "/pricing",
+            },
+        )
+
+    parser = ScriptParser()
+    source_pdf = None
+    if file is not None:
+        content, ext = await _read_upload(file)
+        if ext == "pdf":
+            pages = pages_for_selection(picked) or None
+            text_to_build = await run_in_threadpool(
+                lambda: parser.extract_text_from_pdf(content, only_pages=pages)
+            )
+            if not script.source_text:
+                source_pdf = content
+        else:
+            full = parser.extract_text_from_txt(content)
+            text_to_build = text_for_selection(full, picked)
+            if not script.source_text:
+                script.source_text = full
+    elif script.source_text:
+        text_to_build = text_for_selection(script.source_text, picked)
+    else:
+        raise HTTPException(status_code=409, detail={"error": "needs_file"})
+
+    if not text_to_build or len(text_to_build.strip()) < 100:
+        raise HTTPException(status_code=400, detail="Couldn't find those scenes in the script.")
+
+    script.processing_status = "processing"
+    script.processing_error = None
+    db.commit()
+    db.refresh(script)
+
+    threading.Thread(
+        target=_add_scenes_in_background,
+        args=(script.id, text_to_build, script.original_filename, source_pdf),
+        daemon=True,
+    ).start()
+    return UserScriptResponse.model_validate(script)
+
+
+def _add_scenes_in_background(script_id: int, text_to_build: str, filename: str,
+                              source_pdf: Optional[bytes]) -> None:
+    """Read the picked text and append its scenes. Never removes a scene."""
+    from app.services.script_additions import built_keys, is_new_scene
+
+    db = SessionLocal()
+    cancel_event = threading.Event()
+    with _EXTRACTION_CANCELS_LOCK:
+        _EXTRACTION_CANCELS[script_id] = cancel_event
+    try:
+        parser = ScriptParser()
+        result = parser.parse_script(
+            text_to_build.encode("utf-8"), "txt", filename, mode="full", cancel_event=cancel_event
+        )
+        script = db.query(UserScript).filter(UserScript.id == script_id).first()
+        if not script or cancel_event.is_set():
+            return
+
+        existing = db.query(Scene).filter(Scene.user_script_id == script.id).all()
+        keys = built_keys(existing)
+        fresh = [s for s in result.get("scenes", []) if is_new_scene(s, keys)]
+
+        # New speakers join the cast, so their scenes can find who they are.
+        known = {(c.get("name") or "").upper() for c in (script.characters or [])}
+        added_cast = [
+            c for c in (result.get("metadata", {}).get("characters") or [])
+            if (c.get("name") or "").upper() not in known
+        ]
+        if added_cast:
+            script.characters = list(script.characters or []) + added_cast
+            script.num_characters = len(script.characters)
+
+        play_id = existing[0].play_id if existing else None
+        if play_id is None:
+            play = Play(
+                title=script.title,
+                author=script.author or "Unknown",
+                genre=script.genre or "Drama",
+                category="contemporary",
+                copyright_status="user_uploaded",
+                license_type="user_content",
+                full_text=text_to_build,
+                text_format="plain",
+            )
+            db.add(play)
+            db.flush()
+            play_id = play.id
+
+        created = _build_scenes(db, script, play_id, fresh)
+        # Redo re-cuts raw_text, so it has to hold everything built.
+        script.raw_text = ((script.raw_text or "").rstrip() + "\n\n" + text_to_build).strip()
+        script.num_scenes_extracted = len(existing) + len(created)
+        script.processing_status = "completed"
+        script.processing_error = (
+            None if created else "Those scenes came back without two speaking parts, so nothing was added."
+        )
+        db.commit()
+
+        if source_pdf is not None:
+            _store_pdf_source(db, script, parser, source_pdf)
+    except Exception as e:
+        db.rollback()
+        try:
+            script = db.query(UserScript).filter(UserScript.id == script_id).first()
+            if script:
+                script.processing_status = "completed"
+                script.processing_error = (
+                    None if cancel_event.is_set() else f"Couldn't add those scenes: {str(e)[:300]}"
+                )
+                db.commit()
+        except Exception:
+            pass
+    finally:
+        with _EXTRACTION_CANCELS_LOCK:
+            _EXTRACTION_CANCELS.pop(script_id, None)
+        db.close()
+
+
+@router.post("/{script_id}/synopsis")
+async def write_synopsis(
+    script_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """A fresh synopsis, written from the script. Returned, not saved: the actor
+    sees it in the details form and decides."""
+    script = _owned_script(db, script_id, current_user)
+    text_in = script.source_text or script.raw_text or ""
+    if len(text_in.strip()) < 200:
+        raise HTTPException(status_code=400, detail="There isn't enough of the script to write from.")
+
+    def write() -> str:
+        parser = ScriptParser()
+        prompt = (
+            "Write a synopsis of this script for an actor deciding whether to rehearse it. "
+            "Two or three sentences, present tense, plain words. Name the lead and what they want, "
+            "and the world they are in. No spoilers past the midpoint, no marketing language, "
+            "no dashes.\n\n"
+            f"Title: {script.title}\n\nScript:\n```\n{text_in[:12000]}\n```\n\n"
+            "Return only the synopsis."
+        )
+        response = parser.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5,
+            max_tokens=300,
+        )
+        return (response.choices[0].message.content or "").strip().strip('"')
+
+    try:
+        synopsis = await run_in_threadpool(write)
+    except Exception:
+        raise HTTPException(status_code=502, detail="Couldn't write one just now. Try again.")
+    if not synopsis:
+        raise HTTPException(status_code=502, detail="Couldn't write one just now. Try again.")
+    return {"synopsis": synopsis}

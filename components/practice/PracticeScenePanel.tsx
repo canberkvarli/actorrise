@@ -12,6 +12,7 @@ import {
   IconPencil,
   IconRefresh,
   IconScissorsOff,
+  IconListCheck,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -34,6 +35,7 @@ import { groupScenesByAct, formatSceneDuration, type Scene } from "@/lib/scenes"
 import { sceneListShape } from "@/lib/sceneListShape";
 import { EditScriptDetailsModal } from "@/components/practice/EditScriptDetailsModal";
 import { AddSceneToScriptModal } from "@/components/scenepartner/AddSceneToScriptModal";
+import { useUpload } from "@/components/practice/UploadProvider";
 
 type ScriptWithScenes = UserScript & { scenes: Scene[] };
 
@@ -80,6 +82,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
   const isProcessing =
     script.processing_status === "processing" || script.processing_status === "pending";
   const isFailed = script.processing_status === "failed";
+  const { chooseMore } = useUpload();
 
   const refreshScenes = () => {
     queryClient.invalidateQueries({ queryKey: ["scripts", script.id] });
@@ -141,6 +144,8 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
   };
 
   const metaParts: string[] = [];
+  const genres = script.genres?.length ? script.genres : script.genre ? [script.genre] : [];
+  if (genres.length > 1) metaParts.push(genres.join(", "));
   if (script.author) metaParts.push(script.author);
   if (script.estimated_length_minutes) metaParts.push(`~${script.estimated_length_minutes} min`);
   if (script.num_scenes_extracted > 0)
@@ -238,6 +243,24 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
                 <IconPlus className="h-3.5 w-3.5" />
                 Add scene
               </button>
+              {/* The rest of the script, picked like an upload. Built scenes
+                  stay as they are, rehearsal history and all. */}
+              {!isProcessing && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    chooseMore({
+                      id: script.id,
+                      title: script.title,
+                      original_filename: script.original_filename,
+                    })
+                  }
+                  className="t-script-action"
+                >
+                  <IconListCheck className="h-3.5 w-3.5" />
+                  Choose more scenes
+                </button>
+              )}
               {/* This used to be gated on `scenes.length > 0`, which hid it in the
                   one case that needs it most: a script that came back with nothing.
                   An actor looking at an empty shelf item had no way to ask for
@@ -267,7 +290,19 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
 
       {/* The scenes */}
       <div className="mt-8 min-w-0 md:mt-0">
-        {isProcessing ? (
+        {isProcessing && scenes.length > 0 && (
+          /* Adding scenes to a script that has some: keep them on screen. */
+          <p className="mb-4 flex items-center gap-2 text-sm" style={{ color: "var(--t-muted-light)" }}>
+            <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+            Adding the scenes you picked. They&apos;ll appear here.
+          </p>
+        )}
+        {!isProcessing && !isFailed && script.processing_error && scenes.length > 0 && (
+          <p className="mb-4 text-sm" style={{ color: "var(--t-muted-light)" }}>
+            {script.processing_error}
+          </p>
+        )}
+        {isProcessing && scenes.length === 0 ? (
           <ScenesComingIn />
         ) : isLoading && scenes.length === 0 ? (
           <div className="space-y-2">
@@ -322,6 +357,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
                          each restarting their own stagger reads as two lists
                          that happen to be stacked. */
                       index={groups.slice(0, gi).reduce((n, g) => n + g.scenes.length, 0) + si}
+                      position={si + 1}
                       scene={scene}
                       accentClass={getGenreBorderClassName(script.genre ?? "")}
                       expanded={expandedSceneId === scene.id}
@@ -428,6 +464,7 @@ function SoloScene({
 function SceneRow({
   scene,
   index = 0,
+  position,
   accentClass,
   expanded,
   onToggle,
@@ -438,6 +475,8 @@ function SceneRow({
   scene: Scene;
   /** Position in the panel, for the entrance only. */
   index?: number;
+  /** 1, 2, 3 within its act or episode: the row's number. */
+  position?: number;
   /** Genre-tinted left edge (border-l-* class from genreColors). */
   accentClass: string;
   expanded: boolean;
@@ -454,13 +493,14 @@ function SceneRow({
   const duration = formatSceneDuration(scene.estimated_duration_seconds);
 
   const subParts: string[] = [];
+  // The script's own label ("Scene 4") rides in the facts. The big numeral
+  // counts rows: a series that skips its one-voice openers numbered 2, 3, 4.
+  if (scene.scene_number) subParts.push(scene.scene_number);
   if (characters.length > 0) subParts.push(characters.join(" & "));
   if (duration) subParts.push(duration);
   if (scene.line_count > 0) subParts.push(`${scene.line_count} lines`);
 
-  // scene_number is free text ("Scene 2", "2A") — the ghost numeral wants the
-  // digits alone, and nothing at all when there aren't any.
-  const numeral = String(scene.scene_number ?? "").match(/\d+/)?.[0] ?? null;
+  const numeral = position != null ? String(position) : null;
 
   return (
     <motion.div

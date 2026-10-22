@@ -28,7 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UpgradeModal } from "@/components/billing/UpgradeModal";
-import { BringInScriptDialog } from "@/components/practice/BringInScriptDialog";
+import { BringInScriptDialog, SCRIPT_ACCEPT } from "@/components/practice/BringInScriptDialog";
 import { UploadStage } from "@/components/practice/UploadStage";
 import { ScenePicker, type ScannedScene } from "@/components/practice/ScenePicker";
 import { API_URL } from "@/lib/api";
@@ -130,7 +130,28 @@ interface UploadContextValue {
   openUpgrade: () => void;
   /** Open "Bring in a script" (file or paste), or the upgrade modal when over the limit. */
   openPicker: () => void;
+  /** Reopen the scene picker on a shelved script, to build more of it. */
+  chooseMore: (script: { id: number; title: string; original_filename: string }) => void;
 }
+
+/** What `/api/scripts/{id}/scene-map` answers. */
+type SceneMapResponse =
+  | { needs_file: true }
+  | {
+      needs_file: false;
+      scan: ScanResult;
+      built: number[];
+      built_count: number;
+      limit: number | null;
+    };
+
+/** "Choose more scenes" in flight: which script, its map, and the file if one was asked for. */
+type MoreScenes = {
+  script: { id: number; title: string; original_filename: string };
+  map: Extract<SceneMapResponse, { needs_file: false }> | null;
+  file: File | null;
+  askFile: boolean;
+};
 
 const UploadContext = createContext<UploadContextValue | null>(null);
 
@@ -620,6 +641,108 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     void clearPending();
   };
 
+  const [more, setMore] = useState<MoreScenes | null>(null);
+  const moreFileRef = useRef<HTMLInputElement | null>(null);
+
+  const fetchSceneMap = useCallback(
+    async (scriptId: number, file: File | null): Promise<SceneMapResponse> => {
+      const token = await getToken();
+      if (!token) throw new Error("Please sign in again.");
+      const form = new FormData();
+      if (file) form.append("file", file);
+      const res = await fetch(`${API_URL}/api/scripts/${scriptId}/scene-map`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(typeof err.detail === "string" ? err.detail : "Couldn't read the script");
+      }
+      return res.json();
+    },
+    [getToken],
+  );
+
+  /**
+   * Build more of a script that is already on the shelf.
+   *
+   * The same picker as an upload, with what is built ticked and locked. Only
+   * new ticks are built, so nothing already rehearsed is touched. Scripts
+   * uploaded before the whole text was kept ask for the file, once.
+   */
+  const chooseMore = useCallback(
+    async (script: MoreScenes["script"]) => {
+      if (isBusy) return;
+      setMore({ script, map: null, file: null, askFile: false });
+      try {
+        const map = await fetchSceneMap(script.id, null);
+        if (map.needs_file) {
+          setMore({ script, map: null, file: null, askFile: true });
+          return;
+        }
+        setMore({ script, map, file: null, askFile: false });
+      } catch (e) {
+        setMore(null);
+        toast.error(e instanceof Error ? e.message : "Couldn't read the script");
+      }
+    },
+    [isBusy, fetchSceneMap],
+  );
+
+  const onMoreFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !more) return;
+    const script = more.script;
+    setMore({ script, map: null, file, askFile: false });
+    try {
+      const map = await fetchSceneMap(script.id, file);
+      if (map.needs_file) throw new Error("Couldn't read that file");
+      setMore({ script, map, file, askFile: false });
+    } catch (e) {
+      setMore({ script, map: null, file: null, askFile: true });
+      toast.error(e instanceof Error ? e.message : "Couldn't read that file");
+    }
+  };
+
+  const confirmMore = async (picks: ScannedScene[]) => {
+    if (!more) return;
+    const { script, file } = more;
+    setMore(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Please sign in again.");
+      const form = new FormData();
+      form.append("scenes", JSON.stringify(picks));
+      if (file) form.append("file", file);
+      const res = await fetch(`${API_URL}/api/scripts/${script.id}/add-scenes`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        if (err.detail?.error === "feature_not_available") {
+          setShowUpgradeModal(true);
+          return;
+        }
+        if (err.detail?.error === "needs_file") {
+          setMore({ script, map: null, file: null, askFile: true });
+          return;
+        }
+        throw new Error(typeof err.detail === "string" ? err.detail : "Couldn't add those scenes");
+      }
+      await queryClient.invalidateQueries({ queryKey: ["scripts", script.id] });
+      await invalidateShelf(queryClient);
+      toast.success(
+        `Building ${picks.length} more ${picks.length === 1 ? "scene" : "scenes"}. They'll appear here.`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't add those scenes");
+    }
+  };
+
   const resumePicking = () => {
     if (!resumable) return;
     setPendingFile(resumable.file);
@@ -632,7 +755,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
   return (
     <UploadContext.Provider
-      value={{ isUploading: isBusy, phaseLabel, canUpload, start, openUpgrade, openPicker }}
+      value={{ isUploading: isBusy, phaseLabel, canUpload, start, openUpgrade, openPicker, chooseMore }}
     >
       {children}
 
@@ -871,6 +994,70 @@ export function UploadProvider({ children }: { children: ReactNode }) {
               }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Choose more scenes: the same picker, what is built locked in. */}
+      <Dialog
+        open={more?.map != null}
+        onOpenChange={(open) => {
+          if (!open) setMore(null);
+        }}
+      >
+        <DialogContent className="w-full max-w-2xl gap-0 overflow-hidden p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Choose more scenes</DialogTitle>
+          </DialogHeader>
+          {more?.map?.scan.scenes && (
+            <ScenePicker
+              scenes={more.map.scan.scenes}
+              pageCount={more.map.scan.page_count}
+              fileName={more.script.title}
+              limit={more.map.limit}
+              built={more.map.built}
+              onConfirm={confirmMore}
+              onCancel={() => setMore(null)}
+              onUpgrade={() => {
+                setMore(null);
+                setShowUpgradeModal(true);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Scripts from before the whole text was kept: ask for the file once. */}
+      <Dialog
+        open={more?.askFile === true}
+        onOpenChange={(open) => {
+          if (!open) setMore(null);
+        }}
+      >
+        <DialogContent className="w-full max-w-md">
+          <DialogHeader>
+            <DialogTitle>One more look at the file</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            I only kept the part of <span className="text-foreground">{more?.script.title}</span> you
+            built the first time. Choose {more?.script.original_filename ? (
+              <span className="text-foreground">{more.script.original_filename}</span>
+            ) : "the same file"}{" "}
+            again and I&apos;ll show you every scene. You only have to do this once.
+          </p>
+          <input
+            ref={moreFileRef}
+            type="file"
+            accept={SCRIPT_ACCEPT}
+            onChange={onMoreFile}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => moreFileRef.current?.click()}
+            className="h-11 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground transition-all hover:brightness-110"
+          >
+            Choose the file
+          </button>
         </DialogContent>
       </Dialog>
 

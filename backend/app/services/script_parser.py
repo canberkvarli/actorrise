@@ -2047,7 +2047,7 @@ Please extract:
    - gender: "male", "female", "non-binary", or "unknown"
    - age_range: Approximate age (e.g., "20s", "30-40", "teen", "elderly")
    - description: Brief character description (10-15 words max)
-4. genre: Drama, Comedy, Tragedy, etc.
+4. genres: An array of 1 to 3 genres, the main one first (e.g. ["Comedy", "Drama"]). Use plain genre names: Drama, Comedy, Tragedy, Romance, Thriller, Mystery, Horror, Satire, Farce, Musical, Historical, Fantasy, Sci-Fi, Crime, Family. Only add a second or third when the script really is both.
 5. estimated_length_minutes: Approximate runtime
 6. synopsis: A 2-3 sentence synopsis of the entire work. What is the story about? Keep it concise and compelling.
 
@@ -2059,6 +2059,7 @@ Return ONLY valid JSON, no explanation."""
             "author": "Unknown",
             "characters": [],
             "genre": "Drama",
+            "genres": ["Drama"],
             "estimated_length_minutes": 60,
         }
 
@@ -2490,7 +2491,7 @@ Script text:
 {script_text[:15000]}
 ```
 
-Return a JSON object with two keys:
+Return a JSON object with two keys. For "genres" give 1 to 3 plain genre names, the main one first, and only add more when the script really is more than one.
 
 1. "metadata": {{
   "title": "The actual play/screenplay title",
@@ -2498,7 +2499,7 @@ Return a JSON object with two keys:
   "characters": [
     {{"name": "NAME", "gender": "male/female/non-binary/unknown", "age_range": "20s/30-40/teen/elderly", "description": "Brief 10-15 word description"}}
   ],
-  "genre": "Drama/Comedy/Tragedy/etc",
+  "genres": ["Drama"],
   "estimated_length_minutes": 60,
   "synopsis": "2-3 sentence synopsis of the work"
 }}
