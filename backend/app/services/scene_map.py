@@ -30,6 +30,7 @@ from app.services.script_parser import parse_dialogue
 from app.services.script_structure import (
     _detect_screenplay,
     _detect_stage_play,
+    _match_scene,
     _match_slug_line,
 )
 
@@ -110,6 +111,15 @@ _CAST_LIST = re.compile(
     r"characters in the play|dramatis person|cast of characters|^\s*(the )?characters\s*$",
     re.IGNORECASE | re.MULTILINE,
 )
+
+# A title page says what it is. "ALL RIGHTS RESERVED" in capitals is a cue to
+# the parser, and the copyright line under it reads as its speech, so a TV
+# script's cover arrived as a two-hander ("ALMOST A THERAPIST", 2026-10-22).
+_TITLE_PAGE = re.compile(
+    r"all rights reserved|copyright|\u00a9|a screenplay|a teleplay|written by",
+    re.IGNORECASE,
+)
+_TITLE_PAGE_MAX_LINES = 5
 
 
 def repair_split_name(name: str) -> str:
@@ -217,6 +227,20 @@ def _absorb_bare_act_headers(spans: List[SceneSpan]) -> List[SceneSpan]:
     return merged
 
 
+def _from_scene_heading(text: str) -> str:
+    """The span from its SCENE heading on, for counting who speaks.
+
+    A folded-in act or episode header sits above it, and "EPISODE ONE" with its
+    title "BOUNDARIES" under it are two lines in capitals: the parser takes both
+    for cues and lists them in the cast.
+    """
+    lines = text.split("\n")
+    for i, line in enumerate(lines[:12]):
+        if _match_scene(line):
+            return "\n".join(lines[i:]) if i else text
+    return text
+
+
 def _finalize(spans: List[SceneSpan]) -> List[SceneSpan]:
     """Attach cast and line counts, then drop what is not a scene.
 
@@ -232,7 +256,7 @@ def _finalize(spans: List[SceneSpan]) -> List[SceneSpan]:
     """
     out = []
     for span in spans:
-        names, lines = _speakers(span.text)
+        names, lines = _speakers(_from_scene_heading(span.text))
         out.append(replace(span, characters=names, line_count=lines))
 
     # Both signals, because each has a false positive on its own. A title page
@@ -246,10 +270,10 @@ def _finalize(spans: List[SceneSpan]) -> List[SceneSpan]:
 
 
 def _act_number(label: Optional[str]) -> Optional[int]:
-    """The digit in "Act 3". None for Prologue, Epilogue and the unlabelled."""
+    """The digit in "Act 3" or "Episode 3". None for Prologue, Epilogue and the unlabelled."""
     if not label:
         return None
-    match = re.match(r"act\s+(\d+)", label.strip(), re.IGNORECASE)
+    match = re.match(r"(?:act|episode)\s+(\d+)", label.strip(), re.IGNORECASE)
     return int(match.group(1)) if match else None
 
 
@@ -298,6 +322,10 @@ def _drop_front_matter(spans: List[SceneSpan], had_preamble: bool) -> List[Scene
     # cue: "NICK BOTTOM, weaver" is a cue with a direction, and the description
     # under it is his line. It says what it is at the top, so believe that.
     if _CAST_LIST.search(first.text):
+        return spans[1:]
+    # Short, because sides carry a copyright footer on every page and the real
+    # opening scene must not go with it. A cover reads as a handful of "lines".
+    if _TITLE_PAGE.search(first.text) and first.line_count <= _TITLE_PAGE_MAX_LINES:
         return spans[1:]
     if len(first.characters) >= 2:
         return spans

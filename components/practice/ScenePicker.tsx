@@ -120,6 +120,23 @@ export function ScenePicker({
     });
   };
 
+  // A series is picked an episode at a time, not a box at a time. Fills up to
+  // the plan's limit, like the single toggle does.
+  const toggleGroup = (groupScenes: ScannedScene[]) => {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (groupScenes.every((s) => next.has(s.index))) {
+        for (const s of groupScenes) next.delete(s.index);
+        return next;
+      }
+      for (const s of groupScenes) {
+        if (limit != null && next.size >= limit) break;
+        next.add(s.index);
+      }
+      return next;
+    });
+  };
+
   // How many this plan will let them build in one go.
   const allowance = limit == null ? scenes.length : Math.min(limit, scenes.length);
   const hasAllowance = picked.size >= allowance;
@@ -193,6 +210,15 @@ export function ScenePicker({
                   {act}
                 </h3>
                 <span aria-hidden className="h-px flex-1 bg-paper-rule" />
+                {actScenes.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(actScenes)}
+                    className="shrink-0 font-typewriter text-[12.5px] tracking-wide text-paper-muted transition-colors hover:text-primary"
+                  >
+                    {actScenes.every((s) => picked.has(s.index)) ? "clear" : `all ${actScenes.length}`}
+                  </button>
+                )}
               </div>
             )}
             <ul className="space-y-0.5">

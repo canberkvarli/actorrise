@@ -36,17 +36,35 @@ class StructuralChunk:
 # in a Gutenberg afterword matched "scene i" and was read as Scene 1. On The
 # Trojan Women that phantom heading sat at 88% of the way through the file and
 # took the entire play out of the only scene we then knew about.
+# Spelled-out numbers, as far as a TV season or a long act runs. A longer
+# alternative is still reached after a shorter one fails: SEVEN fails the
+# (?![A-Za-z]) guard on "SEVENTEEN" and the match backtracks into it.
+_WORD_NUMERALS = r'(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|ELEVEN|TWELVE|THIRTEEN|FOURTEEN|FIFTEEN|SIXTEEN|SEVENTEEN|EIGHTEEN|NINETEEN|TWENTY)'
+
 ACT_PATTERNS = [
     r'^ACT\s+([IVX]+)(?![A-Za-z])',                                          # ACT III
     r'^ACT\s+(\d+)(?![A-Za-z])',                                             # ACT 3
-    r'^ACT\s+(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE)(?![A-Za-z])',    # ACT ONE
+    r'^ACT\s+' + _WORD_NUMERALS + r'(?![A-Za-z])',    # ACT ONE
+]
+
+# Episodes sit where acts do. A series script numbers its scenes from ONE again
+# in every episode, so without this level six episodes read as one run of
+# scenes with every number repeated six times ("ALMOST A THERAPIST", 2026-10-22).
+# The number ends the line, or a title follows a separator ("EPISODE ONE:
+# Pilot"). Stricter than ACT on purpose: "Episode one of many..." is prose,
+# and episodes are rare enough that a missed heading costs less than a fake one.
+_EPISODE_END = r'\s*(?:$|[:.\-\u2013\u2014(])'
+EPISODE_PATTERNS = [
+    r'^EPISODE\s+(\d+)' + _EPISODE_END,                                        # EPISODE 3
+    r'^EPISODE\s+([IVX]+)' + _EPISODE_END,                                      # EPISODE III
+    r'^EPISODE\s+' + _WORD_NUMERALS + _EPISODE_END,                             # EPISODE THREE
 ]
 
 # Patterns that match scene headers (stage plays)
 SCENE_PATTERNS = [
     r'^SCENE\s+([IVX]+)(?![A-Za-z])',                                        # SCENE II
     r'^SCENE\s+(\d+)(?![A-Za-z])',                                           # SCENE 2
-    r'^SCENE\s+(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE)(?![A-Za-z])',  # SCENE ONE
+    r'^SCENE\s+' + _WORD_NUMERALS + r'(?![A-Za-z])',  # SCENE ONE
 ]
 
 # A heading is a line of its own, not the opening of a paragraph. Anything
@@ -71,7 +89,10 @@ _ROMAN_MAP = {'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
               'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10}
 
 _WORD_MAP = {'ONE': 1, 'TWO': 2, 'THREE': 3, 'FOUR': 4, 'FIVE': 5,
-             'SIX': 6, 'SEVEN': 7, 'EIGHT': 8, 'NINE': 9}
+             'SIX': 6, 'SEVEN': 7, 'EIGHT': 8, 'NINE': 9, 'TEN': 10,
+             'ELEVEN': 11, 'TWELVE': 12, 'THIRTEEN': 13, 'FOURTEEN': 14,
+             'FIFTEEN': 15, 'SIXTEEN': 16, 'SEVENTEEN': 17, 'EIGHTEEN': 18,
+             'NINETEEN': 19, 'TWENTY': 20}
 
 # Max chunk size before splitting at paragraph boundaries
 MAX_CHUNK_CHARS = 60000
@@ -96,6 +117,10 @@ def _match_act(line: str) -> Optional[str]:
         m = re.match(pattern, stripped, re.IGNORECASE)
         if m:
             return f"Act {_normalize_number(m.group(1))}"
+    for pattern in EPISODE_PATTERNS:
+        m = re.match(pattern, stripped, re.IGNORECASE)
+        if m:
+            return f"Episode {_normalize_number(m.group(1))}"
 
     for pattern, label in SPECIAL_PATTERNS:
         if re.match(pattern, stripped, re.IGNORECASE):
@@ -191,6 +216,31 @@ def detect_structure(text: str) -> List[StructuralChunk]:
     return _build_chunks_from_boundaries(lines, boundaries)
 
 
+def _episode_title(lines: List[str], heading_index: int) -> Optional[str]:
+    """The name printed under an episode heading, if it has one.
+
+    "EPISODE ONE / BOUNDARIES / SCENE ONE": a short line in capitals, standing
+    alone between the episode and its first scene. Anything else under the
+    heading (a slug, a stage direction, the first line of dialogue) is not a
+    title, so both neighbours have to be right before it counts.
+    """
+    following = [j for j in range(heading_index + 1, min(len(lines), heading_index + 8)) if lines[j].strip()]
+    if len(following) < 2:
+        return None
+    candidate = lines[following[0]].strip()
+    if (
+        len(candidate) > 40
+        or candidate != candidate.upper()
+        or not re.search(r"[A-Z]", candidate)
+        or candidate.endswith(":")
+        or _match_act(candidate)
+        or _match_scene(candidate)
+        or not _match_scene(lines[following[1]])
+    ):
+        return None
+    return candidate.title()
+
+
 def _detect_stage_play(lines: List[str]) -> list:
     """Detect ACT/SCENE boundaries in stage play format."""
     boundaries = []  # (line_index, act_label_or_None, scene_label_or_None)
@@ -200,7 +250,7 @@ def _detect_stage_play(lines: List[str]) -> list:
     has_real_acts = any(
         re.match(p, line.strip(), re.IGNORECASE)
         for line in lines
-        for p in ACT_PATTERNS
+        for p in ACT_PATTERNS + EPISODE_PATTERNS
     )
 
     for i, line in enumerate(lines):
@@ -214,6 +264,10 @@ def _detect_stage_play(lines: List[str]) -> list:
             if is_special and has_real_acts and current_act is not None:
                 continue  # skip — it's nested inside a real act
 
+            if act.startswith("Episode "):
+                title = _episode_title(lines, i)
+                if title:
+                    act = f"{act}: {title}"
             current_act = act
             boundaries.append((i, act, None))
             continue

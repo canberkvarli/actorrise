@@ -46,9 +46,10 @@ export function groupScenesByAct(scenes: Scene[]): ActGroup[] {
     if (lower === "__none__") return 9999;
     if (lower.includes("prologue")) return -1;
     if (lower.includes("epilogue")) return 1000;
-    const numMatch = lower.match(/act\s+(\d+)/);
+    // Episodes sit where acts do: "Episode 2: Self Identification".
+    const numMatch = lower.match(/(?:act|episode)\s+(\d+)/);
     if (numMatch) return parseInt(numMatch[1]);
-    const romanMatch = lower.match(/act\s+([ivxlc]+)/i);
+    const romanMatch = lower.match(/(?:act|episode)\s+([ivxlc]+)/i);
     if (romanMatch) {
       const roman: Record<string, number> = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10 };
       return roman[romanMatch[1].toLowerCase()] ?? 500;

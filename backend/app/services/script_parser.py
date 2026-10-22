@@ -33,7 +33,9 @@ from app.services.character_names import normalize_name
 #      no uploaded dialogue is ever lost  (2026-09-02)
 #   5  attribution and order taken from the source rather than the AI's retyping
 #      of it  (2026-09-02)
-PARSER_VERSION = 5
+#   6  EPISODE headings group a series script, scene words read past NINE, and
+#      a title page no longer arrives as a scene  (2026-10-22)
+PARSER_VERSION = 6
 
 
 # ---------------------------------------------------------------------------
