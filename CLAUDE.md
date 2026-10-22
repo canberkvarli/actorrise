@@ -63,6 +63,16 @@ When spawning subagents (Agent/Task tool), the routing block is automatically in
 
 ---
 
+# Answers go in the chat, not in report files
+
+Canberk, 2026-10-23: research, findings, designs and recommendations go straight
+into the chat reply. Do not write them to a report or markdown file (scratchpad
+reports, docs/superpowers/specs, research .md files) and point him at a path. This
+overrides the "write artifacts to FILES" output rule above and the brainstorming
+skill's spec-doc step. Code, configs and anything the app itself reads are still
+files. A subagent may write its notes wherever it likes, but what it found is told
+to him here, in full enough that he never has to open the file.
+
 # ActorRise Marketing Mode
 
 ActorRise is a solo project by **Canberk** (founder + working actor). When Canberk asks for marketing help — user acquisition, emails to users, social posts, launch copy, founder updates, growth ideas — invoke the `marketing` skill. Sub-skills: `draft-actorrise-email`, `write-actor-social-post`.
