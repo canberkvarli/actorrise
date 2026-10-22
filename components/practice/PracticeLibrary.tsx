@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
 import { PracticeLibraryRail } from "@/components/practice/PracticeLibraryRail";
 import { PracticeScenePanel } from "@/components/practice/PracticeScenePanel";
+import { OtherScriptsStrip } from "@/components/practice/OtherScriptsStrip";
 import { WhatsNext, NothingYet } from "@/components/practice/WhatsNext";
 import { useWhatsNext } from "@/hooks/useWhatsNext";
 import { useDeleteScript, useReorderScripts, type UserScript } from "@/hooks/useScripts";
@@ -228,6 +229,18 @@ export function PracticeLibrary({
             against but the viewport. A list you scan should not be wider than
             you can read across. The rule above the rows caps with them, or the
             header floats free of the shelf it belongs to. */}
+        {selectedScript ? (
+          <OtherScriptsStrip
+            scripts={ordered}
+            openId={selectedScript.id}
+            onSelect={(id) => {
+              setSelectedId(id);
+              // The strip is at the foot of the page; the next script opens at
+              // the top of it.
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
+        ) : (
         <div className="min-w-0 max-w-2xl">
           {/* The way in sits at the top of the shelf, not under it. Below the
               list it was the last thing on the page and moved further down with
@@ -276,6 +289,7 @@ export function PracticeLibrary({
             />
           </div>
         </div>
+        )}
       </div>
 
       <ConfirmDeleteDialog

@@ -110,6 +110,7 @@ export function PlayCover({
   category,
   themes,
   className,
+  size = "default",
 }: {
   title: string;
   author?: string | null;
@@ -119,25 +120,31 @@ export function PlayCover({
   category?: string | null;
   themes?: string[] | null;
   className?: string;
+  /** "sm" is the thumbnail an opened script carries in its header: the cloth,
+   *  the emblem and the title, without the year and byline it has no room for. */
+  size?: "default" | "sm";
 }) {
+  const sm = size === "sm";
   const cloth = CLOTHS[hash(title) % CLOTHS.length];
   const emblem = emblemFor({ genre, category, themes, title, author });
 
   return (
     <div
-      className={`relative flex aspect-[2/3] flex-col items-center justify-between overflow-hidden rounded-sm px-4 py-6 text-center sm:px-5 sm:py-7 ${className ?? ""}`}
+      className={`relative flex aspect-[2/3] flex-col items-center justify-between overflow-hidden rounded-sm text-center ${
+        sm ? "px-2 py-3" : "px-4 py-6 sm:px-5 sm:py-7"
+      } ${className ?? ""}`}
       style={{ backgroundColor: cloth.bg, color: cloth.ink }}
     >
       {/* A blind-stamped rule inset from the edge, the way a cloth binding is
           tooled. Pure colour maths off the ink so it works on all six cloths. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-[7px] rounded-[2px] border"
+        className={`pointer-events-none absolute rounded-[2px] border ${sm ? "inset-[4px]" : "inset-[7px]"}`}
         style={{ borderColor: "color-mix(in oklab, currentColor 22%, transparent)" }}
       />
 
       <p
-        className="font-typewriter text-[9px] uppercase tracking-[0.2em] opacity-55 sm:text-[10px]"
+        className={`font-typewriter text-[9px] uppercase tracking-[0.2em] opacity-55 sm:text-[10px] ${sm ? "hidden" : ""}`}
         style={{ lineHeight: 1.4 }}
       >
         {year || " "}
@@ -151,22 +158,26 @@ export function PlayCover({
         {/* No `draw`: the catalogue's draw mode is whileInView, and a cover
             emblem must never depend on an observer firing — that is how you get
             a coloured rectangle with nothing on it. Static renders immediately. */}
-        <Glyph name={emblem} size={54} />
+        <Glyph name={emblem} size={sm ? 30 : 54} />
       </motion.div>
 
       <div className="w-full">
         <div
           aria-hidden
-          className="mx-auto mb-2.5 h-px w-8"
+          className={`mx-auto h-px ${sm ? "mb-1.5 w-5" : "mb-2.5 w-8"}`}
           style={{ backgroundColor: "color-mix(in oklab, currentColor 40%, transparent)" }}
         />
         {/* text-balance keeps a three-word title from dropping one word alone
             onto the last line, which is the usual way a generated cover
             announces that it was generated. */}
-        <p className="font-playbill text-balance text-[15px] leading-[0.95] sm:text-[19px]">
+        <p
+          className={`font-playbill text-balance leading-[0.95] ${
+            sm ? "line-clamp-3 text-[11px]" : "text-[15px] sm:text-[19px]"
+          }`}
+        >
           {title}
         </p>
-        {author && (
+        {author && !sm && (
           <p className="mt-2 font-typewriter text-[9px] uppercase tracking-[0.14em] opacity-60 sm:text-[10px]">
             {author}
           </p>

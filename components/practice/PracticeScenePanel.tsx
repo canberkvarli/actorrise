@@ -1,19 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import {
-  IconChevronDown,
-  IconArrowRight,
-  IconLoader2,
-  IconPlus,
-  IconPencil,
-  IconRefresh,
-  IconScissorsOff,
-  IconListCheck,
-} from "@tabler/icons-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { IconLoader2, IconPlus, IconRefresh, IconScissorsOff } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import api from "@/lib/api";
@@ -27,15 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getGenreBorderClassName } from "@/lib/genreColors";
-import { entrance } from "@/lib/motion";
-import { PlayCover } from "@/components/monologue/PlayCover";
+import { getGenreBorderClassName, getGenreInkColor, getGenreSpineColor } from "@/lib/genreColors";
 import { invalidateShelf, useScript, type UserScript } from "@/hooks/useScripts";
-import { groupScenesByAct, formatSceneDuration, type Scene } from "@/lib/scenes";
-import { sceneListShape } from "@/lib/sceneListShape";
+import { invalidateSceneMap, useSceneMap } from "@/hooks/useSceneMap";
+import { formatSceneDuration, type Scene } from "@/lib/scenes";
+import { mergeSceneMap, tickableRows } from "@/lib/scriptMap";
 import { EditScriptDetailsModal } from "@/components/practice/EditScriptDetailsModal";
 import { AddSceneToScriptModal } from "@/components/scenepartner/AddSceneToScriptModal";
 import { useUpload } from "@/components/practice/UploadProvider";
+import { ScriptHeader } from "@/components/practice/ScriptHeader";
+import { FIRST_OPEN_ROW_ID, ScriptMap } from "@/components/practice/ScriptMap";
 
 type ScriptWithScenes = UserScript & { scenes: Scene[] };
 
@@ -45,10 +37,10 @@ interface PracticeScenePanelProps {
 }
 
 /**
- * Right pane of the /practice library — the single script surface. Shows the
- * selected script's scenes grouped by act; tap a scene to preview its synopsis
- * and open it in the editor. Header carries the script's management actions
- * (Add scene, Edit details) that used to live on the old /practice/[id] page.
+ * The opened script on /practice: its title page across the top, and the
+ * whole script below it in script order (see ScriptMap), built scenes to open
+ * and the rest to tick and build. This file holds the states around those two
+ * (reading, empty, one scene) and the dialogs they share.
  */
 export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
   const router = useRouter();
@@ -59,7 +51,6 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
     isLoading: boolean;
   };
 
-  const [expandedSceneId, setExpandedSceneId] = useState<number | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [redoing, setRedoing] = useState(false);
@@ -69,23 +60,44 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
   const [confirmRedo, setConfirmRedo] = useState(false);
   const [cost, setCost] = useState<{ scenes: number; sessions: number } | null>(null);
 
-  const scenes = data?.scenes ?? [];
-  const groups = groupScenesByAct(scenes);
-  /* One layout served every script, and the common case fared worst: 11 of 20
-     scripts hold exactly ONE scene, 6 hold several without acts, and only 3
-     have acts at all. A numeral labelling a list of one, a chevron marooned at
-     the right of a 1,420px row, and an act heading above the only act are all
-     furniture for a choice the actor does not have. */
-  const shape = sceneListShape(scenes);
+  const scenes = useMemo(() => data?.scenes ?? [], [data]);
   const existingActs = [...new Set(scenes.map((s) => s.act).filter((a): a is string => !!a))];
   const canManage = !script.is_sample;
   const isProcessing =
     script.processing_status === "processing" || script.processing_status === "pending";
   const isFailed = script.processing_status === "failed";
-  const { chooseMore } = useUpload();
+  const { chooseMore, buildScenes, showWholeScript, openUpgrade } = useUpload();
+  const shelved = {
+    id: script.id,
+    title: script.title,
+    original_filename: script.original_filename,
+  };
+
+  /* The whole script. Samples belong to nobody, so the endpoint (owner only)
+     is not asked about them. */
+  const sceneMap = useSceneMap(script.id, canManage);
+  const map = sceneMap.data;
+  const ready = map && !map.needs_file ? map : null;
+  const groups = useMemo(
+    () =>
+      ready
+        ? mergeSceneMap(ready.scan.scenes ?? [], ready.built, scenes)
+        : mergeSceneMap([], [], scenes),
+    [ready, scenes],
+  );
+  const tickable = tickableRows(groups).length;
+  const totalRows = groups.reduce((n, g) => n + g.rows.length, 0);
+
+  // A read finishing is the moment built rows change, so the map is asked again.
+  const wasProcessing = useRef(isProcessing);
+  useEffect(() => {
+    if (wasProcessing.current && !isProcessing) void invalidateSceneMap(queryClient, script.id);
+    wasProcessing.current = isProcessing;
+  }, [isProcessing, queryClient, script.id]);
 
   const refreshScenes = () => {
     queryClient.invalidateQueries({ queryKey: ["scripts", script.id] });
+    void invalidateSceneMap(queryClient, script.id);
     // A re-cut purges the old scenes, so the stage must stop pointing at them.
     return invalidateShelf(queryClient);
   };
@@ -131,7 +143,6 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
       await api.post(`/api/scripts/${script.id}/reextract`, undefined, {
         timeoutMs: 5 * 60 * 1000,
       });
-      setExpandedSceneId(null);
       await refreshScenes();
       toast.success("Fresh cut of the scenes");
     } catch (e) {
@@ -143,13 +154,24 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
     }
   };
 
-  const metaParts: string[] = [];
-  const genres = script.genres?.length ? script.genres : script.genre ? [script.genre] : [];
-  if (genres.length > 1) metaParts.push(genres.join(", "));
-  if (script.author) metaParts.push(script.author);
-  if (script.estimated_length_minutes) metaParts.push(`~${script.estimated_length_minutes} min`);
-  if (script.num_scenes_extracted > 0)
-    metaParts.push(`${script.num_scenes_extracted} scene${script.num_scenes_extracted !== 1 ? "s" : ""}`);
+  /**
+   * The one thing to do up top. Where the map is on the page, it goes to the
+   * first scene there is to tick. An older upload asks for its file, once. If
+   * the map could not be read, the picker is still there as before.
+   */
+  const startBuilding = () => {
+    if (map?.needs_file) {
+      showWholeScript(shelved);
+      return;
+    }
+    const first = document.getElementById(FIRST_OPEN_ROW_ID);
+    if (ready && first) {
+      first.closest("label")?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+      first.focus({ preventScroll: true });
+      return;
+    }
+    chooseMore(shelved);
+  };
 
   /* The preview, not the editor.
      Tapping a scene used to land on four thousand lines of line-editing, which
@@ -161,15 +183,11 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
    * Into the scene.
    *
    * A plain router.push cut from a list of rows to a full page of sides with
-   * nothing in between, which is the jump this pass was asked to fix. So the
-   * room answers first: the chosen row takes the light, everything around it
-   * goes down, and the navigation happens on the far side of that beat. The
-   * preview then opens on its own staggered entrance, so the two read as one
-   * move rather than a cut.
-   *
-   * 190ms — long enough to see the light change, short enough that nobody
-   * waiting to rehearse would call it a delay. Reduced motion goes straight
-   * there.
+   * nothing in between. So the room answers first: the chosen row takes the
+   * light, everything around it goes down, and the navigation happens on the
+   * far side of that beat. 190ms: long enough to see the light change, short
+   * enough that nobody waiting to rehearse would call it a delay. Reduced
+   * motion goes straight there.
    */
   const openScene = (sceneId: number) => {
     if (openingId) return;
@@ -181,122 +199,42 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
     window.setTimeout(() => router.push(sceneHref(sceneId)), 190);
   };
 
-  return (
-    // The selected script, opened like a playbook: title page on the left,
-    // the scenes on the right. Same spine color as its card on the shelf,
-    // so the eye connects the two.
-    // overflow-clip, not overflow-hidden: hidden makes this a scroll container
-    // and the sticky title page below stops sticking. Clipping is identical.
-    // The opened script is not a card on the page any more; it is the page.
-    // The room gives it the full width once it is open, so the scene titles
-    // have somewhere to go.
-    <div className="min-w-0 md:grid md:grid-cols-[minmax(0,260px)_minmax(0,1fr)] md:gap-10">
-      {/* Title page: a bound playscript, cloth and emblem, on a hard gel
-          shadow. It is the same cover the search detail panel prints, so a
-          play looks like itself wherever you meet it. */}
-      <div className="min-w-0">
-        <div className="flex min-w-0 flex-col gap-3 md:sticky md:top-6">
-          <div className="t-titlepage">
-            <PlayCover
-              title={script.title}
-              author={script.author}
-              genre={script.genre}
-              className="w-full"
-            />
-          </div>
-          {metaParts.length > 0 && (
-            <p
-              className="mt-5 text-sm"
-              style={{ color: "var(--t-muted-light)" }}
-            >
-              {metaParts.join(" · ")}
-            </p>
-          )}
-          {script.description && (
-            <p
-              className="max-w-[32ch] text-[15px] leading-relaxed"
-              style={{ color: "var(--t-muted-light-3)" }}
-            >
-              {script.description}
-            </p>
-          )}
-  
-          {/* These sat on mt-auto, which pinned them to the bottom of a column
-              that stretches to match the scene list. Every scene extracted pushed
-              them further down, so on a full play they were a screen and a half
-              below the script they act on. They belong under the synopsis. */}
-          {canManage && (
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setEditOpen(true)}
-                className="t-script-action"
-              >
-                <IconPencil className="h-3.5 w-3.5" />
-                Edit details
-              </button>
-              <button
-                type="button"
-                onClick={() => setAddOpen(true)}
-                className="t-script-action"
-              >
-                <IconPlus className="h-3.5 w-3.5" />
-                Add scene
-              </button>
-              {/* The rest of the script, picked like an upload. Built scenes
-                  stay as they are, rehearsal history and all. */}
-              {!isProcessing && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    chooseMore({
-                      id: script.id,
-                      title: script.title,
-                      original_filename: script.original_filename,
-                    })
-                  }
-                  className="t-script-action"
-                >
-                  <IconListCheck className="h-3.5 w-3.5" />
-                  Choose more scenes
-                </button>
-              )}
-              {/* This used to be gated on `scenes.length > 0`, which hid it in the
-                  one case that needs it most: a script that came back with nothing.
-                  An actor looking at an empty shelf item had no way to ask for
-                  another pass and no reason to think one was possible, so the only
-                  move left was deleting and re-uploading, which costs an upload.
-                  Re-cutting works off the stored text, so offer it whenever there
-                  is text to cut. */}
-              {!isProcessing && (
-                <button
-                  type="button"
-                  onClick={requestRedo}
-                  disabled={redoing}
-                  className="t-script-action t-script-action--quiet"
-                >
-                  {redoing ? (
-                    <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <IconRefresh className="h-3.5 w-3.5" />
-                  )}
-                  {redoing ? "Cutting again…" : "Redo scenes"}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+  const builtCount = ready ? Math.max(ready.built_count, scenes.length) : scenes.length;
+  const sceneSummary = ready && totalRows > 0
+    ? `${totalRows} ${totalRows === 1 ? "scene" : "scenes"} · ${builtCount} built`
+    : scenes.length > 0
+      ? `${scenes.length} ${scenes.length === 1 ? "scene" : "scenes"}`
+      : null;
 
-      {/* The scenes */}
-      <div className="mt-8 min-w-0 md:mt-0">
-        {isProcessing && scenes.length > 0 && (
-          /* Adding scenes to a script that has some: keep them on screen. */
-          <p className="mb-4 flex items-center gap-2 text-sm" style={{ color: "var(--t-muted-light)" }}>
-            <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
-            Adding the scenes you picked. They&apos;ll appear here.
-          </p>
-        )}
+  const accentClass = getGenreBorderClassName(script.genre ?? "");
+  // The whole script is the one built scene: the scene IS the page.
+  const isSolo = scenes.length === 1 && tickable === 0 && totalRows === 1 && !map?.needs_file;
+  const nothing = scenes.length === 0 && tickable === 0;
+
+  return (
+    <div
+      className="t-opened min-w-0"
+      /* The shelf's binding colour, carried onto the built scenes' edge so a
+         script looks like itself on the shelf and open. */
+      style={{
+        ["--spine" as string]: getGenreSpineColor(script.genre),
+        ["--spine-ink" as string]: getGenreInkColor(script.genre),
+      }}
+    >
+      <ScriptHeader
+        script={script}
+        canManage={canManage}
+        isProcessing={isProcessing}
+        redoing={redoing}
+        sceneSummary={sceneSummary}
+        showBuild={!!map?.needs_file || sceneMap.isError || tickable > 0}
+        onBuild={startBuilding}
+        onEdit={() => setEditOpen(true)}
+        onAddByHand={() => setAddOpen(true)}
+        onRedo={requestRedo}
+      />
+
+      <div className="mt-8 min-w-0 sm:mt-10">
         {!isProcessing && !isFailed && script.processing_error && scenes.length > 0 && (
           <p className="mb-4 text-sm" style={{ color: "var(--t-muted-light)" }}>
             {script.processing_error}
@@ -310,7 +248,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
               <Skeleton key={i} className="h-14 w-full rounded-lg" />
             ))}
           </div>
-        ) : scenes.length === 0 ? (
+        ) : nothing && !(canManage && sceneMap.isLoading) ? (
           /* A finished script with no scenes reads as a dead end, so it is the
              one empty state that has to carry its own way out. Both roads are
              here: another pass at the text, or writing the scene by hand. */
@@ -322,58 +260,28 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
             onRedo={redoScenes}
             onAdd={() => setAddOpen(true)}
           />
+        ) : isSolo && scenes[0] ? (
+          <SoloScene
+            scene={scenes[0]}
+            accentClass={accentClass}
+            onOpen={() => openScene(scenes[0].id)}
+            opening={openingId === scenes[0].id}
+          />
         ) : (
-          /* Capped, like the shelf. The panel is 1fr in a max-w-7xl page, so a
-             scene row ran about 1,420px with the title at one end and the
-             chevron at the other. Capped here rather than on a container
-             because this panel is mounted from more than one place. */
-          <div className="max-w-2xl space-y-8">
-            {shape === "solo" && scenes[0] ? (
-              <SoloScene
-                scene={scenes[0]}
-                accentClass={getGenreBorderClassName(script.genre ?? "")}
-                onOpen={() => openScene(scenes[0].id)}
-                opening={openingId === scenes[0].id}
-              />
-            ) : (
-            groups.map((group, gi) => (
-              <div key={group.act ?? `g${gi}`} className="space-y-3">
-                {group.act && shape === "grouped" && (
-                  <div
-                    className="flex items-baseline justify-between gap-3 pb-2.5"
-                    style={{ borderBottom: "1.5px solid var(--t-line-dark-2)" }}
-                  >
-                    <h3 className="t-act-name">{group.act}</h3>
-                    <span className="t-act-count tabular-nums">
-                      ({group.scenes.length} {group.scenes.length === 1 ? "scene" : "scenes"}.)
-                    </span>
-                  </div>
-                )}
-                <div className="space-y-1.5">
-                  {group.scenes.map((scene, si) => (
-                    <SceneRow
-                      key={scene.id}
-                      /* Counted across the whole panel, not per act: two acts
-                         each restarting their own stagger reads as two lists
-                         that happen to be stacked. */
-                      index={groups.slice(0, gi).reduce((n, g) => n + g.scenes.length, 0) + si}
-                      position={si + 1}
-                      scene={scene}
-                      accentClass={getGenreBorderClassName(script.genre ?? "")}
-                      expanded={expandedSceneId === scene.id}
-                      onToggle={() => {
-                        setExpandedSceneId((cur) => (cur === scene.id ? null : scene.id));
-                        router.prefetch(sceneHref(scene.id));
-                      }}
-                      onOpen={() => openScene(scene.id)}
-                      opening={openingId === scene.id}
-                      dimmed={openingId !== null && openingId !== scene.id}
-                    />
-                  ))}
-                </div>
-              </div>
-            )))}
-          </div>
+          <ScriptMap
+            groups={groups}
+            scenes={scenes}
+            map={map}
+            mapLoading={sceneMap.isLoading}
+            canManage={canManage}
+            isProcessing={isProcessing}
+            openingId={openingId}
+            onOpen={openScene}
+            onPrefetch={(id) => router.prefetch(sceneHref(id))}
+            onShowWholeScript={() => showWholeScript(shelved)}
+            onBuild={(picks) => buildScenes(shelved, picks)}
+            onUpgrade={openUpgrade}
+          />
         )}
       </div>
 
@@ -437,7 +345,7 @@ function SoloScene({
         accentClass,
       ].join(" ")}
     >
-      <h3 className="font-typewriter font-semibold text-base text-foreground">{scene.title}</h3>
+      <h3 className="font-sans text-base font-semibold text-foreground">{scene.title}</h3>
       {facts.length > 0 && (
         <p className="mt-1 text-xs text-muted-foreground">{facts.join("  ·  ")}</p>
       )}
@@ -457,164 +365,6 @@ function SoloScene({
         {opening ? "Curtain up…" : "Open the scene"}
       </button>
     </div>
-  );
-}
-
-
-function SceneRow({
-  scene,
-  index = 0,
-  position,
-  accentClass,
-  expanded,
-  onToggle,
-  onOpen,
-  opening = false,
-  dimmed = false,
-}: {
-  scene: Scene;
-  /** Position in the panel, for the entrance only. */
-  index?: number;
-  /** 1, 2, 3 within its act or episode: the row's number. */
-  position?: number;
-  /** Genre-tinted left edge (border-l-* class from genreColors). */
-  accentClass: string;
-  expanded: boolean;
-  onToggle: () => void;
-  onOpen: () => void;
-  /** This is the one being opened: it takes the light. */
-  opening?: boolean;
-  /** Another one is being opened: stand down. */
-  dimmed?: boolean;
-}) {
-  const reduce = useReducedMotion();
-  const ent = entrance(index, { reduce, y: 6, duration: 0.36 });
-  const characters = [scene.character_1_name, scene.character_2_name].filter(Boolean);
-  const duration = formatSceneDuration(scene.estimated_duration_seconds);
-
-  const subParts: string[] = [];
-  // The script's own label ("Scene 4") rides in the facts. The big numeral
-  // counts rows: a series that skips its one-voice openers numbered 2, 3, 4.
-  if (scene.scene_number) subParts.push(scene.scene_number);
-  if (characters.length > 0) subParts.push(characters.join(" & "));
-  if (duration) subParts.push(duration);
-  if (scene.line_count > 0) subParts.push(`${scene.line_count} lines`);
-
-  const numeral = position != null ? String(position) : null;
-
-  return (
-    <motion.div
-      /* The scenes come in the way everything else does (lib/motion). Opening
-         a script used to swap the stage for a finished block of rows, which is
-         the one moment on this screen where something new is being handed over
-         and the only one that did not look like it. */
-      /* Spread would not do here: `transition={undefined}` in the normal case
-         overrides the entrance's own delay and kills the stagger. The two are
-         merged by hand instead. */
-      initial={ent.initial}
-      /* The beat before the page turns. The chosen row comes up and forward,
-         everything else goes down, and the navigation lands on the far side of
-         it — see openScene in the panel. */
-      animate={
-        opening
-          ? { opacity: 1, y: 0, scale: 1.015 }
-          : dimmed
-            ? { opacity: 0.35, y: 0, scale: 1 }
-            : ent.animate
-      }
-      transition={
-        opening || dimmed ? { duration: 0.19, ease: [0.22, 1, 0.36, 1] } : ent.transition
-      }
-      style={
-        opening
-          ? { boxShadow: "0 0 0 1.5px var(--t-gel-ink), 0 14px 34px -14px rgb(0 0 0 / 0.4)" }
-          : undefined
-      }
-      className={[
-        "rounded-lg border border-l-2 transition-colors",
-        accentClass,
-        expanded ? "border-primary/45 bg-muted/20" : "border-border/70 hover:border-border hover:bg-muted/10",
-      ].join(" ")}
-    >
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {numeral && (
-          <span
-            aria-hidden
-            className="w-6 shrink-0 select-none text-center font-brand text-xl leading-none text-foreground/15 tabular-nums"
-          >
-            {numeral}
-          </span>
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="font-typewriter font-semibold text-sm text-foreground truncate">
-            {scene.title}
-          </p>
-          {subParts.length > 0 && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5">{subParts.join(" · ")}</p>
-          )}
-        </div>
-        <IconChevronDown
-          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-4 pt-1 space-y-3">
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {scene.description?.trim() || "No synopsis for this scene yet."}
-              </p>
-              <dl className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
-                {characters.length > 0 && (
-                  <div>
-                    <dt className="inline text-muted-foreground/60">Characters: </dt>
-                    <dd className="inline text-foreground">{characters.join(", ")}</dd>
-                  </div>
-                )}
-                {duration && (
-                  <div>
-                    <dt className="inline text-muted-foreground/60">Length: </dt>
-                    <dd className="inline text-foreground">{duration}</dd>
-                  </div>
-                )}
-                {scene.line_count > 0 && (
-                  <div>
-                    <dt className="inline text-muted-foreground/60">Lines: </dt>
-                    <dd className="inline text-foreground">{scene.line_count}</dd>
-                  </div>
-                )}
-                {scene.act && (
-                  <div>
-                    <dt className="inline text-muted-foreground/60">Act: </dt>
-                    <dd className="inline text-foreground">{scene.act}</dd>
-                  </div>
-                )}
-              </dl>
-              <button
-                type="button"
-                onClick={onOpen}
-                className="inline-flex items-center gap-1.5 rounded-md px-4 h-10 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                Open in editor
-                <IconArrowRight className="h-4 w-4" />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
   );
 }
 
