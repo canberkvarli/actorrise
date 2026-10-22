@@ -3,20 +3,11 @@
 import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
+import { isSolo, type ScannedScene } from "@/lib/scriptMap";
 
-/** One row of the map `/api/scripts/scan` returns. */
-export type ScannedScene = {
-  index: number;
-  act_label: string | null;
-  scene_label: string | null;
-  title: string | null;
-  characters: string[];
-  line_count: number;
-  char_start: number;
-  char_end: number;
-  page_start: number | null;
-  page_end: number | null;
-};
+/** One row of the map `/api/scripts/scan` returns. Lives in lib/scriptMap now,
+ *  which the opened script's map shares. */
+export type { ScannedScene };
 
 interface ScenePickerProps {
   scenes: ScannedScene[];
@@ -79,18 +70,9 @@ function pageRange(scene: ScannedScene): string | null {
   return end === scene.page_start ? `p. ${scene.page_start}` : `pp. ${scene.page_start}-${end}`;
 }
 
-/**
- * ScenePartner reads the other part, so a scene needs two speakers to build.
- * A one-voice scene (a series opening on a therapy session where the client
- * never speaks) used to be tickable and then vanish from the build, which read
- * as Scene 1 going missing.
- *
- * Exactly one, not fewer than two: an empty cast means the quick read could
- * not parse the layout, and the full build may still find both parts.
- */
-function isSolo(scene: ScannedScene): boolean {
-  return scene.characters.length === 1;
-}
+/* isSolo (lib/scriptMap): a one-voice scene (a series opening on a therapy
+   session where the client never speaks) used to be tickable and then vanish
+   from the build, which read as Scene 1 going missing. */
 
 /** Strip the extension. The filename is the only title we have at this point. */
 function scriptName(fileName: string): string {

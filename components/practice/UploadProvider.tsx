@@ -34,6 +34,14 @@ import { ScenePicker, type ScannedScene } from "@/components/practice/ScenePicke
 import { API_URL } from "@/lib/api";
 import { clearPending, loadPending, savePending } from "@/lib/pending-upload";
 import { invalidateShelf, useScripts } from "@/hooks/useScripts";
+import {
+  fetchSceneMap,
+  invalidateSceneMap,
+  keepScriptFile,
+  keptScriptFile,
+  sceneMapKey,
+  type SceneMapResponse,
+} from "@/hooks/useSceneMap";
 import { useSubscription, useUsageLimits } from "@/hooks/useSubscription";
 
 // Known backend progress prefixes and their friendly group labels.
@@ -131,26 +139,27 @@ interface UploadContextValue {
   /** Open "Bring in a script" (file or paste), or the upgrade modal when over the limit. */
   openPicker: () => void;
   /** Reopen the scene picker on a shelved script, to build more of it. */
-  chooseMore: (script: { id: number; title: string; original_filename: string }) => void;
+  chooseMore: (script: ShelvedScript) => void;
+  /** Build the scenes ticked on an opened script's map. Resolves true once the
+   *  server has taken them; false if it said no (the upgrade modal or the
+   *  file question is up by then). */
+  buildScenes: (script: ShelvedScript, picks: ScannedScene[]) => Promise<boolean>;
+  /** Ask for the file of an older script once, so its map can be drawn on the
+   *  page instead of in the picker. */
+  showWholeScript: (script: ShelvedScript) => void;
 }
 
-/** What `/api/scripts/{id}/scene-map` answers. */
-type SceneMapResponse =
-  | { needs_file: true }
-  | {
-      needs_file: false;
-      scan: ScanResult;
-      built: number[];
-      built_count: number;
-      limit: number | null;
-    };
+type ShelvedScript = { id: number; title: string; original_filename: string };
 
-/** "Choose more scenes" in flight: which script, its map, and the file if one was asked for. */
+/** "Choose more scenes" in flight: which script, its map, and the file if one was asked for.
+ *  `inline` is the opened script's map asking for the file, which lands back on
+ *  the page rather than in the picker. */
 type MoreScenes = {
-  script: { id: number; title: string; original_filename: string };
+  script: ShelvedScript;
   map: Extract<SceneMapResponse, { needs_file: false }> | null;
   file: File | null;
   askFile: boolean;
+  inline?: boolean;
 };
 
 const UploadContext = createContext<UploadContextValue | null>(null);
@@ -644,26 +653,6 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const [more, setMore] = useState<MoreScenes | null>(null);
   const moreFileRef = useRef<HTMLInputElement | null>(null);
 
-  const fetchSceneMap = useCallback(
-    async (scriptId: number, file: File | null): Promise<SceneMapResponse> => {
-      const token = await getToken();
-      if (!token) throw new Error("Please sign in again.");
-      const form = new FormData();
-      if (file) form.append("file", file);
-      const res = await fetch(`${API_URL}/api/scripts/${scriptId}/scene-map`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(typeof err.detail === "string" ? err.detail : "Couldn't read the script");
-      }
-      return res.json();
-    },
-    [getToken],
-  );
-
   /**
    * Build more of a script that is already on the shelf.
    *
@@ -676,32 +665,46 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       if (isBusy) return;
       setMore({ script, map: null, file: null, askFile: false });
       try {
-        const map = await fetchSceneMap(script.id, null);
+        const kept = keptScriptFile(script.id);
+        const map = await fetchSceneMap(script.id, kept);
         if (map.needs_file) {
           setMore({ script, map: null, file: null, askFile: true });
           return;
         }
-        setMore({ script, map, file: null, askFile: false });
+        setMore({ script, map, file: kept, askFile: false });
       } catch (e) {
         setMore(null);
         toast.error(e instanceof Error ? e.message : "Couldn't read the script");
       }
     },
-    [isBusy, fetchSceneMap],
+    [isBusy],
   );
+
+  /** The opened script's map, for a script that needs its file once. */
+  const showWholeScript = useCallback((script: ShelvedScript) => {
+    setMore({ script, map: null, file: null, askFile: true, inline: true });
+  }, []);
 
   const onMoreFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !more) return;
-    const script = more.script;
-    setMore({ script, map: null, file, askFile: false });
+    const { script, inline } = more;
+    setMore({ script, map: null, file, askFile: false, inline });
     try {
       const map = await fetchSceneMap(script.id, file);
       if (map.needs_file) throw new Error("Couldn't read that file");
+      if (inline) {
+        // Back to the page: the map draws itself from the cache, and the file
+        // rides along with every read and build until the text is stored.
+        keepScriptFile(script.id, file);
+        queryClient.setQueryData(sceneMapKey(script.id), map);
+        setMore(null);
+        return;
+      }
       setMore({ script, map, file, askFile: false });
     } catch (e) {
-      setMore({ script, map: null, file: null, askFile: true });
+      setMore({ script, map: null, file: null, askFile: true, inline });
       toast.error(e instanceof Error ? e.message : "Couldn't read that file");
     }
   };
@@ -710,6 +713,23 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     if (!more) return;
     const { script, file } = more;
     setMore(null);
+    await addScenes(script, picks, file);
+  };
+
+  const buildScenes = (script: ShelvedScript, picks: ScannedScene[]) =>
+    addScenes(script, picks, keptScriptFile(script.id), true);
+
+  /**
+   * Append the picked scenes to a shelved script. Shared by the picker and the
+   * opened script's map. Nothing built is touched; the server checks the plan
+   * against what the script already holds.
+   */
+  async function addScenes(
+    script: ShelvedScript,
+    picks: ScannedScene[],
+    file: File | null,
+    inline = false,
+  ): Promise<boolean> {
     try {
       const token = await getToken();
       if (!token) throw new Error("Please sign in again.");
@@ -725,23 +745,30 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         const err = await res.json().catch(() => ({}));
         if (err.detail?.error === "feature_not_available") {
           setShowUpgradeModal(true);
-          return;
+          return false;
         }
         if (err.detail?.error === "needs_file") {
-          setMore({ script, map: null, file: null, askFile: true });
-          return;
+          setMore({ script, map: null, file: null, askFile: true, inline });
+          return false;
         }
         throw new Error(typeof err.detail === "string" ? err.detail : "Couldn't add those scenes");
       }
       await queryClient.invalidateQueries({ queryKey: ["scripts", script.id] });
       await invalidateShelf(queryClient);
-      toast.success(
-        `Building ${picks.length} more ${picks.length === 1 ? "scene" : "scenes"}. They'll appear here.`,
-      );
+      await invalidateSceneMap(queryClient, script.id);
+      // On the map the rows themselves say it ("building"); a toast on top of
+      // that is the page narrating itself.
+      if (!inline) {
+        toast.success(
+          `Building ${picks.length} more ${picks.length === 1 ? "scene" : "scenes"}. They'll appear here.`,
+        );
+      }
+      return true;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't add those scenes");
+      return false;
     }
-  };
+  }
 
   const resumePicking = () => {
     if (!resumable) return;
@@ -755,7 +782,17 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
   return (
     <UploadContext.Provider
-      value={{ isUploading: isBusy, phaseLabel, canUpload, start, openUpgrade, openPicker, chooseMore }}
+      value={{
+        isUploading: isBusy,
+        phaseLabel,
+        canUpload,
+        start,
+        openUpgrade,
+        openPicker,
+        chooseMore,
+        buildScenes,
+        showWholeScript,
+      }}
     >
       {children}
 

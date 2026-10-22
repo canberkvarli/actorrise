@@ -5474,6 +5474,389 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
   color: var(--t-gel-ink);
 }
 .t-script-action:disabled { opacity: 0.6; }
+/* The ··· beside Edit details: a round button, 44px to hit. */
+.t-script-action--icon {
+  position: relative;
+  width: 34px;
+  padding: 0;
+  justify-content: center;
+}
+.t-script-action--icon::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+}
+.t-script-action--icon[data-state="open"] {
+  border-color: var(--t-text);
+  color: var(--t-text);
+}
+
+/* --- The opened script, as one page ---------------------------------------
+   Title page across the top, the whole script under it. One column, capped
+   at a reading measure, because a list of scenes is read down, not across. */
+.t-opened {
+  max-width: 60rem;
+}
+
+/* The cover, as a thumbnail. Same cloth, same gel shadow, a smaller tilt. */
+.t-titlepage--sm {
+  width: 100%;
+  box-shadow: 5px 5px 0 var(--t-gel);
+  transform: rotate(-2.5deg);
+}
+.t-titlepage--sm:hover {
+  transform: rotate(0deg) translateY(-3px);
+}
+
+/* Phone: the cover sits beside the title, and the synopsis and actions take
+   the full width under both. From 640px the cover holds its column and
+   everything else stacks beside it. Laid out here, not in utilities, because
+   an unlayered rule would beat a responsive class on the same element. */
+.t-scripthead {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-areas:
+    "cover title"
+    "rest rest";
+  column-gap: 18px;
+  row-gap: 16px;
+  align-items: start;
+}
+.t-scripthead__cover { grid-area: cover; padding-top: 4px; }
+.t-scripthead__title { grid-area: title; min-width: 0; align-self: center; }
+.t-scripthead__rest { grid-area: rest; min-width: 0; }
+@media (min-width: 640px) {
+  .t-scripthead {
+    grid-template-columns: 112px minmax(0, 1fr);
+    grid-template-areas:
+      "cover title"
+      "cover rest";
+    column-gap: 28px;
+    row-gap: 14px;
+  }
+  .t-scripthead__title { align-self: end; }
+}
+
+.t-scripthead__stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0 0 6px;
+}
+/* A letterpress stamp, like the shelf's: sharp, not a pill. It is not a
+   control. */
+.t-scripthead__stamp {
+  font-family: var(--t-body);
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--spine-ink, var(--t-muted-dark));
+}
+/* The ink colours are set for paper. On the dark page the binding colour
+   itself, which is light cover stock, is the one that reads. */
+.dark .t-scripthead__stamp { color: var(--spine, var(--t-muted-dark)); }
+.t-scripthead__name {
+  margin: 0;
+  font-family: var(--t-body);
+  font-weight: 700;
+  font-size: clamp(24px, 5.4vw, 36px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+  overflow-wrap: anywhere;
+}
+.t-scripthead__meta {
+  margin: 8px 0 0;
+  font-family: var(--t-body);
+  font-size: 13.5px;
+  color: var(--t-muted-light);
+}
+.t-scripthead__synopsis {
+  max-width: 62ch;
+  font-family: var(--t-body);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--t-muted-light-3);
+}
+.t-scripthead__synopsis p { margin: 0; }
+.t-scripthead__more {
+  margin-top: 2px;
+  padding: 4px 0;
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t-text);
+  text-decoration: underline;
+  text-decoration-color: var(--t-line-light);
+  text-underline-offset: 4px;
+}
+.t-scripthead__more:hover { text-decoration-color: var(--t-text); }
+.t-scripthead__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* --- The script map ------------------------------------------------------- */
+.t-map { font-family: var(--t-body); }
+.t-map__note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--t-muted-light);
+}
+.t-map__count {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--t-muted-light);
+}
+.t-map__act {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-bottom: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1.5px solid var(--t-line-dark-2);
+}
+.dark .t-map__act { border-bottom-color: var(--t-line-light); }
+.t-map__act-name {
+  margin: 0;
+  min-width: 0;
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--t-text);
+}
+.t-map__act-count {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--t-muted-light);
+  font-variant-numeric: tabular-nums;
+}
+.t-map__act-count::before {
+  content: "·";
+  margin-right: 10px;
+  color: var(--t-muted-light-2);
+}
+
+/* A row. Built ones are paper with the script's binding colour down the edge;
+   the rest of the script is the same row, unbound and dimmed, so the eye reads
+   one list with some of it lit. */
+.t-maprow {
+  display: block;
+  border-radius: 10px;
+  border-style: solid;
+  border-width: 1.5px 1.5px 1.5px 4px;
+  border-color: var(--t-line-light);
+  transition: border-color 0.2s, background-color 0.2s, opacity 0.2s;
+}
+.t-maprow--built {
+  background: var(--t-paper);
+  border-left-color: var(--spine, var(--t-line-light));
+}
+.t-maprow--built:hover,
+.t-maprow--built.is-expanded {
+  border-top-color: var(--t-muted-light-2);
+  border-right-color: var(--t-muted-light-2);
+  border-bottom-color: var(--t-muted-light-2);
+}
+.t-maprow--open {
+  border-style: dashed;
+  border-left-style: solid;
+  border-left-color: transparent;
+  background: transparent;
+  cursor: pointer;
+}
+.t-maprow--open .t-maprow__body,
+.t-maprow--open .t-maprow__num { opacity: 0.62; transition: opacity 0.2s; }
+.t-maprow--open:hover .t-maprow__body,
+.t-maprow--open:hover .t-maprow__num,
+.t-maprow--open.is-picked .t-maprow__body,
+.t-maprow--open.is-picked .t-maprow__num,
+.t-maprow--open:focus-within .t-maprow__body { opacity: 1; }
+.t-maprow--open.is-picked {
+  border-style: solid;
+  border-color: color-mix(in oklab, var(--primary) 55%, transparent);
+  border-left-color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 8%, transparent);
+}
+.t-maprow--open:focus-within {
+  outline: 2px solid var(--t-gel-ink);
+  outline-offset: 2px;
+}
+.t-maprow--open.is-locked { cursor: default; }
+.t-maprow--open.is-locked .t-maprow__body,
+.t-maprow--open.is-locked .t-maprow__num { opacity: 0.5; }
+.t-maprow--open.is-disabled { cursor: default; }
+.t-maprow--open.is-disabled .t-maprow__box { opacity: 0.35; }
+
+.t-maprow__num {
+  width: 22px;
+  flex-shrink: 0;
+  text-align: center;
+  font-family: var(--t-display);
+  font-size: 20px;
+  line-height: 1;
+  color: var(--t-muted-light-2);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+.t-maprow__title,
+.t-maprow__label {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--t-text);
+}
+.t-maprow__subtitle {
+  min-width: 0;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--t-muted-dark);
+}
+.t-maprow__detail {
+  margin-top: 2px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--t-muted-light);
+}
+.t-maprow__synopsis {
+  margin: 0;
+  padding: 0 16px 14px 50px;
+  max-width: 68ch;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--t-muted-dark);
+}
+/* Notes in the margin, not controls: sharp corners. */
+.t-maprow__flag,
+.t-maprow__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border: 1px solid var(--t-line-light);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--t-muted-light);
+}
+.t-maprow__flag {
+  border-color: color-mix(in oklab, var(--t-gel-ink) 50%, transparent);
+  color: var(--t-gel-ink);
+}
+/* The box. 20px drawn; the whole row is its label, so the target is the row. */
+.t-maprow__box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1.5px solid var(--t-muted-light-2);
+  color: var(--primary-foreground);
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.t-maprow--open:hover .t-maprow__box { border-color: var(--t-text); }
+.t-maprow--open.is-picked .t-maprow__box {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+/* Older uploads: the rest of the script is one file away. */
+.t-map__whole {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 6px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1.5px dashed var(--t-line-light);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--t-text);
+  transition: border-color 0.2s;
+}
+.t-map__whole:hover { border-color: var(--t-text); }
+
+/* --- The shelf, while a script is open: a row of spines ------------------- */
+.t-strip { max-width: 60rem; }
+.t-strip__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1.5px solid var(--t-line-dark-2);
+}
+.dark .t-strip__head { border-bottom-color: var(--t-line-light); }
+.t-strip__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.t-strip__chip {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: min(100%, 18rem);
+  min-height: 40px;
+  overflow: hidden;
+  border-radius: 4px 999px 999px 4px;
+  border: 1.5px solid var(--t-line-light);
+  background: var(--t-paper);
+  text-align: left;
+  transition: transform 0.3s var(--t-spring), border-color 0.2s;
+}
+.t-strip__chip:hover {
+  transform: translateY(-2px);
+  border-color: var(--t-muted-light-2);
+}
+.t-strip__chip:focus-visible {
+  outline: 2px solid var(--t-gel-ink);
+  outline-offset: 2px;
+}
+.t-strip__bind {
+  flex-shrink: 0;
+  width: 10px;
+  background: var(--spine);
+  box-shadow: inset -2px 0 0 oklch(0.2 0.02 50 / 0.16);
+}
+.t-strip__title {
+  align-self: center;
+  min-width: 0;
+  padding: 8px 16px 8px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--t-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--t-text);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-titlepage--sm:hover { transform: rotate(-2.5deg); }
+  .t-strip__chip:hover { transform: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .t-titlepage:hover { transform: rotate(-2deg); }
