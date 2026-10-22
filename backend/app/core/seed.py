@@ -57,18 +57,20 @@ def canonical_tiers() -> list[PricingTier]:
             is_active=True,
             sort_order=0,
         ),
-        # MONOLOGUES — Ghost Light iOS ($4.99/mo, $29.99/yr). Sold through the
-        # App Store via RevenueCat, NOT Stripe, so it carries no Stripe price ids
-        # and is granted/revoked by the RevenueCat webhook. It buys the one thing
-        # the iOS app gates: unlimited full monologue reads (free is 3, lifetime)
-        # plus unlimited saves. It deliberately does NOT include ScenePartner —
-        # that is Plus/v2. Sits between Free and Plus (spec §4 #4).
+        # MONOLOGUES — Ghost Light Premium, iOS ($9.99/mo, $59.99/yr from 1.1;
+        # $4.99/$29.99 before, and those subscribers keep their price). Sold
+        # through the App Store via RevenueCat, NOT Stripe, so it carries no
+        # Stripe price ids and is granted/revoked by the RevenueCat webhook.
+        # It buys everything the iOS app gates: unlimited full monologue reads
+        # (free is 3, lifetime), unlimited saves, and since 1.1 the scene
+        # partner on the same terms as Plus (the phone's reader is the reason
+        # the price went up). Sits between Free and Plus (spec §4 #4).
         PricingTier(
             name="monologues",
             display_name="Monologues",
             description="Every monologue, unlimited",
-            monthly_price_cents=499,
-            annual_price_cents=2999,
+            monthly_price_cents=999,
+            annual_price_cents=5999,
             stripe_monthly_price_id=None,
             stripe_annual_price_id=None,
             features={
@@ -78,8 +80,8 @@ def canonical_tiers() -> list[PricingTier]:
                 "recommendations": True,
                 "download_formats": ["pdf", "docx"],
                 "priority_support": False,
-                "scene_partner_scripts": 0,  # not included — Plus/v2
-                "scene_partner_sessions": 0,
+                "scene_partner_scripts": 5,  # as Plus: the phone's scene partner (1.1)
+                "scene_partner_sessions": -1,
                 "monologue_sessions": -1,
             },
             is_active=True,
