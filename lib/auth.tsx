@@ -9,6 +9,7 @@ import { setStoredLastAuthMethod } from "./last-auth-method";
 import { clearSwrCache, clearReactQueryCache, clearUserSpecificQueryCache } from "./swrCache";
 import { suppressCachePersist } from "@/components/providers/AuthProviderWrapper";
 import { safeClientPath } from "./safe-redirect";
+import { heldClassCode } from "./classLink";
 import { CURTAIN_LIFT_KEY } from "@/components/transition/CurtainLiftPaint";
 
 interface User {
@@ -248,6 +249,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: {
           data: {
             name: name || null,
+            // The class link's code, kept on the account itself: a student who
+            // confirms their email in another browser still lands in the class
+            // (backend class_links.claim_signup_code).
+            class_code: heldClassCode(),
           },
         },
       });

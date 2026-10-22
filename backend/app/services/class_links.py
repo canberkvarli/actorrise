@@ -156,6 +156,20 @@ def claim_invites(db: Session, user: User) -> list[JoinResult]:
     return results
 
 
+def claim_signup_code(db: Session, user: User, code: object) -> JoinResult | None:
+    """Join the class whose code rode in on the signup itself (Supabase
+    user_metadata.class_code, set by lib/auth.tsx). The browser also holds the
+    code, but only the browser that opened the link: a student who confirms
+    their email somewhere else arrives without it. Gilroy, 2026-10-22, lost two
+    students that way. None when there is no usable, live link."""
+    if not isinstance(code, str):
+        return None
+    link = find_link(db, code)
+    if link is None or not link.active:
+        return None
+    return join(db, link, user)
+
+
 def _grant(db: Session, link: ClassLink, user: User) -> None:
     from app.api.admin.users import AdminGrantRequest, grant_admin_user_membership
 
