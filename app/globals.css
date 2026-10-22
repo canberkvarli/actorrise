@@ -7941,12 +7941,27 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
 .r-line[data-mine="true"] .r-text,
 .r-line[data-when="live"] .r-text { color: var(--t-ink); }
 
-/* Heard words carry the weight. On the live line the words still to say are
-   softer, so the next one is where the ink stops. */
-.r-word { transition: color 120ms ease-out, font-weight 120ms ease-out; }
+/* Heard words carry the weight on a line already read. On the live line the
+   words still to say, and any skipped on the way, are softer, heard words
+   fill in ink, and the word the actor is on has a quiet underline in their
+   cue colour. The live line never changes weight: bold widens a word, a
+   wider word re-wraps the paragraph, and a long line re-wrapping on every
+   delta read as the words jumping. Only colour moves, and only forward. */
+.r-word {
+  transition: color 160ms ease-out, text-decoration-color 160ms ease-out;
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.22em;
+}
 .r-word[data-heard="true"] { color: var(--t-ink); font-weight: 700; }
+.r-line[data-when="live"] .r-word[data-heard="true"] { font-weight: inherit; }
 .r-line[data-when="live"] .r-word[data-heard="false"] {
   color: color-mix(in oklab, var(--t-ink) 55%, var(--t-paper));
+}
+.r-line[data-when="live"] .r-word[data-at="true"] {
+  color: var(--t-ink);
+  text-decoration-color: var(--t-gel-ink);
 }
 
 /* The top bar: leave, the scene, the count, and the run sheet under them. */

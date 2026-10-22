@@ -43,8 +43,12 @@ export function Stage({ lines, actor, snapshot, paused, onJump, warming = false 
   const placed = useRef(false);
   const handsOn = useRef(0);
   const current = snapshot?.lineIndex ?? 0;
-  const matched = snapshot?.read.matched;
-  const next = matched && matched.size ? Math.max(...matched) + 1 : 0;
+  /* The word the actor is on. This used to be one past the furthest word
+     heard, which jumped ahead whenever a common word matched its twin further
+     on and fell back when the next delta revised it, so the script scrolled
+     down a row and up again under a long line. The reading position only
+     moves forward, so now neither does the script. */
+  const next = snapshot?.read.position ?? 0;
   const cues = useMemo(() => {
     const palette = castPalette(lines.map(l => l.character));
     return new Map<string, CSSProperties>([...new Set(lines.map(l => l.character))].map(n => [n, castColorVars(n, palette)]));
@@ -103,8 +107,10 @@ export function Stage({ lines, actor, snapshot, paused, onJump, warming = false 
             : snapshot?.heard.get(line.index) ?? NO_WORDS;
           const speaking = !live ? undefined : ready ? 'warming'
             : snapshot?.state === 'actor' ? 'listening' : snapshot?.state === 'partner' ? 'sounding' : 'held';
+          // Your live line, mic open or paused on it: the word you are on.
+          const at = mine && live && (speaking === 'listening' || speaking === 'held') ? next : undefined;
           return <Line key={line.index} line={line} mine={mine} when={when} heard={heard} speaking={speaking}
-            jumpable={Boolean(onJump) && !live} cueStyle={cues.get(line.character)} />;
+            at={at} jumpable={Boolean(onJump) && !live} cueStyle={cues.get(line.character)} />;
         })}
       </ol>
       <div aria-hidden className="h-[60dvh]" />
