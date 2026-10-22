@@ -58,6 +58,22 @@ Who reaches the Auditions tab (GA4) is a weekly question since 2026-10-12 and li
 `/marketing-week`. Here, section 7 is read for one thing only: the first real user to add
 an audition, which goes under "Moved" the day it happens.
 
+Section 8 is what people told the site in the last 2 days: feedback (thumbs and comments),
+content requests, and weak or empty searches (Canberk, 2026-10-22: "put in daily, we gotta
+tend to the app and improve in any way we can"). Read it for what to fix, not who to write:
+- A comment that names a bug: say which page, and check whether it is already fixed
+  (`git log`) before calling it open.
+- A title asked for (a request, or the same title searched weak by 2 or more people, or
+  tried several ways by one): run the three-place check. If it is in, the search missed it,
+  and that is a search bug. If it is out, it is a content gap; say whether it can come in
+  (public domain, or a film/TV row like the rest of the screen corpus).
+- A kind of piece many people miss (contemporary comedy for women 18 to 25, villains):
+  count what the corpus has for it, in one query.
+- A comment from a real actor with an account may get a reply drafted, never sent, only
+  if it asks something; it is a thread with the site, not a search note.
+Only what is new and real goes in the summary, under "The app". The feedback quotes go in
+`docs/metrics/user-voice.md` like a reply would (no name, no address).
+
 ## 2. The inbox
 
 Load the Gmail tools and search for replies since the last run (the date of the newest other
@@ -195,6 +211,8 @@ Inbox: <n> replies, <n> opt-outs filed, <n> bounces filed, <n> drafts waiting fo
   <CURTAIN, if any: address -> full prefilled link to paste>
 
 Moved: <one line per thing that moved, with the number, or "nothing">
+
+The app: <one line per thing to fix or add from section 8, with the evidence and the next step, or "nothing new">
 
 Broken: <what failed, or "nothing">
 

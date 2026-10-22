@@ -270,6 +270,46 @@ group by 1 order by 2 desc
 """
 
 
+# What people told the site, the same rows the admin feedback inbox, requests
+# queue and search log show (Canberk, 2026-10-22: "put in daily, we gotta tend
+# to the app and improve in any way we can"). Two days so a missed run still
+# overlaps. Staff are left out; an anonymous row is a reader with no account.
+FEEDBACK = """
+select f.created_at::date, f.context, f.rating, coalesce(f.comment, ''),
+       coalesce(u.email, '(no account)')
+from result_feedback f left join users u on u.id = f.user_id
+where f.created_at > now() - interval '2 days'
+  and not coalesce(u.exclude_from_stats, false)
+order by f.created_at
+"""
+
+CONTENT_REQUESTS = """
+select last_requested_at::date, play_title, coalesce(author, ''), coalesce(character_name, ''),
+       request_count, status
+from content_requests where last_requested_at > now() - interval '2 days'
+order by last_requested_at
+"""
+
+# Weak includes searches that recovered through available_in, so a row here is
+# "worth a look", never "not in the library": that claim needs the three-place
+# check (plays.title, monologues.title, character_name).
+FAILED_SEARCHES = """
+select left(lower(s.query), 90), count(*), count(distinct s.user_id), min(s.results_count)
+from search_logs s left join users u on u.id = s.user_id
+where s.created_at > now() - interval '2 days'
+  and (s.weak_match or s.results_count = 0)
+  and not coalesce(u.exclude_from_stats, false)
+group by 1 order by 2 desc, 3 desc limit 15
+"""
+
+SEARCH_TOTALS = """
+select count(*), count(*) filter (where s.weak_match or s.results_count = 0)
+from search_logs s left join users u on u.id = s.user_id
+where s.created_at > now() - interval '2 days'
+  and not coalesce(u.exclude_from_stats, false)
+"""
+
+
 def table(head: tuple[str, ...], rows: list[tuple]) -> str:
     if not rows:
         return "_nobody_\n"
@@ -398,6 +438,16 @@ def build(conn) -> str:
               [r[:6] + ("yes" if r[6] else "no",) for r in q(AUDITIONS_UPCOMING)]),
         "### What the tracker recorded this week\n",
         table(("event", "times", "people"), q(AUDITION_EVENTS)),
+        "## 8. What people told the site, last 2 days\n",
+        "The admin feedback inbox, the requests queue and the search log. Staff left out.\n",
+        "### Feedback\n",
+        table(("day", "where", "rating", "comment", "who"), q(FEEDBACK)),
+        "### Content requests\n",
+        table(("last asked", "title", "author", "character", "times", "status"), q(CONTENT_REQUESTS)),
+        "### Weak or empty searches\n",
+        "{1} of {0} searches came back weak or empty. Weak counts recoveries too, so check a".format(*q(SEARCH_TOTALS)[0]),
+        "title in plays.title, monologues.title and character_name before calling it missing.\n",
+        table(("query", "times", "people", "fewest results"), q(FAILED_SEARCHES)),
     ]
     return "\n".join(parts)
 
