@@ -165,6 +165,23 @@ class ClassLinkJoinTest(unittest.TestCase):
         self.assertEqual(class_links.claim_invites(self.db, s), [])
         self.assertIsNone(self._sub(s))
 
+    def test_a_code_carried_in_the_signup_joins_the_class(self):
+        """Gilroy, 2026-10-22: two students signed up in another browser than
+        the one that opened the link, so the code held there never arrived."""
+        s = self._student("far@nmu.edu")
+        r = class_links.claim_signup_code(self.db, s, "NMU-Teach")
+        self.assertEqual(r.outcome, "granted")
+        self.assertTrue(self._sub(s).is_active)
+
+    def test_a_signup_code_that_is_junk_off_or_missing_does_nothing(self):
+        s = self._student("junk@nmu.edu")
+        for code in (None, "", 42, "../etc", "no-such-class"):
+            self.assertIsNone(class_links.claim_signup_code(self.db, s, code))
+        self.link.active = False
+        self.db.commit()
+        self.assertIsNone(class_links.claim_signup_code(self.db, s, "nmu-teach"))
+        self.assertIsNone(self._sub(s))
+
 
 if __name__ == "__main__":
     unittest.main()
