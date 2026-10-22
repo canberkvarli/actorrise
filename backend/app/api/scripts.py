@@ -30,6 +30,7 @@ from app.models.actor import (
     ScriptTagVote,
     UserScript,
 )
+from app.services.docx_text import SUPPORTED_EXTS, UNSUPPORTED_MESSAGE, normalize_upload
 from app.services.script_tags import normalize_tag_list
 from app.models.user import User
 from app.services.character_names import canonicalize_scene_characters
@@ -222,13 +223,16 @@ async def scan_script(
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
-    file_ext = file.filename.split(".")[-1].lower()
-    if file_ext not in ["pdf", "txt", "text"]:
-        raise HTTPException(status_code=400, detail="Only PDF and TXT files are supported")
+    if file.filename.rsplit(".", 1)[-1].lower() not in SUPPORTED_EXTS:
+        raise HTTPException(status_code=400, detail=UNSUPPORTED_MESSAGE)
 
     file_content = await file.read()
     if len(file_content) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+    try:
+        file_content, file_ext = normalize_upload(file.filename, file_content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     # Off the event loop. This function used to open the PDF inline in an
     # `async def`, which blocks the worker: nothing else was served, health
@@ -335,12 +339,8 @@ async def upload_script(
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
-    file_ext = file.filename.split(".")[-1].lower()
-    if file_ext not in ["pdf", "txt", "text"]:
-        raise HTTPException(
-            status_code=400,
-            detail="Only PDF and TXT files are supported"
-        )
+    if file.filename.rsplit(".", 1)[-1].lower() not in SUPPORTED_EXTS:
+        raise HTTPException(status_code=400, detail=UNSUPPORTED_MESSAGE)
 
     # Read file content
     file_content = await file.read()
@@ -348,6 +348,10 @@ async def upload_script(
 
     if file_size > 10 * 1024 * 1024:  # 10MB limit
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+    try:
+        file_content, file_ext = normalize_upload(file.filename, file_content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     # ---- Phase 1: Extract everything BEFORE touching DB ----
     # This avoids DB connection timeouts during long AI extraction.
@@ -553,14 +557,17 @@ async def upload_script_stream(
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
-    file_ext = file.filename.split(".")[-1].lower()
-    if file_ext not in ["pdf", "txt", "text"]:
-        raise HTTPException(status_code=400, detail="Only PDF and TXT files are supported")
+    if file.filename.rsplit(".", 1)[-1].lower() not in SUPPORTED_EXTS:
+        raise HTTPException(status_code=400, detail=UNSUPPORTED_MESSAGE)
 
     file_content = await file.read()
     file_size = len(file_content)
     if file_size > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+    try:
+        file_content, file_ext = normalize_upload(file.filename, file_content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     # Compute file hash for extraction cache
     import hashlib
@@ -2600,14 +2607,17 @@ async def upload_script_background(
     """
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
-    file_ext = file.filename.split(".")[-1].lower()
-    if file_ext not in ["pdf", "txt", "text"]:
-        raise HTTPException(status_code=400, detail="Only PDF and TXT files are supported")
+    if file.filename.rsplit(".", 1)[-1].lower() not in SUPPORTED_EXTS:
+        raise HTTPException(status_code=400, detail=UNSUPPORTED_MESSAGE)
 
     file_content = await file.read()
     file_size = len(file_content)
     if file_size > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+    try:
+        file_content, file_ext = normalize_upload(file.filename, file_content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     import hashlib
     import threading

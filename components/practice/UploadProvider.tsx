@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UpgradeModal } from "@/components/billing/UpgradeModal";
+import { BringInScriptDialog } from "@/components/practice/BringInScriptDialog";
 import { UploadStage } from "@/components/practice/UploadStage";
 import { ScenePicker, type ScannedScene } from "@/components/practice/ScenePicker";
 import { API_URL } from "@/lib/api";
@@ -127,6 +128,8 @@ interface UploadContextValue {
   start: (file: File) => Promise<void>;
   /** Open the upgrade modal directly (used when canUpload is false). */
   openUpgrade: () => void;
+  /** Open "Bring in a script" (file or paste), or the upgrade modal when over the limit. */
+  openPicker: () => void;
 }
 
 const UploadContext = createContext<UploadContextValue | null>(null);
@@ -207,6 +210,18 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   );
 
   const openUpgrade = useCallback(() => setShowUpgradeModal(true), []);
+
+  const [showBringIn, setShowBringIn] = useState(false);
+  const openPicker = useCallback(() => {
+    if (isBusy) return;
+    // Over the plan's upload limit? Show the upgrade modal up front instead of
+    // taking a script only to reject the upload after the fact.
+    if (!canUpload) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    setShowBringIn(true);
+  }, [isBusy, canUpload]);
 
   /**
    * Pick up a script that was scanned but never built.
@@ -487,8 +502,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         return;
       }
       const ext = file.name.split(".").pop()?.toLowerCase();
-      if (!ext || !["pdf", "txt", "text"].includes(ext)) {
-        toast.error("Only PDF and TXT files are supported");
+      if (!ext || !["pdf", "docx", "txt", "text"].includes(ext)) {
+        toast.error(
+          ext === "doc"
+            ? "Older .doc files can't be read. Save it as .docx or PDF and try again."
+            : "Only PDF, Word (.docx) and TXT files are supported",
+        );
         return;
       }
       const MAX_SIZE_MB = 15;
@@ -612,8 +631,16 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const showBanner = scanning || uploadingFile || doneInfo !== null;
 
   return (
-    <UploadContext.Provider value={{ isUploading: isBusy, phaseLabel, canUpload, start, openUpgrade }}>
+    <UploadContext.Provider
+      value={{ isUploading: isBusy, phaseLabel, canUpload, start, openUpgrade, openPicker }}
+    >
       {children}
+
+      <BringInScriptDialog
+        open={showBringIn}
+        onOpenChange={setShowBringIn}
+        onFile={(file) => void start(file)}
+      />
 
       {/* Centre stage while the script is being read */}
       <AnimatePresence>

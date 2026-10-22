@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { IconUpload, IconLoader2 } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,8 @@ interface UploadScriptButtonProps {
 }
 
 /**
- * Thin upload trigger: a button + a hidden file input. All upload state and UI
- * (scan, mode dialog, streaming progress banner, upgrade modal) live in
+ * Thin upload trigger. All upload state and UI (the file-or-paste dialog,
+ * scan, mode dialog, streaming progress banner, upgrade modal) live in
  * <UploadProvider> at the platform-layout level, so the in-flight upload
  * survives in-app navigation and every trigger stays in sync.
  *
@@ -30,25 +30,7 @@ export function UploadScriptButton({
   children,
   className,
 }: UploadScriptButtonProps) {
-  const { isUploading, phaseLabel, canUpload, start, openUpgrade } = useUpload();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const triggerPicker = () => {
-    if (isUploading) return;
-    // Over the plan's upload limit? Show the upgrade modal up front instead of
-    // opening a file picker only to reject the upload after the fact.
-    if (!canUpload) {
-      openUpgrade();
-      return;
-    }
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = ""; // reset so the same file can be re-selected later
-    if (file) await start(file);
-  };
+  const { isUploading, phaseLabel, openPicker } = useUpload();
 
   const busyLabel = phaseLabel ?? "Uploading…";
   const isPrimary = variant === "primary";
@@ -56,17 +38,9 @@ export function UploadScriptButton({
 
   return (
     <>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf,.txt"
-        onChange={handleFileChange}
-        className="hidden"
-        disabled={isUploading}
-      />
       <Button
         size={isPrimary ? "lg" : "sm"}
-        onClick={triggerPicker}
+        onClick={openPicker}
         disabled={isUploading}
         className={
           className ??

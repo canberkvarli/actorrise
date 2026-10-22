@@ -28,7 +28,7 @@ const ACTS = [
     Sketch: StageDoorSketch,
     direction: "(first: bring your sides.)",
     title: "Upload any script",
-    body: "PDF or pasted text. The scenes pull themselves out, characters and all.",
+    body: "PDF, Word or pasted text. The scenes pull themselves out, characters and all.",
   },
   {
     numeral: "II",

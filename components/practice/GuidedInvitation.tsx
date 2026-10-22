@@ -27,27 +27,10 @@ import { useUpload } from "@/components/practice/UploadProvider";
 export function GuidedInvitation() {
   const router = useRouter();
   const { refreshUser } = useAuth();
-  const { isUploading, canUpload, start: startUpload, openUpgrade } = useUpload();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { isUploading, openPicker } = useUpload();
   const [starting, setStarting] = useState(false);
   const [failed, setFailed] = useState(false);
   const shownRef = useRef(false);
-
-  // The same picker UploadScriptButton owns, without its pill: on this page
-  // bringing in a script is the footnote, not the way in.
-  const bringIn = () => {
-    if (isUploading) return;
-    if (!canUpload) {
-      openUpgrade();
-      return;
-    }
-    fileInputRef.current?.click();
-  };
-  const onFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (file) await startUpload(file);
-  };
 
   useEffect(() => {
     if (shownRef.current) return;
@@ -127,16 +110,7 @@ export function GuidedInvitation() {
         </p>
       )}
       <div className="t-invite__alt">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.txt"
-          className="hidden"
-          onChange={onFile}
-          aria-hidden
-          tabIndex={-1}
-        />
-        <button type="button" className="t-how-link" onClick={bringIn} disabled={isUploading}>
+        <button type="button" className="t-how-link" onClick={openPicker} disabled={isUploading}>
           {isUploading ? "bringing it in" : "bring in a script instead"}
         </button>
       </div>
