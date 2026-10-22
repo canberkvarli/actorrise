@@ -4,7 +4,7 @@ import html as html_module
 import os
 import re
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Literal, Optional, cast
 
 from app.api.auth import get_current_user, get_current_user_optional
@@ -30,6 +30,7 @@ from app.models.actor import (Monologue, MonologueBeat, MonologueFavorite,
                               Play)
 from app.models.user import User
 from app.services.search.grounding import query_is_unservable
+from app.services.search.semantic_search import exclude_hidden
 from app.services.search.originality import originality_cap
 from app.services.search.query_optimizer import (correct_query_typos,
                                                  is_filter_only_query,
@@ -47,7 +48,7 @@ from app.services.search.title_lookup import (compute_content_gap,
 from app.services.search.scene_intent import detect_two_person_scene_intent
 from app.services.search.recommender import Recommender
 from app.services.search.semantic_search import MIN_RELEVANCE_TO_SHOW, STRONG_COSINE_SIM, SemanticSearch
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
@@ -1424,6 +1425,122 @@ async def get_trending(
     _apply_list_wall(_out, db=db, user=current_user, request=request,
                      favorite_ids=favorite_ids)
     return _out
+
+
+# --- Tonight: one speech a day, the same one for everyone ---------------------
+#
+# Ghost Light's home screen widget, its ticket and its evening knock all name
+# "tonight's speech". The pick used to be made on the phone from the trending
+# list by the date, which meant a widget could only show it after the app had
+# been opened and had written it down. This endpoint makes the pick on the
+# server so the widget can fetch it on its own, and hands out a run of days so
+# it can turn the page at midnight without asking again.
+#
+# Public on purpose: it carries only the teaser of each piece, the same opening
+# every free reader sees, so there is nothing here the wall protects.
+
+#: A week for the widget, one day either side for a phone whose calendar is
+#: ahead of or behind the server's.
+_TONIGHT_DAYS_MAX = 10
+#: The pool a day's pick is drawn from: the house's twenty most read pieces.
+_TONIGHT_POOL = 20
+_TONIGHT_TTL_SECONDS = 3600
+_tonight_cache: dict = {}
+_EPOCH = date(1970, 1, 1)
+_STAGE_DIRECTION = re.compile(r"\([^)]*\)|\[[^\]]*\]")
+
+
+class TonightDay(BaseModel):
+    day: str
+    quote: str
+    monologue: MonologueResponse
+
+
+class TonightResponse(BaseModel):
+    house: Literal["stage", "screen"]
+    days: List[TonightDay]
+
+
+def _tonight_index(day_number: int, count: int) -> int:
+    """Knuth's multiplicative hash of the day, so consecutive days do not walk
+    the pool in order. Bit-for-bit what the app computes for itself when it is
+    offline (`tonightIndex` in src/hooks/useTonight.ts), so the two agree."""
+    return ((day_number * 2654435761) % (1 << 32)) % count
+
+
+def _quote(text: str, limit: int = 150) -> str:
+    """The one line a widget has room for: the first whole sentence of the
+    speech that is neither a fragment nor a paragraph, stage directions
+    dropped. A run-on with no sentence in it is cut at a word."""
+    flat = " ".join(_STAGE_DIRECTION.sub("", text or "").split())
+    sentences = [x.strip() for x in _SENTENCE_END.split(flat) if x.strip()]
+    for x in sentences[:4]:
+        if 24 <= len(x) <= limit:
+            return x
+    # No single sentence is the right size: run them together from the start
+    # until there is enough, and cut at a word if the first one alone is too long.
+    acc = ""
+    for x in sentences:
+        acc = f"{acc} {x}".strip()
+        if len(acc) > limit:
+            break
+        if len(acc) >= 24:
+            return acc
+    if len(acc) <= limit:
+        return acc
+    cut = acc[:limit].rsplit(" ", 1)[0]
+    return cut.rstrip(" .,;:") + "…"
+
+
+def _tonight_pool(db: Session, house: str) -> list:
+    q = (
+        exclude_hidden(db.query(Monologue))
+        .join(Play, Play.id == Monologue.play_id)
+        .options(joinedload(Monologue.play).joinedload(Play.film_tv_reference))
+    )
+    if house == "stage":
+        q = q.filter(Play.source_type == "play")
+    else:
+        q = q.filter(Play.source_type.in_(["film", "tv"]))
+    pool = q.order_by((Monologue.favorite_count + Monologue.view_count / 10).desc()).limit(_TONIGHT_POOL).all()
+    # By id as a string: the app sorts the same way, so the order the rows
+    # arrived in never changes the pick.
+    pool.sort(key=lambda m: str(m.id))
+    return pool
+
+
+@router.get("/tonight", response_model=TonightResponse)
+async def get_tonight(
+    response: Response,
+    house: Literal["stage", "screen"] = Query("stage"),
+    days: int = Query(8, ge=1, le=_TONIGHT_DAYS_MAX),
+    db: Session = Depends(get_db),
+):
+    """A run of days, each with the house's speech for that day. Public."""
+    today = datetime.now(timezone.utc).date()
+    key = (house, today.isoformat(), days)
+    now = time.time()
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    hit = _tonight_cache.get(key)
+    if hit and now - hit[0] < _TONIGHT_TTL_SECONDS:
+        return hit[1]
+
+    pool = _tonight_pool(db, house)
+    out: List[TonightDay] = []
+    if pool:
+        for k in range(-1, days):
+            d = today + timedelta(days=k)
+            m = pool[_tonight_index((d - _EPOCH).days, len(pool))]
+            r = _monologue_to_response(m)
+            r.text = _teaser(r.text)
+            r.text_segments = None
+            out.append(TonightDay(day=d.isoformat(), quote=_quote(cast(str, m.text)), monologue=r))
+    payload = TonightResponse(house=house, days=out)
+    # Yesterday's entries are never asked for again.
+    for stale in [k for k in _tonight_cache if k[1] != key[1]]:
+        _tonight_cache.pop(stale, None)
+    _tonight_cache[key] = (now, payload)
+    return payload
 
 
 #: Roughly what two lines of verse or a couple of prose sentences come to. The
