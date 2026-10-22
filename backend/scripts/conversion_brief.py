@@ -310,6 +310,72 @@ where s.created_at > now() - interval '2 days'
 """
 
 
+# Where the library is thin, 30 days (Canberk, 2026-10-22: "keep track of where
+# we lack in sources, is it teens? contemporary? so we can focus on scraping
+# those"). A kind of piece is a keyword match on the query, or the filter that
+# says the same thing; a search can be several kinds. The weak rate against the
+# overall rate is the signal: a kind well above it is where to add pieces.
+# Titles searched that are in no tab at all come from content_gap (a jsonb
+# 'null' there is not SQL NULL, hence the ->> test).
+GAP_SEARCHES = """
+select lower(s.query), s.filters_used, (s.weak_match or s.results_count = 0), s.user_id
+from search_logs s left join users u on u.id = s.user_id
+where s.created_at > now() - interval '30 days' and not coalesce(u.exclude_from_stats, false)
+  and coalesce(s.page, 1) = 1 and s.source = 'search'
+"""
+
+ABSENT_TITLES = """
+select s.content_gap->>'play', count(*), count(distinct s.user_id), max(s.created_at)::date
+from search_logs s left join users u on u.id = s.user_id
+where s.created_at > now() - interval '30 days' and not coalesce(u.exclude_from_stats, false)
+  and (s.weak_match or s.results_count = 0)
+  and s.content_gap->>'play' is not null
+  and jsonb_array_length(coalesce(s.content_gap->'available_in', '[]'::jsonb)) = 0
+group by 1 order by 3 desc, 2 desc limit 12
+"""
+
+GAP_KINDS = {
+    "teens / high school": (r"\bteen|high ?school|highschool|\b1[2-8]\b|young|\bkids?\b|child|middle school|tween",
+                            lambda f: f.get("age_range") == "teens"),
+    "contemporary / modern": (r"contemporary|modern|recent|\bnew\b|current|today",
+                              lambda f: f.get("category") == "contemporary"),
+    "comedy": (r"comed|funny|humou?r|comic|witty|sarcas", lambda f: f.get("tone") == "comedic"),
+    "musical theatre": (r"musical|muscial|broadway|\bsong", None),
+    "villain": (r"villa?i|evil|antagonist|menac|psycho", None),
+    "grief / loss": (r"grie|\bloss\b|death|dying|cancer|mourn", None),
+    "angry / intense": (r"ang(ry|er)|rage|intense|furious", None),
+    "romance": (r"roman|\blove\b|crush|heartbreak", None),
+    "audition brief (school, 1 min)": (r"\b1 ?min|one minute|tisch|college|bfa|conservator|juilliard", None),
+    "classical / Shakespeare": (r"shakespear|greek|classical|restoration|chekhov|ibsen", None),
+}
+
+
+def gap_rows(searches: list[tuple]) -> tuple[str, list[tuple]]:
+    """Each kind of piece: weak searches, all searches, weak rate, people who
+    got a weak one. Plus two pairs that came up together (contemporary comedy,
+    contemporary teens), since that is how actors actually ask."""
+    from collections import defaultdict
+
+    tot, weak, ppl = defaultdict(int), defaultdict(int), defaultdict(set)
+    for q, f, w, uid in searches:
+        f = f if isinstance(f, dict) else {}
+        hit = {name for name, (rx, ft) in GAP_KINDS.items() if re.search(rx, q) or (ft and ft(f))}
+        if {"contemporary / modern", "comedy"} <= hit:
+            hit.add("contemporary + comedy")
+        if {"contemporary / modern", "teens / high school"} <= hit:
+            hit.add("contemporary + teens")
+        for name in hit:
+            tot[name] += 1
+            if w:
+                weak[name] += 1
+                ppl[name].add(uid)
+    all_weak = sum(1 for r in searches if r[2])
+    overall = f"{all_weak} of {len(searches)} searches were weak or empty ({all_weak / max(1, len(searches)):.0%})."
+    rows = [(n, weak[n], tot[n], f"{weak[n] / tot[n]:.0%}", len(ppl[n]))
+            for n in sorted(tot, key=lambda n: (-len(ppl[n]), -weak[n]))]
+    return overall, rows
+
+
 def table(head: tuple[str, ...], rows: list[tuple]) -> str:
     if not rows:
         return "_nobody_\n"
@@ -383,6 +449,7 @@ def build(conn) -> str:
             store_rows.append((name, now_v if now_v is not None else "", before_v if before_v is not None else "",
                                change(int(now_v or 0), int(before_v or 0)) if isinstance(now_v, int) or now_v is None else ""))
     reads7, readers7, reads14, readers14 = q(APP_READS)[0]
+    gap_overall, gap_kinds = gap_rows(q(GAP_SEARCHES))
 
     parts = [
         f"# Conversion brief, {date.today():%Y-%m-%d}\n",
@@ -448,6 +515,11 @@ def build(conn) -> str:
         "{1} of {0} searches came back weak or empty. Weak counts recoveries too, so check a".format(*q(SEARCH_TOTALS)[0]),
         "title in plays.title, monologues.title and character_name before calling it missing.\n",
         table(("query", "times", "people", "fewest results"), q(FAILED_SEARCHES)),
+        "### Where the library is thin, 30 days\n",
+        gap_overall + " A kind well above that rate is where to add pieces.\n",
+        table(("kind of piece", "weak", "searches", "weak rate", "people"), gap_kinds),
+        "Titles searched that are in no tab (screen titles come in like the rest of the TV and film corpus):\n",
+        table(("title", "searches", "people", "last"), q(ABSENT_TITLES)),
     ]
     return "\n".join(parts)
 

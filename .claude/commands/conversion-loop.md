@@ -71,6 +71,12 @@ tend to the app and improve in any way we can"). Read it for what to fix, not wh
   count what the corpus has for it, in one query.
 - A comment from a real actor with an account may get a reply drafted, never sent, only
   if it asks something; it is a thread with the site, not a search note.
+- "Where the library is thin, 30 days" ranks kinds of piece by how many people got a weak
+  search, with each kind's weak rate against the overall rate (Canberk, 2026-10-22: "keep
+  track of where we lack in sources, is it teens? contemporary? so we can focus on scraping
+  those"). Name the top kind every day in "The app" as the content focus, and say when the
+  order changes. Below it, titles searched that are in no tab: a public-domain play or a
+  screen title can come in; a stage play under copyright (Miller, Williams) cannot, say so.
 Only what is new and real goes in the summary, under "The app". The feedback quotes go in
 `docs/metrics/user-voice.md` like a reply would (no name, no address).
 
