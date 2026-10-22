@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useMemo, type CSSProperties } from 'react';
+import { Fragment, memo, useMemo, type CSSProperties } from 'react';
 import type { RehearsalLine } from '@/lib/rehearsal/contract';
 import { displayRuns } from '@/lib/rehearsal/display-words';
 
@@ -14,6 +14,8 @@ interface Props {
   /** For the actor's lines: indices of words heard. Undefined for partner lines. */
   heard?: Set<number>;
   speaking?: Speaking;
+  /** On your live line: the index of the word you are on (the reading position). */
+  at?: number;
   /** A tap here starts the run on this line (Stage handles the click). */
   jumpable: boolean;
   /** The cast colour for the cue, as the scene preview deals it (lib/castColors). */
@@ -26,8 +28,15 @@ interface Props {
  * on the live line. On the actor's lines every word is a span whose weight
  * carries whether it was heard; one span per matcher token, so index `i` is
  * the word actually said.
+ *
+ * On the live line, heard words fill in ink and the word the actor is on
+ * (`at`) carries a quiet underline. Both only ever move forward, because the
+ * reading position does. The space after each word sits outside its span so
+ * the underline stops at the word, and the live line never changes weight:
+ * bold widens a word, and a word widening mid-line re-wraps the paragraph,
+ * which read as the words jumping.
  */
-function LineView({ line, mine, when, heard, speaking, jumpable, cueStyle }: Props) {
+function LineView({ line, mine, when, heard, speaking, at, jumpable, cueStyle }: Props) {
   const words = useMemo(() => displayRuns(line.text), [line.text]);
   return (
     <li data-line={line.index} data-mine={mine} data-when={when} data-speaking={speaking}
@@ -43,10 +52,14 @@ function LineView({ line, mine, when, heard, speaking, jumpable, cueStyle }: Pro
       {line.direction && <p className="r-dir">{line.direction}</p>}
       <p className="r-text">
         {words.map((w, i) => (
-          <span key={i} data-word={i} className={mine ? 'r-word' : undefined}
-            data-heard={mine ? String(heard?.has(i) ?? false) : undefined}>
-            {w.word}{w.gap ? ' ' : ''}
-          </span>
+          <Fragment key={i}>
+            <span data-word={i} className={mine ? 'r-word' : undefined}
+              data-heard={mine ? String(heard?.has(i) ?? false) : undefined}
+              data-at={mine && at === i ? 'true' : undefined}>
+              {w.word}
+            </span>
+            {w.gap ? ' ' : null}
+          </Fragment>
         ))}
       </p>
     </li>
@@ -60,7 +73,7 @@ function sameWords(a?: Set<number>, b?: Set<number>): boolean {
   return true;
 }
 
-/** The engine publishes a snapshot a frame; only a line whose place or heard words changed re-renders. */
+/** The engine publishes a snapshot a frame; only a line whose place, position or heard words changed re-renders. */
 export const Line = memo(LineView, (p, n) =>
-  p.line === n.line && p.mine === n.mine && p.when === n.when && p.speaking === n.speaking
+  p.line === n.line && p.mine === n.mine && p.when === n.when && p.speaking === n.speaking && p.at === n.at
   && p.jumpable === n.jumpable && p.cueStyle === n.cueStyle && sameWords(p.heard, n.heard));

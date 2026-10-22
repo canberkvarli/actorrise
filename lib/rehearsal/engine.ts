@@ -174,7 +174,9 @@ export class Engine {
     const now = this.ports.clock.now();
     this.timeline.mark('delta', now);
     if (this.timeline.get('first_delta') === undefined) this.timeline.mark('first_delta', now);
-    this.read = liveRead(turn.words, transcript);
+    // The read carries on from the last delta of this turn, so the reading
+    // position only moves forward; enter() and resume() reset it to EMPTY_READ.
+    this.read = liveRead(turn.words, transcript, this.read);
     if (shouldHandOver({ ...this.read, turnEnded: false })) {
       this.finishActorTurn('last_word');
       return;

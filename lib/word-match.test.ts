@@ -99,6 +99,48 @@ describe('alignWords — span matching', () => {
   });
 });
 
+describe('alignWords — no leaping', () => {
+  it('a common word far ahead is not matched on its own', () => {
+    // The greedy walk took this "you" for the line's last word and stranded
+    // everything between.
+    expect(hits('I came all this way tonight just to say goodbye to you', 'i came you'))
+      .toEqual([true, true, false, false, false, false, false, false, false, false, false, false]);
+  });
+
+  it('an early word not yet heard does not claim its twin further on', () => {
+    expect(hits('I swear I never meant it', 'swear I never'))
+      .toEqual([false, true, true, true, false, false]);
+  });
+
+  it('a skipped phrase lines up again once three words in a row agree', () => {
+    expect(hits('one two three four five six seven eight nine ten eleven twelve', 'one two nine ten eleven'))
+      .toEqual([true, true, false, false, false, false, false, false, true, true, true, false]);
+  });
+
+  it('a long skip with only one agreeing word is not taken', () => {
+    expect(hits('one two three four five six seven eight nine ten eleven twelve', 'one two ten'))
+      .toEqual([true, true, false, false, false, false, false, false, false, false, false, false]);
+  });
+
+  it('the look-ahead is measured from where the actor already is', () => {
+    const line = tokenize('one two three four five six seven eight nine ten eleven twelve');
+    // Nothing heard near the top, but the reading was already at "seven".
+    expect([...alignWords(line, tokenize('nine'), { from: 6 })]).toEqual([8]);
+    expect([...alignWords(line, tokenize('nine'))]).toEqual([]);
+  });
+
+  it('prefers a word on its own over a span that would light a word not said', () => {
+    // "i" + "swear" is one letter from "swear"; the "I" was not said.
+    expect(hits('I swear', 'swear')).toEqual([false, true]);
+  });
+
+  it('matches everything in order for a clean read of a long line', () => {
+    const line = 'I have waited for you every night since the summer and every night you never came';
+    expect(hits(line, line).every(Boolean)).toBe(true);
+    expect(hits(line, 'um ' + line).every(Boolean)).toBe(true);
+  });
+});
+
 describe('wordMatchScore', () => {
   it('scores a complete read as 1', () => {
     expect(wordMatchScore('Twenty-four.', 'twenty four')).toBe(1);

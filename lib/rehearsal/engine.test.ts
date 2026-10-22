@@ -84,6 +84,24 @@ describe('Engine', () => {
       expect.objectContaining({ ended_by: 'last_word', matched: [0, 1, 2, 3], handover_ms: 0 }));
   });
 
+  it('a long line is not taken away on a "you" said halfway, and a revision never pulls the reading back', () => {
+    const lines = [L(0, 'BEN', 'Where were you?'), L(1, 'ANNA', "Get in the car, I'll drive ya home, I'm not leaving you."), L(2, 'BEN', 'Fine.')];
+    const e = new Engine(buildScript(lines, 'ANNA'), ports);
+    e.begin(); ports.tick(1.0); fire(101);
+    expect(e.snapshot().state).toBe('actor');
+    e.delta("get in the car I'll drive you");
+    expect(e.snapshot().state).toBe('actor');
+    expect(e.snapshot().read.position).toBe(6);
+    e.quiet(); // a breath, not the end
+    expect(e.snapshot().state).toBe('actor');
+    e.delta('get in the'); // the transcriber revising its first pass
+    expect(e.snapshot().read.position).toBe(6);
+    expect(e.snapshot().read.matched.size).toBe(6);
+    e.delta("get in the car I'll drive you home I'm not leaving you");
+    expect(e.snapshot().state).toBe('partner');
+    expect(ports.journal.emit).toHaveBeenCalledWith('actor_line_read', 1, expect.any(Number), expect.objectContaining({ ended_by: 'last_word' }));
+  });
+
   it('a delta before the mic is open is ignored', () => {
     engine.begin();
     engine.delta('out twenty four hours');
