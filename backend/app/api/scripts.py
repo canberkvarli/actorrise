@@ -2470,7 +2470,8 @@ def extraction_outcome(created: list) -> tuple:
 
 def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
                            file_ext: str, filename: str, mode: str, file_hash: str,
-                           source_pdf: Optional[bytes] = None) -> None:
+                           source_pdf: Optional[bytes] = None,
+                           front_matter: Optional[str] = None) -> None:
     """Finish reading a script after the request that uploaded it has gone.
 
     `source_pdf` is the original file of a picked PDF upload, read in full after
@@ -2483,7 +2484,8 @@ def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
     try:
         parser = ScriptParser()
         result = parser.parse_script(
-            file_content, file_ext, filename, mode=mode, cancel_event=cancel_event
+            file_content, file_ext, filename, mode=mode, cancel_event=cancel_event,
+            front_matter=front_matter,
         )
 
         script = db.query(UserScript).filter(UserScript.id == script_id).first()
@@ -2561,6 +2563,24 @@ def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
         with _EXTRACTION_CANCELS_LOCK:
             _EXTRACTION_CANCELS.pop(script_id, None)
         db.close()
+
+
+# Enough for a title page, a copyright line and a cast list.
+_FRONT_MATTER_CHARS = 6000
+
+
+def _pdf_opening(pdf_bytes: bytes) -> Optional[str]:
+    """The first pages of a PDF, read fast. Only for the title page."""
+    try:
+        import io
+
+        import pypdf
+
+        reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+        text = "\n".join((page.extract_text() or "") for page in reader.pages[:3])
+        return text[:_FRONT_MATTER_CHARS] or None
+    except Exception:
+        return None
 
 
 def _store_pdf_source(db: Session, script, parser, pdf_bytes: bytes) -> None:
@@ -2699,6 +2719,14 @@ async def upload_script_background(
     # picked PDF was only read for its picked pages; the thread reads the rest
     # once the scenes are built, so nobody waits on it.
     full_text = raw_text if (file_ext != "pdf" or not picked_pages) else None
+    # The title page, for the details. A picked build reads only its scenes,
+    # and named a series "EPISODE 6" by Unknown from them.
+    front_matter = None
+    if picked_scenes:
+        front_matter = (
+            full_text[:_FRONT_MATTER_CHARS] if full_text
+            else await run_in_threadpool(_pdf_opening, file_content)
+        )
     if file_ext != "pdf" and picked_scenes:
         from app.services.scene_map import text_for_selection
 
@@ -2739,7 +2767,8 @@ async def upload_script_background(
               # keyed on the file, uploading the same script whole later was
               # handed back only the scenes picked the first time.
               hashlib.sha256(raw_text.encode("utf-8") if picked_scenes else file_content).hexdigest(),
-              file_content if full_text is None else None),
+              file_content if full_text is None else None,
+              front_matter),
         daemon=True,
     ).start()
 

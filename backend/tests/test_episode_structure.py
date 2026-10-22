@@ -69,3 +69,13 @@ def test_a_selection_with_no_spans_reads_everything():
     from app.services.scene_map import text_for_selection
 
     assert text_for_selection(SERIES, [{"page_start": 1, "page_end": 2}]) is None
+
+
+def test_a_heading_is_never_a_title():
+    # A picked upload of one scene named the whole series "EPISODE 6".
+    from app.services.script_parser import _is_usable_title
+
+    assert not _is_usable_title("EPISODE 6")
+    assert not _is_usable_title("Act Two")
+    assert not _is_usable_title("SCENE 3")
+    assert _is_usable_title("ALMOST A THERAPIST")

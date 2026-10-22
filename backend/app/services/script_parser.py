@@ -417,6 +417,11 @@ def _is_usable_title(title: Optional[str]) -> bool:
     # A slug line, a transition, or a speaker cue. None of them name the work.
     if candidate.endswith(":") or _is_excluded(candidate):
         return False
+    # Nor does a heading inside it: "EPISODE 6", "ACT TWO", "Scene 3".
+    from app.services.script_structure import _match_act, _match_scene
+
+    if _match_act(candidate) or _match_scene(candidate):
+        return False
     return not (_CHAR_CONTD.match(candidate) or _MORE_MARKER.match(candidate))
 
 
@@ -2918,13 +2923,17 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         return scenes
 
     def parse_script(self, file_content: bytes, file_type: str, filename: str,
-                     on_progress=None, cancel_event=None, mode: str = "full") -> Dict:
+                     on_progress=None, cancel_event=None, mode: str = "full",
+                     front_matter: Optional[str] = None) -> Dict:
         """
         Main entry point: parse a script file and extract all information.
 
         Args:
             on_progress: Optional callback(step_message: str) for real-time progress.
             mode: "quick" (regex + batch AI, 2-person only) or "full" (AI per chunk).
+            front_matter: the opening of the whole script, when the text being
+                parsed is only the picked part of it. The title page lives
+                there, so the details are read from it.
 
         Returns:
         {
@@ -2975,7 +2984,12 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
 
         check_cancelled()
         progress("Learning who the characters are")
-        metadata = self.extract_script_metadata(raw_text)
+        # A picked upload is one scene of the script. Read alone, the details
+        # came back as "EPISODE 6" by Unknown: the title page, with the name
+        # and the author on it, was never in the text the model saw.
+        metadata = self.extract_script_metadata(
+            f"{front_matter.strip()}\n\n{raw_text}" if front_matter else raw_text
+        )
         script_title = metadata.get("title", "")
         script_author = metadata.get("author", "")
         characters = metadata.get('characters', [])
@@ -3000,8 +3014,11 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
             # The model's own reading of who is in it is better than nothing
             # here, since the deterministic pass found no exchange at all.
             combined_meta = combined.get("metadata") or {}
+            # With the title page read, the script's own details stand; this
+            # pass only saw the picked part and should not rename the script.
+            keep = {"title", "author", "genre", "genres", "synopsis"} if front_matter else set()
             for key, value in combined_meta.items():
-                if value:
+                if value and not (key in keep and metadata.get(key)):
                     metadata[key] = value
             scenes = combined.get("scenes", [])
             script_title = metadata.get("title", "")
