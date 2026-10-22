@@ -160,3 +160,17 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** 50-year-old character actor returning after 15 years, free
 **They said:** "I did, thank you. I'm in a slow amp right now to just start building a monologue depository for myself. I'm not rushing, but rather trying to find the right material. I haven't visited the site in a few days but I truly appreciate the support."
 **Heard as:** happy, slow builder; got the automated follow-up while already in a personal thread
+
+## 2026-10-22
+
+**Replying to:** search results (thumbs down, web feedback)
+**Account:** app sign-in, private relay address
+**They said:** "Contemporary, emotional, grieving, loss, dry humour"
+**Heard as:** content gap, contemporary grief with comedy
+
+## 2026-10-22
+
+**Replying to:** search results (thumbs down, web feedback)
+**Account:** signed up 2026-10-22, hit the originality filter wall the same day
+**They said:** "I was hoping for something more recognizable in the highschool community"
+**Heard as:** content gap, pieces teens know (musicals, teen TV and film)
