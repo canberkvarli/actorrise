@@ -35,7 +35,9 @@ from app.services.character_names import normalize_name
 #      of it  (2026-09-02)
 #   6  EPISODE headings group a series script, scene words read past NINE, and
 #      a title page no longer arrives as a scene  (2026-10-22)
-PARSER_VERSION = 6
+#   7  a model reads every scene, grounded word for word against the page;
+#      NAME (note): cues, business paragraphs and dot leaders  (2026-10-23)
+PARSER_VERSION = 7
 
 
 # ---------------------------------------------------------------------------
@@ -58,6 +60,86 @@ _CHAR_ONLY = re.compile(r"^([A-Z][A-Z\s'\-]{0,30})[:.]?\s*$")
 _CHAR_WITH_DIRECTION = re.compile(
     r"^((?:A |THE )?[A-Z][A-Z'’\-]+(?: [A-Z][A-Z'’\-]+){0,2}), ([a-z][^\n]*)$"
 )
+
+# CHARACTER (direction): speech. How a Word document or a set of sides puts a
+# note on the cue: "MARK (continuing his act): “Then the other afternoon…”",
+# "JANE (beat): You kept it." The bracket sat between the name and the colon,
+# so no cue pattern matched and Mark's speech was read as the end of Esther's.
+_CHAR_PAREN_CUE = re.compile(
+    r"^((?:A |THE )?[A-Z][A-Z'’\-]+(?: [A-Z][A-Z'’\-]+){0,2})[ \t]*"
+    r"\(([^()\n]{1,80})\)[ \t]*[:.](?:[ \t]+(.*))?$"
+)
+
+# What a cue's bracket can say without it being a note to the actor.
+_CUE_EXTENSION = re.compile(r"^\s*(?:CONT'?[’']?D|CONTINUED|MORE)\s*$", re.IGNORECASE)
+
+# A note at the very head of a speech: "JANE: (quietly) I know."
+_LEADING_WRYLY = re.compile(r"^\(([^()]{1,60})\)\s+(?=\S)")
+
+# Words that put a sentence in somebody's mouth. A direction narrates; it
+# never says "I" or "you".
+_PERSONAL_WORDS = {
+    "i", "i'm", "i’m", "i've", "i’ve", "i'll", "i’ll", "i'd", "i’d", "me", "my",
+    "mine", "myself", "we", "we're", "we’re", "us", "our", "ours", "you",
+    "you're", "you’re", "your", "yours", "yourself", "you'll", "you’ll",
+}
+
+_NARRATIVE_MAX_WORDS = 30
+
+# A cue with the speech on the same line after a colon: "MARK: I nailed it",
+# "MARK (continuing his act): “Then…”". Two of them make a script written
+# that way.
+_INLINE_CUE = re.compile(
+    r"^[ \t]*([A-Z][A-Z'’\-]+(?: [A-Z][A-Z'’\-]+){0,2})(?:[ \t]*\([^()\n]*\))?[ \t]*:[ \t]+\S",
+    re.MULTILINE,
+)
+
+
+def _is_narrative_direction(text: str, cast) -> bool:
+    """A paragraph between speeches that tells us what happens, not what is said.
+
+    "Mark continues with his act." "They stop walking." "Esther is in the park
+    with Mark." A script that cues every speech on its own line (NAME: words)
+    still writes the business between speeches as a plain paragraph, and the
+    parser read each one as more of the last speaker's line: Mark ended up
+    saying "They stop walking."
+
+    The shape is narrow on purpose, because a speech that runs on past its cue
+    paragraph is just as common ("You know something Esther. Being you is a
+    dream." is Mark still talking). It has to be about one of the cast, or
+    "they", "he", "she", with a lowercase verb after the subject; it has to end
+    on a full stop; and it must never say "I", "me", "you" or "we". Somebody
+    talking does; a direction never does.
+    """
+    s = (text or "").strip()
+    if not s or s[0] in "\"“‘'(" or not s.endswith("."):
+        return False
+    if "?" in s or "!" in s:
+        return False
+    words = re.findall(r"[A-Za-z'’\-]+", s)
+    if not words or len(words) > _NARRATIVE_MAX_WORDS:
+        return False
+    if any(w.casefold() in _PERSONAL_WORDS for w in words):
+        return False
+    known = {n.strip().upper() for n in (cast or ()) if n and n.strip()}
+    if not known:
+        return False
+    if words[0].lower() == "the":
+        words = words[1:]
+    subject_found = False
+    for i, word in enumerate(words):
+        lowered = word.lower()
+        if lowered in ("and", "but"):
+            continue
+        if word[0].islower():
+            # The verb. A subject has to have come before it.
+            return subject_found and i > 0
+        if word.upper() in known or lowered in ("they", "he", "she", "both", "everyone"):
+            subject_found = True
+            continue
+        return False
+    return False
+
 
 # Words a direction can carry a capitalised name after: "to Robin",
 # "as Pyramus", "in Lysander's voice", "applying the nectar to Demetrius' eyes".
@@ -379,6 +461,18 @@ _CONTINUED_HEADER = re.compile(
 )
 _REVISION_MARK = re.compile(r"\s+\*+\s*$")
 
+# A row of dots run out to the margin: "ESTHER: I said no. …………………………" A Word
+# document draws its end-of-scene rule that way, and the parser handed the
+# rule to Esther as part of her line. Three ellipsis characters or six full
+# stops at the end of a line is a leader; one ellipsis is somebody trailing
+# off ("Buster died …") and stays. The sentence's own full stop stays too: the
+# run has to start after whitespace, at the head of the line, or after the
+# punctuation that closed the sentence.
+_DOT_LEADER = re.compile(
+    r"(?:^|[ \t]+|(?<=[.!?]))(?:(?:…[ \t]*){3,}|(?:\.[ \t]*){6,})[.…\t ]*$",
+    re.MULTILINE,
+)
+
 
 _PLACEHOLDER_TITLES = {"untitled script", "untitled", "unknown", "n/a", "none"}
 
@@ -447,13 +541,13 @@ def _title_from_filename(filename: str) -> str:
 
 
 def _strip_production_marks(text: str) -> str:
-    """Drop shooting-script page furniture and revision marks."""
+    """Drop shooting-script page furniture, revision marks and dot leaders."""
     kept = []
     for line in text.split("\n"):
         stripped = line.strip()
         if _REVISION_BANNER.match(stripped) or _CONTINUED_HEADER.match(stripped):
             continue
-        kept.append(_REVISION_MARK.sub("", line))
+        kept.append(_DOT_LEADER.sub("", _REVISION_MARK.sub("", line)))
     return "\n".join(kept)
 
 
@@ -664,11 +758,20 @@ def _split_cue_lines(text: str) -> str:
     names = _cue_names(text)
     if not names:
         return text
+    # A screenplay already puts every cue on a line of its own, in its own
+    # column, and its action introduces people in capitals: "Rain against the
+    # window. JUNE (40s) stirs a coffee". Split there, June's name became a
+    # cue in the middle of the action and the column reader lost it.
+    if _screenplay_columns(text):
+        return text
 
     pattern = "|".join(re.escape(n) for n in names)
-    # At the head of a line, followed by dialogue on the same line.
+    # At the head of a line, followed by dialogue on the same line. Not when
+    # a note sits on the cue, "MAYA (beat): You kept it.": broken there, the
+    # note became the first words of her line.
     text = re.sub(
-        rf"^[ \t]*({pattern})[ \t]+(?=\S)", r"\1\n", text, flags=re.MULTILINE
+        rf"^[ \t]*({pattern})[ \t]+(?=\S)(?!\([^()\n]*\)[ \t]*[:.])", r"\1\n", text,
+        flags=re.MULTILINE,
     )
     # Mid-line, once the previous sentence has closed.
     text = re.sub(
@@ -1208,6 +1311,23 @@ def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
     # anywhere, which is what keeps "Pyramus draws near the wall." a line.
     known_cast = set(_cue_names(text))
     known_cast.update(n.strip().upper() for n in (cast or ()) if n and n.strip())
+    # Directions that stood as their own paragraph, waiting for the line they
+    # come before. Unlike pending_direction, a new cue does not clear them:
+    # "They stop walking." belongs above Esther's next line, not lost in it.
+    standalone: List[str] = []
+    # Whether the speech in progress began on its cue line ("MARK: I nailed
+    # it"). Only a script written that way has paragraphs that can be told
+    # apart from speech by their shape; in a play whose cues stand alone, every
+    # paragraph under a cue is the speech.
+    inline_cued = False
+    inline_cues = [n.strip() for n in _INLINE_CUE.findall(text) if not _is_excluded(n)]
+    inline_script = len(inline_cues) >= 2
+    if inline_script:
+        # "MARK: I nailed it" names Mark as surely as a cue on its own line,
+        # and the direction test needs to know he is a person.
+        known_cast.update(inline_cues)
+    previous_blank = True
+    previous_closed = True
 
     def hang_direction(direction: str) -> None:
         """Keep a direction printed between lines: it rides on the speech before it."""
@@ -1235,11 +1355,20 @@ def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
         nonlocal pending_direction
         clean_text, stage_dir = _extract_stage_direction(text_content)
         if clean_text:
-            current_section["lines"].append({
+            line = {
                 "character": character,
                 "text": clean_text,
                 "stage_direction": stage_dir or pending_direction,
-            })
+            }
+            if standalone:
+                # The direction printed before this line rides on it, ahead of
+                # the line's own note, and keeps it from being merged into the
+                # speech above: the business happens between the two.
+                notes = standalone + ([line["stage_direction"]] if line["stage_direction"] else [])
+                line["stage_direction"] = "; ".join(notes)
+                line["_after_direction"] = True
+                standalone.clear()
+            current_section["lines"].append(line)
             pending_direction = None
         elif stage_dir:
             # A wryly on its own line: nothing spoken, but it still belongs to
@@ -1249,7 +1378,14 @@ def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
     for line in text.split('\n'):
         stripped = line.strip()
         if not stripped:
+            previous_blank = True
             continue
+        # A paragraph of its own: a blank line above it, or the line above
+        # finished its sentence. A PDF wraps a long speech mid-sentence, and
+        # the wrapped half must never be read as a paragraph.
+        new_paragraph = previous_blank or previous_closed
+        previous_blank = False
+        previous_closed = stripped[-1] in ".!?\"”’…)]"
         # Any marker that survived to here is not a direction; it was unwrapped
         # italic that belongs in the line. Never let one reach an actor.
         if _ITALIC_OPEN in stripped or _ITALIC_CLOSE in stripped:
@@ -1282,7 +1418,21 @@ def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
                 continue
             direction, speech = _split_direction(m.group(2), known_cast)
             start_speech(character)
+            inline_cued = False
             pending_direction = direction or None
+            if speech:
+                add_line(character, speech)
+            continue
+
+        # Try: CHARACTER (direction): speech
+        m = _CHAR_PAREN_CUE.match(stripped)
+        if m and not _is_excluded(m.group(1).strip()):
+            character = m.group(1).strip()
+            note = m.group(2).strip()
+            speech = (m.group(3) or "").strip()
+            start_speech(character)
+            inline_cued = bool(speech)
+            pending_direction = None if _CUE_EXTENSION.match(note) else note
             if speech:
                 add_line(character, speech)
             continue
@@ -1315,6 +1465,12 @@ def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
                 continue
 
             start_speech(character)
+            inline_cued = True
+            # "JANE: (quietly) I know." The note is the delivery, not words.
+            lead = _LEADING_WRYLY.match(dialogue_text)
+            if lead and _is_a_wryly(lead.group(1)):
+                pending_direction = lead.group(1).strip()
+                dialogue_text = dialogue_text[lead.end():]
             add_line(character, dialogue_text)
             continue
 
@@ -1327,6 +1483,15 @@ def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
                 continue
 
             start_speech(character)
+            inline_cued = False
+            continue
+
+        # A paragraph of business before anyone has spoken in a script that
+        # cues its speeches inline: "Esther is in the park with Mark." It used
+        # to be dropped; it rides on the first line instead.
+        if (not current_character and new_paragraph and inline_script
+                and _is_narrative_direction(stripped, known_cast)):
+            standalone.append(stripped)
             continue
 
         # Try: dialogue continuation (indented or sentence-case)
@@ -1336,6 +1501,12 @@ def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
             if _is_stage_direction_line(stripped, known_cast):
                 if not _PAGE_HEADER.match(stripped):
                     hang_direction(stripped.rstrip('.'))
+                continue
+            # Business written as its own paragraph between inline-cued
+            # speeches: "Mark continues with his act." It goes above the line
+            # that follows it, not on the end of the line before.
+            if inline_cued and new_paragraph and _is_narrative_direction(stripped, known_cast):
+                standalone.append(stripped)
                 continue
             # Skip screenplay action that narrates the characters (e.g.
             # "Rachel takes the camera out of her bag.") — not spoken dialogue.
@@ -1367,6 +1538,15 @@ def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
                 if trailing:
                     hang_direction(trailing)
 
+    # A direction after the last speech has no line to go above; it closes the
+    # scene on the last line instead of disappearing.
+    if standalone and current_section["lines"]:
+        last = current_section["lines"][-1]
+        last["stage_direction"] = "; ".join(
+            ([last["stage_direction"]] if last.get("stage_direction") else []) + standalone
+        )
+        standalone.clear()
+
     # Don't forget the last section
     if current_section["lines"]:
         sections.append(current_section)
@@ -1377,7 +1557,8 @@ def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
     for section in sections:
         merged = []
         for line in section["lines"]:
-            if merged and merged[-1]["character"] == line["character"]:
+            after_direction = line.pop("_after_direction", False)
+            if merged and merged[-1]["character"] == line["character"] and not after_direction:
                 merged[-1]["text"] += " " + line["text"]
                 # Keep the first stage direction if any
                 if line.get("stage_direction") and not merged[-1].get("stage_direction"):
@@ -1641,6 +1822,9 @@ def whole_scene(span, cast: Optional[List[str]] = None) -> Optional[Dict]:
             }
             for l in lines
         ],
+        # The span itself, for scene_reader to read against. Internal:
+        # parse_script takes it off before anything is stored.
+        "_source_text": span.text,
     }
 
 
@@ -2836,10 +3020,14 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
                              cancel_event=None) -> List[Dict]:
         """Cut a play on its own headings and keep every line of every scene.
 
-        One model call for the whole script, and it only writes the framing:
-        a title, a summary, a tone. Which lines a scene has, and who says them,
-        is read off the page.
+        The rule parser finds the scenes and makes a first attempt at each
+        one's lines. Then scene_reader has a model read every scene, and keeps
+        its reading only where every word of it is found on the page; a scene
+        it cannot ground keeps the rules' lines and is flagged. One more call
+        writes the framing: a title, a summary, a tone.
         """
+        from app.services.scene_reader import read_scenes
+
         def progress(msg):
             print(msg)
             if on_progress:
@@ -2849,6 +3037,13 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         spoken = sum(len(s["lines"]) for s in scenes)
         progress(f"Read {len(scenes)} scenes, {spoken} speeches, nothing skipped")
         if not scenes or (cancel_event and cancel_event.is_set()):
+            return scenes
+
+        progress("Reading each scene line by line")
+        scenes = read_scenes(
+            scenes, self.client, cancel_event=cancel_event, on_progress=on_progress
+        )
+        if cancel_event and cancel_event.is_set():
             return scenes
 
         progress("Naming the scenes")
