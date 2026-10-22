@@ -171,6 +171,13 @@ I'll set it up the same day"). Every educator whose comp ends within 10 days get
 check-in draft: the date it ends, "longer if you want it", and the students line. Logged
 like any other draft. Never a second chase.
 
+**A class link nobody has used** (Canberk, 2026-10-23). `scripts/class_link.py list` shows
+joins per link. A teacher who said yes and got a link 7 or more days ago, and whose link
+still says "nobody yet", gets ONE nudge draft on the thread where the link went: the link
+again as [LINK], and the line that it took one teacher's class a single period to get set
+up (about 20 students in one hour, 2026-10-22). No school or teacher named. Logged as
+`--kind chase`; it is their one chase.
+
 ## 4. What people said
 
 Append to `docs/metrics/user-voice.md`, newest at the bottom. Create it if it is missing.
