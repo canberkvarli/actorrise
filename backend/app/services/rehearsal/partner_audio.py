@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import queue
 import re
+import threading
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
@@ -266,3 +268,40 @@ def delete_row(db: Session, key: str) -> None:
                 logger.warning("could not remove %s: %s", row.storage_path, exc)
     db.delete(row)
     db.commit()
+
+
+# ── the worker ───────────────────────────────────────────────────────────────
+#
+# Lines are voiced by one thread, in the order asked for. With Gemini's
+# per-minute limit a fresh scene takes a couple of minutes to voice, and a
+# BackgroundTask per request would park a request-pool thread for each waiting
+# line, which is the pool every other route runs on.
+
+_jobs: "queue.Queue[tuple[list[str], dict[str, LineVoice]]]" = queue.Queue()
+_worker: threading.Thread | None = None
+_worker_lock = threading.Lock()
+
+
+def enqueue(keys: list[str], line_for: dict[str, LineVoice]) -> None:
+    """Voice these lines, soon, off the request. Safe to call twice for the
+    same key: a row is claimed before work and a ready row is skipped."""
+    global _worker
+    _jobs.put((list(keys), dict(line_for)))
+    with _worker_lock:
+        if _worker is None or not _worker.is_alive():
+            _worker = threading.Thread(target=_run, name="partner-audio", daemon=True)
+            _worker.start()
+
+
+def _run() -> None:
+    from app.core.database import SessionLocal
+
+    while True:
+        keys, line_for = _jobs.get()
+        db = SessionLocal()
+        try:
+            synthesise_pending(db, keys, line_for)
+        except Exception:  # noqa: BLE001  (one bad job must not stop the worker)
+            logger.exception("partner audio worker job failed")
+        finally:
+            db.close()

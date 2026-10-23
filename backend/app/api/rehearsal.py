@@ -5,6 +5,7 @@ and the next; see docs/superpowers/specs/2026-10-12-scenepartner-v2-design.md.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -14,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
 from app.core.config import settings
-from app.core.database import SessionLocal, get_db
+from app.core.database import get_db
 from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_scene_partner
 from app.models.actor import Scene, UserScript
@@ -28,6 +29,7 @@ from app.services.rehearsal.contract import RehearsalLine, lines_for, same_chara
 from app.services.rehearsal.delivery import MAX_DIRECTOR_NOTE, LineVoice, SceneVoicing, clean_note, scene_voicing
 from app.services.rehearsal.voices import VOICES, default_voices, voice_by_id
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/rehearsal", tags=["rehearsal"])
 
 # require_scene_partner is a factory. Build the gate once so a test can
@@ -70,12 +72,8 @@ def _audio_plan(lines: list[RehearsalLine], actor: str, voices: dict[str, str],
 
 
 def schedule_synthesis(keys: list[str], line_for: dict[str, LineVoice]) -> None:
-    """Runs in a BackgroundTask with its own session: the request is long gone."""
-    db = SessionLocal()
-    try:
-        partner_audio.synthesise_pending(db, keys, line_for)
-    finally:
-        db.close()
+    """Hand the lines to the partner-audio worker (one thread, rate limited)."""
+    partner_audio.enqueue(keys, line_for)
 
 
 def _wants_synthesis(row: PartnerAudio, now: datetime) -> bool:
@@ -162,6 +160,32 @@ def _voice_list() -> list[dict[str, Any]]:
     ]
 
 
+def _warm_first_part(db: Session, scene, lines, characters, defaults, voicing) -> None:
+    """Start voicing the usual pick's partner lines while the actor reads the
+    sides. Under Gemini's per-minute limit a fresh scene takes a minute or two
+    to voice; begun at Rehearse, the first partner line after the actor's
+    could still be in the queue, and the run sat silent. Never raises: the
+    preview must open whatever happens here."""
+    try:
+        first = scene.character_1_name if any(same_character(scene.character_1_name or "", c) for c in characters) else (characters[0] if characters else "")
+        plan = _audio_plan(lines, first, defaults.get(first, {}), voicing) if first else []
+        if not plan:
+            return
+        capped = partner_audio.over_cap(db)
+        line_for: dict[str, LineVoice] = {}
+        for _index, voice, spec in plan:
+            line_for[partner_audio.ensure_for(db, voice, spec, capped)] = spec
+        db.commit()
+        now = datetime.now(timezone.utc)
+        rows = db.query(PartnerAudio).filter(PartnerAudio.key.in_(list(line_for))).all()
+        missing = [r.key for r in rows if _wants_synthesis(r, now)]
+        if missing:
+            schedule_synthesis(missing, {k: line_for[k] for k in missing})
+    except Exception:  # noqa: BLE001
+        logger.exception("warming partner audio for scene %s failed", scene.id)
+        db.rollback()
+
+
 @router.get("/scenes/{scene_id}/voices")
 def get_scene_voices(scene_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """The voices and every part's default voice, without the audio. The
@@ -174,9 +198,11 @@ def get_scene_voices(scene_id: int, db: Session = Depends(get_db), user: User = 
     for line in lines:
         if not any(same_character(line.character, c) for c in characters):
             characters.append(line.character)
+    defaults = {c: default_voices(scene, lines, c, voicing.characters) for c in characters}
+    _warm_first_part(db, scene, lines, characters, defaults, voicing)
     return {
         "voices": _voice_list(),
-        "defaults": {c: default_voices(scene, lines, c, voicing.characters) for c in characters},
+        "defaults": defaults,
         "can_direct": can_direct_partner(db, user),
         "note_max": MAX_DIRECTOR_NOTE,
     }

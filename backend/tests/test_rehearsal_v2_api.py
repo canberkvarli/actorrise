@@ -107,7 +107,15 @@ class Api(unittest.TestCase):
         body = r.json()
         self.assertEqual(body["defaults"]["ANNA"]["BEN"], next(v["id"] for v in body["voices"] if v["gender"] == "male"))
         self.assertNotIn("audio", body)
-        self.assertEqual(self.db.query(PartnerAudio).count(), 0)
+
+    def test_the_preview_starts_voicing_the_usual_part(self):
+        """Gemini voices ten lines a minute, so a scene is queued while the
+        actor reads the sides, not when they press Rehearse."""
+        self.client.get(f"/api/rehearsal/scenes/{self.scene.id}/voices")
+        keys = [r.key for r in self.db.query(PartnerAudio).all()]
+        self.assertTrue(keys)
+        api.schedule_synthesis.assert_called_once()
+        self.assertEqual(sorted(api.schedule_synthesis.call_args.args[0]), sorted(keys))
 
     def _audio(self, **kw):
         body = {"scene_id": self.scene.id, "line_index": 0, "voice": "ash", **kw}

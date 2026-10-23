@@ -17,8 +17,11 @@ from __future__ import annotations
 
 import array
 import base64
+import collections
+import os
 import re
 import sys
+import threading
 import time
 
 import httpx
@@ -36,6 +39,35 @@ SILENCE_FLOOR = 200
 # breath are not clipped. Under a tenth of a second does not read as a gap.
 EDGE_PAD_SECONDS = 0.06
 RETRY_SECONDS = 2.0
+
+# Gemini TTS allows 10 requests a minute on the account's tier (the 429 says
+# so: "limit: 10 requests per minute on Tier 1"). A scene asks for all its
+# partner lines at once, so on 2026-10-23 the eleventh line of every fresh
+# scene failed and the run went silent after the actor's line. Calls now
+# queue for a slot, one under the limit, across the whole process.
+GEMINI_RPM = int(os.getenv("GEMINI_TTS_RPM", "9"))
+GEMINI_ATTEMPTS = 4
+_slots: collections.deque = collections.deque()
+_slot_lock = threading.Lock()
+
+
+def _wait_for_gemini_slot() -> None:
+    while True:
+        with _slot_lock:
+            now = time.monotonic()
+            while _slots and now - _slots[0] >= 60:
+                _slots.popleft()
+            if len(_slots) < GEMINI_RPM:
+                _slots.append(now)
+                return
+            wait = 60 - (now - _slots[0]) + 0.05
+        time.sleep(wait)
+
+
+def _retry_after(text: str) -> float:
+    """Seconds Gemini asks us to wait ("Please retry in 48s"), within reason."""
+    m = re.search(r"retry in ([0-9.]+)s", text or "")
+    return min(float(m.group(1)) + 1, 65.0) if m else 20.0
 
 
 def model_for(vendor: str) -> str:
@@ -113,18 +145,22 @@ def _gemini_pcm(voice: str, line: LineVoice) -> bytes:
         "response_format": {"type": "audio", "mime_type": "audio/l16"},
         "generation_config": {"speech_config": [{"voice": voice}]},
     }
-    # One quiet retry on a rate limit or a 5xx: on the first real run six of
-    # ten samples failed in a quick second pass (the error was not kept) and
-    # the same calls a minute later were fine. A line that fails twice is a
-    # failed row, retried by partner_audio's own clock (FAILED_RETRY).
-    for attempt in (1, 2):
+    # Every call waits for a slot under the per-minute limit. A 429 anyway
+    # (another process, a lower quota than we think) waits as long as Gemini
+    # says and tries again; a 5xx waits a moment. Only a line that fails every
+    # attempt becomes a failed row, retried later by partner_audio's own clock.
+    for attempt in range(1, GEMINI_ATTEMPTS + 1):
+        _wait_for_gemini_slot()
         res = httpx.post(
             "https://generativelanguage.googleapis.com/v1beta/interactions",
             headers={"x-goog-api-key": settings.gemini_api_key},
             json=body,
             timeout=90,
         )
-        if attempt == 1 and (res.status_code == 429 or res.status_code >= 500):
+        if attempt < GEMINI_ATTEMPTS and res.status_code == 429:
+            time.sleep(_retry_after(res.text))
+            continue
+        if attempt < GEMINI_ATTEMPTS and res.status_code >= 500:
             time.sleep(RETRY_SECONDS)
             continue
         break

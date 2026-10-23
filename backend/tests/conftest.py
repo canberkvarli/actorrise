@@ -39,3 +39,13 @@ def _scene_reader_stays_offline(monkeypatch):
     from app.services import scene_reader
 
     monkeypatch.setattr(scene_reader, "_call_model", _no_model_call)
+
+
+@pytest.fixture(autouse=True)
+def _gemini_never_sleeps(monkeypatch):
+    """The Gemini rate limiter and its retry waits are real seconds; a test
+    that fails a line on purpose would sit through a minute of them."""
+    from app.services.rehearsal import synth
+
+    monkeypatch.setattr(synth, "GEMINI_RPM", 10_000)
+    monkeypatch.setattr(synth.time, "sleep", lambda _s: None)
