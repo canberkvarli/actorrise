@@ -3017,7 +3017,7 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
 
     def extract_scenes_whole(self, spans, script_title: str = "",
                              script_author: str = "", on_progress=None,
-                             cancel_event=None) -> List[Dict]:
+                             cancel_event=None, reading_budget: Optional[int] = None) -> List[Dict]:
         """Cut a play on its own headings and keep every line of every scene.
 
         The rule parser finds the scenes and makes a first attempt at each
@@ -3041,7 +3041,8 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
 
         progress("Reading each scene line by line")
         scenes = read_scenes(
-            scenes, self.client, cancel_event=cancel_event, on_progress=on_progress
+            scenes, self.client, cancel_event=cancel_event, on_progress=on_progress,
+            budget=reading_budget,
         )
         if cancel_event and cancel_event.is_set():
             return scenes
@@ -3119,7 +3120,8 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
 
     def parse_script(self, file_content: bytes, file_type: str, filename: str,
                      on_progress=None, cancel_event=None, mode: str = "full",
-                     front_matter: Optional[str] = None) -> Dict:
+                     front_matter: Optional[str] = None,
+                     reading_budget: Optional[int] = None) -> Dict:
         """
         Main entry point: parse a script file and extract all information.
 
@@ -3195,7 +3197,8 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
             progress(f"Cutting on the script's own headings, {len(spans)} scenes")
         scenes = self.extract_scenes_whole(
             spans, script_title, script_author,
-            on_progress=on_progress, cancel_event=cancel_event
+            on_progress=on_progress, cancel_event=cancel_event,
+            reading_budget=reading_budget,
         )
         read_directly = bool(scenes)
 

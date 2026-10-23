@@ -629,7 +629,7 @@ def _rank_cast(lines: Sequence[Dict]) -> List[str]:
 
 def read_scenes(scenes: List[Dict], client, model: str = READER_MODEL,
                 workers: int = READER_WORKERS, cancel_event=None,
-                on_progress=None) -> List[Dict]:
+                on_progress=None, budget: Optional[int] = None) -> List[Dict]:
     """Read every scene that carries its source, side by side, and fold the result in.
 
     A scene comes from script_parser.whole_scene with its rule-parsed lines
@@ -641,9 +641,20 @@ def read_scenes(scenes: List[Dict], client, model: str = READER_MODEL,
     if not todo:
         return scenes
 
+    # `budget` is how many more scenes this account may have read this month
+    # (services/reading_budget). The ones past it keep the rule lines, flagged,
+    # without a call: the same outcome as a reading that could not be trusted.
+    over = set() if budget is None else {id(s) for s in todo[max(0, budget):]}
+
     def one(scene: Dict) -> Dict:
         if cancel_event is not None and cancel_event.is_set():
             return {"skip": True}
+        if id(scene) in over:
+            from app.services.reading_budget import LIMIT_PROBLEM
+            result = read_scene(scene["_source_text"], scene.get("lines") or [], None, model)
+            result["problems"] = [LIMIT_PROBLEM]
+            result["seconds"] = 0.0
+            return result
         started = time.monotonic()
         result = read_scene(scene["_source_text"], scene.get("lines") or [], client, model)
         result["seconds"] = round(time.monotonic() - started, 1)

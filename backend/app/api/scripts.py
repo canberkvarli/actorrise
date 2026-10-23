@@ -33,11 +33,25 @@ from app.models.actor import (
 from app.services.docx_text import SUPPORTED_EXTS, UNSUPPORTED_MESSAGE, normalize_upload
 from app.services.script_tags import normalize_tag_list
 from app.services.script_additions import apply_genres, clean_genres
+from app.services.reading_budget import LIMIT_PROBLEM, reading_budget, tell_founder_once
 from app.models.user import User
 from app.services.character_names import canonicalize_scene_characters
 from app.services.script_parser import PARSER_VERSION, ScriptParser
 
 router = APIRouter(prefix="/api/scripts", tags=["scripts"])
+
+
+def _note_reading_cap(result, user_id) -> None:
+    """Tell the founder, once a month, when an account's scenes went past its
+    reading budget and were built by the rules instead. See reading_budget."""
+    scenes = (result or {}).get("scenes") or []
+    over = sum(
+        1 for s in scenes
+        if LIMIT_PROBLEM in ((s.get("reading") or {}).get("problems") or [])
+    )
+    if over and user_id:
+        tell_founder_once(user_id, over)
+
 
 
 # ============================================================================
@@ -584,6 +598,7 @@ async def upload_script_stream(
 
     filename = file.filename
     user_id = current_user.id  # capture before closing db
+    budget = reading_budget(db, user_id)  # also before the db goes
     progress_queue: Queue = Queue()
     import threading
     cancel_event = threading.Event()
@@ -644,8 +659,9 @@ async def upload_script_stream(
                     extraction_result["data"] = parser.parse_script(
                         file_content, file_ext, filename,
                         on_progress=on_progress, cancel_event=cancel_event,
-                        mode=extraction_mode,
+                        mode=extraction_mode, reading_budget=budget,
                     )
+                    _note_reading_cap(extraction_result["data"], user_id)
                 except InterruptedError:
                     extraction_error["msg"] = "cancelled"
                 except Exception as e:
@@ -2492,11 +2508,13 @@ def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
     with _EXTRACTION_CANCELS_LOCK:
         _EXTRACTION_CANCELS[script_id] = cancel_event
     try:
+        owner = db.query(UserScript.user_id).filter(UserScript.id == script_id).scalar()
         parser = ScriptParser()
         result = parser.parse_script(
             file_content, file_ext, filename, mode=mode, cancel_event=cancel_event,
-            front_matter=front_matter,
+            front_matter=front_matter, reading_budget=reading_budget(db, owner),
         )
+        _note_reading_cap(result, owner)
 
         script = db.query(UserScript).filter(UserScript.id == script_id).first()
         if not script:
@@ -3084,10 +3102,13 @@ def _add_scenes_in_background(script_id: int, text_to_build: str, filename: str,
     with _EXTRACTION_CANCELS_LOCK:
         _EXTRACTION_CANCELS[script_id] = cancel_event
     try:
+        owner = db.query(UserScript.user_id).filter(UserScript.id == script_id).scalar()
         parser = ScriptParser()
         result = parser.parse_script(
-            text_to_build.encode("utf-8"), "txt", filename, mode="full", cancel_event=cancel_event
+            text_to_build.encode("utf-8"), "txt", filename, mode="full", cancel_event=cancel_event,
+            reading_budget=reading_budget(db, owner),
         )
+        _note_reading_cap(result, owner)
         script = db.query(UserScript).filter(UserScript.id == script_id).first()
         if not script or cancel_event.is_set():
             return
