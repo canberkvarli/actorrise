@@ -34,12 +34,18 @@ export function VoicePicker({
   value,
   onChange,
   sampleFor,
+  scopeClassName = "",
 }: {
   character: string;
   voices: PickerVoice[];
   value: string | undefined;
   onChange: (voiceId: string) => void;
   sampleFor: (voice: PickerVoice) => string;
+  /** The list opens in a portal at the end of <body>, outside the page's
+      theatre wrapper, where none of the --t-* tokens are defined: it rendered
+      with no background and the script showed through. The page passes its
+      own token classes so the list wears them too. */
+  scopeClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [playing, setPlaying] = useState<string | null>(null);
@@ -86,7 +92,7 @@ export function VoicePicker({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="t-voicelist w-[min(320px,calc(100vw-2rem))] p-1.5"
+        className={`t-voicelist ${scopeClassName} w-[min(320px,calc(100vw-2rem))] p-1.5`}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <p className="t-voicelist__head">Who reads {character}</p>

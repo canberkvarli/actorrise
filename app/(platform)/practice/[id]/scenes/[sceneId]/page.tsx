@@ -415,6 +415,7 @@ export default function ScenePreviewPage() {
                           value={voiceId}
                           onChange={(id) => chooseVoice(name, id)}
                           sampleFor={(v) => v.sample ?? voiceSample(v.id)}
+                          scopeClassName={`theatre-monologue theatre-tokens ${theatreFontVars}`}
                         />
                         <button
                           type="button"
