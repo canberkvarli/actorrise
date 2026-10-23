@@ -11283,3 +11283,83 @@ label:hover > .aud-check[data-on="false"] {
     transition: none;
   }
 }
+
+/* The voice picker on the scene preview (components/scenepartner/VoicePicker).
+   The pill keeps .t-prev__voice's size and border; it is a button now, so the
+   chevron is an icon rather than a background, and the name stays whole while
+   the description gives way. */
+.t-prev__voicebtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-image: none;
+  padding: 0 12px 0 14px;
+  text-align: left;
+  font-family: var(--t-body);
+}
+.t-prev__voicename { font-weight: 600; white-space: nowrap; flex: none; }
+.t-prev__voicesound {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--t-muted-light);
+}
+.t-prev__voicechev { width: 14px; height: 14px; flex: none; margin-left: auto; color: var(--t-muted-light); }
+.t-voicelist {
+  background: var(--t-paper-2);
+  border-color: var(--t-line-light);
+  color: var(--t-text);
+}
+.t-voicelist__head {
+  margin: 4px 8px 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t-muted-light);
+}
+.t-voicelist__group {
+  margin: 8px 8px 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t-faint);
+}
+.t-voicelist__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+}
+.t-voicelist__row:hover,
+.t-voicelist__row[data-on="true"] { background: color-mix(in oklab, var(--t-text) 8%, transparent); }
+.t-voicelist__pick {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 7px 8px;
+  text-align: left;
+  min-height: 44px;
+}
+.t-voicelist__name { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+.t-voicelist__sound { font-size: 12px; color: var(--t-muted-light); }
+.t-voicelist__play {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 4px;
+  border-radius: 999px;
+  border: 1.5px dashed var(--t-line-light);
+  color: var(--t-muted-light);
+}
+.t-voicelist__play[data-on="true"] { border-style: solid; color: var(--t-text); }
+.t-voicelist__pick:focus-visible,
+.t-voicelist__play:focus-visible { outline: 2px solid var(--t-gel-ink); outline-offset: 1px; }
+.t-voicelist { font-family: var(--t-body); }

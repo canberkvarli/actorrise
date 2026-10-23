@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { castPalette, castColorVars } from "@/lib/castColors";
 import { VoiceMark } from "@/components/scenepartner/VoiceMark";
+import { VoicePicker } from "@/components/scenepartner/VoicePicker";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { motion, useReducedMotion } from "framer-motion";
@@ -408,18 +409,13 @@ export default function ScenePreviewPage() {
                           </span>
                           <span className="t-prev__them">{name}</span>
                         </span>
-                        <select
-                          aria-label={`Voice for ${name}`}
-                          className="t-prev__voice"
+                        <VoicePicker
+                          character={name}
+                          voices={voiceList}
                           value={voiceId}
-                          onChange={(e) => chooseVoice(name, e.target.value)}
-                        >
-                          {voiceList.map((voice) => (
-                            <option key={voice.id} value={voice.id}>
-                              {voice.label}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(id) => chooseVoice(name, id)}
+                          sampleFor={(v) => v.sample ?? voiceSample(v.id)}
+                        />
                         <button
                           type="button"
                           onClick={() => audition(name)}
