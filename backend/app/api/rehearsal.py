@@ -193,6 +193,16 @@ class AudioFor(BaseModel):
     note: str | None = Field(default=None, max_length=1000)
 
 
+def _known_voices(scene, lines, actor: str, chosen: dict, db: Session) -> dict:
+    """The part defaults, with the actor's choices laid over them where the
+    choice is still a voice we have. A run opened before the partner moved to
+    Gemini carries OpenAI ids, and so does a browser that remembers them; those
+    fall back to the default rather than failing the run."""
+    voices = default_voices(scene, lines, actor, _voicing(db, scene, lines).characters)
+    voices.update({c: v for c, v in (chosen or {}).items() if voice_by_id(v) is not None})
+    return voices
+
+
 @router.post("/audio")
 def audio_for_line(
     req: AudioFor,
@@ -204,17 +214,21 @@ def audio_for_line(
     switch, with a note, or for a part other than character 1. Queues
     synthesis if missing."""
     scene, _ = _load_scene(db, req.scene_id, user)
-    if voice_by_id(req.voice) is None:
-        raise HTTPException(status_code=422, detail="Unknown voice")
     lines = lines_for(db, scene.id)
     if not 0 <= req.line_index < len(lines):
         raise HTTPException(status_code=404, detail="No such line")
     line = lines[req.line_index]
+    voice = req.voice
+    if voice_by_id(voice) is None:
+        # A voice from before the vendor changed ("ash", "coral"), kept in the
+        # browser or on an open run. Refusing it stopped the whole run on
+        # "A partner line could not load"; the part's own default is better.
+        voice = _known_voices(scene, lines, "", {}, db).get(line.character) or VOICES[0].id
     note = clean_note(req.note)
     if note and not can_direct_partner(db, user):
         note = ""
     spec = _voicing(db, scene, lines).line_voice(line, note)
-    key = partner_audio.ensure_for(db, req.voice, spec, partner_audio.over_cap(db))
+    key = partner_audio.ensure_for(db, voice, spec, partner_audio.over_cap(db))
     db.commit()
     row = db.get(PartnerAudio, key)
     if row.status == "ready" and row.storage_path:
@@ -259,10 +273,7 @@ def start_run(
     lines = lines_for(db, scene.id)
     if not any(same_character(l.character, req.character) for l in lines):
         raise HTTPException(status_code=422, detail="That character has no lines in this scene")
-    for c, v in req.voices.items():
-        if voice_by_id(v) is None:
-            raise HTTPException(status_code=422, detail=f"Unknown voice for {c}")
-    voices = {**default_voices(scene, lines, req.character, _voicing(db, scene, lines).characters), **req.voices}
+    voices = _known_voices(scene, lines, req.character, req.voices, db)
     run = journal.create_run(db, user.id, scene.id, req.character, voices, is_guided=False)
     return {"run_id": run.id, "voices": voices}
 
@@ -305,8 +316,10 @@ def resume_run(
     run = journal.db_run(db, run_id)
     if run is None or run.user_id != user.id or journal.is_closed(db, run_id) or not journal.in_resume_window(run):
         raise HTTPException(status_code=404, detail="Run not found")
+    scene, _ = _load_scene(db, run.scene_id, user)
+    voices = _known_voices(scene, lines_for(db, scene.id), run.character, run.voices or {}, db)
     return {
-        "run_id": run.id, "scene_id": run.scene_id, "character": run.character, "voices": run.voices or {},
+        "run_id": run.id, "scene_id": run.scene_id, "character": run.character, "voices": voices,
         "line_index": journal.furthest_line(db, run_id) or 0,
     }
 
