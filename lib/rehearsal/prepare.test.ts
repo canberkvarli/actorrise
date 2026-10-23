@@ -71,6 +71,18 @@ describe('planPartnerAudio', () => {
     expect(plan.map(s => [s.lineIndex, s.voice, s.source])).toEqual([[1, 'v-anna', null], [2, 'v-carl', null], [3, 'v-anna', null]]);
   });
 
+  it('asks per line, with the note, for a part the actor directed (Plus)', () => {
+    const p = payload(lines, { audio, can_direct: true });
+    const plan = planPartnerAudio(p, buildScript(lines, 'ANNA'), { BEN: 'v-ben', CARL: 'v-carl' }, { ben: ' meaner ' });
+    expect(plan.map(s => [s.lineIndex, s.note, s.source])).toEqual([[0, 'meaner', null], [2, undefined, { key: 'k2', url: null }]]);
+  });
+
+  it('sends no note when the payload says the actor may not direct', () => {
+    const p = payload(lines, { audio, can_direct: false });
+    const plan = planPartnerAudio(p, buildScript(lines, 'ANNA'), { BEN: 'v-ben', CARL: 'v-carl' }, { BEN: 'meaner' });
+    expect(plan[0]).toEqual({ lineIndex: 0, character: 'BEN', voice: 'v-ben', source: { key: 'k0', url: 'u0' } });
+  });
+
   it('falls back to the first voice when nothing names one', () => {
     const p = payload(lines, { defaults: {} });
     const plan = planPartnerAudio(p, buildScript(lines, 'ANNA'), {});

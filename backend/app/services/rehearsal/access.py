@@ -49,3 +49,24 @@ def assert_can_rehearse(db, user, scene, script=None) -> None:
             "upgrade_url": "/pricing",
         }
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+
+
+# The actor's own note on a partner part ("make him meaner") is Plus.
+# A tier says so by an explicit `partner_direction` feature when it has one
+# (a UserBenefitOverride can grant or revoke it like any other); otherwise by
+# the thing every tier from Plus up shares, unlimited ScenePartner runs. That
+# keeps the rule out of a hard-coded list of tier names and needs no change to
+# the live pricing table.
+PARTNER_DIRECTION_FEATURE = "partner_direction"
+
+
+def can_direct_partner(db, user) -> bool:
+    from app.core.config import settings
+
+    emails = [e.strip().lower() for e in (settings.superuser_emails or "").split(",") if e.strip()]
+    if user.email and user.email.lower() in emails:
+        return True
+    benefits = get_effective_benefits(db, user.id, _subscription(db, user.id))
+    if PARTNER_DIRECTION_FEATURE in benefits:
+        return bool(benefits[PARTNER_DIRECTION_FEATURE])
+    return benefits.get("scene_partner_sessions") == -1

@@ -54,8 +54,19 @@ class Settings:
     # OpenAI (script parsing, scene partner, embeddings)
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
     elevenlabs_api_key: str | None = os.getenv("ELEVENLABS_API_KEY")
-    # "openai" (gpt-4o-mini-tts) or "elevenlabs". Decided by scripts/bench_tts.py.
-    partner_tts_vendor: str = os.getenv("PARTNER_TTS_VENDOR", "openai")
+    gemini_api_key: str | None = os.getenv("GEMINI_API_KEY")
+    inworld_api_key: str | None = os.getenv("INWORLD_API_KEY")
+    # Who voices the partner: "gemini", "openai" or "elevenlabs". Gemini won by
+    # ear on 2026-10-23 (and gpt-4o-mini-tts is shut down on 2027-01-06), so it
+    # is the default wherever its key is set. A deploy without GEMINI_API_KEY
+    # keeps the vendor it had. PARTNER_TTS_VENDOR, when set, overrides both.
+    partner_tts_vendor: str = os.getenv("PARTNER_TTS_VENDOR") or ("gemini" if os.getenv("GEMINI_API_KEY") else "openai")
+    # The Gemini TTS model is one setting. Part of every cache key, so changing
+    # it re-voices each line the next time it is played, never in bulk.
+    partner_tts_model: str = os.getenv("PARTNER_TTS_MODEL", "gemini-3.8-flash-tts")
+    # The monthly spending guard: characters Gemini may voice per calendar
+    # month (about $0.03 a minute). Past it, new lines go to Inworld.
+    partner_tts_monthly_chars: int = int(os.getenv("PARTNER_TTS_MONTHLY_CHARS", "300000") or 300000)
     partner_audio_bucket: str = os.getenv("PARTNER_AUDIO_BUCKET", "partner-lines")
 
 

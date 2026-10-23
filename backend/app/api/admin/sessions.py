@@ -5,13 +5,13 @@ from typing import Any, Optional
 
 from app.api.admin.stats import require_moderator
 from app.api.rehearsal import schedule_synthesis
-from app.core.config import settings
 from app.core.database import get_db
 from app.models.actor import Play, RehearsalLineDelivery, RehearsalSession, Scene
 from app.models.user import User
 from app.services.admin_filters import test_user_filter
 from app.services.rehearsal import partner_audio
 from app.services.rehearsal.contract import lines_for
+from app.services.rehearsal.delivery import scene_voicing
 from app.services.rehearsal.voices import voice_by_id
 from app.services.rehearsal_cleanup import TIMED_OUT_STATUS, UNFINISHED_STATUSES
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -469,9 +469,14 @@ def regenerate_partner_audio(
     if not 0 <= req.line_index < len(lines):
         raise HTTPException(status_code=404, detail="No such line")
     line = lines[req.line_index]
-    key = partner_audio.audio_key(settings.partner_tts_vendor, req.voice, line.direction, line.text)
+    # The line as the run voices it (with its acting and delivery notes) and
+    # by the vendor it would get now, so the row thrown away is the one actors
+    # hear. An actor's own Plus note is per actor and is not regenerated here.
+    spec = scene_voicing(db, scene, lines, enrich=False).line_voice(line)
+    vendor = partner_audio.vendor_for(db, req.voice, spec, partner_audio.over_cap(db))
+    key = partner_audio.audio_key(vendor, req.voice, spec)
     partner_audio.delete_row(db, key)
-    partner_audio.ensure(db, settings.partner_tts_vendor, req.voice, line.direction, line.text)
+    partner_audio.ensure(db, vendor, req.voice, spec)
     db.commit()
-    background.add_task(schedule_synthesis, [key], {key: (line.text, line.direction)})
+    background.add_task(schedule_synthesis, [key], {key: spec})
     return {"key": key}

@@ -17,11 +17,16 @@ from app.models.actor import FilmTvReference, Play, Scene, SceneLine, UserScript
 from app.models.organization import Organization
 from app.models.rehearsal import PartnerAudio, RehearsalEvent, RehearsalRun
 from app.models.user import User
-from app.services.rehearsal import journal, partner_audio
+from app.services.rehearsal import delivery, journal, partner_audio
+from app.services.rehearsal import voices as voices_mod
+from app.services.rehearsal.delivery import LineVoice
 from tests.dbfixture import memory_db, restore
 
 # FilmTvReference is here only because plays.film_tv_reference_id points at it
 # and SQLite will not create plays without the target table.
+# BEN's line as the API voices it in these tests: no reading, no notes.
+BEN_LINE = LineVoice(text="Where were you?", character="BEN")
+
 _TABLES = (Organization, User, FilmTvReference, Play, UserScript, Scene, SceneLine, RehearsalRun, RehearsalEvent, PartnerAudio)
 
 
@@ -60,6 +65,14 @@ class Api(unittest.TestCase):
         self.patches = [
             mock.patch.object(api, "assert_can_rehearse"),
             mock.patch.object(api, "schedule_synthesis"),
+            # Pinned to OpenAI's four voices whatever the laptop's .env says
+            # (a GEMINI_API_KEY there makes Gemini the default vendor), and no
+            # model is ever asked for acting notes.
+            mock.patch.object(settings, "partner_tts_vendor", "openai"),
+            mock.patch.object(voices_mod, "VOICES", voices_mod._OPENAI),
+            mock.patch.object(delivery, "_enrich", return_value=None),
+            mock.patch.object(api, "VOICES", voices_mod._OPENAI),
+            mock.patch.object(api, "can_direct_partner", return_value=False),
             mock.patch.object(api, "record_user_event"),
             mock.patch.object(partner_audio, "signed_url", side_effect=lambda p: f"https://signed/{p}"),
             mock.patch.object(partner_audio, "signed_urls", side_effect=lambda ps: {p: f"https://signed/{p}" for p in ps}),
@@ -81,6 +94,43 @@ class Api(unittest.TestCase):
         self.assertEqual(body["audio"]["0"], {"key": mock.ANY, "url": None})
         self.assertIsNone(body["resume"])
 
+    def test_scene_payload_says_whether_the_actor_may_direct(self):
+        body = self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()
+        self.assertFalse(body["can_direct"])
+        self.assertEqual(body["note_max"], 120)
+        with mock.patch.object(api, "can_direct_partner", return_value=True):
+            self.assertTrue(self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()["can_direct"])
+
+    def test_voices_endpoint_gives_the_runs_defaults_without_audio(self):
+        r = self.client.get(f"/api/rehearsal/scenes/{self.scene.id}/voices")
+        self.assertEqual(r.status_code, 200, r.text)
+        body = r.json()
+        self.assertEqual(body["defaults"]["ANNA"]["BEN"], next(v["id"] for v in body["voices"] if v["gender"] == "male"))
+        self.assertNotIn("audio", body)
+        self.assertEqual(self.db.query(PartnerAudio).count(), 0)
+
+    def _audio(self, **kw):
+        body = {"scene_id": self.scene.id, "line_index": 0, "voice": "ash", **kw}
+        return self.client.post("/api/rehearsal/audio", json=body)
+
+    def test_a_free_actors_note_is_dropped_on_the_server(self):
+        # Under Gemini, where a note would change the key.
+        with mock.patch.object(settings, "partner_tts_vendor", "gemini"):
+            plain = self._audio().json()["key"]
+            self.assertEqual(self._audio(note="make him meaner").json()["key"], plain)
+        self.assertEqual(api.schedule_synthesis.call_args.args[1][plain].note, "")
+
+    def test_a_plus_actors_note_is_its_own_line(self):
+        with mock.patch.object(api, "can_direct_partner", return_value=True), \
+             mock.patch.object(settings, "partner_tts_vendor", "gemini"):
+            plain = self._audio().json()["key"]
+            noted = self._audio(note="make him meaner").json()["key"]
+            again = self._audio(note="  make him   meaner ").json()["key"]
+        self.assertNotEqual(noted, plain)
+        self.assertEqual(noted, again)  # whitespace is not a different note
+        spec = api.schedule_synthesis.call_args.args[1][noted]
+        self.assertEqual(spec.note, "make him meaner")
+
     def test_scene_open_signs_every_ready_line_in_one_call(self):
         # A third line so BEN has two partner lines for ANNA's pick (character
         # 1 is ANNA, so the audio slots are BEN's lines).
@@ -101,7 +151,7 @@ class Api(unittest.TestCase):
         partner_audio.signed_url.assert_not_called()
 
     def test_audio_endpoint_202_then_200(self):
-        key = partner_audio.ensure(self.db, "openai", "ash", None, "Where were you?")
+        key = partner_audio.ensure(self.db, "openai", "ash", BEN_LINE)
         self.db.commit()
         self.assertEqual(self.client.get(f"/api/rehearsal/audio/{key}").status_code, 202)
         row = self.db.get(PartnerAudio, key); row.status = "ready"; row.storage_path = "ab/x.mp3"; self.db.commit()
@@ -219,7 +269,7 @@ class Api(unittest.TestCase):
         self.assertEqual((r.status_code, r.json()["line_index"]), (200, 0))
 
     def _failed(self, age: timedelta) -> str:
-        key = partner_audio.ensure(self.db, settings.partner_tts_vendor, "ash", None, "Where were you?")
+        key = partner_audio.ensure(self.db, "openai", "ash", BEN_LINE)
         row = self.db.get(PartnerAudio, key)
         row.status = "failed"; row.error = "boom"; row.claimed_at = datetime.now(timezone.utc) - age
         self.db.commit()
@@ -238,11 +288,11 @@ class Api(unittest.TestCase):
         key = self._failed(age)
         body = self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()
         self.assertEqual(body["audio"]["0"], {"key": key, "url": None})
-        api.schedule_synthesis.assert_called_once_with([key], {key: ("Where were you?", None)})
+        api.schedule_synthesis.assert_called_once_with([key], {key: BEN_LINE})
         api.schedule_synthesis.reset_mock()
         r = self.client.post("/api/rehearsal/audio", json={"scene_id": self.scene.id, "line_index": 0, "voice": "ash"})
         self.assertEqual((r.status_code, r.json()["url"]), (200, None))
-        api.schedule_synthesis.assert_called_once_with([key], {key: ("Where were you?", None)})
+        api.schedule_synthesis.assert_called_once_with([key], {key: BEN_LINE})
 
     def test_failed_audio_is_queued_again_after_ten_minutes(self):
         self._retries(timedelta(minutes=10))

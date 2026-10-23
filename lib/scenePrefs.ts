@@ -39,16 +39,30 @@ export function voiceById(id: string | null | undefined): Voice {
 }
 
 /**
- * The voices a rehearsal reads with: backend/app/services/rehearsal/voices.py,
- * the `voices` on GET /api/rehearsal/scenes/{id}. A saved id outside this list
- * is ignored by `initialVoices`, so the preview offers exactly these.
+ * The voices a rehearsal reads with: backend/app/services/rehearsal/voices.py
+ * (`_GEMINI`), the `voices` on GET /api/rehearsal/scenes/{id}. Only a
+ * fallback: the preview casts from GET /api/rehearsal/scenes/{id}/voices,
+ * which is the server's own list and defaults. A saved id outside the list
+ * is ignored by `initialVoices`, so an old OpenAI pick ("coral") quietly
+ * becomes the server's default.
  */
 export const REHEARSAL_VOICES = [
-  { id: "coral", label: "Coral", gender: "female" },
-  { id: "ash", label: "Ash", gender: "male" },
-  { id: "sage", label: "Sage", gender: "female" },
-  { id: "echo", label: "Echo", gender: "male" },
+  { id: "Leda", label: "Leda · youthful, bright, 20s", gender: "female" },
+  { id: "Aoede", label: "Aoede · breezy, easy, 30s", gender: "female" },
+  { id: "Sulafat", label: "Sulafat · warm, kind, 30s", gender: "female" },
+  { id: "Kore", label: "Kore · firm, direct, 40s", gender: "female" },
+  { id: "Gacrux", label: "Gacrux · mature, assured, 50s+", gender: "female" },
+  { id: "Fenrir", label: "Fenrir · eager, excitable, 20s", gender: "male" },
+  { id: "Puck", label: "Puck · upbeat, playful, 30s", gender: "male" },
+  { id: "Achird", label: "Achird · friendly, warm, 30s", gender: "male" },
+  { id: "Charon", label: "Charon · steady, low, 40s", gender: "male" },
+  { id: "Algenib", label: "Algenib · gravelly, weathered, 50s+", gender: "male" },
 ] as const;
+
+/** The few seconds of a voice the ▶ plays: made once by backend/scripts/make_voice_samples.py. */
+export function voiceSample(voiceId: string): string {
+  return `/voices/${voiceId.toLowerCase()}.mp3`;
+}
 
 export type RehearsalVoiceId = (typeof REHEARSAL_VOICES)[number]["id"];
 
@@ -103,6 +117,42 @@ export function setCharacterVoices(sceneId: number, voices: CharacterVoices): vo
     localStorage.setItem(VOICE_KEY, JSON.stringify(all));
   } catch {
     /* private mode — the server's defaults still give everyone a voice */
+  }
+}
+
+/**
+ * The actor's own note for a partner part ("make him meaner"), per scene and
+ * character, beside the voices and in the same shape. A Plus feature: the
+ * server drops a note from anyone else (services/rehearsal/access
+ * can_direct_partner), so a note kept here after a plan lapses is harmless.
+ */
+export type CharacterNotes = Record<string, string>;
+
+const NOTE_KEY = "scene_partner_notes_v1";
+
+export function getCharacterNotes(sceneId: number): CharacterNotes {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(NOTE_KEY);
+    if (!raw) return {};
+    const all = JSON.parse(raw) as Record<string, CharacterNotes>;
+    const mine = all[String(sceneId)] ?? {};
+    return Object.fromEntries(Object.entries(mine).filter(([, v]) => typeof v === "string" && v.trim() !== ""));
+  } catch {
+    return {};
+  }
+}
+
+export function setCharacterNote(sceneId: number, character: string, note: string): void {
+  try {
+    const raw = localStorage.getItem(NOTE_KEY);
+    const all = raw ? (JSON.parse(raw) as Record<string, CharacterNotes>) : {};
+    const mine = { ...(all[String(sceneId)] ?? {}) };
+    if (note.trim()) mine[character] = note; else delete mine[character];
+    all[String(sceneId)] = mine;
+    localStorage.setItem(NOTE_KEY, JSON.stringify(all));
+  } catch {
+    /* private mode: the run is voiced without the note */
   }
 }
 

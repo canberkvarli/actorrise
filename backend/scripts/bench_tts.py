@@ -18,6 +18,7 @@ from pathlib import Path
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
+from app.services.rehearsal.delivery import LineVoice  # noqa: E402
 from app.services.rehearsal.synth import synthesize  # noqa: E402
 
 LINES = [
@@ -36,7 +37,7 @@ LINES = [
     ]), None),
 ]
 
-VOICES = {"openai": "coral", "elevenlabs": "Rachel"}
+VOICES = {"gemini": "Kore", "inworld": "Kore", "openai": "coral", "elevenlabs": "Rachel"}
 
 out = backend_dir.parent / "outputs" / "bench_tts"
 out.mkdir(parents=True, exist_ok=True)
@@ -45,7 +46,7 @@ for vendor, voice in VOICES.items():
     for name, text, direction in LINES:
         t0 = time.perf_counter()
         try:
-            audio = synthesize(vendor, voice, text, direction)
+            audio = synthesize(vendor, voice, LineVoice(text=text, delivery=direction or ""))
         except Exception as exc:  # noqa: BLE001
             print(f"{vendor:10} {name:9} FAILED {exc}")
             continue

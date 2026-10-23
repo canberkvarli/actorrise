@@ -435,3 +435,39 @@ def send_trial_ended_notification(
     except Exception as e:
         print(f"Error sending trial-ended notification: {e}")
         return {"id": "error", "status": "failed"}
+
+
+def send_partner_tts_cap_notification(month: str, used: int, cap: int, fallback: Optional[str]) -> dict:
+    """The partner voice hit its monthly cap. Fire-and-forget, never raises.
+
+    Sent once a month at most (partner_audio._mail_cap_once claims the month
+    in app_settings first). Plain HTML, no template: it is one line to the
+    founder, not a letter to an actor.
+    """
+    if not os.getenv("RESEND_API_KEY"):
+        print("Warning: RESEND_API_KEY not set. Partner TTS cap notification disabled.")
+        return {"id": "mock_partner_tts_cap_id", "status": "disabled"}
+
+    try:
+        from html import escape
+
+        client = ResendEmailClient()
+        then = (
+            f"New partner lines go to {escape(fallback)} until the 1st. Lines already saved keep their Gemini voice."
+            if fallback
+            else "INWORLD_API_KEY is not set, so Gemini carries on past the cap. Set it on Render, or raise PARTNER_TTS_MONTHLY_CHARS."
+        )
+        html = (
+            f"<p>The ScenePartner voice reached its cap for {escape(month)}: "
+            f"{used:,} of {cap:,} characters voiced by Gemini.</p>"
+            f"<p>{then}</p>"
+            "<p>The cap is PARTNER_TTS_MONTHLY_CHARS on Render (about $0.03 a minute of audio).</p>"
+        )
+        return client.send_email(
+            to="canberk@actorrise.com",
+            subject=f"Partner voice hit its {month} cap",
+            html=html,
+        )
+    except Exception as e:
+        print(f"Error sending partner TTS cap notification: {e}")
+        return {"id": "error", "status": "failed"}

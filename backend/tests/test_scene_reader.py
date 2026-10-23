@@ -362,5 +362,28 @@ class EveryUploadIsRead(unittest.TestCase):
         self.assertEqual(scene["lines"][-1]["text"], "I said no.")
 
 
+class ActingNotes(unittest.TestCase):
+    """The reader writes an acting note per line. It is the model's own words,
+    so the grounding check must not look for it in the source."""
+
+    def test_the_schema_asks_for_one_on_every_item(self):
+        item = scene_reader.SCHEMA["schema"]["properties"]["items"]["items"]
+        self.assertIn("acting", item["required"])
+        self.assertIn("acting", item["properties"])
+        self.assertIn("acting is your own note", scene_reader.SYSTEM_PROMPT)
+
+    def test_a_note_that_is_not_in_the_source_does_not_fail_the_reading(self):
+        source = "MARK: Hello there.\nESTHER: No."
+        items = [
+            {"kind": "line", "character": "MARK", "text": "Hello there.", "delivery": "",
+             "acting": "hopeful, overdoing the charm"},
+            {"kind": "line", "character": "ESTHER", "text": "No.", "delivery": "", "acting": "flat, final"},
+        ]
+        self.assertEqual(scene_reader.check_reading(source, items), [])
+        self.assertEqual([l["text"] for l in scene_reader.items_to_lines(items)], ["Hello there.", "No."])
+        self.assertNotIn("acting", scene_reader.items_to_lines(items)[0])
+        self.assertEqual(scene_reader.items_to_voice_notes(items)[1]["acting"], "flat, final")
+
+
 if __name__ == "__main__":
     unittest.main()

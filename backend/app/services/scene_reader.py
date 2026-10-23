@@ -10,8 +10,10 @@ row of dots under the last line went to Esther with her "I said no."
 So a model now reads every scene. It gets the scene's own text, and the rule
 parser's attempt as a hint, and returns the scene as an ordered list of items:
 a spoken line (who, the words, and any delivery note on the cue), or a
-direction. It also writes a short reading of each character for the voice
-work that comes later.
+direction. It also writes a short reading of each character, and a few words
+of acting note on every spoken line ("teasing and affectionate, light"), for
+the partner's voice (services/rehearsal/delivery). The notes are the model's
+own words and are never checked against the page; the lines are.
 
 A model can retype, and an actor rehearsing words that are not in their script
 is the one failure that cannot be shrugged off. So nothing it returns is taken
@@ -80,12 +82,16 @@ SCHEMA = {
                 "items": {
                     "type": "object",
                     "additionalProperties": False,
-                    "required": ["kind", "character", "text", "delivery"],
+                    "required": ["kind", "character", "text", "delivery", "acting"],
                     "properties": {
                         "kind": {"type": "string", "enum": ["line", "direction"]},
                         "character": {"type": "string"},
                         "text": {"type": "string"},
                         "delivery": {"type": "string"},
+                        # The reader's own note on how to play the line, for
+                        # the partner's voice. Not source words, so the
+                        # grounding check never looks at it.
+                        "acting": {"type": "string"},
                     },
                 },
             },
@@ -123,7 +129,8 @@ Rules:
 5. A paragraph with no cue is either a direction or more of the same speech. If it narrates what someone does ("They stop walking.", "Mark continues with his act.") it is a direction. If it is the last speaker still talking (it says I or you, it answers, it carries on a routine or a quotation) it joins that speaker's line. A speech runs from its cue to the next cue or the next direction.
 6. A paragraph of action is one direction item, whole, with every word in it, including the names it mentions ("JUNE (40s) stirs a coffee." keeps JUNE and the (40s)). Never split a paragraph into several directions.
 7. Leave out headings (act, scene and episode numbers, sluglines such as INT. KITCHEN - NIGHT), page numbers, and rows of dots or rules. Leave out nothing else: every spoken sentence and every direction appears in exactly one item.
-8. A line's text is only the words spoken: no cue, and no bracketed note. A direction item has character "" and delivery "".
+8. A line's text is only the words spoken: no cue, and no bracketed note. A direction item has character "", delivery "" and acting "".
+9. acting is your own note on how the line is played, for the actor who will voice it: 3 to 12 words of playable direction, such as "teasing and affectionate, light" or "suddenly gentle and sincere, the joke gone". It is a note, never words from the line, and it never changes the text. Read it from what the character wants and what has just happened.
 
 Also return characters: one entry for each character who speaks, a short reading for the actor who will voice them, from this scene only. gender is female, male, nonbinary or unknown. age_range is like "30s" or "teens", "" if the scene gives no sign. relationship is who they are to the others here. wants is what they want in this scene. temperament is a few words. Use "" for anything the scene does not show."""
 
@@ -459,6 +466,40 @@ def items_to_lines(items: Sequence[Dict]) -> List[Dict]:
     line (unless the second has a note of its own), and directions printed
     back to back are one direction, the way the page sets them.
     """
+    return [
+        {"character": l["character"], "text": l["text"], "stage_direction": l["stage_direction"]}
+        for l in _grouped(items)
+    ]
+
+
+def items_to_voice_notes(items: Sequence[Dict]) -> List[Dict]:
+    """The same lines as items_to_lines, with what the partner's voice may use.
+
+    stage_direction on a scene line is two things glued together: business
+    printed above the line ("They stop walking.") and the delivery note on
+    its cue ("continuing his act"). The screen shows both. Only the second is
+    about how the words are said, and a direction handed to a TTS model is
+    read as an instruction to perform it, so the voice needs them apart. The
+    items still have them apart, and this keeps them so: {"character",
+    "text", "delivery", "acting"}, one per line, in the same grouping, so the
+    nth entry here is the nth line items_to_lines makes.
+
+    `acting` is present only when the reading carried acting notes (readings
+    from before 2026-10-23 do not), so a caller can tell "the reader wrote no
+    note" from "nobody asked the reader".
+    """
+    out = []
+    for l in _grouped(items):
+        entry = {"character": l["character"], "text": l["text"], "delivery": l["delivery"]}
+        if l["acting"] is not None:
+            entry["acting"] = l["acting"]
+        out.append(entry)
+    return out
+
+
+def _grouped(items: Sequence[Dict]) -> List[Dict]:
+    """items_to_lines' work, keeping the delivery note and acting note apart
+    from the directions that ride on stage_direction."""
     lines: List[Dict] = []
     waiting: List[str] = []
     for item in items:
@@ -474,8 +515,11 @@ def items_to_lines(items: Sequence[Dict]) -> List[Dict]:
         delivery = _SPACE.sub(" ", _strip_brackets(item.get("delivery") or "")).strip()
         if _CUE_EXTENSIONS.match(delivery):
             delivery = ""  # "(CONT'D)" says the speech goes on; it is no note to the actor
+        acting = _SPACE.sub(" ", item["acting"]).strip() if isinstance(item.get("acting"), str) else None
         if lines and not waiting and not delivery and lines[-1]["character"] == character:
             lines[-1]["text"] += " " + text
+            if not lines[-1]["acting"] and acting:
+                lines[-1]["acting"] = acting
             continue
         notes = [_join_directions(waiting)] if waiting else []
         if delivery:
@@ -485,6 +529,8 @@ def items_to_lines(items: Sequence[Dict]) -> List[Dict]:
             "character": character,
             "text": text,
             "stage_direction": "; ".join(notes) or None,
+            "delivery": delivery,
+            "acting": acting,
         })
     if waiting and lines:
         last = lines[-1]
@@ -516,6 +562,9 @@ def lines_to_items(lines: Sequence[Dict]) -> List[Dict]:
             "text": l.get("text") or "",
             "delivery": l.get("stage_direction") or "",
         }
+        # No "acting": the rules wrote no notes. And this "delivery" is the
+        # whole stage_direction, business included, so it is never handed to
+        # a voice (services/rehearsal/delivery ignores a flagged reading).
         for l in lines
     ]
 

@@ -1,12 +1,181 @@
-"""One function, two vendors. Quality per line is what is being bought; latency
-is not, because every line is synthesised ahead of time and cached."""
+"""One function, four vendors. Quality per line is what is being bought;
+latency is not, because every line is synthesised ahead of time and cached.
+
+Gemini is the partner since 2026-10-23: Canberk listened to every vendor and
+it won by ear. It is sent the line, verbatim, with its direction as a style
+(services/rehearsal/delivery.gemini_style), answers with raw 24 kHz 16-bit
+mono PCM, and is billed per audio token, about
+25 a second. So the PCM is trimmed of the digital silence Gemini has been
+seen to pad either end with (it is paid for and it is dead air before the
+partner's cue) and encoded to MP3, because as WAV a line is about ten times
+the size and the partner-lines bucket is on a tight quota.
+
+Inworld is the stand-in past the monthly cap (partner_audio.vendor_for).
+OpenAI and ElevenLabs stay for a deploy without a Gemini key.
+"""
 from __future__ import annotations
 
+import array
+import base64
 import re
+import sys
+import time
 
 import httpx
 
 from app.core.config import settings
+from app.services.rehearsal.delivery import LineVoice, gemini_style, tagged_text
+
+GEMINI_RATE = 24_000  # Hz, mono, signed 16-bit little-endian
+INWORLD_MODEL = "inworld-tts-2"
+OPENAI_MODEL = "gpt-4o-mini-tts"
+# A sample this quiet or quieter is silence. 16-bit full scale is 32767; 200
+# is -44 dBFS, below a breath and well above the dither of a "silent" pad.
+SILENCE_FLOOR = 200
+# Kept either side of the voice, so a consonant's attack and a trailing
+# breath are not clipped. Under a tenth of a second does not read as a gap.
+EDGE_PAD_SECONDS = 0.06
+RETRY_SECONDS = 2.0
+
+
+def model_for(vendor: str) -> str:
+    """The model a vendor speaks with. Part of every cache key."""
+    return {
+        "gemini": settings.partner_tts_model,
+        "inworld": INWORLD_MODEL,
+        "openai": OPENAI_MODEL,
+        "elevenlabs": "eleven_v3",
+    }.get(vendor, "")
+
+
+# ── audio ────────────────────────────────────────────────────────────────────
+
+def _samples(pcm: bytes) -> array.array:
+    a = array.array("h")
+    a.frombytes(pcm[: len(pcm) - (len(pcm) % 2)])
+    if sys.byteorder != "little":
+        a.byteswap()
+    return a
+
+
+def trim_silence(pcm: bytes, rate: int = GEMINI_RATE, floor: int = SILENCE_FLOOR,
+                 pad_seconds: float = EDGE_PAD_SECONDS) -> bytes:
+    """16-bit mono PCM without the silence at either end, keeping `pad_seconds`
+    of it. All silence (or nothing) comes back empty: there is no line in it."""
+    a = _samples(pcm)
+    n = len(a)
+    start = next((i for i in range(n) if abs(a[i]) > floor), None)
+    if start is None:
+        return b""
+    end = next(i for i in range(n - 1, -1, -1) if abs(a[i]) > floor)
+    pad = int(rate * pad_seconds)
+    lo, hi = max(0, start - pad), min(n, end + 1 + pad)
+    out = a[lo:hi]
+    if sys.byteorder != "little":
+        out.byteswap()
+    return out.tobytes()
+
+
+def pcm_to_mp3(pcm: bytes, rate: int = GEMINI_RATE, kbps: int = 64) -> bytes:
+    """Mono MP3. 64 kbit/s is plenty for one voice and about a tenth of the
+    PCM (384 kbit/s at 24 kHz)."""
+    import lameenc
+
+    enc = lameenc.Encoder()
+    enc.set_bit_rate(kbps)
+    enc.set_in_sample_rate(rate)
+    enc.set_channels(1)
+    enc.set_quality(2)  # 2 is near-best; the encode is milliseconds either way
+    return bytes(enc.encode(pcm) + enc.flush())
+
+
+# ── vendors ──────────────────────────────────────────────────────────────────
+
+def _gemini_pcm(voice: str, line: LineVoice) -> bytes:
+    """Raw PCM for one line, through the Interactions API.
+
+    Gemini 3.8 TTS reads its text field as a verbatim transcript: the prose
+    prompt in the original sample ("You are Mark, ... Say the line ...")
+    was spoken aloud, all twenty seconds of it, on 2026-10-23. Direction
+    goes in the turn's speech_metadata.style instead, and the text is the
+    line and nothing else. audio/l16 asks for headerless PCM; the unary
+    default is a WAV whose RIFF header would otherwise be read as samples.
+    """
+    if not settings.gemini_api_key:
+        raise ValueError("GEMINI_API_KEY is not set")
+    content: dict = {"type": "text", "text": line.text.strip()}
+    style = gemini_style(line)
+    if style:
+        content["annotations"] = [{"type": "speech_metadata", "style": style}]
+    body = {
+        "model": settings.partner_tts_model,
+        "input": [{"type": "user_input", "content": [content]}],
+        "response_format": {"type": "audio", "mime_type": "audio/l16"},
+        "generation_config": {"speech_config": [{"voice": voice}]},
+    }
+    # One quiet retry on a rate limit or a 5xx: on the first real run six of
+    # ten samples failed in a quick second pass (the error was not kept) and
+    # the same calls a minute later were fine. A line that fails twice is a
+    # failed row, retried by partner_audio's own clock (FAILED_RETRY).
+    for attempt in (1, 2):
+        res = httpx.post(
+            "https://generativelanguage.googleapis.com/v1beta/interactions",
+            headers={"x-goog-api-key": settings.gemini_api_key},
+            json=body,
+            timeout=90,
+        )
+        if attempt == 1 and (res.status_code == 429 or res.status_code >= 500):
+            time.sleep(RETRY_SECONDS)
+            continue
+        break
+    if res.status_code != 200:
+        raise RuntimeError(f"Gemini {res.status_code}: {res.text[:200]}")
+    try:
+        audio = [
+            c for step in res.json().get("steps") or [] if step.get("type") == "model_output"
+            for c in step.get("content") or [] if c.get("type") == "audio"
+        ][-1]
+    except (IndexError, AttributeError, TypeError, ValueError):
+        raise RuntimeError(f"Gemini returned no audio: {res.text[:200]}")
+    rate = audio.get("sample_rate") or GEMINI_RATE
+    if int(rate) != GEMINI_RATE or "l16" not in (audio.get("mime_type") or "audio/l16"):
+        raise RuntimeError(f"Gemini audio is {audio.get('mime_type')} at {rate} Hz, expected L16 at {GEMINI_RATE}")
+    return base64.b64decode(audio["data"])
+
+
+def _gemini(voice: str, line: LineVoice) -> bytes:
+    pcm = trim_silence(_gemini_pcm(voice, line))
+    if not pcm:
+        raise RuntimeError("Gemini returned silence")
+    return pcm_to_mp3(pcm)
+
+
+def _inworld(voice: str, line: LineVoice) -> bytes:
+    """`voice` is the Gemini voice the part was cast with; Inworld reads it
+    with that voice's stand-in (voices.Voice.stand_in)."""
+    from app.services.rehearsal.voices import _GEMINI
+
+    if not settings.inworld_api_key:
+        raise ValueError("INWORLD_API_KEY is not set")
+    match = next((v for v in _GEMINI if v.id == voice), None)
+    stand_in = match.stand_in if match else voice
+    res = httpx.post(
+        "https://api.inworld.ai/tts/v1/voice",
+        headers={"Authorization": f"Basic {settings.inworld_api_key}"},
+        json={
+            "text": tagged_text(line),
+            "voiceId": stand_in,
+            "modelId": INWORLD_MODEL,
+            "audioConfig": {"audioEncoding": "MP3"},
+        },
+        timeout=60,
+    )
+    if res.status_code != 200:
+        raise RuntimeError(f"Inworld {res.status_code}: {res.text[:200]}")
+    try:
+        return base64.b64decode(res.json()["audioContent"])
+    except (KeyError, TypeError, ValueError):
+        raise RuntimeError(f"Inworld returned no audio: {res.text[:200]}")
 
 
 def _clean_direction(direction: str | None) -> str:
@@ -20,22 +189,20 @@ def _openai_tts():
     return TTSService()
 
 
-def _openai(voice: str, text: str, direction: str | None) -> bytes:
-    d = _clean_direction(direction)
+def _openai(voice: str, line: LineVoice) -> bytes:
+    d = ", ".join(x for x in (_clean_direction(line.acting), _clean_direction(line.delivery)) if x)
     instructions = f"Deliver this line {d}." if d else ""
-    return _openai_tts().synthesize_speech(text, voice=voice, instructions=instructions, response_format="mp3")
+    return _openai_tts().synthesize_speech(line.text, voice=voice, instructions=instructions, response_format="mp3")
 
 
-def _elevenlabs(voice: str, text: str, direction: str | None) -> bytes:
+def _elevenlabs(voice: str, line: LineVoice) -> bytes:
     if not settings.elevenlabs_api_key:
         raise ValueError("ELEVENLABS_API_KEY is not set")
-    d = _clean_direction(direction)
-    spoken = f"[{d}] {text}" if d else text
     res = httpx.post(
         f"https://api.elevenlabs.io/v1/text-to-speech/{voice}",
         params={"output_format": "mp3_44100_64"},
         headers={"xi-api-key": settings.elevenlabs_api_key},
-        json={"text": spoken, "model_id": "eleven_v3"},
+        json={"text": tagged_text(line), "model_id": "eleven_v3"},
         timeout=60,
     )
     if res.status_code != 200:
@@ -43,9 +210,14 @@ def _elevenlabs(voice: str, text: str, direction: str | None) -> bytes:
     return res.content
 
 
-def synthesize(vendor: str, voice: str, text: str, direction: str | None) -> bytes:
+def synthesize(vendor: str, voice: str, line: LineVoice) -> bytes:
+    """MP3 bytes for one line."""
+    if vendor == "gemini":
+        return _gemini(voice, line)
+    if vendor == "inworld":
+        return _inworld(voice, line)
     if vendor == "openai":
-        return _openai(voice, text, direction)
+        return _openai(voice, line)
     if vendor == "elevenlabs":
-        return _elevenlabs(voice, text, direction)
+        return _elevenlabs(voice, line)
     raise ValueError(f"unknown TTS vendor {vendor!r}")
