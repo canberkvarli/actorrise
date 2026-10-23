@@ -50,3 +50,20 @@ def test_a_429_is_waited_out_and_tried_again():
         assert synth._gemini_pcm("Aoede", line) == b"\x00\x00\x00"
     slept.assert_any_call(4.0)
     synth._slots.clear()
+
+
+def test_a_daily_limit_is_not_waited_out():
+    class Res:
+        status_code = 429
+        text = "limit: 100 requests per day on Tier 1). Please retry in 16h2m1s"
+
+    calls = []
+    line = mock.Mock(text="Stop it.")
+    with mock.patch.object(synth.settings, "gemini_api_key", "k"), \
+         mock.patch.object(synth, "gemini_style", lambda _l: ""), \
+         mock.patch.object(synth.httpx, "post", side_effect=lambda *a, **k: calls.append(1) or Res()):
+        try:
+            synth._gemini_pcm("Aoede", line)
+        except RuntimeError as e:
+            assert "429" in str(e)
+    assert len(calls) == 1

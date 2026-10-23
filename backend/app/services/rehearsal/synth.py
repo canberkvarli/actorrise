@@ -157,7 +157,10 @@ def _gemini_pcm(voice: str, line: LineVoice) -> bytes:
             json=body,
             timeout=90,
         )
-        if attempt < GEMINI_ATTEMPTS and res.status_code == 429:
+        # A per-DAY limit ("limit: 100 requests per day", "retry in 16h…") will
+        # not lift in a minute; waiting it out held the one voicing worker for
+        # minutes per line while every other line queued behind it.
+        if attempt < GEMINI_ATTEMPTS and res.status_code == 429 and "per day" not in res.text:
             time.sleep(_retry_after(res.text))
             continue
         if attempt < GEMINI_ATTEMPTS and res.status_code >= 500:
