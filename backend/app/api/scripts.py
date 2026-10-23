@@ -30,7 +30,7 @@ from app.models.actor import (
     ScriptTagVote,
     UserScript,
 )
-from app.services.docx_text import SUPPORTED_EXTS, UNSUPPORTED_MESSAGE, normalize_upload
+from app.services.docx_text import normalize_upload
 from app.services.script_tags import normalize_tag_list
 from app.services.script_additions import apply_genres, clean_genres
 from app.models.user import User
@@ -227,8 +227,6 @@ async def scan_script(
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
-    if file.filename.rsplit(".", 1)[-1].lower() not in SUPPORTED_EXTS:
-        raise HTTPException(status_code=400, detail=UNSUPPORTED_MESSAGE)
 
     file_content = await file.read()
     if len(file_content) > 10 * 1024 * 1024:
@@ -343,8 +341,6 @@ async def upload_script(
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
-    if file.filename.rsplit(".", 1)[-1].lower() not in SUPPORTED_EXTS:
-        raise HTTPException(status_code=400, detail=UNSUPPORTED_MESSAGE)
 
     # Read file content
     file_content = await file.read()
@@ -566,8 +562,6 @@ async def upload_script_stream(
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
-    if file.filename.rsplit(".", 1)[-1].lower() not in SUPPORTED_EXTS:
-        raise HTTPException(status_code=400, detail=UNSUPPORTED_MESSAGE)
 
     file_content = await file.read()
     file_size = len(file_content)
@@ -2679,8 +2673,6 @@ async def upload_script_background(
     """
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
-    if file.filename.rsplit(".", 1)[-1].lower() not in SUPPORTED_EXTS:
-        raise HTTPException(status_code=400, detail=UNSUPPORTED_MESSAGE)
 
     file_content = await file.read()
     file_size = len(file_content)
@@ -2952,8 +2944,8 @@ def _owned_script(db: Session, script_id: int, user: User) -> UserScript:
 
 
 async def _read_upload(file: UploadFile) -> tuple:
-    if not file.filename or file.filename.rsplit(".", 1)[-1].lower() not in SUPPORTED_EXTS:
-        raise HTTPException(status_code=400, detail=UNSUPPORTED_MESSAGE)
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
     content = await file.read()
     if len(content) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
