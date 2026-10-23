@@ -18,8 +18,11 @@ describe('skipsCurtain', () => {
     expect(skipsCurtain(cast, ['HAMLET'], go)).toBeNull();
   });
 
-  it('shows the Curtain with a run to pick up, and on a guided run', () => {
-    expect(skipsCurtain(cast, ['ANNA'], { ...go, resume: true })).toBeNull();
+  it('picks a run up straight on the Stage, with its saved part', () => {
+    expect(skipsCurtain(cast, ['ANNA'], { ...go, resume: true })).toBe('ANNA');
+  });
+
+  it('shows the Curtain on a guided run', () => {
     expect(skipsCurtain(cast, ['ANNA'], { ...go, guided: true })).toBeNull();
   });
 });

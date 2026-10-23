@@ -34,7 +34,7 @@ const failure = () => plainError('other');
  * guided run (the first scene; the server picks the part). The run prepares on
  * mount and begins by itself once it can, when the audio context runs; on iOS
  * it waits for one tap anywhere, which is the gesture that unlocks it. No saved
- * part, or a run to pick up, and it is the Curtain; so is the Plus gate
+ * part and it is the Curtain; so is the Plus gate
  * (lib/rehearsal/entry decides).
  */
 export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload; guided: boolean; go: boolean }) {
@@ -79,7 +79,9 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
     if (!goPart || goPrepared.current) return;
     goPrepared.current = true;
     const voices = partnerVoices(payload.characters, goPart, initialVoices(payload, getCharacterVoices(payload.scene.id)));
-    prepare(goPart, voices).catch(() => { setChosen(null); setPrepError(failure()); });
+    // A run to pick up carries on from where its journal stopped, unmetered.
+    const pickUp = payload.resume ? { resumeRunId: payload.resume.run_id, resumeLine: payload.resume.line_index } : undefined;
+    prepare(goPart, voices, pickUp).catch(() => { setChosen(null); setPrepError(failure()); });
   }, [goPart, prepare, payload]);
 
   // Go: begin by itself where audio may start. Where it may not (iOS), the
