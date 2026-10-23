@@ -18,7 +18,7 @@ from app.core.database import SessionLocal, get_db
 from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_scene_partner
 from app.models.actor import Scene, UserScript
-from app.models.rehearsal import PartnerAudio
+from app.models.rehearsal import PartnerAudio, RehearsalRun
 from app.models.user import User
 from app.services.events import record_user_event
 from app.services.guided_scene import GUIDED_ACTOR, guided_scene
@@ -281,6 +281,34 @@ async def append_events(
         if run is not None and run.is_guided:
             record_user_event(user.id, "guided_scene_finished", {"lines_heard": journal.furthest_line(db, run_id)})
     return Response(status_code=204)
+
+
+@router.get("/latest")
+def latest_run(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """The scene the actor left unfinished most recently, with enough to draw
+    the pick-up card: the title, the part, who reads the others, how far in.
+    Null when every recent run is finished, which is the common case."""
+    found = journal.latest_resumable(db, user.id)
+    if not found:
+        return None
+    run = db.query(RehearsalRun).filter(RehearsalRun.id == found["run_id"]).first()
+    scene = db.query(Scene).filter(Scene.id == found["scene_id"]).first()
+    if run is None or scene is None:
+        return None
+    lines = lines_for(db, scene.id)
+    labels = {v.id: v.label for v in VOICES}
+    partners = [{"character": c, "voice": labels.get(v, v)} for c, v in (run.voices or {}).items()]
+    return {
+        "run_id": run.id,
+        "scene_id": scene.id,
+        "title": scene.title,
+        "play_title": scene.play.title if scene.play else None,
+        "character": run.character,
+        "partners": partners,
+        "line_index": found["line_index"],
+        "line_count": len(lines),
+        "is_guided": run.is_guided,
+    }
 
 
 @router.get("/runs")
