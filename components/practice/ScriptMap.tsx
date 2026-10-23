@@ -3,7 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { IconArrowRight, IconFileSearch, IconLoader2, IconX } from "@tabler/icons-react";
+import { IconArrowRight, IconChevronDown, IconFileSearch, IconLoader2, IconX } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { entrance } from "@/lib/motion";
@@ -75,6 +75,11 @@ export function ScriptMap({
      comes back with them in it, instead of springing back to an empty box. */
   const [building, setBuilding] = useState<Set<number>>(() => new Set());
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  /* Episodes the actor opened or closed by hand. Untouched, an episode is
+     open when it has a built scene (or, with nothing built yet, the first
+     one is): a 49-scene series laid out flat was a very long page to scroll
+     past to reach the one scene you work on. */
+  const [actOpen, setActOpen] = useState<Map<string, boolean>>(() => new Map());
 
   // Only while the script is being read: once it is done the map has the new
   // scenes in it as built rows, and the marks have served.
@@ -128,19 +133,38 @@ export function ScriptMap({
         </p>
       )}
 
-      <div className="space-y-8">
-        {groups.map((group, gi) => (
-          <div key={group.act ?? `g${gi}`}>
+      <div className={showHeadings ? "space-y-5" : undefined}>
+        {groups.map((group, gi) => {
+          const actKey = group.act ?? `g${gi}`;
+          const anyBuilt = totalBuilt > 0;
+          const touched = group.rows.some(
+            (r) => r.kind === "open" && (picked.has(r.scan.index) || showBuilding.has(r.scan.index)),
+          );
+          const open = !showHeadings
+            || (actOpen.get(actKey) ?? (group.builtCount > 0 || touched || (!anyBuilt && gi === 0)));
+          return (
+          <div key={actKey}>
             {showHeadings && (
-              <div className="t-map__act">
-                <h3 className="t-map__act-name">{group.act ?? "Scenes"}</h3>
+              <button
+                type="button"
+                className="t-map__act t-map__act--toggle"
+                aria-expanded={open}
+                onClick={() => setActOpen((m) => new Map(m).set(actKey, !open))}
+              >
+                <IconChevronDown
+                  className="t-map__act-chev h-3.5 w-3.5 shrink-0"
+                  data-open={open}
+                  aria-hidden
+                />
+                <span className="t-map__act-name">{group.act ?? "Scenes"}</span>
                 {ready && (
                   <span className="t-map__act-count">
                     {group.builtCount} of {group.rows.length} built
                   </span>
                 )}
-              </div>
+              </button>
             )}
+            {open && (
             <ol className="space-y-1.5">
               {group.rows.map((row, ri) => {
                 const index = drawn++;
@@ -179,8 +203,10 @@ export function ScriptMap({
                 );
               })}
             </ol>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {canManage && mapLoading && !map && <MapLoading />}

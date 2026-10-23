@@ -11363,3 +11363,18 @@ label:hover > .aud-check[data-on="false"] {
 .t-voicelist__pick:focus-visible,
 .t-voicelist__play:focus-visible { outline: 2px solid var(--t-gel-ink); outline-offset: 1px; }
 .t-voicelist { font-family: var(--t-body); }
+
+/* Episode headings fold their scenes away (ScriptMap). The heading is the
+   button: full width, so the whole rule is a target, not just the words. */
+.t-map__act--toggle {
+  width: 100%;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  color: inherit;
+}
+.t-map__act--toggle:focus-visible { outline: 2px solid var(--t-gel-ink); outline-offset: 3px; }
+.t-map__act-chev { transition: transform 160ms ease-out; transform: rotate(-90deg); opacity: 0.7; }
+.t-map__act-chev[data-open="true"] { transform: rotate(0deg); }
+@media (prefers-reduced-motion: reduce) { .t-map__act-chev { transition: none; } }
