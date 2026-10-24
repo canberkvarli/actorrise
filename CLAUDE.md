@@ -184,8 +184,9 @@ school>`) and send it in the reply: every student who signs up through
 actorrise.com/join/<code> is on the student month by themselves, no addresses
 to collect. A teacher who already has comped Plus gets their link in the
 follow-up or check-in. The FIRST email to a teacher still carries no link: it
-offers Plus and asks for a reply. The Gmail connector wraps URLs, so drafts say
-[LINK] and Canberk pastes the link. `class_link.py list` shows who joined.
+offers Plus and asks for a reply. The Gmail connector wraps URLs, so the link is
+written out and highlighted instead, `<span style="background-color:#fff2a8;font-weight:bold;padding:2px 4px">actorrise<span>.</span>com/join/<code></span>` (Canberk, 2026-10-25: he does not want to
+paste them by hand). It reads as text, not a link. `class_link.py list` shows who joined.
 Ticking "student" at signup gives nobody anything, on purpose.
 
 Frame it as a gift, not a discount ("I don't run a discount, I just give it to you free"). This replaces any "reply CURTAIN" language for educator/student contexts. Prefer it over the trial whenever the audience is educators or students.

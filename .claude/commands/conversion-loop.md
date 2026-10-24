@@ -103,8 +103,13 @@ first person singular, no dashes of any kind, no "we", signed `Canberk`, no emoj
 Create each as a Gmail draft:
 
 - `htmlBody` only. Never `body`.
-- No URL of any kind. Write the domain as `actorrise<span>.</span>com`. If a link is needed,
-  write `[LINK]` and put the link in your summary.
+- No URL of any kind. Write the domain as `actorrise<span>.</span>com`.
+- A class link goes in written out and highlighted, never as [LINK] (Canberk, 2026-10-25:
+  "add those links and highlight them, I don't wanna do it by hand"):
+  `<span style="background-color:#fff2a8;font-weight:bold;padding:2px 4px">actorrise<span>.</span>com/join/<code></span>`. The span keeps Gmail from wrapping it (checked 2026-10-25: an `<a href>` is
+  still wrapped, inline style survives). The teacher reads and types it; it is not clickable.
+- Any other link (the Stripe link after CURTAIN) stays `[LINK]`, with the full link in your
+  summary: it is too long to type, so Canberk pastes it as a real link.
 - A reply goes on its thread. A new email does not.
 
 **A reply that names a price** (a membership, a sponsorship, an ad) gets a warm, plain no.
@@ -174,7 +179,7 @@ like any other draft. Never a second chase.
 **A class link nobody has used** (Canberk, 2026-10-23). `scripts/class_link.py list` shows
 joins per link. A teacher who said yes and got a link 7 or more days ago, and whose link
 still says "nobody yet", gets ONE nudge draft on the thread where the link went: the link
-again as [LINK], and the line that it took one teacher's class a single period to get set
+again, written out and highlighted (see the draft rules above), and the line that it took one teacher's class a single period to get set
 up (about 20 students in one hour, 2026-10-22). No school or teacher named. Logged as
 `--kind chase`; it is their one chase.
 
