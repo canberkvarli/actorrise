@@ -10,6 +10,7 @@ Demos:
   - "The Breakup"  — a short contemporary two-person scene (1 scene)
   - "Hamlet"       — Shakespeare; two iconic two-handers (2 scenes)
   - "Late"         — the guided first scene; is_guided, so no shelf lists it (1 scene)
+  - "A fight", "A flirt", "A confession" — the phone's three first scenes, one a key; is_guided
 
 Run:
     python backend/scripts/seed_sample_script.py
@@ -320,12 +321,143 @@ def seed_late(db):
     print(f"Demo \"Late\" seeded (script_id={script.id}, scene_id={scene.id}).")
 
 
+# The three the phone's first launch offers: one scene a key, both parts
+# playable, seven or eight short lines so a stranger reading cold into a
+# microphone is heard. Each character carries one line of who they are,
+# printed on the card when the actor picks a part. Must agree with
+# services/guided_scene.py::GUIDED_KEYS, which finds them by title.
+GUIDED_THREE = [
+    {
+        "key": "fight",
+        "title": "A fight",
+        "description": "The keys are gone. Somebody is lying, or nobody is.",
+        "tone": "dramatic",
+        "emotions": ["anger", "doubt"],
+        "dynamic": "partners",
+        "characters": [
+            {"name": "JO", "gender": "neutral", "line": "the one who is sure"},
+            {"name": "SAM", "gender": "neutral", "line": "the one who is done explaining"},
+        ],
+        "lines": [
+            ("JO", "Where are the keys?"),
+            ("SAM", "I don't have the keys."),
+            ("JO", "You had them last night."),
+            ("SAM", "I gave them back. On the table, by the lamp."),
+            ("JO", "There is nothing on the table."),
+            ("SAM", "Then somebody moved them."),
+            ("JO", "Nobody has been here but us."),
+            ("SAM", "Then look at me and say what you mean."),
+        ],
+    },
+    {
+        "key": "flirt",
+        "title": "A flirt",
+        "description": "The last table in the place, and one seat at it.",
+        "tone": "comedic",
+        "emotions": ["attraction", "play"],
+        "dynamic": "strangers",
+        "characters": [
+            {"name": "NOOR", "gender": "neutral", "line": "has somewhere to be"},
+            {"name": "ELI", "gender": "neutral", "line": "has all night"},
+        ],
+        "lines": [
+            ("NOOR", "Is this seat taken?"),
+            ("ELI", "It is now."),
+            ("NOOR", "That is a terrible line."),
+            ("ELI", "It worked, though."),
+            ("NOOR", "I haven't sat down."),
+            ("ELI", "You're thinking about it."),
+            ("NOOR", "I'm thinking about leaving."),
+            ("ELI", "Then I had better be quick. What's your name?"),
+        ],
+    },
+    {
+        "key": "confession",
+        "title": "A confession",
+        "description": "A letter that was not meant to be read has been read.",
+        "tone": "dramatic",
+        "emotions": ["guilt", "tenderness"],
+        "dynamic": "partners",
+        "characters": [
+            {"name": "MARA", "gender": "neutral", "line": "found the letter"},
+            {"name": "DEV", "gender": "neutral", "line": "wrote it"},
+        ],
+        "lines": [
+            ("MARA", "I read the letter."),
+            ("DEV", "It wasn't for you."),
+            ("MARA", "I know. I read it anyway."),
+            ("DEV", "Then you know."),
+            ("MARA", "I know you wanted to leave. I didn't know it was me."),
+            ("DEV", "It wasn't you. It was the house. The quiet."),
+            ("MARA", "Say the whole thing."),
+            ("DEV", "I was going to go without telling you. I'm sorry."),
+        ],
+    },
+]
+
+
+def seed_guided_three(db):
+    """The three first scenes the phone offers, one a key. Guided like "Late":
+    no shelf lists them, no meter counts them, any signed-in actor may run them."""
+    for g in GUIDED_THREE:
+        if db.query(UserScript).filter(UserScript.is_sample == True, UserScript.title == g["title"]).first():
+            print(f'Demo "{g["title"]}" already exists. Skipping.')
+            continue
+        text = "\n".join(f"{who}: {line}" for who, line in g["lines"])
+        play = Play(title=g["title"], author="Sample Script", genre="drama", category="contemporary", copyright_status="public_domain")
+        db.add(play)
+        db.flush()
+        script = UserScript(
+            user_id=None,
+            is_sample=True,
+            is_guided=True,
+            title=g["title"],
+            author="Sample Script",
+            description=g["description"],
+            original_filename=f"{g['key']}.txt",
+            file_type="txt",
+            file_size_bytes=0,
+            raw_text=text,
+            characters=g["characters"],
+            processing_status="completed",
+            ai_extraction_completed=True,
+            genre="drama",
+            num_characters=2,
+            num_scenes_extracted=1,
+        )
+        db.add(script)
+        db.flush()
+        a, b = g["characters"]
+        scene = Scene(
+            play_id=play.id,
+            user_script_id=script.id,
+            title=g["title"],
+            scene_number="1",
+            description=g["description"],
+            character_1_name=a["name"],
+            character_2_name=b["name"],
+            character_1_gender=a["gender"],
+            character_2_gender=b["gender"],
+            line_count=len(g["lines"]),
+            estimated_duration_seconds=40,
+            difficulty_level="beginner",
+            primary_emotions=g["emotions"],
+            relationship_dynamic=g["dynamic"],
+            tone=g["tone"],
+        )
+        db.add(scene)
+        db.flush()
+        _add_lines(db, scene, [(who, line, None) for who, line in g["lines"]])
+        print(f'Demo "{g["title"]}" seeded (script_id={script.id}, scene_id={scene.id}).')
+
+
 def seed_sample_scripts():
     db = SessionLocal()
     try:
         seed_breakup(db)
         seed_hamlet(db)
         seed_late(db)
+        seed_guided_three(db)
         db.commit()
         print("Demo scripts seeded successfully.")
     except Exception as e:

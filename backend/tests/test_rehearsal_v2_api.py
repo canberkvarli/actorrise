@@ -147,6 +147,38 @@ class Api(unittest.TestCase):
         with mock.patch.object(api, "guided_scene", return_value=None):
             self.assertEqual(self.client.post("/api/rehearsal/runs/guided").status_code, 404)
 
+    def test_the_phones_first_scenes_are_listed_with_their_parts(self):
+        from scripts.seed_sample_script import seed_guided_three, seed_late
+        seed_late(self.db); seed_guided_three(self.db); self.db.commit()
+        r = self.client.get("/api/rehearsal/guided")
+        self.assertEqual(r.status_code, 200, r.text)
+        body = r.json()
+        self.assertEqual(body["character"], api.GUIDED_ACTOR)
+        self.assertEqual([x["key"] for x in body["scenes"]], ["fight", "flirt", "confession"])
+        fight = body["scenes"][0]
+        self.assertEqual([c["name"] for c in fight["characters"]], ["JO", "SAM"])
+        self.assertEqual(fight["characters"][1]["line"], "the one who is done explaining")
+        # SAM's first line is the second line of the scene: that is the one a voice is heard on.
+        self.assertEqual(fight["characters"][1]["first_line"], 1)
+        self.assertTrue(fight["hook"])
+
+    def test_a_guided_run_takes_one_of_the_phones_scenes_the_part_and_the_voice(self):
+        from scripts.seed_sample_script import seed_guided_three
+        from app.services.rehearsal.voices import VOICES
+        seed_guided_three(self.db); self.db.commit()
+        fight = self.db.query(Scene).filter(Scene.title == "A fight").one()
+        r = self.client.post("/api/rehearsal/runs/guided", json={"scene_id": fight.id, "character": "sam", "voices": {"JO": VOICES[1].id}})
+        self.assertEqual(r.status_code, 200, r.text)
+        body = r.json()
+        self.assertEqual((body["scene_id"], body["character"]), (fight.id, "SAM"))
+        self.assertEqual(body["voices"]["JO"], VOICES[1].id)
+        self.assertTrue(self.db.get(RehearsalRun, body["run_id"]).is_guided)
+        # A part that is not in the scene falls to the first; a voice that does not exist is ignored.
+        r = self.client.post("/api/rehearsal/runs/guided", json={"scene_id": fight.id, "character": "HAMLET", "voices": {"SAM": "nobody"}})
+        self.assertEqual(r.json()["character"], "JO")
+        # A scene that is not guided is not a guided run, whoever asks.
+        self.assertEqual(self.client.post("/api/rehearsal/runs/guided", json={"scene_id": self.scene.id}).status_code, 404)
+
     def test_guided_run_marks_the_first_rehearsal_seen(self):
         """What the old start-guided route did: the hub stops inviting because
         the server flipped the flag, not because the client remembered to."""

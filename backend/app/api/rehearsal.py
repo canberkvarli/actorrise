@@ -21,7 +21,7 @@ from app.models.actor import Scene, UserScript
 from app.models.rehearsal import PartnerAudio, RehearsalRun
 from app.models.user import User
 from app.services.events import record_user_event
-from app.services.guided_scene import GUIDED_ACTOR, guided_scene
+from app.services.guided_scene import GUIDED_ACTOR, guided_scene, guided_scenes, guided_script_of
 from app.services.rehearsal import journal, partner_audio
 from app.services.rehearsal.access import assert_can_rehearse
 from app.services.rehearsal.contract import RehearsalLine, lines_for, same_character
@@ -210,27 +210,50 @@ def start_run(
     return {"run_id": run.id, "voices": voices}
 
 
+class StartGuided(BaseModel):
+    """The phone's first scenes: one of the guided scenes, the part the actor
+    picked and the voice they heard. All optional; the web sends nothing and
+    gets the one scene and part it always did."""
+    scene_id: int | None = None
+    character: str | None = None
+    voices: dict[str, str] = Field(default_factory=dict)
+
+
 @router.post("/runs/guided")
 def start_guided_run(
+    req: StartGuided | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
     _burst: bool = Depends(BurstLimiter("scene_partner")),
 ):
-    """The guided first run: the server picks the scene and the part. No meter
-    and no tier check, like the start-guided route it replaces."""
-    scene = guided_scene(db)
+    """The guided first run: no meter and no tier check, like the start-guided
+    route it replaces. The server picks the scene and the part unless the
+    phone names one of the guided scenes and a part in it."""
+    req = req or StartGuided()
+    actor = GUIDED_ACTOR
+    if req.scene_id is not None:
+        if guided_script_of(db, req.scene_id) is None:
+            raise HTTPException(status_code=404, detail="Not a guided scene")
+        scene = db.get(Scene, req.scene_id)
+        cast = [scene.character_1_name, scene.character_2_name]
+        actor = next((c for c in cast if c and req.character and same_character(c, req.character)), None) or cast[0]
+    else:
+        scene = guided_scene(db)
     if scene is None:
         raise HTTPException(status_code=404, detail="The guided scene is not seeded")
     lines = lines_for(db, scene.id)
-    voices = default_voices(scene, lines, GUIDED_ACTOR)
-    run = journal.create_run(db, user.id, scene.id, GUIDED_ACTOR, voices, is_guided=True)
+    voices = default_voices(scene, lines, actor)
+    for ch, v in req.voices.items():
+        if voice_by_id(v) is not None and any(same_character(ch, c) for c in voices):
+            voices = {c: (v if same_character(c, ch) else old) for c, old in voices.items()}
+    run = journal.create_run(db, user.id, scene.id, actor, voices, is_guided=True)
     # Answering IS seeing the first rehearsal. This flag is what stops the hub
     # inviting again (lib/guided-invite reads it); has_ever_rehearsed is
     # computed from the meter, which this route deliberately does not touch.
     user.has_seen_first_rehearsal = True
     db.commit()
     record_user_event(user.id, "guided_scene_started", {"platform": "web"})
-    return {"run_id": run.id, "scene_id": scene.id, "character": GUIDED_ACTOR, "voices": voices}
+    return {"run_id": run.id, "scene_id": scene.id, "character": actor, "voices": voices}
 
 
 @router.post("/runs/{run_id}/resume")
@@ -323,8 +346,29 @@ def run_stats(db: Session = Depends(get_db), user: User = Depends(get_current_us
 
 @router.get("/guided")
 def guided(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Which scene and which part the guided first run uses."""
+    """Which scene and which part the guided first run uses, and the phone's
+    three first scenes, one a key, with who each part is and where each part's
+    first line is (for hearing a voice before casting it)."""
     scene = guided_scene(db)
     if scene is None:
         raise HTTPException(status_code=404, detail="The guided scene is not seeded")
-    return {"scene_id": scene.id, "character": GUIDED_ACTOR}
+    scenes = []
+    for key, sc, script in guided_scenes(db):
+        lines = lines_for(db, sc.id)
+        who = {c.get("name"): c.get("line") for c in (script.characters or []) if isinstance(c, dict)}
+        cast = [c for c in (sc.character_1_name, sc.character_2_name) if c]
+        scenes.append({
+            "key": key,
+            "scene_id": sc.id,
+            "title": sc.title,
+            "hook": sc.description,
+            "characters": [
+                {
+                    "name": c,
+                    "line": who.get(c),
+                    "first_line": next((l.index for l in lines if same_character(l.character, c)), None),
+                }
+                for c in cast
+            ],
+        })
+    return {"scene_id": scene.id, "character": GUIDED_ACTOR, "scenes": scenes}
