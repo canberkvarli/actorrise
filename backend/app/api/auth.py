@@ -10,6 +10,7 @@ from app.services.email.opt_out import link_reason, opt_back_in, opt_out
 from app.services.email.notifications import (
     send_welcome_email_later,
 )
+from app.services.email.school_address import is_district_address, is_school_student
 from app.services import app_settings
 from app.services.community import record_event
 from app.services.events import record_user_event
@@ -190,8 +191,11 @@ def get_current_user(
         # upgrade to a real email.
         if not is_placeholder_email:
             # Send welcome email on its own thread; never hold the request
-            # (or its connection) for Resend.
-            send_welcome_email_later(user_email=user.email, user_name=user.name)
+            # (or its connection) for Resend. Not to a student signing up
+            # through a class link on a district address: that inbox turns
+            # outside mail away (app/services/email/school_address.py).
+            if not (user_metadata.get("class_code") and is_district_address(user.email)):
+                send_welcome_email_later(user_email=user.email, user_name=user.name)
             # The FOUNDER3 offer email used to go out here alongside the welcome,
             # gated on an admin setting that defaulted to True. That row was never
             # written in prod, so the default applied and every new signup was
@@ -218,7 +222,8 @@ def get_current_user(
                 user.name = name
             db.commit()
             db.refresh(user)
-            send_welcome_email_later(user_email=user.email, user_name=user.name)
+            if not is_school_student(user):
+                send_welcome_email_later(user_email=user.email, user_name=user.name)
             record_event(user.id, "joined")
             record_user_event(
                 user.id,

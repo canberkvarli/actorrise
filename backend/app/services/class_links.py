@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from app.models.billing import PricingTier, UserSubscription
 from app.models.class_link import ClassLink, ClassLinkInvite, ClassLinkJoin
 from app.models.user import User
+from app.services.email.school_address import is_district_address
 
 ADMIN_EMAIL = "canberk@actorrise.com"
 CODE_RE = re.compile(r"^[a-z0-9][a-z0-9-]{2,63}$")
@@ -183,7 +184,8 @@ def _grant(db: Session, link: ClassLink, user: User) -> None:
             tier_id=plus.id,
             duration_days=link.days,
             account_type="student",
-            notify=True,
+            # A district inbox turns the email away; see school_address.py.
+            notify=not is_district_address(user.email),
             note=f"class link {link.code}",
         ),
         admin=admin,
