@@ -236,3 +236,99 @@ class CapMail(unittest.TestCase):
     def test_a_failed_mail_never_stops_a_line(self):
         with mock.patch("app.services.app_settings.claim_day", side_effect=RuntimeError("db")):
             pa._mail_cap_once(None, datetime.now(timezone.utc), 1)  # does not raise
+
+
+class DailyLimit(unittest.TestCase):
+    """Gemini's 100 a day: a scene goes to OpenAI whole, never half."""
+
+    def setUp(self):
+        self.db, self._saved = memory_db((PartnerAudio,))
+        self.patches = [
+            mock.patch.object(pa.settings, "partner_tts_vendor", "gemini"),
+            mock.patch.object(pa.settings, "openai_api_key", "sk"),
+            mock.patch.object(pa.settings, "inworld_api_key", None),
+            mock.patch.object(pa, "GEMINI_RPD", 5),
+        ]
+        for p in self.patches: p.start()
+        self.part = [("Puck", LineVoice(text=f"Line {i}.")) for i in range(3)]
+
+    def tearDown(self):
+        for p in self.patches: p.stop()
+        self.db.close(); restore(self._saved)
+
+    def _spend(self, n):
+        for i in range(n):
+            pa.ensure(self.db, "gemini", "Kore", LineVoice(text=f"Spent {i}."))
+        self.db.commit()
+
+    def test_a_day_with_room_is_gemini(self):
+        self._spend(2)
+        self.assertEqual(pa.scene_vendor(self.db, self.part, capped=False), "gemini")
+
+    def test_a_day_without_room_for_the_whole_part_is_openai(self):
+        self._spend(3)
+        self.assertEqual(pa.scene_vendor(self.db, self.part, capped=False), "openai")
+
+    def test_a_part_saved_in_gemini_stays_gemini_when_the_day_is_spent(self):
+        self._spend(5)
+        for voice, line in self.part:
+            row = self.db.get(PartnerAudio, pa.ensure(self.db, "gemini", voice, line))
+            row.status = "ready"
+        self.db.commit()
+        self.assertEqual(pa.scene_vendor(self.db, self.part, capped=False), "gemini")
+
+    def test_a_refusal_for_the_day_sends_the_rest_of_the_day_to_openai(self):
+        key = pa.ensure(self.db, "gemini", "Kore", LineVoice(text="No."))
+        row = self.db.get(PartnerAudio, key)
+        row.status, row.claimed_at, row.error = "failed", datetime.now(timezone.utc), "Gemini 429: 100 requests per day"
+        self.db.commit()
+        self.assertTrue(pa.gemini_out_today(self.db))
+        self.assertEqual(pa.scene_vendor(self.db, self.part, capped=False), "openai")
+
+    def test_yesterdays_refusal_does_not_count_today(self):
+        key = pa.ensure(self.db, "gemini", "Kore", LineVoice(text="No."))
+        row = self.db.get(PartnerAudio, key)
+        row.status, row.error = "failed", "per day"
+        row.claimed_at = row.created_at = datetime.now(timezone.utc) - timedelta(days=2)
+        self.db.commit()
+        self.assertFalse(pa.gemini_out_today(self.db))
+        self.assertEqual(pa.gemini_left_today(self.db), 5)
+
+    def test_openai_reads_in_the_stand_in_voice(self):
+        voice, line = self.part[0]
+        key = pa.ensure_as(self.db, "openai", voice, line)
+        self.assertEqual(self.db.get(PartnerAudio, key).voice, "fable")
+        self.assertEqual(key, pa.audio_key("openai", "fable", line))
+
+    def test_without_an_openai_key_gemini_carries_on(self):
+        self._spend(5)
+        with mock.patch.object(pa.settings, "openai_api_key", None):
+            self.assertEqual(pa.scene_vendor(self.db, self.part, capped=False), "gemini")
+
+    def test_a_line_refused_for_the_day_is_read_by_openai_at_once(self):
+        voice, line = self.part[0]
+        key = pa.ensure(self.db, "gemini", voice, line)
+        self.db.commit()
+
+        def synth(vendor, _voice, _line):
+            if vendor == "gemini":
+                raise RuntimeError("Gemini 429: limit: 100 requests per day")
+            return b"mp3"
+
+        with mock.patch.object(pa, "synthesize", side_effect=synth), mock.patch.object(pa, "_upload"):
+            pa.synthesise_pending(self.db, [key], {key: line})
+        row = self.db.get(PartnerAudio, key)
+        self.assertEqual(row.status, "failed")
+        stand_in = pa.stand_in_key(row)
+        self.assertEqual(stand_in, pa.audio_key("openai", "fable", line))
+        self.assertEqual(self.db.get(PartnerAudio, stand_in).status, "ready")
+
+    def test_an_ordinary_failure_has_no_stand_in(self):
+        voice, line = self.part[0]
+        key = pa.ensure(self.db, "gemini", voice, line)
+        self.db.commit()
+        with mock.patch.object(pa, "synthesize", side_effect=RuntimeError("Gemini 500")), \
+             mock.patch.object(pa, "_upload"):
+            pa.synthesise_pending(self.db, [key], {key: line})
+        self.assertIsNone(pa.stand_in_key(self.db.get(PartnerAudio, key)))
+        self.assertEqual(self.db.query(PartnerAudio).count(), 1)

@@ -17,7 +17,8 @@ character_2_gender, and then to alternating.
 
 Each Gemini voice names the Inworld voice that stands in for it once the
 monthly cap is reached (partner_audio.vendor_for), chosen to be the nearest
-in gender, age and colour in Inworld's own catalogue.
+in gender, age and colour in Inworld's own catalogue, and the OpenAI voice that
+stands in once the day's Gemini requests are spent (partner_audio.scene_vendor).
 """
 from __future__ import annotations
 
@@ -41,29 +42,31 @@ class Voice:
     traits: tuple[str, ...] = field(default_factory=tuple)
     # The Inworld voice that reads this part past the monthly cap.
     stand_in: str = ""
+    # The OpenAI voice that reads it once Gemini's day is spent.
+    day_stand_in: str = ""
 
 
 _GEMINI = [
     Voice("Leda", "Leda · youthful, bright, 20s", "female", "gemini", 2,
-          ("young", "bright", "eager", "energetic", "excited", "playful", "naive", "lively", "bubbly"), "Zoe"),
+          ("young", "bright", "eager", "energetic", "excited", "playful", "naive", "lively", "bubbly"), "Zoe", "nova"),
     Voice("Aoede", "Aoede · breezy, easy, 30s", "female", "gemini", 3,
-          ("relaxed", "light", "breezy", "casual", "easygoing", "wry", "charming", "flirtatious"), "Ashley"),
+          ("relaxed", "light", "breezy", "casual", "easygoing", "wry", "charming", "flirtatious"), "Ashley", "coral"),
     Voice("Sulafat", "Sulafat · warm, kind, 30s", "female", "gemini", 3,
-          ("warm", "kind", "gentle", "caring", "tender", "patient", "loving", "soft"), "Naomi"),
+          ("warm", "kind", "gentle", "caring", "tender", "patient", "loving", "soft"), "Naomi", "shimmer"),
     Voice("Kore", "Kore · firm, direct, 40s", "female", "gemini", 4,
-          ("firm", "direct", "blunt", "guarded", "tough", "sharp", "impatient", "angry", "cold", "stern", "serious"), "Lauren"),
+          ("firm", "direct", "blunt", "guarded", "tough", "sharp", "impatient", "angry", "cold", "stern", "serious"), "Lauren", "sage"),
     Voice("Gacrux", "Gacrux · mature, assured, 50s+", "female", "gemini", 5,
-          ("mature", "authoritative", "dry", "weary", "wise", "commanding", "grand", "formal"), "Deborah"),
+          ("mature", "authoritative", "dry", "weary", "wise", "commanding", "grand", "formal"), "Deborah", "alloy"),
     Voice("Fenrir", "Fenrir · eager, excitable, 20s", "male", "gemini", 2,
-          ("young", "excitable", "eager", "nervous", "restless", "energetic", "passionate", "impulsive", "anxious"), "Bryce"),
+          ("young", "excitable", "eager", "nervous", "restless", "energetic", "passionate", "impulsive", "anxious"), "Bryce", "verse"),
     Voice("Puck", "Puck · upbeat, playful, 30s", "male", "gemini", 3,
-          ("upbeat", "playful", "joking", "funny", "cheerful", "charming", "witty", "teasing", "comic"), "James"),
+          ("upbeat", "playful", "joking", "funny", "cheerful", "charming", "witty", "teasing", "comic"), "James", "fable"),
     Voice("Achird", "Achird · friendly, warm, 30s", "male", "gemini", 3,
-          ("friendly", "warm", "kind", "gentle", "sincere", "earnest", "tender", "loving", "shy"), "Evan"),
+          ("friendly", "warm", "kind", "gentle", "sincere", "earnest", "tender", "loving", "shy"), "Evan", "ash"),
     Voice("Charon", "Charon · steady, low, 40s", "male", "gemini", 4,
-          ("steady", "calm", "measured", "serious", "controlled", "reserved", "guarded", "cold", "stern"), "Dennis"),
+          ("steady", "calm", "measured", "serious", "controlled", "reserved", "guarded", "cold", "stern"), "Dennis", "echo"),
     Voice("Algenib", "Algenib · gravelly, weathered, 50s+", "male", "gemini", 5,
-          ("gravelly", "gruff", "weary", "bitter", "old", "hard", "menacing", "commanding", "tired"), "Theodore"),
+          ("gravelly", "gruff", "weary", "bitter", "old", "hard", "menacing", "commanding", "tired"), "Theodore", "onyx"),
 ]
 
 _OPENAI = [

@@ -109,10 +109,11 @@ def get_rehearsal_scene(
     # line on its own round trip, which is what made a long scene slow to open.
     # The cap is read once for the whole scene, not once a line.
     capped = partner_audio.over_cap(db) if plan else False
+    vendor = partner_audio.scene_vendor(db, [(v, spec) for _i, v, spec in plan], capped)
     key_for: dict[int, str] = {}
     line_for: dict[str, LineVoice] = {}
     for index, voice, spec in plan:
-        key = partner_audio.ensure_for(db, voice, spec, capped)
+        key = partner_audio.ensure_as(db, vendor, voice, spec)
         key_for[index] = key
         line_for[key] = spec
     db.commit()
@@ -172,9 +173,10 @@ def _warm_first_part(db: Session, scene, lines, characters, defaults, voicing) -
         if not plan:
             return
         capped = partner_audio.over_cap(db)
+        vendor = partner_audio.scene_vendor(db, [(v, spec) for _i, v, spec in plan], capped)
         line_for: dict[str, LineVoice] = {}
         for _index, voice, spec in plan:
-            line_for[partner_audio.ensure_for(db, voice, spec, capped)] = spec
+            line_for[partner_audio.ensure_as(db, vendor, voice, spec)] = spec
         db.commit()
         now = datetime.now(timezone.utc)
         rows = db.query(PartnerAudio).filter(PartnerAudio.key.in_(list(line_for))).all()
@@ -269,6 +271,12 @@ def get_audio(key: str, db: Session = Depends(get_db), user: User = Depends(get_
     row = db.get(PartnerAudio, key)
     if row is None:
         raise HTTPException(status_code=404, detail="Unknown line")
+    if row.status == "ready" and row.storage_path:
+        return {"key": key, "url": partner_audio.signed_url(row.storage_path)}
+    stand_in = partner_audio.stand_in_key(row)
+    if stand_in:
+        # Gemini refused this line for the day; OpenAI read it instead.
+        row = db.get(PartnerAudio, stand_in) or row
     if row.status == "ready" and row.storage_path:
         return {"key": key, "url": partner_audio.signed_url(row.storage_path)}
     if row.status == "failed":

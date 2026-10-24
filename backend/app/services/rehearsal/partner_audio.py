@@ -15,15 +15,24 @@ The monthly spending guard lives here too, because the spend is derived from
 these rows: the characters of this calendar month's ready Gemini rows. Past
 PARTNER_TTS_MONTHLY_CHARS new lines go to Inworld; a line already saved, in
 any voice, is played as it is.
+
+And the daily one. Gemini's tier allows GEMINI_TTS_RPD requests a day (100 on
+Tier 1, reset at midnight Pacific); on 2026-10-23 that ran out by mid
+afternoon and every partner after it was silent. Now a scene is voiced by
+Gemini only while the day has room for all of its new lines, and by OpenAI
+otherwise, the whole scene, so a part never changes voice in the middle of a
+run. A line Gemini refuses for the day anyway is voiced by OpenAI at once.
 """
 from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import queue
 import re
 import threading
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
@@ -152,23 +161,100 @@ def _mail_cap_once(db: Session, now: datetime, used: int) -> None:
 
 
 def vendor_for(db: Session, voice: str, line: LineVoice, capped: bool) -> str:
-    """Who voices this line. The configured vendor, unless the month's cap is
-    reached (`capped`, from over_cap, worked out once per request) and the
-    line is not already saved: then Inworld. A line Gemini already voiced,
-    or is voicing, stays Gemini's; the cap never throws audio away. With no
-    Inworld key there is nobody to fall back to, so Gemini carries on and the
-    founder's email says so."""
+    """Who voices this one line: scene_vendor for a part of one. A line Gemini
+    already voiced stays Gemini's; the cap never throws audio away. With no
+    Inworld key there is nobody to fall back to past the monthly cap, so Gemini
+    carries on and the founder's email says so."""
+    return scene_vendor(db, [(voice, line)], capped)
+
+
+# ── the daily limit ──────────────────────────────────────────────────────────
+
+GEMINI_RPD = int(os.getenv("GEMINI_TTS_RPD", "100"))
+PACIFIC = ZoneInfo("America/Los_Angeles")
+DAILY_LIMIT = "per day"  # in the text of Gemini's 429 for the daily quota
+STAND_IN = "stand-in "   # a failed row's error, followed by the key that read it
+
+
+def _gemini_day(now: datetime) -> datetime:
+    """When Gemini's day began: midnight Pacific, in UTC."""
+    local = _aware(now).astimezone(PACIFIC)
+    return local.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+
+
+def gemini_out_today(db: Session, now: datetime | None = None) -> bool:
+    """Whether Gemini has refused a line for the day since its day began. Read
+    from the rows, so every process knows once one of them has been told."""
+    start = _gemini_day(now or datetime.now(timezone.utc))
+    return db.query(PartnerAudio.key).filter(
+        PartnerAudio.vendor == "gemini", PartnerAudio.status == "failed",
+        PartnerAudio.claimed_at >= start, PartnerAudio.error.ilike(f"%{DAILY_LIMIT}%"),
+    ).first() is not None
+
+
+def gemini_left_today(db: Session, now: datetime | None = None) -> int:
+    """Requests left in Gemini's day, counting a row made or tried today as one."""
+    start = _gemini_day(now or datetime.now(timezone.utc))
+    used = db.query(func.count(PartnerAudio.key)).filter(
+        PartnerAudio.vendor == "gemini",
+        (PartnerAudio.created_at >= start) | (PartnerAudio.claimed_at >= start),
+    ).scalar()
+    return GEMINI_RPD - int(used or 0)
+
+
+def openai_voice(voice: str) -> str:
+    """The OpenAI voice standing in for a Gemini one (voices.Voice.day_stand_in).
+    Anything else is already an OpenAI id and comes back as it is."""
+    from app.services.rehearsal.voices import _GEMINI
+
+    match = next((v for v in _GEMINI if v.id == voice), None)
+    return match.day_stand_in if match and match.day_stand_in else voice
+
+
+def scene_vendor(db: Session, pairs: list[tuple[str, LineVoice]], capped: bool,
+                 now: datetime | None = None) -> str:
+    """Who voices these lines, all of them: one scene's partner part, or one
+    line. Gemini when every line is saved in Gemini, or when the day has room
+    for the ones that are not. Otherwise OpenAI for the lot, Gemini's saved
+    lines included, so the part sounds like one person. Past the monthly cap,
+    Inworld as before."""
     primary = settings.partner_tts_vendor
-    if primary != "gemini" or not capped or not settings.inworld_api_key:
+    if primary != "gemini" or not pairs:
         return primary
-    if db.get(PartnerAudio, audio_key(primary, voice, line)) is not None:
+    keys = [audio_key(primary, voice, line) for voice, line in pairs]
+    rows = {r.key: r for r in db.query(PartnerAudio).filter(PartnerAudio.key.in_(keys))}
+    out = gemini_out_today(db, now)
+    unheld = [k for k in keys if k not in rows or not (
+        rows[k].status == "ready" or (rows[k].status == "pending" and not out))]
+    if not unheld:
         return primary
-    return "inworld"
+    if capped and settings.inworld_api_key:
+        return "inworld"
+    if not settings.openai_api_key:
+        return primary
+    # A pending row made today is counted in the day already; a missing or a
+    # failed one is a request still to come.
+    new = sum(1 for k in unheld if k not in rows or rows[k].status == "failed")
+    if out or new > gemini_left_today(db, now):
+        return "openai"
+    return primary
+
+
+def ensure_as(db: Session, vendor: str, voice: str, line: LineVoice) -> str:
+    """ensure() for a vendor scene_vendor chose, in that vendor's voice."""
+    return ensure(db, vendor, openai_voice(voice) if vendor == "openai" else voice, line)
 
 
 def ensure_for(db: Session, voice: str, line: LineVoice, capped: bool) -> str:
-    """ensure() with the vendor chosen by vendor_for. What the routes call."""
-    return ensure(db, vendor_for(db, voice, line, capped), voice, line)
+    """One line, on its own. The scene routes choose once for the whole part."""
+    return ensure_as(db, scene_vendor(db, [(voice, line)], capped), voice, line)
+
+
+def stand_in_key(row: PartnerAudio) -> str | None:
+    """The key of the line that read a Gemini row refused for the day."""
+    if row.status != "failed" or not (row.error or "").startswith(STAND_IN):
+        return None
+    return row.error[len(STAND_IN):].split(":", 1)[0].strip() or None
 
 
 def _claim(db: Session, key: str) -> bool:
@@ -217,9 +303,17 @@ def synthesise_pending(db: Session, keys: list[str], line_for: dict[str, LineVoi
             logger.warning("partner audio %s failed: %s", key[:8], exc)
             row.status = "failed"
             row.error = str(exc)[:500]
+            stand_in = None
+            if row.vendor == "gemini" and DAILY_LIMIT in str(exc) and settings.openai_api_key:
+                # Gemini is done for the day and an actor is waiting on this
+                # line: OpenAI reads it now, and GET /audio/{key} hands that over.
+                stand_in = ensure(db, "openai", openai_voice(row.voice), line)
+                row.error = f"{STAND_IN}{stand_in}: {exc}"[:500]
             # The claim stays: it is now the time of the failure, and the
             # retry clock (FAILED_RETRY) runs from it.
             db.commit()
+            if stand_in:
+                synthesise_pending(db, [stand_in], {stand_in: line})
             continue
         row.claimed_at = None
         db.commit()
