@@ -3,6 +3,7 @@ API endpoints for user script management - upload, edit, manage scripts
 """
 
 import asyncio
+import hashlib
 import json as _json
 import threading
 from datetime import datetime, timedelta
@@ -2981,6 +2982,30 @@ async def _read_upload(file: UploadFile) -> tuple:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+def _scan_key(text: str) -> str:
+    from app.services.scene_map import MAP_VERSION
+
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return f"{MAP_VERSION}.{PARSER_VERSION}:{digest}"
+
+
+def kept_scan(script) -> Optional[ScriptScanResponse]:
+    """The map read from this script's text before, if it still holds."""
+    kept = script.scene_map
+    if not isinstance(kept, dict) or kept.get("key") != _scan_key(script.source_text):
+        return None
+    try:
+        return ScriptScanResponse(**kept["scan"])
+    except Exception:
+        return None
+
+
+def keep_scan(script, scan: ScriptScanResponse) -> None:
+    """Every open of the script used to read the whole text again, and an
+    under-split one went to the model each time. Now it is read once."""
+    script.scene_map = {"key": _scan_key(script.source_text), "scan": scan.model_dump()}
+
+
 @router.post("/{script_id}/scene-map")
 async def script_scene_map(
     script_id: int,
@@ -2998,12 +3023,16 @@ async def script_scene_map(
     script = _owned_script(db, script_id, current_user)
     if file is not None:
         content, ext = await _read_upload(file)
+        scan = await run_in_threadpool(_scan_file, content, ext)
     elif script.source_text:
-        content, ext = script.source_text.encode("utf-8"), "txt"
+        scan = kept_scan(script)
+        if scan is None:
+            scan = await run_in_threadpool(_scan_file, script.source_text.encode("utf-8"), "txt")
+            keep_scan(script, scan)
+            db.commit()
     else:
         return {"needs_file": True}
 
-    scan = await run_in_threadpool(_scan_file, content, ext)
     built = db.query(Scene).filter(Scene.user_script_id == script.id).all()
     return {
         "needs_file": False,

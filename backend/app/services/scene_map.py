@@ -35,6 +35,10 @@ from app.services.script_structure import (
     _match_slug_line,
 )
 
+# Bump when the map reads a script differently: every script's stored map
+# (user_scripts.scene_map) is read again on its next open.
+MAP_VERSION = 1
+
 # A scene longer than this is treated as suspicious rather than long. Set low on
 # purpose: the cost of asking the model to look again is a fraction of a cent,
 # and the cost of missing a scene is that an actor never finds it.
