@@ -11,7 +11,9 @@ import { bindGestures } from '@/lib/rehearsal/browser/gestures';
 import { goStep, partnerVoices, skipsCurtain, startsBy } from '@/lib/rehearsal/entry';
 import { initialVoices } from '@/lib/rehearsal/prefs';
 import { plainError } from '@/lib/rehearsal/prepare';
-import { getCharacterVoices, getMyRoles } from '@/lib/scenePrefs';
+import { getBook, getCharacterVoices, getMyRoles, setBook } from '@/lib/scenePrefs';
+import { nextGiven, type Book } from '@/lib/rehearsal/book';
+import { lineWords } from '@/lib/live-read';
 import { Curtain } from './Curtain';
 import { Stage } from './Stage';
 import { Dock, TopBar } from './Dock';
@@ -54,6 +56,11 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   const guidedStarted = useRef(false);
   const state = snapshot?.state ?? 'ready';
   const error = readiness.error ?? prepError;
+  // How much of their own lines the actor reads from, kept per scene, and the
+  // words they called for this run, by line.
+  const [book, setBookState] = useState<Book>(() => getBook(payload.scene.id));
+  const [given, setGiven] = useState<Map<number, Set<number>>>(() => new Map());
+  const onBook = useCallback((b: Book) => { setBookState(b); setBook(payload.scene.id, b); }, [payload.scene.id]);
 
   const choose = useCallback(async (character: string, voices: Record<string, string>, pickUp?: { runId: number; lineIndex: number }) => {
     setPrepError(null);
@@ -110,6 +117,22 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   const toggle = () => (pausedRef.current ? resume() : pause());
 
   const actor = snapshot?.actor ?? goPart ?? '';
+  const liveLine = snapshot?.state === 'actor' ? snapshot.lineIndex : null;
+  // A line taken again (back, a jump, a resume, which starts it from its first
+  // word) starts with nothing given: the second try is a fresh test. Adjusted
+  // as the live line changes, in render, the way React has state follow a value.
+  const [takenLine, setTakenLine] = useState<number | null>(null);
+  if (liveLine !== takenLine) {
+    setTakenLine(liveLine);
+    if (liveLine !== null && given.has(liveLine)) {
+      const m = new Map(given); m.delete(liveLine); setGiven(m);
+    }
+  }
+  const prompt = liveLine === null || !snapshot ? null : (() => {
+    const n = lineWords(payload.lines[liveLine]?.text ?? '').length;
+    const i = nextGiven(book, n, snapshot.read.position, snapshot.read.matched, given.get(liveLine) ?? new Set());
+    return i === null ? null : () => setGiven(g => new Map(g).set(liveLine, new Set(g.get(liveLine)).add(i)));
+  })();
   const running = state === 'actor' || state === 'partner' || state === 'paused';
   const current = snapshot?.lineIndex ?? 0;
   const cast = useMemo(() => castPalette(payload.characters), [payload.characters]);
@@ -126,11 +149,12 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   return (
     <div ref={rootRef} className="relative h-dvh overflow-hidden">
       <Stage lines={payload.lines} actor={actor} snapshot={snapshot}
-        paused={state === 'paused'} onJump={running ? jumpTo : undefined} warming={straight && !error} />
+        paused={state === 'paused'} onJump={running ? jumpTo : undefined} warming={straight && !error}
+        book={book} given={given} />
       <TopBar title={payload.scene.title} lines={payload.lines} actor={l => sameCharacter(l.character, actor)}
-        current={current} started={state !== 'ready'} onLeave={onLeave} />
+        current={current} started={state !== 'ready'} onLeave={onLeave} book={book} onBook={onBook} />
       {!ended && <Dock snapshot={snapshot} partner={partner} onToggle={toggle} onSkip={skip} onBack={back}
-        onRestart={() => jumpTo(0)} />}
+        onRestart={() => jumpTo(0)} onPrompt={prompt ?? undefined} />}
       {straight && !canBegin && !error && state === 'ready' && (
         <div role="status" className="r-getting">
           <span className="r-spin r-spin--big" aria-hidden />

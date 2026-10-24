@@ -8347,6 +8347,61 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
   text-decoration-color: var(--t-gel-ink);
 }
 
+/* Off the script (lib/rehearsal/book): a hidden word keeps its text, coloured
+   out over a soft bar its own width, so the line is the shape it will be and
+   nothing re-wraps as it fills in. A word fills in, in ink, as it is said. The
+   word the actor is on is the bar lit in their gel. A word they called for is
+   shown softer with a dotted rule; on a line already read, a word never heard
+   is underlined, so the actor sees where they went off. */
+.r-line[data-book] .r-word[data-show="hidden"] {
+  color: transparent;
+  background: color-mix(in oklab, var(--t-ink) 11%, transparent);
+  border-radius: 3px;
+  text-decoration-color: transparent;
+  user-select: none;
+}
+.r-line[data-book] .r-word[data-show="hidden"][data-at="true"] {
+  color: transparent;
+  background: color-mix(in oklab, var(--t-gel-ink) 32%, transparent);
+}
+.r-line[data-book] .r-word[data-show="given"] {
+  color: color-mix(in oklab, var(--t-ink) 62%, var(--t-paper));
+  font-weight: inherit;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: color-mix(in oklab, var(--t-ink) 45%, transparent);
+}
+.r-line[data-book] .r-word[data-show="missed"] {
+  text-decoration-color: var(--t-gel-ink);
+}
+.r-line[data-book][data-when="past"] { opacity: 0.5; }
+
+/* Script · Cues · Off book, under the title. A switch, not a menu: one tap, any time. */
+.r-book {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  max-width: 38rem;
+  margin: 2px auto 0;
+}
+.r-book__opt {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--r-soft);
+  transition: color 160ms ease-out, background-color 160ms ease-out;
+}
+.r-book__opt[aria-checked="true"] {
+  color: var(--t-ink);
+  font-weight: 600;
+  background: color-mix(in oklab, var(--t-ink) 8%, transparent);
+}
+@media (hover: hover) {
+  .r-book__opt[aria-checked="false"]:hover { color: var(--t-ink); }
+}
+
 /* The top bar: leave, the scene, the count, and the run sheet under them. */
 .r-top {
   position: fixed;

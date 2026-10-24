@@ -4,15 +4,18 @@ import type { CSSProperties } from 'react';
 import { ArrowLeft, Pause, Play, RotateCcw, SkipForward, X } from 'lucide-react';
 import type { RehearsalLine } from '@/lib/rehearsal/contract';
 import type { Snapshot } from '@/lib/rehearsal/engine';
+import { BOOKS, type Book } from '@/lib/rehearsal/book';
 
 /**
  * The bar across the top: leave, where in the scene, and the run sheet. One
  * notch per line, the actor's notches taller, filled up to the live one. It
  * is a reading, not a control; a line is jumped to on the script itself.
  */
-export function TopBar({ title, lines, actor, current, started, onLeave }: {
+export function TopBar({ title, lines, actor, current, started, onLeave, book, onBook }: {
   title: string; lines: RehearsalLine[]; actor: (l: RehearsalLine) => boolean;
   current: number; started: boolean; onLeave: () => void;
+  /** How much of the actor's lines shows; switchable at any point in the run. */
+  book: Book; onBook: (book: Book) => void;
 }) {
   return (
     <header className="r-top">
@@ -24,6 +27,14 @@ export function TopBar({ title, lines, actor, current, started, onLeave }: {
         <p className="r-top__count" aria-label={`Line ${current + 1} of ${lines.length}`}>
           {started ? current + 1 : 0}<span>/{lines.length}</span>
         </p>
+      </div>
+      <div className="r-book" role="radiogroup" aria-label="Your lines">
+        {BOOKS.map(b => (
+          <button key={b.id} type="button" role="radio" aria-checked={book === b.id}
+            className="r-book__opt" onClick={() => onBook(b.id)}>
+            {b.label}
+          </button>
+        ))}
       </div>
       <ol className="r-sheet" aria-hidden>
         {lines.map(l => (
@@ -40,15 +51,18 @@ interface DockProps {
   /** The name on the partner line sounding, with its cast colour. */
   partner: { name: string; style?: CSSProperties } | null;
   onToggle: () => void; onSkip: () => void; onBack: () => void; onRestart: () => void;
+  /** Off the script, on the actor's line: give them the next word. Absent when there is nothing to give. */
+  onPrompt?: () => void;
 }
 
 /**
  * The three controls, under the thumb: back, pause/play, skip. Above them one
  * word of state, so the actor never wonders whose line it is: their own (with
  * the mic breathing), the partner's name, or Paused, which also offers the
- * top of the scene.
+ * top of the scene. Off the script, their own line also offers "Line!", what
+ * an actor calls in rehearsal when the next word will not come.
  */
-export function Dock({ snapshot, partner, onToggle, onSkip, onBack, onRestart }: DockProps) {
+export function Dock({ snapshot, partner, onToggle, onSkip, onBack, onRestart, onPrompt }: DockProps) {
   const state = snapshot?.state ?? 'ready';
   const paused = state === 'paused';
   const running = state === 'actor' || state === 'partner';
@@ -56,6 +70,14 @@ export function Dock({ snapshot, partner, onToggle, onSkip, onBack, onRestart }:
     <div className="r-dock" data-state={state}>
       <div className="r-dock__status" aria-live="polite">
         {state === 'actor' && <><span className="r-mic" aria-hidden />Your line</>}
+        {state === 'actor' && onPrompt && (
+          <>
+            <span className="r-dock__sep" aria-hidden>·</span>
+            <button type="button" className="r-dock__link" onClick={onPrompt} aria-label="Line! Show the next word">
+              Line!
+            </button>
+          </>
+        )}
         {state === 'partner' && partner && <span className="r-dock__who" style={partner.style}>{partner.name}</span>}
         {paused && (
           <>Paused<span className="r-dock__sep" aria-hidden>·</span>

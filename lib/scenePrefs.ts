@@ -187,3 +187,28 @@ export function setMyRoles(sceneId: number, roles: string[]): void {
     /* private mode — the preview falls back to the first character */
   }
 }
+
+const BOOK_KEY = "scene_partner_book_v1";
+
+/** How much of their own lines the actor reads from, per scene (lib/rehearsal/book). */
+export function getBook(sceneId: number): "script" | "cues" | "off" {
+  if (typeof window === "undefined") return "script";
+  try {
+    const raw = localStorage.getItem(BOOK_KEY);
+    const book = raw ? (JSON.parse(raw) as Record<string, string>)[String(sceneId)] : null;
+    return book === "cues" || book === "off" ? book : "script";
+  } catch {
+    return "script";
+  }
+}
+
+export function setBook(sceneId: number, book: "script" | "cues" | "off"): void {
+  try {
+    const raw = localStorage.getItem(BOOK_KEY);
+    const all = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    all[String(sceneId)] = book;
+    localStorage.setItem(BOOK_KEY, JSON.stringify(all));
+  } catch {
+    /* private mode: the choice lasts the visit */
+  }
+}
