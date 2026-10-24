@@ -11,6 +11,8 @@
  * (mid-beat, the line sounding or the next one due), never from the top.
  */
 import { liveRead, shouldHandOver, type LiveRead, EMPTY_READ } from '../live-read';
+import { tokenize } from '../word-match';
+import { splitCalls } from './line-call';
 import type { EventType } from './contract';
 import type { ActorTurn, PartnerTurn, Script } from './script';
 import { Timeline } from './timeline';
@@ -53,12 +55,21 @@ export interface Snapshot {
   sounding: number | null;
   /** Lines the actor has already read, index → matched word indices. */
   heard: Map<number, Set<number>>;
+  /** Times the actor has called "line" on this turn (line-call.ts). Starts again with the turn, and on resume. */
+  calls: number;
 }
 
 export class Engine {
   private state: EngineState = 'ready';
   private turnIndex = 0;
   private read: LiveRead = EMPTY_READ;
+  // Calls for a line on this turn: where they are in the transcript, how long
+  // the transcript was when it last went quiet, and whether the actor is
+  // waiting on a prompt now. Reset with the read.
+  private calls = new Set<number>();
+  private tokenCount = 0;
+  private quietAt = 0;
+  private waitingOnPrompt = false;
   private sounding: number | null = null;
   private heard = new Map<number, Set<number>>();
   private cancels: Array<() => void> = [];
@@ -79,7 +90,7 @@ export class Engine {
     const lineIndex = turn ? (turn.kind === 'actor' ? turn.lineIndex : (this.sounding ?? turn.lineIndices[0])) : -1;
     return {
       state: this.state, actor: this.script.actor, turnIndex: this.turnIndex, lineIndex,
-      read: this.read, sounding: this.sounding, heard: this.heard,
+      read: this.read, sounding: this.sounding, heard: this.heard, calls: this.calls.size,
     };
   }
 
@@ -117,7 +128,7 @@ export class Engine {
     this.ports.journal.emit('resumed', this.snapshot().lineIndex, this.atMs());
     if (this.resumeFrom < 0) { this.enter(this.turnIndex + 1); return; } // the beat had finished
     const turn = this.script.turns[this.turnIndex];
-    this.read = EMPTY_READ;
+    this.clearRead();
     this.waiting = null;
     this.timeline.reset();
     if (turn.kind === 'partner') this.startBeat(turn, this.resumeFrom); else this.openMic(turn);
@@ -176,7 +187,12 @@ export class Engine {
     if (this.timeline.get('first_delta') === undefined) this.timeline.mark('first_delta', now);
     // The read carries on from the last delta of this turn, so the reading
     // position only moves forward; enter() and resume() reset it to EMPTY_READ.
-    this.read = liveRead(turn.words, transcript, this.read);
+    const tokens = tokenize(transcript);
+    const split = splitCalls(tokens, turn.words[this.read.position], this.quietAt, this.calls);
+    this.calls = split.calls;
+    this.tokenCount = tokens.length;
+    this.waitingOnPrompt = split.waiting;
+    this.read = liveRead(turn.words, split.spoken, this.read);
     if (shouldHandOver({ ...this.read, turnEnded: false })) {
       this.finishActorTurn('last_word');
       return;
@@ -187,6 +203,9 @@ export class Engine {
   /** The transcript has stopped growing (QUIET_AFTER_WORDS_MS). */
   quiet() {
     if (this.state !== 'actor') return;
+    this.quietAt = this.tokenCount;
+    // Quiet after "line" is the actor waiting for the prompt, not done.
+    if (this.waitingOnPrompt) return;
     if (shouldHandOver({ ...this.read, turnEnded: true })) this.finishActorTurn('quiet');
   }
 
@@ -211,7 +230,7 @@ export class Engine {
     const turn = this.script.turns[t];
     if (!turn) { finished?.(false); this.end(); return; } // past the last turn; the snapshot stays on it
     this.turnIndex = t;
-    this.read = EMPTY_READ;
+    this.clearRead();
     // The line the beat starts on is the live one from now, not only once its
     // audio is due: a jump into a beat must not show its first line meanwhile.
     this.sounding = turn.kind === 'partner' ? turn.lineIndices[position] : null;
@@ -285,7 +304,7 @@ export class Engine {
     this.ports.mic.close();
     this.timeline.mark('handover', this.ports.clock.now());
     this.heard.set(turn.lineIndex, new Set(this.read.matched));
-    const marks = this.timeline, read = this.read;
+    const marks = this.timeline, read = this.read, calls = this.calls.size;
     // The next beat is scheduled at now by enter(), in this same call. The mark
     // is set only once play() has taken its first line: refused, it stays unset.
     this.enter(this.turnIndex + 1, (scheduled) => {
@@ -294,6 +313,7 @@ export class Engine {
         ended_by: endedBy,
         matched: [...read.matched].sort((a, b) => a - b),
         score: read.score,
+        calls,
         // null when nothing was measured (a skip with no delta, a cold or refused partner line).
         handover_ms: marks.handoverMs(),
         output_latency_ms: Math.round(this.ports.clock.outputLatency() * 1000),
@@ -307,6 +327,14 @@ export class Engine {
     this.state = 'ended';
     this.ports.journal.emit('completed', this.script.lines.length - 1, this.atMs(), {});
     this.changed();
+  }
+
+  private clearRead() {
+    this.read = EMPTY_READ;
+    this.calls = new Set();
+    this.tokenCount = 0;
+    this.quietAt = 0;
+    this.waitingOnPrompt = false;
   }
 
   private clearTimers() { this.cancels.forEach(c => c()); this.cancels = []; }

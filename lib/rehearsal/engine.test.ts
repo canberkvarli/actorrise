@@ -393,3 +393,34 @@ describe('Engine', () => {
     expect((performance.now() - t0) / 10).toBeLessThan(5);
   });
 });
+
+describe('Engine: "line" said out loud', () => {
+  const lines = [L(0, 'BEN', 'Where were you?'), L(1, 'ANNA', "Get in the car, I'll drive ya home, I'm not leaving you."), L(2, 'BEN', 'Fine.')];
+  let ports: ReturnType<typeof fakePorts>;
+  let e: Engine;
+  beforeEach(() => {
+    timers = []; ports = fakePorts(); e = new Engine(buildScript(lines, 'ANNA'), ports);
+    e.begin(); ports.tick(1.0); fire(101);
+  });
+
+  it('a call after a stop is counted, is no word of the line, and its quiet does not end the line', () => {
+    e.delta('get in the car');
+    e.quiet(); // stuck, mid-line
+    expect(e.snapshot().state).toBe('actor');
+    e.delta('get in the car line');
+    expect(e.snapshot().calls).toBe(1);
+    expect(e.snapshot().read.position).toBe(4);
+    e.quiet(); // waiting for the prompt
+    expect(e.snapshot().state).toBe('actor');
+    e.delta("get in the car line I'll drive ya home I'm not leaving you");
+    expect(e.snapshot().state).toBe('partner');
+    expect(ports.journal.emit).toHaveBeenCalledWith('actor_line_read', 1, expect.any(Number), expect.objectContaining({ calls: 1 }));
+  });
+
+  it('calls start again with the next turn', () => {
+    e.delta('line');
+    expect(e.snapshot().calls).toBe(1);
+    e.skip();
+    expect(e.snapshot().calls).toBe(0);
+  });
+});

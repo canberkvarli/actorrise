@@ -73,7 +73,7 @@ export function Dock({ snapshot, partner, onToggle, onSkip, onBack, onRestart, o
         {state === 'actor' && onPrompt && (
           <>
             <span className="r-dock__sep" aria-hidden>·</span>
-            <button type="button" className="r-dock__link" onClick={onPrompt} aria-label="Line! Show the next word">
+            <button type="button" className="r-dock__link" onClick={onPrompt} aria-label="Line! Show the next words" title={`Or say "line"`}>
               Line!
             </button>
           </>

@@ -12,7 +12,7 @@ import { goStep, partnerVoices, skipsCurtain, startsBy } from '@/lib/rehearsal/e
 import { initialVoices } from '@/lib/rehearsal/prefs';
 import { plainError } from '@/lib/rehearsal/prepare';
 import { getBook, getCharacterVoices, getMyRoles, setBook } from '@/lib/scenePrefs';
-import { nextGiven, type Book } from '@/lib/rehearsal/book';
+import { nextPrompt, type Book } from '@/lib/rehearsal/book';
 import { lineWords } from '@/lib/live-read';
 import { Curtain } from './Curtain';
 import { Stage } from './Stage';
@@ -130,9 +130,18 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   }
   const prompt = liveLine === null || !snapshot ? null : (() => {
     const n = lineWords(payload.lines[liveLine]?.text ?? '').length;
-    const i = nextGiven(book, n, snapshot.read.position, snapshot.read.matched, given.get(liveLine) ?? new Set());
-    return i === null ? null : () => setGiven(g => new Map(g).set(liveLine, new Set(g.get(liveLine)).add(i)));
+    const words = nextPrompt(book, n, snapshot.read.position, snapshot.read.matched, given.get(liveLine) ?? new Set());
+    return words.length === 0 ? null
+      : () => setGiven(g => new Map(g).set(liveLine, new Set([...(g.get(liveLine) ?? []), ...words])));
   })();
+  // "Line" said out loud does what the button does. The engine counts the
+  // calls on the turn; each new one gives the next words, in render.
+  const calls = liveLine === null ? 0 : snapshot?.calls ?? 0;
+  const [seenCalls, setSeenCalls] = useState(0);
+  if (calls !== seenCalls) {
+    setSeenCalls(calls);
+    if (calls > seenCalls) prompt?.();
+  }
   const running = state === 'actor' || state === 'partner' || state === 'paused';
   const current = snapshot?.lineIndex ?? 0;
   const cast = useMemo(() => castPalette(payload.characters), [payload.characters]);

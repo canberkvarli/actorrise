@@ -5,8 +5,8 @@
  *
  * Off the script the words still fill in, one by one, as the actor says them,
  * because the reading position already knows which word they are on. Stuck,
- * they call for a line and the next word shows, marked as given rather than
- * remembered. Once a line is read it shows in full, with what was missed and
+ * they call for a line (the Line! button, or "line" said out loud) and the
+ * next few words show, marked as given rather than remembered. Once a line is read it shows in full, with what was missed and
  * what was given marked, so the actor sees where they went off.
  *
  * Pure, so book.test.ts pins it without a page.
@@ -55,4 +55,23 @@ export function nextGiven(book: Book, n: number, position: number,
   for (let i = Math.max(0, position); i < n; i++) if (hidden(i)) return i;
   for (let i = 0; i < Math.min(position, n); i++) if (hidden(i)) return i;
   return null;
+}
+
+/** The words one call for a line gives: a prompter's phrase, enough to start again from. */
+export const PROMPT_WORDS = 3;
+
+/**
+ * What one call for a line gives: the word nextGiven picks and the hidden
+ * words straight after it, up to PROMPT_WORDS. Empty when nothing is left.
+ */
+export function nextPrompt(book: Book, n: number, position: number,
+  heard: ReadonlySet<number>, given: ReadonlySet<number>): number[] {
+  const first = nextGiven(book, n, position, heard, given);
+  if (first === null) return [];
+  const out = [first];
+  for (let i = first + 1; i < n && out.length < PROMPT_WORDS; i++) {
+    if (showWord(book, i, n, false, heard, given) !== 'hidden') break;
+    out.push(i);
+  }
+  return out;
 }

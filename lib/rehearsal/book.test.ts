@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cueWords, nextGiven, showWord } from './book';
+import { cueWords, nextGiven, showWord, nextPrompt } from './book';
 
 const none = new Set<number>();
 
@@ -55,5 +55,19 @@ describe('nextGiven', () => {
   it('gives nothing on the script, or when nothing is hidden', () => {
     expect(nextGiven('script', 6, 0, none, none)).toBeNull();
     expect(nextGiven('off', 2, 2, new Set([0, 1]), none)).toBeNull();
+  });
+});
+
+describe('nextPrompt', () => {
+  const none = new Set<number>();
+  it('gives a phrase: the next hidden word and the two after it', () => {
+    expect(nextPrompt('off', 10, 2, new Set([0, 1]), none)).toEqual([2, 3, 4]);
+  });
+  it('stops at a word already showing, and at the end', () => {
+    expect(nextPrompt('off', 10, 2, new Set([0, 1, 4]), none)).toEqual([2, 3]);
+    expect(nextPrompt('off', 4, 3, new Set([0, 1, 2]), none)).toEqual([3]);
+  });
+  it('gives the script nothing: it is all on the page', () => {
+    expect(nextPrompt('script', 10, 0, none, none)).toEqual([]);
   });
 });
