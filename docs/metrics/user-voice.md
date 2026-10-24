@@ -205,3 +205,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** educator, comped Plus
 **They said:** "about 8 of them encountered a black screen when the clicked on the Take a seat. To get around it they had to open a new tab and when they did that they were able to get in. Some other students about 4/5 ... just kept clicking the button and then it finally let them in after the 3or 4th try. They also said that yesterday it was taking a long time about 1-2 min for monologues to load once they clicked on them - but that could have been the school wifi"
 **Heard as:** bug, /join/<code> "Take your seat" (black screen for about 8 of 26, failed until the 3rd or 4th click for 4 or 5), slow monologue loads in a classroom
+
+## 2026-10-25
+
+**Replying to:** a personal search note ("The Holdovers is in")
+**Account:** signed up 2026-10-23, reads in the iOS app (29 reads, 12 pieces), free, cancelled an app trial the same day
+**They said:** "I did notice that there are time stamps for the monologues. I'm assuming they're the estimated length of them? If so, I noticed they aren't accurate. Some say over a minute but are only 5 or so sentences. Am I missing something? I love the idea of this app but if the I filter for a certain duration and never get that estimated length, I can't use it."
+**Heard as:** bug or trust gap, duration estimate (130 wpm plus pauses) reads long against a silent read; the duration filter is the feature at stake
