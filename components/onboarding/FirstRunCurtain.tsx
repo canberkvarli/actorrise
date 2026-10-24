@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
@@ -43,6 +43,8 @@ import {
  * lib/firstRun) — sessionStorage fires no event in the tab that wrote it, so
  * without it the curtain never hears that it can go.
  */
+const USER_WAIT_MS = 8000;
+
 export function FirstRunCurtain() {
   const { user } = useAuth();
   const pathname = usePathname();
@@ -65,7 +67,22 @@ export function FirstRunCurtain() {
   // Where the card stays quiet the curtain must too, or it sits over the
   // ScenePartner hub waiting for a card that never comes (2026-09-26: a
   // brand-new account saw a black /practice).
-  const show = !finished && !onboardingIsQuietOn(pathname) && (needsOnboarding || signupPending);
+  const covering = !finished && !onboardingIsQuietOn(pathname) && (needsOnboarding || signupPending);
+
+  /* Never wait on the account forever. The curtain is down for the seconds
+     before the user arrives; if the server is slow it stays down, and on
+     2026-10-22 about 8 of a class of 26 sat in front of a black screen until
+     they opened a new tab (which has no signup flag, so no curtain). Past
+     USER_WAIT_MS without a user, lift it and let the app show its own
+     loading; the card still takes over when the account lands. */
+  const [gaveUp, setGaveUp] = useState(false);
+  const waitingForUser = covering && !user;
+  useEffect(() => {
+    if (!waitingForUser) return;
+    const t = window.setTimeout(() => setGaveUp(true), USER_WAIT_MS);
+    return () => window.clearTimeout(t);
+  }, [waitingForUser]);
+  const show = covering && !(gaveUp && !user);
 
   /* Take the pre-paint cover down once this element is the one covering the
      app. FirstRunPaint puts `data-firstrun` on <html> before the first frame,

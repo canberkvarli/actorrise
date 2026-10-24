@@ -6,6 +6,8 @@ submission workflow and welcome emails.
 """
 
 import os
+import threading
+import time
 from typing import Optional
 
 from app.services.email.resend_client import ResendEmailClient
@@ -41,22 +43,49 @@ def send_welcome_email(user_email: str, user_name: Optional[str] = None) -> dict
         raise
 
 
+def send_welcome_email_later(user_email: str, user_name: Optional[str] = None) -> None:
+    """send_welcome_email on a thread of its own, for the signup request.
+
+    It used to run inline in get_current_user: a COUNT on a second connection
+    and a call to Resend, while the request held its first. A class of 26
+    signing up at once on 2026-10-22 ran the pool dry that way.
+    """
+
+    def run() -> None:
+        try:
+            send_welcome_email(user_email=user_email, user_name=user_name)
+        except Exception:  # noqa: BLE001 - logged inside send_welcome_email
+            pass
+
+    threading.Thread(target=run, daemon=True).start()
+
+
+_count_cache: dict[str, float] = {}
+_COUNT_TTL_S = 3600
+
+
 def _searchable_monologue_count() -> Optional[int]:
     """Live library size, counted the way /api/public/stats counts it.
 
     Returns None rather than raising: the welcome email is the first thing a new
     signup sees, and it must not fail because a COUNT did. library_claim() falls
-    back to a floor when this is None.
+    back to a floor when this is None. Held for an hour: the count takes about
+    two seconds, and a class signing up together would run it once each.
     """
+    if _count_cache and time.monotonic() - _count_cache["at"] < _COUNT_TTL_S:
+        return int(_count_cache["n"])
     try:
         from sqlalchemy import text
 
         from app.core.database import SessionLocal
 
         with SessionLocal() as db:
-            return db.execute(
+            n = db.execute(
                 text("select count(*) from monologues where review_status is null")
             ).scalar()
+        if n is not None:
+            _count_cache.update(n=n, at=time.monotonic())
+        return n
     except Exception as e:  # noqa: BLE001 - never block the welcome on this
         print(f"Could not read monologue count for welcome email: {e}")
         return None

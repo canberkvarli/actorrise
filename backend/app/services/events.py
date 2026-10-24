@@ -14,7 +14,7 @@ import json
 import logging
 from typing import Any, Optional
 
-from app.core.database import SessionLocal
+from app.core.database import SideSessionLocal as SessionLocal  # own pool, see database.py
 from app.models.user_event import UserEvent
 
 logger = logging.getLogger(__name__)

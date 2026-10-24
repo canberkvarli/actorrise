@@ -8,7 +8,7 @@ from app.models.user import User
 from app.services.email.marketing import verify_unsubscribe_token
 from app.services.email.opt_out import link_reason, opt_back_in, opt_out
 from app.services.email.notifications import (
-    send_welcome_email,
+    send_welcome_email_later,
 )
 from app.services import app_settings
 from app.services.community import record_event
@@ -189,11 +189,9 @@ def get_current_user(
         # Anonymous accounts get none of the onboarding emails/events until they
         # upgrade to a real email.
         if not is_placeholder_email:
-            # Send welcome email (fire-and-forget; don't block auth response)
-            try:
-                send_welcome_email(user_email=user.email, user_name=user.name)
-            except Exception:
-                pass  # Logged inside send_welcome_email
+            # Send welcome email on its own thread; never hold the request
+            # (or its connection) for Resend.
+            send_welcome_email_later(user_email=user.email, user_name=user.name)
             # The FOUNDER3 offer email used to go out here alongside the welcome,
             # gated on an admin setting that defaulted to True. That row was never
             # written in prod, so the default applied and every new signup was
@@ -220,10 +218,7 @@ def get_current_user(
                 user.name = name
             db.commit()
             db.refresh(user)
-            try:
-                send_welcome_email(user_email=user.email, user_name=user.name)
-            except Exception:
-                pass
+            send_welcome_email_later(user_email=user.email, user_name=user.name)
             record_event(user.id, "joined")
             record_user_event(
                 user.id,
