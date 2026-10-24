@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PartnerCard, type Partner } from "@/components/admin/OrganizationPartner";
 
 interface Person {
   id: number;
@@ -52,6 +53,7 @@ interface OrgDetail {
   next_comp_expiry: string | null;
   first_joined: string | null;
   top_referral: string | null;
+  partner: Partner;
   people: Person[];
   suggestions: { by_domain: Suggestion[]; by_typed_name: Suggestion[] };
 }
@@ -145,6 +147,16 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
     onError: () => toast.error("Could not remove"),
   });
 
+  const savePartner = useMutation<OrgDetail, unknown, Omit<Partner, "updated_at" | "ready_to_ask" | "on_landing">>({
+    mutationFn: async (body) =>
+      (await api.put<OrgDetail>(`/api/admin/organizations/${id}/partner`, body)).data,
+    onSuccess: () => {
+      toast.success("Partner saved");
+      refresh();
+    },
+    onError: () => toast.error("Could not save"),
+  });
+
   if (isLoading || !data) return <p className="text-sm text-muted-foreground">Loading…</p>;
 
   return (
@@ -173,6 +185,15 @@ export default function OrganizationDetailPage({ params }: { params: Promise<{ i
           />
         </CardContent>
       </Card>
+
+      <PartnerCard
+        key={data.partner.updated_at ?? "new"}
+        orgName={data.name}
+        kind={data.kind}
+        partner={data.partner}
+        saving={savePartner.isPending}
+        onSave={(next) => savePartner.mutate(next)}
+      />
 
       <SuggestionList
         title="Same email domain"

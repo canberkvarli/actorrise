@@ -183,6 +183,19 @@ again, written out and highlighted (see the draft rules above), and the line tha
 up (about 20 students in one hour, 2026-10-22). No school or teacher named. Logged as
 `--kind chase`; it is their one chase.
 
+**An organization ready to ask** (Canberk, 2026-10-25: "partnerships, hosted by or
+supported by, on our landing page"). `/admin/organizations` marks an org "ready to ask"
+once 10 students have joined and nobody has asked. Its teacher gets ONE draft, on the
+thread where they last wrote to Canberk, and only after the class has used it without
+trouble: thank them for bringing the class in, then ask two things they can say yes to
+themselves, a link to ActorRise from their drama or class resources page, and whether
+their program's NAME may appear on the landing ("used in classes at ..."). Never ask a
+teacher for a district or university logo; that is not theirs to give. A studio,
+conservatory, theatre or association may be asked for its logo. Log it `--kind
+partner`, and say in the summary to set the org to "asked" in the admin. When they say
+yes, Canberk records who, when and their words in the org's Partner card; nothing shows
+on the landing without it.
+
 ## 4. What people said
 
 Append to `docs/metrics/user-voice.md`, newest at the bottom. Create it if it is missing.

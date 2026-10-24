@@ -15,6 +15,8 @@
  * ticket. Renders nothing below PARTNERS_MIN_TO_SHOW, same as the app page.
  */
 
+import { useEffect, useState } from "react";
+
 import {
   APPROVED_PARTNERS,
   PARTNERS_MIN_FOR_ROW,
@@ -22,6 +24,43 @@ import {
   type PartnerItem,
 } from "@/data/partners";
 import { trackPartnerClicked } from "@/lib/analytics";
+
+/**
+ * Organizations approved in /admin/organizations (GET /api/partners). Same
+ * written-yes rule, kept on the server. A school shows by name ("used in
+ * classes at"), an org that owns its mark can show its logo beside the
+ * data/partners.ts ones. Fetched after load: the landing is static and these
+ * change from the admin without a deploy.
+ */
+interface OrgPartner {
+  name: string;
+  kind: string;
+  url: string | null;
+  logo: string | null;
+  show: "name" | "logo";
+}
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+function useOrgPartners(): OrgPartner[] {
+  const [rows, setRows] = useState<OrgPartner[]>([]);
+  useEffect(() => {
+    let live = true;
+    fetch(`${API_URL}/api/partners`)
+      .then((r) => (r.ok ? r.json() : { partners: [] }))
+      .then((d) => live && setRows(Array.isArray(d?.partners) ? d.partners : []))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+  return rows;
+}
+
+function listNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
 
 /** "the Virginia Theatre Association" / "X and Y" / "X, Y and Z" */
 function listPartnerNames(partners: PartnerItem[]): string {
@@ -62,9 +101,16 @@ function PartnerMark({ partner, solo }: { partner: PartnerItem; solo: boolean })
 }
 
 export function TheatrePartners() {
-  if (APPROVED_PARTNERS.length < PARTNERS_MIN_TO_SHOW) return null;
+  const orgs = useOrgPartners();
+  const orgMarks: PartnerItem[] = orgs
+    .filter((o) => o.show === "logo" && o.logo && o.url)
+    .map((o) => ({ name: o.name, url: o.url as string, logo: o.logo as string, category: o.kind, approved: true }));
+  const classes = orgs.filter((o) => !orgMarks.some((m) => m.name === o.name)).map((o) => o.name);
+  const marks = [...APPROVED_PARTNERS, ...orgMarks];
 
-  const asRow = APPROVED_PARTNERS.length >= PARTNERS_MIN_FOR_ROW;
+  if (marks.length < PARTNERS_MIN_TO_SHOW && classes.length === 0) return null;
+
+  const asRow = marks.length >= PARTNERS_MIN_FOR_ROW;
 
   return (
     <div className="mt-[120px]">
@@ -72,16 +118,16 @@ export function TheatrePartners() {
         (who&rsquo;s listing us.)
       </p>
 
-      {asRow ? (
+      {marks.length < PARTNERS_MIN_TO_SHOW ? null : asRow ? (
         <div className="mt-6 flex flex-wrap items-center gap-x-9 gap-y-4">
-          {APPROVED_PARTNERS.map((partner) => (
+          {marks.map((partner) => (
             <PartnerMark key={partner.url} partner={partner} solo={false} />
           ))}
         </div>
       ) : (
         <div className="mt-5 flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-7">
           <div className="flex shrink-0 items-center gap-6">
-            {APPROVED_PARTNERS.map((partner) => (
+            {marks.map((partner) => (
               <PartnerMark key={partner.url} partner={partner} solo />
             ))}
           </div>
@@ -96,11 +142,23 @@ export function TheatrePartners() {
           >
             Listed by the{" "}
             <em className="t-em" style={{ color: "var(--t-orange-deep)" }}>
-              {listPartnerNames(APPROVED_PARTNERS)}
+              {listPartnerNames(marks)}
             </em>
             .
           </p>
         </div>
+      )}
+      {classes.length > 0 && (
+        <p
+          className="m-0 mt-5 text-[17px]"
+          style={{ fontFamily: "var(--t-display)", color: "var(--t-text)" }}
+        >
+          Used in classes at{" "}
+          <em className="t-em" style={{ color: "var(--t-orange-deep)" }}>
+            {listNames(classes)}
+          </em>
+          .
+        </p>
       )}
     </div>
   );
