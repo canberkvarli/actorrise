@@ -145,31 +145,10 @@ class AdminSessionAnalyticsTests(unittest.TestCase):
         copies drift, which is the failure this file keeps documenting."""
         self.assertIn("from app.services.admin_filters import test_user_filter", self.source)
 
-    def test_every_aggregate_applies_it(self):
-        """Four separate chances to forget: the feed, the page-1 summary, the
-        top-scenes list, and the analytics window that all of /sessions/analytics
-        is built on."""
-        self.assertGreaterEqual(
-            self.source.count("not_staff"), 5,  # 1 def + 4 uses
-            "an aggregate on /admin/sessions is missing the staff filter",
-        )
-
-    def test_the_analytics_window_carries_it(self):
-        """`window` is spread into the funnel, drop-off, per-scene and per-user
-        queries, so putting the filter there covers all four at once — and means
-        a new query that uses `window` is filtered by default."""
-        window = self.source.split("window = (", 1)[1].split("\n    )", 1)[0]
-        self.assertIn("_not_staff(db)", window)
-
-    def test_an_explicit_search_can_still_find_staff(self):
-        """A filter you cannot see past is a filter you cannot debug past, so
-        typing an address or scene title into `q` overrides it. The summary
-        numbers below it never do."""
-        self.assertIn("if not q:", self.source)
-
-    def test_anonymous_sessions_still_count(self):
-        """No user_id means nobody claims it, not that it isn't real use."""
-        self.assertIn("RehearsalSession.user_id.is_(None)", self.source)
+    # The rest of this rule (every aggregate leaves staff out, a `q` search
+    # still finds them, an anonymous session still counts) is tested on real
+    # rows in test_admin_sessions_runs.py since the page moved to reading
+    # rehearsal_runs as well, 2026-10-25.
 
 
 if __name__ == "__main__":
