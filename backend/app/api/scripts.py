@@ -578,6 +578,41 @@ async def upload_script_stream(
 
     filename = file.filename
     user_id = current_user.id  # capture before closing db
+
+    # The same file again is the script they already have, not a second copy
+    # of it: same name, same size, read to the end once already. The map on
+    # the phone gets one step and the script, and the shelf stays one deep.
+    already = (
+        db.query(UserScript)
+        .filter(
+            UserScript.user_id == user_id,
+            UserScript.original_filename == filename,
+            UserScript.file_size_bytes == file_size,
+            UserScript.processing_status == "completed",
+        )
+        .order_by(UserScript.id.desc())
+        .first()
+    )
+    if already is not None:
+        had = db.query(Scene).filter(Scene.user_script_id == already.id).all()
+        again_data = UserScriptDetailResponse(
+            **UserScriptResponse.model_validate(already).model_dump(),
+            scenes=[SceneInScriptResponse.model_validate(sc) for sc in had],
+        ).model_dump()
+        for key in ("created_at", "updated_at"):
+            if again_data.get(key) and hasattr(again_data[key], "isoformat"):
+                again_data[key] = again_data[key].isoformat()
+
+        async def again_stream():
+            yield f"data: {_json.dumps({'type': 'progress', 'step': 'You have this one already. Opening it.'})}\n\n"
+            yield f"data: {_json.dumps({'type': 'done', 'data': again_data})}\n\n"
+
+        return StreamingResponse(
+            again_stream(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+        )
+
     progress_queue: Queue = Queue()
     import threading
     cancel_event = threading.Event()
