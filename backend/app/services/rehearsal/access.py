@@ -70,3 +70,19 @@ def can_direct_partner(db, user) -> bool:
     if PARTNER_DIRECTION_FEATURE in benefits:
         return bool(benefits[PARTNER_DIRECTION_FEATURE])
     return benefits.get("scene_partner_sessions") == -1
+
+
+# The Community library's classics are Plus. A free actor puts one on their
+# shelf to taste it; the next Add is the upgrade. Same tier rule as the
+# partner note: unlimited ScenePartner runs, no tier names.
+FREE_LIBRARY_ADDS = 1
+
+
+def has_whole_library(db, user) -> bool:
+    from app.core.config import settings
+
+    emails = [e.strip().lower() for e in (settings.superuser_emails or "").split(",") if e.strip()]
+    if user.email and user.email.lower() in emails:
+        return True
+    benefits = get_effective_benefits(db, user.id, _subscription(db, user.id))
+    return benefits.get("scene_partner_sessions") == -1

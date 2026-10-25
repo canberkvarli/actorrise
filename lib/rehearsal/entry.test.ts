@@ -9,8 +9,8 @@ describe('skipsCurtain', () => {
     expect(skipsCurtain(cast, ['anna'], go)).toBe('ANNA');
   });
 
-  it('shows the Curtain without ?go=1', () => {
-    expect(skipsCurtain(cast, ['ANNA'], { ...go, go: false })).toBeNull();
+  it('opens on the saved part without ?go=1 too: a bookmark, the back button', () => {
+    expect(skipsCurtain(cast, ['ANNA'], { ...go, go: false })).toBe('ANNA');
   });
 
   it('shows the Curtain when no part was saved, or the saved one is not in this scene', () => {

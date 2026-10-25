@@ -8,7 +8,8 @@ import { type ShareableScene, type ShelfScene } from "@/lib/shelf";
 
 const KEY = ["shelf"] as const;
 
-type Page = { items: ShelfScene[]; total: number };
+/** adds_left: classics this actor can still add; null is no limit (Plus). */
+type Page = { items: ShelfScene[]; total: number; adds_left?: number | null };
 
 /**
  * The whole library at once, for the Community library to filter in the
@@ -33,7 +34,13 @@ export function useAddToShelf() {
     onSuccess: (r, id) => {
       // Say so on the card now; the shelf beside it catches up.
       qc.setQueryData<Page>([...KEY, "all"], (old) =>
-        old ? { ...old, items: old.items.map((s) => (s.id === id ? { ...s, on_my_shelf: r.script_id } : s)) } : old,
+        old
+          ? {
+              ...old,
+              items: old.items.map((s) => (s.id === id ? { ...s, on_my_shelf: r.script_id } : s)),
+              adds_left: r.added && old.adds_left != null ? Math.max(0, old.adds_left - 1) : old.adds_left,
+            }
+          : old,
       );
       return invalidateShelf(qc);
     },

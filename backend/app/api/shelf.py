@@ -23,6 +23,7 @@ from app.models.rehearsal import RehearsalEvent, RehearsalRun
 from app.models.shelf import ON_SHELF, ShelfScene, WORK_KINDS
 from app.models.user import User
 from app.services import shelf_labels
+from app.services.rehearsal.access import FREE_LIBRARY_ADDS, has_whole_library
 
 router = APIRouter(prefix="/api/shelf", tags=["shelf"])
 
@@ -66,6 +67,27 @@ def serialize(row: ShelfScene, viewer: User, sharer: Optional[User] = None, my_s
         # The viewer's own copy of a classic, on their shelf: its script id.
         "on_my_shelf": my_script_id,
     }
+
+
+def _adds_left(db: Session, user: User) -> Optional[int]:
+    """Classics this actor can still put on their shelf; None is no limit."""
+    if has_whole_library(db, user):
+        return None
+    held = (
+        db.query(UserScript)
+        .filter(UserScript.user_id == user.id, UserScript.original_filename.like("shelf-%"))
+        .count()
+    )
+    return max(0, FREE_LIBRARY_ADDS - held)
+
+
+def _assert_room_on_shelf(db: Session, user: User) -> None:
+    if _adds_left(db, user) == 0:
+        raise HTTPException(status_code=403, detail={
+            "error": "library_upgrade_required",
+            "message": "Your free shelf holds one classic. Plus puts the whole library on your shelf.",
+            "upgrade_url": "/pricing",
+        })
 
 
 def _my_copies(db: Session, user: User, rows) -> dict:
@@ -152,6 +174,7 @@ def list_shelf(
     return {
         "items": [serialize(r, current_user, sharers.get(r.shared_by_user_id), copies.get(r.id)) for r in rows],
         "total": total,
+        "adds_left": _adds_left(db, current_user),
     }
 
 
@@ -513,6 +536,7 @@ def add_to_my_shelf(shelf_id: int, current_user: User = Depends(get_current_user
     scene = _copy_for(db, current_user, row)
     added = scene is None
     if added:
+        _assert_room_on_shelf(db, current_user)
         scene = copy_public_domain(db, current_user, row)
         row.open_count = (row.open_count or 0) + 1
     db.commit()
@@ -535,6 +559,7 @@ def rehearse(shelf_id: int, current_user: User = Depends(get_current_user), db: 
 
     scene = _copy_for(db, current_user, row)
     if scene is None:
+        _assert_room_on_shelf(db, current_user)
         scene = copy_public_domain(db, current_user, row)
         row.open_count = (row.open_count or 0) + 1
     db.commit()

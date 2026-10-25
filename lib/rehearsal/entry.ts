@@ -7,16 +7,18 @@ import { savedPart } from './prefs';
 
 /**
  * The part a run opens on with no Curtain, or null when the Curtain shows: no
- * `?go=1`, no saved part in this scene, or a guided run (the server picks the
- * part). A run waiting to be picked up no longer stops at the Curtain: "Pick it
- * up" used to land on it to ask where to start, and the answer is always "where
- * I stopped" (Canberk, 2026-10-23). The run resumes at its line; starting over
- * is a jump from the run's own top bar.
+ * saved part in this scene, or a guided run (the server picks the part). A part
+ * cast once is the part, however the actor got here: the preview's `?go=1`, a
+ * bookmark, the back button. The Curtain asking "who are you, which voice,
+ * Begin" again was the screen Canberk wanted gone (2026-10-26); it is left for
+ * a scene never cast on this device, and for the Plus gate (goStep).
+ * A run waiting to be picked up resumes at its line (Canberk, 2026-10-23);
+ * starting over is a jump from the run's own top bar.
  */
 export function skipsCurtain(
   characters: string[], roles: string[], opts: { go: boolean; resume: boolean; guided: boolean },
 ): string | null {
-  if (!opts.go || opts.guided) return null;
+  if (opts.guided) return null;
   return savedPart(characters, roles);
 }
 

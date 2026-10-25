@@ -9,6 +9,7 @@ import {
   IconChevronDown,
   IconDots,
   IconLoader2,
+  IconLock,
   IconPlus,
   IconSearch,
   IconX,
@@ -21,6 +22,7 @@ import { theatreFontVars } from "@/lib/fonts/theatre";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
+import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { useAddToShelf, useMyShares, useSetStatus, useShelfAll } from "@/hooks/useShelf";
 import {
   AGES,
@@ -269,6 +271,8 @@ function LibraryRoom({ onClose }: { onClose: () => void }) {
               {results.length === scenes.length
                 ? `${scenes.length} scenes from ${allWorks} plays`
                 : `${results.length} ${results.length === 1 ? "scene" : "scenes"} in ${works.length} ${works.length === 1 ? "play" : "plays"}`}
+              {all.data?.adds_left === 1 && " · your first one is free"}
+              {all.data?.adds_left === 0 && " · Plus puts the rest on your shelf"}
             </p>
             <Grid>
               <AnimatePresence mode="popLayout" initial={false}>
@@ -382,8 +386,11 @@ function WorkCard({ work, index, onClose }: { work: ShelfWork; index: number; on
 function SceneRow({ scene, onClose }: { scene: ShelfScene; onClose: () => void }) {
   const router = useRouter();
   const add = useAddToShelf();
+  // The same cached page the room drew from: no second request.
+  const shelfFull = useShelfAll(true).data?.adds_left === 0;
   const [open, setOpen] = useState(false);
   const [bringOwn, setBringOwn] = useState(false);
+  const [upgrade, setUpgrade] = useState(false);
   const shared = scene.kind === "shared";
   const facts = [formatLength(scene.duration_seconds), scene.tone].filter(Boolean).join(" · ");
 
@@ -392,7 +399,11 @@ function SceneRow({ scene, onClose }: { scene: ShelfScene; onClose: () => void }
       onSuccess: (r) => {
         if (r.added) toast.success(`${scene.title} is on your shelf`);
       },
-      onError: (e) => toast.error((e as Error).message || "That didn't go on your shelf. Try again."),
+      onError: (e) => {
+        const detail = (e as { response?: { data?: { detail?: { error?: string } } } }).response?.data?.detail;
+        if (detail?.error === "library_upgrade_required") setUpgrade(true);
+        else toast.error((e as Error).message || "That didn't go on your shelf. Try again.");
+      },
     });
 
   const openMine = (scriptId: number) => {
@@ -418,6 +429,16 @@ function SceneRow({ scene, onClose }: { scene: ShelfScene; onClose: () => void }
       <IconCheck className="h-3.5 w-3.5 text-primary" />
       On your shelf
     </button>
+  ) : shelfFull ? (
+    <button
+      type="button"
+      onClick={() => setUpgrade(true)}
+      aria-label={`Add ${scene.title} to my shelf, with Plus`}
+      className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-neutral-900 px-3 text-[12.5px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-900 hover:text-[#faf7f1]"
+    >
+      <IconLock className="h-3.5 w-3.5" />
+      Add
+    </button>
   ) : (
     <button
       type="button"
@@ -433,6 +454,12 @@ function SceneRow({ scene, onClose }: { scene: ShelfScene; onClose: () => void }
 
   return (
     <div className="py-3">
+      <UpgradeModal
+        open={upgrade}
+        onOpenChange={setUpgrade}
+        feature="Community library"
+        message="Your free shelf holds one classic. Plus puts the whole library on your shelf, every scene ready to rehearse."
+      />
       <div className="flex items-start gap-3">
         {/* The title opens what happens in the scene; the button does the rest. */}
         <button

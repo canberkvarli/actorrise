@@ -2,6 +2,7 @@
 
 import unittest
 from datetime import datetime, timezone
+from unittest import mock
 
 import app.models  # noqa: F401  every mapper the relationships name
 from fastapi import HTTPException
@@ -45,6 +46,11 @@ class ShelfApiTests(unittest.TestCase):
                              duration_seconds=cand.duration_seconds, line_count=cand.turns, tone="tense", era="modern")
         self.db.add(self.pd)
         self.db.commit()
+        # Plus unless a test says otherwise; the free shelf has its own test.
+        self.whole_library = True
+        patcher = mock.patch.object(api, "has_whole_library", lambda db, user: self.whole_library)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def tearDown(self):
         self.db.close()
@@ -109,6 +115,28 @@ class ShelfApiTests(unittest.TestCase):
         theirs = api.list_shelf(current_user=self.other, db=self.db, pairing=None, age=None, length=None,
                                 tone=None, era=None, kind=None, q=None, offset=0, limit=30)
         self.assertIsNone(theirs["items"][0]["on_my_shelf"])
+
+    def test_a_free_shelf_holds_one_classic(self):
+        self.whole_library = False
+        second = ShelfScene(kind="public_domain", status="live", work_title="A Doll's House", author="Henrik Ibsen",
+                            play_id=self.play.id, start_offset=self.pd.start_offset, end_offset=self.pd.end_offset,
+                            text_hash=self.pd.text_hash, title="Again", character_1_name="Nora",
+                            character_2_name="Helmer", duration_seconds=60, line_count=self.pd.line_count)
+        self.db.add(second)
+        self.db.commit()
+        self.assertEqual(self._list()["adds_left"], 1)
+        api.add_to_my_shelf(self.pd.id, current_user=self.me, db=self.db)
+        self.assertEqual(self._list()["adds_left"], 0)
+        # The one they hold is still theirs to open.
+        self.assertFalse(api.add_to_my_shelf(self.pd.id, current_user=self.me, db=self.db)["added"])
+        for door in (api.add_to_my_shelf, api.rehearse):
+            with self.assertRaises(HTTPException) as err:
+                door(second.id, current_user=self.me, db=self.db)
+            self.assertEqual(err.exception.status_code, 403)
+            self.assertEqual(err.exception.detail["error"], "library_upgrade_required")
+        self.whole_library = True
+        self.assertIsNone(self._list()["adds_left"])
+        self.assertTrue(api.add_to_my_shelf(second.id, current_user=self.me, db=self.db)["added"])
 
     def test_a_shared_scene_is_never_copied(self):
         scene = self._my_upload(self.other)

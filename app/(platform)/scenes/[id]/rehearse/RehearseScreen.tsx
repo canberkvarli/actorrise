@@ -31,8 +31,9 @@ const failure = () => plainError('other');
  * `prepare` opens a metered run, so it is called exactly once per mount: when
  * the actor taps a part (or, with a run to pick up, chooses where to start).
  *
- * Straight onto the Stage, with no Curtain: `go` (`?go=1`, from the scene
- * preview, where the actor cast the scene; the saved part and voices) and a
+ * Straight onto the Stage, with no Curtain: a part saved for this scene (cast
+ * on the scene preview, which sends `?go=1`; a bookmark or the back button
+ * gets the same; the saved part and voices) and a
  * guided run (the first scene; the server picks the part). The run prepares on
  * mount and begins by itself once it can, when the audio context runs; on iOS
  * it waits for one tap anywhere, which is the gesture that unlocks it. No saved
