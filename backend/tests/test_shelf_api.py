@@ -1,0 +1,150 @@
+"""The scene shelf's API: browse, share a pointer, take a scene into rehearsal."""
+
+import unittest
+from datetime import datetime, timezone
+
+import app.models  # noqa: F401  every mapper the relationships name
+from fastapi import HTTPException
+
+from app.api import shelf as api
+from app.models.actor import FilmTvReference, Play, Scene, SceneLine, UserScript
+from app.models.organization import Organization
+from app.models.shelf import ShelfScene
+from app.models.user import User
+from app.services.extraction import scene_cutter
+from tests.dbfixture import memory_db, restore
+
+LINE_A = "I have been waiting for you all evening and you know it very well indeed."
+LINE_B = "Then you should have gone home, because I was never going to come tonight."
+PLAY_TEXT = "THE PLAY\n\nACT I\n\n" + "\n".join(
+    f"Nora. {LINE_A} {i}.\n\nHelmer. {LINE_B} {i}.\n" for i in range(6)
+)
+
+
+class ShelfApiTests(unittest.TestCase):
+    def setUp(self):
+        self.db, self.saved = memory_db([Organization, User, FilmTvReference, Play, UserScript, Scene, SceneLine, ShelfScene])
+        now = datetime.now(timezone.utc)
+        self.me = User(email="me@gmail.com", hashed_password="x", name="Maya Lopez", created_at=now)
+        self.other = User(email="o@gmail.com", hashed_password="x", name="Sam", created_at=now)
+        self.mod = User(email="m@actorrise.com", hashed_password="x", is_moderator=True, created_at=now)
+        self.db.add_all([self.me, self.other, self.mod])
+        self.play = Play(title="A Doll's House", author="Henrik Ibsen", genre="drama", category="classical",
+                         copyright_status="public_domain", full_text=PLAY_TEXT, text_format="plain", year_written=1879)
+        self.db.add(self.play)
+        self.db.flush()
+        cand = scene_cutter.cut_play(PLAY_TEXT)[0]
+        self.pd = ShelfScene(kind="public_domain", status="live", work_title="A Doll's House", author="Henrik Ibsen",
+                             play_id=self.play.id, start_offset=cand.start, end_offset=cand.end,
+                             text_hash=scene_cutter.span_hash(PLAY_TEXT, cand.start, cand.end),
+                             title="Nora waits", character_1_name="Nora", character_2_name="Helmer",
+                             character_1_gender="female", character_2_gender="male",
+                             character_1_age_range="30s", character_2_age_range="30s",
+                             duration_seconds=cand.duration_seconds, line_count=cand.turns, tone="tense", era="modern")
+        self.db.add(self.pd)
+        self.db.commit()
+
+    def tearDown(self):
+        self.db.close()
+        restore(self.saved)
+
+    def _my_upload(self, user=None):
+        user = user or self.me
+        stub = Play(title="Up", author="Me", genre="drama", category="contemporary", copyright_status="user_uploaded")
+        self.db.add(stub)
+        self.db.flush()
+        script = UserScript(user_id=user.id, title="Doubt", author="J", original_filename="doubt.pdf", file_type="pdf")
+        self.db.add(script)
+        self.db.flush()
+        scene = Scene(play_id=stub.id, user_script_id=script.id, title="The garden", character_1_name="Aloysius",
+                      character_2_name="Flynn", character_1_gender="female", character_2_gender="male",
+                      line_count=30, estimated_duration_seconds=240, tone="tense")
+        self.db.add(scene)
+        self.db.commit()
+        return scene
+
+    def _list(self, **kw):
+        args = dict(pairing=None, age=None, length=None, tone=None, era=None, kind=None, q=None, offset=0, limit=30)
+        args.update(kw)
+        return api.list_shelf(current_user=self.me, db=self.db, **args)
+
+    def test_browse_and_filter(self):
+        self.assertEqual(self._list()["total"], 1)
+        self.assertEqual(self._list(pairing="mf")["total"], 1)
+        self.assertEqual(self._list(pairing="ff")["total"], 0)
+        self.assertEqual(self._list(tone="comedic")["total"], 0)
+        self.assertEqual(self._list(q="doll")["total"], 1)
+        self.pd.status = "hidden"
+        self.db.commit()
+        self.assertEqual(self._list()["total"], 0)
+
+    def test_rehearse_copies_the_lines_once(self):
+        first = api.rehearse(self.pd.id, current_user=self.me, db=self.db)
+        scene = self.db.query(Scene).get(first["scene_id"])
+        self.assertEqual(scene.character_1_name, "Nora")
+        # Its own play row: editing the copy can never rename the real play.
+        self.assertNotEqual(scene.play_id, self.play.id)
+        self.assertEqual(self.db.query(Play).get(scene.play_id).copyright_status, "user_uploaded")
+        lines = self.db.query(SceneLine).filter(SceneLine.scene_id == scene.id).count()
+        self.assertEqual(lines, self.pd.line_count)
+        again = api.rehearse(self.pd.id, current_user=self.me, db=self.db)
+        self.assertEqual(again["scene_id"], first["scene_id"])
+        self.assertEqual(self.pd.open_count, 1)
+
+    def test_a_moved_text_is_refused(self):
+        self.play.full_text = "changed " + PLAY_TEXT
+        self.db.commit()
+        with self.assertRaises(HTTPException) as err:
+            api.rehearse(self.pd.id, current_user=self.me, db=self.db)
+        self.assertEqual(err.exception.status_code, 409)
+
+    def test_share_a_pointer_not_the_text(self):
+        scene = self._my_upload()
+        out = api.share(api.ShareIn(scene_id=scene.id, work_title="Doubt", where="Scene 5, the garden",
+                                    show_name=True), current_user=self.me, db=self.db)
+        self.assertEqual(out["kind"], "shared")
+        self.assertEqual(out["shared_by"], "Maya")
+        self.assertEqual(out["characters"][0]["gender"], "female")
+        row = self.db.query(ShelfScene).get(out["id"])
+        self.assertIsNone(row.play_id)
+        self.assertIsNone(row.start_offset)
+        # Sharing twice gives back the same row.
+        again = api.share(api.ShareIn(scene_id=scene.id, work_title="Doubt", where="x"), current_user=self.me, db=self.db)
+        self.assertEqual(again["id"], out["id"])
+        self.assertTrue(api.shareable(current_user=self.me, db=self.db)["items"][0]["already_shared"])
+        self.assertTrue(api.mine(current_user=self.me, db=self.db)["contributor"])
+
+    def test_cannot_share_someone_elses_scene(self):
+        scene = self._my_upload(self.other)
+        with self.assertRaises(HTTPException) as err:
+            api.share(api.ShareIn(scene_id=scene.id, work_title="Doubt", where="x"), current_user=self.me, db=self.db)
+        self.assertEqual(err.exception.status_code, 404)
+
+    def test_a_shared_scene_asks_for_your_own_copy(self):
+        scene = self._my_upload()
+        out = api.share(api.ShareIn(scene_id=scene.id, work_title="Doubt", where="Scene 5"), current_user=self.me, db=self.db)
+        self.assertIsNone(out["shared_by"])  # no name unless they said yes
+        theirs = api.rehearse(out["id"], current_user=self.other, db=self.db)
+        self.assertTrue(theirs["bring_your_own"])
+        self.assertIsNone(theirs["scene_id"])
+        mine = api.rehearse(out["id"], current_user=self.me, db=self.db)
+        self.assertEqual(mine["scene_id"], scene.id)
+        self.assertEqual(api.mine(current_user=self.me, db=self.db)["opens"], 1)
+
+    def test_only_moderators_hide(self):
+        with self.assertRaises(HTTPException):
+            api.set_status(self.pd.id, api.StatusIn(status="hidden"), current_user=self.me, db=self.db)
+        api.set_status(self.pd.id, api.StatusIn(status="hidden"), current_user=self.mod, db=self.db)
+        self.assertEqual(self.pd.status, "hidden")
+
+    def test_withdraw_only_your_own(self):
+        scene = self._my_upload()
+        out = api.share(api.ShareIn(scene_id=scene.id, work_title="Doubt", where="x"), current_user=self.me, db=self.db)
+        with self.assertRaises(HTTPException):
+            api.withdraw(out["id"], current_user=self.other, db=self.db)
+        api.withdraw(out["id"], current_user=self.me, db=self.db)
+        self.assertIsNone(self.db.query(ShelfScene).get(out["id"]))
+
+
+if __name__ == "__main__":
+    unittest.main()

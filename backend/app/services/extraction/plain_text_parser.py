@@ -141,6 +141,54 @@ class PlainTextParser:
         """
         monologues = []
 
+        speeches = self.speeches(text)
+
+        # Read the cast block once, not per speech. Empty for modern texts,
+        # which spell their speakers out and need no expansion.
+        cast = self._cast_list(text)
+
+        # Filter and clean speeches
+        for character, speech_text in speeches:
+            # Two texts, the same pair screenplay_pdf_parser produces:
+            #   display — what the actor reads, directions kept as `(...)` so the
+            #             reader can set them italic and muted
+            #   spoken  — display minus the directions, which is what a word
+            #             floor must measure. A direction is not something the
+            #             actor says, so counting it would let
+            #             "(He crosses to the window and stands a long while)"
+            #             push a thin speech over the bar.
+            display = self._strip_leading_narrative(self._to_display(speech_text))
+            spoken = self._spoken_only(display)
+
+            # Skip if empty or starts with common non-dialogue indicators
+            if not spoken or spoken.lower().startswith(('scene', 'act', 'enter', 'exit')):
+                continue
+
+            word_count = len(spoken.split())
+
+            if min_words <= word_count <= max_words:
+                monologues.append({
+                    'character': self._expand_from_cast(
+                        self._normalize_character_name(character), cast),
+                    'text': display,
+                    'dialogue': spoken,
+                    'word_count': word_count,
+                    'stage_directions': self._extract_stage_directions(speech_text)
+                })
+
+        return monologues
+
+    def speeches(self, text: str, merge: bool = True) -> List[tuple]:
+        """Every speech in the play, in order, as (cue, body) pairs.
+
+        ``merge=False`` keeps an interruption as the speech it is: a monologue
+        wants "Go on." folded back into the speech it cut, a two-person scene
+        wants it as the other actor's line.
+
+        The reading extract_monologues filters; the scene shelf's cutter
+        (services/extraction/scene_cutter.py) walks the same list for stretches
+        where two people talk, so both read a play the same way.
+        """
         # Pattern 1: Character name followed by colon (most common)
         # Matches: "HAMLET:\n  To be or not to be..."
         pattern1 = r'([A-Z][A-Z\s\-\.]+):\s*\n((?:(?!\n[A-Z][A-Z\s\-\.]+:)(?!\n\n[A-Z][A-Z\s\-\.]+\.).)+'
@@ -246,42 +294,7 @@ class PlainTextParser:
         ]
 
         # A speech that someone briefly interrupted is still one speech.
-        speeches = self._merge_interrupted_speeches(speeches)
-
-        # Read the cast block once, not per speech. Empty for modern texts,
-        # which spell their speakers out and need no expansion.
-        cast = self._cast_list(text)
-
-        # Filter and clean speeches
-        for character, speech_text in speeches:
-            # Two texts, the same pair screenplay_pdf_parser produces:
-            #   display — what the actor reads, directions kept as `(...)` so the
-            #             reader can set them italic and muted
-            #   spoken  — display minus the directions, which is what a word
-            #             floor must measure. A direction is not something the
-            #             actor says, so counting it would let
-            #             "(He crosses to the window and stands a long while)"
-            #             push a thin speech over the bar.
-            display = self._strip_leading_narrative(self._to_display(speech_text))
-            spoken = self._spoken_only(display)
-
-            # Skip if empty or starts with common non-dialogue indicators
-            if not spoken or spoken.lower().startswith(('scene', 'act', 'enter', 'exit')):
-                continue
-
-            word_count = len(spoken.split())
-
-            if min_words <= word_count <= max_words:
-                monologues.append({
-                    'character': self._expand_from_cast(
-                        self._normalize_character_name(character), cast),
-                    'text': display,
-                    'dialogue': spoken,
-                    'word_count': word_count,
-                    'stage_directions': self._extract_stage_directions(speech_text)
-                })
-
-        return monologues
+        return self._merge_interrupted_speeches(speeches) if merge else speeches
 
     #: The merge bounds live in `speech_merge` and are shared with the
     #: screenplay parser; re-exported here because tests and callers refer to

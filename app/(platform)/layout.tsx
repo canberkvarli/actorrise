@@ -7,7 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
-import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconHelpCircle, IconTicket } from "@tabler/icons-react";
+import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconHelpCircle, IconTicket, IconUsers } from "@tabler/icons-react";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarks";
 import { useFilmTvFavoriteCount } from "@/hooks/useFilmTvFavorites";
@@ -197,6 +197,10 @@ export default function PlatformLayout({
     { href: "/rehearse", label: "Collection", icon: IconBookmark, match: "exact" as const },
     // The tracker. Prefix match so the prep room (/auditions/12) lights the tab.
     { href: "/auditions", label: "Auditions", icon: IconTicket, match: "prefix" as const },
+    // The scene shelf. Desktop only: the phone bar is full at five slots, so
+    // on a phone it is a row in the menu sheet. /shelf, not /scenes: /scenes
+    // has been a permanent redirect to /practice, and browsers keep those.
+    { href: "/shelf", label: "Scenes", icon: IconUsers, match: "prefix" as const, phone: false },
   ];
   /* Which room the phone bar names. Derived from the same nav config, with the
      rooms that are not tabs spelled out, so it never says nothing. */
@@ -645,7 +649,7 @@ export default function PlatformLayout({
           {/* Same navItems, same order as the desktop bar, so the two navs can no
               longer drift apart. Account is appended here only, it lives in the
               avatar dropdown on desktop. */}
-          {navItems.map((item) => {
+          {navItems.filter((item) => !("phone" in item && item.phone === false)).map((item) => {
             const Icon = item.icon;
             return (
               <Link
@@ -735,6 +739,16 @@ export default function PlatformLayout({
                 {userTier && <span className="t-sheet__plan">{userTier}</span>}
               </span>
             </div>
+
+            <Link
+              href="/shelf"
+              onClick={() => setMobileMenuOpen(false)}
+              className="t-sheet__row"
+              data-active={pathname.startsWith("/shelf")}
+            >
+              <IconUsers className="size-[18px] shrink-0" />
+              Scenes
+            </Link>
 
             <p className="t-sheet__dir">(you.)</p>
 
