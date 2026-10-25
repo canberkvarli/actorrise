@@ -172,3 +172,43 @@ export function filterShelf(scenes: ShelfScene[], f: ShelfFilters): ShelfScene[]
     return true;
   });
 }
+
+/** One work in the library and its scenes, as the library shows them. */
+export type ShelfWork = {
+  key: string;
+  work_title: string;
+  work_kind: ShelfScene["work_kind"];
+  author: string | null;
+  year: number | null;
+  /** Any scene in it was shared by an actor. */
+  shared: boolean;
+  scenes: ShelfScene[];
+};
+
+/**
+ * Scenes gathered under the play (or film, or show) they come from.
+ *
+ * Works with an actor's share come first: they are what the library is for
+ * and they are few. Then the works actors open most, then by title. Inside a
+ * work, scenes keep the order they had (shared first, then most opened).
+ */
+export function groupByWork(scenes: ShelfScene[]): ShelfWork[] {
+  const works = new Map<string, ShelfWork>();
+  for (const s of scenes) {
+    const key = `${s.work_kind}|${s.work_title.trim().toLowerCase()}|${(s.author ?? "").trim().toLowerCase()}`;
+    let w = works.get(key);
+    if (!w) {
+      w = { key, work_title: s.work_title, work_kind: s.work_kind, author: s.author, year: s.year, shared: false, scenes: [] };
+      works.set(key, w);
+    }
+    w.scenes.push(s);
+    if (s.kind === "shared") w.shared = true;
+  }
+  const opens = (w: ShelfWork) => w.scenes.reduce((n, s) => n + (s.open_count || 0), 0);
+  return [...works.values()].sort(
+    (a, b) =>
+      Number(b.shared) - Number(a.shared) ||
+      opens(b) - opens(a) ||
+      a.work_title.replace(/^(the|a|an)\s+/i, "").localeCompare(b.work_title.replace(/^(the|a|an)\s+/i, "")),
+  );
+}

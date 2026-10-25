@@ -4,6 +4,7 @@ import {
   contributorLine,
   describeCharacter,
   filterShelf,
+  groupByWork,
   formatLength,
   guessWorkKind,
   shareMoment,
@@ -112,5 +113,20 @@ describe("filterShelf", () => {
     expect(filterShelf(all, { length: "long" }).map((s) => s.id)).toEqual([2]);
     expect(filterShelf(all, { length: "medium" }).map((s) => s.id)).toEqual([1]);
     expect(filterShelf(all, { tone: "tragic" }).map((s) => s.id)).toEqual([2]);
+  });
+});
+
+describe("groupByWork", () => {
+  it("gathers a play's scenes under it, shared works first, then most opened, then by title", () => {
+    const works = groupByWork([
+      scene({ id: 1, work_title: "The Tempest", author: "William Shakespeare" }),
+      scene({ id: 2, work_title: "Hamlet", author: "William Shakespeare" }),
+      scene({ id: 3, work_title: "The Tempest", author: "William Shakespeare" }),
+      scene({ id: 4, work_title: "Doubt", author: "John Patrick Shanley", kind: "shared" }),
+      scene({ id: 5, work_title: "Arcadia", author: "Tom Stoppard", open_count: 4 }),
+    ]);
+    expect(works.map((w) => w.work_title)).toEqual(["Doubt", "Arcadia", "Hamlet", "The Tempest"]);
+    expect(works[3].scenes.map((s) => s.id)).toEqual([1, 3]);
+    expect(works[0].shared).toBe(true);
   });
 });

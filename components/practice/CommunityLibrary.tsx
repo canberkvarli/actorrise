@@ -9,6 +9,7 @@ import {
   IconChevronDown,
   IconDots,
   IconLoader2,
+  IconPlus,
   IconSearch,
   IconX,
 } from "@tabler/icons-react";
@@ -27,9 +28,11 @@ import {
   describeCharacter,
   filterShelf,
   formatLength,
+  groupByWork,
   TONES,
   type ShelfFilters,
   type ShelfScene,
+  type ShelfWork,
 } from "@/lib/shelf";
 
 /*
@@ -46,7 +49,7 @@ import {
  * browser, so a keystroke answers at once.
  */
 
-const STEP = 36;
+const STEP = 18;
 
 /** Warm stock under a stage light, as the Green Room's scripts are. */
 const PAGE =
@@ -131,6 +134,8 @@ function LibraryRoom({ onClose }: { onClose: () => void }) {
     () => (scenes ? filterShelf(scenes, { ...filters, q: q || undefined }) : []),
     [scenes, filters, q],
   );
+  const works = useMemo(() => groupByWork(results), [results]);
+  const allWorks = useMemo(() => (scenes ? groupByWork(scenes).length : 0), [scenes]);
   const key = JSON.stringify({ ...filters, q });
   /* How many cards are drawn, for this search only: a new search starts again
      at the first handful, at the top, without an effect resetting state. */
@@ -240,7 +245,7 @@ function LibraryRoom({ onClose }: { onClose: () => void }) {
         ref={scroller}
         onScroll={(e) => {
           const el = e.currentTarget;
-          if (el.scrollTop + el.clientHeight > el.scrollHeight - 600 && shown < results.length) {
+          if (el.scrollTop + el.clientHeight > el.scrollHeight - 600 && shown < works.length) {
             setPage({ key, n: shown + STEP });
           }
         }}
@@ -262,13 +267,13 @@ function LibraryRoom({ onClose }: { onClose: () => void }) {
           <>
             <p className="mb-4 text-[13px] tabular-nums text-muted-foreground">
               {results.length === scenes.length
-                ? `${scenes.length} scenes`
-                : `${results.length} of ${scenes.length}`}
+                ? `${scenes.length} scenes from ${allWorks} plays`
+                : `${results.length} ${results.length === 1 ? "scene" : "scenes"} in ${works.length} ${works.length === 1 ? "play" : "plays"}`}
             </p>
             <Grid>
               <AnimatePresence mode="popLayout" initial={false}>
-                {results.slice(0, shown).map((s, i) => (
-                  <SceneCard key={s.id} scene={s} index={i} onClose={onClose} />
+                {works.slice(0, shown).map((w, i) => (
+                  <WorkCard key={w.key} work={w} index={i} onClose={onClose} />
                 ))}
               </AnimatePresence>
             </Grid>
@@ -340,16 +345,46 @@ function FilterPill<V extends string>({
   );
 }
 
-/** One scene, as a lit page. The page is not the control; its button is. */
-function SceneCard({ scene, index, onClose }: { scene: ShelfScene; index: number; onClose: () => void }) {
-  const router = useRouter();
+/**
+ * A play as a lit page, with its scenes listed on it. A play holds three
+ * scenes at most, so they sit open on the page rather than behind a fold.
+ * The page is not the control; each scene's button is.
+ */
+function WorkCard({ work, index, onClose }: { work: ShelfWork; index: number; onClose: () => void }) {
   const reduce = useReducedMotion();
+  const kind = work.work_kind === "tv" ? "TV" : work.work_kind === "film" ? "Film" : null;
+  const byline = [work.author, work.year && work.year > 0 ? String(work.year) : null, kind].filter(Boolean).join(" · ");
+  return (
+    <motion.article
+      layout={!reduce}
+      initial={reduce ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12 } }}
+      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1], delay: reduce ? 0 : Math.min(index, 8) * 0.025 }}
+      className={cn("flex flex-col p-5", PAGE)}
+    >
+      <h3 className="font-brand text-[22px] font-semibold leading-[1.15] tracking-tight text-neutral-900">
+        {work.work_title}
+      </h3>
+      {byline && <p className="mt-1 text-[12px] uppercase tracking-[0.1em] text-neutral-500">{byline}</p>}
+      <ul className="mt-3 divide-y divide-neutral-200 border-t border-neutral-200">
+        {work.scenes.map((s) => (
+          <li key={s.id}>
+            <SceneRow scene={s} onClose={onClose} />
+          </li>
+        ))}
+      </ul>
+    </motion.article>
+  );
+}
+
+/** One scene on its play's page: who, how long, and the one thing to do. */
+function SceneRow({ scene, onClose }: { scene: ShelfScene; onClose: () => void }) {
+  const router = useRouter();
   const add = useAddToShelf();
+  const [open, setOpen] = useState(false);
   const [bringOwn, setBringOwn] = useState(false);
   const shared = scene.kind === "shared";
-  const kicker = [scene.work_title, scene.author?.split(" ").slice(-1)[0], scene.work_kind === "tv" ? "TV" : scene.work_kind === "film" ? "film" : null]
-    .filter(Boolean)
-    .join(" · ");
   const facts = [formatLength(scene.duration_seconds), scene.tone].filter(Boolean).join(" · ");
 
   const putOnShelf = () =>
@@ -365,85 +400,100 @@ function SceneCard({ scene, index, onClose }: { scene: ShelfScene; index: number
     router.push(`/practice?script=${scriptId}`);
   };
 
-  return (
-    <motion.article
-      layout={!reduce}
-      initial={reduce ? false : { opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12 } }}
-      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1], delay: reduce ? 0 : Math.min(index, 8) * 0.025 }}
-      className={cn("flex flex-col p-5", PAGE)}
+  const action = shared && scene.is_mine ? null : shared ? (
+    <button
+      type="button"
+      onClick={() => setBringOwn((b) => !b)}
+      className="inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-900 px-3 text-[12.5px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-900 hover:text-[#faf7f1]"
     >
-      <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">{kicker}</p>
-        {shared ? (
-          <span className="shrink-0 border border-neutral-300 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-neutral-600">
-            {scene.is_mine ? "yours" : scene.shared_by ? `shared · ${scene.shared_by}` : "shared"}
+      Bring your copy
+    </button>
+  ) : scene.on_my_shelf ? (
+    <button
+      type="button"
+      onClick={() => openMine(scene.on_my_shelf!)}
+      aria-label={`${scene.title} is on your shelf. Open it`}
+      className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-neutral-300 px-3 text-[12.5px] font-semibold text-neutral-800 transition-colors hover:border-neutral-900"
+    >
+      <IconCheck className="h-3.5 w-3.5 text-primary" />
+      On your shelf
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={putOnShelf}
+      disabled={add.isPending}
+      aria-label={`Add ${scene.title} to my shelf`}
+      className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-primary px-3 text-[12.5px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+    >
+      {add.isPending ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : <IconPlus className="h-3.5 w-3.5" />}
+      Add
+    </button>
+  );
+
+  return (
+    <div className="py-3">
+      <div className="flex items-start gap-3">
+        {/* The title opens what happens in the scene; the button does the rest. */}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="min-w-0 flex-1 rounded-sm text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-[14.5px] font-semibold leading-snug text-neutral-900">{scene.title}</span>
+            {shared && (
+              <span className="shrink-0 border border-neutral-300 px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-[0.1em] text-neutral-600">
+                {scene.is_mine ? "yours" : scene.shared_by ? `shared · ${scene.shared_by}` : "shared"}
+              </span>
+            )}
           </span>
-        ) : (
-          <ModeratorMenu scene={scene} />
-        )}
+          <span className="mt-0.5 block text-[12.5px] leading-snug text-neutral-700">
+            {scene.characters.map(describeCharacter).join(" & ")}
+          </span>
+          {(facts || (shared && scene.where)) && (
+            <span className="block text-[12px] text-neutral-500">
+              {[shared ? scene.where : null, facts].filter(Boolean).join(" · ")}
+            </span>
+          )}
+        </button>
+        <div className="flex shrink-0 items-center gap-0.5">
+          {action}
+          {!shared && <ModeratorMenu scene={scene} />}
+        </div>
       </div>
-
-      <h3 className="mt-2 font-brand text-[22px] font-semibold leading-[1.15] tracking-tight text-neutral-900">
-        {scene.title}
-      </h3>
-      {scene.description && (
-        <p className="mt-2 line-clamp-2 text-[13.5px] leading-relaxed text-neutral-600">{scene.description}</p>
-      )}
-
-      <p className="mt-3 text-[13px] text-neutral-800">{scene.characters.map(describeCharacter).join(" & ")}</p>
-      {(facts || (shared && scene.where)) && (
-        <p className="mt-0.5 text-[12.5px] text-neutral-500">
-          {[shared ? scene.where : null, facts].filter(Boolean).join(" · ")}
-        </p>
-      )}
-
-      <div className="mt-auto pt-5">
-        {bringOwn ? (
-          <div className="space-y-3 text-[13px] text-neutral-700">
-            <p>
-              It&apos;s in <span className="font-semibold text-neutral-900">{scene.work_title}</span>
-              {scene.where ? `, ${scene.where}` : ""}. Bring in your copy and pick this scene.
-            </p>
-            <UploadScriptButton
-              variant="compact"
-              className="h-9 rounded-full border border-neutral-900 bg-transparent px-4 text-[13px] font-semibold text-neutral-900 shadow-none hover:bg-neutral-900 hover:text-[#faf7f1]"
-            >
-              Bring in your copy
-            </UploadScriptButton>
-          </div>
-        ) : shared && scene.is_mine ? null : shared ? (
-          <button
-            type="button"
-            onClick={() => setBringOwn(true)}
-            className="inline-flex h-9 items-center rounded-full border border-neutral-900 px-4 text-[13px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-900 hover:text-[#faf7f1]"
+      <AnimatePresence initial={false}>
+        {(open && scene.description) || bringOwn ? (
+          <motion.div
+            key="more"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className="overflow-hidden"
           >
-            Bring your copy
-          </button>
-        ) : scene.on_my_shelf ? (
-          <button
-            type="button"
-            onClick={() => openMine(scene.on_my_shelf!)}
-            className="group inline-flex h-9 items-center gap-1.5 rounded-full border border-neutral-300 px-4 text-[13px] font-semibold text-neutral-800 transition-colors hover:border-neutral-900"
-          >
-            <IconCheck className="h-4 w-4 text-primary" />
-            On your shelf
-            <IconArrowRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={putOnShelf}
-            disabled={add.isPending}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
-          >
-            {add.isPending && <IconLoader2 className="h-4 w-4 animate-spin" />}
-            Add to my shelf
-          </button>
-        )}
-      </div>
-    </motion.article>
+            {open && scene.description && (
+              <p className="pt-2 text-[13px] leading-relaxed text-neutral-600">{scene.description}</p>
+            )}
+            {bringOwn && (
+              <div className="space-y-2.5 pt-2.5 text-[13px] text-neutral-700">
+                <p>
+                  It&apos;s in <span className="font-semibold text-neutral-900">{scene.work_title}</span>
+                  {scene.where ? `, ${scene.where}` : ""}. Bring in your copy and pick this scene.
+                </p>
+                <UploadScriptButton
+                  variant="compact"
+                  className="h-8 rounded-full border border-neutral-900 bg-transparent px-3 text-[12.5px] font-semibold text-neutral-900 shadow-none hover:bg-neutral-900 hover:text-[#faf7f1]"
+                >
+                  Bring in your copy
+                </UploadScriptButton>
+              </div>
+            )}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -458,7 +508,7 @@ function ModeratorMenu({ scene }: { scene: ShelfScene }) {
         <button
           type="button"
           aria-label="Moderator options"
-          className="-mr-1.5 -mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700"
+          className="flex h-8 w-7 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700"
         >
           <IconDots className="h-4 w-4" />
         </button>
