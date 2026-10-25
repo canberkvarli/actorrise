@@ -28,6 +28,8 @@ import { AddSceneToScriptModal } from "@/components/scenepartner/AddSceneToScrip
 import { useUpload } from "@/components/practice/UploadProvider";
 import { ScriptHeader } from "@/components/practice/ScriptHeader";
 import { FIRST_OPEN_ROW_ID, ScriptMap } from "@/components/practice/ScriptMap";
+import { ShareAsk, ShareRowAction } from "@/components/practice/ShareScene";
+import { useShareable } from "@/hooks/useShelf";
 
 type ScriptWithScenes = UserScript & { scenes: Scene[] };
 
@@ -86,6 +88,16 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
     [ready, scenes],
   );
   const tickable = tickableRows(groups).length;
+
+  /* Where each built scene stands on the scene library: shared, or what the
+     actor answered when asked. Samples and shelf copies are nobody's to share. */
+  const canShare = canManage && !script.original_filename?.startsWith("shelf-");
+  const shareable = useShareable(canShare && scenes.length > 0, script.id);
+  const shareById = useMemo(
+    () => new Map((shareable.data?.items ?? []).map((s) => [s.scene_id, s])),
+    [shareable.data],
+  );
+  const shareFor = canShare ? (sceneId: number) => <ShareRowAction item={shareById.get(sceneId)} /> : undefined;
   const totalRows = groups.reduce((n, g) => n + g.rows.length, 0);
 
   // A read finishing is the moment built rows change, so the map is asked again.
@@ -240,6 +252,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
             {script.processing_error}
           </p>
         )}
+        {canShare && !isProcessing && scenes.length > 0 && <ShareAsk scriptId={script.id} />}
         {isProcessing && scenes.length === 0 ? (
           <ScenesComingIn />
         ) : isLoading && scenes.length === 0 ? (
@@ -266,6 +279,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
             accentClass={accentClass}
             onOpen={() => openScene(scenes[0].id)}
             opening={openingId === scenes[0].id}
+            share={shareFor?.(scenes[0].id)}
           />
         ) : (
           <ScriptMap
@@ -281,6 +295,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
             onShowWholeScript={() => showWholeScript(shelved)}
             onBuild={(picks) => buildScenes(shelved, picks)}
             onUpgrade={openUpgrade}
+            shareFor={shareFor}
           />
         )}
       </div>
@@ -325,11 +340,13 @@ function SoloScene({
   accentClass,
   onOpen,
   opening = false,
+  share,
 }: {
   scene: Scene;
   accentClass: string;
   onOpen: () => void;
   opening?: boolean;
+  share?: React.ReactNode;
 }) {
   const characters = [scene.character_1_name, scene.character_2_name].filter(Boolean) as string[];
   const facts = [
@@ -364,6 +381,7 @@ function SoloScene({
       >
         {opening ? "Curtain up…" : "Open the scene"}
       </button>
+      {share && <div className="mt-4">{share}</div>}
     </div>
   );
 }

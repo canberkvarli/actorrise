@@ -7,8 +7,9 @@ import app.models  # noqa: F401  every mapper the relationships name
 from fastapi import HTTPException
 
 from app.api import shelf as api
-from app.models.actor import FilmTvReference, Play, Scene, SceneLine, UserScript
+from app.models.actor import FilmTvReference, Play, RehearsalSession, Scene, SceneLine, UserScript
 from app.models.organization import Organization
+from app.models.rehearsal import RehearsalEvent, RehearsalRun
 from app.models.shelf import ShelfScene
 from app.models.user import User
 from app.services.extraction import scene_cutter
@@ -23,7 +24,8 @@ PLAY_TEXT = "THE PLAY\n\nACT I\n\n" + "\n".join(
 
 class ShelfApiTests(unittest.TestCase):
     def setUp(self):
-        self.db, self.saved = memory_db([Organization, User, FilmTvReference, Play, UserScript, Scene, SceneLine, ShelfScene])
+        self.db, self.saved = memory_db([Organization, User, FilmTvReference, Play, UserScript, Scene, SceneLine, ShelfScene,
+                                               RehearsalRun, RehearsalEvent, RehearsalSession])
         now = datetime.now(timezone.utc)
         self.me = User(email="me@gmail.com", hashed_password="x", name="Maya Lopez", created_at=now)
         self.other = User(email="o@gmail.com", hashed_password="x", name="Sam", created_at=now)
@@ -143,7 +145,71 @@ class ShelfApiTests(unittest.TestCase):
         with self.assertRaises(HTTPException):
             api.withdraw(out["id"], current_user=self.other, db=self.db)
         api.withdraw(out["id"], current_user=self.me, db=self.db)
-        self.assertIsNone(self.db.query(ShelfScene).get(out["id"]))
+        # Off the shelf, and the row stays to say "don't ask about this one again".
+        self.assertEqual(self._list(kind="shared")["total"], 0)
+        self.assertEqual(self._shareable()[0]["ask"], "done_asking")
+        self.assertFalse(api.mine(current_user=self.me, db=self.db)["contributor"])
+
+    def _shareable(self, script_id=None):
+        return api.shareable(script_id=script_id, current_user=self.me, db=self.db)["items"]
+
+    def test_not_now_is_remembered_and_asks_once_more_at_most(self):
+        scene = self._my_upload()
+        self.assertIsNone(self._shareable()[0]["ask"])
+        self.assertEqual(self._shareable()[0]["where_guess"], "")
+        out = api.decline(api.DeclineIn(scene_ids=[scene.id]), current_user=self.me, db=self.db)
+        self.assertEqual(out["asks"][scene.id], "declined")
+        self.assertEqual(self._shareable()[0]["ask"], "declined")
+        # A no is never on the shelf and makes nobody a contributor.
+        self.assertEqual(self._list(kind="shared")["total"], 0)
+        self.assertFalse(api.mine(current_user=self.me, db=self.db)["contributor"])
+        api.decline(api.DeclineIn(scene_ids=[scene.id]), current_user=self.me, db=self.db)
+        self.assertEqual(self._shareable()[0]["ask"], "done_asking")
+        # And a later yes still goes up, on the same row.
+        shared = api.share(api.ShareIn(scene_id=scene.id, work_title="Doubt", where="Scene 5"), current_user=self.me, db=self.db)
+        self.assertEqual(self.db.query(ShelfScene).filter(ShelfScene.source_scene_id == scene.id).count(), 1)
+        self.assertEqual(shared["status"], "live")
+        self.assertEqual(shared["where"], "Scene 5")
+        self.assertEqual(self._shareable()[0]["ask"], "shared")
+        # Declining a scene on the shelf leaves it there.
+        api.decline(api.DeclineIn(scene_ids=[scene.id]), current_user=self.me, db=self.db)
+        self.assertEqual(self._list(kind="shared")["total"], 1)
+
+    def test_cannot_decline_someone_elses_scene(self):
+        scene = self._my_upload(self.other)
+        with self.assertRaises(HTTPException):
+            api.decline(api.DeclineIn(scene_ids=[scene.id]), current_user=self.me, db=self.db)
+
+    def test_a_declined_row_cannot_be_opened_or_unhidden(self):
+        scene = self._my_upload()
+        api.decline(api.DeclineIn(scene_ids=[scene.id]), current_user=self.me, db=self.db)
+        row = self.db.query(ShelfScene).filter(ShelfScene.source_scene_id == scene.id).one()
+        with self.assertRaises(HTTPException):
+            api.rehearse(row.id, current_user=self.other, db=self.db)
+        with self.assertRaises(HTTPException):
+            api.set_status(row.id, api.StatusIn(status="live"), current_user=self.mod, db=self.db)
+
+    def test_shareable_by_script_with_where_and_finished(self):
+        scene = self._my_upload()
+        scene.act, scene.scene_number = "Act 2", "Scene 3"
+        self.db.commit()
+        item = self._shareable(script_id=scene.user_script_id)[0]
+        self.assertEqual(item["where_guess"], "Act 2, Scene 3")
+        scene.act, scene.scene_number = "3", "1"
+        self.db.commit()
+        self.assertEqual(self._shareable()[0]["where_guess"], "Act 3, Scene 1")
+        scene.act, scene.scene_number = "Episode 6: Passion", None
+        self.db.commit()
+        self.assertEqual(self._shareable()[0]["where_guess"], "Episode 6: Passion")
+        self.assertEqual(item["script_title"], "Doubt")
+        self.assertFalse(item["finished"])
+        self.assertEqual(self._shareable(script_id=scene.user_script_id + 99), [])
+        run = RehearsalRun(user_id=self.me.id, scene_id=scene.id, character="Flynn", voices={})
+        self.db.add(run)
+        self.db.flush()
+        self.db.add(RehearsalEvent(run_id=run.id, seq=1, type="completed", at_ms=1000, payload={}))
+        self.db.commit()
+        self.assertTrue(self._shareable()[0]["finished"])
 
 
 if __name__ == "__main__":

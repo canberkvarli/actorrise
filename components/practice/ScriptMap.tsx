@@ -41,6 +41,8 @@ interface ScriptMapProps {
   /** Build the ticked rows. Resolves true when the server took them. */
   onBuild: (picks: ScannedScene[]) => Promise<boolean>;
   onUpgrade: () => void;
+  /** The share option inside a built scene's fold (ShareScene.ShareRowAction). */
+  shareFor?: (sceneId: number) => React.ReactNode;
 }
 
 /**
@@ -64,6 +66,7 @@ export function ScriptMap({
   onShowWholeScript,
   onBuild,
   onUpgrade,
+  shareFor,
 }: ScriptMapProps) {
   const ready = map && !map.needs_file ? map : null;
   const needsFile = canManage && map?.needs_file === true;
@@ -186,6 +189,7 @@ export function ScriptMap({
                         onOpen={() => onOpen(row.scene.id)}
                         opening={openingId === row.scene.id}
                         dimmed={openingId !== null && openingId !== row.scene.id}
+                        share={shareFor?.(row.scene.id)}
                       />
                     ) : (
                       <OpenRow
@@ -265,6 +269,7 @@ function BuiltRow({
   onOpen,
   opening,
   dimmed,
+  share,
 }: {
   scene: Scene;
   index: number;
@@ -276,6 +281,7 @@ function BuiltRow({
   opening: boolean;
   /** Another one is being opened: stand down. */
   dimmed: boolean;
+  share?: React.ReactNode;
 }) {
   const reduce = useReducedMotion();
   const ent = entrance(index, { reduce, y: 6, duration: 0.36 });
@@ -346,6 +352,7 @@ function BuiltRow({
             <p className="t-maprow__synopsis">
               {scene.description?.trim() || "No synopsis for this scene yet."}
             </p>
+            {share && <div className="pb-3.5 pl-[50px] pr-4">{share}</div>}
           </motion.div>
         )}
       </AnimatePresence>

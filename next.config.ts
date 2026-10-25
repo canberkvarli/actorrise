@@ -45,6 +45,8 @@ const nextConfig: NextConfig = {
       { source: "/my-scripts/:path*", destination: "/practice/:path*", permanent: true },
       { source: "/my-monologues", destination: "/monologues", permanent: true },
       { source: "/scenes", destination: "/practice", permanent: true },
+      // The scene library lives on /practice now (components/practice/SceneLibrary).
+      { source: "/shelf", destination: "/practice", permanent: true },
       // Bio links. X's t.co shortener drops the query string off a profile
       // website, so the UTM has to be added on our side of the hop. Temporary
       // (302) on purpose: the tags can change without a cached 301 pinning them.

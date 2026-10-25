@@ -18,8 +18,9 @@ from sqlalchemy.orm import Session, undefer
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
-from app.models.actor import Play, Scene, UserScript
-from app.models.shelf import ShelfScene, WORK_KINDS
+from app.models.actor import Play, RehearsalSession, Scene, UserScript
+from app.models.rehearsal import RehearsalEvent, RehearsalRun
+from app.models.shelf import ON_SHELF, ShelfScene, WORK_KINDS
 from app.models.user import User
 from app.services import shelf_labels
 
@@ -152,19 +153,74 @@ def _my_scenes(db: Session, user: User):
     )
 
 
-@router.get("/shareable")
-def shareable(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Scenes from the actor's own uploads, and which of them are on the shelf."""
-    shared = {
-        r.source_scene_id
-        for r in db.query(ShelfScene.source_scene_id).filter(ShelfScene.shared_by_user_id == current_user.id)
+def _finished(db: Session, user: User, scene_ids: List[int]) -> set:
+    """Which of these scenes the actor has rehearsed to the end, in either room."""
+    if not scene_ids:
+        return set()
+    done = {
+        sid for (sid,) in db.query(RehearsalRun.scene_id)
+        .join(RehearsalEvent, RehearsalEvent.run_id == RehearsalRun.id)
+        .filter(RehearsalRun.user_id == user.id, RehearsalRun.scene_id.in_(scene_ids),
+                RehearsalEvent.type == "completed")
+        .distinct()
     }
+    done |= {
+        sid for (sid,) in db.query(RehearsalSession.scene_id)
+        .filter(RehearsalSession.user_id == user.id, RehearsalSession.scene_id.in_(scene_ids),
+                RehearsalSession.status == "completed")
+        .distinct()
+    }
+    return done
+
+
+def _where_guess(scene: Scene) -> str:
+    """"Act 2, Scene 3" from the script's own headings, for the actor to check.
+
+    Some scripts store a bare "3" for either; it is named, or "Act 3, 1" reads
+    as nothing.
+    """
+    act = (scene.act or "").strip()
+    number = (scene.scene_number or "").strip()
+    if act.isdigit():
+        act = f"Act {act}"
+    if number.isdigit():
+        number = f"Scene {number}"
+    return ", ".join(p for p in (act, number) if p)
+
+
+@router.get("/shareable")
+def shareable(
+    script_id: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Scenes from the actor's own uploads, with where each stands on the shelf.
+
+    ``ask`` is what has been asked of that scene: None (never), "shared",
+    "declined" (not now at upload) or "done_asking" (not now twice, or taken
+    down). ``finished`` is whether they have run it to the end, which is when
+    the second, one-line ask comes.
+    """
+    rows = {
+        r.source_scene_id: r
+        for r in db.query(ShelfScene).filter(ShelfScene.shared_by_user_id == current_user.id)
+    }
+    query = _my_scenes(db, current_user)
+    if script_id is not None:
+        query = query.filter(UserScript.id == script_id)
+    found = query.order_by(Scene.id.desc()).limit(200).all()
+    finished = _finished(db, current_user, [scene.id for scene, _ in found])
     out = []
-    for scene, script in _my_scenes(db, current_user).order_by(Scene.id.desc()).limit(200):
+    for scene, script in found:
+        row = rows.get(scene.id)
+        on_shelf = bool(row and row.status in ON_SHELF)
         out.append({
             "scene_id": scene.id,
+            "script_id": script.id,
             "title": scene.title,
             "script_title": script.title,
+            "script_author": script.author,
+            "where_guess": _where_guess(scene),
             "characters": [
                 {"name": scene.character_1_name, "gender": scene.character_1_gender, "age": scene.character_1_age_range},
                 {"name": scene.character_2_name, "gender": scene.character_2_gender, "age": scene.character_2_age_range},
@@ -173,7 +229,11 @@ def shareable(current_user: User = Depends(get_current_user), db: Session = Depe
             "line_count": scene.line_count,
             "tone": scene.tone,
             "description": scene.description,
-            "already_shared": scene.id in shared,
+            "already_shared": on_shelf,
+            "ask": "shared" if on_shelf else (row.status if row else None),
+            "shelf_id": row.id if on_shelf else None,
+            "open_count": (row.open_count or 0) if on_shelf else 0,
+            "finished": scene.id in finished,
         })
     return {"items": out}
 
@@ -200,23 +260,54 @@ def _two(values, allowed, fallback):
     return [v if v in allowed else f for v, f in zip(values, fallback)]
 
 
+def _own_scene(db: Session, user: User, scene_id: int):
+    found = _my_scenes(db, user).filter(Scene.id == scene_id).first()
+    if not found:
+        raise HTTPException(status_code=404, detail="That scene isn't one of yours.")
+    return found
+
+
+def _labels_from_scene(scene: Scene) -> dict:
+    """What the shelf files a scene under, read off the scene itself."""
+    return dict(
+        title=(scene.title or "Untitled scene").strip()[:200],
+        description=(scene.description or "").strip() or None,
+        character_1_name=scene.character_1_name[:80],
+        character_2_name=scene.character_2_name[:80],
+        character_1_gender=scene.character_1_gender or "any",
+        character_2_gender=scene.character_2_gender or "any",
+        character_1_age_range=scene.character_1_age_range or "any",
+        character_2_age_range=scene.character_2_age_range or "any",
+        duration_seconds=scene.estimated_duration_seconds,
+        line_count=scene.line_count,
+        tone=scene.tone if scene.tone in shelf_labels.TONES else None,
+    )
+
+
 @router.post("/share")
 def share(body: ShareIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Put a pointer to one of the actor's own scenes on the shelf. No text is copied."""
-    found = _my_scenes(db, current_user).filter(Scene.id == body.scene_id).first()
-    if not found:
-        raise HTTPException(status_code=404, detail="That scene isn't one of yours.")
-    scene, _script = found
+    scene, _script = _own_scene(db, current_user, body.scene_id)
     if body.work_kind not in WORK_KINDS:
         raise HTTPException(status_code=400, detail="work_kind is play, film or tv.")
     existing = db.query(ShelfScene).filter(ShelfScene.source_scene_id == scene.id).first()
-    if existing:
+    if existing and existing.status in ON_SHELF:
         return serialize(existing, current_user, current_user)
 
-    genders = _two(body.genders, shelf_labels.GENDERS, [scene.character_1_gender or "any", scene.character_2_gender or "any"])
-    ages = _two(body.ages, shelf_labels.AGES, [scene.character_1_age_range or "any", scene.character_2_age_range or "any"])
-    tone = body.tone if body.tone in shelf_labels.TONES else (scene.tone if scene.tone in shelf_labels.TONES else None)
-    row = ShelfScene(
+    labels = _labels_from_scene(scene)
+    genders = _two(body.genders, shelf_labels.GENDERS, [labels["character_1_gender"], labels["character_2_gender"]])
+    ages = _two(body.ages, shelf_labels.AGES, [labels["character_1_age_range"], labels["character_2_age_range"]])
+    labels.update(
+        character_1_gender=genders[0],
+        character_2_gender=genders[1],
+        character_1_age_range=ages[0],
+        character_2_age_range=ages[1],
+        title=(body.title or labels["title"]).strip()[:200],
+        description=(body.description or labels["description"] or "").strip() or None,
+    )
+    if body.tone in shelf_labels.TONES:
+        labels["tone"] = body.tone
+    fields = dict(
         kind="shared",
         status="live",
         work_title=body.work_title.strip(),
@@ -228,22 +319,51 @@ def share(body: ShareIn, current_user: User = Depends(get_current_user), db: Ses
         source_scene_id=scene.id,
         show_name=body.show_name,
         where_in_work=body.where.strip(),
-        title=(body.title or scene.title or "Untitled scene").strip()[:200],
-        description=(body.description or scene.description or "").strip() or None,
-        character_1_name=scene.character_1_name[:80],
-        character_2_name=scene.character_2_name[:80],
-        character_1_gender=genders[0],
-        character_2_gender=genders[1],
-        character_1_age_range=ages[0],
-        character_2_age_range=ages[1],
-        duration_seconds=scene.estimated_duration_seconds,
-        line_count=scene.line_count,
-        tone=tone,
+        **labels,
     )
-    db.add(row)
+    # A "not now" earlier left a row behind; saying yes later fills it in.
+    row = existing or ShelfScene()
+    for key, value in fields.items():
+        setattr(row, key, value)
+    if existing is None:
+        db.add(row)
     db.commit()
     db.refresh(row)
     return serialize(row, current_user, current_user)
+
+
+class DeclineIn(BaseModel):
+    scene_ids: List[int] = Field(min_length=1, max_length=200)
+
+
+@router.post("/decline")
+def decline(body: DeclineIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The actor's "not now", remembered per scene so the asking stops.
+
+    A first no (at upload) leaves the scene "declined", which still allows the
+    one nudge after a finished run. A no to that nudge is "done_asking". A
+    scene already on the shelf is left alone.
+    """
+    out = {}
+    for scene_id in dict.fromkeys(body.scene_ids):
+        scene, script = _own_scene(db, current_user, scene_id)
+        row = db.query(ShelfScene).filter(ShelfScene.source_scene_id == scene.id).first()
+        if row is None:
+            # A pointer like any share, never shown: it holds the answer.
+            row = ShelfScene(
+                kind="shared",
+                status="declined",
+                work_title=(script.title or "Untitled").strip()[:200],
+                shared_by_user_id=current_user.id,
+                source_scene_id=scene.id,
+                **_labels_from_scene(scene),
+            )
+            db.add(row)
+        elif row.status == "declined":
+            row.status = "done_asking"
+        out[scene_id] = row.status if row.status not in ON_SHELF else "shared"
+    db.commit()
+    return {"asks": out}
 
 
 @router.get("/mine")
@@ -251,7 +371,7 @@ def mine(current_user: User = Depends(get_current_user), db: Session = Depends(g
     """What the actor has shared, and how many actors opened it. One share makes a contributor."""
     rows = (
         db.query(ShelfScene)
-        .filter(ShelfScene.shared_by_user_id == current_user.id)
+        .filter(ShelfScene.shared_by_user_id == current_user.id, ShelfScene.status.in_(ON_SHELF))
         .order_by(ShelfScene.id.desc())
         .all()
     )
@@ -269,7 +389,8 @@ def withdraw(shelf_id: int, current_user: User = Depends(get_current_user), db: 
         raise HTTPException(status_code=404, detail="Not found")
     if row.kind != "shared":
         raise HTTPException(status_code=400, detail="Library scenes are hidden, not withdrawn.")
-    db.delete(row)
+    # Kept, off the shelf, so the scene is never asked about again.
+    row.status = "done_asking"
     db.commit()
     return {"ok": True}
 
@@ -285,7 +406,7 @@ def set_status(shelf_id: int, body: StatusIn, current_user: User = Depends(get_c
     if body.status not in ("live", "hidden"):
         raise HTTPException(status_code=400, detail="status is live or hidden")
     row = db.query(ShelfScene).get(shelf_id)
-    if not row:
+    if not row or row.status not in ON_SHELF:
         raise HTTPException(status_code=404, detail="Not found")
     row.status = body.status
     db.commit()
@@ -366,7 +487,7 @@ def copy_public_domain(db: Session, user: User, row: ShelfScene) -> Scene:
 def rehearse(shelf_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Where Rehearse goes: a scene id for the rehearsal room, or "bring your copy"."""
     row = db.query(ShelfScene).get(shelf_id)
-    if not row or (row.status != "live" and not current_user.is_moderator):
+    if not row or row.status not in ON_SHELF or (row.status != "live" and not current_user.is_moderator):
         raise HTTPException(status_code=404, detail="Not found")
 
     if row.kind == "shared":

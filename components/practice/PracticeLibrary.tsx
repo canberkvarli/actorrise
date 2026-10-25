@@ -14,6 +14,7 @@ import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
 import { PracticeLibraryRail } from "@/components/practice/PracticeLibraryRail";
 import { PracticeScenePanel } from "@/components/practice/PracticeScenePanel";
 import { OtherScriptsStrip } from "@/components/practice/OtherScriptsStrip";
+import { SceneLibrary } from "@/components/practice/SceneLibrary";
 import { WhatsNext, NothingYet } from "@/components/practice/WhatsNext";
 import { useWhatsNext } from "@/hooks/useWhatsNext";
 import { useDeleteScript, useReorderScripts, type UserScript } from "@/hooks/useScripts";
@@ -291,6 +292,15 @@ export function PracticeLibrary({
         </div>
         )}
       </div>
+
+      {/* Scenes to rehearse that aren't on anyone's shelf yet: classics, and
+          where other actors found theirs. On the stage only; an open script
+          has the room to itself. */}
+      {!selectedScript && (
+        <div className="mt-14 lg:mt-16">
+          <SceneLibrary />
+        </div>
+      )}
 
       <ConfirmDeleteDialog
         open={deleteTarget !== null}

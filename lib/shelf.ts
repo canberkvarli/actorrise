@@ -24,16 +24,27 @@ export type ShelfScene = {
   is_mine: boolean;
 };
 
+/** What has been asked of one of the actor's scenes (shelf.py, /shareable). */
+export type ShareAsk = null | "shared" | "declined" | "done_asking";
+
 export type ShareableScene = {
   scene_id: number;
+  script_id: number;
   title: string;
   script_title: string;
+  script_author: string | null;
+  /** "Act 2, Scene 3" off the script's own headings; "" when it has none. */
+  where_guess: string;
   characters: ShelfCharacter[];
   duration_seconds: number | null;
   line_count: number | null;
   tone: string | null;
   description: string | null;
   already_shared: boolean;
+  ask: ShareAsk;
+  shelf_id: number | null;
+  open_count: number;
+  finished: boolean;
 };
 
 export type ShelfFilters = {
@@ -68,12 +79,13 @@ export function describeCharacter(c: ShelfCharacter): string {
 }
 
 /** The query string the list endpoint reads, empty filters left out. */
-export function shelfQuery(filters: ShelfFilters, offset = 0): string {
+export function shelfQuery(filters: ShelfFilters, offset = 0, limit?: number): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
     if (typeof value === "string" && value.trim()) params.set(key, value.trim());
   }
   if (offset) params.set("offset", String(offset));
+  if (limit) params.set("limit", String(limit));
   const s = params.toString();
   return s ? `?${s}` : "";
 }
@@ -83,4 +95,34 @@ export function sourceLine(scene: Pick<ShelfScene, "work_title" | "author" | "wo
   const kind = scene.work_kind === "film" ? "film" : scene.work_kind === "tv" ? "TV" : null;
   const work = kind ? `${scene.work_title} (${kind})` : scene.work_title;
   return [work, scene.author, scene.where].filter(Boolean).join(" · ");
+}
+
+/**
+ * The two moments ScenePartner asks an actor to share, never twice for a scene.
+ *
+ * At upload: every scene of the script nobody has asked about yet, as one ask.
+ * After a run: one scene they said "not now" to at upload and have since run
+ * to the end. Never both at once; the upload ask comes first.
+ */
+export function shareMoment(
+  scenes: ShareableScene[],
+): { kind: "upload"; scenes: ShareableScene[] } | { kind: "rehearsed"; scenes: ShareableScene[] } | null {
+  const fresh = scenes.filter((s) => s.ask === null);
+  if (fresh.length > 0) return { kind: "upload", scenes: fresh };
+  const nudge = scenes.find((s) => s.ask === "declined" && s.finished);
+  return nudge ? { kind: "rehearsed", scenes: [nudge] } : null;
+}
+
+/** Film, TV or a play, guessed from the script's headings ("Episode 3" is TV). */
+export function guessWorkKind(where: string): "play" | "film" | "tv" {
+  if (/\b(episode|season|ep\.?\s*\d|s\d+e\d+)/i.test(where)) return "tv";
+  if (/\b(int\.|ext\.)/i.test(where)) return "film";
+  return "play";
+}
+
+/** "Contributor · 12 actors opened yours", or nothing before the first share. */
+export function contributorLine(mine: { contributor: boolean; opens: number } | undefined): string | null {
+  if (!mine?.contributor) return null;
+  const n = mine.opens;
+  return n > 0 ? `Contributor · ${n} ${n === 1 ? "actor" : "actors"} opened yours` : "Contributor";
 }

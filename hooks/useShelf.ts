@@ -9,12 +9,12 @@ const KEY = ["shelf"] as const;
 
 type Page = { items: ShelfScene[]; total: number };
 
-export function useShelf(filters: ShelfFilters) {
+export function useShelf(filters: ShelfFilters, pageSize?: number) {
   return useInfiniteQuery<Page>({
-    queryKey: [...KEY, "list", filters],
+    queryKey: [...KEY, "list", filters, pageSize ?? null],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) =>
-      (await api.get<Page>(`/api/shelf${shelfQuery(filters, pageParam as number)}`)).data,
+      (await api.get<Page>(`/api/shelf${shelfQuery(filters, pageParam as number, pageSize)}`)).data,
     getNextPageParam: (last, pages) => {
       const seen = pages.reduce((n, p) => n + p.items.length, 0);
       return seen < last.total ? seen : undefined;
@@ -23,11 +23,26 @@ export function useShelf(filters: ShelfFilters) {
   });
 }
 
-export function useShareable(enabled: boolean) {
+/** The actor's own scenes and where each stands; one script's when given. */
+export function useShareable(enabled: boolean, scriptId?: number) {
   return useQuery<{ items: ShareableScene[] }>({
-    queryKey: [...KEY, "shareable"],
-    queryFn: async () => (await api.get<{ items: ShareableScene[] }>("/api/shelf/shareable")).data,
+    queryKey: [...KEY, "shareable", scriptId ?? "all"],
+    queryFn: async () =>
+      (await api.get<{ items: ShareableScene[] }>(
+        `/api/shelf/shareable${scriptId != null ? `?script_id=${scriptId}` : ""}`,
+      )).data,
     enabled,
+    staleTime: 30_000,
+  });
+}
+
+/** "Not now", remembered per scene (shelf.py, /decline). */
+export function useDecline() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (sceneIds: number[]) =>
+      (await api.post<{ asks: Record<string, string> }>("/api/shelf/decline", { scene_ids: sceneIds })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 }
 

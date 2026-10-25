@@ -20,7 +20,12 @@ from app.core.database import Base
 
 SHELF_KINDS = ("public_domain", "shared")
 WORK_KINDS = ("play", "film", "tv")
-SHELF_STATUSES = ("live", "hidden")
+#: live and hidden are on the shelf (hidden by a moderator). declined and
+#: done_asking are the actor's "not now" on one of their scenes: declined after
+#: the ask at upload, done_asking after the nudge that follows a finished run
+#: (or after taking a share down). Neither is ever listed; both stop the asking.
+SHELF_STATUSES = ("live", "hidden", "declined", "done_asking")
+ON_SHELF = ("live", "hidden")
 
 
 class ShelfScene(Base):
