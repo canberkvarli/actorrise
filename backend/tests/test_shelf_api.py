@@ -93,6 +93,30 @@ class ShelfApiTests(unittest.TestCase):
         self.assertEqual(again["scene_id"], first["scene_id"])
         self.assertEqual(self.pd.open_count, 1)
 
+    def test_add_to_my_shelf_puts_one_copy_in_my_scripts(self):
+        self.assertIsNone(self._list()["items"][0]["on_my_shelf"])
+        first = api.add_to_my_shelf(self.pd.id, current_user=self.me, db=self.db)
+        self.assertTrue(first["added"])
+        script = self.db.query(UserScript).get(first["script_id"])
+        self.assertEqual(script.user_id, self.me.id)
+        self.assertEqual(script.genre, "drama")
+        again = api.add_to_my_shelf(self.pd.id, current_user=self.me, db=self.db)
+        self.assertFalse(again["added"])
+        self.assertEqual(again["script_id"], first["script_id"])
+        self.assertEqual(self.pd.open_count, 1)
+        self.assertEqual(self._list()["items"][0]["on_my_shelf"], first["script_id"])
+        # Only mine: another actor sees it as not on theirs.
+        theirs = api.list_shelf(current_user=self.other, db=self.db, pairing=None, age=None, length=None,
+                                tone=None, era=None, kind=None, q=None, offset=0, limit=30)
+        self.assertIsNone(theirs["items"][0]["on_my_shelf"])
+
+    def test_a_shared_scene_is_never_copied(self):
+        scene = self._my_upload(self.other)
+        out = api.share(api.ShareIn(scene_id=scene.id, work_title="Doubt", where="Scene 5"), current_user=self.other, db=self.db)
+        with self.assertRaises(HTTPException) as err:
+            api.add_to_my_shelf(out["id"], current_user=self.me, db=self.db)
+        self.assertEqual(err.exception.status_code, 400)
+
     def test_a_moved_text_is_refused(self):
         self.play.full_text = "changed " + PLAY_TEXT
         self.db.commit()

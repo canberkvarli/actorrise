@@ -1,29 +1,45 @@
 "use client";
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import api from "@/lib/api";
-import { shelfQuery, type ShareableScene, type ShelfFilters, type ShelfScene } from "@/lib/shelf";
+import { invalidateShelf } from "@/hooks/useScripts";
+import { type ShareableScene, type ShelfScene } from "@/lib/shelf";
 
 const KEY = ["shelf"] as const;
 
 type Page = { items: ShelfScene[]; total: number };
 
-export function useShelf(filters: ShelfFilters, pageSize?: number) {
-  return useInfiniteQuery<Page>({
-    queryKey: [...KEY, "list", filters, pageSize ?? null],
-    initialPageParam: 0,
-    queryFn: async ({ pageParam }) =>
-      (await api.get<Page>(`/api/shelf${shelfQuery(filters, pageParam as number, pageSize)}`)).data,
-    getNextPageParam: (last, pages) => {
-      const seen = pages.reduce((n, p) => n + p.items.length, 0);
-      return seen < last.total ? seen : undefined;
-    },
-    staleTime: 60_000,
+/**
+ * The whole library at once, for the Community library to filter in the
+ * browser. Asked for when the library is about to open, not on every visit to
+ * /practice: a few hundred rows of labels is cheap once and wasteful daily.
+ */
+export function useShelfAll(enabled: boolean) {
+  return useQuery<Page>({
+    queryKey: [...KEY, "all"],
+    queryFn: async () => (await api.get<Page>("/api/shelf?limit=500")).data,
+    enabled,
+    staleTime: 5 * 60_000,
   });
 }
 
-/** The actor's own scenes and where each stands; one script's when given. */
+/** A classic onto the actor's own shelf, as a script of theirs. */
+export function useAddToShelf() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) =>
+      (await api.post<{ script_id: number; scene_id: number; added: boolean }>(`/api/shelf/${id}/add`)).data,
+    onSuccess: (r, id) => {
+      // Say so on the card now; the shelf beside it catches up.
+      qc.setQueryData<Page>([...KEY, "all"], (old) =>
+        old ? { ...old, items: old.items.map((s) => (s.id === id ? { ...s, on_my_shelf: r.script_id } : s)) } : old,
+      );
+      return invalidateShelf(qc);
+    },
+  });
+}
+
 export function useShareable(enabled: boolean, scriptId?: number) {
   return useQuery<{ items: ShareableScene[] }>({
     queryKey: [...KEY, "shareable", scriptId ?? "all"],
@@ -87,18 +103,5 @@ export function useSetStatus() {
     mutationFn: async ({ id, status }: { id: number; status: "live" | "hidden" }) =>
       (await api.patch(`/api/shelf/${id}/status`, { status })).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
-  });
-}
-
-export type RehearseResult = {
-  scene_id: number | null;
-  bring_your_own: boolean;
-  work_title?: string;
-  where?: string | null;
-};
-
-export function useRehearseShelf() {
-  return useMutation({
-    mutationFn: async (id: number) => (await api.post<RehearseResult>(`/api/shelf/${id}/rehearse`)).data,
   });
 }

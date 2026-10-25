@@ -39,7 +39,7 @@ def _first_name(user: Optional[User]) -> Optional[str]:
     return name.split()[0] if name else None
 
 
-def serialize(row: ShelfScene, viewer: User, sharer: Optional[User] = None) -> dict:
+def serialize(row: ShelfScene, viewer: User, sharer: Optional[User] = None, my_script_id: Optional[int] = None) -> dict:
     mine = row.shared_by_user_id is not None and row.shared_by_user_id == viewer.id
     return {
         "id": row.id,
@@ -63,7 +63,20 @@ def serialize(row: ShelfScene, viewer: User, sharer: Optional[User] = None) -> d
         "open_count": row.open_count or 0,
         "shared_by": _first_name(sharer) if (sharer and row.show_name) else None,
         "is_mine": mine,
+        # The viewer's own copy of a classic, on their shelf: its script id.
+        "on_my_shelf": my_script_id,
     }
+
+
+def _my_copies(db: Session, user: User, rows) -> dict:
+    """shelf id -> the viewer's script holding their copy, for the rows given."""
+    names = {COPY_FILENAME.format(id=r.id): r.id for r in rows if r.kind == "public_domain"}
+    if not names:
+        return {}
+    found = db.query(UserScript.id, UserScript.original_filename).filter(
+        UserScript.user_id == user.id, UserScript.original_filename.in_(list(names))
+    )
+    return {names[name]: script_id for script_id, name in found}
 
 
 def _pairing_filter(query, pairing: str):
@@ -119,7 +132,9 @@ def list_shelf(
             ShelfScene.character_2_name.ilike(like),
         ))
     total = query.count()
-    limit = max(1, min(limit, 60))
+    # The library loads whole into the browser and filters there (a few
+    # hundred rows of labels), so the cap is the size of the shelf.
+    limit = max(1, min(limit, 500))
     # Shared scenes first: what actors brought is the reason the shelf grows.
     rows = (
         query.order_by(
@@ -133,8 +148,9 @@ def list_shelf(
     )
     sharer_ids = {r.shared_by_user_id for r in rows if r.shared_by_user_id}
     sharers = {u.id: u for u in db.query(User).filter(User.id.in_(sharer_ids)).all()} if sharer_ids else {}
+    copies = _my_copies(db, current_user, rows)
     return {
-        "items": [serialize(r, current_user, sharers.get(r.shared_by_user_id)) for r in rows],
+        "items": [serialize(r, current_user, sharers.get(r.shared_by_user_id), copies.get(r.id)) for r in rows],
         "total": total,
     }
 
@@ -456,6 +472,8 @@ def copy_public_domain(db: Session, user: User, row: ShelfScene) -> Scene:
     script = UserScript(
         user_id=user.id,
         title=f"{row.work_title}: {row.title}"[:200],
+        # The play's genre, so the copy wears its binding colour on the shelf.
+        genre=play.genre,
         author=row.author or play.author or "Unknown",
         description=row.description,
         original_filename=COPY_FILENAME.format(id=row.id),
@@ -481,6 +499,24 @@ def copy_public_domain(db: Session, user: User, row: ShelfScene) -> Scene:
         "lines": lines,
     }])
     return created[0]
+
+
+@router.post("/{shelf_id}/add")
+def add_to_my_shelf(shelf_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Put a classic on the actor's own shelf, as a script of theirs. Twice is once."""
+    row = db.query(ShelfScene).get(shelf_id)
+    if not row or row.status not in ON_SHELF or (row.status != "live" and not current_user.is_moderator):
+        raise HTTPException(status_code=404, detail="Not found")
+    if row.kind != "public_domain":
+        # Someone else's script: never copied. The actor brings their own.
+        raise HTTPException(status_code=400, detail="Bring your own copy of this one.")
+    scene = _copy_for(db, current_user, row)
+    added = scene is None
+    if added:
+        scene = copy_public_domain(db, current_user, row)
+        row.open_count = (row.open_count or 0) + 1
+    db.commit()
+    return {"script_id": scene.user_script_id, "scene_id": scene.id, "added": added}
 
 
 @router.post("/{shelf_id}/rehearse")

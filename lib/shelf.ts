@@ -22,6 +22,8 @@ export type ShelfScene = {
   open_count: number;
   shared_by: string | null;
   is_mine: boolean;
+  /** The viewer's copy of a classic, as a script on their shelf. */
+  on_my_shelf: number | null;
 };
 
 /** What has been asked of one of the actor's scenes (shelf.py, /shareable). */
@@ -125,4 +127,48 @@ export function contributorLine(mine: { contributor: boolean; opens: number } | 
   if (!mine?.contributor) return null;
   const n = mine.opens;
   return n > 0 ? `Contributor · ${n} ${n === 1 ? "actor" : "actors"} opened yours` : "Contributor";
+}
+
+const PAIRING_GENDERS: Record<NonNullable<ShelfFilters["pairing"]>, [string, string]> = {
+  mf: ["male", "female"],
+  ff: ["female", "female"],
+  mm: ["male", "male"],
+};
+const LENGTH_SECONDS: Record<NonNullable<ShelfFilters["length"]>, [number, number]> = {
+  short: [0, 120],
+  medium: [120, 210],
+  long: [210, Infinity],
+};
+
+/**
+ * The library's filters, in the browser. The same rules as the list endpoint
+ * (backend/app/api/shelf.py list_shelf), so the whole library loads once and
+ * every keystroke answers at once instead of waiting on a request.
+ */
+export function filterShelf(scenes: ShelfScene[], f: ShelfFilters): ShelfScene[] {
+  const fits = (g: string | null, want: string) => g === want || g === "any" || g == null;
+  const q = f.q?.trim().toLowerCase();
+  return scenes.filter((s) => {
+    const [a, b] = s.characters;
+    if (f.pairing) {
+      const [x, y] = PAIRING_GENDERS[f.pairing];
+      if (!((fits(a?.gender ?? null, x) && fits(b?.gender ?? null, y)) || (fits(a?.gender ?? null, y) && fits(b?.gender ?? null, x)))) return false;
+    }
+    if (f.age && !s.characters.some((c) => c.age === f.age || c.age === "any")) return false;
+    if (f.length) {
+      const [lo, hi] = LENGTH_SECONDS[f.length];
+      if (s.duration_seconds == null || s.duration_seconds < lo || s.duration_seconds >= hi) return false;
+    }
+    if (f.tone && s.tone !== f.tone) return false;
+    if (f.era && s.era !== f.era) return false;
+    if (f.kind && s.kind !== f.kind) return false;
+    if (q) {
+      const hay = [s.title, s.work_title, s.author, s.description, ...s.characters.map((c) => c.name)]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (!q.split(/\s+/).every((word) => hay.includes(word))) return false;
+    }
+    return true;
+  });
 }

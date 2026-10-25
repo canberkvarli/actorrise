@@ -3,12 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   contributorLine,
   describeCharacter,
+  filterShelf,
   formatLength,
   guessWorkKind,
   shareMoment,
   shelfQuery,
   sourceLine,
   type ShareableScene,
+  type ShelfScene,
 } from "./shelf";
 
 describe("shelf", () => {
@@ -77,5 +79,38 @@ describe("contributorLine", () => {
     expect(contributorLine({ contributor: true, opens: 0 })).toBe("Contributor");
     expect(contributorLine({ contributor: true, opens: 1 })).toBe("Contributor · 1 actor opened yours");
     expect(contributorLine({ contributor: true, opens: 12 })).toBe("Contributor · 12 actors opened yours");
+  });
+});
+
+const scene = (over: Partial<ShelfScene>): ShelfScene => ({
+  id: 1, kind: "public_domain", status: "live", title: "Nora waits", description: "She has the letter.",
+  work_title: "A Doll's House", work_kind: "play", author: "Henrik Ibsen", year: 1879, era: "modern", where: null,
+  characters: [{ name: "Nora", gender: "female", age: "30s" }, { name: "Helmer", gender: "male", age: "40s" }],
+  duration_seconds: 150, line_count: 20, tone: "tense", open_count: 0, shared_by: null, is_mine: false, on_my_shelf: null,
+  ...over,
+});
+
+describe("filterShelf", () => {
+  const nora = scene({});
+  const sisters = scene({ id: 2, title: "Masha and Olga", work_title: "Three Sisters", author: "Anton Chekhov",
+    characters: [{ name: "Masha", gender: "female", age: "20s" }, { name: "Olga", gender: "female", age: "any" }],
+    duration_seconds: 260, tone: "tragic", era: "modern" });
+  const all = [nora, sisters];
+
+  it("reads a pairing either way round, and 'any' fits both", () => {
+    expect(filterShelf(all, { pairing: "mf" }).map((s) => s.id)).toEqual([1]);
+    expect(filterShelf(all, { pairing: "ff" }).map((s) => s.id)).toEqual([2]);
+    expect(filterShelf(all, { pairing: "mm" })).toEqual([]);
+  });
+  it("matches every word of a search anywhere on the card", () => {
+    expect(filterShelf(all, { q: "ibsen letter" }).map((s) => s.id)).toEqual([1]);
+    expect(filterShelf(all, { q: "OLGA" }).map((s) => s.id)).toEqual([2]);
+    expect(filterShelf(all, { q: "ibsen olga" })).toEqual([]);
+  });
+  it("filters age, length and tone like the server", () => {
+    expect(filterShelf(all, { age: "40s" }).map((s) => s.id)).toEqual([1, 2]); // Olga is any age
+    expect(filterShelf(all, { length: "long" }).map((s) => s.id)).toEqual([2]);
+    expect(filterShelf(all, { length: "medium" }).map((s) => s.id)).toEqual([1]);
+    expect(filterShelf(all, { tone: "tragic" }).map((s) => s.id)).toEqual([2]);
   });
 });

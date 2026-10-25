@@ -10,6 +10,7 @@ import {
   GhostLightSketch,
   MasksSketch,
   MicSketch,
+  ScriptPagesSketch,
   StageDoorSketch,
 } from "@/components/brand/sketches";
 
@@ -32,20 +33,27 @@ const ACTS = [
   },
   {
     numeral: "II",
+    Sketch: ScriptPagesSketch,
+    direction: "(or: borrow one.)",
+    title: "The Community library",
+    body: "Two-person scenes, classics and ones other actors shared. Put one on your shelf in a tap, or share where yours is.",
+  },
+  {
+    numeral: "III",
     Sketch: MasksSketch,
     direction: "(then: take your role.)",
     title: "Choose who you are",
     body: "Every scene knows its characters. Say which one is yours.",
   },
   {
-    numeral: "III",
+    numeral: "IV",
     Sketch: MicSketch,
     direction: "(now: run it.)",
     title: "Rehearse out loud",
     body: "Your partner reads every other role, holds your lines, and never misses a cue.",
   },
   {
-    numeral: "IV",
+    numeral: "V",
     Sketch: GhostLightSketch,
     direction: "(and again, from the top.)",
     title: "Break a leg",
