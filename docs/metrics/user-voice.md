@@ -212,3 +212,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-10-23, reads in the iOS app (29 reads, 12 pieces), free, cancelled an app trial the same day
 **They said:** "I did notice that there are time stamps for the monologues. I'm assuming they're the estimated length of them? If so, I noticed they aren't accurate. Some say over a minute but are only 5 or so sentences. Am I missing something? I love the idea of this app but if the I filter for a certain duration and never get that estimated length, I can't use it."
 **Heard as:** bug or trust gap, duration estimate (130 wpm plus pauses) reads long against a silent read; the duration filter is the feature at stake
+
+## 2026-10-25
+
+**Replying to:** class link email (acting studio owner)
+**Account:** studio teacher, class link sent 2026-10-18, nobody joined yet
+**They said:** "Thank you. I will use it today. And again just to be clear two person “scenes” are not in the database, just monologues?"
+**Heard as:** could not find the feature (scenes come from an uploaded script in ScenePartner, there is no scene library to browse)
