@@ -122,11 +122,11 @@ export function guessWorkKind(where: string): "play" | "film" | "tv" {
   return "play";
 }
 
-/** "Contributor · 12 actors opened yours", or nothing before the first share. */
+/** "Contributor · 12 actors picked yours up", or nothing before the first share. */
 export function contributorLine(mine: { contributor: boolean; opens: number } | undefined): string | null {
   if (!mine?.contributor) return null;
   const n = mine.opens;
-  return n > 0 ? `Contributor · ${n} ${n === 1 ? "actor" : "actors"} opened yours` : "Contributor";
+  return n > 0 ? `Contributor · ${n} ${n === 1 ? "actor" : "actors"} picked yours up` : "Contributor";
 }
 
 const PAIRING_GENDERS: Record<NonNullable<ShelfFilters["pairing"]>, [string, string]> = {

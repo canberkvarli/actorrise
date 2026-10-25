@@ -172,10 +172,8 @@ class FeatureGate:
                         UserScript.user_id == current_user.id,
                         UserScript.created_at >= month_start,
                         # A classic from the Community library isn't an upload.
-                        or_(
-                            UserScript.original_filename.is_(None),
-                            ~UserScript.original_filename.like("shelf-%"),
-                        ),
+                        # Marked by file_type, which an upload can't set (shelf.py).
+                        UserScript.file_type != "shelf",
                     )
                     .scalar()
                 )

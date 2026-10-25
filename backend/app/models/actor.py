@@ -523,7 +523,7 @@ class UserScript(Base):
     # File Info
     original_filename = Column(String, nullable=False)  # "my_script.pdf"
     file_path = Column(String, nullable=True)  # Path to stored file
-    file_type = Column(String, nullable=False)  # "pdf", "txt", "docx"
+    file_type = Column(String, nullable=False)  # "pdf", "txt"; "shelf" for a Community library copy
     file_size_bytes = Column(Integer, nullable=True)
 
     # Extracted Content

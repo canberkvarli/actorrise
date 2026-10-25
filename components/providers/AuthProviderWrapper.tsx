@@ -1,12 +1,17 @@
 "use client";
 
 import { AuthProvider } from "@/lib/auth";
-import { QueryClient, QueryClientProvider, hydrate, dehydrate } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, hydrate, dehydrate, type DehydratedState } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 
 const REACT_QUERY_CACHE_KEY = "actorrise-react-query-cache";
 const PERSIST_CACHE_MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
 const PERSIST_THROTTLE_MS = 1000; // max one write per second
+// The deploy that wrote the cache. A new deploy can change what an endpoint
+// returns, and a page drawn from yesterday's shape crashes before its refetch
+// lands (/admin/organizations, 2026-10-26: rows cached before `partner`
+// existed). Empty locally and where Vercel doesn't expose it: never busts.
+const BUILD = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "";
 
 // When true, prevents beforeunload from re-persisting a cache that was just cleared (e.g. on sign-out).
 let persistSuppressed = false;
@@ -31,7 +36,7 @@ function persistCache(client: QueryClient) {
     const state = dehydrate(client);
     localStorage.setItem(
       REACT_QUERY_CACHE_KEY,
-      JSON.stringify({ clientState: state, timestamp: Date.now() })
+      JSON.stringify({ clientState: state, timestamp: Date.now(), build: BUILD })
     );
   } catch {
     // Storage full or unavailable — ignore
@@ -46,10 +51,22 @@ function createQueryClient(): QueryClient {
     try {
       const raw = localStorage.getItem(REACT_QUERY_CACHE_KEY);
       if (raw) {
-        const persisted = JSON.parse(raw) as { clientState?: unknown; timestamp?: number };
+        const persisted = JSON.parse(raw) as {
+          clientState?: DehydratedState;
+          timestamp?: number;
+          build?: string;
+        };
         const age = persisted.timestamp ? Date.now() - persisted.timestamp : 0;
-        if (age < PERSIST_CACHE_MAX_AGE && persisted.clientState) {
-          hydrate(client, persisted.clientState);
+        if (age < PERSIST_CACHE_MAX_AGE && persisted.clientState && (persisted.build ?? "") === BUILD) {
+          // The timestamp is the last write of the whole cache, which every
+          // visit renews; each query's own age is what says it is a day old.
+          const now = Date.now();
+          hydrate(client, {
+            ...persisted.clientState,
+            queries: persisted.clientState.queries.filter(
+              (q) => now - q.state.dataUpdatedAt < PERSIST_CACHE_MAX_AGE,
+            ),
+          });
         }
       }
     } catch {
