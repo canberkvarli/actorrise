@@ -108,6 +108,30 @@ describe('shouldHandOver', () => {
     expect(shouldHandOver({ ...r, turnEnded: true })).toBe(true);
   });
 
+  const LONG = 'I came back because you asked me to, and I sat in that kitchen for three hours ' +
+    'listening to your mother explain why nothing here was ever going to change, so do not ' +
+    'stand there telling me I left';
+  it('a breath two thirds into a long speech does not take it away', () => {
+    // Prod, 2026-10-24, scene 983: a 75-word line moved on with 22 words still
+    // to say, and a 36-word one with 12, each on a pause after about two
+    // thirds of it. Two thirds of a long line is not its end.
+    const words = lineWords(LONG);
+    const said = Math.ceil(words.length * 0.7);
+    const r = liveRead(words, words.slice(0, said).join(' '));
+    expect(r.score).toBeGreaterThan(0.6);
+    expect(r.tailMatched).toBe(false);
+    expect(r.remaining).toBe(words.length - said);
+    expect(shouldHandOver({ ...r, turnEnded: true })).toBe(false);
+  });
+
+  it('a long speech said to within a word or two of its end moves on quiet', () => {
+    const words = lineWords(LONG);
+    const r = liveRead(words, words.slice(0, words.length - 3).join(' '));
+    expect(r.remaining).toBe(3);
+    expect(r.tailMatched).toBe(false);
+    expect(shouldHandOver({ ...r, turnEnded: true })).toBe(true);
+  });
+
   it('never moves on a turn that ended with nothing heard', () => {
     // The exact failure that started this: the scene moved on for an actor who
     // had said nothing. An empty transcript is room noise, not a performance.

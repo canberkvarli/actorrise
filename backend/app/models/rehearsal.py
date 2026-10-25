@@ -33,6 +33,11 @@ class PartnerAudio(Base):
     error = Column(Text, nullable=True)
     claimed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=_now, server_default=sql_text("now()"))
+    # Characters of the line, set when the row is made. The monthly Gemini cap
+    # (partner_audio.chars_this_month) is the sum over this month's ready
+    # Gemini rows, so the spend is derived from the cache, not a counter.
+    # Added by scripts/add_partner_audio_chars.py; NULL on older rows.
+    chars = Column(Integer, nullable=True)
 
 
 class RehearsalRun(Base):

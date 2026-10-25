@@ -28,3 +28,5 @@ from app.models.class_link import ClassLink, ClassLinkInvite, ClassLinkJoin  # n
 from app.models.audition import Audition, AuditionEvent, AuditionPiece, AuditionReminderSend
 
 from app.models.rehearsal import PartnerAudio, RehearsalEvent, RehearsalRun  # noqa: F401
+
+from app.models.shelf import ShelfScene  # noqa: F401

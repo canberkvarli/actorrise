@@ -117,6 +117,9 @@ data-gym-cache/
 /outreach/founder/
 /outputs/conversion/
 /outputs/marketing/
+# The scene shelf's dry runs (backend/scripts/cut_shelf_scenes.py): samples
+# and the manifest an --apply reads. Regenerable.
+/outputs/shelf/
 
 # The TTS vendor benchmark (backend/scripts/bench_tts.py) writes its sample
 # mp3s here. Regenerable, and never source.

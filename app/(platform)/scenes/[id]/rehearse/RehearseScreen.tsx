@@ -11,7 +11,9 @@ import { bindGestures } from '@/lib/rehearsal/browser/gestures';
 import { goStep, partnerVoices, skipsCurtain, startsBy } from '@/lib/rehearsal/entry';
 import { initialVoices } from '@/lib/rehearsal/prefs';
 import { plainError } from '@/lib/rehearsal/prepare';
-import { getCharacterVoices, getMyRoles } from '@/lib/scenePrefs';
+import { getBook, getCharacterVoices, getMyRoles, setBook } from '@/lib/scenePrefs';
+import { nextPrompt, type Book } from '@/lib/rehearsal/book';
+import { lineWords } from '@/lib/live-read';
 import { Curtain } from './Curtain';
 import { Stage } from './Stage';
 import { Dock, TopBar } from './Dock';
@@ -29,12 +31,13 @@ const failure = () => plainError('other');
  * `prepare` opens a metered run, so it is called exactly once per mount: when
  * the actor taps a part (or, with a run to pick up, chooses where to start).
  *
- * Straight onto the Stage, with no Curtain: `go` (`?go=1`, from the scene
- * preview, where the actor cast the scene; the saved part and voices) and a
+ * Straight onto the Stage, with no Curtain: a part saved for this scene (cast
+ * on the scene preview, which sends `?go=1`; a bookmark or the back button
+ * gets the same; the saved part and voices) and a
  * guided run (the first scene; the server picks the part). The run prepares on
  * mount and begins by itself once it can, when the audio context runs; on iOS
  * it waits for one tap anywhere, which is the gesture that unlocks it. No saved
- * part, or a run to pick up, and it is the Curtain; so is the Plus gate
+ * part and it is the Curtain; so is the Plus gate
  * (lib/rehearsal/entry decides).
  */
 export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload; guided: boolean; go: boolean }) {
@@ -54,6 +57,11 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   const guidedStarted = useRef(false);
   const state = snapshot?.state ?? 'ready';
   const error = readiness.error ?? prepError;
+  // How much of their own lines the actor reads from, kept per scene, and the
+  // words they called for this run, by line.
+  const [book, setBookState] = useState<Book>(() => getBook(payload.scene.id));
+  const [given, setGiven] = useState<Map<number, Set<number>>>(() => new Map());
+  const onBook = useCallback((b: Book) => { setBookState(b); setBook(payload.scene.id, b); }, [payload.scene.id]);
 
   const choose = useCallback(async (character: string, voices: Record<string, string>, pickUp?: { runId: number; lineIndex: number }) => {
     setPrepError(null);
@@ -79,7 +87,9 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
     if (!goPart || goPrepared.current) return;
     goPrepared.current = true;
     const voices = partnerVoices(payload.characters, goPart, initialVoices(payload, getCharacterVoices(payload.scene.id)));
-    prepare(goPart, voices).catch(() => { setChosen(null); setPrepError(failure()); });
+    // A run to pick up carries on from where its journal stopped, unmetered.
+    const pickUp = payload.resume ? { resumeRunId: payload.resume.run_id, resumeLine: payload.resume.line_index } : undefined;
+    prepare(goPart, voices, pickUp).catch(() => { setChosen(null); setPrepError(failure()); });
   }, [goPart, prepare, payload]);
 
   // Go: begin by itself where audio may start. Where it may not (iOS), the
@@ -108,6 +118,31 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   const toggle = () => (pausedRef.current ? resume() : pause());
 
   const actor = snapshot?.actor ?? goPart ?? '';
+  const liveLine = snapshot?.state === 'actor' ? snapshot.lineIndex : null;
+  // A line taken again (back, a jump, a resume, which starts it from its first
+  // word) starts with nothing given: the second try is a fresh test. Adjusted
+  // as the live line changes, in render, the way React has state follow a value.
+  const [takenLine, setTakenLine] = useState<number | null>(null);
+  if (liveLine !== takenLine) {
+    setTakenLine(liveLine);
+    if (liveLine !== null && given.has(liveLine)) {
+      const m = new Map(given); m.delete(liveLine); setGiven(m);
+    }
+  }
+  const prompt = liveLine === null || !snapshot ? null : (() => {
+    const n = lineWords(payload.lines[liveLine]?.text ?? '').length;
+    const words = nextPrompt(book, n, snapshot.read.position, snapshot.read.matched, given.get(liveLine) ?? new Set());
+    return words.length === 0 ? null
+      : () => setGiven(g => new Map(g).set(liveLine, new Set([...(g.get(liveLine) ?? []), ...words])));
+  })();
+  // "Line" said out loud does what the button does. The engine counts the
+  // calls on the turn; each new one gives the next words, in render.
+  const calls = liveLine === null ? 0 : snapshot?.calls ?? 0;
+  const [seenCalls, setSeenCalls] = useState(0);
+  if (calls !== seenCalls) {
+    setSeenCalls(calls);
+    if (calls > seenCalls) prompt?.();
+  }
   const running = state === 'actor' || state === 'partner' || state === 'paused';
   const current = snapshot?.lineIndex ?? 0;
   const cast = useMemo(() => castPalette(payload.characters), [payload.characters]);
@@ -124,11 +159,12 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   return (
     <div ref={rootRef} className="relative h-dvh overflow-hidden">
       <Stage lines={payload.lines} actor={actor} snapshot={snapshot}
-        paused={state === 'paused'} onJump={running ? jumpTo : undefined} warming={straight && !error} />
+        paused={state === 'paused'} onJump={running ? jumpTo : undefined} warming={straight && !error}
+        book={book} given={given} />
       <TopBar title={payload.scene.title} lines={payload.lines} actor={l => sameCharacter(l.character, actor)}
-        current={current} started={state !== 'ready'} onLeave={onLeave} />
+        current={current} started={state !== 'ready'} onLeave={onLeave} book={book} onBook={onBook} />
       {!ended && <Dock snapshot={snapshot} partner={partner} onToggle={toggle} onSkip={skip} onBack={back}
-        onRestart={() => jumpTo(0)} />}
+        onRestart={() => jumpTo(0)} onPrompt={prompt ?? undefined} />}
       {straight && !canBegin && !error && state === 'ready' && (
         <div role="status" className="r-getting">
           <span className="r-spin r-spin--big" aria-hidden />

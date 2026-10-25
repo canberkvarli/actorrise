@@ -40,6 +40,20 @@ export const VOICE_MARKS: Record<string, VoiceMark> = {
   // Neutral — balanced, or a deliberate rise and fall.
   alloy: { bars: [0.65, 0.65, 0.65, 0.65], note: "balanced, clear" },
   ballad: { bars: [0.35, 0.7, 1, 0.55], note: "melodic, theatrical" },
+
+  // The Gemini ten (2026-10-23, backend/app/services/rehearsal/voices.py),
+  // keyed lowercase like the rest. Same grammar: weight low for the men,
+  // taller and moving for the women, roughness as an uneven top.
+  leda: { bars: [0.8, 1, 0.7, 0.9], note: "youthful, bright" },
+  aoede: { bars: [0.5, 0.75, 0.9, 0.65], note: "breezy, easy" },
+  sulafat: { bars: [0.55, 0.85, 0.85, 0.55], note: "warm, kind" },
+  kore: { bars: [0.7, 0.9, 0.9, 0.7], note: "firm, direct" },
+  gacrux: { bars: [0.65, 0.8, 0.6, 0.75], note: "mature, assured" },
+  fenrir: { bars: [0.45, 1, 0.5, 0.85], note: "eager, excitable" },
+  puck: { bars: [0.5, 0.9, 0.6, 0.8], note: "upbeat, playful" },
+  achird: { bars: [0.55, 0.8, 0.8, 0.5], note: "friendly, warm" },
+  charon: { bars: [0.8, 0.85, 0.85, 0.8], note: "steady, low" },
+  algenib: { bars: [0.95, 0.7, 1, 0.75], note: "gravelly, weathered" },
 };
 
 /** Fallback keeps the row drawn rather than leaving a hole. */

@@ -103,8 +103,13 @@ first person singular, no dashes of any kind, no "we", signed `Canberk`, no emoj
 Create each as a Gmail draft:
 
 - `htmlBody` only. Never `body`.
-- No URL of any kind. Write the domain as `actorrise<span>.</span>com`. If a link is needed,
-  write `[LINK]` and put the link in your summary.
+- No URL of any kind. Write the domain as `actorrise<span>.</span>com`.
+- A class link goes in written out and highlighted, never as [LINK] (Canberk, 2026-10-25:
+  "add those links and highlight them, I don't wanna do it by hand"):
+  `<span style="background-color:#fff2a8;font-weight:bold;padding:2px 4px">actorrise<span>.</span>com/join/<code></span>`. The span keeps Gmail from wrapping it (checked 2026-10-25: an `<a href>` is
+  still wrapped, inline style survives). The teacher reads and types it; it is not clickable.
+- Any other link (the Stripe link after CURTAIN) stays `[LINK]`, with the full link in your
+  summary: it is too long to type, so Canberk pastes it as a real link.
 - A reply goes on its thread. A new email does not.
 
 **A reply that names a price** (a membership, a sponsorship, an ad) gets a warm, plain no.
@@ -177,6 +182,23 @@ still says "nobody yet", gets ONE nudge draft on the thread where the link went:
 again as [LINK], and the line that it took one teacher's class a single period to get set
 up (about 20 students in one hour, 2026-10-22). No school or teacher named. Logged as
 `--kind chase`; it is their one chase.
+
+again, written out and highlighted (see the draft rules above), and the line that it took one teacher's class a single period to get set
+up (about 20 students in one hour, 2026-10-22). No school or teacher named. Logged as
+`--kind chase`; it is their one chase.
+
+**An organization ready to ask** (Canberk, 2026-10-25: "partnerships, hosted by or
+supported by, on our landing page"). `/admin/organizations` marks an org "ready to ask"
+once 10 students have joined and nobody has asked. Its teacher gets ONE draft, on the
+thread where they last wrote to Canberk, and only after the class has used it without
+trouble: thank them for bringing the class in, then ask two things they can say yes to
+themselves, a link to ActorRise from their drama or class resources page, and whether
+their program's NAME may appear on the landing ("used in classes at ..."). Never ask a
+teacher for a district or university logo; that is not theirs to give. A studio,
+conservatory, theatre or association may be asked for its logo. Log it `--kind
+partner`, and say in the summary to set the org to "asked" in the admin. When they say
+yes, Canberk records who, when and their words in the org's Partner card; nothing shows
+on the landing without it.
 
 ## 4. What people said
 

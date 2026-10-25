@@ -5,6 +5,7 @@ import { animate, type AnimationPlaybackControls } from 'framer-motion';
 import { castColorVars, castPalette } from '@/lib/castColors';
 import { sameCharacter, type RehearsalLine } from '@/lib/rehearsal/contract';
 import type { Snapshot } from '@/lib/rehearsal/engine';
+import type { Book } from '@/lib/rehearsal/book';
 import { Line, type When } from './Line';
 
 interface Props {
@@ -13,6 +14,9 @@ interface Props {
   onJump?: (line: number) => void;
   /** The run starts by itself and is not there yet: the first line's light glows while it gets ready. */
   warming?: boolean;
+  /** How much of the actor's lines shows, and the words they called for, by line. */
+  book?: Book;
+  given?: Map<number, Set<number>>;
 }
 
 /** Fraction of the viewport height where the live word is held: the middle of the pool of light. */
@@ -37,7 +41,7 @@ const NO_WORDS = new Set<number>();
  * Scrolling by hand to find a line is left alone for a few seconds, then the
  * script follows the run again on its next move.
  */
-export function Stage({ lines, actor, snapshot, paused, onJump, warming = false }: Props) {
+export function Stage({ lines, actor, snapshot, paused, onJump, warming = false, book = 'script', given }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const motion = useRef<AnimationPlaybackControls | null>(null);
   const placed = useRef(false);
@@ -110,7 +114,8 @@ export function Stage({ lines, actor, snapshot, paused, onJump, warming = false 
           // Your live line, mic open or paused on it: the word you are on.
           const at = mine && live && (speaking === 'listening' || speaking === 'held') ? next : undefined;
           return <Line key={line.index} line={line} mine={mine} when={when} heard={heard} speaking={speaking}
-            at={at} jumpable={Boolean(onJump) && !live} cueStyle={cues.get(line.character)} />;
+            at={at} jumpable={Boolean(onJump) && !live} cueStyle={cues.get(line.character)}
+            book={book} given={mine ? given?.get(line.index) : undefined} />;
         })}
       </ol>
       <div aria-hidden className="h-[60dvh]" />

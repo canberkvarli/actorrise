@@ -18,6 +18,8 @@ from app.api.admin.stripe_revenue import router as admin_stripe_revenue_router
 from app.api.admin.sessions import router as admin_sessions_router
 from app.api.admin.users import router as admin_users_router
 from app.api.admin.organizations import router as admin_organizations_router
+from app.api.partners import router as partners_router
+from app.api.shelf import router as shelf_router
 from app.api.admin.pulse import router as admin_pulse_router
 from app.api.admin.auditions import router as admin_auditions_router
 from app.api.audition import router as audition_router
@@ -562,6 +564,8 @@ app.include_router(admin_film_tv_router)
 app.include_router(admin_stats_router)
 app.include_router(admin_users_router)
 app.include_router(admin_organizations_router)
+app.include_router(partners_router)
+app.include_router(shelf_router)
 app.include_router(admin_pulse_router)
 app.include_router(admin_auditions_router)
 app.include_router(admin_feedback_router)

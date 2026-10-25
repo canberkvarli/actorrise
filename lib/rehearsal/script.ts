@@ -50,7 +50,8 @@ export function buildScript(lines: RehearsalLine[], actor: string): Script {
       const words = lineWords(line.text);
       const own = [...new Set(line.text.match(/\b[A-Z][a-z]{2,}\b/g) ?? [])];
       turns.push({ kind: 'actor', index: turns.length, lineIndex: line.index, words,
-        keywords: [...new Set([...shared, ...own])].slice(0, 100) });
+        // "Line" first, so a call for one (line-call.ts) is never cut by the cap.
+        keywords: [...new Set(['Line', ...shared, ...own])].slice(0, 100) });
     } else if (last && last.kind === 'partner') {
       last.lineIndices.push(line.index);
     } else {

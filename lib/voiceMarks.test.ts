@@ -1,16 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { VOICE_MARKS, voiceMark } from "./voiceMarks";
-import { AI_VOICES } from "./scenePrefs";
+import { AI_VOICES, REHEARSAL_VOICES } from "./scenePrefs";
 
 describe("every voice has a mark", () => {
   it("covers the whole catalogue, so no row falls back", () => {
     for (const v of AI_VOICES) {
       expect(VOICE_MARKS[v.id], v.id).toBeDefined();
     }
+    for (const v of REHEARSAL_VOICES) {
+      expect(VOICE_MARKS[v.id.toLowerCase()], v.id).toBeDefined();
+    }
   });
 
   it("has no mark for a voice that does not exist", () => {
-    const ids = new Set(AI_VOICES.map((v) => v.id));
+    const ids = new Set([...AI_VOICES.map((v) => v.id), ...REHEARSAL_VOICES.map((v) => v.id.toLowerCase())]);
     for (const key of Object.keys(VOICE_MARKS)) {
       expect(ids.has(key), key).toBe(true);
     }

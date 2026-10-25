@@ -263,9 +263,14 @@ class CommunityScriptDetail(BaseModel):
 
 
 @router.get("/scripts/{script_id}", response_model=CommunityScriptDetail)
-def get_community_script(script_id: int, db: Session = Depends(get_db)):
+def get_community_script(
+    script_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """A shared (or demo) script with its scenes + lines, for rehearsal rooms.
-    Public read, but ONLY for scripts the owner shared (or system demos)."""
+    Signed in only (rooms are behind login), and ONLY for scripts the owner
+    shared (or system demos): these are the lines of someone's script."""
     script = (
         db.query(UserScript)
         .filter(

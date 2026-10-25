@@ -14,6 +14,7 @@ import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
 import { PracticeLibraryRail } from "@/components/practice/PracticeLibraryRail";
 import { PracticeScenePanel } from "@/components/practice/PracticeScenePanel";
 import { OtherScriptsStrip } from "@/components/practice/OtherScriptsStrip";
+import { CommunityLibraryEntry } from "@/components/practice/CommunityLibrary";
 import { WhatsNext, NothingYet } from "@/components/practice/WhatsNext";
 import { useWhatsNext } from "@/hooks/useWhatsNext";
 import { useDeleteScript, useReorderScripts, type UserScript } from "@/hooks/useScripts";
@@ -288,6 +289,9 @@ export function PracticeLibrary({
               }}
             />
           </div>
+          {/* Scenes to put on this shelf: classics, and where other actors
+              found theirs. Opens as its own room (CommunityLibrary). */}
+          <CommunityLibraryEntry />
         </div>
         )}
       </div>

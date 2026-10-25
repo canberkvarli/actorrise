@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { castPalette, castColorVars } from "@/lib/castColors";
 import { VoiceMark } from "@/components/scenepartner/VoiceMark";
+import { VoicePicker } from "@/components/scenepartner/VoicePicker";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { motion, useReducedMotion } from "framer-motion";
@@ -21,13 +22,16 @@ import { formatSceneDuration } from "@/lib/scenes";
 import {
   REHEARSAL_VOICES,
   defaultRehearsalVoices,
+  getCharacterNotes,
   getCharacterVoices,
   getMyRoles,
+  setCharacterNote,
   setCharacterVoices,
   setMyRoles,
+  voiceSample,
   type CharacterVoices,
 } from "@/lib/scenePrefs";
-import { useOpenAITTS } from "@/hooks/useOpenAITTS";
+import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { ScenePreviewSkeleton } from "@/components/practice/ScenePreviewSkeleton";
 
 /**
@@ -46,7 +50,11 @@ import { ScenePreviewSkeleton } from "@/components/practice/ScenePreviewSkeleton
  * head, the cast, and the dialogue set on paper.
  *
  * This is where the actor casts: the part, and the voice for every other part,
- * from the four the rehearsal reads with (lib/scenePrefs REHEARSAL_VOICES).
+ * from the ten the rehearsal reads with (GET /api/rehearsal/scenes/{id}/voices,
+ * the server's own list and its defaults; lib/scenePrefs REHEARSAL_VOICES
+ * until that answers). "hear" plays a few seconds of the voice, a static file.
+ * Each part can take a note of the actor's own ("meaner"): Plus, locked with
+ * the Plus mark for a free account.
  * Both are remembered, and "Rehearse this scene" goes straight into the run
  * (`?go=1`) with no Curtain in between. The part is required, because it is
  * the one thing the run cannot guess; an untouched voice is the server's own
@@ -81,6 +89,17 @@ interface SceneDetail {
   lines: SceneLine[];
 }
 
+/** GET /api/rehearsal/scenes/{id}/voices */
+interface SceneVoices {
+  voices: { id: string; label: string; gender: string; sample?: string | null }[];
+  /** {the actor's part: {partner: voice id}} */
+  defaults: Record<string, Record<string, string>>;
+  can_direct: boolean;
+  note_max: number;
+}
+
+const FALLBACK_VOICES: SceneVoices["voices"] = [...REHEARSAL_VOICES];
+
 /** "act one, scene two." — the slug line, lowercase, in the direction face. */
 function slugFor(scene: SceneDetail): string {
   const bits = [scene.act, scene.scene_number].filter(Boolean).join(", ");
@@ -99,6 +118,14 @@ export default function ScenePreviewPage() {
     () => api.get<SceneDetail>(`/api/scenes/${sceneId}`).then((r) => r.data),
     { revalidateOnFocus: false },
   );
+  // The voices and the defaults the run will use. The defaults come from the
+  // character reading on the server, so they cannot be worked out here.
+  const { data: castInfo } = useSWR<SceneVoices>(
+    Number.isFinite(sceneId) ? `/api/rehearsal/scenes/${sceneId}/voices` : null,
+    () => api.get<SceneVoices>(`/api/rehearsal/scenes/${sceneId}/voices`).then((r) => r.data),
+    { revalidateOnFocus: false },
+  );
+  const voiceList = castInfo?.voices ?? FALLBACK_VOICES;
 
   /* Overrides, not state-of-record. Both of these are DERIVED from storage and
      only replaced once the actor touches them — an effect that seeded state
@@ -119,10 +146,14 @@ export default function ScenePreviewPage() {
   const [draft, setDraft] = useState<{ who: string; text: string }>({ who: "", text: "" });
   const [savingLine, setSavingLine] = useState(false);
 
-  const tts = useOpenAITTS({
-    onEnd: () => setAuditioning(null),
-    onError: () => setAuditioning(null),
-  });
+  const sampleRef = useRef<HTMLAudioElement | null>(null);
+  const stopSample = useCallback(() => {
+    sampleRef.current?.pause();
+    sampleRef.current = null;
+    setAuditioning(null);
+  }, []);
+  const [notesPicked, setNotesPicked] = useState<Record<string, string> | null>(null);
+  const [asking, setAsking] = useState(false);
 
   /** Everyone who speaks, in the order they first speak. */
   const cast = useMemo(() => {
@@ -164,13 +195,23 @@ export default function ScenePreviewPage() {
       n === scene.character_1_name ? scene.character_1_gender
         : n === scene.character_2_name ? scene.character_2_gender
           : null;
-    const out = defaultRehearsalVoices(theirs, genderOf);
+    const server = castInfo?.defaults[mine];
+    const out = server ? { ...server } : defaultRehearsalVoices(theirs, genderOf);
     for (const name of theirs) {
       const pick = saved[name];
-      if (pick && REHEARSAL_VOICES.some((v) => v.id === pick)) out[name] = pick;
+      if (pick && voiceList.some((v) => v.id === pick)) out[name] = pick;
     }
     return out;
-  }, [scene, theirs, saved]);
+  }, [scene, theirs, saved, castInfo, mine, voiceList]);
+  const notes = useMemo(
+    () => notesPicked ?? (scene ? getCharacterNotes(scene.id) : {}),
+    [notesPicked, scene],
+  );
+  const writeNote = (character: string, note: string) => {
+    if (!scene) return;
+    setNotesPicked({ ...notes, [character]: note });
+    setCharacterNote(scene.id, character, note);
+  };
 
   /* A colour per character, dealt in order of appearance.
      A scene is a wall of identical monospace with a name over every
@@ -199,20 +240,23 @@ export default function ScenePreviewPage() {
     setCharacterVoices(scene.id, next);
   };
 
-  /** Hear a voice on a real line of theirs, not on a stock sentence. */
+  /** Hear a few seconds of the voice: one sample per voice, made once and
+      shipped in /public, so trying all ten costs nothing. It used to speak a
+      real line through the OpenAI voice, which the partner no longer uses. */
   const audition = (character: string) => {
-    if (!scene) return;
     if (auditioning === character) {
-      tts.cancel();
-      setAuditioning(null);
+      stopSample();
       return;
     }
-    const line =
-      scene.lines.find((l) => l.character_name === character && l.text.trim().length > 12) ??
-      scene.lines.find((l) => l.character_name === character);
-    const text = line?.text?.trim() || "Is all our company here?";
+    stopSample();
+    const id = fullVoices[character];
+    if (!id) return;
+    const src = voiceList.find((v) => v.id === id)?.sample ?? voiceSample(id);
+    const audio = new Audio(src);
+    sampleRef.current = audio;
     setAuditioning(character);
-    void tts.speak(text.slice(0, 220), fullVoices[character] ?? "coral");
+    audio.onended = () => setAuditioning((a) => (a === character ? null : a));
+    audio.play().catch(() => setAuditioning(null));
   };
 
   const beginEdit = (line: { id: number; character_name: string; text: string }) => {
@@ -244,10 +288,10 @@ export default function ScenePreviewPage() {
      Plus gate, and falls back to the Curtain when it must. */
   const rehearse = useCallback(() => {
     if (!scene || !mine || starting) return;
-    tts.cancel();
+    stopSample();
     setStarting(true);
     router.push(`/scenes/${scene.id}/rehearse?go=1`);
-  }, [scene, mine, router, starting, tts]);
+  }, [scene, mine, router, starting, stopSample]);
 
   const shell = `theatre-monologue theatre-tokens t-m__body ${theatreFontVars} min-h-screen pb-32`;
   const column = "mx-auto w-full max-w-[880px] px-5 pt-7 sm:px-6 sm:pt-10";
@@ -365,18 +409,14 @@ export default function ScenePreviewPage() {
                           </span>
                           <span className="t-prev__them">{name}</span>
                         </span>
-                        <select
-                          aria-label={`Voice for ${name}`}
-                          className="t-prev__voice"
+                        <VoicePicker
+                          character={name}
+                          voices={voiceList}
                           value={voiceId}
-                          onChange={(e) => chooseVoice(name, e.target.value)}
-                        >
-                          {REHEARSAL_VOICES.map((voice) => (
-                            <option key={voice.id} value={voice.id}>
-                              {voice.label}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(id) => chooseVoice(name, id)}
+                          sampleFor={(v) => v.sample ?? voiceSample(v.id)}
+                          scopeClassName={`theatre-monologue theatre-tokens ${theatreFontVars}`}
+                        />
                         <button
                           type="button"
                           onClick={() => audition(name)}
@@ -391,6 +431,32 @@ export default function ScenePreviewPage() {
                           )}
                           {busy ? "stop" : "hear"}
                         </button>
+                        {/* A note for the part, across the whole row. Plus:
+                            a free account sees it locked, and a tap opens the
+                            plans (the server drops the note either way). */}
+                        {castInfo?.can_direct ? (
+                          <input
+                            type="text"
+                            value={notes[name] ?? ""}
+                            maxLength={castInfo.note_max}
+                            onChange={(e) => writeNote(name, e.target.value)}
+                            aria-label={`A note for ${name}`}
+                            placeholder={`A note for ${name}, like "meaner"`}
+                            className="col-span-full -mt-1 min-h-9 w-full border-0 border-b border-dashed bg-transparent text-[13px] outline-none"
+                            style={{ borderColor: "var(--t-line-light)", color: "var(--t-text)" }}
+                          />
+                        ) : castInfo ? (
+                          <button
+                            type="button"
+                            onClick={() => setAsking(true)}
+                            aria-disabled
+                            className="col-span-full -mt-1 flex min-h-9 items-center text-left text-[13px]"
+                            style={{ color: "var(--t-faint)" }}
+                          >
+                            A note for {name}, like &quot;meaner&quot;
+                            <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-primary">Plus</span>
+                          </button>
+                        ) : null}
                       </div>
                     );
                   })
@@ -398,6 +464,13 @@ export default function ScenePreviewPage() {
               </div>
             </div>
           </div>
+          <MonologuePaywallModal
+            open={asking}
+            onOpenChange={setAsking}
+            feature="partner_direction"
+            title="Directing your partner is a Plus thing."
+            description="With Plus you can give each part a note, like meaner, slower or drunker, and the partner reads it that way. Free to start, card on file, cancel before it renews."
+          />
         </motion.section>
 
         {/* The sides. */}
@@ -460,7 +533,7 @@ export default function ScenePreviewPage() {
                           <span className="t-prev__chip">
                             <VoiceMark
                               voiceId={fullVoices[line.character_name]}
-                              label={REHEARSAL_VOICES.find((v) => v.id === fullVoices[line.character_name])?.label}
+                              label={voiceList.find((v) => v.id === fullVoices[line.character_name])?.label}
                               size={13}
                             />
                           </span>

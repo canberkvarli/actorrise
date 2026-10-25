@@ -3,6 +3,7 @@ API endpoints for user script management - upload, edit, manage scripts
 """
 
 import asyncio
+import hashlib
 import json as _json
 import threading
 from datetime import datetime, timedelta
@@ -33,11 +34,25 @@ from app.models.actor import (
 from app.services.docx_text import normalize_upload
 from app.services.script_tags import normalize_tag_list
 from app.services.script_additions import apply_genres, clean_genres
+from app.services.reading_budget import LIMIT_PROBLEM, reading_budget, tell_founder_once
 from app.models.user import User
 from app.services.character_names import canonicalize_scene_characters
 from app.services.script_parser import PARSER_VERSION, ScriptParser
 
 router = APIRouter(prefix="/api/scripts", tags=["scripts"])
+
+
+def _note_reading_cap(result, user_id) -> None:
+    """Tell the founder, once a month, when an account's scenes went past its
+    reading budget and were built by the rules instead. See reading_budget."""
+    scenes = (result or {}).get("scenes") or []
+    over = sum(
+        1 for s in scenes
+        if LIMIT_PROBLEM in ((s.get("reading") or {}).get("problems") or [])
+    )
+    if over and user_id:
+        tell_founder_once(user_id, over)
+
 
 
 # ============================================================================
@@ -613,6 +628,7 @@ async def upload_script_stream(
             headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
         )
 
+    budget = reading_budget(db, user_id)  # also before the db goes
     progress_queue: Queue = Queue()
     import threading
     cancel_event = threading.Event()
@@ -673,8 +689,9 @@ async def upload_script_stream(
                     extraction_result["data"] = parser.parse_script(
                         file_content, file_ext, filename,
                         on_progress=on_progress, cancel_event=cancel_event,
-                        mode=extraction_mode,
+                        mode=extraction_mode, reading_budget=budget,
                     )
+                    _note_reading_cap(extraction_result["data"], user_id)
                 except InterruptedError:
                     extraction_error["msg"] = "cancelled"
                 except Exception as e:
@@ -2521,11 +2538,13 @@ def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
     with _EXTRACTION_CANCELS_LOCK:
         _EXTRACTION_CANCELS[script_id] = cancel_event
     try:
+        owner = db.query(UserScript.user_id).filter(UserScript.id == script_id).scalar()
         parser = ScriptParser()
         result = parser.parse_script(
             file_content, file_ext, filename, mode=mode, cancel_event=cancel_event,
-            front_matter=front_matter,
+            front_matter=front_matter, reading_budget=reading_budget(db, owner),
         )
+        _note_reading_cap(result, owner)
 
         script = db.query(UserScript).filter(UserScript.id == script_id).first()
         if not script:
@@ -2990,6 +3009,30 @@ async def _read_upload(file: UploadFile) -> tuple:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+def _scan_key(text: str) -> str:
+    from app.services.scene_map import MAP_VERSION
+
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return f"{MAP_VERSION}.{PARSER_VERSION}:{digest}"
+
+
+def kept_scan(script) -> Optional[ScriptScanResponse]:
+    """The map read from this script's text before, if it still holds."""
+    kept = script.scene_map
+    if not isinstance(kept, dict) or kept.get("key") != _scan_key(script.source_text):
+        return None
+    try:
+        return ScriptScanResponse(**kept["scan"])
+    except Exception:
+        return None
+
+
+def keep_scan(script, scan: ScriptScanResponse) -> None:
+    """Every open of the script used to read the whole text again, and an
+    under-split one went to the model each time. Now it is read once."""
+    script.scene_map = {"key": _scan_key(script.source_text), "scan": scan.model_dump()}
+
+
 @router.post("/{script_id}/scene-map")
 async def script_scene_map(
     script_id: int,
@@ -3007,12 +3050,16 @@ async def script_scene_map(
     script = _owned_script(db, script_id, current_user)
     if file is not None:
         content, ext = await _read_upload(file)
+        scan = await run_in_threadpool(_scan_file, content, ext)
     elif script.source_text:
-        content, ext = script.source_text.encode("utf-8"), "txt"
+        scan = kept_scan(script)
+        if scan is None:
+            scan = await run_in_threadpool(_scan_file, script.source_text.encode("utf-8"), "txt")
+            keep_scan(script, scan)
+            db.commit()
     else:
         return {"needs_file": True}
 
-    scan = await run_in_threadpool(_scan_file, content, ext)
     built = db.query(Scene).filter(Scene.user_script_id == script.id).all()
     return {
         "needs_file": False,
@@ -3111,10 +3158,13 @@ def _add_scenes_in_background(script_id: int, text_to_build: str, filename: str,
     with _EXTRACTION_CANCELS_LOCK:
         _EXTRACTION_CANCELS[script_id] = cancel_event
     try:
+        owner = db.query(UserScript.user_id).filter(UserScript.id == script_id).scalar()
         parser = ScriptParser()
         result = parser.parse_script(
-            text_to_build.encode("utf-8"), "txt", filename, mode="full", cancel_event=cancel_event
+            text_to_build.encode("utf-8"), "txt", filename, mode="full", cancel_event=cancel_event,
+            reading_budget=reading_budget(db, owner),
         )
+        _note_reading_cap(result, owner)
         script = db.query(UserScript).filter(UserScript.id == script_id).first()
         if not script or cancel_event.is_set():
             return

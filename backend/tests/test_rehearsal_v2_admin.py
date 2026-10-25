@@ -17,8 +17,13 @@ from app.models.actor import FilmTvReference, Play, Scene, SceneLine, UserScript
 from app.models.organization import Organization
 from app.models.rehearsal import PartnerAudio
 from app.models.user import User
-from app.services.rehearsal import partner_audio
+from app.services.rehearsal import delivery, partner_audio
+from app.services.rehearsal import voices as voices_mod
+from app.services.rehearsal.delivery import LineVoice
 from tests.dbfixture import memory_db, restore
+
+# BEN's line as the API voices it in these tests: no reading, no notes.
+BEN_LINE = LineVoice(text="Where were you?", character="BEN")
 
 _TABLES = (Organization, User, FilmTvReference, Play, UserScript, Scene, SceneLine, PartnerAudio)
 
@@ -58,6 +63,12 @@ class Regenerate(unittest.TestCase):
 
         self.patches = [
             mock.patch.object(admin_sessions, "schedule_synthesis"),
+            # Pinned to OpenAI's four voices whatever the laptop's .env says
+            # (a GEMINI_API_KEY there makes Gemini the default vendor), and no
+            # model is ever asked for acting notes.
+            mock.patch.object(settings, "partner_tts_vendor", "openai"),
+            mock.patch.object(voices_mod, "VOICES", voices_mod._OPENAI),
+            mock.patch.object(delivery, "_enrich", return_value=None),
             mock.patch.object(partner_audio, "delete_row", side_effect=forget),
         ]
         for p in self.patches: p.start()
@@ -71,19 +82,19 @@ class Regenerate(unittest.TestCase):
         return self.client.post("/api/admin/rehearsal/audio/regenerate", json=body)
 
     def test_regenerate_drops_the_row_and_queues_it_again(self):
-        key = partner_audio.ensure(self.db, settings.partner_tts_vendor, "ash", None, "Where were you?")
+        key = partner_audio.ensure(self.db, "openai", "ash", BEN_LINE)
         row = self.db.get(PartnerAudio, key); row.status = "ready"; row.storage_path = "ab/x.mp3"; self.db.commit()
 
         r = self._post()
         self.assertEqual(r.status_code, 202, r.text)
         self.assertEqual(r.json(), {"key": key})
         partner_audio.delete_row.assert_called_once_with(self.db, key)
-        admin_sessions.schedule_synthesis.assert_called_once_with([key], {key: ("Where were you?", None)})
+        admin_sessions.schedule_synthesis.assert_called_once_with([key], {key: BEN_LINE})
         fresh = self.db.get(PartnerAudio, key)
         self.assertEqual((fresh.status, fresh.storage_path), ("pending", None))
 
     def test_a_failed_line_is_regenerated_too(self):
-        key = partner_audio.ensure(self.db, settings.partner_tts_vendor, "ash", None, "Where were you?")
+        key = partner_audio.ensure(self.db, "openai", "ash", BEN_LINE)
         row = self.db.get(PartnerAudio, key); row.status = "failed"; row.error = "boom"; self.db.commit()
         self.assertEqual(self._post().status_code, 202)
         fresh = self.db.get(PartnerAudio, key)
@@ -95,7 +106,7 @@ class Regenerate(unittest.TestCase):
         self.assertEqual(r.status_code, 202, r.text)
         key = r.json()["key"]
         self.assertEqual(self.db.get(PartnerAudio, key).status, "pending")
-        admin_sessions.schedule_synthesis.assert_called_once_with([key], {key: ("Where were you?", None)})
+        admin_sessions.schedule_synthesis.assert_called_once_with([key], {key: BEN_LINE})
 
     def test_unknown_scene_line_or_voice(self):
         self.assertEqual(self._post(scene_id=self.scene.id + 99).status_code, 404)

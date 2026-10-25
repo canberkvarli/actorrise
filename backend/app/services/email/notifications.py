@@ -6,6 +6,8 @@ submission workflow and welcome emails.
 """
 
 import os
+import threading
+import time
 from typing import Optional
 
 from app.services.email.resend_client import ResendEmailClient
@@ -41,22 +43,49 @@ def send_welcome_email(user_email: str, user_name: Optional[str] = None) -> dict
         raise
 
 
+def send_welcome_email_later(user_email: str, user_name: Optional[str] = None) -> None:
+    """send_welcome_email on a thread of its own, for the signup request.
+
+    It used to run inline in get_current_user: a COUNT on a second connection
+    and a call to Resend, while the request held its first. A class of 26
+    signing up at once on 2026-10-22 ran the pool dry that way.
+    """
+
+    def run() -> None:
+        try:
+            send_welcome_email(user_email=user_email, user_name=user_name)
+        except Exception:  # noqa: BLE001 - logged inside send_welcome_email
+            pass
+
+    threading.Thread(target=run, daemon=True).start()
+
+
+_count_cache: dict[str, float] = {}
+_COUNT_TTL_S = 3600
+
+
 def _searchable_monologue_count() -> Optional[int]:
     """Live library size, counted the way /api/public/stats counts it.
 
     Returns None rather than raising: the welcome email is the first thing a new
     signup sees, and it must not fail because a COUNT did. library_claim() falls
-    back to a floor when this is None.
+    back to a floor when this is None. Held for an hour: the count takes about
+    two seconds, and a class signing up together would run it once each.
     """
+    if _count_cache and time.monotonic() - _count_cache["at"] < _COUNT_TTL_S:
+        return int(_count_cache["n"])
     try:
         from sqlalchemy import text
 
         from app.core.database import SessionLocal
 
         with SessionLocal() as db:
-            return db.execute(
+            n = db.execute(
                 text("select count(*) from monologues where review_status is null")
             ).scalar()
+        if n is not None:
+            _count_cache.update(n=n, at=time.monotonic())
+        return n
     except Exception as e:  # noqa: BLE001 - never block the welcome on this
         print(f"Could not read monologue count for welcome email: {e}")
         return None
@@ -434,4 +463,40 @@ def send_trial_ended_notification(
         return client.send_email(to="canberk@actorrise.com", subject=subject, html=html)
     except Exception as e:
         print(f"Error sending trial-ended notification: {e}")
+        return {"id": "error", "status": "failed"}
+
+
+def send_partner_tts_cap_notification(month: str, used: int, cap: int, fallback: Optional[str]) -> dict:
+    """The partner voice hit its monthly cap. Fire-and-forget, never raises.
+
+    Sent once a month at most (partner_audio._mail_cap_once claims the month
+    in app_settings first). Plain HTML, no template: it is one line to the
+    founder, not a letter to an actor.
+    """
+    if not os.getenv("RESEND_API_KEY"):
+        print("Warning: RESEND_API_KEY not set. Partner TTS cap notification disabled.")
+        return {"id": "mock_partner_tts_cap_id", "status": "disabled"}
+
+    try:
+        from html import escape
+
+        client = ResendEmailClient()
+        then = (
+            f"New partner lines go to {escape(fallback)} until the 1st. Lines already saved keep their Gemini voice."
+            if fallback
+            else "INWORLD_API_KEY is not set, so Gemini carries on past the cap. Set it on Render, or raise PARTNER_TTS_MONTHLY_CHARS."
+        )
+        html = (
+            f"<p>The ScenePartner voice reached its cap for {escape(month)}: "
+            f"{used:,} of {cap:,} characters voiced by Gemini.</p>"
+            f"<p>{then}</p>"
+            "<p>The cap is PARTNER_TTS_MONTHLY_CHARS on Render (about $0.03 a minute of audio).</p>"
+        )
+        return client.send_email(
+            to="canberk@actorrise.com",
+            subject=f"Partner voice hit its {month} cap",
+            html=html,
+        )
+    except Exception as e:
+        print(f"Error sending partner TTS cap notification: {e}")
         return {"id": "error", "status": "failed"}

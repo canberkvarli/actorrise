@@ -35,6 +35,8 @@ services:
       # - SUPABASE_URL (your Supabase project URL)
       # - SUPABASE_SERVICE_ROLE_KEY (Supabase service role key)
       # - OPENAI_API_KEY (if you use AI search)
+      # - GEMINI_API_KEY (the ScenePartner voice; without it the partner stays on OpenAI)
+      # - INWORLD_API_KEY (the partner voice past PARTNER_TTS_MONTHLY_CHARS, default 300000)
 
     healthCheckPath: /health
     autoDeployTrigger: commit

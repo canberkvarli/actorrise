@@ -57,6 +57,8 @@ export interface LiveRead {
    * the line's length. It only ever moves forward within a turn.
    */
   position: number;
+  /** Words still to say after the position: 0 at the end of the line. */
+  remaining: number;
   /** Has the reading reached the line's final word? */
   lastWordMatched: boolean;
   /**
@@ -73,6 +75,7 @@ export interface LiveRead {
 export const EMPTY_READ: LiveRead = {
   matched: new Set(),
   position: 0,
+  remaining: Infinity, // the line is not known yet: nothing is near its end
   lastWordMatched: false,
   tailMatched: false,
   score: 0,
@@ -123,7 +126,7 @@ const END_SLACK = 2;
 export function liveRead(expectedWords: string[], transcript: string, previous: LiveRead = EMPTY_READ): LiveRead {
   const n = expectedWords.length;
   if (!n) {
-    return { matched: new Set(), position: 0, lastWordMatched: true, tailMatched: true, score: 1 };
+    return { matched: new Set(), position: 0, remaining: 0, lastWordMatched: true, tailMatched: true, score: 1 };
   }
   const heard = tokenize(transcript);
   const from = Math.min(Math.max(previous.position, 0), n);
@@ -152,6 +155,7 @@ export function liveRead(expectedWords: string[], transcript: string, previous: 
   return {
     matched,
     position,
+    remaining: n - position,
     lastWordMatched,
     tailMatched: lastWordMatched || matched.has(last - 1) || endsOnTail(expectedWords, heard),
     score: matched.size / n,
@@ -214,6 +218,14 @@ const ENDING_MIN_SCORE = 0.5;
  */
 export const QUIET_MIN_SCORE = 0.6;
 
+/**
+ * And how close to the end, in words. A share alone let a long speech go on a
+ * breath: 60% of 75 words leaves 30 to say, and on 2026-10-24 Canberk lost a
+ * line with 22 still to come. The last word or two is what a transcriber drops
+ * as a voice falls away (END_SLACK); three is that, and one more.
+ */
+export const QUIET_MAX_REMAINING = 3;
+
 export interface HandOverState extends LiveRead {
   /**
    * Has the actor stopped speaking?
@@ -229,6 +241,7 @@ export interface HandOverState extends LiveRead {
 /** Should the scene move to the next line? */
 export function shouldHandOver({
   matched,
+  remaining,
   lastWordMatched,
   tailMatched,
   score,
@@ -243,12 +256,13 @@ export function shouldHandOver({
      end on its only word, so it still goes on the instant. */
   if (lastWordMatched && score >= ENDING_MIN_SCORE) return true;
 
-  /* The turn is over and the line was substantially said: most of it, or
-     its tail. Guarded on having heard anything, because a turn that ends
-     with an empty transcript is a room noise false positive, and moving the
-     scene on for an actor who has not spoken is the failure that started all
-     of this. */
-  if (turnEnded && matched.size > 0 && (score >= QUIET_MIN_SCORE || tailMatched)) return true;
+  /* The turn is over and the line was substantially said: most of it and
+     nearly to its end, or its tail. Guarded on having heard anything, because
+     a turn that ends with an empty transcript is a room noise false positive,
+     and moving the scene on for an actor who has not spoken is the failure
+     that started all of this. */
+  const nearlyAll = score >= QUIET_MIN_SCORE && remaining <= QUIET_MAX_REMAINING;
+  if (turnEnded && matched.size > 0 && (nearlyAll || tailMatched)) return true;
 
   return false;
 }

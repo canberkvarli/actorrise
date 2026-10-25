@@ -37,6 +37,8 @@ export interface AudioSlot {
   lineIndex: number;
   character: string;
   voice: string;
+  /** The actor's own note for this line's character (Plus), sent with POST /api/rehearsal/audio. */
+  note?: string;
   /** The payload's slot when it is usable as is; null = ask POST /api/rehearsal/audio. */
   source: { key: string; url: string | null } | null;
 }
@@ -48,9 +50,11 @@ const lookup = (m: Record<string, string> | undefined, character: string) =>
  * One slot per partner line, in order. The payload carries audio only for the
  * part the server guessed, in that part's default voices, so its slot is used
  * when it covers every partner line of the part picked (that is the part) and
- * the line's character still has its default voice. Anything else is asked for.
+ * the line's character still has its default voice and no note. Anything else
+ * is asked for. Notes are only sent when the payload says the actor may direct.
  */
-export function planPartnerAudio(payload: ScenePayload, script: Script, voices: Record<string, string>): AudioSlot[] {
+export function planPartnerAudio(payload: ScenePayload, script: Script, voices: Record<string, string>,
+  notes: Record<string, string> = {}): AudioSlot[] {
   const defaults = Object.entries(payload.defaults).find(([c]) => sameCharacter(c, script.actor))?.[1];
   const partner = script.lines.filter(l => !sameCharacter(l.character, script.actor));
   const covered = partner.length > 0 && partner.every(l => payload.audio[String(l.index)]);
@@ -58,7 +62,11 @@ export function planPartnerAudio(payload: ScenePayload, script: Script, voices: 
     const fallback = lookup(defaults, l.character);
     const voice = lookup(voices, l.character) ?? fallback ?? payload.voices[0]?.id ?? '';
     const slot = payload.audio[String(l.index)];
-    return { lineIndex: l.index, character: l.character, voice, source: covered && slot && voice === fallback ? slot : null };
+    const note = payload.can_direct ? (lookup(notes, l.character) ?? '').trim() : '';
+    return {
+      lineIndex: l.index, character: l.character, voice, ...(note ? { note } : {}),
+      source: covered && slot && voice === fallback && !note ? slot : null,
+    };
   });
 }
 

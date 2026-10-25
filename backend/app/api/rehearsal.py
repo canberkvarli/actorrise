@@ -5,6 +5,7 @@ and the next; see docs/superpowers/specs/2026-10-12-scenepartner-v2-design.md.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -14,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
 from app.core.config import settings
-from app.core.database import SessionLocal, get_db
+from app.core.database import get_db
 from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_scene_partner
 from app.models.actor import Scene, SceneLine, UserScript
@@ -23,11 +24,13 @@ from app.models.user import User
 from app.services.events import record_user_event
 from app.services.guided_scene import GUIDED_ACTOR, guided_scene, guided_scenes, guided_script_of
 from app.services.rehearsal import journal, partner_audio
-from app.services.rehearsal.access import assert_can_rehearse
+from app.services.rehearsal.access import assert_can_rehearse, can_direct_partner
 from app.services.rehearsal.contract import RehearsalLine, lines_for, same_character
+from app.services.rehearsal.delivery import MAX_DIRECTOR_NOTE, LineVoice, SceneVoicing, clean_note, scene_voicing
 from app.services.rehearsal.voices import VOICES, default_voices, voice_by_id
 from app.utils.duration import estimate_duration_seconds
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/rehearsal", tags=["rehearsal"])
 
 # require_scene_partner is a factory. Build the gate once so a test can
@@ -47,24 +50,31 @@ def _load_scene(db: Session, scene_id: int, user: User) -> tuple[Scene, UserScri
     return scene, script
 
 
-def _audio_plan(lines: list[RehearsalLine], actor: str, voices: dict[str, str]) -> list[tuple[int, str, str, str | None]]:
-    """(line index, voice, text, direction) for every partner line, in order."""
+def _voicing(db: Session, scene: Scene, lines: list[RehearsalLine], enrich: bool = False) -> SceneVoicing:
+    """The acting notes and character readings the partner's voice is built
+    from. Only opening the scene (GET /scenes, GET /scenes/{id}/voices) may
+    make them, one model call stored on the scene; every other route reads
+    what is there. POST /audio comes in four at a time per line, and four
+    parallel model calls for one scene (or forty, if the model were down) is
+    exactly what the notes were stored to avoid."""
+    return scene_voicing(db, scene, lines, enrich=enrich)
+
+
+def _audio_plan(lines: list[RehearsalLine], actor: str, voices: dict[str, str],
+                voicing: SceneVoicing) -> list[tuple[int, str, LineVoice]]:
+    """(line index, voice, what to say and how) for every partner line, in order."""
     out = []
     for line in lines:
         if same_character(line.character, actor):
             continue
         voice = next((v for c, v in voices.items() if same_character(c, line.character)), None) or VOICES[0].id
-        out.append((line.index, voice, line.text, line.direction))
+        out.append((line.index, voice, voicing.line_voice(line)))
     return out
 
 
-def schedule_synthesis(keys: list[str], text_for: dict[str, tuple[str, str | None]]) -> None:
-    """Runs in a BackgroundTask with its own session: the request is long gone."""
-    db = SessionLocal()
-    try:
-        partner_audio.synthesise_pending(db, keys, text_for)
-    finally:
-        db.close()
+def schedule_synthesis(keys: list[str], line_for: dict[str, LineVoice]) -> None:
+    """Hand the lines to the partner-audio worker (one thread, rate limited)."""
+    partner_audio.enqueue(keys, line_for)
 
 
 def _wants_synthesis(row: PartnerAudio, now: datetime) -> bool:
@@ -90,19 +100,23 @@ def get_rehearsal_scene(
     # Defaults for whichever part the actor picks, and the audio slots for the
     # part the extractor calls character 1 (the common pick). Audio for another
     # pick, or another voice, comes through GET /audio/{key} as it is needed.
-    defaults = {c: default_voices(scene, lines, c) for c in characters}
+    voicing = _voicing(db, scene, lines, enrich=True)
+    defaults = {c: default_voices(scene, lines, c, voicing.characters) for c in characters}
     first = scene.character_1_name if any(same_character(scene.character_1_name or "", c) for c in characters) else characters[0] if characters else ""
-    plan = _audio_plan(lines, first, defaults.get(first, {})) if first else []
+    plan = _audio_plan(lines, first, defaults.get(first, {}), voicing) if first else []
 
     # One pass over the lines to make sure every row exists, one query for the
     # rows, one storage call for the URLs. A scene used to sign each ready
     # line on its own round trip, which is what made a long scene slow to open.
+    # The cap is read once for the whole scene, not once a line.
+    capped = partner_audio.over_cap(db) if plan else False
+    vendor = partner_audio.scene_vendor(db, [(v, spec) for _i, v, spec in plan], capped)
     key_for: dict[int, str] = {}
-    text_for: dict[str, tuple[str, str | None]] = {}
-    for index, voice, text, direction in plan:
-        key = partner_audio.ensure(db, settings.partner_tts_vendor, voice, direction, text)
+    line_for: dict[str, LineVoice] = {}
+    for index, voice, spec in plan:
+        key = partner_audio.ensure_as(db, vendor, voice, spec)
         key_for[index] = key
-        text_for[key] = (text, direction)
+        line_for[key] = spec
     db.commit()
     keys = list(dict.fromkeys(key_for.values()))  # two identical lines share a key
     rows = {r.key: r for r in db.query(PartnerAudio).filter(PartnerAudio.key.in_(keys))} if keys else {}
@@ -116,7 +130,7 @@ def get_rehearsal_scene(
     now = datetime.now(timezone.utc)
     missing = [k for k in keys if k in rows and _wants_synthesis(rows[k], now)]
     if missing:
-        background.add_task(schedule_synthesis, missing, {k: text_for[k] for k in missing})
+        background.add_task(schedule_synthesis, missing, {k: line_for[k] for k in missing})
 
     return {
         "scene": {
@@ -126,11 +140,74 @@ def get_rehearsal_scene(
         },
         "lines": [l.model_dump() for l in lines],
         "characters": characters,
-        "voices": [{"id": v.id, "label": v.label, "gender": v.gender} for v in VOICES],
+        "voices": _voice_list(),
         "defaults": defaults,
         "vendor": settings.partner_tts_vendor,
+        # The actor's own note on a part ("make him meaner") is Plus. The
+        # field shows for everyone; this says whether it is open.
+        "can_direct": can_direct_partner(db, user),
+        "note_max": MAX_DIRECTOR_NOTE,
         "audio": audio,
         "resume": journal.resumable(db, user.id, scene.id),
+    }
+
+
+def _voice_list() -> list[dict[str, Any]]:
+    """The voices, each with the static sample the run setup plays (a few
+    seconds, made once by scripts/make_voice_samples.py, in public/voices)."""
+    return [
+        {"id": v.id, "label": v.label, "gender": v.gender,
+         "sample": f"/voices/{v.id.lower()}.mp3" if v.vendor == "gemini" else None}
+        for v in VOICES
+    ]
+
+
+def _warm_first_part(db: Session, scene, lines, characters, defaults, voicing) -> None:
+    """Start voicing the usual pick's partner lines while the actor reads the
+    sides. Under Gemini's per-minute limit a fresh scene takes a minute or two
+    to voice; begun at Rehearse, the first partner line after the actor's
+    could still be in the queue, and the run sat silent. Never raises: the
+    preview must open whatever happens here."""
+    try:
+        first = scene.character_1_name if any(same_character(scene.character_1_name or "", c) for c in characters) else (characters[0] if characters else "")
+        plan = _audio_plan(lines, first, defaults.get(first, {}), voicing) if first else []
+        if not plan:
+            return
+        capped = partner_audio.over_cap(db)
+        vendor = partner_audio.scene_vendor(db, [(v, spec) for _i, v, spec in plan], capped)
+        line_for: dict[str, LineVoice] = {}
+        for _index, voice, spec in plan:
+            line_for[partner_audio.ensure_as(db, vendor, voice, spec)] = spec
+        db.commit()
+        now = datetime.now(timezone.utc)
+        rows = db.query(PartnerAudio).filter(PartnerAudio.key.in_(list(line_for))).all()
+        missing = [r.key for r in rows if _wants_synthesis(r, now)]
+        if missing:
+            schedule_synthesis(missing, {k: line_for[k] for k in missing})
+    except Exception:  # noqa: BLE001
+        logger.exception("warming partner audio for scene %s failed", scene.id)
+        db.rollback()
+
+
+@router.get("/scenes/{scene_id}/voices")
+def get_scene_voices(scene_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """The voices and every part's default voice, without the audio. The
+    scene preview casts from this, so the voice it shows is the one the run
+    will use (the defaults come from the character reading)."""
+    scene, _ = _load_scene(db, scene_id, user)
+    lines = lines_for(db, scene.id)
+    voicing = _voicing(db, scene, lines, enrich=True)
+    characters: list[str] = []
+    for line in lines:
+        if not any(same_character(line.character, c) for c in characters):
+            characters.append(line.character)
+    defaults = {c: default_voices(scene, lines, c, voicing.characters) for c in characters}
+    _warm_first_part(db, scene, lines, characters, defaults, voicing)
+    return {
+        "voices": _voice_list(),
+        "defaults": defaults,
+        "can_direct": can_direct_partner(db, user),
+        "note_max": MAX_DIRECTOR_NOTE,
     }
 
 
@@ -210,6 +287,19 @@ class AudioFor(BaseModel):
     scene_id: int
     line_index: int
     voice: str
+    # The actor's note for this line's character. Plus only: from anyone else
+    # it is dropped here, so the line is voiced (and cached) without it.
+    note: str | None = Field(default=None, max_length=1000)
+
+
+def _known_voices(scene, lines, actor: str, chosen: dict, db: Session) -> dict:
+    """The part defaults, with the actor's choices laid over them where the
+    choice is still a voice we have. A run opened before the partner moved to
+    Gemini carries OpenAI ids, and so does a browser that remembers them; those
+    fall back to the default rather than failing the run."""
+    voices = default_voices(scene, lines, actor, _voicing(db, scene, lines).characters)
+    voices.update({c: v for c, v in (chosen or {}).items() if voice_by_id(v) is not None})
+    return voices
 
 
 @router.post("/audio")
@@ -220,21 +310,30 @@ def audio_for_line(
     user: User = Depends(get_current_user),
 ):
     """The key (and URL if ready) for one line in one voice. Used after a voice
-    switch or for a part other than character 1. Queues synthesis if missing."""
+    switch, with a note, or for a part other than character 1. Queues
+    synthesis if missing."""
     scene, _ = _load_scene(db, req.scene_id, user)
-    if voice_by_id(req.voice) is None:
-        raise HTTPException(status_code=422, detail="Unknown voice")
     lines = lines_for(db, scene.id)
     if not 0 <= req.line_index < len(lines):
         raise HTTPException(status_code=404, detail="No such line")
     line = lines[req.line_index]
-    key = partner_audio.ensure(db, settings.partner_tts_vendor, req.voice, line.direction, line.text)
+    voice = req.voice
+    if voice_by_id(voice) is None:
+        # A voice from before the vendor changed ("ash", "coral"), kept in the
+        # browser or on an open run. Refusing it stopped the whole run on
+        # "A partner line could not load"; the part's own default is better.
+        voice = _known_voices(scene, lines, "", {}, db).get(line.character) or VOICES[0].id
+    note = clean_note(req.note)
+    if note and not can_direct_partner(db, user):
+        note = ""
+    spec = _voicing(db, scene, lines).line_voice(line, note)
+    key = partner_audio.ensure_for(db, voice, spec, partner_audio.over_cap(db))
     db.commit()
     row = db.get(PartnerAudio, key)
     if row.status == "ready" and row.storage_path:
         return {"key": key, "url": partner_audio.signed_url(row.storage_path)}
     if _wants_synthesis(row, datetime.now(timezone.utc)):
-        background.add_task(schedule_synthesis, [key], {key: (line.text, line.direction)})
+        background.add_task(schedule_synthesis, [key], {key: spec})
     return {"key": key, "url": None}
 
 
@@ -243,6 +342,12 @@ def get_audio(key: str, db: Session = Depends(get_db), user: User = Depends(get_
     row = db.get(PartnerAudio, key)
     if row is None:
         raise HTTPException(status_code=404, detail="Unknown line")
+    if row.status == "ready" and row.storage_path:
+        return {"key": key, "url": partner_audio.signed_url(row.storage_path)}
+    stand_in = partner_audio.stand_in_key(row)
+    if stand_in:
+        # Gemini refused this line for the day; OpenAI read it instead.
+        row = db.get(PartnerAudio, stand_in) or row
     if row.status == "ready" and row.storage_path:
         return {"key": key, "url": partner_audio.signed_url(row.storage_path)}
     if row.status == "failed":
@@ -273,10 +378,7 @@ def start_run(
     lines = lines_for(db, scene.id)
     if not any(same_character(l.character, req.character) for l in lines):
         raise HTTPException(status_code=422, detail="That character has no lines in this scene")
-    for c, v in req.voices.items():
-        if voice_by_id(v) is None:
-            raise HTTPException(status_code=422, detail=f"Unknown voice for {c}")
-    voices = {**default_voices(scene, lines, req.character), **req.voices}
+    voices = _known_voices(scene, lines, req.character, req.voices, db)
     run = journal.create_run(db, user.id, scene.id, req.character, voices, is_guided=False)
     return {"run_id": run.id, "voices": voices}
 
@@ -313,7 +415,7 @@ def start_guided_run(
     if scene is None:
         raise HTTPException(status_code=404, detail="The guided scene is not seeded")
     lines = lines_for(db, scene.id)
-    voices = default_voices(scene, lines, actor)
+    voices = default_voices(scene, lines, actor, _voicing(db, scene, lines).characters)
     for ch, v in req.voices.items():
         if voice_by_id(v) is not None and any(same_character(ch, c) for c in voices):
             voices = {c: (v if same_character(c, ch) else old) for c, old in voices.items()}
@@ -342,8 +444,10 @@ def resume_run(
     run = journal.db_run(db, run_id)
     if run is None or run.user_id != user.id or journal.is_closed(db, run_id) or not journal.in_resume_window(run):
         raise HTTPException(status_code=404, detail="Run not found")
+    scene, _ = _load_scene(db, run.scene_id, user)
+    voices = _known_voices(scene, lines_for(db, scene.id), run.character, run.voices or {}, db)
     return {
-        "run_id": run.id, "scene_id": run.scene_id, "character": run.character, "voices": run.voices or {},
+        "run_id": run.id, "scene_id": run.scene_id, "character": run.character, "voices": voices,
         "line_index": journal.furthest_line(db, run_id) or 0,
     }
 

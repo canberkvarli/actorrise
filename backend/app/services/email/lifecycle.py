@@ -32,6 +32,7 @@ from app.core.database import SessionLocal
 from app.models.actor import Monologue, MonologueFavorite
 from app.models.billing import PricingTier, UserSubscription
 from app.models.email_do_not_contact import EmailDoNotContact
+from app.services.email.school_address import is_school_student
 from app.models.lifecycle_email import LifecycleEmailSend
 from app.models.search_log import MonologueView, SearchLog
 from app.models.user import User
@@ -98,6 +99,8 @@ def _mailable(user: User, dnc: set[str], paid: set[int]) -> bool:
     if not email or not getattr(user, "marketing_opt_in", False):
         return False
     if getattr(user, "exclude_from_stats", False):
+        return False
+    if is_school_student(user):
         return False
     for blocked in (ANON_DOMAIN, "@actorrise.com", APPLE_RELAY_DOMAIN):
         if blocked in email:

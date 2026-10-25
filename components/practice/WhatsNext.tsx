@@ -79,13 +79,12 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
 
   const sceneSlug = [scene?.act, scene?.scene_number].filter(Boolean).join(" · ");
 
-  /* A run in progress goes straight to the stage: the rehearse screen opens
-     its own run and picks up where the journal says they stopped, so nothing
-     rides on the link. Everything else goes to the scene preview, which is
+  /* A run in progress goes straight to the stage, at the line where the
+     journal says they stopped: `?go=1` skips the Curtain (lib/rehearsal/entry). Everything else goes to the scene preview, which is
      where you read the sides and pick your part. */
   const href =
     rung === "resume" && scene
-      ? `/scenes/${scene.id}/rehearse`
+      ? `/scenes/${scene.id}/rehearse?go=1`
       : scene && script
         ? `/practice/${script.id}/scenes/${scene.id}`
         : "#";

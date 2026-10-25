@@ -8347,6 +8347,61 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
   text-decoration-color: var(--t-gel-ink);
 }
 
+/* Off the script (lib/rehearsal/book): a hidden word keeps its text, coloured
+   out over a soft bar its own width, so the line is the shape it will be and
+   nothing re-wraps as it fills in. A word fills in, in ink, as it is said. The
+   word the actor is on is the bar lit in their gel. A word they called for is
+   shown softer with a dotted rule; on a line already read, a word never heard
+   is underlined, so the actor sees where they went off. */
+.r-line[data-book] .r-word[data-show="hidden"] {
+  color: transparent;
+  background: color-mix(in oklab, var(--t-ink) 11%, transparent);
+  border-radius: 3px;
+  text-decoration-color: transparent;
+  user-select: none;
+}
+.r-line[data-book] .r-word[data-show="hidden"][data-at="true"] {
+  color: transparent;
+  background: color-mix(in oklab, var(--t-gel-ink) 32%, transparent);
+}
+.r-line[data-book] .r-word[data-show="given"] {
+  color: color-mix(in oklab, var(--t-ink) 62%, var(--t-paper));
+  font-weight: inherit;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: color-mix(in oklab, var(--t-ink) 45%, transparent);
+}
+.r-line[data-book] .r-word[data-show="missed"] {
+  text-decoration-color: var(--t-gel-ink);
+}
+.r-line[data-book][data-when="past"] { opacity: 0.5; }
+
+/* Script · Cues · Off book, under the title. A switch, not a menu: one tap, any time. */
+.r-book {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  max-width: 38rem;
+  margin: 2px auto 0;
+}
+.r-book__opt {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--r-soft);
+  transition: color 160ms ease-out, background-color 160ms ease-out;
+}
+.r-book__opt[aria-checked="true"] {
+  color: var(--t-ink);
+  font-weight: 600;
+  background: color-mix(in oklab, var(--t-ink) 8%, transparent);
+}
+@media (hover: hover) {
+  .r-book__opt[aria-checked="false"]:hover { color: var(--t-ink); }
+}
+
 /* The top bar: leave, the scene, the count, and the run sheet under them. */
 .r-top {
   position: fixed;
@@ -11283,3 +11338,98 @@ label:hover > .aud-check[data-on="false"] {
     transition: none;
   }
 }
+
+/* The voice picker on the scene preview (components/scenepartner/VoicePicker).
+   The pill keeps .t-prev__voice's size and border; it is a button now, so the
+   chevron is an icon rather than a background, and the name stays whole while
+   the description gives way. */
+.t-prev__voicebtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-image: none;
+  padding: 0 12px 0 14px;
+  text-align: left;
+  font-family: var(--t-body);
+}
+.t-prev__voicename { font-weight: 600; white-space: nowrap; flex: none; }
+.t-prev__voicesound {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--t-muted-light);
+}
+.t-prev__voicechev { width: 14px; height: 14px; flex: none; margin-left: auto; color: var(--t-muted-light); }
+.t-voicelist {
+  background: var(--t-paper-2);
+  border-color: var(--t-line-light);
+  color: var(--t-text);
+}
+.t-voicelist__head {
+  margin: 4px 8px 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t-muted-light);
+}
+.t-voicelist__group {
+  margin: 8px 8px 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t-faint);
+}
+.t-voicelist__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+}
+.t-voicelist__row:hover,
+.t-voicelist__row[data-on="true"] { background: color-mix(in oklab, var(--t-text) 8%, transparent); }
+.t-voicelist__pick {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 7px 8px;
+  text-align: left;
+  min-height: 44px;
+}
+.t-voicelist__name { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+.t-voicelist__sound { font-size: 12px; color: var(--t-muted-light); }
+.t-voicelist__play {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 4px;
+  border-radius: 999px;
+  border: 1.5px dashed var(--t-line-light);
+  color: var(--t-muted-light);
+}
+.t-voicelist__play[data-on="true"] { border-style: solid; color: var(--t-text); }
+.t-voicelist__pick:focus-visible,
+.t-voicelist__play:focus-visible { outline: 2px solid var(--t-gel-ink); outline-offset: 1px; }
+.t-voicelist { font-family: var(--t-body); }
+
+/* Episode headings fold their scenes away (ScriptMap). The heading is the
+   button: full width, so the whole rule is a target, not just the words. */
+.t-map__act--toggle {
+  width: 100%;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  color: inherit;
+}
+.t-map__act--toggle:focus-visible { outline: 2px solid var(--t-gel-ink); outline-offset: 3px; }
+.t-map__act-chev { transition: transform 160ms ease-out; transform: rotate(-90deg); opacity: 0.7; }
+.t-map__act-chev[data-open="true"] { transform: rotate(0deg); }
+@media (prefers-reduced-motion: reduce) { .t-map__act-chev { transition: none; } }

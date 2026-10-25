@@ -54,4 +54,10 @@ dependencies = [
     "resend>=0.7.0",
     "jinja2>=3.1.0",
     "weasyprint>=66.0",
+    # Partner lines come back from Gemini as raw 24 kHz PCM. Stored as WAV a
+    # line is about ten times the MP3, and the partner-lines bucket is on a
+    # tight Supabase quota. lameenc is LAME in a wheel: no ffmpeg, nothing for
+    # the Dockerfile to apt-get. Pinned to the March release, not the one
+    # from last week.
+    "lameenc==1.8.2",
 ]

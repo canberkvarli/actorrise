@@ -18,6 +18,7 @@ import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PartnerBadge, type Partner } from "@/components/admin/OrganizationPartner";
 
 export interface OrganizationRow {
   id: number;
@@ -32,6 +33,7 @@ export interface OrganizationRow {
   next_comp_expiry: string | null;
   first_joined: string | null;
   top_referral: string | null;
+  partner: Partner;
 }
 
 const KINDS = ["school", "studio", "chapter", "company"];
@@ -151,6 +153,7 @@ export default function AdminOrganizationsPage() {
                   <th className="px-4 py-3 font-medium">Comps</th>
                   <th className="px-4 py-3 font-medium">Expiry</th>
                   <th className="px-4 py-3 font-medium">Came from</th>
+                  <th className="px-4 py-3 font-medium">Partner</th>
                 </tr>
               </thead>
               <tbody>
@@ -173,6 +176,7 @@ export default function AdminOrganizationsPage() {
                     <td className="px-4 py-3">{o.comped || <span className="text-muted-foreground">0</span>}</td>
                     <td className="px-4 py-3"><ExpiryCell iso={o.next_comp_expiry} /></td>
                     <td className="px-4 py-3 text-muted-foreground">{o.top_referral ?? "unknown"}</td>
+                    <td className="px-4 py-3"><PartnerBadge p={o.partner} /></td>
                   </tr>
                 ))}
               </tbody>

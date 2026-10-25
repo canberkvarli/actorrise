@@ -181,3 +181,41 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** educator on comped Plus; about 20 students joined through the link in one class period on 2026-10-22
 **They said:** "I rolled it out with my Musical Theater class today and they all were using the link at the same time - so they had a couple of issues, but in the end everyone got on." Offered a student pros and cons form in a few weeks, and a comparison with Act On Cue from the advanced class.
 **Heard as:** happy; bug, a class signing up at once (two school accounts made in that period never got the class month)
+
+## 2026-10-23
+
+**Replying to:** day10
+**Account:** signed up 2026-10-11, 2 searches ("Silver The Werewolf Hunter", "Monologue for 55+ Men 1 min."), free
+**They said:** "I was looking for a monologue. I found one from another source but I will recommend yours as well."
+**Heard as:** content gap, short pieces for men over 55
+
+## 2026-10-24
+
+**Replying to:** day10
+**Account:** educator, signed up 2026-10-12 on Android, onboarding then straight into the guided scene, never searched, free
+**They said:** "I opened the site on my mobile device. I was hoping for an easy search. The way it is described, it looked so simple. I was excited. I discovered that I was constantly led to a rehearsal option, rather than being able to read the monologues in full. ... It's a great idea in concept. I work with 100s of students each year. It would be amazing to be able to share the site with them so they can browse and see what fits for their projects. When I couldn't read full monologues, I stopped looking. ... I didn't see links to public domain scripts to read the whole work."
+**Heard as:** could not find the feature; onboarding ends on the guided scene even for an educator who came to browse (mobile, /practice)
+
+**Replying to:** day10
+**Account:** educator, signed up 2026-10-12 on iOS, 1 search ("Comedic, high school friendly girl"), free
+**They said:** "We are a brand new group building a theatre program at a small charter school in southern CA. I'm hoping to have my middle schoolers and high schoolers learn how to properly audition and work on building characters."
+**Heard as:** happy; educator lead, audition and character work for a new school program
+
+**Replying to:** a thread with a teacher whose class joined by link on 2026-10-22
+**Account:** educator, comped Plus
+**They said:** "about 8 of them encountered a black screen when the clicked on the Take a seat. To get around it they had to open a new tab and when they did that they were able to get in. Some other students about 4/5 ... just kept clicking the button and then it finally let them in after the 3or 4th try. They also said that yesterday it was taking a long time about 1-2 min for monologues to load once they clicked on them - but that could have been the school wifi"
+**Heard as:** bug, /join/<code> "Take your seat" (black screen for about 8 of 26, failed until the 3rd or 4th click for 4 or 5), slow monologue loads in a classroom
+
+## 2026-10-25
+
+**Replying to:** a personal search note ("The Holdovers is in")
+**Account:** signed up 2026-10-23, reads in the iOS app (29 reads, 12 pieces), free, cancelled an app trial the same day
+**They said:** "I did notice that there are time stamps for the monologues. I'm assuming they're the estimated length of them? If so, I noticed they aren't accurate. Some say over a minute but are only 5 or so sentences. Am I missing something? I love the idea of this app but if the I filter for a certain duration and never get that estimated length, I can't use it."
+**Heard as:** bug or trust gap, duration estimate (130 wpm plus pauses) reads long against a silent read; the duration filter is the feature at stake
+
+## 2026-10-25
+
+**Replying to:** class link email (acting studio owner)
+**Account:** studio teacher, class link sent 2026-10-18, nobody joined yet
+**They said:** "Thank you. I will use it today. And again just to be clear two person “scenes” are not in the database, just monologues?"
+**Heard as:** could not find the feature (scenes come from an uploaded script in ScenePartner, there is no scene library to browse)

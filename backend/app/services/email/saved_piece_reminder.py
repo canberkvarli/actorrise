@@ -29,6 +29,7 @@ from app.models.search_log import MonologueView, SearchLog
 from app.models.user import User
 from app.services.email.marketing import APPLE_RELAY_DOMAIN, build_unsubscribe_url
 from app.services.email.resend_client import ResendEmailClient
+from app.services.email.school_address import is_school_student
 from app.services.email.templates import EmailTemplates
 
 logger = logging.getLogger(__name__)
@@ -90,7 +91,7 @@ def select_candidates(db, hours_min: int, hours_max: int, active_hour: int | Non
         if not user or not user.email:
             continue
         email = user.email
-        if not getattr(user, "marketing_opt_in", False):
+        if not getattr(user, "marketing_opt_in", False) or is_school_student(user):
             continue
         if "@actorrise.com" in email.lower() or APPLE_RELAY_DOMAIN in email.lower():
             continue

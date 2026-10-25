@@ -37,6 +37,7 @@ import { buildScript } from '@/lib/rehearsal/script';
 import { type AudioSlot, canBegin, firstNeededLine, limit, liveFailureKind, makeFlusher, neededFailure, plainError, planPartnerAudio, runFailure, type Readiness } from '@/lib/rehearsal/prepare';
 import { AudioPlayer } from '@/lib/rehearsal/browser/audio-player';
 import { LineLoader, type LineSource } from '@/lib/rehearsal/browser/line-loader';
+import { getCharacterNotes } from '@/lib/scenePrefs';
 
 export type { Readiness };
 
@@ -221,10 +222,11 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
 
     const slow = limit(4); // per-line POST /audio, at most 4 in flight
     const set = (s: AudioSlot) => (s.source ? Promise.resolve(s.source)
-      : slow(() => api.post<LineSource>('/api/rehearsal/audio', { scene_id: payload.scene.id, line_index: s.lineIndex, voice: s.voice })).then(r => r.data))
+      : slow(() => api.post<LineSource>('/api/rehearsal/audio', { scene_id: payload.scene.id, line_index: s.lineIndex, voice: s.voice, ...(s.note ? { note: s.note } : {}) })).then(r => r.data))
       .then(src => { loader.set(s.lineIndex, src); loader.ahead(cursor()); },
         e => failed(s.lineIndex, e instanceof Error ? e.message : String(e)));
-    const slots = planPartnerAudio(payload, script, run.voices);
+    // A guided run is the server's casting, notes included: none.
+    const slots = planPartnerAudio(payload, script, run.voices, opts?.guided ? {} : getCharacterNotes(payload.scene.id));
     const head = slots.find(s => s.lineIndex === first);
     if (head) await set(head);
     await Promise.all(slots.filter(s => s !== head).map(set));

@@ -39,16 +39,30 @@ export function voiceById(id: string | null | undefined): Voice {
 }
 
 /**
- * The voices a rehearsal reads with: backend/app/services/rehearsal/voices.py,
- * the `voices` on GET /api/rehearsal/scenes/{id}. A saved id outside this list
- * is ignored by `initialVoices`, so the preview offers exactly these.
+ * The voices a rehearsal reads with: backend/app/services/rehearsal/voices.py
+ * (`_GEMINI`), the `voices` on GET /api/rehearsal/scenes/{id}. Only a
+ * fallback: the preview casts from GET /api/rehearsal/scenes/{id}/voices,
+ * which is the server's own list and defaults. A saved id outside the list
+ * is ignored by `initialVoices`, so an old OpenAI pick ("coral") quietly
+ * becomes the server's default.
  */
 export const REHEARSAL_VOICES = [
-  { id: "coral", label: "Coral", gender: "female" },
-  { id: "ash", label: "Ash", gender: "male" },
-  { id: "sage", label: "Sage", gender: "female" },
-  { id: "echo", label: "Echo", gender: "male" },
+  { id: "Leda", label: "Leda · youthful, bright, 20s", gender: "female" },
+  { id: "Aoede", label: "Aoede · breezy, easy, 30s", gender: "female" },
+  { id: "Sulafat", label: "Sulafat · warm, kind, 30s", gender: "female" },
+  { id: "Kore", label: "Kore · firm, direct, 40s", gender: "female" },
+  { id: "Gacrux", label: "Gacrux · mature, assured, 50s+", gender: "female" },
+  { id: "Fenrir", label: "Fenrir · eager, excitable, 20s", gender: "male" },
+  { id: "Puck", label: "Puck · upbeat, playful, 30s", gender: "male" },
+  { id: "Achird", label: "Achird · friendly, warm, 30s", gender: "male" },
+  { id: "Charon", label: "Charon · steady, low, 40s", gender: "male" },
+  { id: "Algenib", label: "Algenib · gravelly, weathered, 50s+", gender: "male" },
 ] as const;
+
+/** The few seconds of a voice the ▶ plays: made once by backend/scripts/make_voice_samples.py. */
+export function voiceSample(voiceId: string): string {
+  return `/voices/${voiceId.toLowerCase()}.mp3`;
+}
 
 export type RehearsalVoiceId = (typeof REHEARSAL_VOICES)[number]["id"];
 
@@ -107,6 +121,42 @@ export function setCharacterVoices(sceneId: number, voices: CharacterVoices): vo
 }
 
 /**
+ * The actor's own note for a partner part ("make him meaner"), per scene and
+ * character, beside the voices and in the same shape. A Plus feature: the
+ * server drops a note from anyone else (services/rehearsal/access
+ * can_direct_partner), so a note kept here after a plan lapses is harmless.
+ */
+export type CharacterNotes = Record<string, string>;
+
+const NOTE_KEY = "scene_partner_notes_v1";
+
+export function getCharacterNotes(sceneId: number): CharacterNotes {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(NOTE_KEY);
+    if (!raw) return {};
+    const all = JSON.parse(raw) as Record<string, CharacterNotes>;
+    const mine = all[String(sceneId)] ?? {};
+    return Object.fromEntries(Object.entries(mine).filter(([, v]) => typeof v === "string" && v.trim() !== ""));
+  } catch {
+    return {};
+  }
+}
+
+export function setCharacterNote(sceneId: number, character: string, note: string): void {
+  try {
+    const raw = localStorage.getItem(NOTE_KEY);
+    const all = raw ? (JSON.parse(raw) as Record<string, CharacterNotes>) : {};
+    const mine = { ...(all[String(sceneId)] ?? {}) };
+    if (note.trim()) mine[character] = note; else delete mine[character];
+    all[String(sceneId)] = mine;
+    localStorage.setItem(NOTE_KEY, JSON.stringify(all));
+  } catch {
+    /* private mode: the run is voiced without the note */
+  }
+}
+
+/**
  * Which parts are the actor's, in this scene.
  *
  * New. The editor kept this in component state only, so every visit opened
@@ -135,5 +185,30 @@ export function setMyRoles(sceneId: number, roles: string[]): void {
     localStorage.setItem(ROLE_KEY, JSON.stringify(all));
   } catch {
     /* private mode — the preview falls back to the first character */
+  }
+}
+
+const BOOK_KEY = "scene_partner_book_v1";
+
+/** How much of their own lines the actor reads from, per scene (lib/rehearsal/book). */
+export function getBook(sceneId: number): "script" | "cues" | "off" {
+  if (typeof window === "undefined") return "script";
+  try {
+    const raw = localStorage.getItem(BOOK_KEY);
+    const book = raw ? (JSON.parse(raw) as Record<string, string>)[String(sceneId)] : null;
+    return book === "cues" || book === "off" ? book : "script";
+  } catch {
+    return "script";
+  }
+}
+
+export function setBook(sceneId: number, book: "script" | "cues" | "off"): void {
+  try {
+    const raw = localStorage.getItem(BOOK_KEY);
+    const all = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    all[String(sceneId)] = book;
+    localStorage.setItem(BOOK_KEY, JSON.stringify(all));
+  } catch {
+    /* private mode: the choice lasts the visit */
   }
 }

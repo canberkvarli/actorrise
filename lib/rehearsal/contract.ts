@@ -6,7 +6,11 @@ export interface RehearsalLine {
   direction: string | null;
 }
 
-export interface Voice { id: string; label: string; gender: 'female' | 'male' }
+export interface Voice {
+  id: string; label: string; gender: 'female' | 'male';
+  /** A few seconds of the voice, a static file in /public/voices. Null for a vendor with no samples. */
+  sample?: string | null;
+}
 
 export interface ScenePayload {
   scene: { id: number; title: string; act: string | null; scene_number: string | null; play_title: string | null; is_library: boolean };
@@ -15,6 +19,10 @@ export interface ScenePayload {
   voices: Voice[];
   defaults: Record<string, Record<string, string>>;
   vendor: string;
+  /** Whether the actor may give a partner part a note of their own (Plus). The field shows for everyone. */
+  can_direct?: boolean;
+  /** The longest note the server keeps. */
+  note_max?: number;
   audio: Record<string, { key: string; url: string | null }>;
   resume: { run_id: number; line_index: number } | null;
 }

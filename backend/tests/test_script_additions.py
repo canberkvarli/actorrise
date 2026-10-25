@@ -84,3 +84,41 @@ def test_genre_follows_the_first_of_genres():
     assert (script.genre, script.genres) == ("Comedy", ["Comedy", "Drama"])
     apply_genres(script, [])
     assert script.genre == "Comedy"  # nothing learned changes nothing
+
+
+def _scan(n=1):
+    from app.api.scripts import ScriptScanResponse
+
+    return ScriptScanResponse(
+        page_count=n, has_structure=True, num_acts=1, num_sections=n,
+        show_mode_choice=False, estimated_quick_seconds=8,
+        estimated_full_seconds=10, scenes=_scanned(),
+    )
+
+
+def test_a_kept_map_is_read_back_without_scanning():
+    from app.api.scripts import keep_scan, kept_scan
+
+    script = SimpleNamespace(source_text=SERIES, scene_map=None)
+    assert kept_scan(script) is None
+    keep_scan(script, _scan())
+    assert kept_scan(script) == _scan()
+
+
+def test_a_changed_text_reads_the_map_again():
+    from app.api.scripts import keep_scan, kept_scan
+
+    script = SimpleNamespace(source_text=SERIES, scene_map=None)
+    keep_scan(script, _scan())
+    script.source_text = SERIES + "\nMORE.\n"
+    assert kept_scan(script) is None
+
+
+def test_a_newer_map_reader_reads_the_map_again(monkeypatch):
+    from app.api.scripts import keep_scan, kept_scan
+    from app.services import scene_map
+
+    script = SimpleNamespace(source_text=SERIES, scene_map=None)
+    keep_scan(script, _scan())
+    monkeypatch.setattr(scene_map, "MAP_VERSION", scene_map.MAP_VERSION + 1)
+    assert kept_scan(script) is None

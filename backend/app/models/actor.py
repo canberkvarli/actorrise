@@ -552,6 +552,10 @@ class UserScript(Base):
     # picked upload kept one scene's text and could never offer the rest.
     # deferred(): a full script, read only when choosing more scenes.
     source_text = deferred(Column(Text, nullable=True))
+    # The scene map read from source_text, with the key it was read under
+    # (scene_map's MAP_VERSION, the parser's version, a hash of the text). The
+    # map is read once; a changed text or a newer reader reads it again.
+    scene_map = deferred(Column(JSONB, nullable=True))
     # Up to three, in order. `genre` stays as the first, for the colours.
     genres = Column(JSONB, nullable=True)
 

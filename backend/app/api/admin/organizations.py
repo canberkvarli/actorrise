@@ -10,13 +10,19 @@ multi-tenant permissions system, and today this serves four clusters and about
 thirteen people. See docs/plans/2026-09-05-organizations-admin-design.md.
 """
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional
 
 from app.api.admin.stats import require_moderator
 from app.core.database import get_db
 from app.models.billing import UsageMetrics, UserSubscription
-from app.models.organization import ORGANIZATION_KINDS, Organization
+from app.models.organization import (
+    ORGANIZATION_KINDS,
+    PARTNER_READY_STUDENTS,
+    PARTNER_SHOWS,
+    PARTNER_STATUSES,
+    Organization,
+)
 from app.models.user import User
 from app.services.admin_filters import test_user_filter
 from fastapi import APIRouter, Depends, HTTPException
@@ -41,6 +47,16 @@ class OrganizationIn(BaseModel):
     name: str
     kind: str = "school"
     notes: Optional[str] = None
+
+
+class PartnerIn(BaseModel):
+    status: str = "none"
+    show: Optional[str] = None
+    display_name: Optional[str] = None
+    url: Optional[str] = None
+    logo_url: Optional[str] = None
+    links_us_at: Optional[str] = None
+    approval: Optional[str] = None
 
 
 class AttachIn(BaseModel):
@@ -159,6 +175,25 @@ def _metrics_for(db: Session, org_ids: list[int]) -> dict[int, dict[str, Any]]:
     return out
 
 
+def _partner(org: Organization, metrics: dict[str, Any]) -> dict[str, Any]:
+    status = org.partner_status or "none"
+    students = (metrics.get("by_type") or {}).get("student", 0)
+    return {
+        "status": status,
+        "show": org.partner_show,
+        "display_name": org.partner_display_name,
+        "url": org.partner_url,
+        "logo_url": org.partner_logo_url,
+        "links_us_at": org.partner_links_us_at,
+        "approval": org.partner_approval,
+        "updated_at": org.partner_updated_at.isoformat() if org.partner_updated_at else None,
+        # A class that has really used it, and nobody has asked yet.
+        "ready_to_ask": status == "none" and students >= PARTNER_READY_STUDENTS,
+        # What the landing would show right now; mirrors app/api/partners.py.
+        "on_landing": bool(status == "yes" and org.partner_show and (org.partner_approval or "").strip()),
+    }
+
+
 def _serialize(org: Organization, metrics: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": org.id,
@@ -167,7 +202,17 @@ def _serialize(org: Organization, metrics: dict[str, Any]) -> dict[str, Any]:
         "notes": org.notes,
         "created_at": org.created_at.isoformat() if org.created_at else None,
         **metrics,
+        "partner": _partner(org, metrics),
     }
+
+
+def _clean_url(raw: Optional[str]) -> Optional[str]:
+    url = (raw or "").strip()[:500]
+    if not url:
+        return None
+    if not url.startswith(("https://", "http://", "/partners/")):
+        raise HTTPException(status_code=400, detail="Links start with https:// (or /partners/ for a logo file)")
+    return url
 
 
 @router.get("")
@@ -218,6 +263,45 @@ def update_organization(
     org.name = _clean_name(body.name)
     org.kind = _check_kind(body.kind)
     org.notes = (body.notes or "").strip() or None
+    db.commit()
+    db.refresh(org)
+    return _serialize(org, _metrics_for(db, [org.id]).get(org.id, {}))
+
+
+@router.put("/{org_id}/partner")
+def update_partner(
+    org_id: int,
+    body: PartnerIn,
+    _user: User = Depends(require_moderator),
+    db: Session = Depends(get_db),
+):
+    """Where this org stands as a partner, and what it agreed to show."""
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    if body.status not in PARTNER_STATUSES:
+        raise HTTPException(status_code=400, detail=f"status must be one of {', '.join(PARTNER_STATUSES)}")
+    show = body.show or None
+    if show is not None and show not in PARTNER_SHOWS:
+        raise HTTPException(status_code=400, detail=f"show must be one of {', '.join(PARTNER_SHOWS)}")
+    approval = (body.approval or "").strip() or None
+    # The written-yes rule: nothing goes on the landing without a record of it.
+    if show and not approval:
+        raise HTTPException(status_code=400, detail="Write down who said yes, when, and what they said before showing them")
+    if show and body.status != "yes":
+        raise HTTPException(status_code=400, detail="Only a yes can show on the landing page")
+    logo = _clean_url(body.logo_url)
+    if show == "logo" and not logo:
+        raise HTTPException(status_code=400, detail="A logo needs a logo file")
+
+    org.partner_status = body.status
+    org.partner_show = show
+    org.partner_display_name = (body.display_name or "").strip()[:200] or None
+    org.partner_url = _clean_url(body.url)
+    org.partner_logo_url = logo
+    org.partner_links_us_at = _clean_url(body.links_us_at)
+    org.partner_approval = approval
+    org.partner_updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(org)
     return _serialize(org, _metrics_for(db, [org.id]).get(org.id, {}))
