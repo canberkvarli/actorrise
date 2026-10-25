@@ -49,10 +49,21 @@ def test_normalize_passes_pdf_and_txt_through():
     assert normalize_upload("a.txt", b"hi") == (b"hi", "txt")
 
 
+# A file is read by its bytes, not its name: whatever it is called, bytes that
+# are not a PDF, not a Word file and not text are refused, and bytes that read
+# as text are text, even with no extension at all.
+_NOT_TEXT = bytes(range(0, 32)) * 8
+
+
 @pytest.mark.parametrize("name", ["a.doc", "a.pages", "noextension"])
-def test_normalize_refuses_other_formats(name):
+def test_normalize_refuses_bytes_that_are_not_a_script(name):
     with pytest.raises(ValueError):
-        normalize_upload(name, b"x")
+        normalize_upload(name, _NOT_TEXT)
+
+
+@pytest.mark.parametrize("name", ["a.doc", "a.pages", "noextension"])
+def test_normalize_reads_text_whatever_it_is_called(name):
+    assert normalize_upload(name, b"RILEY: You are an hour late.\n") == (b"RILEY: You are an hour late.\n", "txt")
 
 
 def test_not_a_zip_is_refused():
