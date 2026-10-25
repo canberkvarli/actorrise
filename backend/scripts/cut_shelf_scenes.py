@@ -40,9 +40,14 @@ def _plays(play_ids):
 
     from app.core.database import engine
 
+    # A play row that shares its source_url with another is an anthology
+    # collapsed into one title (shared-source-url-collapse): "Seven Against
+    # Thebes" holds Prometheus Bound, so its scenes would carry the wrong name.
     sql = (
         "select id, title, author, year_written, category, text_format, full_text "
-        "from plays where copyright_status = 'public_domain' and full_text is not null"
+        "from plays p where copyright_status = 'public_domain' and full_text is not null "
+        "and (source_url is null or not exists (select 1 from plays q "
+        "where q.source_url = p.source_url and q.id <> p.id))"
     )
     params = {}
     if play_ids:
