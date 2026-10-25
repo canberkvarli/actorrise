@@ -17,8 +17,8 @@ from app.core.config import settings
 from app.core.database import SessionLocal, get_db
 from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_scene_partner
-from app.models.actor import Scene, UserScript
-from app.models.rehearsal import PartnerAudio, RehearsalRun
+from app.models.actor import Scene, SceneLine, UserScript
+from app.models.rehearsal import PartnerAudio, RehearsalEvent, RehearsalRun
 from app.models.user import User
 from app.services.events import record_user_event
 from app.services.guided_scene import GUIDED_ACTOR, guided_scene, guided_scenes, guided_script_of
@@ -26,6 +26,7 @@ from app.services.rehearsal import journal, partner_audio
 from app.services.rehearsal.access import assert_can_rehearse
 from app.services.rehearsal.contract import RehearsalLine, lines_for, same_character
 from app.services.rehearsal.voices import VOICES, default_voices, voice_by_id
+from app.utils.duration import estimate_duration_seconds
 
 router = APIRouter(prefix="/api/rehearsal", tags=["rehearsal"])
 
@@ -131,6 +132,76 @@ def get_rehearsal_scene(
         "audio": audio,
         "resume": journal.resumable(db, user.id, scene.id),
     }
+
+
+# ── the actor's own lines ────────────────────────────────────────────────────
+
+class EditedLine(BaseModel):
+    character: str = Field(min_length=1, max_length=80)
+    text: str = Field(min_length=1, max_length=4000)
+    direction: str | None = Field(default=None, max_length=600)
+
+
+class EditLines(BaseModel):
+    lines: list[EditedLine] = Field(min_length=1, max_length=2000)
+
+
+@router.put("/scenes/{scene_id}/lines")
+def edit_scene_lines(
+    scene_id: int,
+    req: EditLines,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """The lines of a scene of the actor's own, as they should have been read.
+
+    The extractor gets a speaker wrong, folds a stage direction into a line,
+    or splits one speech in two, and the actor is the one who knows. The
+    whole scene comes back in order and replaces what was there: a speaker
+    renamed, a direction moved to the line it belongs to, two lines made one.
+    The partner's audio follows by itself, since it is keyed by the words.
+    A run left open on the old lines is closed: its line numbers no longer
+    mean what they did.
+    """
+    scene, script = _load_scene(db, scene_id, user)
+    if script is None or script.is_sample or scene.is_library or script.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Only a scene of your own can be rewritten")
+    cleaned: list[tuple[str, str, str | None]] = []
+    for line in req.lines:
+        name, text = line.character.strip(), line.text.strip()
+        direction = (line.direction or "").strip() or None
+        if not name or not text:
+            raise HTTPException(status_code=400, detail="Every line needs a speaker and some words")
+        cleaned.append((name, text, direction))
+    names: list[str] = []
+    for name, _, _ in cleaned:
+        if not any(same_character(name, n) for n in names):
+            names.append(name)
+    if len(names) < 2:
+        raise HTTPException(status_code=400, detail="A scene for a partner needs two parts")
+
+    db.query(SceneLine).filter(SceneLine.scene_id == scene.id).delete(synchronize_session=False)
+    for order, (name, text, direction) in enumerate(cleaned):
+        db.add(SceneLine(scene_id=scene.id, line_order=order, character_name=name, text=text,
+                         stage_direction=direction, word_count=len(text.split())))
+    scene.line_count = len(cleaned)
+    scene.character_1_name, scene.character_2_name = names[0], names[1]
+    scene.estimated_duration_seconds = estimate_duration_seconds(" ".join(text for _, text, _ in cleaned))
+    known = [c.get("name", "") for c in (script.characters or []) if isinstance(c, dict)]
+    for name in names:
+        if not any(same_character(name, k) for k in known):
+            script.characters = [*(script.characters or []), {"name": name}]
+    script.num_characters = len(script.characters or [])
+
+    open_runs = db.query(RehearsalRun).filter(RehearsalRun.user_id == user.id, RehearsalRun.scene_id == scene.id).all()
+    for run in open_runs:
+        if journal.is_closed(db, run.id):
+            continue
+        last = db.query(RehearsalEvent.seq).filter(RehearsalEvent.run_id == run.id).order_by(RehearsalEvent.seq.desc()).first()
+        journal.append(db, run.id, user.id, [{"seq": (last[0] if last else -1) + 1, "type": "abandoned", "line_index": None, "at_ms": 0, "payload": {"reason": "lines_edited"}}])
+    db.commit()
+    lines = lines_for(db, scene.id)
+    return {"lines": [l.model_dump() for l in lines], "characters": names, "line_count": len(lines), "estimated_duration_seconds": scene.estimated_duration_seconds}
 
 
 # ── audio ────────────────────────────────────────────────────────────────────

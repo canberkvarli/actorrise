@@ -281,3 +281,60 @@ class Api(unittest.TestCase):
 
     def test_failed_audio_is_queued_again_after_two_hours(self):
         self._retries(timedelta(hours=2))
+
+
+class EditLines(Api):
+    """PUT /scenes/{id}/lines: the actor's own scene, rewritten."""
+
+    def _own_scene(self):
+        script = UserScript(user_id=self.user.id, title="Mine", author="Me", original_filename="mine.pdf", file_type="pdf")
+        self.db.add(script); self.db.flush()
+        scene = Scene(play_id=self.scene.play_id, user_script_id=script.id, title="Kitchen", is_library=False,
+                      character_1_name="MAY", character_2_name="JO", line_count=2, estimated_duration_seconds=8)
+        self.db.add(scene); self.db.flush()
+        self.db.add_all([
+            SceneLine(scene_id=scene.id, line_order=0, character_name="MAY", text="You said noon. (She looks at the clock.)", word_count=8),
+            SceneLine(scene_id=scene.id, line_order=1, character_name="JOE", text="I said about noon.", word_count=4),
+        ])
+        self.db.commit()
+        return scene
+
+    def test_rewrites_the_lines_and_the_parts(self):
+        scene = self._own_scene()
+        r = self.client.put(f"/api/rehearsal/scenes/{scene.id}/lines", json={"lines": [
+            {"character": "MAY", "text": "You said noon.", "direction": "she looks at the clock"},
+            {"character": "JO", "text": "I said about noon."},
+            {"character": "MAY", "text": "About."},
+        ]})
+        self.assertEqual(r.status_code, 200, r.text)
+        body = r.json()
+        self.assertEqual([l["character"] for l in body["lines"]], ["MAY", "JO", "MAY"])
+        self.assertEqual(body["lines"][0]["direction"], "she looks at the clock")
+        self.assertEqual(body["characters"], ["MAY", "JO"])
+        again = self.client.get(f"/api/rehearsal/scenes/{scene.id}").json()
+        self.assertEqual([l["text"] for l in again["lines"]], ["You said noon.", "I said about noon.", "About."])
+        self.assertEqual(again["characters"], ["MAY", "JO"])
+        self.db.refresh(scene)
+        self.assertEqual((scene.character_1_name, scene.character_2_name, scene.line_count), ("MAY", "JO", 3))
+
+    def test_a_library_scene_is_not_yours_to_rewrite(self):
+        r = self.client.put(f"/api/rehearsal/scenes/{self.scene.id}/lines", json={"lines": [
+            {"character": "A", "text": "x"}, {"character": "B", "text": "y"},
+        ]})
+        self.assertEqual(r.status_code, 403)
+
+    def test_one_part_is_not_a_scene_for_a_partner(self):
+        scene = self._own_scene()
+        r = self.client.put(f"/api/rehearsal/scenes/{scene.id}/lines", json={"lines": [{"character": "MAY", "text": "Alone."}]})
+        self.assertEqual(r.status_code, 400)
+
+    def test_an_open_run_on_the_old_lines_is_closed(self):
+        scene = self._own_scene()
+        run = journal.create_run(self.db, self.user.id, scene.id, "MAY", {})
+        journal.append(self.db, run.id, self.user.id, [{"seq": 0, "type": "began", "line_index": 0, "at_ms": 0, "payload": {}}])
+        self.db.commit()
+        r = self.client.put(f"/api/rehearsal/scenes/{scene.id}/lines", json={"lines": [
+            {"character": "MAY", "text": "x"}, {"character": "JO", "text": "y"},
+        ]})
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertTrue(journal.is_closed(self.db, run.id))
