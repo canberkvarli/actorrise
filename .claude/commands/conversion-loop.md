@@ -256,9 +256,15 @@ Best move today: <one line: the biggest leak and the one action for it; and whet
 
 **Money, first line, every day** (Canberk, 2026-10-20: "you have to tell me how much I'm
 making in a month as well, I know it fluctuates but it's important"). Gross, before fees:
-- Web: Stripe subscriptions whose last paid invoice charged more than $0, each turned into a
-  monthly amount (a yearly price divided by 12). 100%-off comps and trials charge $0 and
-  never count. Cash: the sum of `amount_paid` on `status='paid'` invoices in the last 30 days.
+- Web: what Stripe will charge NEXT, the same number as the admin overview
+  (`app/api/admin/stripe_revenue.py`, `mrr_now_usd`): for each active subscription,
+  `stripe.Invoice.create_preview(subscription=...)`'s `amount_due`, turned into a monthly
+  amount (a yearly price divided by 12). 100%-off comps and trials charge $0 and never count.
+  A subscription with `cancel_at` or `cancel_at_period_end` set has no next invoice and does
+  not count either: it goes on a "Leaving" line under Money with the date it ends and
+  Stripe's `cancellation_details`. (2026-10-27: the loop read the last PAID invoice instead,
+  counted a payer who had cancelled on 10-22 for five days, and printed $72 against the
+  admin's $60.) Cash: the sum of `amount_paid` on `status='paid'` invoices in the last 30 days.
 - App: RevenueCat's MRR from `revenuecat_report.py` (trials are $0 there already).
 - Payers: the web subscriptions that count plus the app ones that are `active` and paid.
 If either source fails, print what came back and say which part is missing; never a
