@@ -171,27 +171,32 @@ def claim_signup_code(db: Session, user: User, code: object) -> JoinResult | Non
     return join(db, link, user)
 
 
-# Addresses anyone can have: a teacher on one of these vouches for nobody's domain.
-_MAIL_PROVIDERS = {
-    "gmail.com", "googlemail.com", "icloud.com", "me.com", "mac.com", "hotmail.com",
-    "outlook.com", "live.com", "msn.com", "yahoo.com", "aol.com", "proton.me",
-    "protonmail.com", "privaterelay.appleid.com", "anon.actorrise.com",
-}
+# A domain only a school hands out: a college (.edu, edu.au, ac.uk) or a
+# district (school_address.py). Anything else, a mail provider, an ISP, a
+# studio, vouches for nobody, so a link on it never matches by domain.
+_COLLEGE = re.compile(r"(^|\.)(edu(\.[a-z]{2})?|ac\.[a-z]{2})$")
+
+
+def _is_school_domain(domain: str) -> bool:
+    return bool(_COLLEGE.search(domain)) or is_district_address("x@" + domain)
 
 
 def _domain(email: str | None) -> str:
     return (email or "").rsplit("@", 1)[-1].strip().lower() if "@" in (email or "") else ""
 
 
-def claim_school_domain(db: Session, user: User) -> JoinResult | None:
+def claim_school_domain(db: Session, user: User, provider: object = None) -> JoinResult | None:
     """Join the class of a live link whose teacher is on this new account's
     school domain (or a subdomain of it, students.nmu.edu under nmu.edu).
     For the student who signs up on a machine that never opened the link:
     Gilroy, 2026-10-26, 4 of 14 came in through Google on a Chromebook with no
-    code held anywhere. Not for someone already in a class, and never on a
-    mail provider's domain. The newest live link wins when a school has two."""
+    code held anywhere. Only for a Google signup: Google has proven the
+    address is theirs, an email signup has not, and anyone could type
+    made-up@gilroyunified.org. Only on a school's domain (_is_school_domain),
+    never for someone already in a class. The newest live link wins when a
+    school has two."""
     domain = _domain(user.email)
-    if not domain or domain in _MAIL_PROVIDERS:
+    if provider != "google" or not _is_school_domain(domain):
         return None
     if db.query(ClassLinkJoin).filter(ClassLinkJoin.user_id == user.id).first() is not None:
         return None
@@ -204,7 +209,7 @@ def claim_school_domain(db: Session, user: User) -> JoinResult | None:
     )
     for link, teacher_email in links:
         school = _domain(teacher_email)
-        if school and school not in _MAIL_PROVIDERS and (domain == school or domain.endswith("." + school)):
+        if _is_school_domain(school) and (domain == school or domain.endswith("." + school)):
             return join(db, link, user)
     return None
 

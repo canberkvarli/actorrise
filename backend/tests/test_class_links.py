@@ -186,11 +186,11 @@ class ClassLinkJoinTest(unittest.TestCase):
         """Gilroy, 2026-10-26: 4 of 14 signed up with Google on a machine that
         never opened the link, so neither the browser nor the signup held a code."""
         s = self._student("kid@nmu.edu")
-        r = class_links.claim_school_domain(self.db, s)
+        r = class_links.claim_school_domain(self.db, s, "google")
         self.assertEqual(r.outcome, "granted")
         self.assertTrue(self._sub(s).is_active)
         sub = self._student("kid2@students.nmu.edu")
-        self.assertEqual(class_links.claim_school_domain(self.db, sub).outcome, "granted")
+        self.assertEqual(class_links.claim_school_domain(self.db, sub, "google").outcome, "granted")
 
     def test_no_domain_match_for_mail_providers_or_other_schools(self):
         gmail_teacher = User(email="coach@gmail.com", supabase_id="g")
@@ -198,19 +198,40 @@ class ClassLinkJoinTest(unittest.TestCase):
         self.db.commit()
         self.db.add(ClassLink(code="coach-g", teacher_user_id=gmail_teacher.id, teacher_label="Coach", days=30, max_uses=60))
         self.db.commit()
-        for email in ("someone@gmail.com", "kid@othernmu.edu", "kid@nmu.edu.evil.com"):
+        isp_teacher = User(email="coach@comcast.net", supabase_id="c")
+        self.db.add(isp_teacher)
+        self.db.commit()
+        self.db.add(ClassLink(code="coach-c", teacher_user_id=isp_teacher.id, teacher_label="Coach", days=30, max_uses=60))
+        self.db.commit()
+        for email in ("someone@gmail.com", "someone@comcast.net", "kid@othernmu.edu", "kid@nmu.edu.evil.com"):
             s = self._student(email)
-            self.assertIsNone(class_links.claim_school_domain(self.db, s), email)
+            self.assertIsNone(class_links.claim_school_domain(self.db, s, "google"), email)
             self.assertIsNone(self._sub(s), email)
+
+    def test_domain_match_only_trusts_a_google_signup(self):
+        """An email signup has not proven the address is theirs."""
+        for provider in ("email", None, "apple"):
+            s = self._student(f"{provider}@nmu.edu")
+            self.assertIsNone(class_links.claim_school_domain(self.db, s, provider))
+            self.assertIsNone(self._sub(s))
+
+    def test_a_district_domain_counts_as_a_school(self):
+        gilroy = User(email="teach@gilroyunified.org", supabase_id="gu")
+        self.db.add(gilroy)
+        self.db.commit()
+        self.db.add(ClassLink(code="gilroy-t", teacher_user_id=gilroy.id, teacher_label="T", days=30, max_uses=60))
+        self.db.commit()
+        s = self._student("794387@gilroyunified.org")
+        self.assertEqual(class_links.claim_school_domain(self.db, s, "google").outcome, "granted")
 
     def test_domain_match_skips_a_switched_off_link_and_anyone_already_in_a_class(self):
         s = self._student("in@nmu.edu")
         class_links.claim_signup_code(self.db, s, "nmu-teach")
-        self.assertIsNone(class_links.claim_school_domain(self.db, s))
+        self.assertIsNone(class_links.claim_school_domain(self.db, s, "google"))
         self.link.active = False
         self.db.commit()
         late = self._student("late@nmu.edu")
-        self.assertIsNone(class_links.claim_school_domain(self.db, late))
+        self.assertIsNone(class_links.claim_school_domain(self.db, late, "google"))
         self.assertIsNone(self._sub(late))
 
 

@@ -85,7 +85,7 @@ def attribution_from_request(request: Request | None) -> dict[str, str]:
     return out
 
 
-def _claim_class_invites(db: Session, user: User, class_code: object = None) -> None:
+def _claim_class_invites(db: Session, user: User, class_code: object = None, provider: object = None) -> None:
     """A teacher's class list approved this address before it had an account,
     or the student signed up through a class link (the code travels in the
     signup's user_metadata, so it survives a change of browser), or their
@@ -96,7 +96,7 @@ def _claim_class_invites(db: Session, user: User, class_code: object = None) -> 
 
         claim_invites(db, user)
         claim_signup_code(db, user, class_code)
-        claim_school_domain(db, user)
+        claim_school_domain(db, user, provider)
     except Exception:
         db.rollback()  # never fail a login over a comp
 
@@ -214,7 +214,12 @@ def get_current_user(
                 "signup_completed",
                 {"provider": (token_data.get("app_metadata") or {}).get("provider")},
             )
-            _claim_class_invites(db, user, user_metadata.get("class_code"))
+            _claim_class_invites(
+                db,
+                user,
+                user_metadata.get("class_code"),
+                (token_data.get("app_metadata") or {}).get("provider"),
+            )
     else:
         # An anonymous account that has since upgraded now carries a real email:
         # backfill it (and opt into marketing + a belated welcome).
