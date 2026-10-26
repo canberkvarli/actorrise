@@ -78,8 +78,8 @@ describe("contributorLine", () => {
     expect(contributorLine(undefined)).toBeNull();
     expect(contributorLine({ contributor: false, opens: 0 })).toBeNull();
     expect(contributorLine({ contributor: true, opens: 0 })).toBe("Contributor");
-    expect(contributorLine({ contributor: true, opens: 1 })).toBe("Contributor · 1 actor opened yours");
-    expect(contributorLine({ contributor: true, opens: 12 })).toBe("Contributor · 12 actors opened yours");
+    expect(contributorLine({ contributor: true, opens: 1 })).toBe("Contributor · 1 actor picked yours up");
+    expect(contributorLine({ contributor: true, opens: 12 })).toBe("Contributor · 12 actors picked yours up");
   });
 });
 

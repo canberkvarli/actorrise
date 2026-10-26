@@ -1,6 +1,6 @@
 "use client";
 
-import { SIGNUP_PENDING_KEY } from "@/lib/firstRun";
+import { NEW_ACCOUNT_PARAM, SIGNUP_PENDING_KEY } from "@/lib/firstRun";
 
 /**
  * The curtain, before React exists.
@@ -36,8 +36,11 @@ export function FirstRunPaint() {
   // constant passed through JSON.stringify, and nothing from a user, a URL, a
   // header or the database reaches it. Keep it that way — if this ever needs a
   // runtime value, it needs a different mechanism, not an escape.
-  const js = `(function(){try{if(sessionStorage.getItem(${JSON.stringify(
-    SIGNUP_PENDING_KEY,
-  )})==="1"){document.documentElement.setAttribute("data-firstrun","1")}}catch(e){}})();`;
+  // `?first=1` from the auth callback raises the same flag first, for an
+  // account made by a button that did not know it was a signup.
+  const key = JSON.stringify(SIGNUP_PENDING_KEY);
+  const js = `(function(){try{if(new URLSearchParams(location.search).get(${JSON.stringify(
+    NEW_ACCOUNT_PARAM,
+  )})==="1"){sessionStorage.setItem(${key},"1")}if(sessionStorage.getItem(${key})==="1"){document.documentElement.setAttribute("data-firstrun","1")}}catch(e){}})();`;
   return <script dangerouslySetInnerHTML={{ __html: js }} />;
 }

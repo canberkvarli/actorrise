@@ -236,7 +236,7 @@ function ShareYourScripts() {
       { scriptId, shared: next },
       {
         onSuccess: () =>
-          toast.success(next ? "Shared with the community" : "Removed from the community"),
+          toast.success(next ? "Open in the Green Room" : "Closed to the Green Room"),
         onError: () => toast.error("Couldn't update sharing. Try again."),
       }
     );
@@ -245,7 +245,7 @@ function ShareYourScripts() {
   return (
     <section>
       <h2 className="mb-4 font-typewriter text-sm uppercase tracking-[0.18em] text-neutral-500">
-        Share your scripts
+        Open a script for rooms
       </h2>
       <ul className="divide-y divide-neutral-800 border border-neutral-800">
         {own.map((s) => {
@@ -266,7 +266,7 @@ function ShareYourScripts() {
                 checked={!!s.shared_with_community}
                 disabled={disabled}
                 onCheckedChange={(next) => toggle(s.id, next, scenes)}
-                aria-label={`Share ${s.title} with the community`}
+                aria-label={`Open ${s.title} in the Green Room`}
               />
             </li>
           );

@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { NEW_ACCOUNT_PARAM } from "@/lib/firstRun";
+
+/** An account this young, signing in, has just been made. */
+const NEW_ACCOUNT_MS = 10 * 60 * 1000;
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -36,11 +40,14 @@ export async function GET(request: Request) {
       }
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
       // Redirect to the dashboard or specified next page; keep provider in URL so client can persist "last used"
       const redirectUrl = new URL(next, origin);
+      // A brand-new account: the first-run curtain covers the app before it paints (lib/firstRun).
+      const created = Date.parse(data.user?.created_at ?? "");
+      if (Date.now() - created < NEW_ACCOUNT_MS) redirectUrl.searchParams.set(NEW_ACCOUNT_PARAM, "1");
       if (provider && (provider === "google" || provider === "apple")) {
         redirectUrl.searchParams.set("provider", provider);
         // Also set cookie as fallback (in case URL is stripped or client reads before nav)

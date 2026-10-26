@@ -47,6 +47,11 @@ const nextConfig: NextConfig = {
       { source: "/scenes", destination: "/practice", permanent: true },
       // The scene library lives on /practice now (components/practice/SceneLibrary).
       { source: "/shelf", destination: "/practice", permanent: true },
+      // The Green Room is on hold (Canberk, 2026-10-26): nothing links to it,
+      // and a typed address or an old room invite lands on ScenePartner.
+      // Temporary (307) so a browser doesn't pin it when the room comes back.
+      { source: "/greenroom", destination: "/practice", permanent: false },
+      { source: "/greenroom/:path*", destination: "/practice", permanent: false },
       // Bio links. X's t.co shortener drops the query string off a profile
       // website, so the UTM has to be added on our side of the hop. Temporary
       // (302) on purpose: the tags can change without a cached 301 pinning them.

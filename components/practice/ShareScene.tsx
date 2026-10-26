@@ -231,7 +231,7 @@ export function ShareForm({
 
 /**
  * The quiet option inside a built scene's fold: share it, or, once shared,
- * how many actors opened it and a way to take it down.
+ * how many actors picked it up and a way to take it down.
  */
 export function ShareRowAction({ item }: { item: ShareableScene | undefined }) {
   const [open, setOpen] = useState(false);
@@ -244,7 +244,7 @@ export function ShareRowAction({ item }: { item: ShareableScene | undefined }) {
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[color:var(--t-muted-light)]">
         <span>
           In the scene library
-          {item.open_count > 0 ? ` · ${item.open_count} ${item.open_count === 1 ? "actor" : "actors"} opened it` : ""}
+          {item.open_count > 0 ? ` · ${item.open_count} ${item.open_count === 1 ? "actor" : "actors"} picked it up` : ""}
         </span>
         <button
           type="button"

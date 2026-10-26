@@ -59,6 +59,16 @@ function notify() {
  */
 export const SIGNUP_PENDING_KEY = "actorrise_signup_pending";
 
+/**
+ * The same news from the server: app/auth/callback adds `?first=1` when the
+ * account it just signed in was created minutes ago. A sign-in button only
+ * marks the flag above when it knows it is a signup (the signup page), so
+ * Google from the login page or the landing, or an email confirmation link
+ * opened in a new tab, created an account with no flag, and the dashboard
+ * painted before the onboarding card.
+ */
+export const NEW_ACCOUNT_PARAM = "first";
+
 export function markSignupPending() {
   try {
     sessionStorage.setItem(SIGNUP_PENDING_KEY, "1");

@@ -33,6 +33,10 @@ LENGTHS = {"short": (0, 120), "medium": (120, 210), "long": (210, 100_000)}
 #: The filename a shelf copy carries in the actor's scripts, so a second press
 #: of Rehearse finds the first copy instead of making another.
 COPY_FILENAME = "shelf-{id}.txt"
+# What marks a copy as the library's, not an upload. An upload's file_type is
+# what normalize_upload makes of the bytes ("pdf" or "txt"), never this, so it
+# can't be faked by naming a file "shelf-1.txt"; the filename can.
+COPY_FILE_TYPE = "shelf"
 
 
 def _first_name(user: Optional[User]) -> Optional[str]:
@@ -75,13 +79,20 @@ def _adds_left(db: Session, user: User) -> Optional[int]:
         return None
     held = (
         db.query(UserScript)
-        .filter(UserScript.user_id == user.id, UserScript.original_filename.like("shelf-%"))
+        .filter(
+            UserScript.user_id == user.id,
+            # Copies made before the file type marked them carry only the name.
+            or_(UserScript.file_type == COPY_FILE_TYPE, UserScript.original_filename.like("shelf-%")),
+        )
         .count()
     )
     return max(0, FREE_LIBRARY_ADDS - held)
 
 
 def _assert_room_on_shelf(db: Session, user: User) -> None:
+    # Two Adds at once would both count one free slot left. Holding the
+    # actor's row until the copy commits makes the second wait and count two.
+    db.query(User).filter(User.id == user.id).with_for_update().first()
     if _adds_left(db, user) == 0:
         raise HTTPException(status_code=403, detail={
             "error": "library_upgrade_required",
@@ -500,7 +511,7 @@ def copy_public_domain(db: Session, user: User, row: ShelfScene) -> Scene:
         author=row.author or play.author or "Unknown",
         description=row.description,
         original_filename=COPY_FILENAME.format(id=row.id),
-        file_type="txt",
+        file_type=COPY_FILE_TYPE,
         raw_text="\n".join(f"{l['character']}: {l['text']}" for l in lines),
         characters=[
             {"name": row.character_1_name, "gender": row.character_1_gender, "age_range": row.character_1_age_range},

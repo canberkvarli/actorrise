@@ -14,8 +14,8 @@ import { BOOKS, type Book } from '@/lib/rehearsal/book';
 export function TopBar({ title, lines, actor, current, started, onLeave, book, onBook }: {
   title: string; lines: RehearsalLine[]; actor: (l: RehearsalLine) => boolean;
   current: number; started: boolean; onLeave: () => void;
-  /** How much of the actor's lines shows; switchable at any point in the run. */
-  book: Book; onBook: (book: Book) => void;
+  /** How much of the actor's lines shows; switchable at any point in the run. Absent: no switch. */
+  book: Book; onBook?: (book: Book) => void;
 }) {
   return (
     <header className="r-top">
@@ -28,14 +28,14 @@ export function TopBar({ title, lines, actor, current, started, onLeave, book, o
           {started ? current + 1 : 0}<span>/{lines.length}</span>
         </p>
       </div>
-      <div className="r-book" role="radiogroup" aria-label="Your lines">
+      {onBook && <div className="r-book" role="radiogroup" aria-label="Your lines">
         {BOOKS.map(b => (
           <button key={b.id} type="button" role="radio" aria-checked={book === b.id}
             className="r-book__opt" onClick={() => onBook(b.id)}>
             {b.label}
           </button>
         ))}
-      </div>
+      </div>}
       <ol className="r-sheet" aria-hidden>
         {lines.map(l => (
           <li key={l.index} data-mine={actor(l)}

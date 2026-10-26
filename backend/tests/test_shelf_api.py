@@ -106,6 +106,7 @@ class ShelfApiTests(unittest.TestCase):
         script = self.db.query(UserScript).get(first["script_id"])
         self.assertEqual(script.user_id, self.me.id)
         self.assertEqual(script.genre, "drama")
+        self.assertEqual(script.file_type, "shelf")
         again = api.add_to_my_shelf(self.pd.id, current_user=self.me, db=self.db)
         self.assertFalse(again["added"])
         self.assertEqual(again["script_id"], first["script_id"])

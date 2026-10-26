@@ -25,7 +25,8 @@ export interface Partner {
 }
 
 /** One word for where this org stands as a partner. */
-export function PartnerBadge({ p }: { p: Partner }) {
+export function PartnerBadge({ p }: { p?: Partner }) {
+  if (!p) return <span className="text-xs text-muted-foreground">not yet</span>;
   if (p.on_landing) return <span className="text-xs font-medium text-primary">on the landing</span>;
   if (p.ready_to_ask) return <span className="text-xs font-medium text-foreground">ready to ask</span>;
   const label = { none: "not yet", asked: "asked", yes: "said yes", no: "said no" }[p.status];

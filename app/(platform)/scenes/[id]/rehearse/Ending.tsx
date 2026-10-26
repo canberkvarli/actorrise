@@ -73,8 +73,17 @@ export function Ending({ scene, guided, onAgain, onLeave }: Props) {
     const cap = setTimeout(() => { if (alive) setRecounted(true); }, RECOUNT_CAP_MS);
     return () => { alive = false; clearTimeout(first); clearTimeout(next); clearTimeout(cap); };
   }, [guided, mutate]);
-  if (!shown || !recounted) return null;
-  return guided ? <GuidedEnd onAgain={onAgain} onLeave={onLeave} /> : <RunEnd scene={scene} onAgain={onAgain} onLeave={onLeave} />;
+  if (!shown) return null;
+  if (!guided) return <RunEnd scene={scene} onAgain={onAgain} onLeave={onLeave} />;
+  /* The house comes down as soon as the line has held, and the page is laid
+     on it once it knows what to say. Drawn only when both were ready, the
+     stage sat bare for up to three seconds and the page cut in over it. */
+  return (
+    <motion.div className="r-win fixed inset-0 z-30 overflow-auto"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, ease: 'easeOut' }}>
+      {recounted && <GuidedEnd onAgain={onAgain} onLeave={onLeave} />}
+    </motion.div>
+  );
 }
 
 /** Mounted only once it shows, so the offer records a show the actor saw. */
@@ -95,8 +104,7 @@ function GuidedEnd({ onAgain, onLeave }: { onAgain: () => void; onLeave: () => v
   }, []);
   if (!offer.settled && !waited) return null;
   return (
-    <motion.div className="r-win fixed inset-0 z-30 overflow-auto"
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, ease: 'easeOut' }}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
       <SceneWin offer={offer} trial={trial} onAgain={onAgain} restarting={false}
         onLeave={onLeave} leaveLabel="back to the room" kept={kept} />
     </motion.div>
