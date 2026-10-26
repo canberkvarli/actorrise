@@ -311,6 +311,9 @@ def synthesise_pending(db: Session, keys: list[str], line_for: dict[str, LineVoi
         line = line_for[key]
         try:
             audio = synthesize(row.vendor, row.voice, line)
+            # One line in the log per clip, naming who voiced it: the only
+            # way to see from outside which vendor a day is landing on.
+            logger.info("partner audio %s voiced by %s as %s", key[:8], row.vendor, row.voice)
             path = storage_path(key)
             _upload(path, audio)
             row.storage_path = path
