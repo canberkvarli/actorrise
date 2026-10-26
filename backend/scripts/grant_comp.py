@@ -7,7 +7,9 @@ row as the "Grant comp membership" card, recorded against canberk@actorrise.com.
     uv run python scripts/grant_comp.py --preset educator-month --dry-run t@school.org
 
 Presets match the admin page: educator-month, student-2weeks, student-month.
-Each person gets the usual "you have Plus" email unless --quiet.
+Each person gets the usual "you have Plus" email unless --quiet, or unless the
+address is on a school district's mail system, which turns it away and costs
+the sending domain its bounce rate (app/services/email/school_address.py).
 """
 
 from __future__ import annotations
@@ -46,6 +48,7 @@ def main() -> None:
     from app.models.organization import Organization  # noqa: F401  not in app.models
     from app.models.user import User
     from app.services.email.notifications import send_membership_granted_email
+    from app.services.email.school_address import is_district_address
 
     account_type, days = PRESETS[args.preset]
     db = SessionLocal()
@@ -76,7 +79,9 @@ def main() -> None:
         )
         sub = db.query(UserSubscription).filter(UserSubscription.user_id == user.id).first()
         mailed = ""
-        if not args.quiet:
+        if not args.quiet and is_district_address(user.email):
+            mailed = ", not emailed (district inbox)"
+        elif not args.quiet:
             r = send_membership_granted_email(
                 user_email=user.email,
                 user_name=user.name,
