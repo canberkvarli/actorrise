@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useRehearsal } from '@/hooks/useRehearsal';
 import { castColorVars, castPalette } from '@/lib/castColors';
 import { sameCharacter } from '@/lib/rehearsal/contract';
@@ -59,7 +59,8 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   const error = readiness.error ?? prepError;
   // How much of their own lines the actor reads from, kept per scene, and the
   // words they called for this run, by line.
-  const [book, setBookState] = useState<Book>(() => getBook(payload.scene.id));
+  // The guided first scene is a taste: the whole script, and no switch for it.
+  const [book, setBookState] = useState<Book>(() => guided ? 'script' : getBook(payload.scene.id));
   const [given, setGiven] = useState<Map<number, Set<number>>>(() => new Map());
   const onBook = useCallback((b: Book) => { setBookState(b); setBook(payload.scene.id, b); }, [payload.scene.id]);
 
@@ -162,9 +163,16 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
         paused={state === 'paused'} onJump={running ? jumpTo : undefined} warming={straight && !error}
         book={book} given={given} />
       <TopBar title={payload.scene.title} lines={payload.lines} actor={l => sameCharacter(l.character, actor)}
-        current={current} started={state !== 'ready'} onLeave={onLeave} book={book} onBook={onBook} />
-      {!ended && <Dock snapshot={snapshot} partner={partner} onToggle={toggle} onSkip={skip} onBack={back}
-        onRestart={() => jumpTo(0)} onPrompt={prompt ?? undefined} />}
+        current={current} started={state !== 'ready'} onLeave={onLeave} book={book} onBook={guided ? undefined : onBook} />
+      {/* The controls fade with the house rather than vanish on the last word. */}
+      <AnimatePresence>
+        {!ended && (
+          <motion.div key="dock" exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+            <Dock snapshot={snapshot} partner={partner} onToggle={toggle} onSkip={skip} onBack={back}
+              onRestart={() => jumpTo(0)} onPrompt={prompt ?? undefined} />
+          </motion.div>
+        )}
+      </AnimatePresence>
       {straight && !canBegin && !error && state === 'ready' && (
         <div role="status" className="r-getting">
           <span className="r-spin r-spin--big" aria-hidden />

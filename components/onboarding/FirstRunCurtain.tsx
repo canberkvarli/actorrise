@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { onboardingIsQuietOn } from "@/lib/onboarding-routes";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import {
+  NEW_ACCOUNT_PARAM,
   isOnboardingDoneThisSession,
   isSignupPending,
   subscribeFirstRun,
@@ -93,6 +94,15 @@ export function FirstRunCurtain() {
     if (typeof document === "undefined") return;
     document.documentElement.removeAttribute("data-firstrun");
   }, [show]);
+
+  /* FirstRunPaint has turned the callback's `?first=1` into the signup flag;
+     off the address bar, so a copied link or a reload a week on says nothing. */
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(NEW_ACCOUNT_PARAM)) return;
+    url.searchParams.delete(NEW_ACCOUNT_PARAM);
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  }, []);
 
   return (
     <AnimatePresence>
