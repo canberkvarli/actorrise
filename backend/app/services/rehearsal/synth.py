@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import array
 import base64
+import json
 import collections
 import os
 import re
@@ -25,6 +26,7 @@ import threading
 import time
 
 import httpx
+import jwt
 
 from app.core.config import settings
 from app.services.rehearsal.delivery import LineVoice, gemini_style, tagged_text
@@ -76,6 +78,7 @@ def model_for(vendor: str) -> str:
         "gemini": settings.partner_tts_model,
         "inworld": INWORLD_MODEL,
         "openai": OPENAI_MODEL,
+        "vertex": settings.vertex_tts_model,
         "elevenlabs": "eleven_v3",
     }.get(vendor, "")
 
@@ -189,6 +192,85 @@ def _gemini(voice: str, line: LineVoice) -> bytes:
     return pcm_to_mp3(pcm)
 
 
+VERTEX_LOCATION = "global"  # the only region the voice models are published in
+VERTEX_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
+_vertex_tok: tuple[str, float] | None = None
+_vertex_tok_lock = threading.Lock()
+
+
+def _vertex_token() -> str:
+    """An access token for Vertex, minted from the service account with a
+    signed JWT and kept until it is near its hour."""
+    global _vertex_tok
+    with _vertex_tok_lock:
+        if _vertex_tok and _vertex_tok[1] - time.time() > 120:
+            return _vertex_tok[0]
+        raw = settings.vertex_service_account_json
+        if not raw:
+            raise ValueError("VERTEX_SERVICE_ACCOUNT_JSON is not set")
+        sa = json.loads(raw)
+        now = int(time.time())
+        assertion = jwt.encode(
+            {"iss": sa["client_email"], "scope": VERTEX_SCOPE, "aud": sa["token_uri"], "iat": now, "exp": now + 3600},
+            sa["private_key"], algorithm="RS256",
+        )
+        res = httpx.post(sa["token_uri"], data={"grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer", "assertion": assertion}, timeout=30)
+        if res.status_code != 200:
+            raise RuntimeError(f"Vertex token {res.status_code}: {res.text[:200]}")
+        body = res.json()
+        _vertex_tok = (body["access_token"], time.time() + int(body.get("expires_in", 3600)))
+        return _vertex_tok[0]
+
+
+def _vertex_pcm(voice: str, line: LineVoice) -> bytes:
+    """Raw PCM for one line from the same voices through Vertex AI.
+
+    Gemini 2.5 TTS takes how a line is said as a prefix it follows and does
+    not speak ("Say it quietly, hurt: ..."), checked by transcribing the
+    result on 2026-10-26; the 3.8 model is on Vertex too but speaks any
+    prefix aloud and has no other channel for a note there. L16 at 24 kHz
+    is what it answers with, the same as the Interactions API.
+    """
+    if not settings.vertex_project:
+        raise ValueError("VERTEX_PROJECT is not set")
+    text = line.text.strip()
+    style = gemini_style(line)
+    prompt = f"Say it {style}: {text}" if style else text
+    body = {
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "responseModalities": ["AUDIO"],
+            "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}},
+        },
+    }
+    url = (f"https://aiplatform.googleapis.com/v1/projects/{settings.vertex_project}/locations/{VERTEX_LOCATION}"
+           f"/publishers/google/models/{settings.vertex_tts_model}:generateContent")
+    for attempt in range(1, GEMINI_ATTEMPTS + 1):
+        res = httpx.post(url, headers={"Authorization": f"Bearer {_vertex_token()}"}, json=body, timeout=90)
+        if attempt < GEMINI_ATTEMPTS and res.status_code in (429, 500, 503):
+            time.sleep(RETRY_SECONDS * attempt)
+            continue
+        break
+    if res.status_code != 200:
+        raise RuntimeError(f"Vertex {res.status_code}: {res.text[:200]}")
+    try:
+        parts = res.json()["candidates"][0]["content"]["parts"]
+        inline = next(p["inlineData"] for p in parts if "inlineData" in p)
+    except (KeyError, IndexError, StopIteration, TypeError, ValueError):
+        raise RuntimeError(f"Vertex returned no audio: {res.text[:200]}")
+    mime = inline.get("mimeType") or ""
+    if "l16" not in mime.lower() or f"rate={GEMINI_RATE}" not in mime:
+        raise RuntimeError(f"Vertex audio is {mime}, expected L16 at {GEMINI_RATE}")
+    return base64.b64decode(inline["data"])
+
+
+def _vertex(voice: str, line: LineVoice) -> bytes:
+    pcm = trim_silence(_vertex_pcm(voice, line))
+    if not pcm:
+        raise RuntimeError("Vertex returned silence")
+    return pcm_to_mp3(pcm)
+
+
 def _inworld(voice: str, line: LineVoice) -> bytes:
     """`voice` is the Gemini voice the part was cast with; Inworld reads it
     with that voice's stand-in (voices.Voice.stand_in)."""
@@ -257,6 +339,8 @@ def synthesize(vendor: str, voice: str, line: LineVoice) -> bytes:
         return _inworld(voice, line)
     if vendor == "openai":
         return _openai(voice, line)
+    if vendor == "vertex":
+        return _vertex(voice, line)
     if vendor == "elevenlabs":
         return _elevenlabs(voice, line)
     raise ValueError(f"unknown TTS vendor {vendor!r}")

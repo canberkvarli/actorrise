@@ -64,6 +64,12 @@ class Settings:
     # The Gemini TTS model is one setting. Part of every cache key, so changing
     # it re-voices each line the next time it is played, never in bulk.
     partner_tts_model: str = os.getenv("PARTNER_TTS_MODEL", "gemini-3.8-flash-tts")
+    # The same Gemini voices through Vertex AI, with no daily request wall:
+    # where the day's Gemini requests run out, the part is voiced here rather
+    # than by OpenAI. A service account's JSON, as one line, and the project.
+    vertex_project: str | None = os.getenv("VERTEX_PROJECT")
+    vertex_service_account_json: str | None = os.getenv("VERTEX_SERVICE_ACCOUNT_JSON")
+    vertex_tts_model: str = os.getenv("VERTEX_TTS_MODEL", "gemini-2.5-flash-tts")
     # The monthly spending guard: characters Gemini may voice per calendar
     # month (about $0.03 a minute). Past it, new lines go to Inworld.
     partner_tts_monthly_chars: int = int(os.getenv("PARTNER_TTS_MONTHLY_CHARS", "300000") or 300000)

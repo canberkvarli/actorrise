@@ -181,3 +181,46 @@ class Audio(unittest.TestCase):
         with mock.patch.object(synth.settings, "partner_tts_model", "gemini-x"):
             self.assertEqual(synth.model_for("gemini"), "gemini-x")
         self.assertEqual(synth.model_for("inworld"), "inworld-tts-2")
+
+
+class Vertex(unittest.TestCase):
+    """The same voices through Vertex AI: the note as a prefix, L16 back."""
+
+    def _reply(self, pcm, mime="audio/L16;codec=pcm;rate=24000"):
+        res = mock.Mock(status_code=200, text="")
+        res.json.return_value = {"candidates": [{"content": {"parts": [{"inlineData": {"mimeType": mime, "data": base64.b64encode(pcm).decode()}}]}}]}
+        return res
+
+    def test_sends_the_note_as_a_prefix_and_returns_pcm(self):
+        pcm = b"\x00\x10" * 2400
+        with mock.patch.object(synth.settings, "vertex_project", "actorrise"), \
+             mock.patch.object(synth.settings, "vertex_tts_model", "gemini-2.5-flash-tts"), \
+             mock.patch.object(synth, "_vertex_token", return_value="tok"), \
+             mock.patch.object(synth.httpx, "post", return_value=self._reply(pcm)) as post:
+            out = synth._vertex_pcm("Puck", LineVoice(text="It's a joke. Laugh.", acting="dry, not unkind"))
+        self.assertEqual(out, pcm)
+        self.assertIn("/projects/actorrise/locations/global/publishers/google/models/gemini-2.5-flash-tts:generateContent", post.call_args.args[0])
+        self.assertEqual(post.call_args.kwargs["headers"], {"Authorization": "Bearer tok"})
+        body = post.call_args.kwargs["json"]
+        self.assertEqual(body["contents"][0]["parts"][0]["text"], f"Say it {synth.gemini_style(LineVoice(text='x', acting='dry, not unkind'))}: It's a joke. Laugh.")
+        self.assertEqual(body["generationConfig"]["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]["voiceName"], "Puck")
+        self.assertEqual(body["generationConfig"]["responseModalities"], ["AUDIO"])
+
+    def test_a_line_without_a_note_is_sent_bare(self):
+        pcm = b"\x00\x10" * 2400
+        with mock.patch.object(synth.settings, "vertex_project", "actorrise"), \
+             mock.patch.object(synth, "_vertex_token", return_value="tok"), \
+             mock.patch.object(synth.httpx, "post", return_value=self._reply(pcm)) as post:
+            synth._vertex_pcm("Kore", LineVoice(text="No."))
+        self.assertEqual(post.call_args.kwargs["json"]["contents"][0]["parts"][0]["text"], "No.")
+
+    def test_wav_is_refused(self):
+        with mock.patch.object(synth.settings, "vertex_project", "actorrise"), \
+             mock.patch.object(synth, "_vertex_token", return_value="tok"), \
+             mock.patch.object(synth.httpx, "post", return_value=self._reply(b"RIFF", mime="audio/wav")):
+            with self.assertRaises(RuntimeError):
+                synth._vertex_pcm("Kore", LineVoice(text="No."))
+
+    def test_vertex_is_a_vendor_with_its_own_model(self):
+        with mock.patch.object(synth.settings, "vertex_tts_model", "gemini-2.5-flash-tts"):
+            self.assertEqual(synth.model_for("vertex"), "gemini-2.5-flash-tts")

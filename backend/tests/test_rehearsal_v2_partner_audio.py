@@ -332,3 +332,23 @@ class DailyLimit(unittest.TestCase):
             pa.synthesise_pending(self.db, [key], {key: line})
         self.assertIsNone(pa.stand_in_key(self.db.get(PartnerAudio, key)))
         self.assertEqual(self.db.query(PartnerAudio).count(), 1)
+
+
+class VertexOverflow(unittest.TestCase):
+    """Past the day's Gemini requests, the same voices through Vertex when it is set up."""
+
+    def test_vertex_when_set_up_else_openai_else_nobody(self):
+        with mock.patch.object(pa.settings, "vertex_project", "actorrise"), \
+             mock.patch.object(pa.settings, "vertex_service_account_json", "{}"), \
+             mock.patch.object(pa.settings, "openai_api_key", "o"):
+            self.assertEqual(pa.overflow_vendor(), "vertex")
+        with mock.patch.object(pa.settings, "vertex_project", None), \
+             mock.patch.object(pa.settings, "openai_api_key", "o"):
+            self.assertEqual(pa.overflow_vendor(), "openai")
+        with mock.patch.object(pa.settings, "vertex_project", None), \
+             mock.patch.object(pa.settings, "openai_api_key", None):
+            self.assertIsNone(pa.overflow_vendor())
+
+    def test_vertex_keeps_the_gemini_voice_name(self):
+        self.assertEqual(pa.vendor_voice("vertex", "Kore"), "Kore")
+        self.assertNotEqual(pa.vendor_voice("openai", "Kore"), "Kore")

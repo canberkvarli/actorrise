@@ -124,7 +124,7 @@ def chars_this_month(db: Session, now: datetime | None = None) -> int:
     now = now or datetime.now(timezone.utc)
     total = (
         db.query(func.coalesce(func.sum(PartnerAudio.chars), 0))
-        .filter(PartnerAudio.vendor == "gemini", PartnerAudio.status == "ready",
+        .filter(PartnerAudio.vendor.in_(("gemini", "vertex")), PartnerAudio.status == "ready",
                 PartnerAudio.created_at >= _month_start(now))
         .scalar()
     )
@@ -211,13 +211,29 @@ def openai_voice(voice: str) -> str:
     return match.day_stand_in if match and match.day_stand_in else voice
 
 
+def overflow_vendor() -> str | None:
+    """Who voices a part when the day's Gemini requests are spent: the same
+    voices through Vertex when it is set up, else OpenAI, else nobody."""
+    if settings.vertex_project and settings.vertex_service_account_json:
+        return "vertex"
+    if settings.openai_api_key:
+        return "openai"
+    return None
+
+
+def vendor_voice(vendor: str, voice: str) -> str:
+    """The Gemini voice a part was cast with, as this vendor names it."""
+    return openai_voice(voice) if vendor == "openai" else voice
+
+
 def scene_vendor(db: Session, pairs: list[tuple[str, LineVoice]], capped: bool,
                  now: datetime | None = None) -> str:
     """Who voices these lines, all of them: one scene's partner part, or one
     line. Gemini when every line is saved in Gemini, or when the day has room
-    for the ones that are not. Otherwise OpenAI for the lot, Gemini's saved
-    lines included, so the part sounds like one person. Past the monthly cap,
-    Inworld as before."""
+    for the ones that are not. Otherwise the overflow vendor for the lot,
+    Gemini's saved lines included, so the part sounds like one person: the
+    same voices through Vertex when it is set up, else OpenAI. Past the
+    monthly cap, Inworld as before."""
     primary = settings.partner_tts_vendor
     if primary != "gemini" or not pairs:
         return primary
@@ -230,19 +246,20 @@ def scene_vendor(db: Session, pairs: list[tuple[str, LineVoice]], capped: bool,
         return primary
     if capped and settings.inworld_api_key:
         return "inworld"
-    if not settings.openai_api_key:
+    overflow = overflow_vendor()
+    if overflow is None:
         return primary
     # A pending row made today is counted in the day already; a missing or a
     # failed one is a request still to come.
     new = sum(1 for k in unheld if k not in rows or rows[k].status == "failed")
     if out or new > gemini_left_today(db, now):
-        return "openai"
+        return overflow
     return primary
 
 
 def ensure_as(db: Session, vendor: str, voice: str, line: LineVoice) -> str:
     """ensure() for a vendor scene_vendor chose, in that vendor's voice."""
-    return ensure(db, vendor, openai_voice(voice) if vendor == "openai" else voice, line)
+    return ensure(db, vendor, vendor_voice(vendor, voice), line)
 
 
 def ensure_for(db: Session, voice: str, line: LineVoice, capped: bool) -> str:
@@ -304,10 +321,13 @@ def synthesise_pending(db: Session, keys: list[str], line_for: dict[str, LineVoi
             row.status = "failed"
             row.error = str(exc)[:500]
             stand_in = None
-            if row.vendor == "gemini" and DAILY_LIMIT in str(exc) and settings.openai_api_key:
+            overflow = overflow_vendor()
+            if row.vendor == "gemini" and DAILY_LIMIT in str(exc) and overflow:
                 # Gemini is done for the day and an actor is waiting on this
-                # line: OpenAI reads it now, and GET /audio/{key} hands that over.
-                stand_in = ensure(db, "openai", openai_voice(row.voice), line)
+                # line: the overflow vendor reads it now, the same voice
+                # through Vertex when it is set up, and GET /audio/{key}
+                # hands that over.
+                stand_in = ensure(db, overflow, vendor_voice(overflow, row.voice), line)
                 row.error = f"{STAND_IN}{stand_in}: {exc}"[:500]
             # The claim stays: it is now the time of the failure, and the
             # retry clock (FAILED_RETRY) runs from it.
