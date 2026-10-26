@@ -88,12 +88,15 @@ def attribution_from_request(request: Request | None) -> dict[str, str]:
 def _claim_class_invites(db: Session, user: User, class_code: object = None) -> None:
     """A teacher's class list approved this address before it had an account,
     or the student signed up through a class link (the code travels in the
-    signup's user_metadata, so it survives a change of browser)."""
+    signup's user_metadata, so it survives a change of browser), or their
+    school address matches a teacher's live link (a Google signup on a machine
+    that never opened the link carries no code at all)."""
     try:
-        from app.services.class_links import claim_invites, claim_signup_code
+        from app.services.class_links import claim_invites, claim_school_domain, claim_signup_code
 
         claim_invites(db, user)
         claim_signup_code(db, user, class_code)
+        claim_school_domain(db, user)
     except Exception:
         db.rollback()  # never fail a login over a comp
 

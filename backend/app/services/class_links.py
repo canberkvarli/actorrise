@@ -171,6 +171,44 @@ def claim_signup_code(db: Session, user: User, code: object) -> JoinResult | Non
     return join(db, link, user)
 
 
+# Addresses anyone can have: a teacher on one of these vouches for nobody's domain.
+_MAIL_PROVIDERS = {
+    "gmail.com", "googlemail.com", "icloud.com", "me.com", "mac.com", "hotmail.com",
+    "outlook.com", "live.com", "msn.com", "yahoo.com", "aol.com", "proton.me",
+    "protonmail.com", "privaterelay.appleid.com", "anon.actorrise.com",
+}
+
+
+def _domain(email: str | None) -> str:
+    return (email or "").rsplit("@", 1)[-1].strip().lower() if "@" in (email or "") else ""
+
+
+def claim_school_domain(db: Session, user: User) -> JoinResult | None:
+    """Join the class of a live link whose teacher is on this new account's
+    school domain (or a subdomain of it, students.nmu.edu under nmu.edu).
+    For the student who signs up on a machine that never opened the link:
+    Gilroy, 2026-10-26, 4 of 14 came in through Google on a Chromebook with no
+    code held anywhere. Not for someone already in a class, and never on a
+    mail provider's domain. The newest live link wins when a school has two."""
+    domain = _domain(user.email)
+    if not domain or domain in _MAIL_PROVIDERS:
+        return None
+    if db.query(ClassLinkJoin).filter(ClassLinkJoin.user_id == user.id).first() is not None:
+        return None
+    links = (
+        db.query(ClassLink, User.email)
+        .join(User, User.id == ClassLink.teacher_user_id)
+        .filter(ClassLink.active.is_(True), ClassLink.teacher_user_id != user.id)
+        .order_by(ClassLink.created_at.desc(), ClassLink.id.desc())
+        .all()
+    )
+    for link, teacher_email in links:
+        school = _domain(teacher_email)
+        if school and school not in _MAIL_PROVIDERS and (domain == school or domain.endswith("." + school)):
+            return join(db, link, user)
+    return None
+
+
 def _grant(db: Session, link: ClassLink, user: User) -> None:
     from app.api.admin.users import AdminGrantRequest, grant_admin_user_membership
 
