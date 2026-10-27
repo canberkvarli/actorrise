@@ -2090,7 +2090,83 @@ def _indented_page_text(page) -> str:
     )
 
 
+# pdfplumber is pure Python and hungry: 15.6s and 295 MB for a 170-page play,
+# on an instance with half a CPU and 512 MB. Read inline, a long PDF held the
+# interpreter for minutes, health checks went unanswered and Render restarted
+# the API under everyone (27 Oct, an iCloud script). So it reads in a child
+# process with a clock and a memory ceiling, and if either runs out the script
+# is read by pypdf instead: plainer text, but the server never goes dark.
+_PDF_READ_SECONDS = 75
+_PDF_READ_BYTES = 380 * 1024 * 1024
+
+
+def _read_pdf_in_child(file_content: bytes, only_pages, conn) -> None:
+    try:
+        import resource
+
+        resource.setrlimit(resource.RLIMIT_DATA, (_PDF_READ_BYTES, _PDF_READ_BYTES))
+    except Exception:
+        pass
+    try:
+        conn.send(("ok", _extract_pdf_text_here(file_content, only_pages)))
+    except BaseException as e:  # MemoryError included: the parent falls back
+        try:
+            conn.send(("err", f"{type(e).__name__}: {e}"))
+        except Exception:
+            pass
+    finally:
+        conn.close()
+
+
+def _plain_pdf_text(file_content: bytes, only_pages=None) -> str:
+    import pypdf
+
+    reader = pypdf.PdfReader(io.BytesIO(file_content))
+    return "\n\n".join(
+        t for i, page in enumerate(reader.pages, start=1)
+        if only_pages is None or i in only_pages
+        for t in [(page.extract_text() or "")] if t.strip()
+    ).strip()
+
+
 def extract_pdf_text(file_content: bytes, only_pages=None) -> str:
+    """The careful read, away from the server's own process (see above)."""
+    import multiprocessing
+    import os
+
+    if os.environ.get("PDF_READ_INLINE") == "1":
+        return _extract_pdf_text_here(file_content, only_pages)
+
+    ctx = multiprocessing.get_context("spawn")
+    parent, child = ctx.Pipe(duplex=False)
+    proc = ctx.Process(target=_read_pdf_in_child, args=(file_content, only_pages, child), daemon=True)
+    proc.start()
+    child.close()
+    outcome = None
+    try:
+        if parent.poll(_PDF_READ_SECONDS):
+            outcome = parent.recv()
+    except (EOFError, OSError):
+        outcome = None  # the child died, most likely of the memory ceiling
+    finally:
+        parent.close()
+        if proc.is_alive():
+            proc.kill()
+        proc.join(timeout=5)
+
+    if outcome and outcome[0] == "ok":
+        return outcome[1]
+    if outcome and outcome[0] == "err" and "MemoryError" not in outcome[1]:
+        # A file pdfplumber cannot open at all; pypdf will not do better.
+        raise ValueError(f"Failed to parse PDF: {outcome[1]}")
+    print(f"pdfplumber gave up ({outcome[1] if outcome else 'out of time or memory'}), reading with pypdf")
+    try:
+        return _plain_pdf_text(file_content, only_pages)
+    except Exception as e:
+        raise ValueError(f"Failed to parse PDF: {str(e)}")
+
+
+def _extract_pdf_text_here(file_content: bytes, only_pages=None) -> str:
     """Text of every page in a PDF, watermarks removed.
 
     `only_pages` is a set of 1-indexed page numbers. When the actor has picked
