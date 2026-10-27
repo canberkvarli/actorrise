@@ -23,6 +23,8 @@ export type CollectionFilters = {
   gender?: "female" | "male";
   tones?: string[];
   era?: "classical" | "contemporary";
+  /** Shortest running time, for a shelf with a floor ("a minute to a minute and a half"). */
+  minSeconds?: number;
   maxSeconds?: number;
   ages?: string[];
   sources?: ("play" | "film" | "tv")[];
@@ -45,8 +47,16 @@ export type Collection = {
   /** The natural-language query the "search" button submits. */
   query: string;
   filters: CollectionFilters;
+  /**
+   * A hand-read shelf: these pieces in this order, and `filters` is ignored.
+   * For a shelf no column can find ("sad turning hopeful"). Each carries the
+   * line the card prints under it, saying where the speech turns.
+   */
+  picks?: CollectionPick[];
   related: string[];
 };
+
+export type CollectionPick = { id: number; turn: string };
 
 const DRAMATIC = ["dramatic", "anguished", "dark"];
 const COMEDIC = ["comedic", "sarcastic", "joyful"];
@@ -398,7 +408,58 @@ export const COLLECTIONS: Collection[] = [
       "Falling into it, being refused it, losing it, pretending not to want it. Four thousand pieces in the library are tagged with love; these are the thirty that read best on their own, the public-domain ones printed whole.",
     query: "monologue about love",
     filters: { themes: ["love"] },
-    related: ["romeo-and-juliet-monologues", "monologues-about-jealousy", "much-ado-about-nothing-monologues"],
+    related: ["romeo-and-juliet-monologues", "monologues-about-jealousy", "much-ado-about-nothing-monologues", "love-monologues-that-turn-hopeful"],
+  },
+  {
+    slug: "love-monologues-that-turn-hopeful",
+    title: "Love Monologues That Turn Hopeful, 1 to 1½ Minutes",
+    h1: { em: "Love", rest: "monologues that turn hopeful, a minute to a minute and a half" },
+    direction: "(sad, then hopeful.)",
+    description:
+      "Thirty-three love monologues that start in loss or heartbreak and end in hope, each 60 to 90 seconds, for women and men, from plays, film and television. Every card says where the speech turns.",
+    intro:
+      "This is the list for the class final: a love monologue, a minute to a minute and a half, that starts somewhere sad and ends with hope. Each one was read for that turn, and the line under it tells you where it happens, so you know the moment you are building to. Read a few out loud before you choose; the right one usually sounds like you.",
+    query: "love monologue that goes from sad to hopeful, 1 to 1.5 minutes",
+    filters: { themes: ["love"], minSeconds: 60, maxSeconds: 90 },
+    // Hand-read 2026-10-28 from the 60 to 90 second love pieces: each moves
+    // from loss to hope by its last lines, is fit for a high school class, and
+    // is not overdone. Romance and family love both; men and women alternate.
+    picks: [
+      { id: 25980, turn: "Turns when he admits he can love her without getting anything back" },
+      { id: 12658, turn: "Turns when she says it is time to breathe on her own" },
+      { id: 18802, turn: "Turns when he vows to raise his mind higher" },
+      { id: 27270, turn: "Turns when she says Jason would want them to move on" },
+      { id: 19142, turn: "Turns when he admits he was fooling himself and came running back" },
+      { id: 25398, turn: "Turns when she decides his mistakes are not bigger than her love" },
+      { id: 26145, turn: "Turns when he says he should have fought for her" },
+      { id: 19403, turn: "Turns when she understands her mother left out of love" },
+      { id: 26745, turn: "Turns when he stops dreading losing her and thanks her instead" },
+      { id: 39663, turn: "Turns when she vows they will never be apart again" },
+      { id: 11626, turn: "Turns when he tells Miles he sees a spark in him" },
+      { id: 26381, turn: "Turns when she remembers she is her parents' story" },
+      { id: 34469, turn: "Turns when he stops listing what he cannot give her and offers love" },
+      { id: 28903, turn: "Turns when she looks at him again and wonder beats fear" },
+      { id: 31636, turn: "Turns when he lets himself think she might let him hold her" },
+      { id: 22938, turn: "Turns when she sets Mikey's place at the table and knows he is okay" },
+      { id: 25953, turn: "Turns when he chooses to believe in her" },
+      { id: 18913, turn: "Turns when she decides to love the people her friend loved" },
+      { id: 6089, turn: "Turns when he decides she was an angel, not a devil" },
+      { id: 30414, turn: "Turns when she decides his bad luck has paid for what he did" },
+      { id: 20937, turn: "Turns when he realizes his dad is still a part of him" },
+      { id: 26507, turn: "Turns when she tells Marion there is more to life than what we can see" },
+      { id: 30797, turn: "Turns when he hears her voice in the dark and follows it" },
+      { id: 39354, turn: "Turns when she says peace can still grow out of sorrow" },
+      { id: 22910, turn: "Turns when he says he would be proud to call him son" },
+      { id: 37728, turn: "Turns when she remembers the strength she found to stay true" },
+      { id: 35818, turn: "Turns when he asks for the rest of his life to tell her the truth" },
+      { id: 11902, turn: "Turns when she begs her sons to love one another" },
+      { id: 31365, turn: "Turns when he decides he is glad he was the fool" },
+      { id: 5366, turn: "Turns when she dares to hope her letter reaches her brother" },
+      { id: 40409, turn: "Turns when the prince asks him along and he kneels" },
+      { id: 36641, turn: "Turns when she makes up her mind to cure herself" },
+      { id: 21784, turn: "Turns when she says she got over it and met Connie's father" },
+    ],
+    related: ["monologues-about-love", "monologues-about-grief", "dramatic-monologues-for-teens"],
   },
   {
     slug: "monologues-about-revenge",
@@ -437,7 +498,7 @@ export const COLLECTIONS: Collection[] = [
       "A death, a leaving, the thing that cannot be got back. The hardest pieces to do well and the ones most often asked for in a dramatic slot. Tagged grief or loss in the library; the public-domain ones print in full.",
     query: "monologue about grief",
     filters: { themes: ["grief", "loss"] },
-    related: ["king-lear-monologues", "dramatic-monologues-for-women-under-2-minutes", "dramatic-monologues-for-men-under-2-minutes"],
+    related: ["king-lear-monologues", "dramatic-monologues-for-women-under-2-minutes", "dramatic-monologues-for-men-under-2-minutes", "love-monologues-that-turn-hopeful"],
   },
   {
     slug: "comedic-monologues-for-teens",
@@ -463,7 +524,7 @@ export const COLLECTIONS: Collection[] = [
       "Serious pieces for teenage characters, written at that age rather than cut down from an adult's speech. Over two hundred in the library; these are the ones that read best alone, the public-domain ones printed in full.",
     query: "dramatic monologue for a teenager",
     filters: { tones: DRAMATIC, ages: ["teens"] },
-    related: ["comedic-monologues-for-teens", "contemporary-monologues-for-teens", "euphoria-monologues"],
+    related: ["comedic-monologues-for-teens", "contemporary-monologues-for-teens", "euphoria-monologues", "love-monologues-that-turn-hopeful"],
   },
   {
     slug: "villain-monologues",
@@ -495,6 +556,7 @@ export function findCollection(slug: string): Collection | null {
  */
 export function collectionsForPiece(
   p: {
+    id: number;
     playTitle: string | null;
     gender: string | null;
     tone: string | null;
@@ -511,6 +573,9 @@ export function collectionsForPiece(
   if (play) out.push(play);
   const scored = COLLECTIONS.filter((c) => !c.filters.plays && c !== play)
     .map((c) => {
+      // A hand-picked shelf holds exactly its picks, and being read onto one
+      // says more about a piece than any filter match.
+      if (c.picks) return c.picks.some((pick) => pick.id === p.id) ? { c, score: 10 } : null;
       const f = c.filters;
       let score = 0;
       if (f.gender) {
@@ -529,8 +594,10 @@ export function collectionsForPiece(
         if (!p.ageRange || !f.ages.includes(p.ageRange)) return null;
         score += 1;
       }
-      if (f.maxSeconds) {
-        if (!p.durationSeconds || p.durationSeconds > f.maxSeconds) return null;
+      if (f.minSeconds || f.maxSeconds) {
+        if (!p.durationSeconds) return null;
+        if (f.minSeconds && p.durationSeconds < f.minSeconds) return null;
+        if (f.maxSeconds && p.durationSeconds > f.maxSeconds) return null;
         score += 1;
       }
       if (f.sources) {

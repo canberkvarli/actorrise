@@ -8,6 +8,7 @@ import { COLLECTIONS, collectionsForPiece, findCollection } from "@/lib/monologu
 import {
   findReplacementMonologue,
   getCollectionMonologues,
+  getPickedMonologues,
   getIndexableMonologues,
   getPublicMonologue,
   getSiblingMonologues,
@@ -117,7 +118,9 @@ export default async function PublicMonologuePage({ params }: Params) {
   if (collection) {
     // A play page promises every speech from the play, so it is not capped at
     // the thirty a keyword shelf shows; King Lear alone has sixty-nine.
-    const monologues = await getCollectionMonologues(collection.filters, collection.filters.plays ? 120 : 30);
+    const monologues = collection.picks
+      ? await getPickedMonologues(collection.picks.map((p) => p.id))
+      : await getCollectionMonologues(collection.filters, collection.filters.plays ? 120 : 30);
     return <MonologueCollectionPage collection={collection} monologues={monologues} />;
   }
   const id = idFromSlug(slug);

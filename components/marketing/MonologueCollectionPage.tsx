@@ -28,6 +28,7 @@ function sourceWord(sourceType: string): string {
  */
 export function MonologueCollectionPage({ collection, monologues }: { collection: Collection; monologues: CollectionMonologue[] }) {
   const searchHref = `/monologues?q=${encodeURIComponent(collection.query)}`;
+  const turnOf = new Map((collection.picks ?? []).map((p) => [p.id, p.turn]));
   const related = collection.related
     .map((slug) => COLLECTIONS.find((c) => c.slug === slug))
     .filter((c): c is Collection => Boolean(c));
@@ -84,6 +85,7 @@ export function MonologueCollectionPage({ collection, monologues }: { collection
               const href = `/monologues/${monologueSlug(m)}`;
               const author = displayableAuthor(m.author);
               const len = readableLength(m.durationSeconds);
+              const turn = turnOf.get(m.id);
               return (
                 <li key={m.id} className="py-5">
                   <div className="flex items-baseline gap-3">
@@ -104,6 +106,7 @@ export function MonologueCollectionPage({ collection, monologues }: { collection
                           .filter(Boolean)
                           .join("  ·  ")}
                       </p>
+                      {turn ? <p className="mt-2 text-sm italic leading-relaxed text-foreground">{turn}</p> : null}
                       {m.teaser ? (
                         <p className="mt-2 font-typewriter text-sm leading-relaxed text-foreground/80">{m.teaser}</p>
                       ) : null}
@@ -116,8 +119,9 @@ export function MonologueCollectionPage({ collection, monologues }: { collection
         )}
 
         <p className="mt-8 text-sm text-muted-foreground">
-          Length is estimated at a spoken pace of about 150 words a minute. Public-domain pieces are printed in
-          full on their own page; copyrighted ones list the character and the source.
+          Length is estimated at a performing pace of about 130 words a minute, with a breath at each sentence.
+          Public-domain pieces are printed in full on their own page; copyrighted ones list the character and the
+          source.
         </p>
 
         {related.length > 0 ? (
