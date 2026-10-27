@@ -45,6 +45,10 @@ export function useClassShelves() {
 export interface MySharing {
   can_share: boolean;
   shared: number;
+  /** Students in the teacher's class, and how many unlock unlimited uploads. */
+  students?: number;
+  unlock_at?: number;
+  unlimited_uploads?: boolean;
 }
 
 export function useMySharing(enabled = true) {

@@ -22,9 +22,14 @@ def read_class_shelves(current_user: User = Depends(get_current_user), db: Sessi
 @router.get("/mine")
 def read_my_sharing(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """The teacher's side: may they share, and how many scripts they have."""
+    can = class_shelf.can_share(db, current_user)
+    joined = class_shelf.students_joined(db, current_user) if can else 0
     return {
-        "can_share": class_shelf.can_share(db, current_user),
+        "can_share": can,
         "shared": class_shelf.shared_count(db, current_user),
+        "students": joined,
+        "unlock_at": class_shelf.UNLOCK_STUDENTS,
+        "unlimited_uploads": can and joined >= class_shelf.UNLOCK_STUDENTS,
     }
 
 

@@ -525,7 +525,12 @@ async def get_usage_limits(request: Request, current_user: User = Depends(get_cu
         )
     except Exception:
         pass
-    is_paid =bool(getattr(tier, "monthly_price_cents", 0) and tier.monthly_price_cents > 0)
+    # So does a teacher's class, once it is big enough (class_shelf.uploads_unlocked).
+    from app.services.class_shelf import uploads_unlocked
+
+    if scripts_limit != -1 and uploads_unlocked(db, current_user):
+        scripts_limit = -1
+    is_paid = bool(getattr(tier, "monthly_price_cents", 0) and tier.monthly_price_cents > 0)
     if is_paid:
         scripts_used = (
             db.query(func.count(UserScript.id))

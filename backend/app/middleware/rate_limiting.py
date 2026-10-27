@@ -143,6 +143,12 @@ class FeatureGate:
             limit = features.get("scene_partner_scripts", 0)
             if limit == -1:
                 return True
+            # A teacher who has brought their class in uploads without limit
+            # (services/class_shelf.uploads_unlocked).
+            from app.services.class_shelf import uploads_unlocked
+
+            if uploads_unlocked(db, current_user):
+                return True
             if limit == 0:
                 raise HTTPException(
                     status_code=403,

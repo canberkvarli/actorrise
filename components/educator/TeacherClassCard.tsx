@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import api from "@/lib/api";
 import { useMySharing } from "@/hooks/useClassShelf";
+import { useUsageLimits } from "@/hooks/useSubscription";
 import { trackEvent } from "@/lib/events";
 
 type ClassLinkSummary = {
@@ -37,6 +38,7 @@ export function TeacherClassCard() {
   const [copied, setCopied] = useState(false);
   // The count is the teacher's own; nobody else is ever told what is shared.
   const { data: sharing } = useMySharing(!!link);
+  const { usage } = useUsageLimits();
 
   useEffect(() => {
     let live = true;
@@ -163,6 +165,14 @@ export function TeacherClassCard() {
               Share a scene
             </Link>
           </p>
+          {/* What a class earns the teacher. Not shown to anyone whose plan is
+              already unlimited (Pro), nor once it is earned. */}
+          {sharing?.unlock_at && !sharing.unlimited_uploads && usage && usage.scripts_limit !== -1 && (
+            <p className="mt-2 text-[15px] leading-normal" style={{ color: "var(--t-muted-dark)" }}>
+              {sharing.students ?? 0} of {sharing.unlock_at} students in. At {sharing.unlock_at}, your uploads are
+              unlimited.
+            </p>
+          )}
         </div>
       )}
     </section>

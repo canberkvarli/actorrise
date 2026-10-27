@@ -168,8 +168,30 @@ class ClassShelfTests(unittest.TestCase):
                                 current_user=self.teacher, db=self.db)
         self.assertEqual(out, {"changed": 2, "shared": 2})
         self.assertIsNone(self.db.get(UserScript, stranger.id).class_share)
-        self.assertEqual(api.read_my_sharing(current_user=self.teacher, db=self.db), {"can_share": True, "shared": 2})
+        mine = api.read_my_sharing(current_user=self.teacher, db=self.db)
+        self.assertEqual((mine["can_share"], mine["shared"]), (True, 2))
         self.assertEqual(api.read_my_sharing(current_user=self.student, db=self.db)["can_share"], False)
+
+
+class UploadsUnlockWithAClass(ClassShelfTests):
+    def test_five_students_in_the_class_unlock_unlimited_uploads(self):
+        # setUp has one member and one turned away ("full", not counted).
+        self.assertEqual(class_shelf.students_joined(self.db, self.teacher), 1)
+        self.assertFalse(class_shelf.uploads_unlocked(self.db, self.teacher))
+        now = datetime.now(timezone.utc)
+        for i in range(4):
+            u = User(email=f"s{i}@x.com", hashed_password="x", created_at=now)
+            self.db.add(u)
+            self.db.flush()
+            self.db.add(ClassLinkJoin(class_link_id=self.link.id, user_id=u.id, outcome="granted"))
+        self.db.commit()
+        self.assertEqual(class_shelf.students_joined(self.db, self.teacher), 5)
+        self.assertTrue(class_shelf.uploads_unlocked(self.db, self.teacher))
+        mine = api.read_my_sharing(current_user=self.teacher, db=self.db)
+        self.assertEqual((mine["students"], mine["unlimited_uploads"]), (5, True))
+
+    def test_only_a_teacher_unlocks(self):
+        self.assertFalse(class_shelf.uploads_unlocked(self.db, self.student))
 
 
 class ReadingAllowanceTests(unittest.TestCase):

@@ -163,6 +163,36 @@ def set_shared(db: Session, teacher: User, script: UserScript, on: bool) -> User
     return script
 
 
+#: Students a teacher brings in before their uploads stop counting. A comped
+#: teacher is on Plus, five scripts a month; one who has brought a class in has
+#: earned the room for its sides (Canberk, 2026-10-28: "I still wanna get
+#: paid"). The model reading stays capped per account (reading_budget), so
+#: this lifts the count of files, not the spend.
+UNLOCK_STUDENTS = 5
+
+
+def students_joined(db: Session, teacher: User) -> int:
+    """People in this teacher's class, across their links, each once."""
+    return (
+        db.query(ClassLinkJoin.user_id)
+        .join(ClassLink, ClassLink.id == ClassLinkJoin.class_link_id)
+        .filter(
+            ClassLink.teacher_user_id == teacher.id,
+            ClassLinkJoin.outcome.notin_(NOT_MEMBER_OUTCOMES),
+            ClassLinkJoin.user_id != teacher.id,
+        )
+        .distinct()
+        .count()
+    )
+
+
+def uploads_unlocked(db: Session, user: User) -> bool:
+    """A teacher with a class of UNLOCK_STUDENTS or more uploads without limit."""
+    if getattr(user, "account_type", None) != "educator":
+        return False
+    return students_joined(db, user) >= UNLOCK_STUDENTS
+
+
 def shared_count(db: Session, teacher: User) -> int:
     """For the teacher's own card. Never shown to anyone else."""
     return (
