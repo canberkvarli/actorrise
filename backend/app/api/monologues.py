@@ -1408,7 +1408,7 @@ async def get_trending(
     """Get trending monologues"""
 
     recommender = Recommender(db)
-    results = recommender.get_trending_monologues(limit=limit)
+    results = recommender.get_trending_monologues(limit=limit, exclude_user_id=current_user.id)
 
     # Get favorites - OPTIMIZED: only for result set
     result_ids = [m.id for m in results]

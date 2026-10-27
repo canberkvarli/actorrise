@@ -646,14 +646,58 @@ class Recommender:
                 )
             ).limit(limit).all()
 
-    def get_trending_monologues(self, limit: int = 20) -> List[Monologue]:
-        """Get trending monologues based on recent views and favorites"""
+    def get_trending_monologues(self, limit: int = 20, exclude_user_id: Optional[int] = None,
+                                days: int = 14) -> List[Monologue]:
+        """What other actors are working on now: the pieces the most different
+        people opened or saved in the last `days`, a save counting three opens.
 
-        # Simple trending algorithm: sort by favorite_count + view_count/10
-        # This gives more weight to favorites than views
-        return exclude_hidden(self.db.query(Monologue)).order_by(
-            (Monologue.favorite_count + Monologue.view_count / 10).desc()
-        ).limit(limit).all()
+        It used to be the all-time counts, which never moved, so "what others
+        are working on" was the same few speeches for months. Counted by people,
+        not rows, so one actor reading a piece twenty times is one actor. The
+        asker's own activity is left out. A quiet fortnight is topped up from
+        the all-time list so the row is never short.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        from sqlalchemy import func, literal
+
+        from app.models.actor import MonologueFavorite
+        from app.models.search_log import MonologueView
+
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        views = self.db.query(
+            MonologueView.monologue_id.label("mid"),
+            MonologueView.user_id.label("uid"),
+            literal(1).label("w"),
+        ).filter(MonologueView.created_at >= since.replace(tzinfo=None), MonologueView.user_id.isnot(None))
+        saves = self.db.query(
+            MonologueFavorite.monologue_id.label("mid"),
+            MonologueFavorite.user_id.label("uid"),
+            literal(3).label("w"),
+        ).filter(MonologueFavorite.created_at >= since)
+        if exclude_user_id is not None:
+            views = views.filter(MonologueView.user_id != exclude_user_id)
+            saves = saves.filter(MonologueFavorite.user_id != exclude_user_id)
+        acts = views.union_all(saves).subquery()
+        # One actor counts once per piece, at the weight of the most they did.
+        per_actor = self.db.query(acts.c.mid, acts.c.uid, func.max(acts.c.w).label("w")).group_by(acts.c.mid, acts.c.uid).subquery()
+        ranked = (
+            self.db.query(per_actor.c.mid, func.sum(per_actor.c.w).label("score"))
+            .group_by(per_actor.c.mid)
+            .order_by(func.sum(per_actor.c.w).desc())
+            .limit(limit * 3)
+            .all()
+        )
+        ids = [r[0] for r in ranked]
+        found = {m.id: m for m in exclude_hidden(self.db.query(Monologue).filter(Monologue.id.in_(ids))).all()} if ids else {}
+        picked = [found[i] for i in ids if i in found][:limit]
+        if len(picked) < limit:
+            have = {m.id for m in picked}
+            more = exclude_hidden(self.db.query(Monologue)).filter(~Monologue.id.in_(have) if have else literal(True)).order_by(
+                (Monologue.favorite_count + Monologue.view_count / 10).desc()
+            ).limit(limit - len(picked)).all()
+            picked += more
+        return picked
 
     def get_fresh_picks(self, limit: int = 20) -> List[Monologue]:
         """Get fresh, under-performed monologues (opposite of trending)"""
