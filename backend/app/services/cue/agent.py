@@ -138,9 +138,16 @@ def _history(conv: CueConversation) -> list[dict[str, Any]]:
 
 def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[str, Any]]:
     t0 = time.monotonic()
+    marks: list[str] = []
+
+    def mark(name: str) -> None:
+        marks.append(f"{name}={time.monotonic() - t0:.2f}")
+
     text = text.strip()[:2000]
     plus = tools.is_plus(db, user)
+    mark("plus")
     cap = caps.check(db, int(user.id), plus)
+    mark("caps")
 
     if not cap.allowed and cap.reason == "free_cap":
         yield {"type": "capped", "reason": "free_cap", "limit": cap.limit}
@@ -150,6 +157,7 @@ def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[st
     assert conv is not None
     db.add(CueMessage(conversation_id=conv.id, user_id=user.id, role="user", content=text))
     db.commit()
+    mark("stored")
 
     if not cap.allowed:
         reply = PLUS_CAP if cap.reason == "plus_cap" else RESTING
@@ -159,6 +167,7 @@ def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[st
         return
 
     client = client if client is not None else _client()
+    mark("client")
     if client is None:
         hand_off(db, user, conv, "resting", text)
         yield from _finish(db, conv, user, NOT_READY, [], 0, 0, handed_off=True)
@@ -171,8 +180,11 @@ def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[st
     used_tools: list[str] = []
     tokens_in = tokens_out = 0
     handed_off = False
-    t_setup = time.monotonic() - t0
+    mark("history")
     t_first: float | None = None
+    # print, not logger: the app configures no logging, so logger.info is
+    # dropped on Render. Printed in two halves so a hang still shows the first.
+    print(f"cue timing user={user.id} " + " ".join(marks), flush=True)
 
     for _round in range(MAX_TOOL_ROUNDS):
         final = None
@@ -180,6 +192,7 @@ def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[st
         # connections; a reply that sat on one for its whole stream made the
         # next actor's "hi" wait ~25s for a free one (2026-10-27).
         db.commit()
+        mark(f"model{_round}")
         try:
             for kind, payload in call_model(
                 client,
@@ -193,6 +206,7 @@ def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[st
                 if kind == "text":
                     if t_first is None:
                         t_first = time.monotonic() - t0
+                        mark("first_text")
                     for piece in gate.feed(payload):
                         said.append(piece)
                         yield {"type": "text", "text": piece}
@@ -245,11 +259,8 @@ def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[st
             said.append(" ")
             yield {"type": "text", "text": " "}
 
-    logger.info(
-        "cue timing user=%s setup=%.2fs first_text=%s total=%.2fs tools=%s",
-        user.id, t_setup, f"{t_first:.2f}s" if t_first is not None else "-",
-        time.monotonic() - t0, ",".join(used_tools) or "-",
-    )
+    mark("done")
+    print(f"cue timing user={user.id} " + " ".join(marks) + f" tools={','.join(used_tools) or '-'}", flush=True)
 
     reason = backstop_reason(text)
     if reason and not handed_off:

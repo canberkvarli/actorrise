@@ -1,6 +1,7 @@
 """Cue, Canberk's assistant, for signed-in actors. See app/services/cue/."""
 
 import json
+import time
 from typing import Any
 
 from app.api.auth import get_current_user
@@ -49,9 +50,11 @@ def post_message(
         # A comment frame first, so the headers and first bytes leave at once
         # and the sheet knows the line is open.
         yield ": open\n\n"
+        t0 = time.monotonic()
         db = SessionLocal()
         try:
             user = db.query(User).get(user_id)
+            print(f"cue stream user={user_id} session+user={time.monotonic() - t0:.2f}", flush=True)
             for event in agent.respond(db, user, body.text):
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception:  # noqa: BLE001
