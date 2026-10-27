@@ -12,9 +12,17 @@ that wants to see events still patches events.SessionLocal (or the call site)
 itself; its patch sits on top of this one and is undone before this one is.
 """
 
+import os
+
 import pytest
 
 from app.services import events
+
+# PDFs are read in a child process in production (script_parser). Under pytest,
+# app/services is on sys.path and its `email` package shadows the standard
+# library inside a spawned child, so the suite reads inline; the child path has
+# its own test, run from a clean interpreter.
+os.environ.setdefault("PDF_READ_INLINE", "1")
 
 
 def _no_prod_session():
