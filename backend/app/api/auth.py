@@ -85,20 +85,35 @@ def attribution_from_request(request: Request | None) -> dict[str, str]:
     return out
 
 
-def _claim_class_invites(db: Session, user: User, class_code: object = None, provider: object = None) -> None:
+def _claim_class_invites(db: Session, user: User, class_code: object = None, provider: object = None) -> bool:
     """A teacher's class list approved this address before it had an account,
     or the student signed up through a class link (the code travels in the
     signup's user_metadata, so it survives a change of browser), or their
     school address matches a teacher's live link (a Google signup on a machine
-    that never opened the link carries no code at all)."""
+    that never opened the link carries no code at all).
+
+    True when the account landed in a class."""
     try:
         from app.services.class_links import claim_invites, claim_school_domain, claim_signup_code
 
-        claim_invites(db, user)
-        claim_signup_code(db, user, class_code)
-        claim_school_domain(db, user, provider)
+        joined = bool(claim_invites(db, user))
+        joined = bool(claim_signup_code(db, user, class_code)) or joined
+        joined = bool(claim_school_domain(db, user, provider)) or joined
+        return joined
     except Exception:
         db.rollback()  # never fail a login over a comp
+        return False
+
+
+def _should_welcome(email: str | None, class_code: object, joined_class: bool) -> bool:
+    """No welcome to a student who came in with a class on a district address:
+    that inbox turns outside mail away (app/services/email/school_address.py).
+    The class is read from the join itself, not only the signup's class_code,
+    because a Google signup carries no code: 2026-10-27, about 90 Gilroy
+    students signed up with Google, every one was sent a welcome, and Resend
+    hit 80% of its daily quota. A teacher on the same district address joins
+    no class at signup, so they still get theirs."""
+    return not (is_district_address(email) and (class_code or joined_class))
 
 
 def get_current_user(
@@ -193,12 +208,6 @@ def get_current_user(
         # Anonymous accounts get none of the onboarding emails/events until they
         # upgrade to a real email.
         if not is_placeholder_email:
-            # Send welcome email on its own thread; never hold the request
-            # (or its connection) for Resend. Not to a student signing up
-            # through a class link on a district address: that inbox turns
-            # outside mail away (app/services/email/school_address.py).
-            if not (user_metadata.get("class_code") and is_district_address(user.email)):
-                send_welcome_email_later(user_email=user.email, user_name=user.name)
             # The FOUNDER3 offer email used to go out here alongside the welcome,
             # gated on an admin setting that defaulted to True. That row was never
             # written in prod, so the default applied and every new signup was
@@ -214,12 +223,17 @@ def get_current_user(
                 "signup_completed",
                 {"provider": (token_data.get("app_metadata") or {}).get("provider")},
             )
-            _claim_class_invites(
+            joined_class = _claim_class_invites(
                 db,
                 user,
                 user_metadata.get("class_code"),
                 (token_data.get("app_metadata") or {}).get("provider"),
             )
+            # The welcome goes on its own thread, never holding the request (or
+            # its connection) for Resend. After the class claim, so a Google
+            # signup that landed in a class is known to be one (_should_welcome).
+            if _should_welcome(user.email, user_metadata.get("class_code"), joined_class):
+                send_welcome_email_later(user_email=user.email, user_name=user.name)
     else:
         # An anonymous account that has since upgraded now carries a real email:
         # backfill it (and opt into marketing + a belated welcome).

@@ -330,3 +330,27 @@ class TeacherMakesOwnLinkTest(unittest.TestCase):
         with self.assertRaises(HTTPException) as e:
             _teacher(actor)
         self.assertEqual(e.exception.status_code, 403)
+
+
+class WelcomeEmailTest(unittest.TestCase):
+    """A student who lands in a class on a district address gets no welcome."""
+
+    def test_google_signup_in_a_class_on_a_district_address_gets_none(self):
+        from app.api.auth import _should_welcome
+
+        self.assertFalse(_should_welcome("774759@gilroyunified.org", None, True))
+
+    def test_class_code_signup_on_a_district_address_gets_none(self):
+        from app.api.auth import _should_welcome
+
+        self.assertFalse(_should_welcome("774759@gilroyunified.org", "gilroy-elizabeth", False))
+
+    def test_a_teacher_on_the_same_district_still_gets_one(self):
+        from app.api.auth import _should_welcome
+
+        self.assertTrue(_should_welcome("elizabeth.dirks@gilroyunified.org", None, False))
+
+    def test_an_actor_in_a_class_on_gmail_still_gets_one(self):
+        from app.api.auth import _should_welcome
+
+        self.assertTrue(_should_welcome("actor@gmail.com", None, True))
