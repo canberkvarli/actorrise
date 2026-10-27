@@ -89,7 +89,7 @@ export function CommunityLibraryButton() {
         onPointerEnter={() => setWarm(true)}
         onFocus={() => setWarm(true)}
         onTouchStart={() => setWarm(true)}
-        className="t-bring-in"
+        className="t-library-pill"
       >
         <IconBooks className="h-3.5 w-3.5" aria-hidden />
         Community library

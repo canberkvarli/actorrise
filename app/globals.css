@@ -4751,6 +4751,36 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
   transform: rotate(-1.5deg);
 }
 
+/* The Community library, beside "Bring in a script": the house's own shelf of
+   scenes, so it is lit rather than drawn. The dashed pill is a way to add
+   something of yours; this one is a room to walk into. Same gel and on-gel
+   pair the dashed pill fills with on hover, so it reads in both themes. */
+.t-library-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--t-gel-ink);
+  background:
+    linear-gradient(180deg, oklch(1 0 0 / 0.22), oklch(1 0 0 / 0) 55%),
+    var(--t-gel-ink);
+  color: var(--t-on-gel-ink);
+  font-family: var(--t-body);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 6px 18px -10px var(--t-gel-ink);
+  transition: transform 0.3s var(--t-spring), box-shadow 0.3s;
+}
+.t-library-pill:hover {
+  transform: rotate(-1.5deg) translateY(-1px);
+  box-shadow: 0 10px 24px -10px var(--t-gel-ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-library-pill:hover { transform: none; }
+}
+
 .t-shelf-heading {
   margin: 0;
   font-family: var(--t-direction);
