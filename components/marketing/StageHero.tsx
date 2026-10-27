@@ -88,9 +88,13 @@ export function StageHero({
 
         {children ? (
           <div
+            // An outline button keeps the page's light background but takes
+            // this band's cream text, so in light theme it rendered cream on
+            // cream, blank until hovered and blank again on hover. On the ink
+            // band it is a cream ring that fills cream on hover.
             className={`t-rise mt-8 flex flex-wrap items-center gap-3 ${
               centered ? "justify-center" : ""
-            }`}
+            } [&_[data-variant=outline]]:border [&_[data-variant=outline]]:border-[color:var(--t-cream)]/40 [&_[data-variant=outline]]:bg-transparent [&_[data-variant=outline]]:text-[color:var(--t-cream)] [&_[data-variant=outline]:hover]:bg-[color:var(--t-cream)] [&_[data-variant=outline]:hover]:text-[color:var(--t-ink)]`}
             style={{ "--t-d": ".36s" } as React.CSSProperties}
           >
             {children}

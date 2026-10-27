@@ -34,6 +34,12 @@ RESTING = "I'm resting for today. I've passed your question to Canberk, he reads
 PLUS_CAP = "That's a lot of questions for one day, I need a breather. I'm back tomorrow, and anything urgent can go to canberk@actorrise.com."
 NOT_READY = "I'm not switched on yet. Email canberk@actorrise.com and he'll get back to you."
 FALLBACK = "I can't help with that one. Want me to pass it to Canberk?"
+AT_CAP_HANDOFF = "I've passed this straight to Canberk. He reads everything and will reply by email."
+
+# What still reaches Canberk when a free actor has spent the month's messages.
+# Teachers and studios are where the money is; billing, account and bug reports
+# are owed an answer. Everything else meets the paywall.
+THROUGH_THE_CAP = {"teacher", "organization", "billing", "account", "bug"}
 
 # A second net under the prompt. If the actor's own words say teacher, money,
 # bug or delete, the conversation reaches Canberk even if the model forgets.
@@ -163,6 +169,16 @@ def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[st
     mark("caps")
 
     if not cap.allowed and cap.reason == "free_cap":
+        reason = backstop_reason(text)
+        if reason in THROUGH_THE_CAP:
+            # No model call: the cap is spent, but this one is for Canberk.
+            conv = today_conversation(db, int(user.id), create=True)
+            assert conv is not None
+            db.add(CueMessage(conversation_id=conv.id, user_id=user.id, role="user", content=text))
+            db.commit()
+            hand_off(db, user, conv, reason, text)
+            yield from _finish(db, conv, user, AT_CAP_HANDOFF, [], 0, 0, handed_off=True)
+            return
         yield {"type": "capped", "reason": "free_cap", "limit": cap.limit}
         return
 

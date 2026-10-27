@@ -85,6 +85,22 @@ class FreeCapTests(CueTestBase):
         asked = self.db.query(CueMessage).filter(CueMessage.role == "user").count()
         self.assertEqual(asked, 10, "the refused message is not stored or counted")
 
+    def test_teacher_at_the_cap_still_reaches_canberk(self):
+        with mock.patch.dict("os.environ", {"CUE_FREE_MONTHLY": "2"}):
+            for i in range(2):
+                self.ask(f"q{i}", [text_turn("Ok.")])
+            events, shown, model = self.ask(
+                "I teach drama at a high school, can my class use this?", [text_turn("No.")]
+            )
+            self.assertEqual(shown, agent.AT_CAP_HANDOFF)
+            self.assertEqual(model.calls, 0, "no model call past the cap, even for a handoff")
+            self.assertTrue(events[-1]["handed_off"])
+            fb = self.db.query(ResultFeedback).one()
+            self.assertIn("reason=teacher", fb.comment)
+            # An ordinary question after it still meets the wall.
+            events, _, _ = self.ask("a funny monologue", [text_turn("No.")])
+            self.assertEqual(events[0]["type"], "capped")
+
     def test_default_free_allowance_is_monthly_15(self):
         for i in range(15):
             self.ask(f"q{i}", [text_turn("Ok.")])

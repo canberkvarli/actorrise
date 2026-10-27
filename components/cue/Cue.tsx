@@ -84,7 +84,7 @@ export function Cue() {
   const send = useCallback(
     async (raw?: string) => {
       const text = (raw ?? draft).trim();
-      if (!text || busy || capped) return;
+      if (!text || busy) return;
       setDraft("");
       setBusy(true);
       setMsgs((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "" }]);
@@ -112,7 +112,7 @@ export function Cue() {
         setBusy(false);
       }
     },
-    [draft, busy, capped],
+    [draft, busy],
   );
 
   const left = thread?.limit != null ? Math.max(0, thread.limit - thread.used) : null;
@@ -202,7 +202,9 @@ export function Cue() {
               {capped && <CueWall />}
             </div>
 
-            {!capped && (
+            {/* Stays under the paywall: a teacher or a billing question still
+                reaches Canberk at the cap (THROUGH_THE_CAP in agent.py). */}
+            {(
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -223,7 +225,7 @@ export function Cue() {
                     }}
                     rows={1}
                     maxLength={2000}
-                    placeholder="Ask Cue something"
+                    placeholder={capped ? "Teacher or billing? Tell me here" : "Ask Cue something"}
                     aria-label="Message Cue"
                     className={s.input}
                   />
@@ -231,7 +233,7 @@ export function Cue() {
                     Send
                   </button>
                 </div>
-                {left != null && left <= 3 && (
+                {!capped && left != null && left <= 3 && (
                   <p className={s.left}>{left === 0 ? "Last one this month." : `${left} left this month.`}</p>
                 )}
               </form>
