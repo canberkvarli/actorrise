@@ -112,10 +112,13 @@ class UsageLimitsResponse(BaseModel):
     craft_coach_limit: int
     scripts_used: int
     scripts_limit: int
-    # Ghost Light iOS — full monologue reads. Lifetime, not monthly: `used` is
-    # all-time, `limit` is 3 on free and -1 (unlimited) on any paid tier.
+    # Full monologue reads, against the asking client's own allowance. Ghost
+    # Light: today's, refilled at the phone's midnight (X-Timezone); `limit` is
+    # 3 on free and -1 (unlimited) on any paid tier. The web: this month's.
     monologue_reads_used: int = 0
     monologue_reads_limit: int = 3
+    #: "day" for Ghost Light, "month" for the web, so a client can word its wall.
+    monologue_reads_window: str = "month"
 
 
 class BillingHistoryItem(BaseModel):
@@ -549,23 +552,39 @@ async def get_usage_limits(request: Request, current_user: User = Depends(get_cu
     # other is how a Ghost Light user would see "5 of 5 used" against a trial
     # they had never opened. Paid tiers read unlimited (-1).
     from app.middleware.rate_limiting import (
+        CLIENT_GHOSTLIGHT,
         distinct_reads,
         free_read_limit,
         normalise_client,
         normalise_device,
+        normalise_tz,
     )
 
     client = normalise_client(request.headers.get("x-client"))
     # This is the endpoint the app polls to paint the wall, so it has to agree
     # with the one that spends the read. If only the spender counted the device,
     # signing out would show three reads left and then refuse the first one.
+    # Ghost Light's three are today's, by the phone's own midnight, and
+    # tonight's speech is not one of them.
+    tz = normalise_tz(request.headers.get("x-timezone"))
+    ghostlight = client == CLIENT_GHOSTLIGHT
+    exempt = None
+    if ghostlight:
+        from app.services.tonight import free_tonight_ids
+
+        exempt = free_tonight_ids(db, int(current_user.id), tz)
     monologue_reads_used = distinct_reads(
         int(current_user.id),
         db,
         client=client,
         device_id=normalise_device(request.headers.get("x-device-id")),
+        tz=tz,
+        exempt=exempt,
     )
     monologue_reads_limit = -1 if is_paid else free_read_limit(client)
+    if ghostlight and monologue_reads_limit >= 0:
+        # Walled opens write view rows too; the meter says three of three, not five.
+        monologue_reads_used = min(monologue_reads_used, monologue_reads_limit)
 
     return UsageLimitsResponse(
         ai_searches_used=ai_searches_used,
@@ -578,6 +597,7 @@ async def get_usage_limits(request: Request, current_user: User = Depends(get_cu
         scripts_limit=scripts_limit,
         monologue_reads_used=monologue_reads_used,
         monologue_reads_limit=monologue_reads_limit,
+        monologue_reads_window="day" if ghostlight else "month",
     )
 
 

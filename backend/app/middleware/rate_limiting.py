@@ -385,7 +385,7 @@ def record_total_search(user_id: int, db: Session) -> None:
 # things (2026-09-01, Canberk):
 #
 #   web         5 distinct pieces per calendar month
-#   Ghost Light 3 distinct pieces, for life, then the paywall
+#   Ghost Light 3 distinct pieces a day, the actor's own day (since 2026-10-28)
 #
 # This is what settles the monthly-vs-lifetime disagreement that
 # ghostlight/docs/DESIGN.md §93 and this file used to argue about from opposite
@@ -488,19 +488,23 @@ def distinct_reads(
     client: str | None = None,
     device_id: str | None = None,
     exclude_monologue_id: int | None = None,
+    tz: str | None = None,
+    exempt: set[int] | None = None,
 ) -> int:
     """Distinct pieces this user has spent against `client`'s own allowance.
+
+    ``tz`` and ``exempt`` are Ghost Light's: the phone's zone, so its day ends
+    at the actor's midnight, and the pieces that never spend a read (tonight's).
 
     Two clients, two trials, two windows (see FREE_MONOLOGUE_READ_LIMIT):
 
     - web counts the CURRENT MONTH, and counts rows written by the web as well
       as rows with no client at all. Every view recorded before 2026-09-01
       predates the column and came from the web detail page, so NULL is web.
-    - Ghost Light counts FOR LIFE, and only rows it wrote itself. It therefore
-      starts at zero for everyone, which is correct for a trial that has never
-      been offered before.
+    - Ghost Light counts TODAY, the actor's own today, and only rows it wrote
+      itself (ghostlight_reads_today). It was three for life until 2026-10-28.
 
-    ``device_id`` closes the hole that made "for life" untrue. The count was
+    ``device_id`` closes the hole that made the allowance untrue. The count was
     keyed on the account alone, so Sign out handed anyone a fresh allowance:
     the session is revoked, the app mints a new anonymous user, and the new user
     has spent nothing. Ghost Light therefore counts pieces read by this user OR
@@ -516,30 +520,102 @@ def distinct_reads(
     """
     from app.models.search_log import MonologueView
 
-    query = db.query(func.count(func.distinct(MonologueView.monologue_id)))
     if normalise_client(client) == CLIENT_GHOSTLIGHT:
-        # An older app, or one whose storage failed, sends no device id. It must
-        # keep behaving exactly as before rather than matching every other row
-        # that also has NULL — which is what `device_id == None` would do, and it
-        # would pool every unlabelled install into one shared allowance.
-        who = (
-            or_(MonologueView.user_id == user_id, MonologueView.device_id == device_id)
-            if device_id
-            else (MonologueView.user_id == user_id)
-        )
-        query = query.filter(who, MonologueView.client == CLIENT_GHOSTLIGHT)
-    else:
-        query = query.filter(MonologueView.user_id == user_id)
-        query = query.filter(
-            or_(
-                MonologueView.client == CLIENT_WEB,
-                MonologueView.client.is_(None),
-            ),
-            MonologueView.created_at >= _period_start_utc(),
-        )
+        # Three a day since 2026-10-28 (was three for life). See ghostlight_reads_today.
+        today = ghostlight_reads_today(user_id, db, device_id=device_id, tz=tz, exempt=exempt)
+        if exclude_monologue_id is not None:
+            today = [m for m in today if m != exclude_monologue_id]
+        return len(today)
+
+    query = db.query(func.count(func.distinct(MonologueView.monologue_id)))
+    query = query.filter(MonologueView.user_id == user_id)
+    query = query.filter(
+        or_(
+            MonologueView.client == CLIENT_WEB,
+            MonologueView.client.is_(None),
+        ),
+        MonologueView.created_at >= _period_start_utc(),
+    )
     if exclude_monologue_id is not None:
         query = query.filter(MonologueView.monologue_id != exclude_monologue_id)
     return int(query.scalar() or 0)
+
+
+def ghostlight_reads_today(
+    user_id: int,
+    db: Session,
+    *,
+    device_id: str | None = None,
+    tz: str | None = None,
+    exempt: set[int] | None = None,
+) -> list[int]:
+    """The distinct pieces Ghost Light opened today, in the order first opened.
+
+    Three a day, refilled at the actor's midnight (the phone sends its zone in
+    X-Timezone). The order is the point. A walled open still writes a view row,
+    so "has a view row today" cannot mean "was read": the pieces that were
+    actually read are the first `limit` of this list, and only those stay open
+    when the actor comes back to them. Counting any viewed piece as read let a
+    search hand back the full text of a piece that had only ever been walled,
+    and counting the others against a piece already read walled it.
+
+    ``exempt`` never spends a read: tonight's speech. A saved piece DOES spend
+    one when it is first read; it is only exempt from the wall afterwards, or
+    saving would hand back the read and three a day would be any number.
+    """
+    from app.models.search_log import MonologueView
+    from app.services.tonight import day_start_utc
+
+    # An older app, or one whose storage failed, sends no device id. It must
+    # not match every other row that also has NULL, which would pool every
+    # unlabelled install into one shared allowance.
+    who = (
+        or_(MonologueView.user_id == user_id, MonologueView.device_id == device_id)
+        if device_id
+        else (MonologueView.user_id == user_id)
+    )
+    rows = (
+        db.query(MonologueView.monologue_id, func.min(MonologueView.created_at).label("first"))
+        .filter(
+            who,
+            MonologueView.client == CLIENT_GHOSTLIGHT,
+            MonologueView.created_at >= day_start_utc(tz),
+        )
+        .group_by(MonologueView.monologue_id)
+        .order_by("first")
+        .all()
+    )
+    skip = exempt or set()
+    return [int(r[0]) for r in rows if int(r[0]) not in skip]
+
+
+def ghostlight_open_today(
+    user_id: int,
+    db: Session,
+    *,
+    device_id: str | None = None,
+    tz: str | None = None,
+    exempt: set[int] | None = None,
+) -> tuple[set[int], int]:
+    """(pieces read today and so open again, how many of today's reads are spent)."""
+    today = ghostlight_reads_today(user_id, db, device_id=device_id, tz=tz, exempt=exempt)
+    limit = FREE_MONOLOGUE_READ_LIMIT_GHOSTLIGHT
+    return set(today[:limit]), min(len(today), limit)
+
+
+def normalise_tz(value: str | None) -> str | None:
+    """The phone's IANA zone from X-Timezone, or None. Checked, because it is a
+    header: anything zoneinfo cannot read is dropped and the day is UTC's."""
+    cleaned = (value or "").strip()[:64]
+    if not cleaned:
+        return None
+    try:
+        from zoneinfo import ZoneInfo
+
+        ZoneInfo(cleaned)
+        return cleaned
+    except Exception:
+        return None
 
 
 def monthly_distinct_reads(

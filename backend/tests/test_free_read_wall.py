@@ -195,13 +195,15 @@ class TestSeparateTrialsPerClient:
         assert distinct_reads(1, db, client=CLIENT_WEB) == 1
         assert distinct_reads(1, db, client=CLIENT_GHOSTLIGHT) == 0
 
-    def test_the_app_trial_is_lifetime_not_monthly(self, db):
-        # Two months ago. The web would have forgotten this; the app must not.
-        long_ago = _period_start_utc() - timedelta(days=45)
-        _view(db, user_id=1, monologue_id=1, client=CLIENT_GHOSTLIGHT, when=long_ago)
-        _view(db, user_id=1, monologue_id=2, client=CLIENT_WEB, when=long_ago)
+    def test_the_app_allowance_is_todays(self, db):
+        # Three a day since 2026-10-28, refilled at midnight. Yesterday's read
+        # is spent and gone; the web's month does not reach the app either.
+        yesterday = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1, hours=1)
+        _view(db, user_id=1, monologue_id=1, client=CLIENT_GHOSTLIGHT, when=yesterday)
+        _view(db, user_id=1, monologue_id=2, client=CLIENT_WEB, when=yesterday)
+        assert distinct_reads(1, db, client=CLIENT_GHOSTLIGHT) == 0
+        _view(db, user_id=1, monologue_id=3, client=CLIENT_GHOSTLIGHT)
         assert distinct_reads(1, db, client=CLIENT_GHOSTLIGHT) == 1
-        assert distinct_reads(1, db, client=CLIENT_WEB) == 0
 
     def test_reopening_a_piece_is_free_on_both(self, db):
         for _ in range(4):

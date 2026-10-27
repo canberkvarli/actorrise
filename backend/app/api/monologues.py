@@ -14,14 +14,19 @@ from app.middleware.rate_limiting import (
     CLIENT_WEB,
     distinct_reads,
     free_read_limit,
+    ghostlight_open_today,
+    ghostlight_reads_today,
     normalise_client,
     normalise_device,
+    normalise_tz,
     record_monologue_read,
     record_total_search,
 )
 from app.models.billing import PricingTier, UserSubscription
 from app.services.email.resend_client import ResendEmailClient
 from app.services.licensing import may_serve_text
+from app.services.tonight import (free_tonight_ids, house_index, house_pool,
+                                  local_today, pick_for)
 from app.core.config import settings
 from app.core.database import get_db
 from app.middleware.burst_limiter import BurstLimiter
@@ -1461,11 +1466,9 @@ class TonightResponse(BaseModel):
     days: List[TonightDay]
 
 
-def _tonight_index(day_number: int, count: int) -> int:
-    """Knuth's multiplicative hash of the day, so consecutive days do not walk
-    the pool in order. Bit-for-bit what the app computes for itself when it is
-    offline (`tonightIndex` in src/hooks/useTonight.ts), so the two agree."""
-    return ((day_number * 2654435761) % (1 << 32)) % count
+# The house pick lives in services/tonight.py, where the read wall can ask it too.
+_tonight_index = house_index
+_tonight_pool = house_pool
 
 
 def _quote(text: str, limit: int = 150) -> str:
@@ -1543,6 +1546,76 @@ async def get_tonight(
     return payload
 
 
+class TonightMine(BaseModel):
+    day: str
+    house: Literal["stage", "screen"]
+    quote: str
+    #: None until the actor answers: "keep" or "pass".
+    answer: Optional[str] = None
+    monologue: MonologueResponse
+
+
+class TonightAnswer(BaseModel):
+    house: Literal["stage", "screen"] = "stage"
+    answer: Literal["keep", "pass"]
+
+
+@router.get("/tonight/mine", response_model=TonightMine)
+async def get_tonight_mine(
+    request: Request,
+    house: Literal["stage", "screen"] = Query("stage"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """This actor's speech for tonight, whole: tonight's is never walled.
+
+    Chosen once a night from what they keep and what they have passed on
+    (services/tonight.py), on the phone's own date (X-Timezone)."""
+    day = local_today(normalise_tz(request.headers.get("x-timezone")))
+    row = pick_for(db, int(current_user.id), house, day)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Nothing for tonight")
+    m = (
+        db.query(Monologue)
+        .options(joinedload(Monologue.play).joinedload(Play.film_tv_reference))
+        .filter(Monologue.id == row.monologue_id)
+        .first()
+    )
+    if m is None:
+        raise HTTPException(status_code=404, detail="Nothing for tonight")
+    fav = db.query(MonologueFavorite.id).filter(
+        MonologueFavorite.user_id == current_user.id,
+        MonologueFavorite.monologue_id == m.id,
+        MonologueFavorite.removed_at.is_(None),
+    ).first()
+    return TonightMine(
+        day=day.isoformat(),
+        house=house,
+        quote=_quote(cast(str, m.text)),
+        answer=row.answer,
+        monologue=_monologue_to_response(m, is_favorited=fav is not None),
+    )
+
+
+@router.post("/tonight/mine/answer")
+async def answer_tonight_mine(
+    body: TonightAnswer,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Keep or Not for me, on tonight's speech. It shapes tomorrow's pick.
+    Keeping it into the Book is the favorite endpoint's job; this only records
+    the answer."""
+    day = local_today(normalise_tz(request.headers.get("x-timezone")))
+    row = pick_for(db, int(current_user.id), body.house, day)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Nothing for tonight")
+    row.answer = body.answer  # type: ignore[assignment]
+    db.commit()
+    return {"day": day.isoformat(), "house": body.house, "answer": body.answer}
+
+
 #: Roughly what two lines of verse or a couple of prose sentences come to. The
 #: teaser has to be enough to recognise the piece and not enough to rehearse it.
 _TEASER_MAX_WORDS = 40
@@ -1580,6 +1653,22 @@ def _apply_list_wall(
             return
 
         limit = free_read_limit(client)
+        if client == CLIENT_GHOSTLIGHT:
+            tz = normalise_tz(request.headers.get("x-timezone")) if request else None
+            tonight = free_tonight_ids(db, int(user.id), tz)
+            open_today, used = ghostlight_open_today(
+                int(user.id), db, device_id=device, tz=tz, exempt=tonight
+            )
+            if used < limit:
+                return
+            for r in responses:
+                if r.id in favorite_ids or r.id in open_today or r.id in tonight:
+                    continue
+                r.text = _teaser(r.text)
+                r.text_segments = None
+                r.paywalled = True
+            return
+
         reads_used = distinct_reads(int(user.id), db, client=client, device_id=device)
         if reads_used < limit:
             return  # nothing to wall; skip the second query entirely
@@ -1734,6 +1823,29 @@ async def get_monologue(
     if fav is None and not _user_has_unlimited_reads(
         int(current_user.id), db, getattr(current_user, "email", None)
     ):
+        if view_client == CLIENT_GHOSTLIGHT:
+            # Three a day. Tonight's speech never spends one, and a piece
+            # among today's first three stays open however many walled
+            # pieces were opened after it (ghostlight_reads_today).
+            view_tz = normalise_tz(request.headers.get("x-timezone"))
+            tonight = free_tonight_ids(db, int(current_user.id), view_tz)
+            walled = False
+            if monologue_id not in tonight:
+                today = ghostlight_reads_today(
+                    int(current_user.id), db, device_id=view_device, tz=view_tz, exempt=tonight
+                )
+                limit = free_read_limit(view_client)
+                walled = (
+                    today.index(monologue_id) >= limit
+                    if monologue_id in today
+                    else len(today) >= limit
+                )
+            if walled:
+                resp.text = _teaser(resp.text)
+                resp.text_segments = None
+                resp.paywalled = True
+            return resp
+
         already_read = distinct_reads(
             int(current_user.id),
             db,
@@ -2349,7 +2461,17 @@ async def record_read(
         db.rollback()
 
     limit = free_read_limit(client)
-    reads_used = distinct_reads(int(current_user.id), db, client=client, device_id=device)
+    tz = normalise_tz(request.headers.get("x-timezone"))
+    reads_used = distinct_reads(
+        int(current_user.id),
+        db,
+        client=client,
+        device_id=device,
+        tz=tz,
+        exempt=free_tonight_ids(db, int(current_user.id), tz) if client == CLIENT_GHOSTLIGHT else None,
+    )
+    if client == CLIENT_GHOSTLIGHT:
+        reads_used = min(reads_used, limit)
 
     return {
         "monologue_id": monologue_id,
