@@ -2409,6 +2409,25 @@ def _build_scenes(db: Session, user_script, play_id: int, scenes_data: list) -> 
 _EXTRACTION_CANCELS: dict = {}
 _EXTRACTION_CANCELS_LOCK = threading.Lock()
 
+# Where a background read has got to, for the phone that asked for it and then
+# went off to do something else: the last line the parser said, when it began,
+# and how long the pages suggest it takes. In memory, like the cancels: a
+# restart ends the read too, and the abandoned-extraction sweep says so.
+_EXTRACTION_PROGRESS: dict = {}
+
+
+def _estimate_seconds(pages: int) -> int:
+    # Measured loosely: the model calls dominate, a few seconds a page, with
+    # a fixed cost for the cast and the title either way.
+    return int(min(600, 25 + 6 * max(1, pages)))
+
+
+def _note_progress(script_id: int, step: str) -> None:
+    with _EXTRACTION_CANCELS_LOCK:
+        entry = _EXTRACTION_PROGRESS.get(script_id)
+        if entry is not None:
+            entry["step"] = step
+
 
 def cancel_background_extraction(script_id: int) -> bool:
     """Ask a running extraction to stop. True if one was listening."""
@@ -2533,16 +2552,24 @@ def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
     `source_pdf` is the original file of a picked PDF upload, read in full after
     the scenes are built so the rest of it can be offered later.
     """
+    import time as _time
+
     db = SessionLocal()
     cancel_event = threading.Event()
     with _EXTRACTION_CANCELS_LOCK:
         _EXTRACTION_CANCELS[script_id] = cancel_event
+        _EXTRACTION_PROGRESS[script_id] = {
+            "started": _time.time(),
+            "pages": max(1, len(file_content) // 3000),
+            "step": f"Opening {filename}",
+        }
     try:
         owner = db.query(UserScript.user_id).filter(UserScript.id == script_id).scalar()
         parser = ScriptParser()
         result = parser.parse_script(
             file_content, file_ext, filename, mode=mode, cancel_event=cancel_event,
             front_matter=front_matter, reading_budget=reading_budget(db, owner),
+            on_progress=lambda msg: _note_progress(script_id, msg),
         )
         _note_reading_cap(result, owner)
 
@@ -2620,7 +2647,43 @@ def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
     finally:
         with _EXTRACTION_CANCELS_LOCK:
             _EXTRACTION_CANCELS.pop(script_id, None)
+            _EXTRACTION_PROGRESS.pop(script_id, None)
         db.close()
+
+
+@router.get("/{script_id}/progress")
+async def extraction_progress(
+    script_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """How far a background read has got, and about how long it has left.
+
+    The phone polls this while the map is up and while the row on the shelf
+    still says it is reading. `step` is the parser's own last line (the phone
+    folds those into its map); the estimate is from the pages, so it is an
+    "about", and the phone says it that way.
+    """
+    import time as _time
+
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id,
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+    with _EXTRACTION_CANCELS_LOCK:
+        entry = dict(_EXTRACTION_PROGRESS.get(script_id) or {})
+    elapsed = int(_time.time() - entry["started"]) if entry.get("started") else None
+    estimate = _estimate_seconds(entry["pages"]) if entry.get("pages") else None
+    return {
+        "status": script.processing_status,
+        "error": script.processing_error,
+        "step": entry.get("step"),
+        "elapsed_seconds": elapsed,
+        "estimate_seconds": estimate,
+        "scenes": script.num_scenes_extracted or 0,
+    }
 
 
 # Enough for a title page, a copyright line and a cast list.
@@ -2736,6 +2799,27 @@ async def upload_script_background(
         file_content, file_ext = normalize_upload(file.filename, file_content)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    # The same file again, whole, is the script they already have (as on the
+    # streaming door): same name, same size, read to the end once already.
+    if not scenes:
+        already = (
+            db.query(UserScript)
+            .filter(
+                UserScript.user_id == current_user.id,
+                UserScript.original_filename == file.filename,
+                UserScript.file_size_bytes == file_size,
+                UserScript.processing_status == "completed",
+            )
+            .order_by(UserScript.id.desc())
+            .first()
+        )
+        if already is not None:
+            had = db.query(Scene).filter(Scene.user_script_id == already.id).all()
+            return UserScriptDetailResponse(
+                **UserScriptResponse.model_validate(already).model_dump(),
+                scenes=[SceneInScriptResponse.model_validate(sc) for sc in had],
+            )
 
     import hashlib
     import threading
