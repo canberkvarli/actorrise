@@ -48,7 +48,9 @@ export type UserEventName =
   | "audition_reminder_clicked"
   | "audition_landing_shown"
   | "audition_strip_clicked"
-  | "calendar_feed_subscribed";
+  | "calendar_feed_subscribed"
+  | "class_link_self_made"
+  | "class_link_copied";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

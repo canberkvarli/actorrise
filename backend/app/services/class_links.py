@@ -15,6 +15,7 @@ Three people are left alone rather than granted:
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -28,6 +29,7 @@ from app.models.user import User
 from app.services.email.school_address import is_district_address
 
 ADMIN_EMAIL = "canberk@actorrise.com"
+logger = logging.getLogger(__name__)
 CODE_RE = re.compile(r"^[a-z0-9][a-z0-9-]{2,63}$")
 
 
@@ -234,3 +236,118 @@ def _grant(db: Session, link: ClassLink, user: User) -> None:
         admin=admin,
         db=db,
     )
+
+
+# --- A teacher makes their own link -----------------------------------------
+#
+# Until 2026-10-27 only Canberk made links (scripts/class_link.py), so every
+# class waited on him reading an email and writing back. The one class that
+# came in (Gilroy, 36 students) did it the day the teacher had the link. Now a
+# teacher account makes its own from the library.
+#
+# A school address (a college or a district domain) gets a link that works at
+# once. Any other address gets one that waits switched off until Canberk turns
+# it on (`class_link.py on <code>`), because "Teacher" is one tap at signup and
+# a working link hands out Plus. He is emailed about every link made, either way.
+
+SELF_SERVE_MAX_USES = 40
+_SLUG = re.compile(r"[^a-z0-9]+")
+
+
+def _slug(text: str | None, limit: int = 24) -> str:
+    return _SLUG.sub("-", (text or "").lower()).strip("-")[:limit].strip("-")
+
+
+def own_link(db: Session, user: User) -> ClassLink | None:
+    """The teacher's own link, newest first if Canberk ever made them two."""
+    return (
+        db.query(ClassLink)
+        .filter(ClassLink.teacher_user_id == user.id)
+        .order_by(ClassLink.created_at.desc(), ClassLink.id.desc())
+        .first()
+    )
+
+
+def _free_code(db: Session, base: str) -> str:
+    base = base if CODE_RE.match(base) else f"class-{base}".strip("-")
+    if not CODE_RE.match(base):
+        base = "class"
+    code, n = base, 2
+    while db.query(ClassLink.id).filter(ClassLink.code == code).first() is not None:
+        code, n = f"{base}-{n}", n + 1
+    return code
+
+
+def make_own_link(db: Session, user: User, school: str | None = None) -> ClassLink:
+    """The teacher's link, made now if they have none. Safe to call twice."""
+    existing = own_link(db, user)
+    if existing is not None:
+        return existing
+
+    first = (user.name or "").strip().split(" ")[0] or (user.email or "").split("@")[0]
+    school_label = (school or user.organization or "").strip()[:120] or None
+    code = _free_code(db, "-".join(p for p in (_slug(school_label, 20), _slug(first, 16)) if p) or _slug(first))
+    link = ClassLink(
+        code=code,
+        teacher_user_id=user.id,
+        organization_id=user.organization_id,
+        teacher_label=first[:80],
+        school_label=school_label,
+        days=30,
+        max_uses=SELF_SERVE_MAX_USES,
+        active=_is_school_domain(_domain(user.email)),
+    )
+    db.add(link)
+    try:
+        db.commit()
+    except IntegrityError:
+        # The same teacher tapping twice at once: the other request made it.
+        db.rollback()
+        made = own_link(db, user)
+        if made is None:
+            raise
+        return made
+    db.refresh(link)
+    _tell_founder(link, user)
+    return link
+
+
+def _tell_founder(link: ClassLink, user: User) -> None:
+    try:
+        from app.services.email.resend_client import ResendEmailClient
+
+        state = (
+            "It works now (school address)."
+            if link.active
+            else f"It is OFF until you turn it on: <code>uv run python scripts/class_link.py on {link.code}</code>"
+        )
+        ResendEmailClient().send_email(
+            to=ADMIN_EMAIL,
+            subject=f"A teacher made a class link: {link.code}",
+            html=(
+                f"<p>{user.email} (user {user.id}) made actorrise.com/join/{link.code}"
+                f" for {link.school_label or 'no school given'}.</p><p>{state}</p>"
+                f"<p>Up to {link.max_uses} students, {link.days} days each. Switch it off with"
+                f" <code>class_link.py off {link.code}</code>.</p>"
+            ),
+        )
+    except Exception:
+        logger.exception("class link: founder email failed for %s", link.code)
+
+
+def link_summary(db: Session, link: ClassLink) -> dict:
+    granted = (
+        db.query(ClassLinkJoin)
+        .filter(ClassLinkJoin.class_link_id == link.id, ClassLinkJoin.outcome == "granted")
+        .count()
+    )
+    joined = db.query(ClassLinkJoin).filter(ClassLinkJoin.class_link_id == link.id).count()
+    return {
+        "code": link.code,
+        "active": bool(link.active),
+        "school": link.school_label,
+        "days": link.days,
+        "max_uses": link.max_uses,
+        "granted": granted,
+        "joined": joined,
+    }

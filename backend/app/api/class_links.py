@@ -1,6 +1,7 @@
 """actorrise.com/join/<code>: a teacher's class link (services/class_links.py)."""
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
@@ -9,6 +10,35 @@ from app.models.user import User
 from app.services import class_links
 
 router = APIRouter(prefix="/api/class-links", tags=["class-links"])
+
+
+class MakeLinkRequest(BaseModel):
+    school: str | None = Field(default=None, max_length=120)
+
+
+def _teacher(user: User) -> User:
+    if user.account_type != "educator":
+        raise HTTPException(status_code=403, detail="Class links are for teacher accounts")
+    return user
+
+
+# Declared before /{code}, which would otherwise take "mine" as a code.
+@router.get("/mine")
+def read_my_class_link(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The teacher's own link and how many students came in, or null."""
+    link = class_links.own_link(db, _teacher(current_user))
+    return {"link": class_links.link_summary(db, link) if link else None}
+
+
+@router.post("/mine")
+def make_my_class_link(
+    body: MakeLinkRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Make the teacher's link (or return the one they have)."""
+    link = class_links.make_own_link(db, _teacher(current_user), school=body.school if body else None)
+    return {"link": class_links.link_summary(db, link)}
 
 
 @router.get("/{code}")

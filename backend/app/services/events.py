@@ -157,6 +157,9 @@ CLIENT_EVENT_NAMES = frozenset(
         "audition_landing_shown",  # {audition_id}: login sent them to the prep room
         "audition_strip_clicked",  # {surface: rehearse|monologues|winback_email}
         "calendar_feed_subscribed",  # {provider: google|apple|outlook|copy, surface: header|first_save}
+        # A teacher's own class link (components/educator/TeacherClassCard.tsx).
+        "class_link_self_made",  # {active}: made from the library; inactive waits for Canberk
+        "class_link_copied",  # the teacher copied their link
     }
 )
 

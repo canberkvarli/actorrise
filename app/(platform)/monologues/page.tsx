@@ -12,6 +12,7 @@ import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/events";
 import { AuditionStrip } from "@/components/auditions/AuditionStrip";
+import { TeacherClassCard } from "@/components/educator/TeacherClassCard";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -2197,7 +2198,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </Dialog>
       </div>
 
-      <AuditionStrip surface="monologues" />
+      {/* A teacher came for their class, not an audition. */}
+      {user?.account_type === "educator" ? <TeacherClassCard /> : <AuditionStrip surface="monologues" />}
 
       <div className="space-y-6">
 

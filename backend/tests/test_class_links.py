@@ -237,3 +237,83 @@ class ClassLinkJoinTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TeacherMakesOwnLinkTest(unittest.TestCase):
+    """A teacher account makes its own link; only a school address gets one that works."""
+
+    def setUp(self):
+        self.db, self.saved = memory_db(
+            [Organization, User, PricingTier, UserSubscription, AdminAuditLog, ClassLink, ClassLinkJoin, ClassLinkInvite]
+        )
+        self.told = []
+        self.patch = mock.patch(
+            "app.services.class_links._tell_founder", lambda link, user: self.told.append(link.code)
+        )
+        self.patch.start()
+
+    def tearDown(self):
+        self.patch.stop()
+        self.db.close()
+        restore(self.saved)
+
+    def _teacher(self, email, name="Elena Ruiz", org=None):
+        user = User(email=email, supabase_id=email, name=name, account_type="educator", organization=org)
+        self.db.add(user)
+        self.db.commit()
+        return user
+
+    def test_school_address_gets_a_working_link_named_for_school_and_teacher(self):
+        t = self._teacher("eruiz@lincolnusd.org", org="Lincoln High")
+        link = class_links.make_own_link(self.db, t)
+        self.assertEqual(link.code, "lincoln-high-elena")
+        self.assertTrue(link.active)
+        self.assertEqual((link.teacher_label, link.school_label), ("Elena", "Lincoln High"))
+        self.assertEqual(link.max_uses, class_links.SELF_SERVE_MAX_USES)
+        self.assertEqual(self.told, ["lincoln-high-elena"])
+
+    def test_college_address_works_too(self):
+        self.assertTrue(class_links.make_own_link(self.db, self._teacher("prof@state.edu")).active)
+
+    def test_any_other_address_waits_switched_off(self):
+        link = class_links.make_own_link(self.db, self._teacher("drama.teacher@gmail.com"))
+        self.assertFalse(link.active)
+        self.assertEqual(self.told, [link.code])
+
+    def test_asking_twice_returns_the_same_link_and_tells_once(self):
+        t = self._teacher("eruiz@lincolnusd.org", org="Lincoln High")
+        first = class_links.make_own_link(self.db, t)
+        again = class_links.make_own_link(self.db, t, school="Somewhere Else")
+        self.assertEqual(first.id, again.id)
+        self.assertEqual(self.db.query(ClassLink).count(), 1)
+        self.assertEqual(len(self.told), 1)
+
+    def test_a_taken_code_gets_a_number(self):
+        a = class_links.make_own_link(self.db, self._teacher("a@lincolnusd.org", org="Lincoln High"))
+        b = class_links.make_own_link(self.db, self._teacher("b@lincolnusd.org", org="Lincoln High"))
+        self.assertEqual((a.code, b.code), ("lincoln-high-elena", "lincoln-high-elena-2"))
+
+    def test_school_typed_on_the_card_wins_over_none(self):
+        link = class_links.make_own_link(self.db, self._teacher("x@lincolnusd.org", name=None), school="Gilroy HS")
+        self.assertEqual(link.code, "gilroy-hs-x")
+        self.assertEqual(link.school_label, "Gilroy HS")
+
+    def test_summary_counts_grants(self):
+        t = self._teacher("eruiz@lincolnusd.org")
+        link = class_links.make_own_link(self.db, t)
+        s = User(email="kid@lincolnusd.org", supabase_id="kid")
+        self.db.add(s)
+        self.db.commit()
+        self.db.add(ClassLinkJoin(class_link_id=link.id, user_id=s.id, outcome="granted"))
+        self.db.commit()
+        self.assertEqual(class_links.link_summary(self.db, link)["granted"], 1)
+
+    def test_only_teacher_accounts_reach_the_endpoint(self):
+        from fastapi import HTTPException
+
+        from app.api.class_links import _teacher
+
+        actor = User(email="a@gmail.com", supabase_id="a", account_type="actor")
+        with self.assertRaises(HTTPException) as e:
+            _teacher(actor)
+        self.assertEqual(e.exception.status_code, 403)
