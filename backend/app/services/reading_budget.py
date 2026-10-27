@@ -67,11 +67,41 @@ def reading_budget(db: Session, user_id: Optional[int]) -> Optional[int]:
         return None
     try:
         used = scenes_built_this_month(db, user_id)
+        allowance = monthly_allowance(db, user_id)
     except Exception:
         # Counting must never be the thing that breaks an upload.
         logger.exception("reading_budget: could not count scenes for user %s", user_id)
         return None
-    return max(0, SCENE_READS_PER_MONTH - used)
+    return max(0, allowance - used)
+
+
+#: A UserBenefitOverride on this key ("set", an int) raises or lowers one
+#: account's month, until it expires. For a teacher bringing in a whole folder
+#: of scenes at once (the class shelf, 2026-10-27): grant it for the month,
+#: with an expiry, rather than raising everyone's.
+OVERRIDE_KEY = "scene_reads_per_month"
+
+
+def monthly_allowance(db: Session, user_id: int) -> int:
+    from app.models.billing import UserBenefitOverride
+
+    now = datetime.now(timezone.utc)
+    row = (
+        db.query(UserBenefitOverride)
+        .filter(
+            UserBenefitOverride.user_id == user_id,
+            UserBenefitOverride.feature_key == OVERRIDE_KEY,
+            UserBenefitOverride.override_type == "set",
+        )
+        .order_by(UserBenefitOverride.id.desc())
+        .first()
+    )
+    if row is None or not isinstance(row.value, int) or isinstance(row.value, bool):
+        return SCENE_READS_PER_MONTH
+    expires = row.expires_at
+    if expires is not None and (expires if expires.tzinfo else expires.replace(tzinfo=timezone.utc)) <= now:
+        return SCENE_READS_PER_MONTH
+    return max(0, row.value)
 
 
 def tell_founder_once(user_id: int, over_by: int) -> None:

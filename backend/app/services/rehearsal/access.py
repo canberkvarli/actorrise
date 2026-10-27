@@ -36,6 +36,13 @@ def assert_can_rehearse(db, user, scene, script=None) -> None:
     own_script_allowed = script is not None and script.user_id == user.id
     if library_allowed or sample_allowed or own_script_allowed:
         return
+    # A teacher's scene for their class rehearses on any plan: it is the reason
+    # a student opens the app, and a student month runs out mid-term.
+    if getattr(script, "class_share", None) == "live":
+        from app.services import class_shelf
+
+        if class_shelf.can_read(db, user, script):
+            return
     if scene.is_library:
         detail = {
             "error": "library_upgrade_required",

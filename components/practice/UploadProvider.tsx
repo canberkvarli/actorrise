@@ -43,6 +43,8 @@ import {
   type SceneMapResponse,
 } from "@/hooks/useSceneMap";
 import { useSubscription, useUsageLimits } from "@/hooks/useSubscription";
+import { useMySharing, useShareWithClass } from "@/hooks/useClassShelf";
+import { useAuth } from "@/lib/auth";
 
 // Known backend progress prefixes and their friendly group labels.
 const STEP_GROUPS: { match: string; label: string }[] = [
@@ -184,6 +186,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const { data: scripts = [] } = useScripts();
   const { usage } = useUsageLimits();
   const { subscription } = useSubscription();
+  const { user } = useAuth();
 
   // Unknown tier reads as free: offering a picker that promises more than the
   // server will build is worse than offering less and being right.
@@ -520,6 +523,118 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     [getToken, queryClient, router],
   );
 
+  /* A teacher who brought in a folder is asked once whether the class gets it,
+     rather than flipping 500 switches. Off until they say so. */
+  const { data: sharing } = useMySharing(user?.account_type === "educator");
+  const shareWithClass = useShareWithClass();
+  const onManyTaken = useCallback(
+    (ids: number[]) => {
+      if (!sharing?.can_share) return;
+      toast(`Share these ${ids.length} with your class?`, {
+        duration: 20000,
+        action: {
+          label: "Share",
+          onClick: () =>
+            shareWithClass.mutate(
+              { scriptIds: ids, on: true },
+              {
+                onSuccess: (r) =>
+                  toast.success(`Shared ${r.changed} with your class. Students see each one once it's read.`),
+                onError: () => toast.error("Couldn't share them. Try the switch on each script."),
+              },
+            ),
+        },
+      });
+    },
+    [sharing?.can_share, shareWithClass],
+  );
+
+  /**
+   * A folder of files at once: a teacher who typed every scene up on its own
+   * (The Actors Workshop, 500 of them). Each file goes to the background door
+   * whole, no picker, a few at a time; the server reads three at once and
+   * queues the rest, so the shelf fills in while they get on with something
+   * else. The tab has to stay open until the last file is taken, not read.
+   */
+  const startMany = useCallback(
+    async (files: File[]) => {
+      const AT_ONCE = 3;
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      setUploadingFile(true);
+      setExtractionDone(false);
+      setDoneInfo(null);
+      setMinimized(true);
+      const taken: number[] = [];
+      const failed: string[] = [];
+      let sent = 0;
+      let stopped = false;
+      const label = () => `${taken.length + failed.length} of ${files.length} files`;
+      setFileName(label());
+      setProgressSteps([{ group: "Taking your files", detail: label() }]);
+
+      const send = async (file: File) => {
+        const token = await getToken();
+        if (!token) throw new Error("Please sign in again to upload.");
+        const form = new FormData();
+        form.append("file", file);
+        form.append("mode", "full");
+        const res = await fetch(`${API_URL}/api/scripts/upload-background`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          if (err.detail?.error === "feature_not_available") {
+            stopped = true;
+            setShowUpgradeModal(true);
+          }
+          throw new Error(typeof err.detail === "string" ? err.detail : "Upload failed");
+        }
+        return (await res.json()) as { id: number };
+      };
+
+      const worker = async () => {
+        while (!stopped && !controller.signal.aborted && sent < files.length) {
+          const file = files[sent++];
+          try {
+            taken.push((await send(file)).id);
+          } catch (e) {
+            if (e instanceof Error && e.name === "AbortError") return;
+            failed.push(file.name);
+          }
+          setFileName(label());
+          setProgressSteps([{ group: "Taking your files", detail: label() }]);
+        }
+      };
+
+      try {
+        await Promise.all(Array.from({ length: Math.min(AT_ONCE, files.length) }, worker));
+        await invalidateShelf(queryClient);
+        if (controller.signal.aborted) {
+          toast.info(`Stopped. ${taken.length} of ${files.length} files were taken.`);
+        } else if (taken.length > 0) {
+          toast.success(
+            `Took ${taken.length} ${taken.length === 1 ? "file" : "files"}. They're being read now and will fill your shelf as they finish.`,
+          );
+        }
+        if (failed.length > 0 && !stopped) {
+          toast.error(
+            `${failed.length} couldn't be read: ${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""}`,
+          );
+        }
+        if (taken.length > 0) onManyTaken?.(taken);
+      } finally {
+        abortControllerRef.current = null;
+        setUploadingFile(false);
+        setProgressSteps([]);
+      }
+    },
+    [getToken, queryClient, onManyTaken],
+  );
+
   const start = useCallback(
     async (file: File) => {
       if (isBusy) return;
@@ -800,6 +915,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         open={showBringIn}
         onOpenChange={setShowBringIn}
         onFile={(file) => void start(file)}
+        onFiles={(files) => void startMany(files)}
       />
 
       {/* Centre stage while the script is being read */}

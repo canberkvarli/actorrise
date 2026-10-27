@@ -508,6 +508,11 @@ class UserScript(Base):
     shared_with_community = Column(
         Boolean, default=False, nullable=False, server_default=sql_text("false"), index=True
     )
+    # A teacher's script handed to their own class (services/class_shelf.py).
+    # NULL is not shared, "live" is on the class shelf, "hidden" is taken down
+    # by a moderator and stays down whatever the teacher does. Never public:
+    # nothing that lists scripts to anyone outside the class reads it.
+    class_share = Column(String(16), nullable=True, index=True)
     # The guided first scene (docs/superpowers/specs/2026-09-26-guided-first-scene-design.md).
     # A sample no shelf lists: the hub starts it at an actor who has never
     # rehearsed. Every listing that shows samples filters this out.

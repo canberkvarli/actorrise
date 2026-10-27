@@ -25,6 +25,7 @@ from app.api.admin.auditions import router as admin_auditions_router
 from app.api.audition import router as audition_router
 from app.api.auditions import router as auditions_router
 from app.api.class_links import router as class_links_router
+from app.api.class_shelf import router as class_shelf_router
 from app.api.community import router as community_router
 from app.api.monologue_work import router as monologue_work_router
 from app.api.auth import router as auth_router
@@ -550,6 +551,7 @@ app.include_router(scripts_router)
 app.include_router(audition_router)
 app.include_router(auditions_router)
 app.include_router(class_links_router)
+app.include_router(class_shelf_router)
 app.include_router(monologue_work_router)
 app.include_router(community_router)
 app.include_router(tapes_router)

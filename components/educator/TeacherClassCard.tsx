@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 import api from "@/lib/api";
+import { useMySharing } from "@/hooks/useClassShelf";
 import { trackEvent } from "@/lib/events";
 
 type ClassLinkSummary = {
@@ -33,6 +35,8 @@ export function TeacherClassCard() {
   const [making, setMaking] = useState(false);
   const [failed, setFailed] = useState(false);
   const [copied, setCopied] = useState(false);
+  // The count is the teacher's own; nobody else is ever told what is shared.
+  const { data: sharing } = useMySharing(!!link);
 
   useEffect(() => {
     let live = true;
@@ -150,6 +154,14 @@ export function TeacherClassCard() {
                 within a day. Once it&apos;s on, have the class sign up together in one class period.
               </>
             )}
+          </p>
+          <p className="mt-2 text-[15px] leading-normal" style={{ color: "var(--t-muted-dark)" }}>
+            {sharing?.shared
+              ? `${sharing.shared} ${sharing.shared === 1 ? "script" : "scripts"} shared with your class. `
+              : "No scripts shared with your class yet. "}
+            <Link href="/practice" className="font-semibold text-primary underline-offset-4 hover:underline">
+              Share a scene
+            </Link>
           </p>
         </div>
       )}

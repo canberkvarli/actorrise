@@ -15,6 +15,7 @@ import { PracticeLibraryRail } from "@/components/practice/PracticeLibraryRail";
 import { PracticeScenePanel } from "@/components/practice/PracticeScenePanel";
 import { OtherScriptsStrip } from "@/components/practice/OtherScriptsStrip";
 import { CommunityLibraryEntry } from "@/components/practice/CommunityLibrary";
+import { ClassShelves } from "@/components/practice/ClassShelf";
 import { WhatsNext, NothingYet } from "@/components/practice/WhatsNext";
 import { useWhatsNext } from "@/hooks/useWhatsNext";
 import { useDeleteScript, useReorderScripts, type UserScript } from "@/hooks/useScripts";
@@ -289,6 +290,8 @@ export function PracticeLibrary({
               }}
             />
           </div>
+          {/* What a teacher shared with this actor's class, if anything. */}
+          <ClassShelves />
           {/* Scenes to put on this shelf: classics, and where other actors
               found theirs. Opens as its own room (CommunityLibrary). */}
           <CommunityLibraryEntry />

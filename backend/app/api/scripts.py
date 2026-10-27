@@ -5,6 +5,7 @@ API endpoints for user script management - upload, edit, manage scripts
 import asyncio
 import hashlib
 import json as _json
+import os
 import threading
 from datetime import datetime, timedelta
 from queue import Queue, Empty
@@ -81,6 +82,8 @@ class UserScriptResponse(BaseModel):
     updated_at: Optional[datetime]
     is_sample: bool = False
     shared_with_community: bool = False
+    # The owner's own class-shelf switch (services/class_shelf.py).
+    class_share: Optional[str] = None
     first_scene_title: Optional[str] = None
     first_scene_description: Optional[str] = None
     scene_titles: List[str] = []
@@ -2495,6 +2498,17 @@ def _estimate_seconds(pages: int) -> int:
     return int(min(600, 25 + 6 * max(1, pages)))
 
 
+# How many background reads run at once. Each one is a parser pass and a run of
+# model calls; a teacher dropping a folder of 500 scenes used to start 500
+# threads at once. The rest wait their turn, still "processing" on the shelf.
+_BACKGROUND_SLOTS = threading.BoundedSemaphore(int(os.getenv("BACKGROUND_EXTRACTION_SLOTS", "3")))
+
+
+def _extract_when_free(*args) -> None:
+    with _BACKGROUND_SLOTS:
+        _extract_in_background(*args)
+
+
 def _note_progress(script_id: int, step: str) -> None:
     with _EXTRACTION_CANCELS_LOCK:
         entry = _EXTRACTION_PROGRESS.get(script_id)
@@ -2973,7 +2987,7 @@ async def upload_script_background(
     # for the same result — and on a picked upload it would also have undone the
     # picking by reading the whole book again.
     threading.Thread(
-        target=_extract_in_background,
+        target=_extract_when_free,
         args=(user_script.id, current_user.id, raw_text.encode("utf-8"), "txt", file.filename,
               mode if mode in ("quick", "full") else "full",
               # A picked build is cached under the text it read, not the file:

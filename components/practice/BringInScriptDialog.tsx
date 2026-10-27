@@ -24,6 +24,9 @@ interface BringInScriptDialogProps {
   onOpenChange: (open: boolean) => void;
   /** A picked file, or the pasted text wrapped as a .txt. Same pipeline either way. */
   onFile: (file: File) => void;
+  /** Several files picked at once (a teacher's folder of scenes): each is read
+   *  whole, in the background, with no picker. */
+  onFiles?: (files: File[]) => void;
 }
 
 /**
@@ -33,7 +36,7 @@ interface BringInScriptDialogProps {
  * with nowhere to live. Sides arrive in an email body as often as an
  * attachment, so the box sits right under the file button.
  */
-export function BringInScriptDialog({ open, onOpenChange, onFile }: BringInScriptDialogProps) {
+export function BringInScriptDialog({ open, onOpenChange, onFile, onFiles }: BringInScriptDialogProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [text, setText] = useState("");
 
@@ -43,11 +46,12 @@ export function BringInScriptDialog({ open, onOpenChange, onFile }: BringInScrip
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files ?? []);
     event.target.value = ""; // reset so the same file can be re-selected later
-    if (!file) return;
+    if (files.length === 0) return;
     close();
-    onFile(file);
+    if (files.length > 1 && onFiles) onFiles(files);
+    else onFile(files[0]);
   };
 
   const usePasted = () => {
@@ -75,13 +79,16 @@ export function BringInScriptDialog({ open, onOpenChange, onFile }: BringInScrip
       <DialogContent className="w-full max-w-lg">
         <DialogHeader>
           <DialogTitle>Bring in a script</DialogTitle>
-          <DialogDescription>PDF, Word or a text file. Or paste the scene below.</DialogDescription>
+          <DialogDescription>
+            PDF, Word or a text file{onFiles ? ", one or a whole folder of them" : ""}. Or paste the scene below.
+          </DialogDescription>
         </DialogHeader>
 
         <input
           ref={fileInputRef}
           type="file"
           accept={SCRIPT_ACCEPT}
+          multiple={!!onFiles}
           onChange={handleFileChange}
           className="hidden"
         />

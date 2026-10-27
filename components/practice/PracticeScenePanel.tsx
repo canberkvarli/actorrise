@@ -29,6 +29,7 @@ import { useUpload } from "@/components/practice/UploadProvider";
 import { ScriptHeader } from "@/components/practice/ScriptHeader";
 import { FIRST_OPEN_ROW_ID, ScriptMap } from "@/components/practice/ScriptMap";
 import { ShareAsk, ShareRowAction } from "@/components/practice/ShareScene";
+import { ClassShareSwitch } from "@/components/practice/ClassShelf";
 import { useShareable } from "@/hooks/useShelf";
 
 type ScriptWithScenes = UserScript & { scenes: Scene[] };
@@ -252,6 +253,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
             {script.processing_error}
           </p>
         )}
+        {canManage && <ClassShareSwitch script={script} />}
         {canShare && !isProcessing && scenes.length > 0 && <ShareAsk scriptId={script.id} />}
         {isProcessing && scenes.length === 0 ? (
           <ScenesComingIn />

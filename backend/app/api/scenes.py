@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.models.actor import (Play, Scene, SceneFavorite, SceneLine,
                               UserScript)
 from app.models.user import User
+from app.services import class_shelf
 from app.services.rehearsal import journal
 from app.services.rehearsal.access import (FREE_LIBRARY_SCENE_TITLES,
                                            is_free_library_scene as _is_free_library_scene)
@@ -82,6 +83,8 @@ class SceneDetailResponse(SceneResponse):
     """Detailed scene with all lines"""
     lines: List[SceneLineResponse]
     has_original_snapshot: bool = False
+    # False on a teacher's scene a student opens: read and rehearse, not rewrite.
+    can_edit: bool = True
 
 
 # ============================================================================
@@ -375,7 +378,20 @@ async def get_scene_detail(
     """Get detailed scene information including all lines"""
     scene = db.query(Scene).filter_by(id=scene_id).first()
 
-    if not scene:
+    script = db.get(UserScript, scene.user_script_id) if scene and scene.user_script_id else None
+    owns = script is not None and script.user_id == current_user.id
+    # Someone else's upload is theirs alone: a sample, a library scene, a
+    # moderator, or a student in the class it was shared with may read it, and
+    # anyone else is told it does not exist. Before 2026-10-27 this route read
+    # any scene to anyone who knew its id.
+    if not scene or (
+        script is not None
+        and not owns
+        and not script.is_sample
+        and not scene.is_library
+        and not current_user.is_moderator
+        and not class_shelf.can_read(db, current_user, script)
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Scene not found"
@@ -396,6 +412,7 @@ async def get_scene_detail(
         "is_free_library": _is_free_library_scene(scene),
         "primary_emotions": scene.primary_emotions or [],
         "has_original_snapshot": scene.original_snapshot is not None,
+        "can_edit": script is None or owns,
         "lines": [SceneLineResponse(**line.__dict__) for line in scene.lines]
     }
 

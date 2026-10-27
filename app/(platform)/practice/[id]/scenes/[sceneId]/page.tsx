@@ -87,6 +87,8 @@ interface SceneDetail {
   estimated_duration_seconds: number;
   rehearsal_count: number;
   lines: SceneLine[];
+  /** False on a teacher's scene a student opened from their class shelf. */
+  can_edit?: boolean;
 }
 
 /** GET /api/rehearsal/scenes/{id}/voices */
@@ -319,11 +321,13 @@ export default function ScenePreviewPage() {
       <div className={column}>
         <button
           type="button"
-          onClick={() => router.push(`/practice?script=${scriptId}`)}
+          onClick={() =>
+            router.push(scene.can_edit === false ? "/practice" : `/practice?script=${scriptId}`)
+          }
           className="t-mem__back"
         >
           <IconArrowLeft className="h-3.5 w-3.5" />
-          back to the script
+          {scene.can_edit === false ? "back to the shelf" : "back to the script"}
         </button>
 
         {/* The head. */}
@@ -542,14 +546,16 @@ export default function ScenePreviewPage() {
                         {isMine && <span className="t-prev__yours">you</span>}
                         {/* Fix it where you read it. The editor was the only
                             way to correct a typo and it cost a full page. */}
-                        <button
-                          type="button"
-                          onClick={() => beginEdit(line)}
-                          aria-label={`Edit ${line.character_name}'s line`}
-                          className="t-prev__lineedit"
-                        >
-                          edit
-                        </button>
+                        {scene.can_edit !== false && (
+                          <button
+                            type="button"
+                            onClick={() => beginEdit(line)}
+                            aria-label={`Edit ${line.character_name}'s line`}
+                            className="t-prev__lineedit"
+                          >
+                            edit
+                          </button>
+                        )}
                       </p>
                       {line.stage_direction && (
                         <p className="t-prev__dir">({line.stage_direction})</p>

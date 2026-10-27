@@ -31,6 +31,8 @@ export interface UserScript {
   updated_at?: string;
   is_sample?: boolean;
   shared_with_community?: boolean;
+  /** The owner's class-shelf switch: null, "live", or "hidden" (taken down). */
+  class_share?: "live" | "hidden" | null;
   first_scene_title?: string | null;
   first_scene_description?: string | null;
   scene_titles?: string[];

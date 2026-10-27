@@ -21,6 +21,7 @@ from app.middleware.rate_limiting import require_scene_partner
 from app.models.actor import Scene, SceneLine, UserScript
 from app.models.rehearsal import PartnerAudio, RehearsalEvent, RehearsalRun
 from app.models.user import User
+from app.services import class_shelf
 from app.services.events import record_user_event
 from app.services.guided_scene import GUIDED_ACTOR, guided_scene, guided_scenes, guided_script_of
 from app.services.rehearsal import journal, partner_audio
@@ -45,7 +46,12 @@ def _load_scene(db: Session, scene_id: int, user: User) -> tuple[Scene, UserScri
     if scene is None:
         raise HTTPException(status_code=404, detail="Scene not found")
     script = db.get(UserScript, scene.user_script_id) if scene.user_script_id else None
-    if script is not None and script.user_id != user.id and not script.is_sample:
+    if (
+        script is not None
+        and script.user_id != user.id
+        and not script.is_sample
+        and not class_shelf.can_read(db, user, script)
+    ):
         raise HTTPException(status_code=404, detail="Scene not found")
     return scene, script
 
