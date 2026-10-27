@@ -4234,6 +4234,21 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
 .t-how-link:hover {
   color: var(--t-gel-ink);
 }
+/* The same quiet italic for the shelf's own controls (show all, sort), which
+   a phone needs as much as a desktop does, so it is never hidden. */
+.t-shelf-link {
+  font-family: var(--t-direction);
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  color: var(--t-muted-dark-2);
+  transition: color 0.25s;
+}
+.t-shelf-link:hover,
+.t-shelf-link[aria-pressed="true"] {
+  color: var(--t-gel-ink);
+}
 
 /* --- The callboard marquee ------------------------------------------------ */
 @keyframes t-breathe {

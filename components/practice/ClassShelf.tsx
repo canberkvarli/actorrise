@@ -85,7 +85,7 @@ function TeacherShelf({ shelf }: { shelf: Shelf }) {
         <p className="px-1 py-3 text-[13px] text-[color:var(--t-muted-light)]">Nothing on this shelf matches.</p>
       )}
       {!query && !all && matches.length > FIRST_SHOWN && (
-        <button type="button" onClick={() => setAll(true)} className="t-how-link mt-3 px-1">
+        <button type="button" onClick={() => setAll(true)} className="t-shelf-link mt-3 px-1">
           show all {matches.length}
         </button>
       )}

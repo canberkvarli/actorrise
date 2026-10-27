@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   IconArrowRight,
+  IconBooks,
   IconCheck,
   IconChevronDown,
   IconDots,
@@ -72,8 +73,10 @@ const ERAS = [
   { value: "modern", label: "Modern" },
 ] as const;
 
-/** The way in, under the shelf. Starts loading the library on the way there. */
-export function CommunityLibraryEntry() {
+/** The library as a way onto the shelf, beside "Bring in a script" at the top
+ *  of it. It sat at the foot of the shelf, under every script the actor had,
+ *  so the longer the shelf the further away the library went. */
+export function CommunityLibraryButton() {
   const [open, setOpen] = useState(false);
   const [warm, setWarm] = useState(false);
   useShelfAll(warm || open);
@@ -86,15 +89,10 @@ export function CommunityLibraryEntry() {
         onPointerEnter={() => setWarm(true)}
         onFocus={() => setWarm(true)}
         onTouchStart={() => setWarm(true)}
-        className="group mt-4 flex w-full items-center gap-3 rounded-xl border-[1.5px] border-dashed border-[color:var(--t-line-light-2)] px-4 py-3.5 text-left transition-colors hover:border-solid hover:border-[color:var(--t-gel-ink)]"
+        className="t-bring-in"
       >
-        <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-[color:var(--t-text)]">Community library</span>
-          <span className="block text-[13px] text-[color:var(--t-muted-light)]">
-            Two-person scenes to put on your shelf
-          </span>
-        </span>
-        <IconArrowRight className="h-4 w-4 shrink-0 text-[color:var(--t-muted-light)] transition-transform group-hover:translate-x-0.5" />
+        <IconBooks className="h-3.5 w-3.5" aria-hidden />
+        Community library
       </button>
       <CommunityLibraryDialog open={open} onOpenChange={setOpen} />
     </>
@@ -570,4 +568,4 @@ function NothingLikeIt() {
   );
 }
 
-export default CommunityLibraryEntry;
+export default CommunityLibraryButton;

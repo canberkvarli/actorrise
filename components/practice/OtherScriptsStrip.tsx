@@ -9,6 +9,8 @@ interface OtherScriptsStripProps {
   scripts: UserScript[];
   openId: number;
   onSelect: (id: number) => void;
+  /** Back to the full shelf, where a long one can be searched. */
+  onShowShelf?: () => void;
 }
 
 /**
@@ -21,8 +23,13 @@ interface OtherScriptsStripProps {
  * nothing to manage. Reordering, deleting and flagging live on the full shelf,
  * one "back to the stage" away.
  */
-export function OtherScriptsStrip({ scripts, openId, onSelect }: OtherScriptsStripProps) {
+/** A strip, not the shelf: past this many the rest are on the full shelf. */
+const STRIP_MAX = 12;
+
+export function OtherScriptsStrip({ scripts, openId, onSelect, onShowShelf }: OtherScriptsStripProps) {
   const others = scripts.filter((s) => s.id !== openId);
+  const shown = others.slice(0, STRIP_MAX);
+  const more = others.length - shown.length;
 
   return (
     <nav aria-label="Other scripts" className="t-strip">
@@ -36,7 +43,7 @@ export function OtherScriptsStrip({ scripts, openId, onSelect }: OtherScriptsStr
       </div>
       {others.length > 0 && (
         <ul id="scenepartner-shelf" className="t-strip__list">
-          {others.map((s) => (
+          {shown.map((s) => (
             <li key={s.id} className="min-w-0 max-w-full">
               <button
                 type="button"
@@ -52,6 +59,13 @@ export function OtherScriptsStrip({ scripts, openId, onSelect }: OtherScriptsStr
               </button>
             </li>
           ))}
+          {more > 0 && onShowShelf && (
+            <li className="min-w-0 max-w-full self-center">
+              <button type="button" onClick={onShowShelf} className="t-shelf-link px-1">
+                + {more} more on the shelf
+              </button>
+            </li>
+          )}
         </ul>
       )}
     </nav>

@@ -11,10 +11,10 @@ import { useAuth } from "@/lib/auth";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
-import { PracticeLibraryRail } from "@/components/practice/PracticeLibraryRail";
+import { ShelfSections } from "@/components/practice/ShelfSections";
 import { PracticeScenePanel } from "@/components/practice/PracticeScenePanel";
 import { OtherScriptsStrip } from "@/components/practice/OtherScriptsStrip";
-import { CommunityLibraryEntry } from "@/components/practice/CommunityLibrary";
+import { CommunityLibraryButton } from "@/components/practice/CommunityLibrary";
 import { ClassShelves } from "@/components/practice/ClassShelf";
 import { WhatsNext, NothingYet } from "@/components/practice/WhatsNext";
 import { useWhatsNext } from "@/hooks/useWhatsNext";
@@ -235,6 +235,11 @@ export function PracticeLibrary({
           <OtherScriptsStrip
             scripts={ordered}
             openId={selectedScript.id}
+            onShowShelf={() => {
+              setSelectedId(null);
+              router.replace("/practice", { scroll: false });
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
             onSelect={(id) => {
               setSelectedId(id);
               // The strip is at the foot of the page; the next script opens at
@@ -254,16 +259,19 @@ export function PracticeLibrary({
               by it. It is a footnote, so it sits on the line that is already
               here — the shelf's rule — beside the thing it explains. */}
           <div
-            className="mb-3 flex items-center justify-between gap-3 pb-3"
+            className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 pb-3"
             style={{ borderBottom: "1.5px solid var(--t-line-dark-2)" }}
           >
             <h2 className="t-shelf-heading">On the shelf</h2>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               {onOpenWalkthrough && (
-                <button type="button" onClick={onOpenWalkthrough} className="t-how-link">
+                <button type="button" onClick={onOpenWalkthrough} className="t-how-link mr-1">
                   how this room works
                 </button>
               )}
+              {/* Both ways onto the shelf, side by side: a script of your own,
+                  or a scene from the library. */}
+              <CommunityLibraryButton />
               <span id="scenepartner-bring-in">
                 <UploadScriptButton variant="compact" className="t-bring-in">Bring in a script</UploadScriptButton>
               </span>
@@ -273,13 +281,12 @@ export function PracticeLibrary({
               column already contains the "bring in a script" step's target, so
               lighting it would show the same pill twice. */}
           <div id="scenepartner-shelf">
-            <PracticeLibraryRail
+            <ShelfSections
               scripts={ordered}
               selectedId={effectiveId}
               onSelect={setSelectedId}
               onRequestDelete={setDeleteTarget}
               onReport={handleReport}
-              orientation="column"
               onReorder={(scriptIds) => {
                 // The shelf has already moved on screen. A toast here would fire
                 // on every drag; the arrangement showing up where it was dropped
@@ -292,9 +299,6 @@ export function PracticeLibrary({
           </div>
           {/* What a teacher shared with this actor's class, if anything. */}
           <ClassShelves />
-          {/* Scenes to put on this shelf: classics, and where other actors
-              found theirs. Opens as its own room (CommunityLibrary). */}
-          <CommunityLibraryEntry />
         </div>
         )}
       </div>

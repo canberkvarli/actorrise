@@ -300,18 +300,22 @@ function DraggableCard({
   );
 }
 
-function ScriptCard({
+export function ScriptCard({
   script,
   index = 0,
   selected,
   column,
   held = false,
   thread,
+  label,
   onSelect,
   onRequestDelete,
   onRequestReport,
 }: {
   script: UserScript;
+  /** The name on the cover when the script's own title says nothing new: one
+   *  of twelve files of the same film is named by its scene. */
+  label?: string;
   /** Position on the shelf, for the entrance only. */
   index?: number;
   selected: boolean;
@@ -362,7 +366,7 @@ function ScriptCard({
         aria-current={selected ? "true" : undefined}
         className="t-script__face"
       >
-        <span className="t-script__title">{script.title}</span>
+        <span className="t-script__title">{label ?? script.title}</span>
         <span className="t-script__foot">
           <span className="t-script__byline">
             {/* No genre on file is not a genre called "—", and no author is
