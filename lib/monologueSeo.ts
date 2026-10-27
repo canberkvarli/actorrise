@@ -249,6 +249,7 @@ export async function getCollectionMonologues(
     gender?: "female" | "male";
     tones?: string[];
     era?: "classical" | "contemporary";
+    minSeconds?: number;
     maxSeconds?: number;
     ages?: string[];
     sources?: string[];
@@ -259,17 +260,11 @@ export async function getCollectionMonologues(
   },
   limit = 30,
 ): Promise<CollectionMonologue[]> {
-  let q = db()
-    .from("monologues")
-    .select(
-      "id, character_name, text, character_gender, estimated_duration_seconds, tone, plays!inner(title, author, copyright_status, source_type, category)",
-    )
-    .neq("plays.copyright_status", "user_uploaded")
-    .not("text", "is", null)
-    .is("review_status", null);
+  let q = liveCollectionRows();
   if (filters.gender) q = q.eq("character_gender", filters.gender);
   if (filters.tones?.length) q = q.in("tone", filters.tones);
   if (filters.era) q = q.eq("plays.category", filters.era);
+  if (filters.minSeconds) q = q.gte("estimated_duration_seconds", filters.minSeconds);
   if (filters.maxSeconds) q = q.lte("estimated_duration_seconds", filters.maxSeconds).gt("estimated_duration_seconds", 0);
   if (filters.ages?.length) q = q.in("character_age_range", filters.ages);
   if (filters.sources?.length) q = q.in("plays.source_type", filters.sources);
@@ -281,7 +276,35 @@ export async function getCollectionMonologues(
     .order("id", { ascending: true })
     .limit(limit);
   if (error || !data) return [];
-  return (data as unknown as CollectionRow[])
+  return toCollectionMonologues(data as unknown as CollectionRow[]);
+}
+
+/**
+ * The pieces behind a hand-picked collection, in the order they were picked.
+ * The same live-row rules as a filtered shelf, so a pick that has since been
+ * retired or hidden drops off the page instead of linking to a dead piece.
+ */
+export async function getPickedMonologues(ids: number[]): Promise<CollectionMonologue[]> {
+  if (!ids.length) return [];
+  const { data, error } = await liveCollectionRows().in("id", ids);
+  if (error || !data) return [];
+  const byId = new Map(toCollectionMonologues(data as unknown as CollectionRow[]).map((m) => [m.id, m]));
+  return ids.map((id) => byId.get(id)).filter((m): m is CollectionMonologue => Boolean(m));
+}
+
+function liveCollectionRows() {
+  return db()
+    .from("monologues")
+    .select(
+      "id, character_name, text, character_gender, estimated_duration_seconds, tone, plays!inner(title, author, copyright_status, source_type, category)",
+    )
+    .neq("plays.copyright_status", "user_uploaded")
+    .not("text", "is", null)
+    .is("review_status", null);
+}
+
+function toCollectionMonologues(rows: CollectionRow[]): CollectionMonologue[] {
+  return rows
     .filter((r) => r.plays && r.text)
     .map((r) => {
       const pd = r.plays!.copyright_status === "public_domain";
