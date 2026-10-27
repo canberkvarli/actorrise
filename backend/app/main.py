@@ -406,6 +406,15 @@ def _start_rehearsal_sweep_scheduler() -> None:
     logger.info("Rehearsal session sweep started (hourly)")
 
 
+def _warm_cue_client() -> None:
+    try:
+        from app.services.cue.agent import _client
+
+        _client()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("cue client warmup failed (non-fatal): %s", e)
+
+
 def _start_comp_expiry_scheduler() -> None:
     """Daily digest of comped memberships about to lapse.
 
@@ -503,6 +512,9 @@ async def lifespan(app: FastAPI):
     _start_audition_reminder_scheduler()
     _start_rehearsal_sweep_scheduler()
     _start_comp_expiry_scheduler()
+    # Cue's Anthropic client takes ~7s to import and build on this box. Build it
+    # off the startup path so the first actor after a deploy doesn't wait.
+    threading.Thread(target=_warm_cue_client, daemon=True).start()
     yield
 
 
