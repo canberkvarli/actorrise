@@ -84,6 +84,9 @@ class UserScriptResponse(BaseModel):
     first_scene_title: Optional[str] = None
     first_scene_description: Optional[str] = None
     scene_titles: List[str] = []
+    # When the actor last ran a scene of it: what the phone's "working on" group
+    # is made of. Only on the shelf list; None where it has never been run.
+    last_rehearsed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -1381,6 +1384,18 @@ async def list_user_scripts(
     for sc in all_scenes:
         scenes_by_script.setdefault(sc.user_script_id, []).append(sc)
 
+    # The last run of any scene of each script, in one grouped query.
+    from sqlalchemy import func as _func
+    from app.models.rehearsal import RehearsalRun
+
+    last_run = dict(
+        db.query(Scene.user_script_id, _func.max(RehearsalRun.started_at))
+        .join(RehearsalRun, RehearsalRun.scene_id == Scene.id)
+        .filter(RehearsalRun.user_id == current_user.id, Scene.user_script_id.in_(script_ids))
+        .group_by(Scene.user_script_id)
+        .all()
+    )
+
     result = []
     for s in scripts:
         data = UserScriptResponse.model_validate(s).model_dump()
@@ -1389,6 +1404,7 @@ async def list_user_scripts(
         data["first_scene_title"] = first_scene.title if first_scene else None
         data["first_scene_description"] = (first_scene.description if first_scene and first_scene.description else None)
         data["scene_titles"] = [sc.title for sc in scenes]
+        data["last_rehearsed_at"] = last_run.get(s.id)
         result.append(UserScriptResponse(**data))
     return result
 
