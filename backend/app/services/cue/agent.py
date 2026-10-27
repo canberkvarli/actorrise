@@ -59,12 +59,25 @@ def backstop_reason(text: str) -> str | None:
     return None
 
 
-def _client():
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        return None
-    import anthropic
+_CLIENT = None
 
-    return anthropic.Anthropic()
+
+def _client():
+    """One client for the life of the process.
+
+    Building it cost 7.6s on Render (2026-10-27, from the timing line): the
+    import and setup ran on every message, and that was nearly all of a slow
+    "hello". main.py warms it in a thread at startup, so even the first
+    message after a deploy doesn't pay.
+    """
+    global _CLIENT
+    if _CLIENT is None:
+        if not os.getenv("ANTHROPIC_API_KEY"):
+            return None
+        import anthropic
+
+        _CLIENT = anthropic.Anthropic()
+    return _CLIENT
 
 
 def call_model(client, **kwargs) -> Iterator[tuple[str, Any]]:
