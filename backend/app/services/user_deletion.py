@@ -74,6 +74,57 @@ def _delete_supabase_auth_user(supabase_id: str) -> None:
         raise
 
 
+def _delete_uploaded_scenes(db: Session, user_script_ids: list) -> None:
+    """The words of what the account uploaded go with the account.
+
+    These used to be unlinked (user_script_id set NULL) and kept, so a deleted
+    account's sides lived on in scenes, scene_lines and plays.full_text with no
+    owner. For a teacher's film and TV scenes (the class shelf) that is
+    copyrighted text kept after the person who shared it asked to leave.
+
+    Everything that points at those scenes goes first, whoever it belongs to: a
+    student's rehearsal history on a teacher's scene ends with the scene. Then
+    the plays built for the uploads, unless something else still uses one.
+    """
+    from app.models.actor import Monologue, Play, SceneLine
+    from app.models.rehearsal import RehearsalEvent, RehearsalRun
+
+    scene_rows = db.query(Scene.id, Scene.play_id).filter(Scene.user_script_id.in_(user_script_ids)).all()
+    if not scene_rows:
+        return
+    scene_ids = [r[0] for r in scene_rows]
+    play_ids = {r[1] for r in scene_rows if r[1] is not None}
+
+    sessions = db.query(RehearsalSession.id).filter(RehearsalSession.scene_id.in_(scene_ids))
+    line_ids = db.query(SceneLine.id).filter(SceneLine.scene_id.in_(scene_ids))
+    db.query(RehearsalLineDelivery).filter(
+        RehearsalLineDelivery.session_id.in_(sessions) | RehearsalLineDelivery.scene_line_id.in_(line_ids)
+    ).delete(synchronize_session=False)
+    db.query(RehearsalSession).filter(RehearsalSession.scene_id.in_(scene_ids)).delete(synchronize_session=False)
+    runs = db.query(RehearsalRun.id).filter(RehearsalRun.scene_id.in_(scene_ids))
+    db.query(RehearsalEvent).filter(RehearsalEvent.run_id.in_(runs)).delete(synchronize_session=False)
+    db.query(RehearsalRun).filter(RehearsalRun.scene_id.in_(scene_ids)).delete(synchronize_session=False)
+    db.query(SceneFavorite).filter(SceneFavorite.scene_id.in_(scene_ids)).delete(synchronize_session=False)
+    # A Community library pointer keeps its row (it holds no text), unhooked.
+    from app.models.shelf import ShelfScene
+
+    db.query(ShelfScene).filter(ShelfScene.source_scene_id.in_(scene_ids)).update(
+        {"source_scene_id": None}, synchronize_session=False
+    )
+    db.query(SceneLine).filter(SceneLine.scene_id.in_(scene_ids)).delete(synchronize_session=False)
+    db.query(Scene).filter(Scene.id.in_(scene_ids)).delete(synchronize_session=False)
+
+    for play_id in play_ids:
+        in_use = (
+            db.query(Scene.id).filter(Scene.play_id == play_id).first()
+            or db.query(Monologue.id).filter(Monologue.play_id == play_id).first()
+        )
+        if not in_use:
+            db.query(Play).filter(Play.id == play_id, Play.copyright_status == "user_uploaded").delete(
+                synchronize_session=False
+            )
+
+
 def delete_user_completely(db: Session, user_id: int) -> None:
     """Delete a user and every record that references their users.id.
 
@@ -134,9 +185,7 @@ def delete_user_completely(db: Session, user_id: int) -> None:
         for row in db.query(UserScript.id).filter(UserScript.user_id == user_id).all()
     ]
     if user_script_ids:
-        db.query(Scene).filter(Scene.user_script_id.in_(user_script_ids)).update(
-            {"user_script_id": None}, synchronize_session=False
-        )
+        _delete_uploaded_scenes(db, user_script_ids)
         db.query(UserScript).filter(UserScript.user_id == user_id).delete(
             synchronize_session=False
         )
