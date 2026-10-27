@@ -179,13 +179,31 @@ like any other draft. Never a second chase.
 **A class link nobody has used** (Canberk, 2026-10-23). `scripts/class_link.py list` shows
 joins per link. A teacher who said yes and got a link 7 or more days ago, and whose link
 still says "nobody yet", gets ONE nudge draft on the thread where the link went: the link
-again as [LINK], and the line that it took one teacher's class a single period to get set
-up (about 20 students in one hour, 2026-10-22). No school or teacher named. Logged as
-`--kind chase`; it is their one chase.
+again, written out and highlighted (see the draft rules above), and the ask that works:
+have the class sign up together in one class period, about ten minutes (one teacher's
+class did it that way and about 20 students were in within the hour, 2026-10-22). No
+school or teacher named. Logged as `--kind chase`; it is their one chase. Whether they have had
+it is Gmail sent, not the contact log: a draft Canberk deleted unsent was never their nudge
+(2026-10-25's six were never sent; redrafted 2026-10-27).
 
-again, written out and highlighted (see the draft rules above), and the line that it took one teacher's class a single period to get set
-up (about 20 students in one hour, 2026-10-22). No school or teacher named. Logged as
-`--kind chase`; it is their one chase.
+**Organizations, every run** (Canberk, 2026-10-27: "we are strategizing the organizations
+too right? partnerships etc, that's our in the conversion loop daily check"). What turns an
+organization into actors on the site is one thing, seen once so far: a teacher who said yes
+had the class sign up during a lesson (Gilroy, 36 students). A link mailed to a teacher who
+never answered has never been used (6 of 6, October). So each run:
+- Read `scripts/class_link.py list` against yesterday's. A link that gained joins is a
+  "Moved" line with the number. The first join on a link is the moment to thank that teacher
+  (a reply draft, on the thread).
+- A teacher who wrote back and has not had an answer from Canberk, or who was offered Plus
+  and has not said yes in 7 days: that teacher is the org line in the summary, with what they
+  said. These are warmer than any cold list.
+- A teacher who says yes gets their link AND the class-period ask in the same reply, never
+  the link alone.
+- A product complaint from a teacher is a bug for every teacher: say which page under
+  "The app" and check whether it is fixed (2026-10-23: a teacher was led into a rehearsal
+  scene at signup and never found the library; fixed 4822d35b, teachers now end on it).
+- Say when `/marketing-week` last ran (the newest folder in `outputs/marketing/`). Older
+  than 8 days is a "Broken" line: new organizations stop coming in without it.
 
 **An organization ready to ask** (Canberk, 2026-10-25: "partnerships, hosted by or
 supported by, on our landing page"). `/admin/organizations` marks an org "ready to ask"
@@ -246,6 +264,8 @@ Inbox: <n> replies, <n> opt-outs filed, <n> bounces filed, <n> drafts waiting fo
   <CURTAIN, if any: address -> full prefilled link to paste>
 
 Moved: <one line per thing that moved, with the number, or "nothing">
+
+Organizations: <links with joins (code: n, +change)>; <warm teachers waiting, one line each: who, what they said, what's owed>; <nudges/chases drafted today>; marketing-week last ran <date>
 
 The app: <one line per thing to fix or add from section 8, with the evidence and the next step, or "nothing new">
 
