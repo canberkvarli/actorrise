@@ -224,6 +224,23 @@ class AScriptWithNoScenesAsksToBeCut(Fixture):
         self.assertEqual(nxt["script"]["id"], script.id)
         self.assertIsNone(nxt["line"])
 
+    def test_a_script_still_being_read_is_not_offered_to_cut(self):
+        # A teacher's folder mid-upload: every file "processing". The stage said
+        # "nobody has cut it, cut the scenes" over the read in progress.
+        reading = self._script("Reading")
+        reading.processing_status = "processing"
+        self.db.commit()
+        self.assertIsNone(whats_next(self.db, self.user.id))
+
+    def test_recently_deleted_is_not_on_the_stage(self):
+        gone = self._script("Gone", created=datetime(2026, 9, 9))
+        self._scene(gone)
+        gone.processing_status = "deleted"
+        kept = self._script("Kept", created=datetime(2026, 8, 1))
+        self.db.commit()
+        nxt = whats_next(self.db, self.user.id)
+        self.assertEqual((nxt["rung"], nxt["script"]["id"]), ("cut", kept.id))
+
 
 class WithNothingOfYourOwnTheDemoSpeaks(Fixture):
     def test_rung_is_demo(self):

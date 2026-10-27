@@ -258,19 +258,20 @@ export function PracticeLibrary({
               entire band of the page and pushed the stage and the shelf down
               by it. It is a footnote, so it sits on the line that is already
               here — the shelf's rule — beside the thing it explains. */}
-          <div
-            className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 pb-3"
-            style={{ borderBottom: "1.5px solid var(--t-line-dark-2)" }}
-          >
-            <h2 className="t-shelf-heading">On the shelf</h2>
-            <div className="flex flex-wrap items-center gap-2">
+          {/* Two rows: the heading with its footnote, then both ways onto the
+              shelf side by side. One wrapping row broke the pills apart at the
+              rail's width, the library on one line and "Bring in" alone under
+              it. */}
+          <div className="mb-3 pb-3" style={{ borderBottom: "1.5px solid var(--t-line-dark-2)" }}>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="t-shelf-heading">On the shelf</h2>
               {onOpenWalkthrough && (
-                <button type="button" onClick={onOpenWalkthrough} className="t-how-link mr-1">
+                <button type="button" onClick={onOpenWalkthrough} className="t-how-link">
                   how this room works
                 </button>
               )}
-              {/* Both ways onto the shelf, side by side: a script of your own,
-                  or a scene from the library. */}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <CommunityLibraryButton />
               <span id="scenepartner-bring-in">
                 <UploadScriptButton variant="compact" className="t-bring-in">Bring in a script</UploadScriptButton>

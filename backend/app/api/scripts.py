@@ -3407,7 +3407,7 @@ async def script_scene_map(
     Read from the stored source when there is one. Scripts from before it was
     kept answer `needs_file`, and the picker asks for the same file once.
     """
-    from app.services.script_additions import built_indices, built_keys
+    from app.services.script_additions import built_indices, built_keys, unlabelled_built
 
     script = _owned_script(db, script_id, current_user)
     if file is not None:
@@ -3426,7 +3426,7 @@ async def script_scene_map(
     return {
         "needs_file": False,
         "scan": scan,
-        "built": built_indices(scan.scenes, built_keys(built)),
+        "built": sorted(set(built_indices(scan.scenes, built_keys(built))) | set(unlabelled_built(scan.scenes, built))),
         "built_count": len(built),
         "limit": _scene_allowance(db, current_user),
     }

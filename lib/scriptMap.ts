@@ -77,9 +77,17 @@ export function mergeSceneMap(
 ): MapGroup[] {
   const builtRows = new Set(built);
   const unclaimed = new Map<string, Scene[]>();
+  // Built scenes with no heading. The server marks an unheaded row built only
+  // when the counts agree (script_additions.unlabelled_built), so they are
+  // taken in order: a one-scene file's row is its one scene, not a second
+  // offer of it beside itself.
+  const unheaded: Scene[] = [];
   for (const scene of scenes) {
     const key = sceneKey(scene.act, scene.scene_number);
-    if (!key) continue;
+    if (!key) {
+      unheaded.push(scene);
+      continue;
+    }
     const list = unclaimed.get(key) ?? [];
     list.push(scene);
     unclaimed.set(key, list);
@@ -101,7 +109,7 @@ export function mergeSceneMap(
     const group = groupFor(row.act_label);
     if (builtRows.has(row.index)) {
       const key = sceneKey(row.act_label, row.scene_label);
-      const scene = key ? unclaimed.get(key)?.shift() : undefined;
+      const scene = key ? unclaimed.get(key)?.shift() : unheaded.shift();
       if (scene) {
         claimed.add(scene.id);
         group.rows.push({ kind: "built", key: `s${scene.id}`, scene, scan: row });

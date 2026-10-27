@@ -30,6 +30,8 @@ import { ScriptHeader } from "@/components/practice/ScriptHeader";
 import { FIRST_OPEN_ROW_ID, ScriptMap } from "@/components/practice/ScriptMap";
 import { ShareAsk, ShareRowAction } from "@/components/practice/ShareScene";
 import { ClassShareSwitch } from "@/components/practice/ClassShelf";
+import { useMySharing } from "@/hooks/useClassShelf";
+import { useAuth } from "@/lib/auth";
 import { useShareable } from "@/hooks/useShelf";
 
 type ScriptWithScenes = UserScript & { scenes: Scene[] };
@@ -92,7 +94,13 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
 
   /* Where each built scene stands on the scene library: shared, or what the
      actor answered when asked. Samples and shelf copies are nobody's to share. */
-  const canShare = canManage && !script.original_filename?.startsWith("shelf-");
+  // A teacher's scripts go to their class (ClassShareSwitch), never to the
+  // Community library: a film scene's title on the public shelf is the teacher
+  // publishing it. So the library's ask is not made of them at all.
+  const { user } = useAuth();
+  const { data: classSharing } = useMySharing(user?.account_type === "educator");
+  const canShare =
+    canManage && !script.original_filename?.startsWith("shelf-") && !classSharing?.can_share;
   const shareable = useShareable(canShare && scenes.length > 0, script.id);
   const shareById = useMemo(
     () => new Map((shareable.data?.items ?? []).map((s) => [s.scene_id, s])),

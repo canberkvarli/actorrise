@@ -92,6 +92,19 @@ def built_indices(scanned: Sequence, keys: Set[Tuple[str, str]]) -> List[int]:
     return out
 
 
+def unlabelled_built(scanned: Sequence, scenes: Iterable) -> List[int]:
+    """Rows with no heading that are built anyway: a file that is one scene
+    (sides typed up, a paste) has no heading to match on, so its built scene
+    was offered again beside itself ("2 scenes, 1 built", Build scenes).
+    Only when the counts agree: as many unheaded rows as unheaded built
+    scenes means the whole of that part was built, and nothing is guessed."""
+    rows = [r.index for r in scanned
+            if scene_key(getattr(r, "act_label", None), getattr(r, "scene_label", None)) is None]
+    built = [s for s in scenes
+             if scene_key(getattr(s, "act", None), getattr(s, "scene_number", None)) is None]
+    return rows if rows and len(rows) == len(built) else []
+
+
 def unbuilt_picks(picked: Iterable[dict], keys: Set[Tuple[str, str]]) -> List[dict]:
     """Drop ticks for scenes that are built already. The client hides them, the
     server does not trust that it did."""

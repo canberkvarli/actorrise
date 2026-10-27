@@ -530,8 +530,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const onManyTaken = useCallback(
     (ids: number[]) => {
       if (!sharing?.can_share) return;
+      // Stays until answered: at 20 seconds it was gone under the room's own
+      // tour before a teacher could reach it (live test, 2026-10-28).
       toast(`Share these ${ids.length} with your class?`, {
-        duration: 20000,
+        duration: Infinity,
+        closeButton: true,
+        cancel: { label: "Not now", onClick: () => undefined },
         action: {
           label: "Share",
           onClick: () =>

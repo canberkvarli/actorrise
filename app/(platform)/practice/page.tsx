@@ -79,8 +79,12 @@ export default function PracticePage() {
   // is what they came for. So the room waits for the class shelf before
   // deciding, and skips the invitation for anyone who has one.
   const { data: classShelves, isFetched: classShelvesFetched } = useClassShelves();
+  // A teacher is here to put scenes on the class shelf ("Share a scene" on
+  // their card lands here), not to be walked through a first scene.
   const wouldInvite =
-    !!user && shouldInvite(user, scriptsFetched ? ownScriptCount : 0, isDemoUser);
+    !!user &&
+    user.account_type !== "educator" &&
+    shouldInvite(user, scriptsFetched ? ownScriptCount : 0, isDemoUser);
   const inviteCandidate =
     wouldInvite && classShelvesFetched && !(classShelves?.length ?? 0);
   // The user object can be a cached copy from before the guided run, which is

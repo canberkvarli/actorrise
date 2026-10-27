@@ -96,6 +96,14 @@ describe("mergeSceneMap", () => {
     expect(tickableRows(groups).map((s) => s.index)).toEqual([1]);
   });
 
+  it("a one-scene file is one built row, not its scene offered again beside itself", () => {
+    // Sides typed up with no heading: the server marks the row built when the
+    // counts agree, and the row takes the scene.
+    const groups = mergeSceneMap([row(0, null, null)], [0], [scene(5, null, null)]);
+    expect(groups.flatMap((g) => g.rows).map((r) => r.kind)).toEqual(["built"]);
+    expect(tickableRows(groups)).toEqual([]);
+  });
+
   it("an unbuilt row with no match is offered", () => {
     const scan = [row(0, "Act 1", "Scene 1"), row(1, "Act 1", null)];
     const groups = mergeSceneMap(scan, [], [scene(1, "Act 1", "Scene 4")]);

@@ -265,33 +265,39 @@ def whats_next(db: Session, user_id: int) -> Optional[dict]:
                 line_index=at,
             )
 
-    own = (
-        db.query(UserScript)
-        .filter(UserScript.user_id == user_id)
-        .order_by(UserScript.created_at.desc(), UserScript.id.desc())
-        .all()
-    )
+    # Recently deleted is not on the shelf, so not on the stage either.
+    on_shelf = (UserScript.user_id == user_id, UserScript.processing_status != "deleted")
 
     # 2. Nothing open, but something ready to start: the newest script that has
-    #    scenes, opened on its first line.
-    for script in own:
-        scene = (
-            db.query(Scene)
-            .filter(Scene.user_script_id == script.id)
-            .order_by(Scene.id)
-            .first()
+    #    scenes, opened on its first line. One query, not one per script: a
+    #    teacher who brought in 500 files has 500 to look through.
+    found = (
+        db.query(UserScript, Scene)
+        .join(Scene, Scene.user_script_id == UserScript.id)
+        .filter(*on_shelf)
+        .order_by(UserScript.created_at.desc(), UserScript.id.desc(), Scene.id.asc())
+        .first()
+    )
+    if found is not None:
+        script, scene = found
+        return _rung(
+            "start", script, scene,
+            line=_line_payload(db, scene.id, 0),
+            character=scene.character_1_name,
+            progress={"current": 0, "total": scene.line_count or 0},
         )
-        if scene is not None:
-            return _rung(
-                "start", script, scene,
-                line=_line_payload(db, scene.id, 0),
-                character=scene.character_1_name,
-                progress={"current": 0, "total": scene.line_count or 0},
-            )
 
-    # 3. A script arrived and has no scenes to rehearse yet.
-    if own:
-        return _rung("cut", own[0])
+    # 3. A script arrived and has no scenes to rehearse yet. Not one still
+    #    being read: the shelf says "reading…" on it, and "nobody has cut it,
+    #    cut the scenes" over a read in progress started a second one.
+    waiting = (
+        db.query(UserScript)
+        .filter(*on_shelf, UserScript.processing_status.notin_(("processing", "pending")))
+        .order_by(UserScript.created_at.desc(), UserScript.id.desc())
+        .first()
+    )
+    if waiting is not None:
+        return _rung("cut", waiting)
 
     # 4. Nothing of their own. The sample play speaks first — a real line of
     #    Shakespeare is a better welcome than an empty shelf.
