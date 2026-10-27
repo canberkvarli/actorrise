@@ -1779,6 +1779,22 @@ def _place_framing(result: List[Dict], framing: List, valid_entries: List) -> Li
     return result
 
 
+# "SCENE 3: The Long Winter, the kitchen", "Scene 2 - Overtime, the lot".
+_NAMED_SCENE_HEADING = re.compile(
+    r"^\s*scene\s+(?:\d+|[ivxlc]+)\s*[:.\-–—]\s*(?P<title>\S.{1,79}?)\s*$", re.IGNORECASE
+)
+
+
+def written_scene_title(text: str) -> Optional[str]:
+    """The name a scene's own heading gives it, if it gives one. A teacher who
+    types sides up names each one ("SCENE 1: The Long Winter, the kitchen"),
+    and that is how the class asks for it; a model's "Returning the Keys" is
+    not. A bare "Scene 2" or a slugline names nothing and gives None."""
+    first = next((l for l in (text or "").split("\n") if l.strip()), "")
+    m = _NAMED_SCENE_HEADING.match(first)
+    return m.group("title").strip() if m else None
+
+
 def whole_scene(span, cast: Optional[List[str]] = None) -> Optional[Dict]:
     """One scene of a play, every cue and every speech, in the order printed.
 
@@ -1801,9 +1817,11 @@ def whole_scene(span, cast: Optional[List[str]] = None) -> Optional[Dict]:
 
     ranked = [name for name, _ in speakers.most_common()]
     label = ", ".join(p for p in (span.act_label, span.scene_label) if p)
+    own = written_scene_title(span.text)
 
     return {
-        "title": label or f"{ranked[0]} & {ranked[1]}",
+        "title": own or label or f"{ranked[0]} & {ranked[1]}",
+        "_own_title": bool(own),
         "character_1": ranked[0],
         "character_2": ranked[1],
         "cast": ranked,
@@ -3128,7 +3146,8 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         for scene, meta in zip(scenes, framing):
             for key in self._FRAMING:
                 value = (meta or {}).get(key)
-                if value:
+                # A name the writer gave the scene in its heading is theirs.
+                if value and not (key == "title" and scene.get("_own_title")):
                     scene[key] = value
         return scenes
 
@@ -3351,6 +3370,7 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         # the chunk hanging off every scene, least of all the extraction cache.
         for scene in scenes:
             scene.pop("_source_text", None)
+            scene.pop("_own_title", None)
 
         if not _has_title_page(raw_text) or not _is_usable_title(metadata.get("title")):
             metadata["title"] = _title_from_filename(filename)

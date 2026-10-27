@@ -99,7 +99,13 @@ function ScriptRow({ script, open, onToggle }: { script: ClassShelfScript; open:
     const scene = script.scenes[0];
     return (
       <li>
-        <SceneLink scriptId={script.id} scene={scene} title={script.title} />
+        <SceneLink
+          scriptId={script.id}
+          scene={scene}
+          title={script.title}
+          // Two files from one film share its title; the scene's name tells them apart.
+          subtitle={scene.title && scene.title !== script.title ? scene.title : undefined}
+        />
       </li>
     );
   }
@@ -137,10 +143,12 @@ function SceneLink({
   scriptId,
   scene,
   title,
+  subtitle,
 }: {
   scriptId: number;
   scene: ClassShelfScript["scenes"][number];
   title: string;
+  subtitle?: string;
 }) {
   return (
     <Link
@@ -152,6 +160,7 @@ function SceneLink({
           {title}
         </span>
         <span className="block truncate text-[13px] text-[color:var(--t-muted-light)]">
+          {subtitle ? `${subtitle} · ` : ""}
           {scene.character_1_name} &amp; {scene.character_2_name} · {formatSceneDuration(scene.estimated_duration_seconds)}
         </span>
       </span>

@@ -128,7 +128,7 @@ Rules:
 4. A parenthetical or bracketed direction in the middle of a speech, such as "I almost did. (beat) Then I didn't.", splits it: a line, a direction, a line, same character.
 5. A paragraph with no cue is either a direction or more of the same speech. If it narrates what someone does ("They stop walking.", "Mark continues with his act.") it is a direction. If it is the last speaker still talking (it says I or you, it answers, it carries on a routine or a quotation) it joins that speaker's line. A speech runs from its cue to the next cue or the next direction.
 6. A paragraph of action is one direction item, whole, with every word in it, including the names it mentions ("JUNE (40s) stirs a coffee." keeps JUNE and the (40s)). Never split a paragraph into several directions.
-7. Leave out headings (act, scene and episode numbers, sluglines such as INT. KITCHEN - NIGHT), page numbers, and rows of dots or rules. Leave out nothing else: every spoken sentence and every direction appears in exactly one item.
+7. Leave out headings (act, scene and episode numbers, sluglines such as INT. KITCHEN - NIGHT, a title line at the very top naming the film, show, play or scene such as "The Long Winter - kitchen scene"), page numbers, and rows of dots or rules. Leave out nothing else: every spoken sentence and every direction appears in exactly one item.
 8. A line's text is only the words spoken: no cue, and no bracketed note. A direction item has character "", delivery "" and acting "".
 9. acting is your own note on how the line is played, for the actor who will voice it: 3 to 12 words of playable direction, such as "teasing and affectionate, light" or "suddenly gentle and sincere, the joke gone". It is a note, never words from the line, and it never changes the text. Read it from what the character wants and what has just happened.
 
@@ -209,21 +209,61 @@ def _strip_brackets(text: str) -> str:
     return s.strip("_ ").strip()
 
 
-def _normalised_source(source: str) -> Tuple[str, List[Tuple[int, int]], set]:
+# A sentence ends in one of these; a title does not.
+_SENTENCE_END = re.compile(r"[.!?…\"'”’)\]]\s*$")
+
+
+def _is_title_line(raw: str, cast_keys: set) -> bool:
+    """A line at the top of a scene that names it rather than plays it: "The
+    Long Winter - kitchen scene", "GOOD WILL HUNTING (1997)". A teacher typing
+    sides up from a film heads each one like that (The Actors Workshop,
+    2026-10-27), and the reader had to keep it, so it rode on the first line as
+    a stage direction. Short, no sentence in it, and not a speaker's cue."""
+    s = raw.strip()
+    if not s or len(s) > 80 or _SENTENCE_END.search(s) or _SENTENCE_BREAK.search(s):
+        return False
+    key = _name_key(s.split(":")[0])
+    return key not in cast_keys and not any(key.startswith(c + " ") for c in cast_keys)
+
+
+_SENTENCE_BREAK = re.compile(r"[.!?]\s+[A-Z]")
+
+
+def _title_rows(raw_lines: Sequence[str], cast_keys: set) -> set:
+    """Indexes of the title lines at the top of a scene: each a paragraph of
+    one line (a blank line or the end after it, so a hard-wrapped line of
+    action is never one), before the first line that is anything else."""
+    rows = set()
+    if not cast_keys:
+        return rows
+    for i, raw in enumerate(raw_lines):
+        if not raw.strip():
+            continue
+        alone = i + 1 >= len(raw_lines) or not raw_lines[i + 1].strip()
+        if not (alone and _is_title_line(raw, cast_keys)):
+            break
+        rows.add(i)
+    return rows
+
+
+def _normalised_source(source: str, cast: Sequence[str] = ()) -> Tuple[str, List[Tuple[int, int]], set]:
     """The source normalised line by line: the text, where its heading lines
-    sit, and where each printed line begins."""
+    sit, and where each printed line begins. `cast` (the scene's speakers)
+    tells a title line at the top from the first cue."""
     parts: List[str] = []
     headings: List[Tuple[int, int]] = []
     starts = set()
     pos = 0
-    for raw in (source or "").split("\n"):
+    raw_lines = (source or "").split("\n")
+    titles = _title_rows(raw_lines, {_name_key(c) for c in cast if _name_key(c)})
+    for i, raw in enumerate(raw_lines):
         n = normalise(raw)
         if not n:
             continue
         if parts:
             pos += 1  # the joining space
         starts.add(pos)
-        if _HEADING_LINE.match(raw) and len(raw.strip()) < 100:
+        if i in titles or (_HEADING_LINE.match(raw) and len(raw.strip()) < 100):
             headings.append((pos, pos + len(n)))
         parts.append(n)
         pos += len(n)
@@ -361,9 +401,9 @@ def check_reading(source: str, items: Sequence[Dict], cast: Sequence[str] = ()) 
     if not items:
         return ["the reading is empty"]
 
-    text, headings, line_starts = _normalised_source(source)
-
     speakers = [i.get("character") or "" for i in items if i.get("kind") == "line"]
+    text, headings, line_starts = _normalised_source(source, list(speakers) + list(cast or ()))
+
     names = _name_pattern(list(speakers) + list(cast or ()))
 
     def masked(start: int, end: int) -> str:
@@ -641,6 +681,7 @@ def read_scene(source: str, hint_lines: Sequence[Dict], client,
         characters = [c for c in (reply.get("characters") or []) if isinstance(c, dict)] or characters
         problems = check_reading(source, items, cast=_rank_cast(hint_lines or ()))
         if not problems:
+            items = _drop_title_directions(source, items, _rank_cast(hint_lines or ()))
             return {
                 "lines": items_to_lines(items),
                 "items": items,
@@ -669,6 +710,22 @@ def read_scene(source: str, hint_lines: Sequence[Dict], client,
     # is kept even when its lines are not. The rejected items go back too, for
     # the eval and the re-read script to show; nothing stores them.
     return dict(fallback, characters=characters, problems=problems, rejected=rejected)
+
+
+def _drop_title_directions(source: str, items: List[Dict], cast: Sequence[str]) -> List[Dict]:
+    """A reading that kept the title line as a direction anyway: drop it, so it
+    does not ride on the first line. Only directions before the first line,
+    and only ones that are a title line at the top of the source word for word."""
+    speakers = [i.get("character") or "" for i in items if i.get("kind") == "line"]
+    cast_keys = {_name_key(c) for c in list(cast) + speakers if _name_key(c)}
+    raw_lines = (source or "").split("\n")
+    titles = {normalise(raw_lines[i]) for i in _title_rows(raw_lines, cast_keys)}
+    if not titles:
+        return items
+    out = list(items)
+    while out and out[0].get("kind") == "direction" and normalise(_strip_brackets(out[0].get("text") or "")) in titles:
+        out.pop(0)
+    return out
 
 
 def _rank_cast(lines: Sequence[Dict]) -> List[str]:
