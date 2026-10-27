@@ -35,11 +35,20 @@ def get_thread(current_user: User = Depends(get_current_user), db: Session = Dep
 
 
 @router.post("/messages")
-def post_message(body: CueMessageIn, current_user: User = Depends(get_current_user)) -> StreamingResponse:
+def post_message(
+    body: CueMessageIn,
+    current_user: User = Depends(get_current_user),
+    request_db: Session = Depends(get_db),
+) -> StreamingResponse:
     user_id = int(current_user.id)
+    # get_current_user's session would otherwise sit on a pooled connection
+    # until the whole reply has streamed, while the stream opens a second.
+    request_db.close()
 
     def stream():
-        # Its own session: the request's is closed before a streamed body ends.
+        # A comment frame first, so the headers and first bytes leave at once
+        # and the sheet knows the line is open.
+        yield ": open\n\n"
         db = SessionLocal()
         try:
             user = db.query(User).get(user_id)

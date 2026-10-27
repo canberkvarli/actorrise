@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import re
+import time
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -136,6 +137,7 @@ def _history(conv: CueConversation) -> list[dict[str, Any]]:
 
 
 def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[str, Any]]:
+    t0 = time.monotonic()
     text = text.strip()[:2000]
     plus = tools.is_plus(db, user)
     cap = caps.check(db, int(user.id), plus)
@@ -169,9 +171,15 @@ def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[st
     used_tools: list[str] = []
     tokens_in = tokens_out = 0
     handed_off = False
+    t_setup = time.monotonic() - t0
+    t_first: float | None = None
 
     for _round in range(MAX_TOOL_ROUNDS):
         final = None
+        # Hand the connection back while the model talks. The pool is five
+        # connections; a reply that sat on one for its whole stream made the
+        # next actor's "hi" wait ~25s for a free one (2026-10-27).
+        db.commit()
         try:
             for kind, payload in call_model(
                 client,
@@ -183,6 +191,8 @@ def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[st
                 output_config={"effort": "low"},
             ):
                 if kind == "text":
+                    if t_first is None:
+                        t_first = time.monotonic() - t0
                     for piece in gate.feed(payload):
                         said.append(piece)
                         yield {"type": "text", "text": piece}
@@ -234,6 +244,12 @@ def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[st
         if said and not said[-1].endswith((" ", "\n")):
             said.append(" ")
             yield {"type": "text", "text": " "}
+
+    logger.info(
+        "cue timing user=%s setup=%.2fs first_text=%s total=%.2fs tools=%s",
+        user.id, t_setup, f"{t_first:.2f}s" if t_first is not None else "-",
+        time.monotonic() - t0, ",".join(used_tools) or "-",
+    )
 
     reason = backstop_reason(text)
     if reason and not handed_off:
