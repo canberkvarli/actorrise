@@ -74,7 +74,7 @@ def _delete_supabase_auth_user(supabase_id: str) -> None:
         raise
 
 
-def _delete_uploaded_scenes(db: Session, user_script_ids: list) -> None:
+def delete_uploaded_scenes(db: Session, user_script_ids: list) -> None:
     """The words of what the account uploaded go with the account.
 
     These used to be unlinked (user_script_id set NULL) and kept, so a deleted
@@ -185,7 +185,7 @@ def delete_user_completely(db: Session, user_id: int) -> None:
         for row in db.query(UserScript.id).filter(UserScript.user_id == user_id).all()
     ]
     if user_script_ids:
-        _delete_uploaded_scenes(db, user_script_ids)
+        delete_uploaded_scenes(db, user_script_ids)
         db.query(UserScript).filter(UserScript.user_id == user_id).delete(
             synchronize_session=False
         )

@@ -10,7 +10,7 @@ from app.models.organization import Organization
 from app.models.rehearsal import RehearsalEvent, RehearsalRun
 from app.models.shelf import ShelfScene
 from app.models.user import User
-from app.services.user_deletion import _delete_uploaded_scenes
+from app.services.user_deletion import delete_uploaded_scenes
 from tests.dbfixture import memory_db, restore
 
 
@@ -61,7 +61,7 @@ class DeletedAccountText(unittest.TestCase):
 
     def test_the_text_and_everything_pointing_at_it_go(self):
         play_id, kept_id = self.play.id, self.kept_play.id
-        _delete_uploaded_scenes(self.db, [self.script.id])
+        delete_uploaded_scenes(self.db, [self.script.id])
         self.db.commit()
         self.db.expunge_all()
         for model in (Scene, SceneLine, RehearsalSession, RehearsalLineDelivery, RehearsalRun, SceneFavorite):
@@ -78,7 +78,7 @@ class DeletedAccountText(unittest.TestCase):
         self.db.add(Scene(play_id=self.play.id, user_script_id=other.id, title="Copy", character_1_name="NICK",
                           character_2_name="ANNA", line_count=0, estimated_duration_seconds=0))
         self.db.commit()
-        _delete_uploaded_scenes(self.db, [self.script.id])
+        delete_uploaded_scenes(self.db, [self.script.id])
         self.db.commit()
         self.assertIsNotNone(self.db.get(Play, self.play.id))
         self.assertEqual(self.db.query(Scene).count(), 1)

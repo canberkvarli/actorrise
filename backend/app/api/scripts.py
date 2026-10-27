@@ -1962,20 +1962,11 @@ async def delete_script(
 
 
 def _destroy_script(db: Session, script) -> None:
-    """A script and every scene of it, gone. The caller commits."""
-    scenes = db.query(Scene).filter(Scene.user_script_id == script.id).all()
-    for scene in scenes:
-        # Delete rehearsal line deliveries, then rehearsal sessions
-        session_ids = [s.id for s in db.query(RehearsalSession).filter(RehearsalSession.scene_id == scene.id).all()]
-        if session_ids:
-            db.query(RehearsalLineDelivery).filter(RehearsalLineDelivery.session_id.in_(session_ids)).delete(synchronize_session=False)
-            db.query(RehearsalSession).filter(RehearsalSession.scene_id == scene.id).delete(synchronize_session=False)
-        # Delete scene favorites
-        db.query(SceneFavorite).filter(SceneFavorite.scene_id == scene.id).delete(synchronize_session=False)
-        # Delete scene lines
-        db.query(SceneLine).filter(SceneLine.scene_id == scene.id).delete(synchronize_session=False)
-        # Delete scene
-        db.delete(scene)
+    """A script and every scene of it, gone, and the play built for it with
+    its full text (which this used to leave behind). The caller commits."""
+    from app.services.user_deletion import delete_uploaded_scenes
+
+    delete_uploaded_scenes(db, [script.id])
     db.delete(script)
 
 
