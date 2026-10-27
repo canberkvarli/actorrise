@@ -513,7 +513,19 @@ async def get_usage_limits(request: Request, current_user: User = Depends(get_cu
     # lifetime counter. Mirrors the logic in require_script_upload's gate so the
     # client can show the upgrade modal before a user even picks a file.
     scripts_limit = features.get("scene_partner_scripts", 0)
-    is_paid = bool(getattr(tier, "monthly_price_cents", 0) and tier.monthly_price_cents > 0)
+    # An admin override on the account counts here too, as it does in the gate
+    # (get_effective_benefits): without it a teacher given unlimited uploads by
+    # override was shown the upgrade modal by the page the server would have let
+    # them through.
+    from app.services.benefits import get_effective_benefits
+
+    try:
+        scripts_limit = get_effective_benefits(db, current_user.id, subscription).get(
+            "scene_partner_scripts", scripts_limit
+        )
+    except Exception:
+        pass
+    is_paid =bool(getattr(tier, "monthly_price_cents", 0) and tier.monthly_price_cents > 0)
     if is_paid:
         scripts_used = (
             db.query(func.count(UserScript.id))
