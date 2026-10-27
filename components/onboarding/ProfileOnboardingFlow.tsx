@@ -428,7 +428,7 @@ export default function ProfileOnboardingFlow({
     setDirection(1);
     setPhase("settling");
     // The scene id, fetched while the profile writes, so Answer is instant.
-    if (variant === "new") {
+    if (variant === "new" && accountType !== "educator") {
       void fetchGuidedSceneId().then((id) => { guidedIdRef.current = id; }).catch(() => {});
     }
     try {
@@ -447,6 +447,16 @@ export default function ProfileOnboardingFlow({
       // frame for the search — the same three seconds, played twice.
       setPicks(await fetchPicks(answers));
       setPhase("payoff");
+      return;
+    }
+    // A teacher came to see the library their students would use, not to
+    // rehearse. Ending them on the scene lost one who works with hundreds of
+    // students a year (2026-10-23: "I couldn't read monologues before choosing
+    // to move on to rehearsing them"). They go straight to the library.
+    if (accountType === "educator") {
+      trackEvent("onboarding_ending_shown", { variant: "educator_library" });
+      endFlow();
+      router.push("/monologues");
       return;
     }
     // A new account: the picks are a side effect, kept without being shown,
@@ -469,7 +479,7 @@ export default function ProfileOnboardingFlow({
     trackEvent("onboarding_ending_shown", { variant: "quiet_skip" });
     setPhase("ending");
     setSubmitting(false);
-  }, [submitting, persist, answers, variant]);
+  }, [submitting, persist, answers, variant, accountType, endFlow, router]);
 
   /** Answer on the ending: the same tap as the hub's invitation. */
   const answerScene = useCallback(async () => {
