@@ -270,7 +270,9 @@ export default function ScenePreviewPage() {
     if (editingId == null || savingLine) return;
     setSavingLine(true);
     try {
-      await api.put(
+      // PATCH: the route is a PATCH, and PUT was a 405 from 2026-09-24 to
+      // 2026-10-27, so no one could save a fix on this page.
+      await api.patch(
         `/api/scripts/${scriptId}/scenes/${sceneId}/lines/${editingId}`,
         { character_name: draft.who.trim(), text: draft.text.trim() },
       );
