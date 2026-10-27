@@ -3,6 +3,7 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 
+from app.models.cue import CueConversation
 from app.models.admin_seen import AdminSeen, last_seen_at, mark_seen
 from app.models.organization import Organization
 from app.models.user import User
@@ -267,6 +268,7 @@ class EndpointTests(unittest.TestCase):
                 Organization,
                 User,
                 AdminSeen,
+                CueConversation,
                 ContentRequest,
                 SearchLog,
                 UserEvent,
@@ -330,7 +332,7 @@ class EndpointTests(unittest.TestCase):
         pulse = admin_pulse(db=self.db, _mod=self.admin)
         self.assertEqual(
             set(pulse),
-            {"feedback", "review", "requests", "searches", "revenue", "auditions"},
+            {"feedback", "review", "requests", "searches", "revenue", "auditions", "cue"},
         )
 
 

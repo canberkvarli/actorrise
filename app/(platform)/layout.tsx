@@ -66,6 +66,7 @@ import { HouseLightsRow, HouseLightsSwitch } from "@/components/layout/HouseLigh
 import { SaveAsk } from "@/components/billing/SaveAsk";
 import { EmailClickBeacon } from "@/components/analytics/EmailClickBeacon";
 import { ClassLinkRedeemer } from "@/components/billing/ClassLinkRedeemer";
+import { Cue } from "@/components/cue/Cue";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -851,6 +852,9 @@ export default function PlatformLayout({
       <SignupTracker />
       <FirstRehearsalGate />
       <SaveAsk />
+      {/* Canberk's assistant. Off where the page is the stage (rehearsal,
+          /work), and for signed-out visitors. */}
+      {user && !isDemoUser && !isImmersive && <Cue />}
       {/* A class code held from /join/<code>, spent once signed in. */}
       <ClassLinkRedeemer />
       {/* useSearchParams: needs its own boundary or the whole layout leaves

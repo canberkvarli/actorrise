@@ -146,6 +146,18 @@ def _unread_feedback(db: Session) -> int:
     )
 
 
+def _unread_cue_handoffs(db: Session) -> int:
+    """Mirrors `admin/cue.py::summary`'s `unread_handoffs`."""
+    from app.models.cue import CueConversation
+
+    return (
+        db.query(func.count(CueConversation.id))
+        .filter(CueConversation.handoff_at.isnot(None), CueConversation.read_at.is_(None))
+        .scalar()
+        or 0
+    )
+
+
 def _pending_review(db: Session) -> int:
     """Mirrors `admin/monologues.py::admin_review_queue_count`."""
     return db.query(Monologue).filter(Monologue.review_status == "pending").count()
@@ -171,6 +183,7 @@ def admin_pulse(
     return {
         "feedback": _unread_feedback(db),
         "review": _pending_review(db),
+        "cue": _unread_cue_handoffs(db),
         "requests": unseen_requests(db, last_seen_at(db, _mod.id, "requests", floor)),
         "searches": unseen_bad_searches(
             db, last_seen_at(db, _mod.id, "searches", floor)

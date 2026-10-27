@@ -95,6 +95,23 @@ Sort every reply into exactly one of these:
 | A bounce or an auto-reply | Hard bounce (5.x.x), and an inbox-full failure (552, or a 452 4.2.2 that Gmail reports as a final failure after its 48 hours of retries): `scripts/opt_out.py <address> "BOUNCE: <code and text>, <date>" --bounce`. Canberk, 2026-10-12: a full inbox is an address that cannot be reached, file it. A "Delivery Status Notification (Delay)" is Gmail still retrying: nothing, it fails or delivers on its own within two days. Out-of-office: nothing. After filing, move the mailer-daemon notice to the trash (`trash_message`); the sent original stays. |
 | Anything else: an answer, a question, a complaint, a thank you | Draft a reply in Canberk's voice (step 3), and append what they said to `docs/metrics/user-voice.md` (step 4). |
 
+## 2b. Cue
+
+Cue is the assistant in the app (`backend/app/services/cue/`). Read what actors asked it since
+yesterday: `cd backend && uv run python scripts/cue_report.py` (read only; `--days 3` after a gap).
+
+- **Handoffs** are people waiting on Canberk, and they come first. Cue already emailed him each one
+  and it sits in `/admin/cue`, but nobody has answered it. Each gets a reply draft (step 3) to the
+  address shown, written from what the conversation says. A teacher, studio, school or org handoff
+  follows the educator rules in CLAUDE.md (free Plus, the students line, no CURTAIN). A billing,
+  refund or account handoff is drafted but flagged in the summary: Cue promised nothing, and
+  neither does the draft. Anything with a link follows the Gmail link-wrapping rule.
+- **Repeated questions** (asked by two or more actors) mean the fact sheet
+  (`backend/app/services/cue/facts.md`) or the app is missing something. List them in the summary
+  with a one-line suggestion each. Do not edit the fact sheet in the loop; Canberk decides.
+- Never quote a Cue conversation outside the summary, and never name the actor in
+  `docs/metrics/user-voice.md`.
+
 ## 3. Drafts
 
 Invoke the `draft-actorrise-email` skill before writing any. Its voice rules are not optional:

@@ -60,4 +60,5 @@ dependencies = [
     # the Dockerfile to apt-get. Pinned to the March release, not the one
     # from last week.
     "lameenc==1.8.2",
+    "anthropic>=0.70",
 ]

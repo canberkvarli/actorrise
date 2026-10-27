@@ -3,6 +3,7 @@ import {
   IconCalendarEvent,
   IconChartBar,
   IconClipboardCheck,
+  IconBulb,
   IconDeviceMobile,
   IconFileSearch,
   IconInbox,
@@ -21,6 +22,7 @@ export const BADGE_KEYS = [
   "searches",
   "revenue",
   "auditions",
+  "cue",
 ] as const;
 
 export type BadgeKey = (typeof BADGE_KEYS)[number];
@@ -84,6 +86,7 @@ export const ADMIN_NAV: NavGroup[] = [
     items: [
       { href: "/admin/users", label: "Users", icon: IconUsers },
       { href: "/admin/organizations", label: "Organizations", icon: IconBuilding },
+      { href: "/admin/cue", label: "Cue", icon: IconBulb, badgeKey: "cue" },
     ],
   },
   {

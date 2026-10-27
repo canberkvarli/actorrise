@@ -30,3 +30,5 @@ from app.models.audition import Audition, AuditionEvent, AuditionPiece, Audition
 from app.models.rehearsal import PartnerAudio, RehearsalEvent, RehearsalRun  # noqa: F401
 
 from app.models.shelf import ShelfScene  # noqa: F401
+
+from app.models.cue import CueConversation, CueMessage  # noqa: F401

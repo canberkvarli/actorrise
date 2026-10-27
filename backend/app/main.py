@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from app.api.account import router as account_router
 from app.api.admin.feedback import router as admin_feedback_router
+from app.api.admin.cue import router as admin_cue_router
 from app.api.admin.film_tv import router as admin_film_tv_router
 from app.api.admin.monologues import router as admin_monologues_router
 from app.api.admin.stats import router as admin_stats_router
@@ -32,6 +33,7 @@ from app.api.auth import router as auth_router
 from app.api.tapes import router as tapes_router
 from app.api.contact import router as contact_router
 from app.api.feedback import router as feedback_router
+from app.api.cue import router as cue_router
 from app.api.film_tv import router as film_tv_router
 from app.api.founding_actors import router as founding_actors_router
 from app.api.monologues import router as monologues_router
@@ -388,6 +390,12 @@ def _start_rehearsal_sweep_scheduler() -> None:
                     closed = close_stale_sessions(_db)
                     if closed:
                         logger.info("rehearsal sweep: closed %s stale session(s)", closed)
+                    # Cue keeps 90 days of text and no more (Supabase is near its cap).
+                    from app.services.cue import trim_old
+
+                    trimmed = trim_old(_db)
+                    if trimmed:
+                        logger.info("cue: trimmed %s old conversation(s)", trimmed)
                 finally:
                     _db.close()
             except Exception as e:  # noqa: BLE001
@@ -540,6 +548,7 @@ app.include_router(account_router)
 app.include_router(auth_router)
 app.include_router(contact_router)
 app.include_router(feedback_router)
+app.include_router(cue_router)
 app.include_router(profile_router)
 app.include_router(resume_router)
 app.include_router(monologues_router)
@@ -571,6 +580,7 @@ app.include_router(shelf_router)
 app.include_router(admin_pulse_router)
 app.include_router(admin_auditions_router)
 app.include_router(admin_feedback_router)
+app.include_router(admin_cue_router)
 app.include_router(admin_emails_router)
 app.include_router(admin_ghostlight_router)
 app.include_router(admin_searches_router)
