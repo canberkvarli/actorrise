@@ -1,0 +1,369 @@
+/* Cue's launcher and window, to the Claude Design spec of 2026-10-28.
+   A module, not globals.css: every branch appends to globals.css and git
+   splices the rules together (see globals-css-merge-conflicts memory).
+
+   Light values come from the theatre tokens wherever one exists. The theatre
+   tokens are light-only (they pin paper), so the dark shades the spec names
+   have no token and are written out under .dark below. */
+
+.root {
+  --cue-ink: var(--t-ink);
+  --cue-cream: var(--t-cream);
+  --cue-gel: var(--t-gel);
+  --cue-accent: var(--primary);
+  --cue-surface: var(--t-paper);
+  --cue-band: var(--t-ink);
+  --cue-launch-bg: var(--t-ink);
+  --cue-launch-border: var(--t-ink);
+  --cue-window-border: var(--t-ink);
+  --cue-window-shadow: var(--t-ink);
+  --cue-rule: var(--t-line-light-2);
+  --cue-muted: var(--t-muted-dark-2);
+  --cue-text: var(--t-text);
+  --cue-theirs-bg: #f3ead8;
+  --cue-theirs-text: var(--t-text);
+  --cue-mine-bg: var(--t-ink);
+  --cue-mine-text: var(--t-cream);
+  --cue-band-sub: #d8cbb6;
+  --cue-band-rule: #5a4636;
+  --cue-send-label: #fff;
+}
+
+:global(.dark) .root {
+  --cue-surface: #1c130d;
+  --cue-band: #26190f;
+  --cue-launch-bg: #26190f;
+  --cue-launch-border: #5a4636;
+  --cue-window-border: #5a4636;
+  --cue-window-shadow: #000;
+  --cue-rule: #3a2c22;
+  --cue-muted: #b3a593;
+  --cue-text: #ebe2d2;
+  --cue-theirs-bg: #2a1d14;
+  --cue-theirs-text: #ebe2d2;
+  --cue-mine-bg: #ebe2d2;
+  --cue-mine-text: var(--t-ink);
+  --cue-send-label: var(--t-ink);
+}
+
+/* Every control: a visible ring in the accent. */
+.root button:focus-visible,
+.root a:focus-visible,
+.root textarea:focus-visible {
+  outline: 2px solid var(--cue-accent);
+  outline-offset: 2px;
+}
+
+/* ---------- launcher ---------- */
+
+.launcher {
+  position: fixed;
+  right: 24px;
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  z-index: 10051;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--cue-launch-bg);
+  border: 1.5px solid var(--cue-launch-border);
+  box-shadow: 4px 4px 0 var(--cue-accent);
+  color: var(--cue-cream);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+@media (min-width: 768px) {
+  .launcher {
+    bottom: 24px;
+  }
+}
+/* On a phone the open window is the whole screen and has its own close. */
+@media (max-width: 767px) {
+  .launcher[data-open="true"] {
+    display: none;
+  }
+}
+.launcher:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--cue-accent);
+}
+
+.tag {
+  position: absolute;
+  right: calc(100% + 14px);
+  top: 50%;
+  white-space: nowrap;
+  padding: 3px 9px;
+  font-family: var(--font-theatre-display);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.2;
+  color: var(--cue-text);
+  background: var(--cue-surface);
+  border: 1px solid var(--cue-rule);
+  opacity: 0;
+  transform: translate(8px, -50%);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.launcher[data-open="false"]:hover .tag,
+.launcher[data-open="false"]:focus-visible .tag {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+@media (hover: none) {
+  .tag {
+    display: none;
+  }
+}
+
+/* ---------- window ---------- */
+
+.window {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--cue-surface);
+  color: var(--cue-text);
+  font-family: var(--font-theatre-body);
+  transform-origin: bottom right;
+}
+@media (min-width: 768px) {
+  .window {
+    inset: auto;
+    right: 24px;
+    bottom: 100px;
+    width: 384px;
+    height: 500px;
+    max-height: calc(100dvh - 124px);
+    border-radius: 14px;
+    border: 1.5px solid var(--cue-window-border);
+    box-shadow: 8px 8px 0 var(--cue-window-shadow);
+  }
+}
+
+.band {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  background: var(--cue-band);
+  color: var(--cue-cream);
+}
+@media (min-width: 768px) {
+  .band {
+    padding-top: 14px;
+  }
+}
+.disc {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--t-ink);
+}
+.name {
+  font-family: var(--font-theatre-display);
+  font-size: 26px;
+  line-height: 1;
+}
+.sub {
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  line-height: 1.2;
+  color: var(--cue-band-sub);
+}
+.gel {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--cue-gel);
+  box-shadow: 0 0 8px var(--cue-gel);
+}
+.close {
+  margin-left: auto;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cue-band-rule);
+  color: var(--cue-cream);
+  background: transparent;
+  cursor: pointer;
+}
+.close:hover {
+  border-color: var(--cue-cream);
+}
+
+.log {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.aside {
+  align-self: center;
+  text-align: center;
+  font-family: var(--font-theatre-display);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--cue-muted);
+  margin-bottom: 2px;
+}
+.bubble {
+  max-width: 82%;
+  padding: 10px 13px;
+  font-size: 14.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.theirs {
+  align-self: flex-start;
+  border-radius: 14px 14px 14px 4px;
+  border: 1px solid var(--cue-rule);
+  background: var(--cue-theirs-bg);
+  color: var(--cue-theirs-text);
+}
+.theirs a {
+  color: var(--cue-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.mine {
+  align-self: flex-end;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--cue-mine-bg);
+  color: var(--cue-mine-text);
+}
+.typing {
+  font-family: var(--font-theatre-display);
+  font-style: italic;
+  color: var(--cue-muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  flex: none;
+  white-space: nowrap;
+  padding: 6px 11px;
+  border-radius: 9999px;
+  border: 1px solid var(--cue-rule);
+  background: transparent;
+  color: var(--cue-text);
+  font-family: var(--font-theatre-body);
+  font-size: 13px;
+  cursor: pointer;
+}
+.chip:hover {
+  border-color: var(--cue-accent);
+  color: var(--cue-accent);
+}
+
+.inputRow {
+  border-top: 1px solid var(--cue-rule);
+  padding: 10px 12px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .inputRow {
+    padding-bottom: 10px;
+  }
+}
+.inputLine {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.input {
+  flex: 1;
+  min-height: 40px;
+  max-height: 128px;
+  resize: none;
+  border: 0;
+  background: transparent;
+  color: var(--cue-text);
+  font-family: var(--font-theatre-body);
+  font-size: 15px;
+  line-height: 1.4;
+  padding: 9px 4px;
+}
+/* The box is borderless, so its focus shows on the row's rule instead of a
+   ring drawn inside the window. */
+.root .input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+/* globals.css rings every focused control with a box-shadow. These carry the
+   outline above instead, so the ring would double it. */
+.chip:focus-visible,
+.close:focus-visible {
+  box-shadow: none;
+}
+.inputRow:focus-within {
+  border-top-color: var(--cue-accent);
+}
+.input::placeholder {
+  color: var(--cue-muted);
+}
+.send {
+  flex: none;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--cue-window-shadow);
+  box-shadow: 3px 3px 0 var(--cue-window-shadow);
+  background: var(--cue-accent);
+  color: var(--cue-send-label);
+  font-family: var(--font-theatre-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.send:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.left {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--cue-muted);
+}
+
+/* The paywall reuses the free-read wall. Its text is set in light-only theatre
+   tokens, so on the dark surface it takes the window's colours instead. */
+.wall {
+  border-top: 1px solid var(--cue-rule);
+  padding-top: 4px;
+}
+:global(.dark) .wall :global(.t-wall__title),
+:global(.dark) .wall :global(.t-wall__quiet) {
+  color: var(--cue-text);
+}
+:global(.dark) .wall :global(.t-wall__body),
+:global(.dark) .wall :global(.t-wall__dir) {
+  color: var(--cue-muted);
+}
