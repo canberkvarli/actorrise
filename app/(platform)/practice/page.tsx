@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState, useSyncExternalStore } from "re
 import { motion } from "framer-motion";
 
 import { useScripts } from "@/hooks/useScripts";
+import { useClassShelves } from "@/hooks/useClassShelf";
 import { useAuth } from "@/lib/auth";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
@@ -73,8 +74,15 @@ export default function PracticePage() {
   // scripts fetch too put a skeleton in front of the first-time actor for the
   // length of a round trip; a brand-new account has no scripts, and if the
   // fetch says otherwise the library takes over when it lands.
-  const inviteCandidate =
+  // Except a student whose teacher shared scenes with the class: the invitation
+  // replaces the library, and the library is where "From <teacher>" is, which
+  // is what they came for. So the room waits for the class shelf before
+  // deciding, and skips the invitation for anyone who has one.
+  const { data: classShelves, isFetched: classShelvesFetched } = useClassShelves();
+  const wouldInvite =
     !!user && shouldInvite(user, scriptsFetched ? ownScriptCount : 0, isDemoUser);
+  const inviteCandidate =
+    wouldInvite && classShelvesFetched && !(classShelves?.length ?? 0);
   // The user object can be a cached copy from before the guided run, which is
   // what set has_seen_first_rehearsal on the server. Finishing Late from the
   // signup card and walking in here showed the invitation to Late again
@@ -110,7 +118,10 @@ export default function PracticePage() {
 
   const hasCachedData = scriptsFetched || safeScripts.length > 0;
   const isLoading =
-    (authLoading && !user) || inviteChecking || (scriptsLoading && !hasCachedData && !invite);
+    (authLoading && !user) ||
+    inviteChecking ||
+    (wouldInvite && !classShelvesFetched) ||
+    (scriptsLoading && !hasCachedData && !invite);
 
   // The playbill introduces itself to first-timers only, then lives behind (?).
   // Two gates, because either alone is wrong: the seen-flag is per-browser, so
