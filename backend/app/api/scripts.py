@@ -1329,7 +1329,31 @@ def shelf_scripts_query(db: Session, user_id: int):
             UserScript.is_sample == True,
         ),
         UserScript.is_guided.is_(False),
+        or_(UserScript.processing_status.is_(None), UserScript.processing_status != DELETED),
     ).order_by(UserScript.is_sample.desc(), *_SHELF_ORDER)
+
+
+# A deleted script waits here this long, restorable, before it is gone for good.
+DELETED = "deleted"
+KEEP_DELETED_DAYS = 30
+
+
+def _purge_deleted(db: Session, user_id: int) -> None:
+    """Finish the deletes that have waited out their thirty days. Lazy: run
+    when the actor looks at their shelf or their recently deleted, which is
+    the only time it could matter to them."""
+    from datetime import datetime, timedelta, timezone
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=KEEP_DELETED_DAYS)
+    old = db.query(UserScript).filter(
+        UserScript.user_id == user_id,
+        UserScript.processing_status == DELETED,
+        UserScript.updated_at < cutoff,
+    ).all()
+    for script in old:
+        _destroy_script(db, script)
+    if old:
+        db.commit()
 
 
 @router.get("/", response_model=List[UserScriptResponse])
@@ -1339,6 +1363,7 @@ async def list_user_scripts(
 ):
     """Get all scripts uploaded by the current user, plus sample scripts"""
     _fail_abandoned_extractions(db, current_user.id)
+    _purge_deleted(db, current_user.id)
     scripts = shelf_scripts_query(db, current_user.id).all()
 
     if not scripts:
@@ -1366,6 +1391,44 @@ async def list_user_scripts(
         data["scene_titles"] = [sc.title for sc in scenes]
         result.append(UserScriptResponse(**data))
     return result
+
+
+@router.get("/deleted", response_model=List[UserScriptResponse])
+async def list_deleted_scripts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Recently deleted: what the actor took off the shelf in the last thirty
+    days, newest first, each one still whole and a tap from coming back."""
+    _purge_deleted(db, current_user.id)
+    gone = (
+        db.query(UserScript)
+        .filter(UserScript.user_id == current_user.id, UserScript.processing_status == DELETED)
+        .order_by(UserScript.updated_at.desc().nullslast(), UserScript.id.desc())
+        .all()
+    )
+    return [UserScriptResponse.model_validate(s) for s in gone]
+
+
+@router.post("/{script_id}/restore", response_model=UserScriptResponse)
+async def restore_script(
+    script_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Put a deleted script back on the shelf, at the top."""
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id,
+        UserScript.processing_status == DELETED,
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+    script.processing_status = "completed" if (script.num_scenes_extracted or 0) > 0 else "failed"
+    script.shelf_order = None  # unarranged sorts first: it comes back where it will be seen
+    db.commit()
+    db.refresh(script)
+    return UserScriptResponse.model_validate(script)
 
 
 class ShelfOrderRequest(BaseModel):
@@ -1678,10 +1741,13 @@ async def toggle_tag_vote(
 @router.delete("/{script_id}")
 async def delete_script(
     script_id: int,
+    forever: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Delete a script and all its scenes"""
+    """Take a script off the shelf. It waits in Recently deleted for thirty
+    days, whole, and can be put back; `forever` (or deleting it again from
+    there) removes it and its scenes now."""
     script = db.query(UserScript).filter(
         UserScript.id == script_id,
         UserScript.user_id == current_user.id
@@ -1690,8 +1756,20 @@ async def delete_script(
     if not script:
         raise HTTPException(status_code=404, detail="Script not found")
 
-    # Delete all associated scenes and their dependencies
-    scenes = db.query(Scene).filter(Scene.user_script_id == script_id).all()
+    if not forever and script.processing_status != DELETED:
+        script.processing_status = DELETED
+        db.commit()
+        return {"message": "Script moved to recently deleted"}
+
+    _destroy_script(db, script)
+    db.commit()
+
+    return {"message": "Script deleted successfully"}
+
+
+def _destroy_script(db: Session, script) -> None:
+    """A script and every scene of it, gone. The caller commits."""
+    scenes = db.query(Scene).filter(Scene.user_script_id == script.id).all()
     for scene in scenes:
         # Delete rehearsal line deliveries, then rehearsal sessions
         session_ids = [s.id for s in db.query(RehearsalSession).filter(RehearsalSession.scene_id == scene.id).all()]
@@ -1704,12 +1782,7 @@ async def delete_script(
         db.query(SceneLine).filter(SceneLine.scene_id == scene.id).delete(synchronize_session=False)
         # Delete scene
         db.delete(scene)
-
-    # Delete script
     db.delete(script)
-    db.commit()
-
-    return {"message": "Script deleted successfully"}
 
 
 # ============================================================================
