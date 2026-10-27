@@ -1429,6 +1429,181 @@ async def list_deleted_scripts(
     return [UserScriptResponse.model_validate(s) for s in gone]
 
 
+class ShelfItem(UserScriptResponse):
+    """A row of the phone's shelf: why it came up, when a find matched inside it."""
+    why: Optional[str] = None
+
+
+class ShelfPage(BaseModel):
+    """One answer for the Scene room's shelf, however long it is.
+
+    `working` is what the actor is on now, whole and in their own order (it is
+    short by nature). `rest` is one page of everything else in the chosen
+    order; `next_offset` asks for the page after. With a find or a genre the
+    two become one list of hits, paged, in `rest`.
+    """
+    grouped: bool
+    found: bool
+    working: List[ShelfItem]
+    rest: List[ShelfItem]
+    rest_total: int
+    total: int
+    next_offset: Optional[int]
+    genres: List[str]
+
+
+# The shelf splits in two from this many scripts; a find shows from FIND_FROM on the phone.
+SHELF_GROUP_FROM = 6
+SHELF_WORKING_DAYS = 14
+SHELF_SORTS = ("recent", "newest", "title", "scenes")
+
+
+def _why(script, needle: str, scene_titles: List[str]) -> Optional[str]:
+    """Why a find matched, when the title is not the reason."""
+    n = needle.lower()
+    if n in (script.title or "").lower():
+        return None
+    if script.author and n in script.author.lower():
+        return f"by {script.author}"
+    for ch in script.characters or []:
+        name = (ch or {}).get("name") if isinstance(ch, dict) else None
+        if name and n in name.lower():
+            return f"a part: {name}"
+    for t in scene_titles:
+        if n in (t or "").lower():
+            return f"a scene: {t}"
+    return None
+
+
+@router.get("/shelf", response_model=ShelfPage)
+async def shelf_page(
+    q: Optional[str] = None,
+    genre: Optional[str] = None,
+    sort: str = "recent",
+    offset: int = 0,
+    limit: int = 30,
+    touched: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """The actor's own sides, made sense of on the server so a shelf of five
+    hundred costs what a shelf of thirty does. `touched` is the ids the phone
+    saw opened lately (comma separated): opening a script counts as working
+    on it as much as running it does."""
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import String, and_, cast, exists, or_
+    from app.models.rehearsal import RehearsalRun
+
+    _fail_abandoned_extractions(db, current_user.id)
+    _purge_deleted(db, current_user.id)
+    limit = max(1, min(limit, 60))
+    offset = max(0, offset)
+    sort = sort if sort in SHELF_SORTS else "recent"
+    opened = {int(x) for x in (touched or "").split(",") if x.strip().isdigit()}
+
+    mine = db.query(UserScript).filter(
+        UserScript.user_id == current_user.id,
+        UserScript.is_sample.is_(False),
+        UserScript.is_guided.is_(False),
+        or_(UserScript.processing_status.is_(None), UserScript.processing_status != DELETED),
+    )
+    total = mine.count()
+
+    # The last run of each script, as a subquery to sort and group by.
+    runs = (
+        db.query(Scene.user_script_id.label("sid"), func.max(RehearsalRun.started_at).label("last_run"))
+        .join(RehearsalRun, RehearsalRun.scene_id == Scene.id)
+        .filter(RehearsalRun.user_id == current_user.id)
+        .group_by(Scene.user_script_id)
+        .subquery()
+    )
+    active = func.coalesce(runs.c.last_run, UserScript.created_at)
+    base = mine.outerjoin(runs, runs.c.sid == UserScript.id)
+
+    # The genres to narrow by: every one on the shelf, the most common first. Two light columns.
+    counts: dict = {}
+    for g1, gs in mine.with_entities(UserScript.genre, UserScript.genres).all():
+        for g in (gs or ([g1] if g1 else [])):
+            g = (g or "").strip()
+            if g:
+                counts[g] = counts.get(g, 0) + 1
+    genres = [g for g, _ in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:6]]
+
+    order = {
+        "recent": (active.desc(), UserScript.id.desc()),
+        "newest": (UserScript.created_at.desc(), UserScript.id.desc()),
+        "title": (func.lower(UserScript.title).asc(), UserScript.id.asc()),
+        "scenes": (UserScript.num_scenes_extracted.desc(), func.lower(UserScript.title).asc()),
+    }[sort]
+
+    def items(rows, needle: str = "") -> List[ShelfItem]:
+        ids = [r.id for r in rows]
+        titles: dict = {}
+        if ids:
+            for sid, t in db.query(Scene.user_script_id, Scene.title).filter(Scene.user_script_id.in_(ids)).order_by(Scene.id).all():
+                titles.setdefault(sid, []).append(t)
+        last = dict(db.query(runs.c.sid, runs.c.last_run).filter(runs.c.sid.in_(ids)).all()) if ids else {}
+        out = []
+        for r in rows:
+            data = UserScriptResponse.model_validate(r).model_dump()
+            data["scene_titles"] = titles.get(r.id, [])
+            data["first_scene_title"] = data["scene_titles"][0] if data["scene_titles"] else None
+            data["last_rehearsed_at"] = last.get(r.id)
+            out.append(ShelfItem(**data, why=_why(r, needle, data["scene_titles"]) if needle else None))
+        return out
+
+    needle = (q or "").strip()
+    if needle or genre:
+        found = base
+        if needle:
+            like = f"%{needle}%"
+            in_scene = exists().where(and_(Scene.user_script_id == UserScript.id, Scene.title.ilike(like)))
+            found = found.filter(or_(
+                UserScript.title.ilike(like),
+                UserScript.author.ilike(like),
+                cast(UserScript.characters, String).ilike(like),
+                in_scene,
+            ))
+        if genre:
+            found = found.filter(or_(UserScript.genre.ilike(genre), cast(UserScript.genres, String).ilike(f'%"{genre}"%')))
+        hits_total = found.count()
+        # A title that starts with the words first, then any title, then the rest.
+        first = func.lower(UserScript.title).like(f"{needle.lower()}%") if needle else None
+        ordering = ((first.desc(),) if first is not None else ()) + order
+        page = found.order_by(*ordering).offset(offset).limit(limit).all()
+        nxt = offset + limit if offset + limit < hits_total else None
+        return ShelfPage(grouped=False, found=True, working=[], rest=items(page, needle), rest_total=hits_total,
+                         total=total, next_offset=nxt, genres=genres)
+
+    if total < SHELF_GROUP_FROM:
+        everything = shelf_ordered(mine).all()
+        return ShelfPage(grouped=False, found=False, working=items(everything), rest=[], rest_total=0,
+                         total=total, next_offset=None, genres=genres)
+
+    since = datetime.now(timezone.utc) - timedelta(days=SHELF_WORKING_DAYS)
+    working_filter = or_(
+        and_(UserScript.processing_status.isnot(None), UserScript.processing_status.notin_(("completed", "failed"))),
+        # Never NULL: a script never run is as recent as when it came in. A NULL
+        # here made "not working on" unknown and emptied the rest.
+        active >= since,
+        UserScript.id.in_(opened or {-1}),
+    )
+    working = base.filter(working_filter).order_by(*_SHELF_ORDER).all()
+    rest_q = base.filter(~working_filter)
+    rest_total = rest_q.count()
+    if not working or rest_total == 0:
+        # Everything is fresh, or nothing is: one list says it better.
+        everything = base.order_by(*_SHELF_ORDER).offset(offset).limit(limit).all()
+        nxt = offset + limit if offset + limit < total else None
+        return ShelfPage(grouped=False, found=False, working=items(everything), rest=[], rest_total=0,
+                         total=total, next_offset=nxt, genres=genres)
+    page = rest_q.order_by(*order).offset(offset).limit(limit).all()
+    nxt = offset + limit if offset + limit < rest_total else None
+    return ShelfPage(grouped=True, found=False, working=items(working) if offset == 0 else [], rest=items(page),
+                     rest_total=rest_total, total=total, next_offset=nxt, genres=genres)
+
+
 @router.post("/{script_id}/restore", response_model=UserScriptResponse)
 async def restore_script(
     script_id: int,
