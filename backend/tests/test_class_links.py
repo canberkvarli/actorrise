@@ -40,7 +40,7 @@ class ClassLinkJoinTest(unittest.TestCase):
         )
         self.db.add(self.link)
         self.db.commit()
-        self.mailed, self.events = [], []
+        self.mailed, self.events, self.full_alerts = [], [], []
         self.patches = [
             mock.patch("app.api.admin.users.threading.Thread", _SyncThread),
             mock.patch(
@@ -51,6 +51,10 @@ class ClassLinkJoinTest(unittest.TestCase):
             mock.patch(
                 "app.services.events.record_user_event",
                 lambda uid, name, props=None: self.events.append((uid, name, props)),
+            ),
+            mock.patch(
+                "app.services.class_links._tell_founder_full",
+                lambda link: self.full_alerts.append(link.code),
             ),
         ]
         for p in self.patches:
@@ -132,6 +136,14 @@ class ClassLinkJoinTest(unittest.TestCase):
         third = self._student("3@nmu.edu")
         self.assertEqual(class_links.join(self.db, self.link, third).outcome, "full")
         self.assertIsNone(self._sub(third))
+
+    def test_the_first_student_turned_away_emails_canberk_once(self):
+        for e in ("1@nmu.edu", "2@nmu.edu"):
+            class_links.join(self.db, self.link, self._student(e))
+        self.assertEqual(self.full_alerts, [])
+        class_links.join(self.db, self.link, self._student("3@nmu.edu"))
+        class_links.join(self.db, self.link, self._student("4@nmu.edu"))
+        self.assertEqual(self.full_alerts, ["nmu-teach"])
 
     def test_the_teacher_opening_their_own_link_changes_nothing(self):
         r = class_links.join(self.db, self.link, self.teacher)
@@ -269,7 +281,7 @@ class TeacherMakesOwnLinkTest(unittest.TestCase):
         self.assertEqual(link.code, "lincoln-high-elena")
         self.assertTrue(link.active)
         self.assertEqual((link.teacher_label, link.school_label), ("Elena", "Lincoln High"))
-        self.assertEqual(link.max_uses, class_links.SELF_SERVE_MAX_USES)
+        self.assertEqual(link.max_uses, class_links.SCHOOL_MAX_USES)
         self.assertEqual(self.told, ["lincoln-high-elena"])
 
     def test_college_address_works_too(self):
@@ -278,6 +290,7 @@ class TeacherMakesOwnLinkTest(unittest.TestCase):
     def test_any_other_address_waits_switched_off(self):
         link = class_links.make_own_link(self.db, self._teacher("drama.teacher@gmail.com"))
         self.assertFalse(link.active)
+        self.assertEqual(link.max_uses, class_links.SELF_SERVE_MAX_USES)
         self.assertEqual(self.told, [link.code])
 
     def test_asking_twice_returns_the_same_link_and_tells_once(self):

@@ -102,6 +102,8 @@ def join(db: Session, link: ClassLink, user: User) -> JoinResult:
         db.rollback()
         return JoinResult("joined")
 
+    if outcome == "full" and _first_full(db, link):
+        _tell_founder_full(link)
     if outcome == "granted":
         _grant(db, link, user)
         sub = db.query(UserSubscription).filter(UserSubscription.user_id == user.id).first()
@@ -251,6 +253,9 @@ def _grant(db: Session, link: ClassLink, user: User) -> None:
 # a working link hands out Plus. He is emailed about every link made, either way.
 
 SELF_SERVE_MAX_USES = 40
+# A teacher on a school address often has several classes (Gilroy: four, 90
+# students in a week, 2026-10-27), so their link starts far higher.
+SCHOOL_MAX_USES = 150
 _SLUG = re.compile(r"[^a-z0-9]+")
 
 
@@ -294,7 +299,7 @@ def make_own_link(db: Session, user: User, school: str | None = None) -> ClassLi
         teacher_label=first[:80],
         school_label=school_label,
         days=30,
-        max_uses=SELF_SERVE_MAX_USES,
+        max_uses=SCHOOL_MAX_USES if _is_school_domain(_domain(user.email)) else SELF_SERVE_MAX_USES,
         active=_is_school_domain(_domain(user.email)),
     )
     db.add(link)
@@ -310,6 +315,37 @@ def make_own_link(db: Session, user: User, school: str | None = None) -> ClassLi
     db.refresh(link)
     _tell_founder(link, user)
     return link
+
+
+def _first_full(db: Session, link: ClassLink) -> bool:
+    return (
+        db.query(ClassLinkJoin)
+        .filter(ClassLinkJoin.class_link_id == link.id, ClassLinkJoin.outcome == "full")
+        .count()
+        == 1
+    )
+
+
+def _tell_founder_full(link: ClassLink) -> None:
+    """The first student a link turns away. A full link is silent otherwise: the
+    student just meets the paywall. Gilroy hit its cap mid-class on 2026-10-27 and
+    29 students were refused before anyone noticed."""
+    try:
+        from app.services.email.resend_client import ResendEmailClient
+
+        ResendEmailClient().send_email(
+            to=ADMIN_EMAIL,
+            subject=f"Class link full: {link.code} is turning students away",
+            html=(
+                f"<p>actorrise.com/join/{link.code} has given out all {link.max_uses} of its grants, and a student"
+                " just joined and got nothing. Everyone after them will too.</p>"
+                f"<p>Raise the cap: <code>UPDATE class_links SET max_uses = {link.max_uses * 2} WHERE code ="
+                f" '{link.code}';</code> then grant the students marked full (the 2026-10-27 Gilroy fix is the"
+                " pattern).</p>"
+            ),
+        )
+    except Exception:
+        logger.exception("class link: full email failed for %s", link.code)
 
 
 def _tell_founder(link: ClassLink, user: User) -> None:
