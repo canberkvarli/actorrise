@@ -12,7 +12,7 @@ import threading
 from datetime import date
 from typing import Optional
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.models.billing import PricingTier, UsageMetrics, UserSubscription
@@ -99,6 +99,12 @@ def _get_marketing_recipients(
 
     # Never send to internal/test addresses.
     query = query.filter(~User.email.ilike("%@actorrise.com"))
+
+    # Never to a student. They came in through a teacher's class link, most are
+    # minors, and many are on district inboxes that turn outside mail away; the
+    # privacy policy (section 12) promises them no marketing email. 2026-10-29:
+    # 113 Gilroy students would otherwise have been in the next send to "all".
+    query = query.filter(or_(User.account_type.is_(None), User.account_type != "student"))
 
     # Exclude anyone who bounced, complained, or asked out. This lives in a
     # separate table from marketing_opt_in (it's populated by Resend webhooks),

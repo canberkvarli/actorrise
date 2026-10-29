@@ -11,12 +11,14 @@ import { paywallProps, type PaywallKind } from "./paywall-events";
 // ─── Event param types ───────────────────────────────────────────────
 
 type SearchPerformedParams = {
+  /** Accepted but never sent to Google: what someone searched for stays in our
+   *  own search_logs (privacy policy, section 12; 2026-10-29). */
   query: string;
   results_count: number;
   search_type: "monologue" | "film_tv";
 };
 
-type SecondSearchPerformedParams = SearchPerformedParams & {
+type SecondSearchPerformedParams = Omit<SearchPerformedParams, "query"> & {
   search_count: number;
 };
 
@@ -193,14 +195,12 @@ export function trackSearchPerformed(params: SearchPerformedParams) {
   const searchCount = incrementSessionSearchCount();
 
   sendEvent("search_performed", {
-    query: params.query,
     results_count: params.results_count,
     search_type: params.search_type,
   });
 
   if (searchCount > 1) {
     sendEvent("second_search_performed", {
-      query: params.query,
       results_count: params.results_count,
       search_type: params.search_type,
       search_count: searchCount,
