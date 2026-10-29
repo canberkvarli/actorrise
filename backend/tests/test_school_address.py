@@ -46,8 +46,49 @@ def test_only_students_are_skipped():
     assert not is_school_student(_user("a@gmail.com", "student"))
 
 
+def test_a_student_subdomain_is_a_student_whatever_the_account_says():
+    assert is_school_student(_user("568713@stu.sandi.net", "actor"))
+    assert is_school_student(_user("568713@stu.sandi.net", None))
+    assert is_school_student(_user("a@student.hunterschools.org", "actor"))
+    assert not is_school_student(_user("teacher@sandi.net", "educator"))
+    assert not is_school_student(_user("a@stuart.com", None))
+
+
 def test_lifecycle_and_triggered_skip_district_students():
     # triggered.py goes through lifecycle._mailable too.
     assert not lifecycle._mailable(_user("a@gilroyunified.org", "student"), set(), set())
     assert lifecycle._mailable(_user("a@gmail.com", "student"), set(), set())
     assert lifecycle._mailable(_user("t@gilroyunified.org", "educator"), set(), set())
+
+
+def test_bulk_email_skips_student_inboxes_whatever_the_account_says():
+    from datetime import datetime, timezone
+
+    from app.models.billing import PricingTier, UserSubscription
+    from app.models.email_do_not_contact import EmailDoNotContact
+    from app.models.organization import Organization
+    from app.models.user import User
+    from app.services.email.marketing import _get_marketing_recipients
+    from tests.dbfixture import memory_db, restore
+
+    db, saved = memory_db([Organization, User, EmailDoNotContact, PricingTier, UserSubscription])
+    try:
+        now = datetime.now(timezone.utc)
+        for i, (email, kind) in enumerate(
+            [
+                ("actor@gmail.com", None),
+                ("568713@stu.sandi.net", "actor"),
+                ("555111@stu.sandi.net", None),
+                ("a@student.hunterschools.org", "actor"),
+                ("teacher@sandi.net", "educator"),
+                ("kid@gilroyunified.org", "student"),
+            ],
+            start=1,
+        ):
+            db.add(User(id=i, email=email, supabase_id=email, account_type=kind, marketing_opt_in=True, created_at=now))
+        db.commit()
+        got = {u.email for u in _get_marketing_recipients(db, "all")}
+        assert got == {"actor@gmail.com", "teacher@sandi.net"}
+    finally:
+        db.close()
+        restore(saved)

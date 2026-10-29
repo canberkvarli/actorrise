@@ -19,6 +19,7 @@ from app.models.billing import PricingTier, UsageMetrics, UserSubscription
 from app.models.email_do_not_contact import EmailDoNotContact
 from app.models.user import User
 from app.services.email.resend_client import ResendEmailClient
+from app.services.email.school_address import STUDENT_INBOX_PREFIXES
 from app.services.email.templates import EmailTemplates
 
 
@@ -105,6 +106,10 @@ def _get_marketing_recipients(
     # privacy policy (section 12) promises them no marketing email. 2026-10-29:
     # 113 Gilroy students would otherwise have been in the next send to "all".
     query = query.filter(or_(User.account_type.is_(None), User.account_type != "student"))
+    # And a student inbox whoever signed up on it (school_address.py): a class that
+    # came in without a link signs up as actors.
+    for prefix in STUDENT_INBOX_PREFIXES:
+        query = query.filter(~User.email.ilike(f"%@{prefix}%"))
 
     # Exclude anyone who bounced, complained, or asked out. This lives in a
     # separate table from marketing_opt_in (it's populated by Resend webhooks),

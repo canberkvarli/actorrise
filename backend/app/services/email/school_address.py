@@ -26,8 +26,23 @@ def is_district_address(email: str | None) -> bool:
     return bool(_DISTRICT.search(domain.rsplit(".", 1)[0]))
 
 
+# A district's student mail lives on its own subdomain ("stu.sandi.net",
+# "student.hunterschools.org"). Nobody but a student has one, so the address
+# alone says so, whatever the account says: 17 San Diego students signed up on
+# 2026-10-28 without a class link, half of them as actors, and the next bulk
+# send went to them.
+STUDENT_INBOX_PREFIXES = ("stu.", "student.", "students.")
+
+
+def is_student_inbox(email: str | None) -> bool:
+    domain = (email or "").rsplit("@", 1)[-1].strip().lower()
+    return domain.startswith(STUDENT_INBOX_PREFIXES)
+
+
 def is_school_student(user) -> bool:
-    """A student account whose address is on a district's mail system."""
-    return getattr(user, "account_type", None) == "student" and is_district_address(
-        getattr(user, "email", None)
-    )
+    """A student on a district's mail system: a student account on a district
+    address, or anyone on a student-only subdomain."""
+    email = getattr(user, "email", None)
+    if is_student_inbox(email):
+        return True
+    return getattr(user, "account_type", None) == "student" and is_district_address(email)
