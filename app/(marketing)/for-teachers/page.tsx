@@ -12,14 +12,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Monologues for Drama Teachers & Acting Coaches | ActorRise",
     description:
-      "Find the right audition monologue in seconds. 19,000+ pieces, AI fit to type and casting, Overdone filter. Plus is free for teachers, coaches and their students.",
+      "Find the right audition monologue in seconds. 19,000+ pieces, AI fit to type and casting, Overdone filter. Your class gets Plus free for a month, then a class plan from $249 a year.",
     url: `${siteUrl}/for-teachers`,
   },
   twitter: {
     card: "summary_large_image",
     title: "Monologues for Drama Teachers & Acting Coaches | ActorRise",
     description:
-      "Find the right audition monologue in seconds. 19,000+ pieces, AI fit to type and casting, Overdone filter. Plus is free for teachers, coaches and their students.",
+      "Find the right audition monologue in seconds. 19,000+ pieces, AI fit to type and casting, Overdone filter. Your class gets Plus free for a month, then a class plan from $249 a year.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/for-teachers` },
@@ -61,29 +61,68 @@ export default function ForTeachersPage() {
           <span>Free tier so students can try it without a credit card</span>
         </li>
       </ul>
-      <p className="text-muted-foreground mb-8">
-        I’m starting with teachers and coaches: point your students to the platform and they get
-        better material that spreads by word of mouth. Curated lists and class-specific features are
-        on the roadmap.
+      <h2 className="mb-3 text-lg font-semibold text-foreground">How your class gets in</h2>
+      <ol className="mb-8 list-decimal space-y-2 pl-5 text-muted-foreground">
+        <li>Sign up free and pick Teacher when it asks who you are.</li>
+        <li>
+          In the library you&rsquo;ll find your class card. Make your class link there; it takes a
+          minute.
+        </li>
+        <li>
+          Have the class sign up together, in one class period. It takes about ten minutes, and
+          everyone who joins through your link gets Plus for a month, free.
+        </li>
+        <li>
+          &ldquo;Your class&rdquo; shows you who has joined, who is active and who has run a monologue
+          all the way through. You see what they did, never what they searched for.
+        </li>
+      </ol>
+      <p className="mb-8 text-sm text-muted-foreground">
+        The student side is for students 13 and up.
       </p>
-      {/* This said "need a discount code for your studio?" and pointed at the
-          contact form. There is no code and no form: the offer is free Plus,
-          granted by hand, and the class list is how students get it. */}
-      <p className="text-muted-foreground mb-8">
-        You don’t pay for this, and neither do your students. Sign up, email me at{" "}
+
+      <h2 className="mb-3 text-lg font-semibold text-foreground">Keeping your class on</h2>
+      <p className="mb-3 text-muted-foreground">
+        After the free month, a class plan keeps every student on Plus for the school year, paid by
+        the school on one invoice. Purchase orders are fine.
+      </p>
+      <ul className="mb-8 space-y-2 text-muted-foreground">
+        <li className="flex gap-2">
+          <span className="text-primary">·</span>
+          <span>
+            <strong className="text-foreground">Classroom</strong>, $249 a year: one teacher, up to 40
+            students
+          </span>
+        </li>
+        <li className="flex gap-2">
+          <span className="text-primary">·</span>
+          <span>
+            <strong className="text-foreground">Program</strong>, $499 a year: one school, up to 150
+            students
+          </span>
+        </li>
+        <li className="flex gap-2">
+          <span className="text-primary">·</span>
+          <span>
+            <strong className="text-foreground">District or studio</strong>: tell me what you need and
+            I&rsquo;ll send a quote
+          </span>
+        </li>
+      </ul>
+      <p className="mb-8 text-muted-foreground">
+        Your own account is on me. Email me at{" "}
         <a
           href="mailto:canberk@actorrise.com"
           className="text-foreground font-medium underline hover:no-underline"
         >
           canberk@actorrise.com
         </a>{" "}
-        with the address you used, and I’ll open Plus on your account. A month to start, and
-        longer for the asking. Send your students’ addresses along and I’ll do the same for
-        them, all on the same dates.
+        with the address you signed up with and I&rsquo;ll switch Plus on. Same address for a quote
+        your school can approve.
       </p>
       <div className="flex flex-wrap gap-4">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link prefetch={false} href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup">Sign up as a teacher</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
           <Link prefetch={false} href="/">Explore the search</Link>

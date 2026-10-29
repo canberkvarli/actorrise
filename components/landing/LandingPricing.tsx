@@ -226,6 +226,14 @@ export function LandingPricing() {
             (compare all plans &amp; faq &#8594;)
           </Link>
         </p>
+        <p className="mt-2 text-center">
+          <Link
+            href="/pricing#schools"
+            className="stage-direction text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            (teaching a class? plans for schools &#8594;)
+          </Link>
+        </p>
       </div>
     </section>
   );

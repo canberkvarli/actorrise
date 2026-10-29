@@ -34,12 +34,17 @@ const faqs = [
   {
     question: "I'm a student. Is there a discount?",
     answer:
-      "Students don't pay at all. Sign up free, then have your teacher email me at canberk@actorrise.com with the addresses, and I'll open Plus for the class.",
+      "Students don't pay at all. Ask your teacher to make a class link (it takes them a minute in the library), sign up through it, and you get Plus for a month, free. For students 13 and up.",
   },
   {
     question: "I teach. Can I get this for my students?",
     answer:
-      "Yes, and for yourself. Sign up at actorrise.com, email me the address you used, and I'll switch Plus on for you, free. A month to start, and if you need longer just say so. Send your students' addresses along and I'll do the same for them.",
+      "Yes. Sign up, pick Teacher, and make your class link from the library. Your class gets Plus free for a month, and your own account is on me. After that, a class plan keeps everyone on for the school year: Classroom $249 a year for up to 40 students, Program $499 for up to 150, a quote for a district or studio.",
+  },
+  {
+    question: "How does a school pay?",
+    answer:
+      "One invoice to the school for the year. Card, bank transfer and purchase orders are all fine. Email me at canberk@actorrise.com and I'll send a quote your principal or finance office can approve.",
   },
   {
     question: "How do I pay?",
@@ -50,6 +55,41 @@ const faqs = [
     question: "Can I cancel any time?",
     answer:
       "Any time, no commitment. You keep access to the end of the period you paid for, and your bookmarks stay put whatever you decide.",
+  },
+];
+
+const QUOTE = "mailto:canberk@actorrise.com?subject=Class%20plan%20quote";
+
+const SCHOOL_PLANS = [
+  {
+    name: "Classroom",
+    price: "$249",
+    per: "/year",
+    who: "One teacher, up to 40 students.",
+    feats: ["Plus for every student, all year", "Your class page: who joined, who's working", "One invoice to the school"],
+    cta: "Start with your class",
+    href: "/signup",
+    pick: false,
+  },
+  {
+    name: "Program",
+    price: "$499",
+    per: "/year",
+    who: "One school, up to 150 students.",
+    feats: ["Every class in the program on one plan", "Plus for every student, all year", "Purchase orders welcome"],
+    cta: "Get a quote",
+    href: QUOTE,
+    pick: true,
+  },
+  {
+    name: "District or studio",
+    price: "Quote",
+    per: "",
+    who: "Several schools, or an acting studio.",
+    feats: ["Seats sized to you", "One agreement, one invoice", "Set up with me directly"],
+    cta: "Get a quote",
+    href: QUOTE,
+    pick: false,
   },
 ];
 
@@ -312,6 +352,52 @@ export default function PricingPage() {
               </motion.div>
             );
           })}
+        </div>
+
+        {/* Classes and schools. A teacher's class gets the free month through
+            their class link; these keep it on after that, paid by the school on
+            one invoice (backend: class_link.py plan). Prices set 2026-10-29,
+            just under StageAgent's school plans. */}
+        <div id="schools" className="mx-auto mt-4 max-w-5xl">
+          <p className="t-box-office__dir text-center">(for classes and schools.)</p>
+          <h2 className="t-box-office__title text-center" style={{ marginBottom: 8 }}>
+            Bring your whole class.
+          </h2>
+          <p className="mx-auto mb-8 max-w-2xl text-center text-[15px] leading-normal" style={{ color: "var(--t-muted-dark, inherit)" }}>
+            Your class gets Plus free for a month through your class link. A class plan keeps every
+            student on for the school year, and you see who joined and what they&rsquo;ve done.
+          </p>
+          <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-3 sm:gap-6">
+            {SCHOOL_PLANS.map((plan) => (
+              <div key={plan.name} className="relative h-full">
+                <div className={`t-ticket t-ticket--stub${plan.pick ? " t-ticket--pick" : ""}`}>
+                  <h3 className="t-ticket__plan" style={{ fontSize: 22 }}>
+                    {plan.name}
+                  </h3>
+                  <p className="t-ticket__price">
+                    {plan.price}
+                    {plan.per ? <span className="t-ticket__per">{plan.per}</span> : null}
+                  </p>
+                  <p className="t-ticket__fine" style={{ marginTop: 8 }}>
+                    {plan.who}
+                  </p>
+                  <ul className="t-ticket__feats">
+                    {plan.feats.map((f) => (
+                      <li key={f} className="t-ticket__feat">
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <a
+                    href={plan.href}
+                    className={`t-ticket__cta mt-5 w-full${plan.pick ? "" : " t-ticket__cta--quiet"}`}
+                  >
+                    {plan.cta}
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="mx-auto mt-16 max-w-3xl">
