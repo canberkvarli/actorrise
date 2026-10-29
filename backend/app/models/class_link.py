@@ -36,6 +36,9 @@ class ClassLink(Base):
     # Grants, not visits: a student who was already paying does not use one up.
     max_uses = Column(Integer, nullable=False, default=60)
     active = Column(Boolean, nullable=False, default=True)
+    # A paid class plan: every student on the link is on Plus until this date,
+    # however late they joined. Null is the free month (`days` from joining).
+    plan_ends_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), default=_now, nullable=False)
 
 

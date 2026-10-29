@@ -16,7 +16,12 @@ type ClassLinkSummary = {
   max_uses: number;
   granted: number;
   joined: number;
+  plan_ends_at?: string | null;
 };
+
+function planDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+}
 
 const SITE = "actorrise.com";
 
@@ -147,8 +152,22 @@ export function TeacherClassCard() {
                 {link.granted === 0
                   ? "Nobody in yet. "
                   : `${link.granted} ${link.granted === 1 ? "student" : "students"} in. `}
-                It works best when the class signs up together, in one class period. It takes about ten minutes, and
-                each student gets Plus for a month.
+                {link.plan_ends_at ? (
+                  <>Every student is on Plus until {planDate(link.plan_ends_at)}, on your class plan.</>
+                ) : (
+                  <>
+                    It works best when the class signs up together, in one class period. It takes about ten minutes,
+                    and each student gets Plus for a month.
+                  </>
+                )}
+                {link.granted > 0 && (
+                  <>
+                    {" "}
+                    <Link href="/class" className="font-semibold text-primary underline-offset-4 hover:underline">
+                      See your class
+                    </Link>
+                  </>
+                )}
               </>
             ) : (
               <>

@@ -354,3 +354,115 @@ class WelcomeEmailTest(unittest.TestCase):
         from app.api.auth import _should_welcome
 
         self.assertTrue(_should_welcome("actor@gmail.com", None, True))
+
+
+class ClassPlanAndRosterTest(unittest.TestCase):
+    """A paid plan carries every student to one date; the teacher sees counts, not searches."""
+
+    def setUp(self):
+        from app.models.rehearsal import RehearsalRun
+        from app.models.search_log import SearchLog
+        from app.models.user_event import UserEvent
+
+        self.SearchLog, self.UserEvent, self.RehearsalRun = SearchLog, UserEvent, RehearsalRun
+        self.db, self.saved = memory_db(
+            [Organization, User, PricingTier, UserSubscription, AdminAuditLog, ClassLink, ClassLinkJoin,
+             ClassLinkInvite, SearchLog, UserEvent, RehearsalRun]
+        )
+        self.admin = User(email="canberk@actorrise.com", supabase_id="admin")
+        self.teacher = User(email="t@lincolnusd.org", supabase_id="t", account_type="educator", name="Elena Ruiz")
+        # Free first: a paid tier is any tier id above 1 (UserSubscription.is_paid_tier).
+        self.db.add(PricingTier(name="free", display_name="Free", monthly_price_cents=0, features={}))
+        self.db.commit()
+        self.plus = PricingTier(name="plus", display_name="Plus", monthly_price_cents=1200, features={})
+        self.db.add_all([self.admin, self.teacher, self.plus])
+        self.db.commit()
+        self.link = ClassLink(code="lincoln-elena", teacher_user_id=self.teacher.id, teacher_label="Elena",
+                              days=30, max_uses=2)
+        self.db.add(self.link)
+        self.db.commit()
+        self.patches = [
+            mock.patch("app.api.admin.users.threading.Thread", _SyncThread),
+            mock.patch("app.services.email.notifications.send_membership_granted_email", lambda **kw: None),
+            mock.patch("app.services.events.record_user_event", lambda *a, **k: None),
+            mock.patch("app.services.class_links._tell_founder_full", lambda link: None),
+        ]
+        for p in self.patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+        self.db.close()
+        restore(self.saved)
+
+    def _student(self, email, name=None):
+        u = User(email=email, supabase_id=email, name=name)
+        self.db.add(u)
+        self.db.commit()
+        return u
+
+    def _end(self, user):
+        sub = self.db.query(UserSubscription).filter(UserSubscription.user_id == user.id).one()
+        return class_links._aware(sub.trial_end)
+
+    def test_a_join_on_a_paid_link_runs_to_the_plan_end(self):
+        plan_end = datetime.now(timezone.utc) + timedelta(days=200)
+        self.link.plan_ends_at = plan_end
+        self.db.commit()
+        s = self._student("a@lincolnusd.org")
+        class_links.join(self.db, self.link, s)
+        self.assertLess(abs((self._end(s) - plan_end).total_seconds()), 2 * 86400)
+
+    def test_a_plan_that_has_ended_falls_back_to_the_month(self):
+        self.link.plan_ends_at = datetime.now(timezone.utc) - timedelta(days=1)
+        self.db.commit()
+        s = self._student("a@lincolnusd.org")
+        class_links.join(self.db, self.link, s)
+        self.assertLess(abs((self._end(s) - (datetime.now(timezone.utc) + timedelta(days=30))).total_seconds()), 2 * 86400)
+
+    def test_applying_a_plan_carries_the_class_and_seats_the_turned_away(self):
+        a, b, c = (self._student(f"{x}@lincolnusd.org") for x in "abc")
+        for s in (a, b, c):
+            class_links.join(self.db, self.link, s)
+        self.assertEqual(class_links.join(self.db, self.link, c).outcome, "joined")
+        until = datetime.now(timezone.utc) + timedelta(days=300)
+        moved = class_links.apply_plan(self.db, self.link, until, max_uses=40)
+        self.assertEqual(moved, 3)
+        for s in (a, b, c):
+            self.assertLess(abs((self._end(s) - until).total_seconds()), 2 * 86400)
+        outcomes = {j.outcome for j in self.db.query(ClassLinkJoin).all()}
+        self.assertEqual(outcomes, {"granted"})
+
+    def test_the_roster_counts_but_never_shows_what_they_searched(self):
+        s = self._student("774759@lincolnusd.org")
+        named = self._student("b@lincolnusd.org", name="Maya Ortiz")
+        for u in (s, named):
+            class_links.join(self.db, self.link, u)
+        # rehearsal_runs points at scenes, whose plays table carries vector
+        # columns SQLite cannot create; the counts are what is under test.
+        from sqlalchemy import text as sql_text
+
+        self.db.execute(sql_text("PRAGMA foreign_keys=OFF"))
+        self.db.add_all([
+            self.SearchLog(query="a secret search", results_count=3, user_id=s.id, created_at=datetime.now(timezone.utc)),
+            self.SearchLog(query="another", results_count=3, user_id=s.id, created_at=datetime.now(timezone.utc)),
+            self.UserEvent(user_id=s.id, event_name="monologue_work_started", properties={}, created_at=datetime.now(timezone.utc)),
+            self.UserEvent(user_id=s.id, event_name="monologue_work_finished", properties={}, created_at=datetime.now(timezone.utc)),
+            self.RehearsalRun(user_id=s.id, scene_id=1, character="A", is_guided=True, started_at=datetime.now(timezone.utc)),
+            self.RehearsalRun(user_id=s.id, scene_id=2, character="B", is_guided=False, started_at=datetime.now(timezone.utc)),
+        ])
+        self.db.commit()
+        roster = class_links.class_roster(self.db, self.teacher)
+        by_name = {r["name"]: r for r in roster}
+        self.assertEqual(set(by_name), {"774759", "Maya Ortiz"})
+        row = by_name["774759"]
+        self.assertEqual((row["searches"], row["monologues_practised"], row["monologues_finished"], row["scenes_run"]), (2, 1, 1, 1))
+        self.assertTrue(row["on_plus"])
+        self.assertNotIn("secret", str(roster))
+
+    def test_a_teacher_with_no_link_has_an_empty_class(self):
+        other = User(email="o@x.edu", supabase_id="o", account_type="educator")
+        self.db.add(other)
+        self.db.commit()
+        self.assertEqual(class_links.class_roster(self.db, other), [])

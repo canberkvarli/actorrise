@@ -16,6 +16,7 @@ Three people are left alone rather than granted:
 from __future__ import annotations
 
 import logging
+import math
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -79,7 +80,7 @@ def join(db: Session, link: ClassLink, user: User) -> JoinResult:
     if user.id == link.teacher_user_id:
         return JoinResult("own_link")
 
-    end = datetime.now(timezone.utc) + timedelta(days=link.days)
+    end = link_end(link)
     if _is_paying(sub):
         outcome = "paying"
     elif _comp_runs_past(sub, end):
@@ -105,7 +106,7 @@ def join(db: Session, link: ClassLink, user: User) -> JoinResult:
     if outcome == "full" and _first_full(db, link):
         _tell_founder_full(link)
     if outcome == "granted":
-        _grant(db, link, user)
+        _grant(db, link, user, until=end)
         sub = db.query(UserSubscription).filter(UserSubscription.user_id == user.id).first()
 
     from app.services.events import record_user_event
@@ -218,7 +219,22 @@ def claim_school_domain(db: Session, user: User, provider: object = None) -> Joi
     return None
 
 
-def _grant(db: Session, link: ClassLink, user: User) -> None:
+def link_end(link: ClassLink, now: datetime | None = None) -> datetime:
+    """When a student joining now is on Plus until: the paid plan's end date
+    when the link has one still to come, otherwise `days` from now."""
+    now = now or datetime.now(timezone.utc)
+    plan = _aware(link.plan_ends_at)
+    if plan is not None and plan > now:
+        return plan
+    return now + timedelta(days=link.days)
+
+
+def _days_until(until: datetime, now: datetime | None = None) -> int:
+    now = now or datetime.now(timezone.utc)
+    return max(1, math.ceil((until - now).total_seconds() / 86400))
+
+
+def _grant(db: Session, link: ClassLink, user: User, until: datetime | None = None) -> None:
     from app.api.admin.users import AdminGrantRequest, grant_admin_user_membership
 
     admin = db.query(User).filter(User.email == ADMIN_EMAIL).first()
@@ -229,7 +245,7 @@ def _grant(db: Session, link: ClassLink, user: User) -> None:
         user.id,
         AdminGrantRequest(
             tier_id=plus.id,
-            duration_days=link.days,
+            duration_days=_days_until(until) if until else link.days,
             account_type="student",
             # A district inbox turns the email away; see school_address.py.
             notify=not is_district_address(user.email),
@@ -386,4 +402,157 @@ def link_summary(db: Session, link: ClassLink) -> dict:
         "max_uses": link.max_uses,
         "granted": granted,
         "joined": joined,
+        "plan_ends_at": _aware(link.plan_ends_at).isoformat() if link.plan_ends_at else None,
     }
+
+
+# --- A paid class plan ---------------------------------------------------------
+
+
+def apply_plan(db: Session, link: ClassLink, until: datetime, max_uses: int) -> int:
+    """A school paid: every student on the link is on Plus until `until`.
+
+    Sets the link's end date and seat count, then brings everyone already in the
+    class up to that date, including anyone the link turned away as full while
+    there are seats. A payer is left alone (granting over them would stop their
+    billing), and a comp that already runs longer is never shortened. No email:
+    most of these are district inboxes. Returns how many students it moved."""
+    until = _aware(until)
+    link.plan_ends_at = until
+    link.max_uses = max_uses
+    db.commit()
+
+    moved = 0
+    joins = (
+        db.query(ClassLinkJoin)
+        .filter(ClassLinkJoin.class_link_id == link.id, ClassLinkJoin.outcome.in_(("granted", "full")))
+        .order_by(ClassLinkJoin.created_at)
+        .all()
+    )
+    granted = sum(1 for j in joins if j.outcome == "granted")
+    for j in joins:
+        if j.outcome == "full" and granted >= max_uses:
+            continue
+        user = db.get(User, j.user_id)
+        sub = db.query(UserSubscription).filter(UserSubscription.user_id == j.user_id).first()
+        if user is None or _is_paying(sub) or _comp_runs_past(sub, until):
+            continue
+        _grant_quiet(db, link, user, until)
+        if j.outcome == "full":
+            j.outcome = "granted"
+            granted += 1
+            db.commit()
+        moved += 1
+    return moved
+
+
+def _grant_quiet(db: Session, link: ClassLink, user: User, until: datetime) -> None:
+    from app.api.admin.users import AdminGrantRequest, grant_admin_user_membership
+
+    admin = db.query(User).filter(User.email == ADMIN_EMAIL).first()
+    plus = db.query(PricingTier).filter(PricingTier.name == "plus").first()
+    if admin is None or plus is None:
+        raise RuntimeError("admin account or plus tier missing")
+    grant_admin_user_membership(
+        user.id,
+        AdminGrantRequest(
+            tier_id=plus.id,
+            duration_days=_days_until(until),
+            account_type="student",
+            notify=False,
+            note=f"class plan {link.code} until {until.date().isoformat()}",
+        ),
+        admin=admin,
+        db=db,
+    )
+
+
+# --- The teacher's view of their class ------------------------------------------
+
+
+def _display_name(user: User) -> str:
+    """What the teacher sees for a student: their name, or the part of their
+    address before the @ (a school student id, often)."""
+    name = (user.name or "").strip()
+    return name or (user.email or "").split("@")[0]
+
+
+def class_roster(db: Session, teacher: User) -> list[dict]:
+    """Every student who joined the teacher's links, with what they have done.
+
+    Counts only. A teacher sees that a student searched 12 times, never what
+    for: the searches are the student's, the class is the teacher's."""
+    from sqlalchemy import func
+
+    from app.models.rehearsal import RehearsalRun
+    from app.models.search_log import SearchLog
+    from app.models.user_event import UserEvent
+
+    links = db.query(ClassLink).filter(ClassLink.teacher_user_id == teacher.id).all()
+    if not links:
+        return []
+    by_link = {l.id: l for l in links}
+    joins = (
+        db.query(ClassLinkJoin)
+        .filter(ClassLinkJoin.class_link_id.in_(by_link), ClassLinkJoin.user_id != teacher.id)
+        .order_by(ClassLinkJoin.created_at.desc())
+        .all()
+    )
+    ids = list({j.user_id for j in joins})
+    if not ids:
+        return []
+
+    def counts(q) -> dict[int, int]:
+        return {uid: n for uid, n in q.all()}
+
+    searches = counts(
+        db.query(SearchLog.user_id, func.count(SearchLog.id)).filter(SearchLog.user_id.in_(ids)).group_by(SearchLog.user_id)
+    )
+
+    def events(name: str) -> dict[int, int]:
+        return counts(
+            db.query(UserEvent.user_id, func.count(UserEvent.id))
+            .filter(UserEvent.user_id.in_(ids), UserEvent.event_name == name)
+            .group_by(UserEvent.user_id)
+        )
+
+    practised = events("monologue_work_started")
+    finished = events("monologue_work_finished")
+    scenes = counts(
+        db.query(RehearsalRun.user_id, func.count(RehearsalRun.id))
+        .filter(RehearsalRun.user_id.in_(ids), RehearsalRun.is_guided.isnot(True))
+        .group_by(RehearsalRun.user_id)
+    )
+    last_seen = {
+        uid: ts
+        for uid, ts in db.query(UserEvent.user_id, func.max(UserEvent.created_at))
+        .filter(UserEvent.user_id.in_(ids))
+        .group_by(UserEvent.user_id)
+        .all()
+    }
+    users = {u.id: u for u in db.query(User).filter(User.id.in_(ids)).all()}
+    subs = {s.user_id: s for s in db.query(UserSubscription).filter(UserSubscription.user_id.in_(ids)).all()}
+
+    out, seen = [], set()
+    for j in joins:
+        if j.user_id in seen or j.user_id not in users:
+            continue
+        seen.add(j.user_id)
+        u, sub = users[j.user_id], subs.get(j.user_id)
+        on_plus = bool(sub and sub.is_active and sub.is_paid_tier)
+        last = _aware(last_seen.get(j.user_id))
+        out.append(
+            {
+                "name": _display_name(u),
+                "joined_at": _aware(j.created_at).isoformat(),
+                "plus_until": _aware(sub.trial_end).isoformat() if on_plus and sub.trial_end else None,
+                "on_plus": on_plus,
+                "searches": searches.get(j.user_id, 0),
+                "monologues_practised": practised.get(j.user_id, 0),
+                "monologues_finished": finished.get(j.user_id, 0),
+                "scenes_run": scenes.get(j.user_id, 0),
+                "last_active": last.isoformat() if last else None,
+                "link": by_link[j.class_link_id].code,
+            }
+        )
+    return out

@@ -43,6 +43,11 @@ def main() -> None:
     off.add_argument("code")
     on = sub.add_parser("on")
     on.add_argument("code")
+    plan = sub.add_parser("plan", help="a school paid: everyone on the link is on Plus until a date")
+    plan.add_argument("code")
+    plan.add_argument("--until", required=True, help="YYYY-MM-DD, the last day of the plan")
+    plan.add_argument("--students", type=int, required=True, help="seats paid for (40 classroom, 150 program)")
+    plan.add_argument("--apply", action="store_true", help="write; without it, only say what would change")
     args = ap.parse_args()
 
     import app.models  # noqa: F401  registers the mappers
@@ -53,6 +58,24 @@ def main() -> None:
     from app.services.class_links import CODE_RE
 
     db = SessionLocal()
+
+    if args.cmd == "plan":
+        from datetime import datetime, timezone
+
+        from app.services.class_links import apply_plan
+
+        link = db.query(ClassLink).filter(ClassLink.code == args.code.strip().lower()).first()
+        if link is None:
+            sys.exit(f"{args.code}: no such link")
+        until = datetime.strptime(args.until, "%Y-%m-%d").replace(hour=23, minute=59, tzinfo=timezone.utc)
+        joined = db.query(ClassLinkJoin).filter(ClassLinkJoin.class_link_id == link.id).count()
+        print(f"{link.code}: plan until {until.date()}, {args.students} seats ({joined} students in the class now)")
+        if not args.apply:
+            print("dry run, nothing written; add --apply")
+            return
+        moved = apply_plan(db, link, until, args.students)
+        print(f"done: {moved} students now on Plus until {until.date()}")
+        return
 
     if args.cmd == "make":
         code = args.code.strip().lower()

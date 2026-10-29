@@ -30,6 +30,12 @@ def read_my_class_link(current_user: User = Depends(get_current_user), db: Sessi
     return {"link": class_links.link_summary(db, link) if link else None}
 
 
+@router.get("/mine/students")
+def read_my_class(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The teacher's students and what each has done (counts, never search text)."""
+    return {"students": class_links.class_roster(db, _teacher(current_user))}
+
+
 @router.post("/mine")
 def make_my_class_link(
     body: MakeLinkRequest | None = None,
