@@ -24,3 +24,16 @@ class PracticeEntry(Base):
     kind = Column(String(16), nullable=False)
     note = Column(String(280), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class PracticeTiming(Base):
+    """How long a timed session ran, for a check-in made from the timer.
+
+    Its own table so practice_entries needs no new column; a check-in made
+    away from the app has no row here.
+    """
+
+    __tablename__ = "practice_timings"
+
+    entry_id = Column(Integer, ForeignKey("practice_entries.id", ondelete="CASCADE"), primary_key=True)
+    seconds = Column(Integer, nullable=False)

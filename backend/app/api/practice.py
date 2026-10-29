@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.middleware.rate_limiting import normalise_tz
-from app.models.practice import PracticeEntry
+from app.models.practice import PracticeEntry, PracticeTiming
 from app.models.user import User
 from app.services.tonight import local_today
 
@@ -31,15 +31,18 @@ class EntryOut(BaseModel):
     day: str
     kind: Kind
     note: Optional[str] = None
+    seconds: Optional[int] = None
 
 
 class EntryIn(BaseModel):
     kind: Kind
     note: Optional[str] = Field(default=None, max_length=280)
+    #: From the timer; absent for work done away from the app. Twelve hours at most.
+    seconds: Optional[int] = Field(default=None, ge=1, le=43200)
 
 
-def _out(e: PracticeEntry) -> EntryOut:
-    return EntryOut(id=int(e.id), day=e.day.isoformat(), kind=e.kind, note=e.note)  # type: ignore[arg-type]
+def _out(e: PracticeEntry, seconds: Optional[int] = None) -> EntryOut:
+    return EntryOut(id=int(e.id), day=e.day.isoformat(), kind=e.kind, note=e.note, seconds=seconds)  # type: ignore[arg-type]
 
 
 @router.get("", response_model=List[EntryOut])
@@ -57,7 +60,9 @@ async def list_entries(
         .order_by(PracticeEntry.day.desc(), PracticeEntry.id.desc())
         .all()
     )
-    return [_out(e) for e in rows]
+    ids = [e.id for e in rows]
+    timed = dict(db.query(PracticeTiming.entry_id, PracticeTiming.seconds).filter(PracticeTiming.entry_id.in_(ids)).all()) if ids else {}
+    return [_out(e, timed.get(e.id)) for e in rows]
 
 
 @router.post("", response_model=EntryOut, status_code=201)
@@ -76,8 +81,11 @@ async def add_entry(
         note=note,
     )
     db.add(row)
+    db.flush()
+    if body.seconds:
+        db.add(PracticeTiming(entry_id=row.id, seconds=body.seconds))
     db.commit()
-    return _out(row)
+    return _out(row, body.seconds)
 
 
 @router.delete("/{entry_id}", status_code=204)
@@ -85,5 +93,6 @@ async def delete_entry(entry_id: int, db: Session = Depends(get_db), current_use
     row = db.query(PracticeEntry).filter(PracticeEntry.id == entry_id, PracticeEntry.user_id == current_user.id).first()
     if row is None:
         raise HTTPException(status_code=404, detail="Not found")
+    db.query(PracticeTiming).filter(PracticeTiming.entry_id == row.id).delete()
     db.delete(row)
     db.commit()

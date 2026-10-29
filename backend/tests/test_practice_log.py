@@ -9,7 +9,7 @@ from fastapi import HTTPException
 
 from app.api import practice as api
 from app.models.organization import Organization
-from app.models.practice import PracticeEntry
+from app.models.practice import PracticeEntry, PracticeTiming
 from app.models.user import User
 from tests.dbfixture import memory_db, restore
 
@@ -20,7 +20,7 @@ def req(tz=None):
 
 class PracticeLog(unittest.TestCase):
     def setUp(self):
-        self.db, self.saved = memory_db([Organization, User, PracticeEntry])
+        self.db, self.saved = memory_db([Organization, User, PracticeEntry, PracticeTiming])
         now = datetime.now(timezone.utc)
         self.me = User(email="me@x.com", supabase_id="me", created_at=now)
         self.other = User(email="o@x.com", supabase_id="o", created_at=now)
@@ -57,6 +57,15 @@ class PracticeLog(unittest.TestCase):
             asyncio.run(api.delete_entry(made.id, db=self.db, current_user=self.other))
         asyncio.run(api.delete_entry(made.id, db=self.db, current_user=self.me))
         self.assertEqual(self.db.query(PracticeEntry).count(), 0)
+
+    def test_a_timed_session_keeps_its_length(self):
+        timed = asyncio.run(api.add_entry(api.EntryIn(kind="speech", seconds=754), req(), db=self.db, current_user=self.me))
+        away = asyncio.run(api.add_entry(api.EntryIn(kind="class"), req(), db=self.db, current_user=self.me))
+        self.assertEqual((timed.seconds, away.seconds), (754, None))
+        out = asyncio.run(api.list_entries(req(), days=62, db=self.db, current_user=self.me))
+        self.assertEqual({e.kind: e.seconds for e in out}, {"speech": 754, "class": None})
+        asyncio.run(api.delete_entry(timed.id, db=self.db, current_user=self.me))
+        self.assertEqual(self.db.query(PracticeTiming).count(), 0)
 
 
 if __name__ == "__main__":
