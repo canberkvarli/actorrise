@@ -22,6 +22,7 @@ from app.api.admin.organizations import router as admin_organizations_router
 from app.api.partners import router as partners_router
 from app.api.shelf import router as shelf_router
 from app.api.book import router as book_router
+from app.api.practice import router as practice_router
 from app.api.admin.pulse import router as admin_pulse_router
 from app.api.admin.auditions import router as admin_auditions_router
 from app.api.audition import router as audition_router
@@ -62,6 +63,7 @@ from app.models.app_store_daily import AppStoreDaily  # noqa: F401; register wit
 from app.models.app_setting import AppSetting  # noqa: F401; register with Base for create_all
 from app.models.user_event import UserEvent  # noqa: F401; register with Base for create_all
 from app.models.book import BookList, BookListItem, TonightPick  # noqa: F401; register with Base for create_all
+from app.models.practice import PracticeEntry  # noqa: F401; register with Base for create_all
 from app.models.lifecycle_email import LifecycleEmailSend  # noqa: F401; register with Base for create_all
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -592,6 +594,7 @@ app.include_router(admin_organizations_router)
 app.include_router(partners_router)
 app.include_router(shelf_router)
 app.include_router(book_router)
+app.include_router(practice_router)
 app.include_router(admin_pulse_router)
 app.include_router(admin_auditions_router)
 app.include_router(admin_feedback_router)
