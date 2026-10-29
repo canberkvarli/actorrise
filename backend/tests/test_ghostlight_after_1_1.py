@@ -23,7 +23,7 @@ from app.middleware.rate_limiting import (
     normalise_tz,
 )
 from app.models.actor import FilmTvReference, Monologue, MonologueFavorite, Play, UserScript
-from app.models.book import BookList, BookListItem, TonightPick
+from app.models.book import BookList, BookListItem, BookListShare, TonightPick
 from app.models.organization import Organization
 from app.models.search_log import MonologueView, SearchLog
 from app.models.user import User
@@ -39,7 +39,7 @@ class Base(unittest.TestCase):
     def setUp(self):
         self.db, self.saved = memory_db([
             Organization, User, FilmTvReference, Play, Monologue, MonologueFavorite,
-            UserScript, SearchLog, MonologueView, BookList, BookListItem, TonightPick,
+            UserScript, SearchLog, MonologueView, BookList, BookListItem, BookListShare, TonightPick,
         ])
         now = datetime.now(timezone.utc)
         self.me = User(email="me@x.com", supabase_id="me", created_at=now)
@@ -230,6 +230,51 @@ class Lists(Base):
         self.assertEqual([x.title for x in run(book_api.get_lists(db=self.db, current_user=self.me))], ["B"])
         run(book_api.restore_list(a.id, db=self.db, current_user=self.me))
         self.assertEqual(len(run(book_api.get_lists(db=self.db, current_user=self.me))), 2)
+
+
+class Sharing(Base):
+    def make(self):
+        self.me.name = "Maya Lopez"
+        for m in self.monos[:2]:
+            self.keep(m)
+        made = run(book_api.create_list(book_api.ListCreate(title="For my agent"), db=self.db, current_user=self.me))
+        for m in self.monos[:2]:
+            run(book_api.add_item(made.id, book_api.ItemCreate(monologue_id=m.id), db=self.db, current_user=self.me))
+        return made
+
+    def test_the_page_has_titles_not_words(self):
+        made = self.make()
+        link = run(book_api.share_list(made.id, db=self.db, current_user=self.me))
+        self.assertTrue(link.url.endswith(f"/l/{link.token}"))
+        page = run(book_api.shared_list(link.token, db=self.db))
+        self.assertEqual(page.title, "For my agent")
+        self.assertEqual(page.by, "Maya")
+        self.assertEqual([i.character for i in page.items], ["Character 0", "Character 1"])
+        self.assertNotIn("waited all evening", page.model_dump_json())
+
+    def test_same_link_until_taken_back(self):
+        made = self.make()
+        a = run(book_api.share_list(made.id, db=self.db, current_user=self.me))
+        b = run(book_api.share_list(made.id, db=self.db, current_user=self.me))
+        self.assertEqual(a.token, b.token)
+        run(book_api.unshare_list(made.id, db=self.db, current_user=self.me))
+        with self.assertRaises(HTTPException):
+            run(book_api.shared_list(a.token, db=self.db))
+        c = run(book_api.share_list(made.id, db=self.db, current_user=self.me))
+        self.assertNotEqual(c.token, a.token)
+
+    def test_only_the_owner_shares(self):
+        made = self.make()
+        with self.assertRaises(HTTPException):
+            run(book_api.share_list(made.id, db=self.db, current_user=self.other))
+
+    def test_a_speech_out_of_the_book_is_off_the_page(self):
+        made = self.make()
+        link = run(book_api.share_list(made.id, db=self.db, current_user=self.me))
+        fav = self.db.query(MonologueFavorite).filter(MonologueFavorite.monologue_id == self.monos[0].id).first()
+        fav.removed_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.assertEqual(len(run(book_api.shared_list(link.token, db=self.db)).items), 1)
 
 
 if __name__ == "__main__":

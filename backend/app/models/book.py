@@ -65,3 +65,18 @@ class TonightPick(Base):
     #: None until the actor says: "keep" or "pass".
     answer = Column(String(8), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class BookListShare(Base):
+    """A list sent to someone: an agent, a teacher. The link carries a token,
+    never the list's id, and opens a page with the titles, the plays and the
+    running times: never a speech's words. Taking the share back kills the link.
+    """
+
+    __tablename__ = "book_list_shares"
+
+    id = Column(Integer, primary_key=True, index=True)
+    list_id = Column(Integer, ForeignKey("book_lists.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    revoked_at = Column(DateTime(timezone=True), nullable=True)

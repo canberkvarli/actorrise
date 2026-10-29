@@ -12,6 +12,7 @@ every list they were in.
 
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timezone
 from typing import List, Literal, Optional
 
@@ -24,7 +25,7 @@ from sqlalchemy.orm import Session
 from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.models.actor import Monologue, MonologueFavorite, Play, UserScript
-from app.models.book import BookList, BookListItem
+from app.models.book import BookList, BookListItem, BookListShare
 from app.models.user import User
 
 router = APIRouter(prefix="/api/book", tags=["book"])
@@ -252,3 +253,109 @@ async def remove_item(
     row = _own_list(db, current_user, list_id)
     db.query(BookListItem).filter(BookListItem.id == item_id, BookListItem.list_id == row.id).delete()
     db.commit()
+
+
+# ---------------------------------------------------------------- sharing
+
+SITE = "https://www.actorrise.com"
+
+
+class ShareOut(BaseModel):
+    token: str
+    url: str
+
+
+class SharedItem(BaseModel):
+    kind: Literal["speech", "sides"]
+    title: str
+    character: Optional[str] = None
+    work: Optional[str] = None
+    author: Optional[str] = None
+    minutes: Optional[float] = None
+
+
+class SharedList(BaseModel):
+    title: str
+    by: Optional[str] = None
+    items: List[SharedItem]
+
+
+def _share_out(token: str) -> ShareOut:
+    return ShareOut(token=token, url=f"{SITE}/l/{token}")
+
+
+@router.post("/lists/{list_id}/share", response_model=ShareOut)
+async def share_list(
+    list_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    """A link to send. Asking again gives the same link while it stands."""
+    row = _own_list(db, current_user, list_id)
+    share = db.query(BookListShare).filter(BookListShare.list_id == row.id).first()
+    if share is None:
+        share = BookListShare(list_id=row.id, token=secrets.token_urlsafe(12)[:16])
+        db.add(share)
+    elif share.revoked_at is not None:
+        share.token = secrets.token_urlsafe(12)[:16]  # type: ignore[assignment]
+        share.revoked_at = None  # type: ignore[assignment]
+    db.commit()
+    return _share_out(str(share.token))
+
+
+@router.delete("/lists/{list_id}/share", status_code=204)
+async def unshare_list(
+    list_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    """Take the link back: it opens nothing from now on."""
+    row = _own_list(db, current_user, list_id)
+    share = db.query(BookListShare).filter(BookListShare.list_id == row.id).first()
+    if share is not None and share.revoked_at is None:
+        share.revoked_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+        db.commit()
+
+
+@router.get("/shared/{token}", response_model=SharedList)
+async def shared_list(token: str, db: Session = Depends(get_db)):
+    """The page behind a sent link. Public: titles, plays, writers, running
+    times, the actor's first name. Never the words of a speech, and nothing
+    the actor has taken out of their Book."""
+    share = db.query(BookListShare).filter(BookListShare.token == token, BookListShare.revoked_at.is_(None)).first()
+    if share is None:
+        raise HTTPException(status_code=404, detail="This list is not shared")
+    row = db.query(BookList).filter(BookList.id == share.list_id, BookList.deleted_at.is_(None)).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="This list is not shared")
+    owner = db.query(User).filter(User.id == row.user_id).first()
+    first = ((owner.name or "").strip().split() or [None])[0] if owner else None
+
+    speeches = (
+        db.query(BookListItem, Monologue, Play)
+        .join(Monologue, Monologue.id == BookListItem.monologue_id)
+        .join(Play, Play.id == Monologue.play_id)
+        .join(
+            MonologueFavorite,
+            (MonologueFavorite.monologue_id == BookListItem.monologue_id)
+            & (MonologueFavorite.user_id == row.user_id)
+            & MonologueFavorite.removed_at.is_(None),
+        )
+        .filter(BookListItem.list_id == row.id)
+        .all()
+    )
+    sides = (
+        db.query(BookListItem, UserScript)
+        .join(UserScript, UserScript.id == BookListItem.user_script_id)
+        .filter(
+            BookListItem.list_id == row.id,
+            or_(UserScript.processing_status.is_(None), UserScript.processing_status != _SCRIPT_DELETED),
+        )
+        .all()
+    )
+    items = sorted(
+        [(i.position, i.id, SharedItem(
+            kind="speech", title=str(m.title), character=str(m.character_name), work=str(p.title),
+            author=str(p.author) if p.author else None,
+            minutes=round((m.estimated_duration_seconds or 0) / 60, 1) or None,
+        )) for i, m, p in speeches]
+        + [(i.position, i.id, SharedItem(kind="sides", title=str(s.title), author=str(s.author) if s.author else None)) for i, s in sides],
+        key=lambda t: (t[0], t[1]),
+    )
+    return SharedList(title=str(row.title), by=first, items=[t[2] for t in items])

@@ -62,7 +62,7 @@ from app.models.audition_usage import AuditionFeedbackUsage  # noqa: F401; regis
 from app.models.app_store_daily import AppStoreDaily  # noqa: F401; register with Base for create_all
 from app.models.app_setting import AppSetting  # noqa: F401; register with Base for create_all
 from app.models.user_event import UserEvent  # noqa: F401; register with Base for create_all
-from app.models.book import BookList, BookListItem, TonightPick  # noqa: F401; register with Base for create_all
+from app.models.book import BookList, BookListItem, BookListShare, TonightPick  # noqa: F401; register with Base for create_all
 from app.models.practice import PracticeEntry  # noqa: F401; register with Base for create_all
 from app.models.lifecycle_email import LifecycleEmailSend  # noqa: F401; register with Base for create_all
 from fastapi import FastAPI
