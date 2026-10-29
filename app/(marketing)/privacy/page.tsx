@@ -33,7 +33,7 @@ export default function PrivacyPage() {
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-3xl">
       <p className="text-sm text-muted-foreground mb-10">
-        Last updated: August 31, 2026
+        Last updated: October 29, 2026
       </p>
 
       <div className="space-y-8 text-muted-foreground">
@@ -88,7 +88,9 @@ export default function PrivacyPage() {
             <li><strong className="text-foreground">Sign-in providers:</strong> If you sign in with Google or Apple, those providers share with us the information you consent to (e.g., email, name) in accordance with their policies.</li>
             <li><strong className="text-foreground">Payments on the web:</strong> Stripe or another payment processor for subscriptions bought on actorrise.com. Payment data is handled by them; we do not store full payment card details.</li>
             <li><strong className="text-foreground">Payments in our iOS app:</strong> Subscriptions bought inside Ghost Light: Monologues are processed by Apple through in-app purchase. Apple does not share your payment details with us. We use RevenueCat to record which subscription you hold and to keep it in sync across your devices; it receives a pseudonymous identifier for your account, your purchase and receipt history, and basic device and app-version data. We never receive your card number.</li>
-            <li><strong className="text-foreground">AI providers:</strong> We use OpenAI to power search, recommendations, speech transcription, the scene partner voice, self-tape feedback, and script parsing. Section 6 describes exactly what is sent, and what is kept. Under our provider&rsquo;s API terms, content sent through the API is not used to train their models.</li>
+            <li><strong className="text-foreground">AI providers:</strong> We use OpenAI to power search, recommendations, speech transcription, self-tape feedback, and script parsing. The scene partner&rsquo;s voice is generated from the script text by OpenAI, Google (Gemini and Vertex AI) or Inworld; they receive the lines to be spoken, not who you are. Section 6 describes exactly what is sent, and what is kept. Under these providers&rsquo; API terms, content sent through their APIs is not used to train their models.</li>
+            <li><strong className="text-foreground">Cue, the in-app assistant:</strong> What you type to Cue is sent to Anthropic to write Cue&rsquo;s reply, under API terms that do not allow training on it. Your conversations with Cue are stored in your account, and Canberk reads them when Cue passes a question to him. Do not type anything into Cue you would not put in an email to us.</li>
+            <li><strong className="text-foreground">Website analytics:</strong> actorrise.com uses Google Analytics to count visits, pages viewed and which features are used, with a pseudonymous identifier. It does not receive your email address or the words you search for.</li>
             <li><strong className="text-foreground">Product analytics in our iOS app:</strong> Ghost Light: Monologues uses PostHog so we can see which parts of the app earn their place and where people get stuck. It receives events describing what happened &mdash; that a search was run, that a monologue was opened, that the subscription screen appeared &mdash; together with a pseudonymous identifier, your device type and the app version. <strong className="text-foreground">It does not receive the words you search for, and it does not receive the monologues you read.</strong> If you sign in, these events are associated with your account identifier and never with your email address.</li>
           </ul>
           <p className="mt-3">
@@ -162,21 +164,34 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">11. Children</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-3">11. Ages</h2>
           <p>
-            The Service is not directed at children under 16 (or higher age where required). We do not knowingly collect personal data from children. If you believe we have collected data from a child, please contact us and we will delete it promptly.
+            ActorRise is for people aged 13 and older. Students aged 13 to 17 use it through their school or acting class, with their teacher. We do not knowingly collect personal data from children under 13. If you believe a child under 13 has an account, contact us and we will delete it promptly.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">12. Changes to This Policy</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-3">12. Schools, Teachers and Students</h2>
+          <p className="mb-3">When a teacher brings a class to ActorRise through a class link:</p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li><strong className="text-foreground">What a student gives us:</strong> the email they sign up with (usually their school address), their name if their sign-in provides it, and what they do in the Service: searches, saved pieces and rehearsals.</li>
+            <li><strong className="text-foreground">What the teacher sees:</strong> for each student who joined their class, the student&rsquo;s name, when they joined and were last active, and counts of what they did (how many searches, monologues and scenes). <strong className="text-foreground">The teacher never sees what a student searched for.</strong></li>
+            <li><strong className="text-foreground">What other users see:</strong> nothing. Students never appear in the community feed.</li>
+            <li><strong className="text-foreground">Email:</strong> students who join through a class link are left out of our marketing emails, and a student on a school district address gets no automated reminders either. They still receive emails they need, such as a sign-in link.</li>
+            <li><strong className="text-foreground">No selling, no ads:</strong> we do not sell student data, show ads, or use it for anything but running the Service and improving it.</li>
+            <li><strong className="text-foreground">Deletion:</strong> a teacher or school can ask us to delete their students&rsquo; accounts and data at any time by emailing canberk@actorrise.com, and a student can delete their own account in Settings.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-foreground mb-3">13. Changes to This Policy</h2>
           <p>
             We may update this Privacy Policy from time to time. We will post the updated policy on this page and, for material changes, we will provide additional notice (e.g., email or in-product notice) where required by law. Your continued use of the Service after the effective date of changes constitutes acceptance of the updated policy.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">13. Contact</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-3">14. Contact</h2>
           <p>
             For privacy-related questions, requests, or complaints, contact us at:{" "}
             <Link prefetch={false} href="/contact" className="text-foreground underline hover:no-underline">
