@@ -332,11 +332,18 @@ def find_catalogue_source_types(db, title: str) -> list[str]:
             f"FROM plays p "
             f"WHERE ({expr} = :n "
             f"      OR (length({expr}) >= 4 AND :n ~ ('\\m' || {expr} || '\\M')) "
+            f"      OR (length(:n) >= {_MIN_PREFIX_CHARS} AND {expr} ~ ('^' || :n || '\\M')) "
             f"      OR (length(:sq) >= {_MIN_SQUASHED_CHARS} AND {sq_expr} = :sq))"
         ),
         {"n": norm, "sq": squashed},
     ).fetchall()
     return pick_carried_source_types(rows)
+
+
+# A query that is the start of a longer stored title ("harry potter" for the
+# eight Harry Potter films) counts as that title. Long enough that a common
+# word cannot do it: "big" must not claim "Big Fish".
+_MIN_PREFIX_CHARS = 8
 
 
 def pick_carried_source_types(rows) -> list[str]:
