@@ -1616,6 +1616,65 @@ async def answer_tonight_mine(
     return {"day": day.isoformat(), "house": body.house, "answer": body.answer}
 
 
+class WidgetKeyOut(BaseModel):
+    key: str
+
+
+@router.post("/tonight/widget-key", response_model=WidgetKeyOut)
+async def tonight_widget_key(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """The home screen widget cannot sign in. The app hands it this key, which
+    opens nothing but this actor's own tonight (GET /tonight/widget)."""
+    import secrets
+
+    from app.models.push import WidgetKey
+
+    row = db.query(WidgetKey).filter(WidgetKey.user_id == current_user.id).first()
+    if row is None:
+        row = WidgetKey(user_id=current_user.id, key=secrets.token_urlsafe(24)[:32])
+        db.add(row)
+        db.commit()
+    return WidgetKeyOut(key=str(row.key))
+
+
+@router.get("/tonight/widget", response_model=TonightResponse)
+async def tonight_widget(
+    key: str = Query(..., min_length=8, max_length=48),
+    house: Literal["stage", "screen"] = Query("stage"),
+    days: int = Query(8, ge=1, le=_TONIGHT_DAYS_MAX),
+    tz: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """The house's run for the widget, with tonight made the actor's own: the
+    same shape as GET /tonight, so the widget reads either. An unknown key is
+    simply the house's run."""
+    from app.models.push import WidgetKey
+
+    zone = normalise_tz(tz)
+    today = local_today(zone)
+    pool = _tonight_pool(db, house)
+    row = db.query(WidgetKey).filter(WidgetKey.key == key).first()
+    mine = pick_for(db, int(row.user_id), house, today) if row is not None else None
+    out: List[TonightDay] = []
+    for k in range(-1, days):
+        d = today + timedelta(days=k)
+        if mine is not None and d == today:
+            m = (
+                db.query(Monologue)
+                .options(joinedload(Monologue.play).joinedload(Play.film_tv_reference))
+                .filter(Monologue.id == mine.monologue_id)
+                .first()
+            )
+        else:
+            m = pool[_tonight_index((d - _EPOCH).days, len(pool))] if pool else None
+        if m is None:
+            continue
+        r = _monologue_to_response(m)
+        r.text = _teaser(r.text)
+        r.text_segments = None
+        out.append(TonightDay(day=d.isoformat(), quote=_quote(cast(str, m.text)), monologue=r))
+    return TonightResponse(house=house, days=out)
+
+
 #: Roughly what two lines of verse or a couple of prose sentences come to. The
 #: teaser has to be enough to recognise the piece and not enough to rehearse it.
 _TEASER_MAX_WORDS = 40

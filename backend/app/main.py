@@ -23,6 +23,7 @@ from app.api.partners import router as partners_router
 from app.api.shelf import router as shelf_router
 from app.api.book import router as book_router
 from app.api.practice import router as practice_router
+from app.api.push import router as push_router
 from app.api.admin.pulse import router as admin_pulse_router
 from app.api.admin.auditions import router as admin_auditions_router
 from app.api.audition import router as audition_router
@@ -64,6 +65,7 @@ from app.models.app_setting import AppSetting  # noqa: F401; register with Base 
 from app.models.user_event import UserEvent  # noqa: F401; register with Base for create_all
 from app.models.book import BookList, BookListItem, BookListShare, TonightPick  # noqa: F401; register with Base for create_all
 from app.models.practice import PracticeEntry  # noqa: F401; register with Base for create_all
+from app.models.push import PushSend, PushToken, WidgetKey  # noqa: F401; register with Base for create_all
 from app.models.lifecycle_email import LifecycleEmailSend  # noqa: F401; register with Base for create_all
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -501,6 +503,52 @@ def _start_comp_expiry_scheduler() -> None:
     logger.info("Comp expiry digest scheduler started (daily at %02d:00 UTC)", send_hour)
 
 
+def _start_ghostlight_push_scheduler():
+    """Tonight's speech as a push, at seven on each actor's own clock
+    (services/push.py). Every fifteen minutes; a night is knocked once. Gated
+    like the others: ENVIRONMENT=production, GHOSTLIGHT_PUSH_ENABLED in the
+    environment, and the app_settings switch (default on: there is nothing to
+    send until a phone running the build with push hands over a token)."""
+    import os
+
+    from app.services.scheduler_gate import scheduler_status
+
+    status = scheduler_status(
+        "ghostlight_push",
+        environment=os.getenv("ENVIRONMENT"),
+        flag=os.getenv("GHOSTLIGHT_PUSH_ENABLED"),
+    )
+    if not status.will_run:
+        logger.warning(status.reason)
+        return
+
+    def loop() -> None:
+        time.sleep(240)
+        while True:
+            try:
+                from app.core.database import SessionLocal
+                from app.services import app_settings
+                from app.services.push import run_tonight
+
+                db = SessionLocal()
+                try:
+                    if not app_settings.get_bool(db, app_settings.GHOSTLIGHT_PUSH_ENABLED, default=True):
+                        logger.info("ghostlight push: skipped, app_settings switch is off")
+                    else:
+                        stats = run_tonight(db, send=True)
+                        if stats["due"]:
+                            logger.info("ghostlight push: due %s skipped %s sent %s failed %s",
+                                        stats["due"], stats["skipped"], stats["sent"], stats["failed"])
+                finally:
+                    db.close()
+            except Exception as e:  # noqa: BLE001
+                logger.error("ghostlight push run FAILED: %s", e, exc_info=True)
+            time.sleep(max(60, 900 - (time.time() % 900)))
+
+    threading.Thread(target=loop, daemon=True, name="ghostlight-push").start()
+    logger.info("Ghost Light push scheduler started (every 15 minutes)")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _init_db()
@@ -516,6 +564,7 @@ async def lifespan(app: FastAPI):
     _start_audition_reminder_scheduler()
     _start_rehearsal_sweep_scheduler()
     _start_comp_expiry_scheduler()
+    _start_ghostlight_push_scheduler()
     # Cue's Anthropic client takes ~7s to import and build on this box. Build it
     # off the startup path so the first actor after a deploy doesn't wait.
     threading.Thread(target=_warm_cue_client, daemon=True).start()
@@ -595,6 +644,7 @@ app.include_router(partners_router)
 app.include_router(shelf_router)
 app.include_router(book_router)
 app.include_router(practice_router)
+app.include_router(push_router)
 app.include_router(admin_pulse_router)
 app.include_router(admin_auditions_router)
 app.include_router(admin_feedback_router)

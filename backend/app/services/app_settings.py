@@ -35,6 +35,9 @@ TRIGGERED_EMAILS_ENABLED = "triggered_emails_enabled"
 # The audition tracker's prep / night-before / morning-after emails
 # (services/auditions/reminders.py). Defaults OFF; turned on at launch.
 AUDITION_REMINDERS_ENABLED = "audition_reminders_enabled"
+# Ghost Light's nightly push (services/push.py). Defaults ON: nothing goes out
+# until a phone on the build with push has handed over a token.
+GHOSTLIGHT_PUSH_ENABLED = "ghostlight_push_enabled"
 
 
 def get_bool(db: Session, key: str, default: bool = False) -> bool:
