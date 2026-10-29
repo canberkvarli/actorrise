@@ -189,6 +189,14 @@ written out and highlighted instead, `<span style="background-color:#fff2a8;font
 paste them by hand). It reads as text, not a link. `class_link.py list` shows who joined.
 Ticking "student" at signup gives nobody anything, on purpose.
 
+STUDENTS ARE 13 AND UP (2026-10-29). The privacy policy says ActorRise is for 13 and
+older, with students 13 to 17 using it through their teacher (section 11, and section 12
+on what teachers see). US law (COPPA) puts real rules on accounts for under-13s, so: never
+offer the class link or student Plus for a class under 13, and when a teacher's program
+includes younger students (a middle school, a grade 6 to 12 drama club), say plainly the
+student side is for 13 and up for now. The teacher's own Plus is fine. No middle-school
+outreach until Canberk has talked to a lawyer.
+
 Frame it as a gift, not a discount ("I don't run a discount, I just give it to you free"). This replaces any "reply CURTAIN" language for educator/student contexts. Prefer it over the trial whenever the audience is educators or students.
 
 In the admin, `/admin/users/<id>` → Grant comp membership has one-tap presets for
