@@ -67,7 +67,8 @@ class Tonight(Base):
         self.assertEqual(stats["sent"], 1)
         self.assertEqual(self.sent[0]["title"], "Tonight's speech")
         self.assertTrue(self.sent[0]["body"].startswith("Catherine, from Proof"))
-        self.assertTrue(self.sent[0]["data"]["url"].startswith("ghostlight://read/"))
+        self.assertEqual(self.sent[0]["data"]["moment"], "tonight")
+        self.assertTrue(self.sent[0]["data"]["monologueId"])
         push.run_tonight(self.db, now=at_local(19) + timedelta(minutes=15))
         self.assertEqual(len(self.sent), 1)
 

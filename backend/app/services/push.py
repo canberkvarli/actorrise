@@ -128,7 +128,8 @@ def run_tonight(db: Session, now: Optional[datetime] = None, send: bool = True) 
             "title": "Tonight's speech",
             "body": f"{str(character).title()}, from {play}.",
             "sound": "default",
-            "data": {"url": f"ghostlight://read/{mid}", "kind": KIND_TONIGHT},
+            # The phone's own reminders carry the same data, so a tap is handled the same way.
+            "data": {"moment": "tonight", "monologueId": str(mid), "url": f"ghostlight://read/{mid}"},
         } for t in tokens]
         tickets = send_expo(messages)
         for t, ticket in zip(tokens, tickets):
