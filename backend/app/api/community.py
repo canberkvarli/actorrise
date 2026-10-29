@@ -19,10 +19,10 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.models.actor import ActorProfile, UserScript
 from app.models.community import CommunityEvent
@@ -83,7 +83,14 @@ def get_feed(
     limit: int = Query(60, ge=1, le=100),
     anonymize: bool = Query(False, description="Mask names to a first initial (logged-out teaser)"),
     db: Session = Depends(get_db),
+    viewer: Optional[User] = Depends(get_current_user_optional),
 ):
+    # Names, cities and faces are for signed-in actors only. `anonymize` used to
+    # be the caller's choice, so anyone could drop it and read every active
+    # user's first name, city and headshot without an account (found
+    # 2026-10-29, with 170 school students in the feed that week).
+    if viewer is None:
+        anonymize = True
     cutoff = datetime.now(timezone.utc) - timedelta(hours=FEED_WINDOW_HOURS)
 
     # One indexed created_at DESC scan; left joins pull display identity at read
@@ -98,7 +105,9 @@ def get_feed(
         .filter(
             or_(
                 CommunityEvent.user_id.is_(None),
-                User.share_activity.is_(True),
+                # Students never appear: most are minors who came in through a
+                # teacher's class link, and the feed shows a name, a city and a face.
+                and_(User.share_activity.is_(True), or_(User.account_type.is_(None), User.account_type != "student")),
             )
         )
         .order_by(CommunityEvent.created_at.desc())

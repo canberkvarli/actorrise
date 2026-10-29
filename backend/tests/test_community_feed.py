@@ -57,3 +57,55 @@ class BuildSearchPayloadTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FeedPrivacyTest(unittest.TestCase):
+    """Signed out, the feed is always masked; students never appear in it."""
+
+    def setUp(self):
+        from datetime import datetime, timezone
+
+        from app.models.actor import ActorProfile
+        from app.models.community import CommunityEvent
+        from app.models.user import User
+        from tests.dbfixture import memory_db
+
+        # payload's '{}'::jsonb default is Postgres-only DDL; stand it down here.
+        self.payload_col = CommunityEvent.__table__.c.payload
+        self.payload_default = self.payload_col.server_default
+        self.payload_col.server_default = None
+        from app.models.organization import Organization
+
+        self.db, self.saved = memory_db([Organization, User, ActorProfile, CommunityEvent])
+        now = datetime.now(timezone.utc)
+        self.actor = User(email="a@gmail.com", supabase_id="a", name="Rosa Diaz", share_activity=True, account_type="actor")
+        self.student = User(email="1@school.org", supabase_id="s", name="Kid Smith", share_activity=True, account_type="student")
+        self.db.add_all([self.actor, self.student])
+        self.db.commit()
+        for u in (self.actor, self.student):
+            self.db.add(CommunityEvent(user_id=u.id, event_type="joined", payload={}, created_at=now))
+        self.db.commit()
+
+    def tearDown(self):
+        from tests.dbfixture import restore
+
+        self.db.close()
+        restore(self.saved)
+        self.payload_col.server_default = self.payload_default
+
+    def _names(self, viewer, anonymize=False):
+        from app.api.community import get_feed
+
+        return [e.name for e in get_feed(limit=60, anonymize=anonymize, db=self.db, viewer=viewer).events]
+
+    def test_signed_out_is_masked_even_when_it_asks_not_to_be(self):
+        names = self._names(None, anonymize=False)
+        self.assertTrue(names)
+        self.assertNotIn("Rosa", names)
+
+    def test_signed_in_sees_first_names(self):
+        self.assertIn("Rosa", self._names(self.actor))
+
+    def test_students_never_appear(self):
+        for viewer in (None, self.actor):
+            self.assertFalse(any(n and n.startswith("K") for n in self._names(viewer)))
