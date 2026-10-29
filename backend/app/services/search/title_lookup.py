@@ -319,17 +319,39 @@ def find_catalogue_source_types(db, title: str) -> list[str]:
     # squashed key collides too easily to be trusted.
     squashed = norm.replace(" ", "")
     sq_expr = f"replace({expr}, ' ', '')"
+    # Every candidate row, with whether it is the title itself (exact or
+    # space-squashed) and whether anyone can actually see a piece of it. A
+    # monologue with no embedding is hidden (retired, held for review) and
+    # never comes back from a search, so it is not something we carry.
     rows = db.execute(
         sa_text(
-            f"SELECT DISTINCT COALESCE(p.source_type, 'play') st FROM plays p "
+            f"SELECT COALESCE(p.source_type, 'play') st, "
+            f"  ({expr} = :n OR (length(:sq) >= {_MIN_SQUASHED_CHARS} AND {sq_expr} = :sq)) exact, "
+            f"  EXISTS (SELECT 1 FROM monologues m WHERE m.play_id = p.id "
+            f"          AND m.embedding_vector IS NOT NULL) visible "
+            f"FROM plays p "
             f"WHERE ({expr} = :n "
-            f"      OR (length({expr}) >= 4 AND :n LIKE '%' || {expr} || '%') "
-            f"      OR (length(:sq) >= {_MIN_SQUASHED_CHARS} AND {sq_expr} = :sq)) "
-            f"AND EXISTS (SELECT 1 FROM monologues m WHERE m.play_id = p.id)"
+            f"      OR (length({expr}) >= 4 AND :n ~ ('\\m' || {expr} || '\\M')) "
+            f"      OR (length(:sq) >= {_MIN_SQUASHED_CHARS} AND {sq_expr} = :sq))"
         ),
         {"n": norm, "sq": squashed},
     ).fetchall()
-    return sorted(r[0] for r in rows)
+    return pick_carried_source_types(rows)
+
+
+def pick_carried_source_types(rows) -> list[str]:
+    """From (source_type, exact, visible) rows, where the title is carried.
+
+    When the library knows the title itself, only that title answers. "Our Town"
+    contains "town", and the film The Town matched it, so the search told
+    students looking for Emily Webb that Our Town was under Film (2026-10-30, a
+    class with a final on it). Our Town's one row is hidden, so the true answer
+    was that we do not have it. A title that only appears inside the query
+    ("hamlet monologue" holds "hamlet") counts only when nothing matched exactly.
+    """
+    exact = [r for r in rows if r[1]]
+    pool = exact or list(rows)
+    return sorted({r[0] for r in pool if r[2]})
 
 
 # Filters find_title_monologues applies itself, predicate-for-predicate against

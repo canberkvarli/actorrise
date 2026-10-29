@@ -285,3 +285,26 @@ class TestCuratedShortLabelDoesNotDenyACarriedTitle:
         assert gap is not None
         assert gap["play"] == "Sweeney Todd"
         assert "available_in" not in gap
+
+
+class TestPickCarriedSourceTypes:
+    """find_catalogue_source_types' choice, given (source_type, exact, visible) rows."""
+
+    def test_exact_title_beats_a_shorter_title_inside_the_query(self):
+        from app.services.search.title_lookup import pick_carried_source_types
+
+        # "our town": Our Town (play, its one row hidden) and The Town (film).
+        rows = [("play", True, False), ("film", False, True)]
+        assert pick_carried_source_types(rows) == []
+
+    def test_a_title_inside_the_query_counts_when_nothing_matched_exactly(self):
+        from app.services.search.title_lookup import pick_carried_source_types
+
+        # "hamlet monologue" holds "hamlet".
+        assert pick_carried_source_types([("play", False, True)]) == ["play"]
+
+    def test_hidden_pieces_are_not_carried(self):
+        from app.services.search.title_lookup import pick_carried_source_types
+
+        assert pick_carried_source_types([("film", True, False)]) == []
+        assert pick_carried_source_types([("tv", True, True), ("film", True, False)]) == ["tv"]
