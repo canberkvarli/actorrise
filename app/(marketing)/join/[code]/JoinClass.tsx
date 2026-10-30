@@ -157,11 +157,9 @@ export function JoinClass({ code, info }: { code: string; info: LinkInfo | null 
             )}
           </div>
 
-          <p className="t-ticket__fine t-ticket__fine--note">
-            {user && !answer
-              ? `Signed in as ${user.email}.`
-              : "No card, no code. I'm Canberk, an actor, and I built this on my own."}
-          </p>
+          {user && !answer && (
+            <p className="t-ticket__fine t-ticket__fine--note">Signed in as {user.email}.</p>
+          )}
         </div>
       </div>
     </div>
