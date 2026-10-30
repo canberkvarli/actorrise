@@ -129,7 +129,7 @@ export function CurtainAct() {
                 className="m-0 mt-2 text-[15px]"
                 style={{ color: "var(--t-muted-light-2)", lineHeight: 1.45 }}
               >
-                The whole library, offline saves, and a reading light for dark wings.
+                Find a piece, run your lines with a partner, and keep every audition in one place. Saves work offline.
               </p>
               <a
                 href={appStoreUrl("landing_teaser")}

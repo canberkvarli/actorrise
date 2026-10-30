@@ -353,8 +353,8 @@ export function HouseAct() {
               style={{ color: "var(--t-muted-light-3)" }}
             >
               Five searches a month, free, forever. Plus is $12 a month when you want
-              unlimited searches and more time with ScenePartner. Students and teachers
-              rehearse free, just email.
+              unlimited searches and more time with ScenePartner. Teaching a class? Your
+              students get a month free through your class link.
             </p>
           </div>
           <TheatreCta size="mid" />

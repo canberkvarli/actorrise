@@ -189,7 +189,7 @@ export function LandingPricing() {
             $0 today, cancel anytime.)
           </p>
           <p className="stage-direction mt-1.5 text-sm text-muted-foreground">
-            (students &amp; educators rehearse free. just email me.)
+            (teaching? your class gets a month free through your link.)
           </p>
         </div>
 
