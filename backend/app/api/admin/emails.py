@@ -544,6 +544,7 @@ def bulk_send_email(
         subject=subject,
         status="pending",
         total=len(body.recipients),
+        variables_json=dict(body.variables),
         created_by=admin.id,
         scheduled_at=body.scheduled_at,
     )
@@ -851,10 +852,22 @@ def resume_batch(
     if not meta:
         raise HTTPException(status_code=400, detail=f"Unknown template: {batch.template_id}")
 
+    # A batch started before variables_json existed has nothing to rebuild the
+    # admin's text from. Refuse when the template needs typed text (custom's
+    # body) rather than mail the rest of the list an empty letter.
+    if batch.variables_json is None and any(
+        v.get("required") and not v.get("default") for v in meta["variables"]
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="This batch was started before its text was saved, so Resume can't rebuild the email. Nobody was sent anything.",
+        )
+
     # Spawn background thread to process remaining sends
     template_id = batch.template_id
     subject = batch.subject
-    default_name = "there"
+    variables = dict(batch.variables_json or {})
+    default_name = variables.get("user_name") or "there"
 
     def _resume_batch():
         db2 = SessionLocal()
@@ -883,7 +896,6 @@ def resume_batch(
             db2.commit()
 
             render_fn = getattr(templates_svc, RENDER_MAP.get(template_id, ""), None)
-            plain_fn = getattr(templates_svc, PLAIN_TEXT_MAP.get(template_id, ""), None)
             if not render_fn:
                 # Give the rows back rather than leaving 372 people parked in a
                 # state no later resume would ever look at.
@@ -896,13 +908,13 @@ def resume_batch(
             with client.batch_session():
                 for send_row in sends:
                     try:
-                        vars_copy = {
-                            "unsubscribe_url": build_unsubscribe_url(send_row.to_email),
-                            "user_name": send_row.to_name or default_name,
-                        }
+                        # Same render as the first run, so the rest of the list
+                        # gets the email the first half got.
+                        vars_copy = dict(variables)
+                        vars_copy["unsubscribe_url"] = build_unsubscribe_url(send_row.to_email)
+                        vars_copy["user_name"] = send_row.to_name or default_name
 
-                        html = render_fn(**vars_copy)
-                        plain_text = plain_fn(**vars_copy) if plain_fn else None
+                        html, _, plain_text = _render_template(template_id, vars_copy)
 
                         # Inject self-hosted open/click tracking
                         html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
@@ -1087,6 +1099,7 @@ def send_campaign_endpoint(
         subject=subject,
         status="pending",
         total=len(recipients),
+        variables_json=dict(body.variables),
         created_by=admin.id,
         scheduled_at=body.scheduled_at,
     )

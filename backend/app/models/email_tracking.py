@@ -27,6 +27,9 @@ class EmailBatch(Base):
     sent = Column(Integer, default=0)
     skipped = Column(Integer, default=0)
     errors_json = Column(JSONB, default=[])
+    # What the admin typed (body, button, sender...). Resume re-renders from
+    # this; without it a stalled custom batch resumed as an email with no body.
+    variables_json = Column(JSONB, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     scheduled_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
