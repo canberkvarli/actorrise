@@ -50,6 +50,7 @@ import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueSpeech, matchMarkIsUseful } from "@/components/monologue/MonologueSpeech";
+import { ScreenStrip } from "@/components/search/ScreenStrip";
 import { constantFacts, constantFactsLabel } from "@/lib/resultFacts";
 import { SearchFiltersSheet, getDurationLabel } from "@/components/search/SearchFiltersSheet";
 import type { SearchFiltersState } from "@/components/search/SearchFiltersSheet";
@@ -280,6 +281,8 @@ function SearchContent() {
   // "no strong match, request it" affordance.
   const [weakMatch, setWeakMatch] = useState(false);
   const [broadened, setBroadened] = useState<{ relaxed: string[] } | null>(null);
+  // Film and TV pieces for a Plays search the plays could not serve.
+  const [fromScreen, setFromScreen] = useState<Monologue[]>([]);
   // Constraints the backend parsed out of the free-text query, shown as
   // removable chips. Dismissing one adds its key to ignoredConstraintsRef and
   // re-runs; the ref (not state) so performSearch always reads the latest, and
@@ -609,6 +612,7 @@ function SearchContent() {
             setParsedConstraints(cached.parsed_constraints ?? null);
             setBroadened(cached.broadened ?? null);
             setWeakMatch(Boolean(cached.weak_match));
+            setFromScreen(cached.from_screen ?? []);
           }
           // Restore typo correction banner from cache
           const correctionKey = `search_correction_${urlQuery}_${JSON.stringify(urlFilters)}_${initialMaxOverdone}`;
@@ -782,6 +786,7 @@ function SearchContent() {
     parsed_constraints?: Record<string, unknown> | null;
     debug_timing?: DebugTiming | null;
     search_log_id?: number | null;
+    from_screen?: Monologue[];
   };
 
   // Links a monologue open back to the search that produced it (?slid= on the
@@ -820,6 +825,7 @@ function SearchContent() {
       setQueryMayHaveTypos(false);
       setWeakMatch(false);
       setBroadened(null);
+      setFromScreen([]);
       // A genuinely new query forgets any constraint chips the user dismissed;
       // a chip-removal re-run keeps the same query text, so its ignores persist.
       if (searchQuery !== lastParsedQueryRef.current) {
@@ -868,6 +874,7 @@ function SearchContent() {
         setWeakMatch(Boolean(data.weak_match));
         setBroadened(data.broadened ?? null);
         setParsedConstraints(data.parsed_constraints ?? null);
+        setFromScreen(data.from_screen ?? []);
       }
       setTotal(data.total);
       setPage(data.page);
@@ -891,6 +898,7 @@ function SearchContent() {
           parsed_constraints: data.parsed_constraints ?? null,
           broadened: data.broadened ?? null,
           weak_match: Boolean(data.weak_match),
+          from_screen: data.from_screen ?? [],
         }));
         // Persist correction alongside the cached results so it survives URL-driven restores
         const correctionKey = `search_correction_${searchQuery}_${JSON.stringify(searchFilters)}_${effectiveMaxOverdone}`;
@@ -2662,6 +2670,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       {!showBookmarkedOnly && bestMatches.map((mono, idx) => renderCard(mono, idx))}
                       {strongRelated.map((mono, idx) => renderCard(mono, baseOffset + idx))}
                     </div>
+                    {!showBookmarkedOnly && (
+                      <ScreenStrip
+                        pieces={fromScreen}
+                        startIndex={baseOffset + strongRelated.length}
+                        onSelect={(mono, idx) => openMonologue(mono, idx, "film_tv")}
+                        onToggleFavorite={toggleFavorite}
+                        onSeeAll={() => switchSourceWithQuery("film")}
+                        isModerator={!!user?.is_moderator}
+                        onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
+                      />
+                    )}
                     {looserRelated.length > 0 && (
                       <>
                         {/* The rule only means anything when there are stronger

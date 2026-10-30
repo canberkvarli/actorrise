@@ -150,6 +150,7 @@ class SearchResponse(BaseModel):
     parsed_constraints: Optional[dict] = None  # constraints understood from the free-text query, e.g. {"category":"contemporary","gender":"female"} — shown as removable chips
     debug_timing: Optional[dict] = None  # Timing data for dev/admin debug overlay
     search_log_id: Optional[int] = None  # search_logs row id; pass as ?slid= when opening a result (funnel analytics)
+    from_screen: List[MonologueResponse] = []  # a few film/TV pieces under a Plays search the plays cannot serve (screen_strip.py)
 
 
 class LeadMagnetItem(BaseModel):
@@ -924,6 +925,50 @@ async def search_monologues(
             if relaxed:
                 broadened = {"relaxed": relaxed}
 
+        # A Plays-tab search the plays cannot serve also shows the best few film
+        # and TV pieces for the same ask (screen_strip.py). A separate search
+        # object, so the main search's signals above are not overwritten.
+        from_screen: list[MonologueResponse] = []
+        from app.services.search.screen_strip import (
+            SCREEN_STRIP_SIZE, screen_filters, should_offer_screen,
+        )
+        if should_offer_screen(
+            q=q, filters=filters, page=page, weak_match=bool(weak_match),
+            title_prepass=bool(title_prepass),
+        ):
+            try:
+                screen_search = SemanticSearch(db)
+                screen_rows, _ = screen_search.search(
+                    search_q,
+                    limit=SCREEN_STRIP_SIZE * 2,
+                    filters=screen_filters(filters),
+                    user_id=cast(int, current_user.id),
+                    actor_profile=actor_profile_for_search,
+                )
+                screen_cos = getattr(screen_search, "_best_cosine_sim", None)
+                # Only worth showing if film and TV actually answer it better.
+                if screen_rows and (screen_cos is None or screen_cos >= STRONG_COSINE_SIM or weak_match):
+                    shown = {int(m.id) for m, _ in all_results_with_scores}
+                    picked = [(m, sc) for m, sc in screen_rows if int(m.id) not in shown][:SCREEN_STRIP_SIZE]
+                    screen_favs = {
+                        f[0] for f in db.query(MonologueFavorite.monologue_id).filter(
+                            MonologueFavorite.user_id == current_user.id,
+                            MonologueFavorite.monologue_id.in_([m.id for m, _ in picked]),
+                        ).all()
+                    } if picked else set()
+                    from_screen = [
+                        _monologue_to_response(m, is_favorited=(m.id in screen_favs), relevance_score=sc)
+                        for m, sc in picked
+                    ]
+                    _apply_list_wall(
+                        from_screen, db=db, user=current_user,
+                        request=request, favorite_ids=screen_favs,
+                    )
+            except Exception:
+                import logging
+                logging.getLogger(__name__).warning("screen strip failed for q=%r", q, exc_info=True)
+                from_screen = []
+
         # Collect debug timing from search service (available for dev/admin)
         debug_timing = getattr(search_service, '_debug_timing', None)
         if debug_timing:
@@ -1017,6 +1062,7 @@ async def search_monologues(
             parsed_constraints=(getattr(search_service, "_parsed_constraints", None) or None),
             debug_timing=debug_timing,
             search_log_id=search_log_id,
+            from_screen=from_screen,
         )
     except HTTPException:
         raise  # Re-raise HTTP exceptions (e.g. from auth/rate-limiting) as-is
