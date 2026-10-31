@@ -384,10 +384,12 @@ def update_me(
 @router.patch("/onboarding")
 def update_onboarding(
     body: UpdateOnboardingRequest,
+    request: Request = None,  # type: ignore[assignment]  # FastAPI injects it; tests call without
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Mark onboarding steps as seen."""
+    just_completed = False
     if body.has_seen_welcome is not None:
         current_user.has_seen_welcome = body.has_seen_welcome
     if body.has_seen_search_tour is not None:
@@ -437,6 +439,16 @@ def update_onboarding(
         current_user.last_seen_feature_id = body.last_seen_feature_id or None
     db.commit()
     db.refresh(current_user)
+    headers = request.headers if request is not None else {}
+    if just_completed and (headers.get("x-client") or "").strip().lower() != "ghostlight":
+        # Half of new web actors get a week of Plus, no card (services/reverse_trial.py).
+        from app.services import reverse_trial
+        from app.services.rehearsal_client import client_platform
+
+        reverse_trial.on_onboarded(
+            db, current_user, client_platform(headers.get("user-agent"))
+        )
+        db.refresh(current_user)
     return {
         "has_seen_welcome": current_user.has_seen_welcome,
         "has_seen_search_tour": current_user.has_seen_search_tour,

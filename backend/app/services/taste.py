@@ -75,7 +75,14 @@ def is_eligible(db, user) -> bool:
     return not had_taste(db, uid)
 
 
-def grant(db, user, platform: Optional[str] = None) -> Optional[datetime]:
+def grant(
+    db,
+    user,
+    platform: Optional[str] = None,
+    *,
+    hours: int = TASTE_HOURS,
+    reason: str = "read_wall",
+) -> Optional[datetime]:
     """Give three days of Plus if eligible. Returns when it ends, or None.
 
     Never raises: a failure here must leave the reader at the ordinary wall,
@@ -88,7 +95,7 @@ def grant(db, user, platform: Optional[str] = None) -> Optional[datetime]:
         if plus is None:
             return None
         uid = int(user.id)
-        end = datetime.now(timezone.utc) + timedelta(hours=TASTE_HOURS)
+        end = datetime.now(timezone.utc) + timedelta(hours=hours)
         sub = db.query(UserSubscription).filter(UserSubscription.user_id == uid).first()
         if sub is None:
             sub = UserSubscription(user_id=uid, tier_id=plus.id)
@@ -104,7 +111,7 @@ def grant(db, user, platform: Optional[str] = None) -> Optional[datetime]:
         db.add(UserEvent(
             user_id=uid,
             event_name=EVENT,
-            properties={"client_platform": platform, "hours": TASTE_HOURS},
+            properties={"client_platform": platform, "hours": hours, "reason": reason},
         ))
         db.commit()
         return end
