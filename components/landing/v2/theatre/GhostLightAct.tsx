@@ -35,7 +35,7 @@ const SHOTS = [
 const N = SHOTS.length;
 const BG = "rgb(11 6 2)";
 /** Scroll spent on each panel, in viewport heights. */
-const STEP_VH = 50;
+const STEP_VH = 62;
 
 const ROMAN = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"];
 
