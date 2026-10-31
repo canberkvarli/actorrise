@@ -193,6 +193,26 @@ class CheckoutAndMeTests(Fixture):
         sent = self._checkout(trial_days=90, trial_period_days=90)
         self.assertEqual(sent["subscription_data"]["trial_period_days"], 7)
 
+    def test_a_yearly_trial_rolls_into_yearly(self):
+        sent = self._checkout(billing_period="annual")
+        self.assertEqual(sent["line_items"][0]["price"], "price_year")
+        self.assertEqual(sent["metadata"]["billing_period"], "annual")
+        self.assertEqual(sent["subscription_data"]["trial_period_days"], 7)
+        self.assertEqual(sent["payment_method_collection"], "always")
+
+    def test_a_monthly_trial_stays_monthly(self):
+        sent = self._checkout(billing_period="monthly")
+        self.assertEqual(sent["line_items"][0]["price"], "price_month")
+        self.assertEqual(sent["metadata"]["billing_period"], "monthly")
+        self.assertEqual(sent["subscription_data"]["trial_period_days"], 7)
+
+    def test_a_yearly_trial_needs_the_yearly_price(self):
+        self.plus.stripe_annual_price_id = None
+        self.db.commit()
+        with self.assertRaises(subscriptions.HTTPException) as ctx:
+            self._checkout(billing_period="annual")
+        self.assertEqual(ctx.exception.status_code, 400)
+
     def test_a_paid_checkout_carries_no_trial(self):
         sent = self._checkout(trial=False, billing_period="annual")
         self.assertNotIn("trial_period_days", sent["subscription_data"])

@@ -231,6 +231,9 @@ function CheckoutContent() {
 
   const calculateMonthlyPrice = () => {
     if (!tier) return "$0";
+    // The trial rolls into the period picked (server side since 2026-10-31).
+    if (isTrial && period === "annual" && tier.annual_price_cents)
+      return `$${(tier.annual_price_cents / 100).toFixed(2)}/year after trial`;
     if (isTrial) return `$${(tier.monthly_price_cents / 100).toFixed(2)}/month after trial`;
     const price = getPrice();
     if (period === "annual" && tier.annual_price_cents) {

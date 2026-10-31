@@ -273,7 +273,7 @@ async def create_checkout_session(
         )
 
     # First-time Plus members can start a free trial: card on file, $0 today,
-    # rolls into Plus monthly after. No code needed — this replaces the retired
+    # rolls into the Plus period they picked after. No code needed — this replaces the retired
     # FOUNDER3 coupon.
     discounts = []
     trial_period_days: int | None = None
@@ -297,18 +297,13 @@ async def create_checkout_session(
                 detail="The free trial is only for first-time Plus members.",
             )
         # A week free, or two for an actor who has finished a scene, then it
-        # rolls into Plus monthly ($12/mo). Decided here, never by the client:
-        # the request says "trial", not how long.
+        # rolls into the Plus plan they picked: monthly ($12/mo) or yearly.
+        # The length is decided here, never by the client: the request says
+        # "trial", not how long. Until 2026-10-31 every trial rolled into
+        # monthly, even for someone who had chosen yearly.
         trial = _trial_fields(db, int(current_user.id))
         trial_period_days = trial["trial_days"]
         trial_earned = trial["trial_earned"]
-        # Force monthly rollover regardless of the billing toggle they picked.
-        price_id = tier.stripe_monthly_price_id
-        if not price_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Stripe price ID not configured for the Plus monthly plan.",
-            )
 
     # Promo codes apply a Stripe coupon (student / teacher / startup discounts).
     if request.promo_code:
@@ -375,8 +370,7 @@ async def create_checkout_session(
         "metadata": {
             "user_id": current_user.id,
             "tier_id": tier.id,
-            # Trial forces monthly rollover, so record that, not what they picked.
-            "billing_period": "monthly" if trial_period_days else request.billing_period,
+            "billing_period": request.billing_period,
             # Stripe metadata values must be strings, and it rejects None.
             "ga_client_id": (request.ga_client_id or "")[:100],
             "trial_days": str(trial_period_days or 0),
