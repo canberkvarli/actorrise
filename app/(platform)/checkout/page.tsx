@@ -10,6 +10,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSubscription } from "@/hooks/useSubscription";
+import { chargeDate } from "@/lib/paywall/offer";
 import { useTrialWords } from "@/hooks/useTrialWords";
 import { cap } from "@/lib/trial";
 import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
@@ -333,8 +334,10 @@ function CheckoutContent() {
           <div className="t-ticket__note">
             <p className="t-ticket__note-title">Nothing is charged today.</p>
             <p className="t-ticket__note-body">
-              Card on file, $0 for {words.days} days, then $12/month. Cancel any
-              time before it renews and you are never billed.{" "}
+              Card on file, $0 for {words.days} days, then{" "}
+              {period === "annual" ? "$99 for the year" : "$12 a month"}, charged on{" "}
+              <span suppressHydrationWarning>{chargeDate(new Date(), words.days)}</span>.
+              Cancel before then and you pay nothing.{" "}
               <EarnSecondWeek />
             </p>
           </div>
@@ -397,11 +400,11 @@ function CheckoutContent() {
                       First time on Plus? Take {words.span} free.
                     </p>
                     <p className="t-ticket__note-body">
-                      Card required, nothing charged for {words.days} days, then
-                      $12/month.
+                      Card required, nothing charged for {words.days} days, then{" "}
+                      {period === "annual" ? "$99 for the year" : "$12 a month"}.
                     </p>
                     <Link
-                      href="/checkout?tier=plus&period=monthly&trial=1"
+                      href={`/checkout?tier=plus&period=${period === "annual" ? "annual" : "monthly"}&trial=1`}
                       className="t-ticket__cta mt-3"
                       style={{ height: 40, padding: "0 18px", fontSize: 14 }}
                     >

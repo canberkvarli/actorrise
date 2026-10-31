@@ -736,7 +736,7 @@ export default function MonologueDetailPage() {
           Rendered only once the piece is on screen, which is after the server
           has counted this read. Signed-out readers have no allowance to count. */}
       {user && !monologue.paywalled && <ReadsLeft ready />}
-      {user && !monologue.paywalled && <TasteNote granted={Boolean(monologue.taste)} aboveRunBar />}
+      {user && !monologue.paywalled && <TasteNote granted={Boolean(monologue.taste)} grantedEndsAt={monologue.taste?.ends_at} aboveRunBar />}
     </div>
   );
 }

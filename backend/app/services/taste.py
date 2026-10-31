@@ -124,6 +124,21 @@ def grant(
         return None
 
 
+def _granted_days(db, user_id: int) -> Optional[int]:
+    """Whole days the taste was granted for, from its taste_started event."""
+    row = (
+        db.query(UserEvent.properties)
+        .filter(UserEvent.user_id == user_id, UserEvent.event_name == EVENT)
+        .order_by(UserEvent.id.desc())
+        .first()
+    )
+    props = (row[0] if row else None) or {}
+    hours = props.get("hours") if isinstance(props, dict) else None
+    if not isinstance(hours, (int, float)) or hours <= 0:
+        return None
+    return max(1, round(hours / 24))
+
+
 def status(db, user_id: int) -> dict[str, Any]:
     """What /me reports: had one, is it running, when it ends."""
     try:
@@ -133,7 +148,15 @@ def status(db, user_id: int) -> dict[str, Any]:
         sub = db.query(UserSubscription).filter(UserSubscription.user_id == user_id).first()
         running = bool(sub and sub.source == SOURCE and sub.is_active)
         ends = _aware(sub.trial_end) if running else None
-        return {"had": True, "active": running, "ends_at": ends.isoformat() if ends else None}
+        return {
+            "had": True,
+            "active": running,
+            "ends_at": ends.isoformat() if ends else None,
+            # How long it was, so the wall after it can say "your week of Plus
+            # ended" for the reverse trial and "your 3 days" for the read-wall
+            # taste. ends_at is gone by then, so it is read off the grant.
+            "days": _granted_days(db, user_id),
+        }
     except Exception as exc:  # noqa: BLE001
         logger.warning("taste: status failed for user %s: %s", user_id, exc)
         try:

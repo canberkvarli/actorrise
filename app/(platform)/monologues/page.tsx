@@ -2245,11 +2245,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           open={!!searchUpgradeUrl}
           onOpenChange={(o) => { if (!o) { setSearchUpgradeUrl(null); setSearchError(null); } }}
           feature="monologue_search"
-          title="You&apos;ve used your free searches this month"
+          lead="search"
+          dir="(the house lights come up.)"
+          title={trialWords.tasted ? trialWords.overTitle : "That's your free searches for the month."}
           description={
             trialWords.tasted
-              ? "Keep exploring with Plus. Unlimited searches, $12 a month or $99 a year, cancel any time."
-              : `Keep exploring with ${trialWords.span} of Plus, free. Unlimited searches, nothing charged now, card on file, cancel anytime.`
+              ? trialWords.overBody
+              : "Plus keeps the search open, as many as it takes to find the piece."
           }
         />
 
@@ -2989,7 +2991,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       <ReadWallModal monologueId={selectedMonologue.id} />
                     </>
                   )}
-                  {selectedMonologue.taste && <TasteNote granted />}
+                  {selectedMonologue.taste && <TasteNote granted grantedEndsAt={selectedMonologue.taste.ends_at} />}
                   <MonologueDetailContent
                     monologue={selectedMonologue}
                     onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}

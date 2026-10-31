@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { useTrialWords } from "@/hooks/useTrialWords";
-import { TASTE_OVER_BODY, TASTE_OVER_TITLE } from "@/lib/trial";
 
 const KEY = (id: number | string) => `arc.readModal.${id}`;
 
@@ -39,11 +38,12 @@ export function ReadWallModal({ monologueId }: { monologueId: number | string })
       onOpenChange={setOpen}
       feature="monologue_read_modal"
       dir="(the rest is behind the curtain.)"
-      title={words.tasted ? TASTE_OVER_TITLE : "That's your free reads for the month."}
+      lead="read"
+      title={words.tasted ? words.overTitle : "That's your free reads for the month."}
       description={
         words.tasted
-          ? TASTE_OVER_BODY
-          : "Plus opens every piece in the library, start to finish. Anything you've already saved stays open either way."
+          ? words.overBody
+          : "Plus opens this piece and every other, start to finish. Anything you've saved stays open either way."
       }
       quietLabel="not now"
     />

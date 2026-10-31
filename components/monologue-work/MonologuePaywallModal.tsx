@@ -3,13 +3,11 @@
 import { useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { theatreFontVars } from "@/lib/fonts/theatre";
-import Link from "next/link";
-import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
+import { PlusOffer } from "@/components/billing/PlusOffer";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
-import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
-import { cap, plusHref } from "@/lib/trial";
-import { ClassRoute } from "@/components/billing/ClassRoute";
+import { trackUpgradeModalViewed } from "@/lib/analytics";
+import type { WallKind } from "@/lib/paywall/offer";
 
 interface MonologuePaywallModalProps {
   open: boolean;
@@ -27,24 +25,15 @@ interface MonologuePaywallModalProps {
   dir?: string;
   /** The quiet way out. */
   quietLabel?: string;
+  /** What they ran into, so the list of what Plus buys leads with it. */
+  lead?: WallKind;
 }
 
-const PLUS_BENEFITS = [
-  "Unlimited monologue rehearsals",
-  "Unlimited AI searches",
-  "30 ScenePartner scenes/month",
-  "AI voice with expressive delivery",
-];
-
-// No counts. The free cap moved twice in one week and copy that names a number
-// goes stale silently.
-const DEFAULT_TITLE = "Keep going";
-// The trial length is the server's to say (lib/trial.ts), so the sentence that
-// names it is built at render.
-const defaultDescription = (span: string, tasted: boolean) =>
-  tasted
-    ? "That's your free rehearsals for this month. Plus takes the cap off, and lets you bring your own sides in too. $12 a month or $99 a year, cancel any time."
-    : `That's your free rehearsals for this month. Plus takes the cap off, and lets you bring your own sides in too. ${cap(span)} free, card on file, cancel before it renews.`;
+// No counts. The free cap moved three times in two months and copy that names
+// a number goes stale silently.
+const DEFAULT_TITLE = "Those were your free runs.";
+const DEFAULT_DESCRIPTION =
+  "Plus lets you run this piece, and every other, as many times as it takes.";
 
 /**
  * Shown when a free user hits a monologue-side wall. Leads with continuing
@@ -63,7 +52,8 @@ export function MonologuePaywallModal({
   description,
   feature = "monologue_rehearsal",
   dir = "(the house is still open.)",
-  quietLabel = "Maybe later",
+  quietLabel = "not now",
+  lead = "rehearse",
 }: MonologuePaywallModalProps) {
   const { subscription } = useSubscription();
   const currentTier = subscription?.tier_name ?? "free";
@@ -74,9 +64,11 @@ export function MonologuePaywallModal({
     trackUpgradeModalViewed({ feature, tier_current: currentTier });
   }, [open, feature, currentTier]);
 
-  // ?from= so begin_checkout can attribute the conversion to THIS wall. Without
-  // it entry_point falls back to document.referrer and every wall looks alike.
-  const href = plusHref(feature, words.tasted);
+  // After a taste (or the reverse trial) the first thing to say is what they
+  // had. A caller's own title is about a feature; the taste outranks it only
+  // on the default rehearsal wall and the walls that pass none.
+  const heading = title ?? (words.tasted ? words.overTitle : DEFAULT_TITLE);
+  const body = description ?? (words.tasted ? words.overBody : DEFAULT_DESCRIPTION);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -84,42 +76,18 @@ export function MonologuePaywallModal({
           to document.body, so it lands outside every scoped wrapper and the
           --t-* vars would resolve to nothing. */}
       <DialogContent
-        className={`t-modal theatre-tokens ${theatreFontVars} max-w-[26rem] border-0 p-7`}
+        className={`t-modal theatre-tokens ${theatreFontVars} max-h-[92dvh] max-w-[26rem] overflow-y-auto border-0 p-7`}
       >
         <p className="t-modal__dir">{dir}</p>
-        <DialogTitle className="t-modal__title">{title ?? DEFAULT_TITLE}</DialogTitle>
-        <DialogDescription className="t-modal__body">
-          {description ?? defaultDescription(words.span, words.tasted)}
-        </DialogDescription>
+        <DialogTitle className="t-modal__title">{heading}</DialogTitle>
+        <DialogDescription className="t-modal__body">{body}</DialogDescription>
 
-        <ul className="t-modal__list">
-          {PLUS_BENEFITS.map((benefit) => (
-            <li key={benefit} className="t-modal__item">
-              {benefit}
-            </li>
-          ))}
-        </ul>
-
-        <div className="t-modal__foot">
-          {/* begin_checkout is deliberately NOT fired here. The checkout page
-              already sends it, reading entry_point from ?from=, and firing in
-              both places would double every conversion in the funnel. */}
-          <Link
-            href={href}
-            className="t-modal__cta"
-            onClick={() => trackPaywallCtaClicked(feature, "wall", currentTier)}
-          >
-            {words.cta}
-          </Link>
-          <button type="button" onClick={() => onOpenChange(false)} className="t-modal__quiet">
-            {quietLabel}
-          </button>
-        </div>
-        <EarnSecondWeek
-          lineClassName="m-0 mt-3 text-center text-[12px]"
-          lineStyle={{ color: "var(--t-muted-dark-2)" }}
+        <PlusOffer
+          feature={feature}
+          lead={lead}
+          onDismiss={() => onOpenChange(false)}
+          dismissLabel={quietLabel}
         />
-        <ClassRoute className="m-0 mt-1.5 text-center text-[12px]" style={{ color: "var(--t-muted-dark-2)" }} />
       </DialogContent>
     </Dialog>
   );

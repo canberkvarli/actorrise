@@ -1,15 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
-import { IconArrowRight } from "@tabler/icons-react";
 
-import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
+import { PlusOffer } from "@/components/billing/PlusOffer";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
-import { TASTE_OVER_BODY, TASTE_OVER_TITLE, plusHref } from "@/lib/trial";
-import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
-import { ClassRoute } from "@/components/billing/ClassRoute";
+import { trackUpgradeModalViewed } from "@/lib/analytics";
 
 /**
  * The end of the free reads, laid over the text that stops early.
@@ -32,15 +28,14 @@ export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
     trackUpgradeModalViewed({ feature, tier_current: currentTier });
   }, [feature, currentTier]);
 
-  // ?from= so checkout can attribute the conversion to THIS gate.
-  // begin_checkout fires there, not here, or every conversion counts twice.
-  const href = plusHref(feature, words.tasted);
-
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[62%] items-end justify-center pb-2">
-      <div aria-hidden className="t-m__gatefade absolute inset-0" />
+    /* The card carries the whole offer now and is taller than most teasers,
+       so it sits in the flow under the text instead of over it; only the fade
+       reaches back up over the last lines. */
+    <div className="relative flex justify-center pb-2 pt-1">
+      <div aria-hidden className="t-m__gatefade pointer-events-none absolute inset-x-0 bottom-full h-40" />
       <div
-        className="t-m__hard-gel t-m-pop pointer-events-auto relative w-full max-w-[460px] -rotate-[0.8deg] rounded-lg border-[1.5px] px-[26px] py-6 text-center"
+        className="t-m__hard-gel t-m-pop relative w-full max-w-[460px] -rotate-[0.8deg] rounded-lg border-[1.5px] px-[26px] py-6"
         style={{ borderColor: "var(--t-text)", background: "var(--t-paper)" }}
       >
         <p
@@ -50,61 +45,19 @@ export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
           (the rest is behind the curtain.)
         </p>
         {/* No number. The cap has moved once already and copy that names it
-            goes stale silently — the same reason MonologuePaywallModal refuses
-            to count. */}
+            goes stale silently. */}
         <p className="t-m__display m-0 mt-2 text-[28px] leading-[1.05]">
-          {words.tasted ? TASTE_OVER_TITLE : <>That&rsquo;s your free reads for the month.</>}
+          {words.tasted ? words.overTitle : <>That&rsquo;s your free reads for the month.</>}
         </p>
         <p
           className="m-0 mt-2.5 text-[14px]"
           style={{ color: "var(--t-muted-dark)" }}
         >
-          {words.tasted ? (
-            TASTE_OVER_BODY
-          ) : (
-            <>
-              Plus opens every piece in the library, start to finish. Anything
-              you&rsquo;ve already saved stays open either way.
-            </>
-          )}
+          {words.tasted
+            ? words.overBody
+            : "Plus opens this piece and every other, start to finish. Anything you've saved stays open either way."}
         </p>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <Link
-            href={href}
-            onClick={() => trackPaywallCtaClicked(feature, "wall", currentTier)}
-            className="inline-flex h-12 items-center gap-2.5 rounded-full pl-5 pr-1.5 text-[15px] font-bold transition-transform duration-300 hover:scale-[1.04] hover:-rotate-1"
-            style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
-          >
-            {words.cta}
-            <span
-              className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full"
-              style={{
-                background: "var(--t-cta-dot-bg)",
-                color: "var(--t-cta-dot-fg)",
-              }}
-            >
-              <IconArrowRight className="h-3.5 w-3.5" />
-            </span>
-          </Link>
-          <Link
-            href="/pricing"
-            className="t-m__dir inline-flex h-12 items-center rounded-full border-[1.5px] px-4 text-[12px] transition-colors"
-            style={{
-              borderColor: "var(--t-line-light)",
-              color: "var(--t-muted-dark-2)",
-            }}
-          >
-            (what else is in it)
-          </Link>
-        </div>
-        <p
-          className="m-0 mt-3.5 text-[12px]"
-          style={{ color: "var(--t-faint)" }}
-        >
-          {words.terms}{" "}
-          <EarnSecondWeek />
-        </p>
-        <ClassRoute className="m-0 mt-1.5 text-[12px]" style={{ color: "var(--t-faint)" }} />
+        <PlusOffer feature={feature} lead="read" />
       </div>
     </div>
   );
