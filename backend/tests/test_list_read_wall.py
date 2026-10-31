@@ -20,39 +20,43 @@ from app.services.read_wall import should_wall
 
 def test_a_reader_under_the_limit_sees_everything():
     assert should_wall(monologue_id=7, reads_used=2, limit=5,
-                       unlimited=False, already_read=set(), favorited=set()) is False
+                       unlimited=False, already_read=set()) is False
 
 
 def test_a_spent_reader_is_walled_on_something_new():
     assert should_wall(monologue_id=7, reads_used=5, limit=5,
-                       unlimited=False, already_read=set(), favorited=set()) is True
+                       unlimited=False, already_read=set()) is True
 
 
 def test_a_spent_reader_keeps_what_they_already_read():
     assert should_wall(monologue_id=7, reads_used=5, limit=5,
-                       unlimited=False, already_read={7}, favorited=set()) is False
+                       unlimited=False, already_read={7}) is False
 
 
-def test_a_spent_reader_keeps_what_they_saved():
-    """Saving is the one behaviour with a pulse. Walling a saved piece would
-    punish exactly the actors worth keeping."""
+def test_saving_a_piece_does_not_buy_a_read():
+    """Saved pieces used to be exempt and saves were uncapped, so saving every
+    search result read all of them (2026-10-31). Only what was actually read
+    within the allowance stays open."""
+    import inspect
+
+    assert "favorited" not in inspect.signature(should_wall).parameters
     assert should_wall(monologue_id=7, reads_used=9, limit=5,
-                       unlimited=False, already_read=set(), favorited={7}) is False
+                       unlimited=False, already_read=set()) is True
 
 
 def test_a_paying_reader_is_never_walled():
     assert should_wall(monologue_id=7, reads_used=99, limit=5,
-                       unlimited=True, already_read=set(), favorited=set()) is False
+                       unlimited=True, already_read=set()) is False
 
 
 def test_the_boundary_is_at_the_limit_not_past_it():
     assert should_wall(monologue_id=1, reads_used=4, limit=5,
-                       unlimited=False, already_read=set(), favorited=set()) is False
+                       unlimited=False, already_read=set()) is False
     assert should_wall(monologue_id=1, reads_used=5, limit=5,
-                       unlimited=False, already_read=set(), favorited=set()) is True
+                       unlimited=False, already_read=set()) is True
 
 
 def test_an_unlimited_sentinel_limit_never_walls():
     """free_read_limit returning -1 means no allowance is being enforced."""
     assert should_wall(monologue_id=1, reads_used=500, limit=-1,
-                       unlimited=False, already_read=set(), favorited=set()) is False
+                       unlimited=False, already_read=set()) is False

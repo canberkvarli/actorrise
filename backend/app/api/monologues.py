@@ -21,6 +21,7 @@ from app.middleware.rate_limiting import (
     normalise_tz,
     record_monologue_read,
     record_total_search,
+    web_reads_this_month,
 )
 from app.models.billing import PricingTier, UserSubscription
 from app.services.email.resend_client import ResendEmailClient
@@ -1767,27 +1768,18 @@ def _apply_list_wall(
             if used < limit:
                 return
             for r in responses:
-                if r.id in favorite_ids or r.id in open_today or r.id in tonight:
+                if r.id in open_today or r.id in tonight:
                     continue
                 r.text = _teaser(r.text)
                 r.text_segments = None
                 r.paywalled = True
             return
 
-        reads_used = distinct_reads(int(user.id), db, client=client, device_id=device)
+        month = web_reads_this_month(int(user.id), db)
+        reads_used = len(month)
         if reads_used < limit:
-            return  # nothing to wall; skip the second query entirely
-
-        ids = [r.id for r in responses]
-        already_read = {
-            row[0]
-            for row in db.query(MonologueView.monologue_id)
-            .filter(
-                MonologueView.user_id == int(user.id),
-                MonologueView.monologue_id.in_(ids),
-            )
-            .all()
-        }
+            return  # nothing to wall
+        already_read = set(month[:limit])
 
         for r in responses:
             if should_wall(
@@ -1796,7 +1788,6 @@ def _apply_list_wall(
                 limit=limit,
                 unlimited=False,
                 already_read=already_read,
-                favorited=favorite_ids,
             ):
                 r.text = _teaser(r.text)
                 r.text_segments = None
@@ -1916,16 +1907,17 @@ async def get_monologue(
         cut_end_line=fav.cut_end_line if fav else None,
     )
 
-    # The wall, enforced here. A saved piece stays open (don't lock their own
-    # shelf); an unsaved one, once the month's free reads are gone, comes back
-    # as teaser only.
+    # The wall, enforced here. Once the free reads are gone, a piece comes back
+    # as teaser only, saved or not: saving used to exempt a piece, and with
+    # saves uncapped that made the wall optional (2026-10-31). Pieces actually
+    # read this period (the first `limit` opened) stay open.
     #
     # Counted from the view rows written above rather than from a spent counter.
     # POST /read is the iOS client's, and nothing on the web has ever called it,
     # so a counter-based wall simply did not exist here. Counting distinct
     # pieces also makes re-opening something you are already working on free,
     # which a per-open counter would punish.
-    if fav is None and not _user_has_unlimited_reads(
+    if not _user_has_unlimited_reads(
         int(current_user.id), db, getattr(current_user, "email", None)
     ):
         if view_client == CLIENT_GHOSTLIGHT:
@@ -1951,14 +1943,13 @@ async def get_monologue(
                 resp.paywalled = True
             return resp
 
-        already_read = distinct_reads(
-            int(current_user.id),
-            db,
-            client=view_client,
-            device_id=view_device,
-            exclude_monologue_id=monologue_id,
-        )
-        if already_read >= free_read_limit(view_client):
+        # Ordered by first open, this one included (its view row is written
+        # above). Its place in the month decides: among the first `limit` it was
+        # a free read and stays one; after that it is walled.
+        month = web_reads_this_month(int(current_user.id), db)
+        limit = free_read_limit(view_client)
+        position = month.index(monologue_id) if monologue_id in month else len(month)
+        if position >= limit:
             # The first time a web reader runs out, they get three days of
             # Plus instead of the wall (services/taste.py). Once, ever.
             ends = None
@@ -2176,10 +2167,16 @@ async def get_others_from_play(
 
 @router.get("/favorites/my", response_model=List[MonologueResponse])
 async def get_my_favorites(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get user's favorited monologues, ordered by last added first."""
+    """Get user's favorited monologues, ordered by last added first.
+
+    Walled like every other list (2026-10-31). This list shipped the full text
+    of every saved piece, so saving a piece and opening the saved list read it
+    whatever the allowance said.
+    """
 
     favorites = (
         db.query(MonologueFavorite)
@@ -2203,7 +2200,7 @@ async def get_my_favorites(
     mono_by_id = {m.id: m for m in monologues}
 
     # Preserve order: last added first; carry each favorite's collection state.
-    return [
+    _out = [
         _monologue_to_response(
             mono_by_id[f.monologue_id],
             is_favorited=True,
@@ -2217,10 +2214,14 @@ async def get_my_favorites(
         for f in favorites
         if f.monologue_id in mono_by_id
     ]
+    _apply_list_wall(_out, db=db, user=current_user, request=request,
+                     favorite_ids={f.monologue_id for f in favorites})
+    return _out
 
 
 @router.get("/removed/my", response_model=List[MonologueResponse])
 async def get_recently_removed(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -2248,13 +2249,15 @@ async def get_recently_removed(
         .filter(Monologue.id.in_([f.monologue_id for f in removed]))
         .all()
     }
-    return [
+    _out = [
         _monologue_to_response(
             monos[f.monologue_id], is_favorited=False, memorized=bool(f.memorized)
         )
         for f in removed
         if f.monologue_id in monos
     ]
+    _apply_list_wall(_out, db=db, user=current_user, request=request, favorite_ids=set())
+    return _out
 
 
 @router.post("/{monologue_id:int}/restore")

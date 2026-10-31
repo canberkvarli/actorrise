@@ -27,6 +27,7 @@ from app.middleware.rate_limiting import (
     free_read_limit,
     monthly_distinct_reads,
     normalise_client,
+    web_reads_this_month,
 )
 from app.models.search_log import MonologueView
 
@@ -158,6 +159,47 @@ class TestWallArithmetic:
         assert not self._walled(db, 1, 1)
 
 
+class TestWebPositionDecides:
+    """The detail page walls a piece by its place in the month (2026-10-31).
+
+    A walled open writes a view row, and saving no longer exempts a piece, so
+    "has a view row" cannot mean "was read". The first `limit` pieces opened
+    this month were read; everything after was walled and stays walled.
+    """
+
+    def _walled(self, db, user_id, monologue_id):
+        month = web_reads_this_month(user_id, db)
+        pos = month.index(monologue_id) if monologue_id in month else len(month)
+        return pos >= FREE_MONOLOGUE_READ_LIMIT
+
+    def test_order_is_first_open(self, db):
+        base = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=10)
+        for i, mid in enumerate((5, 3, 9)):
+            _view(db, user_id=1, monologue_id=mid, when=base + timedelta(minutes=i))
+        _view(db, user_id=1, monologue_id=5)
+        assert web_reads_this_month(1, db) == [5, 3, 9]
+
+    def test_a_read_piece_stays_open_after_walled_opens(self, db):
+        base = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=10)
+        for i in range(1, FREE_MONOLOGUE_READ_LIMIT + 4):
+            _view(db, user_id=1, monologue_id=i, when=base + timedelta(minutes=i))
+        _view(db, user_id=1, monologue_id=1)
+        assert not self._walled(db, 1, 1)
+
+    def test_a_walled_piece_stays_walled_when_reopened(self, db):
+        """Open it walled, save it, come back: still walled. This was the leak."""
+        base = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=10)
+        for i in range(1, FREE_MONOLOGUE_READ_LIMIT + 2):
+            _view(db, user_id=1, monologue_id=i, when=base + timedelta(minutes=i))
+        walled = FREE_MONOLOGUE_READ_LIMIT + 1
+        _view(db, user_id=1, monologue_id=walled)
+        assert self._walled(db, 1, walled)
+
+    def test_app_rows_are_not_web_reads(self, db):
+        _view(db, user_id=1, monologue_id=1, client=CLIENT_GHOSTLIGHT)
+        assert web_reads_this_month(1, db) == []
+
+
 class TestSeparateTrialsPerClient:
     """Web and Ghost Light run separate trials that must not pool.
 
@@ -173,7 +215,7 @@ class TestSeparateTrialsPerClient:
     def test_each_client_has_its_own_limit(self):
         # Equal since 2026-10-21 (web went 5 -> 3); the counts still do not pool.
         assert free_read_limit(CLIENT_WEB) == 3
-        assert free_read_limit(CLIENT_GHOSTLIGHT) == 3
+        assert free_read_limit(CLIENT_GHOSTLIGHT) == 1  # a day, since 2026-10-31
 
     def test_web_reads_do_not_spend_the_app_trial(self, db):
         for i in range(1, 6):

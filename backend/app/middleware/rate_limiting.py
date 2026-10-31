@@ -406,7 +406,10 @@ CLIENT_GHOSTLIGHT = "ghostlight"
 # 3 since 2026-10-21 (was 5), Canberk's call: five a month was most of what a
 # free actor ever reads, so the wall rarely came up at all.
 FREE_MONOLOGUE_READ_LIMIT = 3
-FREE_MONOLOGUE_READ_LIMIT_GHOSTLIGHT = 3
+# Ghost Light: 1 new piece a day since 2026-10-31 (was 3 a day from 10-28).
+# With tonight's speeches never counted, three a day plus tonight came to some
+# 35 pieces a week before any ask, and the app had no reason to be paid for.
+FREE_MONOLOGUE_READ_LIMIT_GHOSTLIGHT = 1
 
 
 def normalise_client(value: str | None) -> str:
@@ -539,6 +542,30 @@ def distinct_reads(
     if exclude_monologue_id is not None:
         query = query.filter(MonologueView.monologue_id != exclude_monologue_id)
     return int(query.scalar() or 0)
+
+
+def web_reads_this_month(user_id: int, db: Session) -> list[int]:
+    """The distinct pieces the web opened this month, in the order first opened.
+
+    The web's twin of ``ghostlight_reads_today``. A walled open writes a view
+    row too, so the pieces actually READ are the first ``limit`` of this list,
+    and only those stay open when the reader comes back to them. Counting any
+    viewed piece as read would let a walled open, once saved, come back whole.
+    """
+    from app.models.search_log import MonologueView
+
+    rows = (
+        db.query(MonologueView.monologue_id, func.min(MonologueView.created_at).label("first"))
+        .filter(
+            MonologueView.user_id == user_id,
+            or_(MonologueView.client == CLIENT_WEB, MonologueView.client.is_(None)),
+            MonologueView.created_at >= _period_start_utc(),
+        )
+        .group_by(MonologueView.monologue_id)
+        .order_by("first")
+        .all()
+    )
+    return [int(r[0]) for r in rows]
 
 
 def ghostlight_reads_today(

@@ -86,16 +86,17 @@ class Base(unittest.TestCase):
 
 
 class DailyReads(Base):
-    def test_first_three_of_the_day_stay_open_after_walled_opens(self):
+    def test_the_first_of_the_day_stays_open_after_walled_opens(self):
+        """One new piece a day since 2026-10-31 (was three)."""
         a, b, c, d, e = self.monos[:5]
-        for m in (a, b, c, d, e):  # d and e were opened walled
+        for m in (a, b, c, d, e):  # b to e were opened walled
             self.view(m)
-        self.view(b)  # coming back to one actually read
+        self.view(a)  # coming back to the one actually read
         today = ghostlight_reads_today(self.me.id, self.db)
         self.assertEqual(today, [a.id, b.id, c.id, d.id, e.id])
         open_today, used = ghostlight_open_today(self.me.id, self.db)
-        self.assertEqual(open_today, {a.id, b.id, c.id})
-        self.assertEqual(used, 3)
+        self.assertEqual(open_today, {a.id})
+        self.assertEqual(used, 1)
 
     def test_yesterday_is_spent_and_gone(self):
         long_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1, hours=1)

@@ -26,20 +26,22 @@ def should_wall(
     limit: int,
     unlimited: bool,
     already_read: Set[int],
-    favorited: Set[int],
 ) -> bool:
     """True when this piece must be served as a teaser to this reader.
 
-    A list must never be stricter than the detail page, so two exemptions carry
-    over from it:
+    ``already_read`` is the pieces this reader actually READ this period, the
+    first ``limit`` they opened, not every piece with a view row: a walled open
+    writes a row too. Re-opening one of those stays free, which is what an
+    actor does with a piece they are working on.
 
-    - Pieces already read. The allowance counts DISTINCT pieces, so re-opening
-      something you are working on has always been free.
-    - Pieces saved. Saving is the one behaviour in this product with a pulse,
-      and walling a saved piece would punish precisely the actors worth keeping.
+    Saving buys nothing (2026-10-31). Saved pieces used to be exempt, and
+    saving had no cap, so a free reader could save every search result and
+    read all of them: the three-a-month wall stopped only the people who never
+    found the heart. A saved piece spends a read when it is first read, like
+    any other, and stays open after that.
     """
     if unlimited or limit < 0:
         return False
-    if monologue_id in favorited or monologue_id in already_read:
+    if monologue_id in already_read:
         return False
     return reads_used >= limit
