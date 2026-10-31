@@ -373,10 +373,24 @@ def _invite_rate_ok(user_id: int) -> bool:
 def send_room_invite(
     body: RoomInviteRequest,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Email a friend a link to a rehearsal room (Canva-style invite). The room
     URL is built server-side, all interpolated values are HTML-escaped, and sends
-    are rate-limited per user so this isn't a spam vector."""
+    are rate-limited per user so this isn't a spam vector.
+
+    Hosting a room is Plus. A room has no server record (its id is made in the
+    browser), so the invite is the one host action the server sees; until
+    2026-10-31 the Plus gate lived only in GreenRoomLibrary.tsx. Joining from a
+    link stays free, and the copied link still works for anyone."""
+    from app.services.rehearsal.access import has_whole_library
+
+    if not has_whole_library(db, current_user):
+        raise HTTPException(status_code=403, detail={
+            "error": "greenroom_host_plus_required",
+            "message": "Starting a rehearsal room is part of Plus. Your scene partner joins free, from any link you send them.",
+            "upgrade_url": "/pricing",
+        })
     email = (body.email or "").strip()
     if not _EMAIL_RE.match(email):
         raise HTTPException(status_code=400, detail="That doesn't look like an email address.")
