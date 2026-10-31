@@ -991,6 +991,41 @@ def _rc_get_or_create_subscription(user_id: int, db: Session) -> UserSubscriptio
     return sub
 
 
+def _rc_web_row_holds(sub: UserSubscription, db: Session) -> bool:
+    """True when the user's one subscription row belongs to the web and is live:
+    a Stripe subscription that is active, trialing or past_due, or a comp
+    (admin grant, class link) that has not run out. RevenueCat must not
+    replace or downgrade such a row. Before 2026-10-31 an app purchase
+    overwrote a paying Stripe Plus row with the app tier, and the app's
+    EXPIRATION then set it to free."""
+    if sub.id is None:
+        return False
+    src = (sub.source or "").lower()
+    if src == "revenuecat":
+        return False
+    if sub.stripe_subscription_id or src == "stripe":
+        return (sub.status or "") in ("active", "trialing", "past_due")
+    if src in ("manual", "class"):
+        if not sub.is_active:
+            return False
+        tier = db.query(PricingTier).get(sub.tier_id) if sub.tier_id else None
+        return tier is not None and tier.name != "free"
+    return False
+
+
+def _rc_owns_row(sub: UserSubscription, db: Session) -> bool:
+    """True when an EXPIRATION may set this row to free: RevenueCat wrote it.
+    Rows from before the grant path stamped a source carry NULL; those count
+    when they hold the app tier and no Stripe subscription."""
+    src = (sub.source or "").lower()
+    if src == "revenuecat":
+        return True
+    if src or sub.stripe_subscription_id:
+        return False
+    tier = db.query(PricingTier).get(sub.tier_id) if sub.tier_id else None
+    return tier is not None and tier.name == "monologues"
+
+
 @router.post("/revenuecat")
 async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
     """Grant/revoke the mobile Monologues tier from RevenueCat events.
@@ -1023,6 +1058,9 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
 
     sub = _rc_get_or_create_subscription(int(user.id), db)
     prior_tier_id = sub.tier_id
+    # A live web Plus/Pro or comp outranks the app tier: the event is recorded
+    # and reported, but the row is left as it is.
+    web_holds = _rc_web_row_holds(sub, db)
 
     # The app's money trail, one row per event, so the admin can see what
     # RevenueCat saw. Every delivery failed on auth from Aug 26 to Oct 6 2026
@@ -1045,6 +1083,8 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
             # BILLING_ERROR, CUSTOMER_SUPPORT, and so on. Without it a lapsed
             # trial could not be told from a card that failed (2026-10-07).
             "reason": event.get("expiration_reason") or event.get("cancel_reason") or "",
+            # The row stayed on the web subscription or comp (2026-10-31).
+            "web_row_kept": web_holds,
         },
     )
 
@@ -1064,6 +1104,15 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
             daemon=True,
         ).start()
 
+    if web_holds and event_type in (_RC_GRANT_EVENTS | {"CANCELLATION", "EXPIRATION", "BILLING_ISSUE"}):
+        logger.warning(
+            "RevenueCat %s for user %s left alone: the row is a live web subscription or comp (source=%s, stripe=%s)",
+            event_type, user.id, sub.source, sub.stripe_subscription_id,
+        )
+        if event_type in _RC_GRANT_EVENTS:
+            _rc_notify("app_purchase")
+        return {"status": "ok", "message": "web subscription kept"}
+
     if event_type in _RC_GRANT_EVENTS:
         tier = db.query(PricingTier).filter(PricingTier.name == "monologues").first()
         if not tier:
@@ -1071,6 +1120,8 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
             return {"status": "ok", "message": "monologues tier missing"}
         sub.tier_id = tier.id
         sub.status = "active"
+        # The row is the app's now, so its EXPIRATION may revoke it.
+        sub.source = "revenuecat"
         sub.cancel_at_period_end = False
         sub.canceled_at = None
         # The plan comes from the product, not from whether it is a trial: an
@@ -1107,6 +1158,10 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
         _rc_notify("app_trial_cancelled" if event.get("period_type") == "TRIAL" else "app_cancelled")
 
     elif event_type == "EXPIRATION":
+        if not _rc_owns_row(sub, db):
+            # A lapsed web comp or Stripe row is not the app's to end.
+            logger.info("RevenueCat EXPIRATION for user %s: row is not the app's (source=%s)", user.id, sub.source)
+            return {"status": "ok", "message": "row not owned by revenuecat"}
         free_tier = db.query(PricingTier).filter(PricingTier.name == "free").first()
         if free_tier:
             sub.tier_id = free_tier.id
