@@ -26,12 +26,29 @@ export const MAX_SESSION_DISMISSALS = 3;
 
 const NEW_GATE: GateState = { shows: 0, lastShownAt: 0, quietUntil: 0 };
 
+/**
+ * Soft asks that never speak again. In the 30 days to 2026-10-31 the reads
+ * meter was shown to 69 people, the monologue-finished ask to 40 and the third
+ * save to 8, and not one of them clicked. The hard walls were clicked by about
+ * one in five who hit them. A success is not the moment to sell; the wall is.
+ * scene_completed stays: 54 shown, 4 trials started.
+ *
+ * Retired here rather than at each caller, so nothing that mounts one of them
+ * can bring it back by accident. Take a name out of this set to revive it.
+ */
+export const RETIRED_GATES: ReadonlySet<string> = new Set([
+  "reads_meter",
+  "monologue_completed",
+  "third_save",
+]);
+
 export function canShow(
   store: Store,
   gate: string,
   now: number,
   sessionDismissals: number,
 ): boolean {
+  if (RETIRED_GATES.has(gate)) return false;
   if (store.clicked) return false;
   if (sessionDismissals >= MAX_SESSION_DISMISSALS) return false;
   const g = store.gates[gate] ?? NEW_GATE;
