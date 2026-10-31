@@ -4,6 +4,7 @@ import { BackstageHero } from "./BackstageHero";
 import { PlayMarquee } from "./PlayMarquee";
 import { StageAct } from "./StageAct";
 import { RehearsalRoom } from "./RehearsalRoom";
+import { GhostLightAct } from "./GhostLightAct";
 import { HouseLightsUp } from "./HouseLightsUp";
 import { HouseAct } from "./HouseAct";
 import { ClassAct } from "./ClassAct";
@@ -13,8 +14,8 @@ import { TheatreFooter } from "./TheatreFooter";
 /**
  * The landing page: one continuous walk through a theatre.
  *
- *   backstage → the fly system → the stage → the rehearsal room → house
- *   lights up → the house → the classroom → the curtain → out
+ *   backstage → the fly system → the stage → the rehearsal room → the ghost
+ *   light → house lights up → the house → the classroom → the curtain → out
  *
  * It is deliberately dark for the first two screens and cream for the middle
  * one, in both light and dark mode. `.theatre` carries its own palette and its
@@ -38,6 +39,7 @@ export function TheatreWalk() {
         <PlayMarquee />
         <StageAct />
         <RehearsalRoom />
+        <GhostLightAct />
         <HouseLightsUp />
         <HouseAct />
         <ClassAct />

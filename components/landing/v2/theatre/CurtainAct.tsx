@@ -1,16 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useRef } from "react";
-import { appStoreUrl } from "@/lib/appStore";
 import { TheatreCta } from "./TheatreCta";
 import { useScrollProgress } from "./useScrollProgress";
-
-const SHOTS = [
-  { src: "/ghostlight/read.png", alt: "Ghost Light reading view", w: "clamp(80px,10vw,120px)", rot: -8 },
-  { src: "/ghostlight/search.png", alt: "Ghost Light search", w: "clamp(100px,12vw,150px)", rot: 0 },
-  { src: "/ghostlight/saves.png", alt: "Ghost Light saved pieces", w: "clamp(80px,10vw,120px)", rot: 8 },
-];
 
 /**
  * Act IV — the curtain, run backwards. It starts closed on the word
@@ -76,74 +68,6 @@ export function CurtainAct() {
           </h2>
           <div className="mt-10">
             <TheatreCta />
-          </div>
-
-          {/* Ghost Light, for iOS. */}
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
-            <div className="flex items-end gap-3" style={{ perspective: 900 }}>
-              {SHOTS.map((s, i) => (
-                <div
-                  key={s.src}
-                  className="overflow-hidden transition-transform duration-500"
-                  style={{
-                    width: s.w,
-                    transform: s.rot ? `rotate(${s.rot}deg) translateY(10px)` : undefined,
-                    borderRadius: s.rot ? 20 : 24,
-                    border: `1px solid ${s.rot ? "var(--t-line-dark-3)" : "var(--t-cta-bd)"}`,
-                    opacity: s.rot ? 0.85 : 1,
-                    boxShadow: s.rot ? undefined : "0 30px 80px -20px oklch(0.72 0.17 55 / .5)",
-                    transitionTimingFunction: "var(--t-spring)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = s.rot
-                      ? `rotate(${s.rot / 2}deg) translateY(-10px)`
-                      : "translateY(-14px) scale(1.04)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = s.rot
-                      ? `rotate(${s.rot}deg) translateY(10px)`
-                      : "";
-                  }}
-                >
-                  <Image
-                    src={s.src}
-                    alt={s.alt}
-                    width={i === 1 ? 300 : 240}
-                    height={i === 1 ? 650 : 520}
-                    className="block h-auto w-full"
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="max-w-[300px] text-left">
-              <p
-                className="m-0 -tracking-[.01em]"
-                style={{ fontFamily: "var(--t-display)", fontSize: 28, lineHeight: 1.05 }}
-              >
-                Ghost Light,{" "}
-                <em className="t-em" style={{ color: "var(--t-gel)" }}>
-                  for iOS.
-                </em>
-              </p>
-              <p
-                className="m-0 mt-2 text-[15px]"
-                style={{ color: "var(--t-muted-light-2)", lineHeight: 1.45 }}
-              >
-                Find a piece, run your lines with a partner, and keep every audition in one place. Saves work offline.
-              </p>
-              <a
-                href={appStoreUrl("landing_teaser")}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3.5 inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors hover:!border-[var(--t-gel)] hover:!text-[var(--t-gel)]"
-                style={{ border: "1.5px solid var(--t-cta-bd)", color: "var(--t-cream)" }}
-              >
-                <svg viewBox="0 0 384 512" width="14" height="14" fill="currentColor" aria-hidden>
-                  <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
-                </svg>
-                Download on the App Store
-              </a>
-            </div>
           </div>
         </div>
 
