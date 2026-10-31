@@ -97,8 +97,11 @@ function getFeaturesList(tier: PricingTier): string[] {
   const features: string[] = [];
 
   // Full pieces a month. The read wall's own number, served with the tier.
+  // Every paid tier reads without a cap (subscriptions.usage_limits).
   const reads = tier.features.monologue_reads_per_month;
-  if (reads && reads > 0) {
+  if (tier.name !== "free") {
+    features.push("Every monologue, start to finish");
+  } else if (reads && reads > 0) {
     features.push(`${reads} full monologues a month`);
   }
 
@@ -199,7 +202,11 @@ export default function PricingPage() {
   // Default to annual — it's the better deal for the actor and the better LTV,
   // so lead with it (they can flip to monthly).
   const [isAnnual, setIsAnnual] = useState(true);
-  const { data: tiers = DEFAULT_PRICING_TIERS, isLoading } = usePricingTiers();
+  const { data: allTiers = DEFAULT_PRICING_TIERS, isLoading } = usePricingTiers();
+  // "Monologues" is Ghost Light's tier, sold in the App Store through
+  // RevenueCat. It has no Stripe price, so on the web its button led to a
+  // checkout that could only fail.
+  const tiers = allTiers.filter((t) => t.name !== "monologues");
 
   const formatPrice = (cents: number) => {
     const dollars = cents / 100;
@@ -236,7 +243,7 @@ export default function PricingPage() {
             Your <em className="italic text-primary">craft</em>, your plan.
           </>
         }
-        lede="Start free, no card. Move up when you need more."
+        lede="Plus is $8.25 a month, billed $99 a year. Start free, no card."
       />
 
       {/* `t-box-office` because that is what this page is, and because it carries
@@ -340,7 +347,12 @@ export default function PricingPage() {
                     href={
                       isFree
                         ? "/signup"
-                        : `/checkout?tier=${tier.name}&period=${isAnnual ? "annual" : "monthly"}`
+                        : // Plus starts on the free trial at either period; the
+                          // trial rolls into the period picked. Without
+                          // trial=1 an annual Plus click was charged $99 today.
+                          `/checkout?tier=${tier.name}&period=${isAnnual ? "annual" : "monthly"}${
+                            tier.name === "plus" ? "&trial=1" : ""
+                          }&from=pricing`
                     }
                     className={`t-ticket__cta mt-5 w-full${
                       isHighlighted ? "" : " t-ticket__cta--quiet"
