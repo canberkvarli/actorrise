@@ -1,5 +1,5 @@
 import { useSubscription } from "@/hooks/useSubscription";
-import { trialWords, type TrialWords } from "@/lib/trial";
+import { tasteDays, trialWords, type TrialWords } from "@/lib/trial";
 
 /** The trial this actor would get if they started one now, as words. */
 export function useTrialWords(): TrialWords {
@@ -9,5 +9,6 @@ export function useTrialWords(): TrialWords {
     subscription?.trial_days,
     subscription?.trial_earned ?? false,
     Boolean(taste?.had && !taste?.active),
+    tasteDays(taste),
   );
 }

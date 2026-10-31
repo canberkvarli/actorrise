@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
-import { TASTE_OVER_BODY, TASTE_OVER_TITLE, plusHref } from "@/lib/trial";
 import { theatreFontVars } from "@/lib/fonts/theatre";
-import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
-import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
-import { ClassRoute } from "@/components/billing/ClassRoute";
+import { trackUpgradeModalViewed } from "@/lib/analytics";
+import { PlusOffer } from "@/components/billing/PlusOffer";
 
 interface MonologueWallProps {
   /** Where the wall fired, for begin_checkout attribution. */
@@ -38,10 +35,6 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
     trackUpgradeModalViewed({ feature, tier_current: currentTier });
   }, [feature, currentTier]);
 
-  // ?from= so the checkout page can attribute the conversion to THIS wall.
-  // begin_checkout is fired there, not here, or every conversion counts twice.
-  const href = plusHref(feature, words.tasted);
-
   return (
     /* theatre-tokens and the faces ride on the wall itself. The monologue
        route binds no theatre surface, so without both every --t-* here
@@ -62,37 +55,20 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
           goes stale silently, which is the same reason MonologuePaywallModal
           refuses to count. */}
       <p className="t-wall__title">
-        {words.tasted ? TASTE_OVER_TITLE : <>That&rsquo;s your free reads for the month.</>}
+        {words.tasted ? words.overTitle : <>That&rsquo;s your free reads for the month.</>}
       </p>
       <p className="t-wall__body">
         {words.tasted ? (
-          TASTE_OVER_BODY
+          words.overBody
         ) : (
           <>
-            Plus opens every piece in the library, start to finish. Anything
-            you&rsquo;ve already saved stays open either way.
+            Plus opens this piece and every other, start to finish. Anything
+            you&rsquo;ve saved stays open either way.
           </>
         )}
       </p>
 
-      <div className="t-wall__foot">
-        <Link
-          href={href}
-          className="t-wall__cta"
-          onClick={() => trackPaywallCtaClicked(feature, "wall", currentTier)}
-        >
-          {words.cta}
-        </Link>
-        <Link href="/pricing" className="t-wall__quiet">
-          what else is in it
-        </Link>
-      </div>
-
-      <p className="t-wall__body" style={{ marginTop: 14, fontSize: 12 }}>
-        {words.terms}{" "}
-        <EarnSecondWeek />
-      </p>
-      <ClassRoute className="t-wall__body" style={{ marginTop: 6, fontSize: 12 }} />
+      <PlusOffer feature={feature} lead="read" />
     </div>
   );
 }

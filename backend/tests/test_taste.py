@@ -128,7 +128,12 @@ class TestStatus:
         sub = db.query(UserSubscription).filter_by(user_id=u.id).one()
         sub.trial_end = datetime.now(timezone.utc) - timedelta(minutes=1)
         db.commit()
-        assert taste.status(db, u.id) == {"had": True, "active": False, "ends_at": None}
+        assert taste.status(db, u.id) == {"had": True, "active": False, "ends_at": None, "days": 3}
+
+    def test_reports_the_length_it_was_granted_for(self, db):
+        u = _user(db)
+        taste.grant(db, u, hours=168, reason="reverse_trial")
+        assert taste.status(db, u.id)["days"] == 7
 
     def test_tasted_ids(self, db):
         a, b = _user(db, 1), _user(db, 2)

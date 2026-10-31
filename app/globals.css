@@ -1515,6 +1515,76 @@
   color: var(--t-text);
 }
 
+/* The offer a hard wall makes (components/billing/PlusOffer.tsx): the stub of
+   the /checkout ticket. One plan, a price set large, then the printed account
+   (Today ... $0, the charge day ... $99) on the ticket's own rows, so tapping
+   through lands on the same object set larger. Paints no background: it sits
+   on the modal's paper, the gate card's, or the reading page itself. */
+.t-plus {
+  margin-top: 18px;
+}
+.t-plus__price {
+  margin: 22px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.t-plus__figure {
+  font-family: var(--t-display);
+  font-size: 46px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--t-text);
+}
+.t-plus__per {
+  font-family: var(--t-direction);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--t-muted-dark);
+}
+.t-plus__rows {
+  margin-top: 12px;
+  border-top: 1.5px solid var(--t-line-light);
+}
+.t-plus__rows .t-ticket__row {
+  padding: 7px 0;
+}
+.t-plus__foot {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+.t-plus__fine {
+  margin: 12px 0 0;
+  max-width: 46ch;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--t-muted-dark-2);
+  text-wrap: pretty;
+}
+.t-plus__fine + .t-plus__fine {
+  margin-top: 4px;
+}
+/* Leaving is allowed and stays small: no border, no pill, just the words. */
+.t-plus__dismiss {
+  display: block;
+  margin: 14px 0 0;
+  padding: 6px 0;
+  background: transparent;
+  border: 0;
+  font-family: var(--t-direction);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--t-muted-dark-2);
+  cursor: pointer;
+}
+.t-plus__dismiss:hover {
+  color: var(--t-text);
+}
+
 /* ==========================================================================
    THE BOX OFFICE — /checkout.
 

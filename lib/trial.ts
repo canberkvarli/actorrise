@@ -27,11 +27,50 @@ export type TrialWords = {
   tasted: boolean;
   /** The line under a wall's button. */
   terms: string;
+  /**
+   * What the first wall after a taste says, once tasted: what they had and
+   * lost. Empty strings otherwise.
+   */
+  overTitle: string;
+  overBody: string;
 };
 
-export const TASTE_OVER_TITLE = "Your 3 days are up.";
+/** The taste as /me reports it (backend services/taste.py). */
+export type TasteState = {
+  had: boolean;
+  active: boolean;
+  ends_at: string | null;
+  /** Whole days it was granted for (3 at the read wall, 7 for the reverse trial). */
+  days?: number | null;
+} | null | undefined;
+
+/**
+ * How long the taste ran, in days, if /me says. The three-day taste and the
+ * seven-day reverse trial are the same mechanism with different lengths, so
+ * the length is read, never assumed.
+ */
+export function tasteDays(taste: TasteState): number | null {
+  if (!taste) return null;
+  return taste.days && taste.days > 0 ? taste.days : null;
+}
+
+/** "a week", "3 days": how a length of free Plus reads in a sentence. */
+export function spanOfDays(days: number): string {
+  if (days === 7) return "a week";
+  if (days === 14) return "two weeks";
+  if (days === 1) return "a day";
+  return `${days} days`;
+}
+
+/** "Your week of Plus ended." Says the length only when it is known. */
+export function tasteOverTitle(days: number | null): string {
+  if (!days) return "Your free Plus ended.";
+  const noun = days === 7 ? "week" : days === 14 ? "two weeks" : days === 1 ? "day" : `${days} days`;
+  return `Your ${noun} of Plus ended.`;
+}
+
 export const TASTE_OVER_BODY =
-  "Keep every piece open, and everything else Plus does, for $12 a month or $99 a year.";
+  "You had every piece, every search and every run. Keep all of it.";
 
 /** Where a wall's button goes. No trial after the taste; the server agrees. */
 export function plusHref(from: string, tasted: boolean): string {
@@ -46,6 +85,7 @@ export function trialWords(
   days: number | undefined | null,
   earned = false,
   tasted = false,
+  tastedDays: number | null = null,
 ): TrialWords {
   if (tasted) {
     return {
@@ -56,6 +96,8 @@ export function trialWords(
       earned: false,
       tasted: true,
       terms: "$12 a month or $99 a year. Cancel any time.",
+      overTitle: tasteOverTitle(tastedDays),
+      overBody: TASTE_OVER_BODY,
     };
   }
   const d = days && days > 0 ? days : DEFAULT_TRIAL_DAYS;
@@ -69,6 +111,8 @@ export function trialWords(
     earned,
     tasted: false,
     terms: "Card on file, cancel before it renews.",
+    overTitle: "",
+    overBody: "",
   };
 }
 

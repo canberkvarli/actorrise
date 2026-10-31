@@ -17,7 +17,20 @@ import { TrialOfferBanner, useTrialOffer } from "./TrialOffer";
  * is fetched again at that point and nothing is shown until the answer is in:
  * a count that is one read behind is a wrong count.
  */
+/**
+ * Off since 2026-10-31. Shown to 69 people in 30 days, clicked by none: a
+ * count of what is left reads as a meter, not an offer. The wall carries the
+ * ask now. The gate is retired in lib/paywall/eligibility.ts as well, so this
+ * flag only saves the usage fetch. Flip to true to bring it back.
+ */
+const READS_LEFT_ON = false;
+
 export function ReadsLeft({ ready }: { ready: boolean }) {
+  if (!READS_LEFT_ON) return null;
+  return <ReadsLeftCounter ready={ready} />;
+}
+
+function ReadsLeftCounter({ ready }: { ready: boolean }) {
   const { usage, mutate } = useUsageLimits();
   const [counted, setCounted] = useState(false);
 

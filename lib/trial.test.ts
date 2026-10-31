@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cap, trialWords, plusHref } from "./trial";
+import { cap, tasteDays, trialWords, plusHref } from "./trial";
 
 describe("trialWords", () => {
   it("a week", () => {
@@ -60,5 +60,24 @@ describe("after the three-day taste", () => {
       "/checkout?tier=plus&period=monthly&trial=0&from=monologue_read",
     );
     expect(plusHref("monologue_read", false)).toContain("trial=1");
+  });
+});
+
+describe("when the free Plus ends", () => {
+  it("says what they had, at the length it ran", () => {
+    expect(trialWords(0, false, true, 7).overTitle).toBe("Your week of Plus ended.");
+    expect(trialWords(0, false, true, 3).overTitle).toBe("Your 3 days of Plus ended.");
+    expect(trialWords(0, false, true, null).overTitle).toBe("Your free Plus ended.");
+    expect(trialWords(0, false, true, 7).overBody).toMatch(/every piece/);
+  });
+
+  it("reads the length off /me, never assumes it", () => {
+    expect(tasteDays({ had: true, active: false, ends_at: null, days: 7 })).toBe(7);
+    expect(tasteDays({ had: true, active: false, ends_at: null })).toBeNull();
+    expect(tasteDays(null)).toBeNull();
+  });
+
+  it("says nothing about it before a taste", () => {
+    expect(trialWords(7).overTitle).toBe("");
   });
 });

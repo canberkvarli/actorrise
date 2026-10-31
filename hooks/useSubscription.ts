@@ -29,7 +29,13 @@ export interface SubscriptionData {
   trial_days?: number;
   trial_earned?: boolean;
   /** The three days of Plus given at the first read wall. Once had, no trial is left. */
-  taste?: { had: boolean; active: boolean; ends_at: string | null } | null;
+  taste?: {
+    had: boolean;
+    active: boolean;
+    ends_at: string | null;
+    /** Whole days it was granted for (services/taste.py status()). */
+    days?: number | null;
+  } | null;
 }
 
 export interface UsageLimits {
