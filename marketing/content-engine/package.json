@@ -1,0 +1,19 @@
+{
+  "name": "actorrise-content-engine",
+  "version": "1.0.0",
+  "description": "Daily story videos for Ghost Light and ActorRise (Remotion)",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "scripts/render.sh",
+    "sfx": "python3 scripts/make_sfx.py"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.539",
+    "@remotion/fonts": "^4.0.539",
+    "@remotion/paths": "^4.0.539",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "remotion": "^4.0.539"
+  },
+  "private": true
+}

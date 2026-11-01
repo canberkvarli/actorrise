@@ -1,0 +1,1043 @@
+import React from "react";
+import {
+  AbsoluteFill,
+  Audio,
+  Img,
+  Sequence,
+  interpolate,
+  spring,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+  Easing,
+} from "remotion";
+import { evolvePath } from "@remotion/paths";
+import { loadFont } from "@remotion/fonts";
+
+export const FPS = 30;
+const T = 22; // frames per camera move
+
+// Anthropic-style warm paper + ink, Ghost Light orange as the only accent.
+const C = {
+  paper: "#f2ece0",
+  ink: "#211a15",
+  inkSoft: "rgba(33,26,21,0.55)",
+  orange: "#e8792b",
+  stage: "#120b07",
+  stageInk: "#efe6d8",
+};
+const F = { serif: "Playfair", serifI: "PlayfairItalic", type: "CourierPrime", sans: "Montserrat" };
+loadFont({ family: F.serif, url: staticFile("fonts/playfair.woff2"), weight: "600" });
+loadFont({ family: F.serifI, url: staticFile("fonts/playfair-italic.woff2"), weight: "400", style: "italic" });
+loadFont({ family: F.type, url: staticFile("fonts/courier-italic.woff2"), weight: "400", style: "italic" });
+loadFont({ family: F.sans, url: staticFile("fonts/montserrat.woff2"), weight: "600" });
+
+// ---------- spec ----------
+type Night = { type: "night"; seconds: number; time: string; cue: string };
+type Books = { type: "books"; seconds: number; line1: string; line2: string; accent: string };
+type Phone = {
+  type: "phone";
+  seconds: number;
+  mode?: "search" | "read";
+  line: string;
+  accent: string;
+  cue?: string;
+  query?: string;
+  chips?: string[];
+  resultsCue?: string;
+  results?: { character: string; source: string; meta: string; quote: string }[];
+  read?: { tag: string; title: string; titleItalic: string; meta: string; text: string; mark?: number; note?: string };
+  /** optional tap: local frame and screen point in video pixels */
+  tap?: { at: number; x: number; y: number };
+};
+type Stage = { type: "stage"; seconds: number; time: string; cue: string; quote: string; accent: string };
+type End = { type: "end"; seconds: number; brand: string; tagline: string; action: string; kicker?: string };
+export type StoryScene = Night | Books | Phone | Stage | End;
+export type StorySpec = { id: string; scenes: StoryScene[] };
+export const storyFrames = (s: StorySpec) =>
+  s.scenes.reduce((n, sc) => n + Math.round(sc.seconds * FPS), 0);
+
+// ---------- primitives ----------
+const ease = Easing.bezier(0.33, 0, 0.2, 1);
+const prog = (f: number, a: number, b: number) =>
+  interpolate(f, [a, b], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
+
+const SilentCtx = React.createContext(false);
+/** A sound cue at a local frame. Skipped inside frozen pre-roll copies. */
+const Sfx: React.FC<{ name: string; at: number; vol?: number; frames?: number }> = ({ name, at, vol = 1, frames }) => {
+  const silent = React.useContext(SilentCtx);
+  if (silent) return null;
+  return (
+    <Sequence from={at} durationInFrames={frames} layout="none">
+      <Audio src={staticFile(`sfx/${name}.wav`)} volume={vol} />
+    </Sequence>
+  );
+};
+const typeFrames = (text: string) => Math.ceil(text.length * 1.3) + 2;
+
+/** An ink line that draws itself on. */
+const Ink: React.FC<{
+  d: string;
+  start: number;
+  dur?: number;
+  color?: string;
+  w?: number;
+  fill?: string;
+}> = ({ d, start, dur = 18, color = C.ink, w = 6, fill }) => {
+  const f = useCurrentFrame();
+  const p = prog(f, start, start + dur);
+  if (p <= 0) return null;
+  const { strokeDasharray, strokeDashoffset } = evolvePath(p, d);
+  return (
+    <>
+      {fill && <path d={d} fill={fill} opacity={prog(f, start + dur * 0.6, start + dur + 6)} />}
+      <path
+        d={d}
+        fill="none"
+        stroke={color}
+        strokeWidth={w}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeDasharray={strokeDasharray}
+        strokeDashoffset={strokeDashoffset}
+      />
+    </>
+  );
+};
+
+const Rise: React.FC<{ at: number; children: React.ReactNode; style?: React.CSSProperties }> = ({
+  at,
+  children,
+  style,
+}) => {
+  const f = useCurrentFrame();
+  const p = prog(f, at, at + 16);
+  return (
+    <div style={{ position: "relative", opacity: p, transform: `translateY(${(1 - p) * 24}px)`, ...style }}>
+      {children}
+    </div>
+  );
+};
+
+/** Headline where one word is orange italic, like the app's own type. */
+const Headline: React.FC<{ text: string; accent: string; color: string; size?: number }> = ({
+  text,
+  accent,
+  color,
+  size = 112,
+}) => {
+  const i = text.indexOf(accent);
+  const before = i >= 0 ? text.slice(0, i) : text;
+  const after = i >= 0 ? text.slice(i + accent.length) : "";
+  return (
+    <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: size, lineHeight: 1.06, color, textAlign: "center" }}>
+      {before}
+      {i >= 0 && (
+        <span style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400, color: C.orange }}>{accent}</span>
+      )}
+      {after}
+    </div>
+  );
+};
+
+const Cue: React.FC<{ text: string; color: string; at?: number }> = ({ text, color, at = 0 }) => {
+  const f = useCurrentFrame();
+  const n = Math.max(0, Math.floor((f - at) / 1.3));
+  return (
+    <div style={{ position: "relative", fontFamily: F.type, fontStyle: "italic", fontSize: 46, color, minHeight: 60, textAlign: "center" }}>
+      {text.slice(0, n)}
+    </div>
+  );
+};
+
+const Paper: React.FC = () => (
+  <AbsoluteFill
+    style={{
+      background: `radial-gradient(ellipse 90% 70% at 50% 40%, #f7f2e8 0%, ${C.paper} 60%, #e9e1d2 100%)`,
+    }}
+  />
+);
+
+const Glow: React.FC<{ glow?: number; y?: string }> = ({ glow = 1, y = "55%" }) => {
+  const f = useCurrentFrame();
+  const b = 0.85 + 0.15 * Math.sin(f / 20);
+  return (
+    <AbsoluteFill
+      style={{
+        background: `radial-gradient(ellipse 60% 38% at 50% ${y}, rgba(232,121,43,${0.22 * glow * b}) 0%, rgba(232,121,43,0) 70%)`,
+      }}
+    />
+  );
+};
+
+// ---------- scenes ----------
+const PAPER_FILL = "#f8f4ec";
+
+const NightScene: React.FC<{ s: Night }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const minute = interpolate(f, [10, 140], [200, 560], { extrapolateRight: "clamp" });
+  const hour = minute / 12 + 330;
+  return (
+    <AbsoluteFill>
+      <Sfx name="pencil_long" at={0} vol={0.8} />
+      <Sfx name="boop_lo" at={50} vol={0.7} />
+      <Sfx name="typing" at={66} frames={typeFrames(s.cue)} vol={0.6} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Ink d="M250 300 C 248 420, 252 640, 250 760 L 830 762 C 832 640, 828 420, 830 300 Z" start={0} dur={26} />
+        <Ink d="M540 302 C 541 450, 539 610, 540 760" start={14} dur={14} w={5} />
+        <Ink d="M252 530 C 400 528, 680 532, 828 530" start={20} dur={14} w={5} />
+        <Ink
+          d="M700 360 C 650 360, 615 400, 615 445 C 615 490, 650 525, 700 525 C 672 505, 655 478, 655 445 C 655 410, 672 382, 700 360 Z"
+          start={28}
+          dur={18}
+          fill={C.orange}
+          color={C.orange}
+          w={4}
+        />
+        <Ink d="M340 380 l 0 30 M325 395 l 30 0" start={36} dur={8} w={4} />
+        <Ink d="M420 620 l 0 22 M409 631 l 22 0" start={40} dur={8} w={4} />
+        <Ink d="M540 980 m -130 0 a 130 130 0 1 0 260 0 a 130 130 0 1 0 -260 0" start={30} dur={22} />
+        <g opacity={prog(f, 44, 52)}>
+          <line x1={540} y1={980} x2={540 + 70 * Math.sin((hour * Math.PI) / 180)} y2={980 - 70 * Math.cos((hour * Math.PI) / 180)} stroke={C.ink} strokeWidth={8} strokeLinecap="round" />
+          <line x1={540} y1={980} x2={540 + 105 * Math.sin((minute * Math.PI) / 180)} y2={980 - 105 * Math.cos((minute * Math.PI) / 180)} stroke={C.orange} strokeWidth={6} strokeLinecap="round" />
+          <circle cx={540} cy={980} r={9} fill={C.ink} />
+        </g>
+      </svg>
+      <AbsoluteFill style={{ justifyContent: "flex-end", paddingBottom: 560 }}>
+        <Rise at={50}>
+          <Headline text={s.time} accent="" color={C.ink} size={150} />
+        </Rise>
+        <div style={{ height: 20 }} />
+        <Cue text={s.cue} color={C.orange} at={66} />
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+const BooksScene: React.FC<{ s: Books }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const t = spring({ frame: f - 46, fps, config: { damping: 14, mass: 0.8 } });
+  const bx = interpolate(t, [0, 1], [300, 810]);
+  const by = 1000 - Math.sin(t * Math.PI) * 260 + t * 120;
+  const books = [
+    { y: 1080, x: 330, w: 420, r: -2 },
+    { y: 1000, x: 360, w: 380, r: 3 },
+    { y: 920, x: 320, w: 400, r: -4 },
+    { y: 840, x: 370, w: 350, r: 2 },
+    { y: 760, x: 345, w: 370, r: -1 },
+  ];
+  return (
+    <AbsoluteFill>
+      <Sfx name="pencil_long" at={0} vol={0.7} />
+      <Sfx name="boop_lo" at={18} vol={0.7} />
+      <Sfx name="boop_hi" at={36} vol={0.7} />
+      <Sfx name="toss" at={44} vol={0.8} />
+      <Sfx name="thud" at={62} vol={0.6} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {books.map((b, i) => {
+          const d = `M${b.x} ${b.y} C ${b.x + b.w * 0.3} ${b.y - 2}, ${b.x + b.w * 0.7} ${b.y + 2}, ${b.x + b.w} ${b.y} L ${b.x + b.w + 2} ${b.y + 70} C ${b.x + b.w * 0.6} ${b.y + 72}, ${b.x + b.w * 0.3} ${b.y + 68}, ${b.x - 2} ${b.y + 70} Z`;
+          const spine = `M${b.x + 40} ${b.y + 8} C ${b.x + 41} ${b.y + 30}, ${b.x + 39} ${b.y + 45}, ${b.x + 40} ${b.y + 62}`;
+          return (
+            <g key={i} transform={`rotate(${b.r} ${b.x + b.w / 2} ${b.y + 35})`}>
+              <Ink d={d} start={i * 6} dur={16} fill={i === 2 ? "rgba(232,121,43,0.25)" : "rgba(33,26,21,0.04)"} />
+              <Ink d={spine} start={i * 6 + 10} dur={8} w={4} />
+            </g>
+          );
+        })}
+        <Ink d="M140 1158 C 400 1150, 700 1164, 940 1156" start={4} dur={20} w={4} color={C.inkSoft} />
+        <g opacity={f > 46 ? 1 : 0} transform={`translate(${bx} ${by}) rotate(${t * 380})`}>
+          <path d="M-34 -10 L -20 -34 L 8 -30 L 30 -18 L 36 8 L 18 32 L -10 34 L -32 18 Z M -20 -34 L 0 -4 L 30 -18 M 0 -4 L -10 34 M 0 -4 L -32 18" fill="#fbf8f1" stroke={C.ink} strokeWidth={4} strokeLinejoin="round" />
+        </g>
+      </svg>
+      <AbsoluteFill style={{ paddingTop: 300, alignItems: "center" }}>
+        <Rise at={18}>
+          <Headline text={s.line1} accent="" color={C.ink} size={120} />
+        </Rise>
+        <Rise at={36}>
+          <Headline text={s.line2} accent={s.accent} color={C.ink} size={120} />
+        </Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/**
+ * A left hand holding the phone from below. Slim thumb crossing the lower
+ * left edge, palm out of frame, four small fingertips curling over the right edge.
+ * Phone spans x 220..860 with its top at y 755.
+ */
+const HoldingHand: React.FC<{ start: number }> = ({ start }) => {
+  const hand =
+    "M60 1920 C 90 1820, 150 1730, 215 1660 C 250 1610, 268 1540, 290 1470 C 306 1420, 322 1376, 344 1352 C 362 1332, 392 1336, 398 1362 C 404 1388, 388 1420, 376 1450 C 360 1492, 350 1540, 352 1590 C 354 1640, 372 1690, 400 1740 C 430 1800, 470 1860, 500 1920 Z";
+  const nail = "M352 1372 C 362 1356, 384 1356, 388 1376 C 390 1392, 380 1404, 368 1408";
+  const joint = "M300 1600 C 318 1610, 336 1626, 346 1644";
+  const palm = "M200 1830 C 250 1800, 300 1790, 350 1795";
+  const tips = [1180, 1275, 1370, 1462];
+  return (
+    <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0, transform: "translateY(270px)" }}>
+      {tips.map((y, i) => {
+        const x = 858;
+        const w = i === 3 ? 40 : 48;
+        const h = i === 3 ? 62 : 72;
+        const d = `M${x} ${y} C ${x + w * 0.7} ${y - 2}, ${x + w} ${y + h * 0.22}, ${x + w} ${y + h * 0.5} C ${x + w} ${y + h * 0.8}, ${x + w * 0.7} ${y + h}, ${x} ${y + h} Z`;
+        return <Ink key={i} d={d} start={start + 8 + i * 3} dur={10} fill={PAPER_FILL} w={5} />;
+      })}
+      <Ink d={hand} start={start} dur={22} fill={PAPER_FILL} w={6} />
+      <Ink d={nail} start={start + 16} dur={8} w={4} color={C.inkSoft} />
+      <Ink d={joint} start={start + 18} dur={6} w={4} color={C.inkSoft} />
+      <Ink d={palm} start={start + 20} dur={8} w={4} color={C.inkSoft} />
+    </svg>
+  );
+};
+
+/** A right index finger that reaches in from the lower right and taps. */
+const TapFinger: React.FC<{ at: number; x: number; y: number }> = ({ at, x, y }) => {
+  const f = useCurrentFrame();
+  if (f < at) return null;
+  const inP = prog(f, at, at + 12);
+  const press = interpolate(f, [at + 12, at + 16, at + 22], [0, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const outP = prog(f, at + 30, at + 44);
+  const away = (1 - inP) + outP;
+  // finger direction (toward the wrist) and its normal
+  const dx = 0.387, dy = 0.922, nx = 0.922, ny = -0.387;
+  const P = (cx: number, cy: number, along: number, side: number) =>
+    `${(cx + dx * along + nx * side).toFixed(1)} ${(cy + dy * along + ny * side).toFixed(1)}`;
+  const tx = x, ty = y + 8;
+  const d = [
+    `M${P(tx, ty, 0, -34)}`,
+    `C ${P(tx, ty, -46, -34)}, ${P(tx, ty, -46, 34)}, ${P(tx, ty, 0, 34)}`,
+    `L ${P(tx, ty, 380, 38)}`,
+    `C ${P(tx, ty, 400, 110)}, ${P(tx, ty, 470, 170)}, ${P(tx, ty, 540, 160)}`,
+    `L ${P(tx, ty, 900, 260)}`,
+    `L ${P(tx, ty, 900, -60)}`,
+    `L ${P(tx, ty, 420, -40)}`,
+    "Z",
+  ].join(" ");
+  const nail = `M${P(tx, ty, 10, -20)} C ${P(tx, ty, -18, -18)}, ${P(tx, ty, -18, 18)}, ${P(tx, ty, 10, 20)}`;
+  const crease1 = `M${P(tx, ty, 150, -30)} C ${P(tx, ty, 156, -10)}, ${P(tx, ty, 156, 10)}, ${P(tx, ty, 150, 30)}`;
+  const crease2 = `M${P(tx, ty, 300, -32)} C ${P(tx, ty, 306, -10)}, ${P(tx, ty, 306, 12)}, ${P(tx, ty, 300, 34)}`;
+  const curled = `M${P(tx, ty, 400, 60)} C ${P(tx, ty, 420, 120)}, ${P(tx, ty, 470, 150)}, ${P(tx, ty, 520, 150)}`;
+  return (
+    <>
+      <div
+        style={{
+          position: "absolute",
+          left: x - 70,
+          top: y - 70,
+          width: 140,
+          height: 140,
+          borderRadius: "50%",
+          border: `4px solid ${C.orange}`,
+          opacity: press > 0 || f > at + 16 ? 1 - prog(f, at + 14, at + 30) : 0,
+          transform: `scale(${0.4 + prog(f, at + 14, at + 30)})`,
+        }}
+      />
+      <svg
+        viewBox="0 0 1080 1920"
+        style={{ position: "absolute", inset: 0, transform: `translate(${away * 380}px, ${away * 700 - press * 10}px)` }}
+      >
+        <path d={d} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+        <path d={nail} fill="none" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" />
+        <path d={crease1} fill="none" stroke={C.inkSoft} strokeWidth={3} strokeLinecap="round" />
+        <path d={crease2} fill="none" stroke={C.inkSoft} strokeWidth={3} strokeLinecap="round" />
+        <path d={curled} fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+      </svg>
+    </>
+  );
+};
+
+// ---------- the drawn app (no screenshots) ----------
+// Phone body spans x 220..860, top y 755. Screen inset 22.
+const APP = {
+  bg: "#17100b",
+  cream: "#f4ead9",
+  dim: "rgba(244,234,217,0.55)",
+  yellow: "#f2cf3a",
+  line: "rgba(244,234,217,0.22)",
+};
+const PX = 220, PY = 755, PW = 640, PH = 1500, PI = 22;
+const SX = PX + PI, SY = PY + PI, SW = PW - PI * 2;
+
+const DrawnPhone: React.FC<{ start: number; children?: React.ReactNode }> = ({ start, children }) => {
+  const f = useCurrentFrame();
+  const body = `M${PX + 96} ${PY} L ${PX + PW - 96} ${PY} C ${PX + PW - 30} ${PY}, ${PX + PW} ${PY + 30}, ${PX + PW} ${PY + 96} L ${PX + PW} ${PY + PH} L ${PX} ${PY + PH} L ${PX} ${PY + 96} C ${PX} ${PY + 30}, ${PX + 30} ${PY}, ${PX + 96} ${PY} Z`;
+  const screenOn = prog(f, start + 10, start + 22);
+  return (
+    <>
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Ink d={body} start={start} dur={18} w={7} fill={PAPER_FILL} />
+      </svg>
+      <div
+        style={{
+          position: "absolute",
+          left: SX,
+          top: SY,
+          width: SW,
+          height: PH,
+          borderRadius: 78,
+          background: APP.bg,
+          opacity: screenOn,
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ position: "absolute", left: SW / 2 - 70, top: 20, width: 140, height: 40, borderRadius: 20, background: "#000" }} />
+        {children}
+      </div>
+    </>
+  );
+};
+
+/** Live search: headline, the query typing in, chips lighting, results sliding up. */
+const SearchUI: React.FC<{ s: Phone }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const q = s.query ?? "";
+  const typeAt = 24;
+  const typed = q.slice(0, Math.max(0, Math.floor((f - typeAt) / 1.15)));
+  const doneAt = typeAt + q.length * 1.15;
+  const caret = f < doneAt + 6 && Math.floor(f / 8) % 2 === 0;
+  const results = s.results ?? [];
+  const resAt = (s.tap?.at ?? doneAt + 10) + 16;
+  const slideUp = prog(f, resAt, resAt + 18);
+  return (
+    <div style={{ position: "absolute", inset: 0 }}>
+      {/* header + search lift away when results arrive */}
+      <div style={{ position: "absolute", left: 0, right: 0, top: 0, transform: `translateY(${-slideUp * 190}px)` }}>
+        <div style={{ position: "absolute", top: 120, width: SW, textAlign: "center", opacity: prog(f, 14, 26) * (1 - slideUp) }}>
+          <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 58, color: APP.cream, lineHeight: 1.05 }}>
+            What do you
+            <br />
+            <span style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400, color: C.orange }}>need</span> tonight?
+          </div>
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            left: 34,
+            top: 290,
+            width: SW - 68,
+            height: 92,
+            borderRadius: 46,
+            background: APP.cream,
+            boxShadow: `6px 6px 0 ${APP.yellow}`,
+            display: "flex",
+            alignItems: "center",
+            padding: "0 26px",
+            fontFamily: F.sans,
+            fontWeight: 600,
+            fontSize: 25,
+            color: "#2a1f17",
+            opacity: prog(f, 18, 28),
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+          }}
+        >
+          <span style={{ marginRight: 14, fontSize: 32 }}>⌕</span>
+          <span style={{ flex: 1, minWidth: 0, overflow: "hidden", whiteSpace: "nowrap" }}>
+            {typed}
+            <span style={{ opacity: caret ? 1 : 0, color: C.orange }}>|</span>
+          </span>
+          <span
+            style={{
+              width: 58,
+              height: 58,
+              borderRadius: 29,
+              background: "#1b140f",
+              color: APP.cream,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 30,
+            }}
+          >
+            →
+          </span>
+        </div>
+        <div style={{ position: "absolute", left: 34, top: 410, width: SW - 68, display: "flex", flexWrap: "wrap", gap: 14 }}>
+          {(s.chips ?? []).map((c, i) => {
+            const lit = f > doneAt + 2 + i * 4;
+            return (
+              <div
+                key={i}
+                style={{
+                  fontFamily: F.type,
+                  fontStyle: "italic",
+                  fontSize: 26,
+                  padding: "8px 22px",
+                  borderRadius: 30,
+                  background: lit ? APP.yellow : "transparent",
+                  color: lit ? "#1b140f" : APP.dim,
+                  border: `2px solid ${lit ? APP.yellow : APP.line}`,
+                  opacity: prog(f, 22 + i * 2, 32 + i * 2),
+                }}
+              >
+                {c}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {/* results */}
+      <div style={{ position: "absolute", left: 30, top: 330, width: SW - 60, opacity: slideUp, transform: `translateY(${(1 - slideUp) * 120}px)` }}>
+        <div style={{ fontFamily: F.type, fontStyle: "italic", fontSize: 24, color: APP.dim, marginBottom: 6 }}>{s.resultsCue}</div>
+        <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 46, color: APP.cream, marginBottom: 22 }}>
+          {results.length}{" "}
+          <span style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400, color: C.orange }}>monologues.</span>
+        </div>
+        {results.map((r, i) => {
+          const p = prog(f, resAt + 6 + i * 6, resAt + 22 + i * 6);
+          return (
+            <div
+              key={i}
+              style={{
+                background: "#f7f0e2",
+                borderRadius: 14,
+                padding: "20px 24px",
+                marginBottom: 18,
+                boxShadow: i === 0 ? `6px 6px 0 ${APP.yellow}` : "none",
+                opacity: p,
+                transform: `translateY(${(1 - p) * 40}px)`,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 36, color: "#1b140f" }}>{r.character}</div>
+                <div style={{ fontFamily: F.type, fontSize: 20, color: "#6b5d50" }}>{r.meta}</div>
+              </div>
+              <div style={{ fontFamily: F.type, fontSize: 20, color: "#6b5d50", marginTop: 2 }}>{r.source}</div>
+              <div style={{ fontFamily: F.type, fontSize: 22, color: "#2a1f17", marginTop: 10, lineHeight: 1.4 }}>{r.quote}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/** The chosen piece opens as a paper page inside the phone, lines appearing. */
+const ReadUI: React.FC<{ s: Phone }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const r = s.read!;
+  const open = prog(f, 0, 16);
+  const lines = r.text.split("\n");
+  return (
+    <div style={{ position: "absolute", inset: 0 }}>
+      <div
+        style={{
+          position: "absolute",
+          left: 26 + (1 - open) * 10,
+          top: 90 + (1 - open) * 300,
+          width: SW - 52,
+          height: 1300,
+          background: "#f7f0e2",
+          borderRadius: 16,
+          boxShadow: `8px 8px 0 ${APP.yellow}`,
+          padding: "40px 38px",
+          transform: `scale(${0.92 + 0.08 * open})`,
+          transformOrigin: "50% 0%",
+        }}
+      >
+        <div style={{ display: "inline-block", fontFamily: F.sans, fontWeight: 600, fontSize: 18, letterSpacing: 3, color: C.orange, border: `2px solid ${C.orange}`, padding: "4px 10px" }}>
+          {r.tag}
+        </div>
+        <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 66, color: "#1b140f", marginTop: 16, lineHeight: 1 }}>
+          {r.title} <span style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400 }}>{r.titleItalic}</span>
+        </div>
+        <div style={{ fontFamily: F.type, fontSize: 22, color: "#6b5d50", marginTop: 12 }}>{r.meta}</div>
+        <div style={{ height: 2, background: "#ddd2c0", margin: "26px 0" }} />
+        {lines.map((l, i) => (
+          <div
+            key={i}
+            style={{
+              fontFamily: F.type,
+              fontSize: 28,
+              color: "#1b140f",
+              lineHeight: 1.5,
+              opacity: prog(f, 18 + i * 9, 26 + i * 9),
+              minHeight: l ? undefined : 24,
+            }}
+          >
+            {l}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/** The chosen page leaves the phone and becomes a marked-up script on the desk. */
+const LiftedSheet: React.FC<{ s: Phone; at: number }> = ({ s, at }) => {
+  const f = useCurrentFrame();
+  const r = s.read!;
+  const p = prog(f, at, at + 22);
+  const lines = r.text.split("\n");
+  const markLine = r.mark ?? 1;
+  const underAt = at + 26;
+  const noteAt = at + 38;
+  const L = 100, Tp = 520, W = 880, LH = 64;
+  const textTop = 300;
+  const uy = Tp + textTop + markLine * LH + 72;
+  const hy = uy - 2;
+  const hl = `M${L + 58} ${hy + 2} C ${L + 250} ${hy - 2}, ${L + 480} ${hy + 3}, ${L + 700} ${hy - 1}`;
+  return (
+    <>
+      <div
+        style={{
+          position: "absolute",
+          left: L,
+          top: Tp,
+          width: W,
+          height: 1180,
+          background: "#fbf7ef",
+          borderRadius: 10,
+          border: `5px solid ${C.ink}`,
+          boxShadow: `${14 * p}px ${22 * p}px 0 rgba(33,26,21,0.12)`,
+          transform: `translateY(${(1 - p) * 220}px) rotate(${-2.5 * p}deg) scale(${0.94 + 0.06 * p})`,
+          opacity: prog(f, at, at + 6),
+          padding: "56px 64px",
+        }}
+      >
+        <div style={{ display: "inline-block", fontFamily: F.sans, fontWeight: 600, fontSize: 24, letterSpacing: 4, color: C.orange, border: `3px solid ${C.orange}`, padding: "6px 14px" }}>
+          {r.tag}
+        </div>
+        <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 92, color: C.ink, marginTop: 20, lineHeight: 1 }}>
+          {r.title} <span style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400 }}>{r.titleItalic}</span>
+        </div>
+        <div style={{ fontFamily: F.type, fontSize: 30, color: "#6b5d50", marginTop: 16 }}>{r.meta}</div>
+        <div style={{ height: 3, background: "#ddd2c0", margin: "34px 0 30px" }} />
+        {lines.map((l, i) => (
+          <div key={i} style={{ fontFamily: F.type, fontSize: 42, color: C.ink, lineHeight: `${LH}px` }}>
+            {l}
+          </div>
+        ))}
+      </div>
+      {/* pencil marks live in scene space so they sit on the sheet */}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0, mixBlendMode: "multiply", transform: `rotate(${-2.5 * p}deg)`, transformOrigin: `${L + W / 2}px ${Tp + 590}px` }}>
+        <g style={{ mixBlendMode: "multiply" }}>
+          <Ink d={hl} start={underAt} dur={12} w={50} color="rgba(242,207,58,0.75)" />
+        </g>
+        <Ink d={`M${L + 712} ${uy - 6} C ${L + 740} ${uy - 20}, ${L + 760} ${uy - 40}, ${L + 770} ${uy - 66}`} start={noteAt - 4} dur={8} w={5} color={C.orange} />
+      </svg>
+      <div
+        style={{
+          position: "absolute",
+          left: L + 730,
+          top: uy - 190,
+          width: 150,
+          lineHeight: 1,
+          transform: `rotate(${-8}deg)`,
+          fontFamily: F.serifI,
+          fontStyle: "italic",
+          fontSize: 40,
+          color: C.orange,
+          opacity: prog(f, noteAt, noteAt + 8),
+        }}
+      >
+        {(r.note ?? "").slice(0, Math.max(0, Math.floor((f - noteAt) / 1.2)))}
+      </div>
+    </>
+  );
+};
+
+const ZOOM = 1.38;
+const PhoneScene: React.FC<{ s: Phone; first: boolean }> = ({ s, first }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const up = first ? spring({ frame: f - 2, fps, config: { damping: 18 } }) : 1;
+  const lift = (1 - up) * 800;
+  const mode = s.mode ?? "search";
+  // camera pushes into the phone once it has landed
+  const zoom = first ? 1 + (ZOOM - 1) * spring({ frame: f - 14, fps, config: { damping: 22 } }) : ZOOM;
+  const sheetAt = 8;
+  const putAway = mode === "read" ? prog(f, sheetAt, sheetAt + 22) : 0;
+  return (
+    <AbsoluteFill>
+      {first && <Sfx name="pop" at={6} vol={0.8} />}
+      {first && <Sfx name="pencil_short" at={0} vol={0.6} />}
+      <Sfx name="boop_hi" at={8} vol={0.6} />
+      {s.cue && <Sfx name="typing" at={20} frames={typeFrames(s.cue)} vol={0.45} />}
+      {mode === "search" && s.query && <Sfx name="typing" at={26} frames={Math.ceil(s.query.length * 1.15)} vol={0.45} />}
+      {s.tap && <Sfx name="boop_lo" at={s.tap.at + 14} vol={0.7} />}
+      {mode === "read" && <Sfx name="slide" at={sheetAt} vol={0.6} />}
+      {mode === "read" && <Sfx name="pencil_short" at={sheetAt + 26} vol={0.7} />}
+      {mode === "read" && <Sfx name="pencil_short" at={sheetAt + 38} vol={0.6} />}
+      <Glow glow={0.6} y="72%" />
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 150 }}>
+        <Rise at={6}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={100} />
+        </Rise>
+        {s.cue && (
+          <div style={{ position: "relative", marginTop: 14 }}>
+            <Cue text={s.cue} color={C.inkSoft} at={20} />
+          </div>
+        )}
+      </AbsoluteFill>
+      <AbsoluteFill
+        style={{
+          transform: `translateY(${lift + putAway * 1600}px) scale(${zoom})`,
+          transformOrigin: "540px 980px",
+        }}
+      >
+        <DrawnPhone start={first ? 0 : -100}>{mode === "search" ? <SearchUI s={s} /> : <ReadUI s={s} />}</DrawnPhone>
+        <HoldingHand start={first ? 8 : -100} />
+        {s.tap && <TapFinger at={s.tap.at} x={s.tap.x} y={s.tap.y} />}
+      </AbsoluteFill>
+      {mode === "read" && <LiftedSheet s={s} at={sheetAt} />}
+    </AbsoluteFill>
+  );
+};
+
+// ---------- the audition room ----------
+/** Simple line figure of an actor mid speech, one hand reaching out. */
+const Actor: React.FC<{ start: number }> = ({ start }) => {
+  const f = useCurrentFrame();
+  const sway = Math.sin(f / 14) * 3;
+  const head = "M540 650 C 568 650, 586 672, 586 700 C 586 730, 566 752, 540 752 C 514 752, 494 730, 494 700 C 494 672, 512 650, 540 650 Z";
+  const hair = "M498 690 C 500 660, 520 646, 544 646 C 570 646, 588 664, 586 694 C 572 676, 552 668, 530 672 C 516 674, 506 682, 498 690 Z";
+  const body = "M540 752 L 540 770 C 506 776, 486 800, 482 840 L 470 1000 L 610 1000 L 598 840 C 594 800, 574 776, 540 770";
+  const armOut = "M590 800 C 640 820, 690 800, 730 760 M730 760 C 738 752, 746 748, 752 744";
+  const armIn = "M490 800 C 470 860, 480 910, 530 900";
+  const legs = "M500 1000 L 492 1150 L 470 1162 M580 1000 L 590 1150 L 614 1162";
+  return (
+    <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0, transform: `rotate(${sway * 0.2}deg)`, transformOrigin: "540px 1160px" }}>
+      <Ink d={head} start={start} dur={12} w={6} fill={PAPER_FILL} />
+      <Ink d={hair} start={start + 8} dur={10} w={4} fill={C.ink} />
+      <Ink d={body} start={start + 10} dur={16} w={6} fill="rgba(232,121,43,0.35)" />
+      <Ink d={armOut} start={start + 20} dur={12} w={6} />
+      <Ink d={armIn} start={start + 22} dur={10} w={6} />
+      <Ink d={legs} start={start + 24} dur={12} w={6} />
+    </svg>
+  );
+};
+
+/** Two casting people seen from behind at a table, papers and a cup. */
+const CastingTable: React.FC<{ start: number }> = ({ start }) => {
+  const p1 = "M300 1500 C 300 1420, 330 1380, 380 1370 C 350 1350, 340 1320, 344 1290 C 350 1250, 380 1230, 410 1232 C 446 1234, 470 1262, 468 1298 C 466 1330, 454 1350, 436 1368 C 490 1378, 520 1420, 522 1500 Z";
+  const hair1 = "M346 1296 C 344 1252, 376 1228, 410 1230 C 448 1232, 472 1262, 466 1300 C 450 1280, 420 1272, 392 1278 C 372 1282, 356 1290, 346 1296 Z";
+  const p2 = "M600 1500 C 600 1430, 628 1392, 676 1380 C 652 1360, 642 1330, 646 1300 C 652 1262, 682 1244, 712 1246 C 748 1248, 770 1276, 768 1310 C 766 1340, 754 1360, 736 1378 C 786 1390, 812 1430, 814 1500 Z";
+  const bun = "M712 1238 C 726 1238, 736 1226, 734 1212 C 732 1198, 718 1192, 706 1196 C 692 1200, 688 1216, 694 1228 C 698 1234, 704 1238, 712 1238 Z";
+  const table = "M90 1500 C 400 1494, 700 1506, 990 1498 M90 1500 L 90 1530 L 990 1528 L 990 1498 M160 1530 L 160 1640 M920 1528 L 920 1640";
+  const papers = "M190 1478 L 290 1470 L 296 1496 L 194 1502 Z M840 1480 L 900 1476 L 902 1498 L 842 1500 Z";
+  const cup = "M520 1440 L 524 1496 L 566 1496 L 570 1440 Z M570 1452 C 590 1452, 590 1478, 568 1480";
+  const steam = "M534 1420 C 528 1404, 540 1396, 534 1380 M552 1420 C 546 1404, 558 1396, 552 1380";
+  return (
+    <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+      <Ink d={p1} start={start} dur={18} w={6} fill={PAPER_FILL} />
+      <Ink d={hair1} start={start + 10} dur={10} w={4} fill={C.ink} />
+      <Ink d={p2} start={start + 6} dur={18} w={6} fill={PAPER_FILL} />
+      <Ink d={bun} start={start + 16} dur={8} w={4} fill={C.ink} />
+      <Ink d={table} start={start + 4} dur={22} w={6} />
+      <Ink d={papers} start={start + 16} dur={10} w={4} fill="#ffffff" />
+      <Ink d={cup} start={start + 18} dur={10} w={5} fill="rgba(232,121,43,0.4)" />
+      <Ink d={steam} start={start + 26} dur={12} w={3} color={C.inkSoft} />
+    </svg>
+  );
+};
+
+const StageScene: React.FC<{ s: Stage }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const lights = prog(f, 34, 50);
+  const bubbleAt = 58;
+  const bubble = prog(f, bubbleAt, bubbleAt + 12);
+  return (
+    <AbsoluteFill>
+      <Sfx name="pencil_long" at={0} vol={0.75} />
+      <Sfx name="pencil_short" at={26} vol={0.5} />
+      <Sfx name="chime" at={34} vol={0.7} />
+      <Sfx name="typing" at={40} frames={typeFrames(s.cue)} vol={0.45} />
+      <Sfx name="pop" at={bubbleAt} vol={0.6} />
+      <Sfx name="boop_hi" at={bubbleAt + 14} vol={0.55} />
+      {/* lights up: a warm cone onto the actor */}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <path d="M470 300 L 610 300 L 820 1180 L 260 1180 Z" fill={`rgba(232,121,43,${0.16 * lights})`} />
+        <ellipse cx={540} cy={1170} rx={260} ry={34} fill={`rgba(232,121,43,${0.22 * lights})`} />
+        {/* stage: floor and wings */}
+        <Ink d="M60 1170 C 400 1162, 700 1176, 1020 1166" start={0} dur={20} w={5} />
+        <Ink d="M60 300 C 140 360, 200 360, 260 300 C 330 360, 400 360, 470 300 M610 300 C 680 360, 750 360, 820 300 C 880 360, 950 360, 1020 300" start={4} dur={22} w={5} />
+        <Ink d="M80 306 C 110 600, 70 900, 110 1166 M150 320 C 170 600, 140 900, 170 1166 M1000 306 C 970 600, 1010 900, 970 1166 M930 320 C 910 600, 940 900, 910 1166" start={10} dur={22} w={4} color={C.inkSoft} />
+      </svg>
+      <Actor start={14} />
+      <CastingTable start={22} />
+      <AbsoluteFill style={{ paddingTop: 60, paddingLeft: 90 }}>
+        <Rise at={30}>
+          <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 92, color: C.ink, lineHeight: 1.1 }}>{s.time}</div>
+        </Rise>
+        <div style={{ position: "relative", marginTop: 4, textAlign: "left" }}>
+          <div style={{ fontFamily: F.type, fontStyle: "italic", fontSize: 44, color: C.orange }}>
+            {s.cue.slice(0, Math.max(0, Math.floor((f - 40) / 1.3)))}
+          </div>
+        </div>
+      </AbsoluteFill>
+      {/* speech bubble from the casting table */}
+      <div
+        style={{
+          position: "absolute",
+          left: 520,
+          top: 1550,
+          width: 500,
+          transform: `scale(${0.6 + 0.4 * bubble})`,
+          transformOrigin: "30% 0%",
+          opacity: bubble,
+        }}
+      >
+        <svg viewBox="0 0 440 260" preserveAspectRatio="none" style={{ position: "absolute", inset: 0, width: 500, height: 300, overflow: "visible" }}>
+          <path
+            d="M40 40 C 120 26, 320 26, 404 42 C 432 48, 440 70, 438 120 C 436 170, 428 196, 400 202 C 320 216, 200 216, 120 206 L 80 240 L 90 202 C 50 196, 22 186, 18 130 C 14 80, 18 46, 40 40 Z"
+            fill="#fffdf8"
+            stroke={C.ink}
+            strokeWidth={5}
+            strokeLinejoin="round"
+            transform="scale(1,-1) translate(0,-250)"
+          />
+        </svg>
+        <div style={{ position: "relative", padding: "72px 44px 0 50px", fontFamily: F.serif, fontWeight: 600, fontSize: 40, lineHeight: 1.15, color: C.ink }}>
+          {(() => {
+            const i = s.quote.indexOf(s.accent);
+            return i < 0 ? (
+              s.quote
+            ) : (
+              <>
+                {s.quote.slice(0, i)}
+                <span style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400, color: C.orange }}>{s.accent}</span>
+                {s.quote.slice(i + s.accent.length)}
+              </>
+            );
+          })()}
+        </div>
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+// ---------- the ticket ----------
+const EndScene: React.FC<{ s: End }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const iconPop = spring({ frame: f - 14, fps, config: { damping: 14 } });
+  const stampAt = 40;
+  const stamp = spring({ frame: f - stampAt, fps, config: { damping: 11, mass: 0.6 } });
+  const L = 110, R = 970, Tt = 640, B = 1180, notch = 40, perfX = 770;
+  const ticket = `M${L} ${Tt} L ${R} ${Tt} L ${R} ${(Tt + B) / 2 - notch} C ${R - notch * 1.2} ${(Tt + B) / 2 - notch}, ${R - notch * 1.2} ${(Tt + B) / 2 + notch}, ${R} ${(Tt + B) / 2 + notch} L ${R} ${B} L ${L} ${B} L ${L} ${(Tt + B) / 2 + notch} C ${L + notch * 1.2} ${(Tt + B) / 2 + notch}, ${L + notch * 1.2} ${(Tt + B) / 2 - notch}, ${L} ${(Tt + B) / 2 - notch} Z`;
+  const perf = Array.from({ length: 13 }, (_, i) => `M${perfX} ${Tt + 20 + i * 40} L ${perfX} ${Tt + 40 + i * 40}`).join(" ");
+  const inner = `M${L + 26} ${Tt + 26} L ${perfX - 26} ${Tt + 26} L ${perfX - 26} ${B - 26} L ${L + 26} ${B - 26} Z`;
+  return (
+    <AbsoluteFill>
+      <Sfx name="pencil_long" at={0} vol={0.6} />
+      <Sfx name="pop" at={14} vol={0.8} />
+      <Sfx name="thud" at={stampAt + 2} vol={0.9} />
+      <Sfx name="boop_lo" at={stampAt + 4} vol={0.5} />
+      <Sfx name="boop_hi" at={58} vol={0.6} />
+      <Glow glow={0.45} y="48%" />
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 440 }}>
+        <Cue text={s.kicker ?? "(now playing.)"} color={C.orange} at={4} />
+      </AbsoluteFill>
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Ink d={ticket} start={0} dur={22} w={6} fill="#fbf7ef" />
+        <Ink d={inner} start={10} dur={18} w={3} color={C.inkSoft} />
+        <Ink d={perf} start={14} dur={14} w={4} color={C.inkSoft} />
+      </svg>
+      {/* left side: icon + name */}
+      <div style={{ position: "absolute", left: L + 60, top: Tt + 78, display: "flex", alignItems: "center", gap: 36 }}>
+        <div
+          style={{
+            width: 200,
+            height: 200,
+            borderRadius: 46,
+            overflow: "hidden",
+            transform: `scale(${iconPop}) rotate(${(1 - iconPop) * -8}deg)`,
+            boxShadow: "0 18px 40px rgba(33,26,21,0.3)",
+          }}
+        >
+          <Img src={staticFile("icon.png")} style={{ width: 200, height: 200 }} />
+        </div>
+        <div style={{ position: "relative" }}>
+          <Rise at={18}>
+            <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 64, color: C.ink, lineHeight: 1 }}>Ghost</div>
+            <div style={{ fontFamily: F.serifI, fontStyle: "italic", fontSize: 64, color: C.orange, lineHeight: 1.05 }}>Light</div>
+          </Rise>
+        </div>
+      </div>
+      <div style={{ position: "absolute", left: L + 60, top: Tt + 330, width: perfX - L - 110 }}>
+        <Rise at={26}>
+          <div style={{ fontFamily: F.type, fontStyle: "italic", fontSize: 34, color: C.inkSoft }}>{s.tagline}</div>
+          <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 26, letterSpacing: 4, color: C.ink, marginTop: 30 }}>
+            ADMIT ONE ACTOR
+          </div>
+        </Rise>
+      </div>
+      {/* stub: the FREE stamp */}
+      <div
+        style={{
+          position: "absolute",
+          left: perfX + 18,
+          top: (Tt + B) / 2 - 90,
+          width: R - perfX - 40,
+          height: 180,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transform: `rotate(-14deg) scale(${f < stampAt ? 0 : 2.2 - 1.2 * stamp})`,
+          opacity: f < stampAt ? 0 : Math.min(1, stamp * 1.5),
+        }}
+      >
+        <div
+          style={{
+            border: `6px solid ${C.orange}`,
+            borderRadius: 14,
+            padding: "10px 18px",
+            fontFamily: F.sans,
+            fontWeight: 600,
+            fontSize: 52,
+            letterSpacing: 4,
+            color: C.orange,
+          }}
+        >
+          FREE
+        </div>
+      </div>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: B + 70 }}>
+        <Rise at={58}>
+          <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 56, color: C.ink }}>
+            {s.action.split(" on ")[0]} <span style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400, color: C.orange }}>on the App Store.</span>
+          </div>
+        </Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** Pencil speed streaks that sweep across while the camera moves. */
+const Streaks: React.FC<{ seed: number }> = ({ seed }) => {
+  const f = useCurrentFrame();
+  const rows = [0, 1, 2, 3, 4, 5, 6].map((k) => {
+    const r = Math.sin((seed + 1) * 97.3 + k * 13.7) * 0.5 + 0.5;
+    const y = 260 + k * 220 + r * 90;
+    const w = 3 + Math.round(r * 5);
+    const len = 0.45 + r * 0.4;
+    const delay = Math.round(r * 5);
+    const d = `M1180 ${y} C 900 ${y - 8 + r * 16}, 500 ${y + 10 - r * 20}, -100 ${y + 4}`;
+    return { d, w, len, delay, orange: k === 2 + (seed % 3) };
+  });
+  return (
+    <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+      {rows.map((r, i) => {
+        const p = interpolate(f - r.delay, [0, T + 2], [0, 1 + r.len], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        const head = Math.min(1, p);
+        const tail = Math.max(0, p - r.len);
+        if (head <= tail) return null;
+        const total = 1400;
+        return (
+          <path
+            key={i}
+            d={r.d}
+            fill="none"
+            stroke={r.orange ? C.orange : C.ink}
+            strokeOpacity={r.orange ? 0.7 : 0.4}
+            strokeWidth={r.w}
+            strokeLinecap="round"
+            pathLength={total}
+            strokeDasharray={`${(head - tail) * total} ${total * 2}`}
+            strokeDashoffset={-tail * total}
+          />
+        );
+      })}
+    </svg>
+  );
+};
+
+// ---------- one continuous sheet: the camera slides from scene to scene ----------
+
+/** One ink thread along the bottom of the whole sheet, drawing ahead of the camera,
+ * with a little loop at every scene boundary. It ties the scenes into one take. */
+const Thread: React.FC<{ slots: number; cam: number }> = ({ slots, cam }) => {
+  const y = 1810;
+  let d = `M-60 ${y}`;
+  for (let k = 0; k < slots; k++) {
+    const x0 = k * 1080;
+    // a soft wave through the scene
+    d += ` C ${x0 + 200} ${y - 22}, ${x0 + 420} ${y + 22}, ${x0 + 620} ${y}`;
+    d += ` C ${x0 + 760} ${y - 16}, ${x0 + 900} ${y + 14}, ${x0 + 1010} ${y}`;
+    if (k < slots - 1) {
+      const bx = x0 + 1080;
+      // the loop at the boundary
+      d += ` C ${bx + 40} ${y - 6}, ${bx + 70} ${y - 70}, ${bx + 30} ${y - 90}`;
+      d += ` C ${bx - 10} ${y - 108}, ${bx - 50} ${y - 60}, ${bx - 10} ${y - 30}`;
+      d += ` C ${bx + 20} ${y - 6}, ${bx + 50} ${y + 2}, ${bx + 70} ${y}`;
+    }
+  }
+  d += ` L ${slots * 1080 + 80} ${y}`;
+  const totalW = slots * 1080 + 140;
+  const head = Math.min(1, Math.max(0, (cam + 860 + 60) / totalW));
+  const L = 10000;
+  return (
+    <svg
+      viewBox={`0 0 ${totalW} 1920`}
+      style={{ position: "absolute", left: 0, top: 0, width: totalW, height: 1920, transform: `translateX(${-cam}px)` }}
+    >
+      <path
+        d={d}
+        fill="none"
+        stroke={C.ink}
+        strokeOpacity={0.55}
+        strokeWidth={5}
+        strokeLinecap="round"
+        pathLength={L}
+        strokeDasharray={`${head * L} ${L}`}
+      />
+    </svg>
+  );
+};
+
+export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
+  const frame = useCurrentFrame();
+  const starts: number[] = [];
+  let acc = 0;
+  for (const sc of spec.scenes) {
+    starts.push(acc);
+    acc += Math.round(sc.seconds * FPS);
+  }
+  // Phone shots that follow another phone shot stay in place (screen swap), no camera move.
+  const moves = spec.scenes.map((sc, i) => i > 0 && !(sc.type === "phone" && spec.scenes[i - 1].type === "phone"));
+  const slot: number[] = [];
+  spec.scenes.forEach((_, i) => slot.push(i === 0 ? 0 : slot[i - 1] + (moves[i] ? 1 : 0)));
+  let cam = 0;
+  spec.scenes.forEach((_, i) => {
+    if (i > 0 && moves[i]) cam += prog(frame, starts[i] - T, starts[i]);
+  });
+  // gentle sway so the camera is never fully parked
+  const sway = 26 * Math.sin(frame / 38);
+  const camEase = cam * 1080 + sway;
+  const slots = slot[slot.length - 1] + 1;
+
+  const renderScene = (sc: StoryScene, i: number) => {
+    const firstPhone = sc.type === "phone" && !(i > 0 && spec.scenes[i - 1].type === "phone");
+    return sc.type === "night" ? <NightScene s={sc} /> :
+      sc.type === "books" ? <BooksScene s={sc} /> :
+      sc.type === "phone" ? <PhoneScene s={sc} first={firstPhone} /> :
+      sc.type === "stage" ? <StageScene s={sc} /> :
+      <EndScene s={sc} />;
+  };
+
+  return (
+    <AbsoluteFill style={{ background: C.paper, overflow: "hidden" }}>
+      <Paper />
+      <Thread slots={slots} cam={camEase} />
+      {spec.scenes.map((sc, i) => {
+        const frames = Math.round(sc.seconds * FPS);
+        const x = slot[i] * 1080 - camEase;
+        return (
+          <React.Fragment key={i}>
+            {moves[i] && <Sfx name="slide" at={starts[i] - T} vol={0.6} />}
+            {moves[i] && (
+              <Sequence from={starts[i] - T - 2} durationInFrames={T + 14}>
+                <Streaks seed={i} />
+              </Sequence>
+            )}
+            <Sequence from={moves[i] ? starts[i] - T : starts[i]} durationInFrames={frames + (moves[i] ? T : 0)}>
+              <AbsoluteFill style={{ transform: `translateX(${x}px)` }}>{renderScene(sc, i)}</AbsoluteFill>
+            </Sequence>
+          </React.Fragment>
+        );
+      })}
+    </AbsoluteFill>
+  );
+};

@@ -1,0 +1,90 @@
+{
+  "id": "2026-11-02-night-before",
+  "scenes": [
+    {
+      "type": "night",
+      "seconds": 3.4,
+      "time": "11:47 pm.",
+      "cue": "(audition at nine.)"
+    },
+    {
+      "type": "books",
+      "seconds": 3.0,
+      "line1": "Forty plays.",
+      "line2": "Nothing fits.",
+      "accent": "fits."
+    },
+    {
+      "type": "phone",
+      "mode": "search",
+      "seconds": 4.4,
+      "line": "Say what you need.",
+      "accent": "need.",
+      "cue": "(angry. twenties. not shakespeare.)",
+      "query": "angry woman, 20s, not shakespeare",
+      "chips": [
+        "female",
+        "20s",
+        "under 2 min"
+      ],
+      "tap": {
+        "at": 64,
+        "x": 749,
+        "y": 1113
+      },
+      "resultsCue": "(you said: angry woman in her twenties)",
+      "results": [
+        {
+          "character": "Hedda",
+          "source": "Hedda Gabler · Ibsen",
+          "meta": "1:40 · cold fury",
+          "quote": "\"Oh, if you could only understand how poor I am.\""
+        },
+        {
+          "character": "Julie",
+          "source": "Miss Julie · Strindberg",
+          "meta": "1:55 · wounded pride",
+          "quote": "\"Do you think I'm afraid of you?\""
+        },
+        {
+          "character": "Nina",
+          "source": "The Seagull · Chekhov",
+          "meta": "1:50 · unravelling",
+          "quote": "\"I'm a seagull. No, that's not it.\""
+        }
+      ]
+    },
+    {
+      "type": "phone",
+      "mode": "read",
+      "seconds": 3.9,
+      "line": "Found it. Tonight.",
+      "accent": "Tonight.",
+      "read": {
+        "tag": "HEDDA",
+        "title": "Hedda",
+        "titleItalic": "Gabler",
+        "meta": "Henrik Ibsen · 1891 · act ii · 1:40",
+        "text": "Oh, if you could only\nunderstand how poor I am.\nAnd fate has made you\nso rich! I think I shall\nburn your hair off\nafter all.",
+        "mark": 1,
+        "note": "cold fury."
+      }
+    },
+    {
+      "type": "stage",
+      "seconds": 4.0,
+      "time": "9:02 am.",
+      "cue": "(lights up.)",
+      "quote": "“Thank you. Nobody brings that one.”",
+      "accent": "Nobody"
+    },
+    {
+      "type": "end",
+      "seconds": 3.6,
+      "brand": "Ghost Light",
+      "tagline": "(monologues for actors.)",
+      "action": "Free on the App Store",
+      "kicker": "(now playing.)"
+    }
+  ]
+}
