@@ -18,7 +18,7 @@ export const FPS = 30;
 const T = 22; // frames per camera move
 // The first scene starts this many frames in, so frame 0 (the feed thumbnail and the
 // first thing a scroller sees) already shows drawing instead of empty paper.
-const PREROLL = 34;
+const PREROLL = 62;
 
 // Anthropic-style warm paper + ink, Ghost Light orange as the only accent.
 const C = {
