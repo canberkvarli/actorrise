@@ -14,7 +14,7 @@ from app.services.search.title_lookup import (detect_catalogue_character,
 
 class FakeDB:
     def __init__(self, rows):
-        self.rows = rows  # list of (character_name, count)
+        self.rows = rows  # (character_name, count) or (character_name, count, plays)
 
     def execute(self, _stmt):
         return self
@@ -28,7 +28,8 @@ CHARACTERS = [
     ("Medea", 12),         # same
     ("Joan Clarke", 4),    # multi-word full name -> matches on any count
     ("Anne Frank", 1),     # multi-word, even a single piece -> matches
-    ("Anna", 3),           # single word, too few pieces -> stands down
+    ("Anna", 3, 3),        # single word, few pieces across plays -> stands down
+    ("Bing", 4, 1),        # single word, few pieces, ONE play -> that play's character
     ("Man", 40),           # generic role word -> stands down
     ("Young Woman", 20),   # every token generic -> stands down
     ("Queen", 8),          # ambiguous descriptor word -> stands down
@@ -131,3 +132,21 @@ def test_classify_query_is_catalogue_aware():
     assert classify_query("a comedic monologue for a teen", db=db) == "attribute"
     assert classify_query("erin gruwell", db=db) == "other"
     reset_catalogue_cache()
+
+
+def test_a_name_from_one_play_matches_with_few_pieces():
+    """Bing has four pieces, all Black Mirror: that is a character, not a first
+    name. "Bings monologue" sent an actor to two of the four (2026-11-01)."""
+    db = FakeDB(CHARACTERS)
+    assert detect_catalogue_character(db, "bing")["character"] == "bing"
+
+
+def test_a_possessive_without_its_apostrophe_still_names_the_character():
+    db = FakeDB(CHARACTERS)
+    assert detect_catalogue_character(db, "Bings monologue")["character"] == "bing"
+    assert detect_catalogue_character(db, "hamlets speech")["character"] == "hamlet"
+
+
+def test_a_name_ending_in_s_is_not_clipped():
+    db = FakeDB([("Lois", 6)])
+    assert detect_catalogue_character(db, "lois")["character"] == "lois"

@@ -755,6 +755,16 @@ _character_loaded_at: float = 0.0
 # one-off first name that would hijack a thematic search.
 _MIN_CHAR_SINGLE_WORD_MONOS = 5
 
+# Words that are a character's name in some one play but, typed alone, are a
+# description of the piece wanted ("monologues for women", "short scene") or an
+# author. They keep the five-piece rule; checked against 90 days of searches.
+_ONE_PLAY_STOP = {
+    "women", "men", "woman", "man", "girl", "girls", "boy", "boys", "kid", "kids",
+    "teen", "teens", "short", "long", "funny", "sad", "angry", "dramatic",
+    "comedic", "comedy", "drama", "classic", "classical", "modern", "young",
+    "old", "love", "death", "grief", "dog", "dogs", "shakespeare", "shakespear",
+}
+
 # Generic role labels that are character_name values but are NOT what an actor
 # means when they type them — "man", "woman", "mother" is an attribute search,
 # not a request for the pieces of a character literally named Man. A name whose
@@ -936,18 +946,26 @@ def _load_character_catalogue(db) -> Dict[str, tuple]:
 
     rows = db.execute(
         sa_text(
-            "SELECT character_name, count(*) FROM monologues "
+            "SELECT character_name, count(*), count(DISTINCT play_id) FROM monologues "
             "WHERE character_name IS NOT NULL AND length(trim(character_name)) >= 3 "
             "GROUP BY character_name"
         )
     ).fetchall()
     cat: Dict[str, tuple] = {}
-    for raw, cnt in rows:
+    for row in rows:
+        raw, cnt = row[0], row[1]
+        # How many plays carry the name. Summed over spelling variants, so it can
+        # only over-count, which errs toward the old, stricter rule.
+        plays = int(row[2]) if len(row) > 2 and row[2] is not None else None
         n = _normalise_name(raw)
         if len(n) < _MIN_TITLE_CHARS:
             continue
-        variants, total = cat.get(n, ((), 0))
-        cat[n] = (variants + (raw,), total + int(cnt))
+        variants, total, nplays = cat.get(n, ((), 0, 0))
+        cat[n] = (
+            variants + (raw,),
+            total + int(cnt),
+            None if plays is None or nplays is None else nplays + plays,
+        )
     _character_cache = cat
     _character_loaded_at = now
     return cat
@@ -984,20 +1002,36 @@ def detect_catalogue_character(db, query: str) -> Optional[Dict[str, object]]:
     # candidate only prevents the match that makes them useful.
     located = _ACT_SCENE_TOKENS.sub(" ", nq)
     located = " ".join(w for w in located.split() if w not in _TITLE_FILLER).strip()
-    for cand in (nq, stripped, located):
-        if not cand:
-            continue
+    candidates = [c for c in (nq, stripped, located) if c]
+    # "bings monologue": a possessive typed without its apostrophe. Only when a
+    # filler word ("monologue", "speech") follows the name, so "dogs" or the
+    # film "Bottoms" typed alone keep their s.
+    nq_toks = nq.split()
+    if (
+        len(nq_toks) >= 2
+        and nq_toks[-1] in _TITLE_FILLER
+        and stripped.endswith("s")
+        and len(stripped.split()[-1]) > 3
+    ):
+        candidates.append(stripped[:-1])
+    for cand in candidates:
         entry = cat.get(cand)
         if entry is None:
             continue
         if _is_generic_name(cand):
             continue
-        variants, count = entry
+        variants, count = entry[0], entry[1]
+        plays = entry[2] if len(entry) > 2 else None
         toks = cand.split()
         if len(toks) == 1:
             if cand in _AMBIGUOUS_SINGLE_WORD_TITLES:
                 continue
-            if count < _MIN_CHAR_SINGLE_WORD_MONOS:
+            # A name every piece of which comes from ONE play is that play's
+            # character, however few pieces it has: Bing (Black Mirror, 4) is
+            # nobody's first name in a thematic search. Spread across plays,
+            # it needs the body of work.
+            one_play = plays == 1 and count >= 2 and cand not in _ONE_PLAY_STOP
+            if count < _MIN_CHAR_SINGLE_WORD_MONOS and not one_play:
                 continue
         return {"character": cand, "names": list(variants)}
     return None
