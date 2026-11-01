@@ -16,9 +16,18 @@ relief at the end of a real moment actors recognize. Canberk's ideas are seeds t
 from, never literal specs (2026-11-02): when he mentions an image ("a thinking man at a
 pin board"), take the feeling behind it and find the best scene for it.
 
-Read `marketing/content-engine/CONTEXT.md` first: this week's data from the site (what
-actors search for, where the library is thin, what never to promise). Its rules hold over
-anything below.
+Read `marketing/content-engine/CONTEXT.md` first. It maps every part of the app (web and
+Ghost Light), carries the latest data from the site, and its rules hold over anything below.
+
+Rotate through the whole app, not just the monologue search (Canberk, 2026-11-02: "create
+videos that touch everywhere on the app"). Pick the moment first, then the part of the app
+that answers it, and never feature the same part twice in 4 days. Write it in the `notes`
+column as `feature=<name from CONTEXT.md>`.
+
+See what shipped lately, so a new feature gets its video within the week:
+`git -C /home/claude/actorrise fetch --depth 200 origin main && git -C /home/claude/actorrise log FETCH_HEAD --since="7 days ago" --format=%s`.
+Only something an actor can see or do counts (skip admin, email, billing and fixes). Show it
+the way it actually works: read its code on main (`git -C /home/claude/actorrise show FETCH_HEAD:<path>`) before drawing it, never guess.
 
 Read `marketing/content-engine/log.csv` (create it if missing: `date,id,scenario,hook,cta,status,url,views,likes,saves,shares,notes`).
 Do not repeat a scenario within 7 days or a monologue within 30.

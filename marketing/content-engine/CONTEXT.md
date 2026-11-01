@@ -1,9 +1,37 @@
 # What the site knows this week
 
 Written by the ActorRise session in Claude Code from the live database, Stripe, GA4 and the
-search log. Refreshed every Monday with `/marketing-week`. Read it before picking a scenario.
+search log. The ActorRise session refreshes the numbers when it has new ones; the feature map and rules hold until changed.
 Last updated 2026-11-02 (week 45). If this date is more than 10 days old, say so in your
 message to Canberk and use it anyway.
+
+## The whole app: rotate through all of it
+
+Each line is a part an actor can use, with the moment it answers. Name in `feature=`.
+
+Web, actorrise.com
+- `search`: describe the piece you need ("comedic, a girl around sixteen, under two minutes") and get matches, not a title list. Moment: the night before, nothing fits.
+- `character`: type a character's name (Shiv Roy, Fleabag, Nina from Black Swan) and get their speeches. Moment: "I want to do her."
+- `overdone`: every piece shows how overdone it is. Moment: everyone brings Juliet.
+- `scene-partner`: the other lines are read aloud so you rehearse alone. Moment: the partner who cancelled, the 2am self tape.
+- `off-book`: rehearse with the Script, then only Cues, then Off book; say "line" for a prompt. Moment: memorizing on the train.
+- `your-script`: upload your own sides or script and rehearse that. Moment: sides arrived an hour ago.
+- `scenes`: two person scenes from plays, ready to run. Moment: scene class on Thursday, no partner picked.
+- `work`: work one monologue out loud, beat by beat. Moment: it's memorized but it's flat.
+- `auditions`: track every audition, its date and the piece you're bringing. Moment: three auditions this week, which piece for which.
+- `callboard`: the board of what you're working on and what's next. Moment: the pin board of sticky notes.
+- `green-room`: a room to rehearse with other actors. Moment: actor friends in three cities.
+- `cue`: ask the in-app assistant what to work on or how to find something. Moment: stuck, no coach to ask.
+- `classes`: a teacher makes one link and the whole class joins with their own accounts. Moment: the drama teacher with forty kids and one photocopier. Teacher angle only, never aimed at students under 13.
+
+Ghost Light, the iOS app
+- `tonight`: one speech a night to read, chosen for you. Moment: you haven't touched a monologue in weeks.
+- `run-lines`: Ghost Light runs lines with you. Moment: lines in the kitchen.
+- `reminder`: a nudge at seven with tonight's speech, and a home screen widget. Moment: the habit you keep dropping.
+- `check-in`: log what you worked on tonight (a speech, a scene, a class, an audition). Moment: did I actually practice this week.
+- `list`: keep a list of pieces and share it with a link. Moment: your coach asks what's in your book.
+
+If a feature here is not on main any more, skip it and say so in the message to Canberk.
 
 ## Why the videos matter right now
 
