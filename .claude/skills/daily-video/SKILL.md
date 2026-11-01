@@ -11,20 +11,29 @@ publishes anything.
 
 ## 1. Pick today's scenario
 
+The subject is an actor's daily life and headspace, not the app. The app shows up as the
+relief at the end of a real moment actors recognize. Canberk's ideas are seeds to curate
+from, never literal specs (2026-11-02): when he mentions an image ("a thinking man at a
+pin board"), take the feeling behind it and find the best scene for it.
+
 Read `marketing/content-engine/log.csv` (create it if missing: `date,id,scenario,hook,cta,status,url,views,likes,saves,shares,notes`).
-Do not repeat a scenario within 7 days or a monologue within 30. Rotate:
+Do not repeat a scenario within 7 days or a monologue within 30.
 
-| scenario | hook (first 2 seconds) | CTA |
-|---|---|---|
-| The night before | "11:47 pm. Audition at nine." | App Store |
-| Everyone brings Juliet | the overdone piece the panel has heard ten times today | App Store |
-| Nothing fits | type, age, length, and every book is wrong | App Store |
-| The pin board | thinking actor at the board, headshots and sides, crossing out the wrong pieces (scene type `thinking`) | App Store |
-| The 2am self-tape | no reader, ScenePartner reads the other part | actorrise.com |
-| The partner who cancelled | rehearsal tonight, your scene partner bails | actorrise.com |
-| Something funny, under two minutes | the comedic piece nobody has | App Store |
-| Callback tomorrow | they want "something different" | App Store |
+Scenario bank (grow it; each line is a moment, not a template):
+- The night before: audition at nine, nothing fits.
+- The library hunt: aisles of play anthologies, an armful of books, the clock on the wall.
+- The jungle of paper: photocopies everywhere, the teacher said "find something contemporary, under two minutes", one page glowing.
+- Everyone brings Juliet: the panel has heard the same piece all day.
+- Memorizing on the train: lips moving, a stranger staring.
+- The 2am self tape: phone on a stack of books, no reader (ScenePartner, CTA actorrise.com).
+- The partner who cancelled: rehearsal tonight, alone (ScenePartner, CTA actorrise.com).
+- Something funny, under two minutes: the comedic piece nobody has.
+- The callback email: "bring something different".
+- The dressing room mirror: last read before they call your name.
+- The pin board: headshots, sides, crossed out sticky notes.
 
+Build the drawn scenes each moment needs (new scene types in `src/StoryVideo.tsx`, same ink
+style, with sounds). Reuse existing scene types only when they truly fit the moment.
 When the numbers show a winner (see step 6), lean into it, changing one variable at a time.
 
 ## 2. Pull real data
