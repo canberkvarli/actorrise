@@ -43,7 +43,7 @@ export function ReadWallModal({ monologueId }: { monologueId: number | string })
       description={
         words.tasted
           ? words.overBody
-          : "Plus opens this piece and every other, start to finish. Anything you've saved stays open either way."
+          : "Plus opens this piece and every other, start to finish. Anything you've already read this month stays open."
       }
       quietLabel="not now"
     />

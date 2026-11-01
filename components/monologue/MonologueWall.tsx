@@ -63,7 +63,7 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
         ) : (
           <>
             Plus opens this piece and every other, start to finish. Anything
-            you&rsquo;ve saved stays open either way.
+            you&rsquo;ve already read this month stays open.
           </>
         )}
       </p>
