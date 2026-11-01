@@ -16,6 +16,10 @@ relief at the end of a real moment actors recognize. Canberk's ideas are seeds t
 from, never literal specs (2026-11-02): when he mentions an image ("a thinking man at a
 pin board"), take the feeling behind it and find the best scene for it.
 
+Read `marketing/content-engine/CONTEXT.md` first: this week's data from the site (what
+actors search for, where the library is thin, what never to promise). Its rules hold over
+anything below.
+
 Read `marketing/content-engine/log.csv` (create it if missing: `date,id,scenario,hook,cta,status,url,views,likes,saves,shares,notes`).
 Do not repeat a scenario within 7 days or a monologue within 30.
 
