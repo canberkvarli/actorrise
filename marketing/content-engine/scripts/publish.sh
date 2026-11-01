@@ -1,19 +1,31 @@
 #!/usr/bin/env bash
-# Upload an APPROVED finished video as a GitHub Release asset on this (public) repo
-# and print its public URL, which TryPost pulls from. Videos live in releases, not
-# in git, so the repo never fills up with mp4s.
+# Put a finished video where the scheduler (TryPost) can pull it, and print its public URL.
+#
+# Videos live on the orphan branch `content-media` of this public repo, never on main or
+# any code branch, so the app's history stays clean. (GitHub Releases would be nicer but
+# cloud sessions are not allowed to create releases.)
 #
 #   scripts/publish.sh out/<id>.mp4
-#   -> https://github.com/canberkvarli/actorrise/releases/download/content-YYYY-MM/<id>.mp4
+#   -> https://raw.githubusercontent.com/canberkvarli/actorrise/content-media/<id>.mp4
 #
-# This makes the file public. Only run it for a video Canberk has approved.
+# The file becomes public. It is the same video that goes out on TikTok/YouTube, and it
+# only goes live on those platforms after Canberk approves it in TryPost.
 set -euo pipefail
-FILE="$1"; NAME="$(basename "$FILE")"
+FILE="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+NAME="$(basename "$FILE")"
 REPO="${REPO:-canberkvarli/actorrise}"
-TAG="content-$(date -u +%Y-%m)"   # one release per month keeps the releases page tidy
-if ! gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
-  gh release create "$TAG" -R "$REPO" --title "Content $(date -u +%Y-%m)" \
-    --notes "Finished marketing videos (Ghost Light / ActorRise). Not an app release." >/dev/null
-fi
-gh release upload "$TAG" "$FILE" -R "$REPO" --clobber >/dev/null
-echo "https://github.com/$REPO/releases/download/$TAG/$NAME"
+BRANCH="content-media"
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+git clone -q --depth 1 --single-branch -b "$BRANCH" "https://github.com/$REPO.git" "$WORK" 2>/dev/null || {
+  git -C "$WORK" init -q -b "$BRANCH"
+  git -C "$WORK" remote add origin "https://github.com/$REPO.git"
+}
+cp "$FILE" "$WORK/$NAME"
+cd "$WORK"
+git add "$NAME"
+git -c user.name="Canberk Varli" -c user.email="canberkvarli@gmail.com" \
+  commit -q -m "Add $NAME" || true
+git push -q origin "$BRANCH"
+echo "https://raw.githubusercontent.com/$REPO/$BRANCH/$NAME"

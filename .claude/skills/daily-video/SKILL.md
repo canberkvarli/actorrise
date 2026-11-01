@@ -59,13 +59,24 @@ First person, no dashes of any kind, no emojis, no corporate words, never "we".
 
 ## 5. Queue for approval
 
-Until the scheduler is connected: send Canberk the mp4 and the three captions in the chat,
-and append a `pending` row to `log.csv`.
+TryPost (app.trypost.it, workspace "ActorRise") is the approval calendar. The connector is
+logged in as the "Claude" member, whose posts always need approval.
 
-Once TryPost is connected (custom connector), and only for a video Canberk approved:
-run `scripts/publish.sh out/<id>.mp4` for the public URL, then create the posts in TryPost
-from that URL as the "Claude" member, so every post lands as pending approval. Posting times:
-US evening, 7 to 9pm Eastern.
+1. Call `get-workspace-tool` first. If `me.requires_approval` is not `true`, STOP: do not
+   create any post. Send Canberk the mp4 and captions in the chat instead and say the
+   connector is logged in as an admin and needs reconnecting as canberk+claude@actorrise.com.
+2. `scripts/publish.sh out/<id>.mp4` puts the file on the `content-media` branch and prints
+   its public URL.
+3. `list-social-accounts-tool` for the account ids (TikTok @actorrise, YouTube @actorrise-app;
+   Instagram once it is connected). For TikTok, call `get-tiktok-creator-info-tool` and use
+   `privacy_level: PUBLIC_TO_EVERYONE`, comments on, duet and stitch on unless disabled.
+4. `create-posts-tool` with one destination per channel, media by that URL, each with its own
+   caption (TikTok caption, YouTube title in `meta.title` plus description), `status: scheduled`
+   and `queue: next`. Channels post daily at 7:15pm New York time. Because the member needs
+   approval, the posts land in Canberk's Approvals tab, not on the platforms.
+5. Append a `pending` row to `log.csv` with the TryPost post ids.
+6. Send Canberk one short message: the video, the scenario and hook, and "it's in Approvals".
+   Never call `approve-post-tool` or `publish-post-tool`. Approval is his.
 
 ## 6. Learn (Mondays)
 
