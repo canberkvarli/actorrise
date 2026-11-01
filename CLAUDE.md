@@ -83,6 +83,11 @@ Trigger phrases that mean "go into marketing mode" and invoke the `marketing` sk
 
 ## Non-negotiable voice rules (apply to ALL marketing output)
 
+Exception (Canberk, 2026-11-02): the brand social accounts (TikTok @actorrise, YouTube
+@actorrise-app, Instagram once connected) speak as Ghost Light / ActorRise, not as Canberk.
+No "I built". Use "built by a working actor". Rules 2, 4, 5 and 6 below still apply there.
+
+
 1. **First person singular only.** "I", "me", "my". NEVER "we", "our", "us", or "the ActorRise team".
 2. **No dashes.** No em dash (—), en dash (–), or long hyphen. Use commas, periods, or rewrite. They look AI-generated.
 3. **Sign off as `Canberk`** in emails. Never "The ActorRise Team".

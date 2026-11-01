@@ -23,6 +23,7 @@ scripts/publish.sh out/<id>.mp4                # approved videos only: public UR
 |---|---|---|
 | `night` | window, moon, clock racing | `time`, `cue` |
 | `books` | a stack of plays, a crumpled page tossed | `line1`, `line2`, `accent` |
+| `thinking` | an actor at a desk, pencil tapping the chin, pin board of headshots, sides and sticky notes, one note crossed out | `line1`, `line2`, `accent`, `notes[3]`, `strike` |
 | `phone` mode `search` | ink phone, camera pushes in, query types, finger taps, chips light, results slide in | `query`, `chips`, `tap`, `results[]` |
 | `phone` mode `read` | the chosen page lifts out of the phone, highlighted, margin note | `read{title,titleItalic,meta,text,mark,note}` |
 | `stage` | audition room: actor under a spotlight, casting table from behind, speech bubble | `time`, `cue`, `quote`, `accent` |

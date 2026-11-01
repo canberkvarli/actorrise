@@ -19,6 +19,7 @@ Do not repeat a scenario within 7 days or a monologue within 30. Rotate:
 | The night before | "11:47 pm. Audition at nine." | App Store |
 | Everyone brings Juliet | the overdone piece the panel has heard ten times today | App Store |
 | Nothing fits | type, age, length, and every book is wrong | App Store |
+| The pin board | thinking actor at the board, headshots and sides, crossing out the wrong pieces (scene type `thinking`) | App Store |
 | The 2am self-tape | no reader, ScenePartner reads the other part | actorrise.com |
 | The partner who cancelled | rehearsal tonight, your scene partner bails | actorrise.com |
 | Something funny, under two minutes | the comedic piece nobody has | App Store |
@@ -50,12 +51,24 @@ Read `out/<id>_strip.png`. Fix overlaps, clipped text, empty frames, text in the
 the right 140px (platform UI). Re-render until clean. Target 20 to 25 seconds, every scene ends
 just after its last animation lands.
 
-## 4. Captions (Canberk's voice, see actorrise/CLAUDE.md)
+## 4. Captions (brand voice, not Canberk's personal voice)
 
-- TikTok: one line, under 150 characters, up to 5 niche hashtags (#actorslife #monologue #audition #actortok #selftape).
-- Instagram Reels: hook line, two short lines, "link in bio", up to 8 hashtags.
-- YouTube Shorts title: under 70 characters, ends with #shorts.
-First person, no dashes of any kind, no emojis, no corporate words, never "we".
+These post from the brand accounts (TikTok @actorrise, YouTube @actorrise-app), not from
+Canberk's own profile, so they speak as Ghost Light / ActorRise. Never "I built" or "my app".
+The credibility line is "built by a working actor" (or "made by an actor"). Canberk, 2026-11-02.
+This overrides the first-person rule in actorrise/CLAUDE.md, which is for his emails and
+his personal posts. Every other voice rule still applies: no dashes of any kind, no emojis,
+no corporate words, plain and warm, peer to peer.
+
+- TikTok: one line, under 150 characters, up to 5 niche hashtags (#actorslife #monologue #audition #actortok #actors).
+- YouTube Shorts: `meta.title` under 70 characters ending with #shorts; description two short lines plus 3 or 4 hashtags.
+- Instagram Reels (once connected): hook line, two short lines, "link in bio", at most 5 hashtags.
+
+Cover frame: pick the single strongest frame (usually the payoff: the audition room with the
+speech bubble fully shown, or the marked script page) and set it as `cover_offset_ms` on the
+TikTok media item (and Instagram when connected). Check it with
+`ffmpeg -ss <seconds> -i out/<id>.mp4 -frames:v 1 cover.png` and look at it. Never let the
+cover be a mid camera move or empty paper. YouTube Shorts cannot take a cover through the API.
 
 ## 5. Queue for approval
 

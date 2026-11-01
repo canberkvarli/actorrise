@@ -16,6 +16,9 @@ import { loadFont } from "@remotion/fonts";
 
 export const FPS = 30;
 const T = 22; // frames per camera move
+// The first scene starts this many frames in, so frame 0 (the feed thumbnail and the
+// first thing a scroller sees) already shows drawing instead of empty paper.
+const PREROLL = 34;
 
 // Anthropic-style warm paper + ink, Ghost Light orange as the only accent.
 const C = {
@@ -52,7 +55,7 @@ type Phone = {
 };
 type Stage = { type: "stage"; seconds: number; time: string; cue: string; quote: string; accent: string };
 type End = { type: "end"; seconds: number; brand: string; tagline: string; action: string; kicker?: string };
-export type StoryScene = Night | Books | Phone | Stage | End;
+export type StoryScene = Night | Books | Thinking | Phone | Stage | End;
 export type StorySpec = { id: string; scenes: StoryScene[] };
 export const storyFrames = (s: StorySpec) =>
   s.scenes.reduce((n, sc) => n + Math.round(sc.seconds * FPS), 0);
@@ -344,6 +347,165 @@ const TapFinger: React.FC<{ at: number; x: number; y: number }> = ({ at, x, y })
         <path d={curled} fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
       </svg>
     </>
+  );
+};
+
+// ---------- the thinking actor at the pin board (original character) ----------
+const SKIN = "#a8704c";
+const CORK = "#ecd9b8";
+
+const Headshot: React.FC<{ x: number; y: number; at: number; tilt: number; hair?: boolean }> = ({ x, y, at, tilt, hair }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const s = spring({ frame: f - at, fps, config: { damping: 12, mass: 0.6 } });
+  if (f < at) return null;
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${tilt}) scale(${0.6 + 0.4 * s})`} opacity={Math.min(1, s * 1.4)}>
+      <rect x={-75} y={-95} width={150} height={190} fill="#fbf8f1" stroke={C.ink} strokeWidth={5} />
+      <circle cx={0} cy={-25} r={32} fill={hair ? "#d8a27a" : "#c08a64"} stroke={C.ink} strokeWidth={4} />
+      {hair && <path d="M-32 -30 C -34 -66, 34 -66, 32 -30 C 20 -46, -20 -46, -32 -30 Z" fill={C.ink} />}
+      <path d="M-55 85 C -50 35, 50 35, 55 85" fill="rgba(33,26,21,0.12)" stroke={C.ink} strokeWidth={4} />
+      <circle cx={0} cy={-95} r={10} fill={C.orange} stroke={C.ink} strokeWidth={3} />
+    </g>
+  );
+};
+
+const Sticky: React.FC<{ x: number; y: number; at: number; tilt: number; text: string; strike?: number }> = ({ x, y, at, tilt, text, strike }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const s = spring({ frame: f - at, fps, config: { damping: 13, mass: 0.5 } });
+  if (f < at) return null;
+  const st = strike != null ? prog(f, strike, strike + 8) : 0;
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${tilt}) scale(${0.6 + 0.4 * s})`} opacity={Math.min(1, s * 1.4)}>
+      <rect x={-75} y={-70} width={150} height={140} fill="#f2cf3a" stroke={C.ink} strokeWidth={4} />
+      <text x={0} y={10} textAnchor="middle" fontFamily={F.serifI} fontStyle="italic" fontSize={34} fill={C.ink}>
+        {text}
+      </text>
+      {st > 0 && (
+        <path d={`M-58 8 L ${-58 + 116 * st} ${8 - 6 * st}`} stroke={C.orange} strokeWidth={7} strokeLinecap="round" />
+      )}
+      <circle cx={0} cy={-70} r={10} fill={C.orange} stroke={C.ink} strokeWidth={3} />
+    </g>
+  );
+};
+
+const ScriptPage: React.FC<{ x: number; y: number; at: number; tilt: number }> = ({ x, y, at, tilt }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const s = spring({ frame: f - at, fps, config: { damping: 12, mass: 0.6 } });
+  if (f < at) return null;
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${tilt}) scale(${0.6 + 0.4 * s})`} opacity={Math.min(1, s * 1.4)}>
+      <rect x={-95} y={-125} width={190} height={250} fill="#ffffff" stroke={C.ink} strokeWidth={5} />
+      {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+        <line key={i} x1={-70} x2={i % 3 === 2 ? 20 : 70} y1={-80 + i * 28} y2={-80 + i * 28} stroke="rgba(33,26,21,0.45)" strokeWidth={4} strokeLinecap="round" />
+      ))}
+      <circle cx={0} cy={-125} r={10} fill={C.orange} stroke={C.ink} strokeWidth={3} />
+    </g>
+  );
+};
+
+/** A seated actor behind a desk, pencil at the chin, looking up at the board. */
+const ThinkingActor: React.FC<{ start: number }> = ({ start }) => {
+  const f = useCurrentFrame();
+  // the pencil taps the chin: small, regular, human
+  const tap = Math.max(0, Math.sin((f - start) / 4)) * (f > start + 30 ? 1 : 0);
+  const blink = (f % 70) > 66;
+  const face = "M540 965 C 585 965 612 1000 612 1045 C 612 1095 582 1127 540 1127 C 498 1127 468 1095 468 1045 C 468 1000 495 965 540 965 Z";
+  const hair = "M466 1040 C 452 1004 466 968 494 958 C 500 934 530 924 552 934 C 574 920 606 930 614 956 C 640 966 642 1004 618 1030 C 606 1012 590 1000 566 996 C 540 1006 504 1004 486 992 C 478 1008 470 1022 466 1040 Z";
+  const torso = "M392 1402 C 400 1262 444 1192 516 1162 L 564 1162 C 636 1192 680 1262 688 1402 Z";
+  const collar = "M516 1162 L 540 1196 L 564 1162";
+  const restArm = "M430 1262 C 404 1322 412 1378 466 1394 L 612 1394";
+  const raisedArm = "M646 1218 C 688 1282 706 1342 700 1394 C 690 1300 654 1196 616 1132";
+  const hand = "M600 1100 C 622 1092 640 1108 636 1130 C 632 1150 610 1156 594 1146 C 580 1136 582 1108 600 1100 Z";
+  const desk = "M100 1402 C 400 1398 700 1406 980 1400";
+  const papers = "M210 1384 L 330 1370 L 338 1396 L 214 1404 Z M236 1370 L 346 1352 L 350 1376";
+  const cup = "M808 1330 L 812 1396 L 862 1396 L 866 1330 Z M866 1344 C 890 1344 890 1376 864 1378";
+  return (
+    <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+      <Ink d={torso} start={start} dur={18} w={6} fill="rgba(232,121,43,0.42)" />
+      <Ink d={collar} start={start + 10} dur={6} w={5} />
+      <Ink d="M520 1124 L 518 1164 M560 1124 L 562 1164" start={start + 6} dur={6} w={6} />
+      <Ink d={face} start={start + 4} dur={14} w={6} fill={SKIN} />
+      <Ink d={hair} start={start + 12} dur={12} w={4} fill={C.ink} />
+      <Ink d="M612 1036 C 626 1034 630 1058 612 1064" start={start + 14} dur={6} w={5} fill={SKIN} />
+      {/* eyes look up and to the left, at the board */}
+      {f > start + 16 && (
+        <g>
+          {blink ? (
+            <path d="M500 1036 L 520 1036 M550 1036 L 570 1036" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+          ) : (
+            <>
+              <circle cx={507} cy={1032} r={6} fill={C.ink} />
+              <circle cx={557} cy={1032} r={6} fill={C.ink} />
+            </>
+          )}
+          <path d="M494 1012 C 504 1004 518 1004 526 1010 M548 1008 C 558 1000 574 1002 582 1010" stroke={C.ink} strokeWidth={5} fill="none" strokeLinecap="round" />
+          <path d="M536 1046 C 528 1066 528 1078 542 1080" stroke={C.ink} strokeWidth={4} fill="none" strokeLinecap="round" />
+          <path d="M520 1100 C 532 1104 546 1102 556 1096" stroke={C.ink} strokeWidth={4} fill="none" strokeLinecap="round" />
+        </g>
+      )}
+      <Ink d={restArm} start={start + 16} dur={12} w={44} />
+      <Ink d={restArm} start={start + 16} dur={12} w={32} color="#f0c6a0" />
+      <Ink d={desk} start={start} dur={20} w={6} />
+      <Ink d={papers} start={start + 20} dur={10} w={4} fill="#ffffff" />
+      <Ink d={cup} start={start + 22} dur={10} w={5} fill="rgba(232,121,43,0.4)" />
+      <Ink d="M822 1310 C 816 1294 828 1286 822 1270 M842 1310 C 836 1294 848 1286 842 1270" start={start + 30} dur={12} w={3} color={C.inkSoft} />
+      <Ink d={raisedArm} start={start + 18} dur={14} w={44} />
+      <Ink d={raisedArm} start={start + 18} dur={14} w={32} color="#f0c6a0" />
+      {/* pencil in the hand, tapping the chin */}
+      <g transform={`rotate(${-tap * 6} 600 1120)`} opacity={prog(f, start + 26, start + 32)}>
+        <line x1={604} y1={1120} x2={662} y2={1012} stroke={C.ink} strokeWidth={22} strokeLinecap="round" />
+        <line x1={604} y1={1120} x2={662} y2={1012} stroke="#f2cf3a" strokeWidth={14} strokeLinecap="round" />
+        <path d="M662 1012 L 676 986 L 652 1004 Z" fill={C.ink} />
+        <line x1={606} y1={1116} x2={614} y2={1102} stroke={C.orange} strokeWidth={14} strokeLinecap="round" />
+      </g>
+      <Ink d={hand} start={start + 24} dur={8} w={5} fill={SKIN} />
+      {/* little thinking marks */}
+      <Ink d="M432 950 l -26 -18 M446 916 l -14 -30 M474 896 l -2 -32" start={start + 40} dur={10} w={5} color={C.orange} />
+    </svg>
+  );
+};
+
+type Thinking = { type: "thinking"; seconds: number; line1: string; line2: string; accent: string; notes: string[]; strike?: number };
+
+const ThinkingScene: React.FC<{ s: Thinking }> = ({ s }) => {
+  const notes = s.notes.slice(0, 3);
+  const strikeIdx = s.strike ?? 1;
+  const strikeAt = 64;
+  return (
+    <AbsoluteFill>
+      <Sfx name="pencil_long" at={0} vol={0.7} />
+      <Sfx name="pop" at={16} vol={0.5} />
+      <Sfx name="pop" at={24} vol={0.5} />
+      <Sfx name="pop" at={32} vol={0.5} />
+      <Sfx name="boop_lo" at={18} vol={0.6} />
+      <Sfx name="boop_hi" at={36} vol={0.6} />
+      <Sfx name="pencil_short" at={strikeAt} vol={0.8} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Ink d="M150 330 L 930 330 L 930 900 L 150 900 Z" start={0} dur={22} w={7} fill={CORK} />
+        <Ink d="M178 356 L 902 356 L 902 874 L 178 874 Z" start={8} dur={18} w={3} color={C.inkSoft} />
+        <Ink d="M285 412 C 360 380, 420 380, 475 392 C 560 410, 640 390, 720 400 C 760 520, 740 600, 720 690" start={44} dur={18} w={4} color={C.orange} />
+      </svg>
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Headshot x={285} y={505} at={14} tilt={-4} />
+        <Headshot x={475} y={485} at={20} tilt={3} hair />
+        <ScriptPage x={720} y={525} at={26} tilt={2} />
+        {notes.map((t, i) => (
+          <Sticky key={i} x={300 + i * 210} y={770 - (i % 2) * 18} at={30 + i * 6} tilt={i % 2 ? 4 : -5} text={t} strike={i === strikeIdx ? strikeAt : undefined} />
+        ))}
+      </svg>
+      <ThinkingActor start={8} />
+      <AbsoluteFill style={{ paddingTop: 70, alignItems: "center" }}>
+        <Rise at={18}>
+          <Headline text={s.line1} accent="" color={C.ink} size={92} />
+        </Rise>
+        <Rise at={36}>
+          <Headline text={s.line2} accent={s.accent} color={C.ink} size={92} />
+        </Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
   );
 };
 
@@ -1012,6 +1174,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
     const firstPhone = sc.type === "phone" && !(i > 0 && spec.scenes[i - 1].type === "phone");
     return sc.type === "night" ? <NightScene s={sc} /> :
       sc.type === "books" ? <BooksScene s={sc} /> :
+      sc.type === "thinking" ? <ThinkingScene s={sc} /> :
       sc.type === "phone" ? <PhoneScene s={sc} first={firstPhone} /> :
       sc.type === "stage" ? <StageScene s={sc} /> :
       <EndScene s={sc} />;
@@ -1032,7 +1195,10 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
                 <Streaks seed={i} />
               </Sequence>
             )}
-            <Sequence from={moves[i] ? starts[i] - T : starts[i]} durationInFrames={frames + (moves[i] ? T : 0)}>
+            <Sequence
+              from={i === 0 ? -PREROLL : moves[i] ? starts[i] - T : starts[i]}
+              durationInFrames={frames + (moves[i] ? T : 0) + (i === 0 ? PREROLL : 0)}
+            >
               <AbsoluteFill style={{ transform: `translateX(${x}px)` }}>{renderScene(sc, i)}</AbsoluteFill>
             </Sequence>
           </React.Fragment>
