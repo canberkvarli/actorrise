@@ -150,3 +150,18 @@ def test_a_possessive_without_its_apostrophe_still_names_the_character():
 def test_a_name_ending_in_s_is_not_clipped():
     db = FakeDB([("Lois", 6)])
     assert detect_catalogue_character(db, "lois")["character"] == "lois"
+
+
+def test_a_first_name_and_surname_routes_to_the_one_play_character(monkeypatch):
+    """"shiv roy" put Shiv's Succession pieces behind Roy from Ted Lasso
+    (2026-11-01). The catalogue only knows "Shiv"; the surname is checked
+    against the play's own pieces."""
+    import app.services.search.title_lookup as tl
+
+    db = FakeDB([("Shiv", 4, 1), ("Anna", 3, 3), ("Hamlet", 67, 1)])
+    monkeypatch.setattr(tl, "_surname_in_play", lambda _db, names, s: s == "roy")
+    assert detect_catalogue_character(db, "shiv roy")["names"] == ["Shiv"]
+    # A surname the play never says stands down.
+    assert detect_catalogue_character(db, "shiv smith") is None
+    # A first name spread over several plays never borrows a surname.
+    assert detect_catalogue_character(db, "anna roy") is None

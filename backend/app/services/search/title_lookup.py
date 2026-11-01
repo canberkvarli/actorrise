@@ -1034,7 +1034,56 @@ def detect_catalogue_character(db, query: str) -> Optional[Dict[str, object]]:
             if count < _MIN_CHAR_SINGLE_WORD_MONOS and not one_play:
                 continue
         return {"character": cand, "names": list(variants)}
+
+    # "shiv roy": a first name and a surname, where the catalogue only carries
+    # the first name. Shiv's four Succession pieces sat behind Roy from Ted
+    # Lasso and The Apprentice (2026-11-01). Only for a name whose pieces all
+    # come from one play, and only when the surname is a word in that play's
+    # own pieces, so "anna smith" never borrows a stranger's Anna.
+    toks = stripped.split()
+    # A role word for a surname ("fro women", "god father") is a phrase, not a name.
+    if (
+        len(toks) == 2
+        and len(toks[0]) >= 4
+        and len(toks[1]) >= 3
+        and not _is_generic_name(toks[1])
+        and toks[1] not in _ONE_PLAY_STOP
+    ):
+        first, surname = toks
+        entry = cat.get(first)
+        if (
+            entry is not None
+            and len(entry) > 2
+            and entry[2] == 1
+            and entry[1] >= 2
+            and not _is_generic_name(first)
+            and first not in _AMBIGUOUS_SINGLE_WORD_TITLES
+            and first not in _ONE_PLAY_STOP
+            and _surname_in_play(db, entry[0], surname)
+        ):
+            return {"character": first, "names": list(entry[0])}
     return None
+
+
+def _surname_in_play(db, names, surname: str) -> bool:
+    """True when `surname` is a whole word in a piece from the play that the
+    character `names` comes from. Never raises."""
+    if not re.fullmatch(r"[a-z'\-]+", surname):
+        return False
+    from sqlalchemy import text as sa_text
+
+    try:
+        row = db.execute(
+            sa_text(
+                "SELECT 1 FROM monologues m WHERE m.play_id IN ("
+                "  SELECT play_id FROM monologues WHERE character_name = ANY(:names)"
+                ") AND m.text ~* :pat LIMIT 1"
+            ),
+            {"names": list(names), "pat": r"\m" + surname + r"\M"},
+        ).first()
+    except Exception:
+        return False
+    return row is not None
 
 
 def find_character_monologues(db, names: list, filters: Optional[dict] = None,
