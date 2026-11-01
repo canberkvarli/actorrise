@@ -5,6 +5,18 @@ search log. The ActorRise session refreshes the numbers when it has new ones; th
 Last updated 2026-11-02 (week 45). If this date is more than 10 days old, say so in your
 message to Canberk and use it anyway.
 
+## How to use this file
+
+Rotate through the whole app, not just the monologue search (Canberk, 2026-11-02: "create
+videos that touch everywhere on the app"). Pick the moment first, then the part of the app
+that answers it, and never feature the same part twice in 4 days. Write it in the `notes`
+column as `feature=<name from CONTEXT.md>`.
+
+See what shipped lately, so a new feature gets its video within the week:
+`git -C /home/claude/actorrise fetch --depth 200 origin main && git -C /home/claude/actorrise log FETCH_HEAD --since="7 days ago" --format=%s`.
+Only something an actor can see or do counts (skip admin, email, billing and fixes). Show it
+the way it actually works: read its code on main (`git -C /home/claude/actorrise show FETCH_HEAD:<path>`) before drawing it, never guess.
+
 ## The whole app: rotate through all of it
 
 Each line is a part an actor can use, with the moment it answers. Name in `feature=`.
