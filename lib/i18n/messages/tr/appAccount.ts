@@ -235,11 +235,11 @@ export const appAccount: Widen<typeof en> = {
   },
   appAccountPrivacy: {
     head: "Gizlilik",
-    label: "Etkinliğimi ilan panosunda göster",
+    label: "Etkinliğimi Duyuru Panosu'nda göster",
     body:
       "Diğer oyuncular okuduğun, kaydettiğin ya da prova ettiğin parçaların yanında adını, şehrini ve fotoğrafını görebilir. Aramaya yazdıkların asla kimseye gösterilmez.",
     hidden:
-      "Gizlisin. Yaptığın hiçbir şey ilan panosunda görünmüyor, bunu kapatmadan öncekiler de dahil.",
+      "Gizlisin. Yaptığın hiçbir şey Duyuru Panosu'nda görünmüyor, bunu kapatmadan öncekiler de dahil.",
   },
   appAccountCredits: {
     remove: "{production} kaldır",
@@ -429,7 +429,7 @@ export const appAccount: Widen<typeof en> = {
     name: "Ad",
     nameRequired: "Ad gerekli",
     hintName:
-      "Sahne adın da olur. Açıksa ilan panosunda görünür, başka hiçbir yerde değil.",
+      "Sahne adın da olur. Açıksa Duyuru Panosu'nda görünür, başka hiçbir yerde değil.",
     ageRange: "Yaş aralığı",
     hintAge: "Cast ekibi seni doğum gününe göre değil, aralığa göre okur. Yaptığın her aramayı bu süzer.",
     selectAge: "Yaş aralığı seç",

@@ -1,3 +1,5 @@
+import { ContentT } from "@/components/seo/ContentT";
+import type { MessageKey } from "@/lib/i18n";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -362,7 +364,7 @@ export default async function PublicMonologuePage({ params }: Params) {
                   href={`/monologues/${c.slug}`}
                   className="inline-block rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
                 >
-                  {c.title.replace(/:.*$/, "")}
+                  <ContentT k={`contentCollections.${c.slug}.title` as MessageKey} fallback={c.title.replace(/:.*$/, "")} short />
                 </Link>
               </li>
             ))}
