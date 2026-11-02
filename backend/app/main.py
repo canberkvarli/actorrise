@@ -52,6 +52,7 @@ from app.api.subscriptions import router as subscriptions_router
 from app.api.tracking import router as tracking_router
 from app.api.events import router as events_router
 from app.api.webhooks import router as webhooks_router
+from app.api.loop_bridge import router as loop_bridge_router
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.core.seed import ensure_pricing_tiers
@@ -656,6 +657,7 @@ app.include_router(admin_stripe_revenue_router)
 app.include_router(admin_sessions_router)
 app.include_router(founding_actors_router)
 app.include_router(admin_founding_actors_router)
+app.include_router(loop_bridge_router)
 
 
 @app.get("/")

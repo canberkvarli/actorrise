@@ -73,6 +73,9 @@ Two rules hold there:
   imports `app.main` and serves). It starts the prod schedulers: lifecycle emails, push
   notifications, Ghost Light reminders. A second copy sends everything twice. Scripts in
   `backend/scripts/` are fine; they do not start the schedulers.
+- **The database is behind the API there.** A cloud session cannot connect to Postgres (web
+  traffic only), so the loop's database scripts run through `backend/scripts/remote.py`, which
+  calls `/api/loop/run` with `LOOP_TOKEN`. See `/conversion-loop` step 0.
 - **No memory files there.** What the laptop's memory knows is not in a cloud session. Who was
   written to is the `contact_log` table (`scripts/contact_log.py`), not a file, so the check
   before every email works the same in both places.
