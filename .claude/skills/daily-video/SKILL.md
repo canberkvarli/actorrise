@@ -35,6 +35,16 @@ Scenario bank (grow it; each line is a moment, not a template):
 - The dressing room mirror: last read before they call your name.
 - The pin board: headshots, sides, crossed out sticky notes.
 
+Then pick a format, so the feed never feels like one template (Canberk, 2026-11-02: "be more
+creative"). Not the same format two days running:
+- Story: the moment, the search, the payoff (the night before).
+- POV: the camera is the actor's eyes ("POV: the panel says 'anything else?'").
+- Types of actors: three or four drawn characters at the same audition, each with their tell; the last one is prepared.
+- Expectation vs reality: the page splits down the middle, two takes of the same moment.
+- Countdown: a clock or a page counter racing to the call time, beats landing on the music.
+- Silent comedy: no words for ten seconds, just drawing, sound and timing, then one line.
+- The object's view: the crumpled monologue, the highlighter, the phone on the stack of books tells it.
+
 Build the drawn scenes each moment needs (new scene types in `src/StoryVideo.tsx`, same ink
 style, with sounds). Reuse existing scene types only when they truly fit the moment.
 When the numbers show a winner (see step 6), lean into it, changing one variable at a time.
@@ -53,6 +63,24 @@ Copy `specs/story-night-before.json` as the starting point, write `specs/<date>-
 Scene types and fields are in `marketing/content-engine/README.md`. If the scenario needs a
 drawn scene that does not exist yet (self-tape ring light, dressing room, phone call), add a
 scene type to `src/StoryVideo.tsx` in the same ink style, with its sounds, and say so in the summary.
+
+Every video gets a music bed: add `"music": {"style": "<style>"}` to the spec. render.sh
+composes it (`scripts/make_music.py`, real instrument samples fetched by
+`scripts/get_samples.sh`, synthesized drums) with the drop landing on the payoff scene.
+Pick the style by the moment, and follow the current trend list below:
+- `sunny`: lofi Rhodes and swung drums. The default under on-screen text.
+- `pizzicato`: sneaky plucked strings. Comedy, mischief, anything with a punchline.
+- `build`: piano and strings that swell into the payoff. Late nights, then vs now, nerves.
+- `festive`: celesta and sleigh bells. November 1 to December 31.
+Do not use the same style three days running. Optional keys: `drop` (scene type or index),
+`volume` (default 0.42, under the sound effects).
+
+Trending audio can't go on our posts: a brand account can't bake a commercial track into the
+file (muted or struck), TikTok's API can't attach a sound, and Instagram's music API needs a
+Facebook-linked account, which Canberk's restriction blocks. So the beds follow the trend's
+feel, never its melody. Trend list (refresh on Mondays, step 6):
+- 2026-11-02: holiday songs took over on Nov 1 (festive beds are timely); nostalgic slow
+  guitar builds for then vs now (build); lyric-free sunny instrumentals under text (sunny).
 
 ```bash
 cd marketing/content-engine && npm ci
@@ -116,6 +144,10 @@ logged in as the "Claude" member, whose posts always need approval.
 Pull last week's metrics from TryPost insights into `log.csv`. A hook or scenario with 5+
 posts in the bottom quartile of views gets dropped. Report in 3 lines: what won, what lost,
 what changes this week.
+
+Also refresh the trend list in step 3: search "trending Reels audio this week" and "trending
+TikTok sounds" (WebSearch), and note the moods and formats in one dated line. If a new feel
+keeps showing up that no style covers, add a style to `scripts/make_music.py`.
 
 ## Never
 

@@ -68,7 +68,9 @@ type Email = {
   cue?: string;
 };
 export type StoryScene = Night | Books | Thinking | Email | Phone | Stage | End;
-export type StorySpec = { id: string; scenes: StoryScene[] };
+/** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
+export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive"; drop?: string | number; volume?: number; seed?: string };
+export type StorySpec = { id: string; scenes: StoryScene[]; music?: StoryMusic };
 export const storyFrames = (s: StorySpec) =>
   s.scenes.reduce((n, sc) => n + Math.round(sc.seconds * FPS), 0);
 
@@ -1286,6 +1288,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
   return (
     <AbsoluteFill style={{ background: C.paper, overflow: "hidden" }}>
       <Paper />
+      {spec.music && <Audio src={staticFile(`music/${spec.id}.wav`)} volume={spec.music.volume ?? 0.42} />}
       <Thread slots={slots} cam={camEase} />
       {spec.scenes.map((sc, i) => {
         const frames = Math.round(sc.seconds * FPS);

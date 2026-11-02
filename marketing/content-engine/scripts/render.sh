@@ -10,6 +10,10 @@ mkdir -p out
 CHROME="${CHROME:-$(ls -d /opt/pw-browsers/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell 2>/dev/null | head -1 || true)}"
 BROWSER_FLAG=(); [ -n "$CHROME" ] && BROWSER_FLAG=(--browser-executable="$CHROME")
 PROPS="$(python3 -c 'import json,sys; print(json.dumps({"spec": json.load(open(sys.argv[1]))}))' "$SPEC")"
+# Music bed, if the spec asks for one (public/music/<id>.wav).
+if python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get("music") else 1)' "$SPEC"; then
+  python3 scripts/make_music.py "$SPEC"
+fi
 CORES="$(nproc 2>/dev/null || echo 2)"
 if [ "${2:-}" = "still" ]; then
   npx remotion still src/index.ts StoryVideo "out/${ID}_${3:-0}.png" --frame="${3:-0}" --props="$PROPS" "${BROWSER_FLAG[@]}" --scale=0.4

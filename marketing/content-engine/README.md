@@ -14,6 +14,8 @@ scripts/render.sh specs/<id>.json              # -> out/<id>.mp4 + out/<id>_stri
 scripts/render.sh specs/<id>.json still 300    # one frame, for layout checks
 npm run studio                                 # live preview in the browser (local machine)
 npm run sfx                                    # regenerate public/sfx/*.wav (all synthesized, no samples)
+python3 scripts/make_music.py specs/<id>.json   # music bed -> public/music/<id>.wav (render.sh runs it when the spec has "music")
+scripts/get_samples.sh                         # instrument samples for the beds (FluidR3 GM, MIT), auto-fetched
 scripts/publish.sh out/<id>.mp4                # approved videos only: public URL for the scheduler
 ```
 
@@ -29,6 +31,8 @@ scripts/publish.sh out/<id>.mp4                # approved videos only: public UR
 | `phone` mode `read` | the chosen page lifts out of the phone, highlighted, margin note | `read{title,titleItalic,meta,text,mark,note}` |
 | `stage` | audition room: actor under a spotlight, casting table from behind, speech bubble | `time`, `cue`, `quote`, `accent` |
 | `end` | theater ticket with the real app icon and a FREE stamp | `brand`, `tagline`, `action`, `kicker` |
+
+Music: `"music": {"style": "sunny|pizzicato|build|festive", "drop": "stage", "volume": 0.42}`. The tempo bends so the drop lands on the drop scene; the intro is filtered and opens on the first camera move.
 
 `accent` is the word set in orange italic. Consecutive `phone` scenes share one camera position.
 
