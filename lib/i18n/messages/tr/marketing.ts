@@ -66,6 +66,7 @@ export const marketing: Widen<typeof en> = {
     catOther: "Diğer",
   },
   marketingContact: {
+    heroDirection: "(yönetmene bir not.)",
     titleA: "",
     titleB: "Merhaba",
     titleC: " de.",
@@ -81,6 +82,7 @@ export const marketing: Widen<typeof en> = {
     privacy: "Gizlilik Politikası",
   },
   marketingAbout: {
+    heroDirection: "(sahneye soldan girer: kurucu.)",
     titleA: "Bir ",
     titleB: "oyuncu",
     titleC: " yaptı, oyuncular için.",
@@ -92,6 +94,7 @@ export const marketing: Widen<typeof en> = {
     featuredOn: "Yer aldığı yerler",
   },
   marketingSupport: {
+    heroDirection: "(yardım lazım mı?)",
     title: "Destek",
     titleEnd: ".",
     lede: "Bir şey çalışmıyor mu, ödemeyle ilgili bir sorun mu var, ya da hesabında mı takıldın? Bana yaz, her mesajı kendim okuyorum.",
@@ -115,6 +118,7 @@ export const marketing: Widen<typeof en> = {
     contactForm: "İletişim formu",
   },
   marketingThanks: {
+    heroDirection: "(programda.)",
     titleA: "ActorRise’ı ",
     titleB: "nerede bulursun",
     titleC: ".",

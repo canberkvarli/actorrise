@@ -28,7 +28,7 @@ export default function AboutPage() {
   return (
     <>
       <StageHero
-        direction="(enter, stage left: the founder.)"
+        direction={<T k="marketingAbout.heroDirection" />}
         title={
           <>
             <T k="marketingAbout.titleA" />

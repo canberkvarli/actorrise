@@ -20,7 +20,8 @@ export function StageHero({
   align = "center",
 }: {
   /** Typewriter eyebrow, e.g. "(the ticket.)" — parentheses included by caller */
-  direction: string;
+  // ReactNode so a server page can pass a translated <T k="..." /> island.
+  direction: ReactNode;
   title: ReactNode;
   lede?: ReactNode;
   /** Optional CTA row rendered under the lede */

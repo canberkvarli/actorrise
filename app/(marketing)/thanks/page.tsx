@@ -112,7 +112,7 @@ export default function ThanksPage() {
   return (
     <>
       <StageHero
-        direction="(in the programme.)"
+        direction={<T k="marketingThanks.heroDirection" />}
         title={
           <>
             <T k="marketingThanks.titleA" />

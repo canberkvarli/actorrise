@@ -64,6 +64,7 @@ export const marketing = {
     catOther: "Other",
   },
   marketingContact: {
+    heroDirection: "(a note to the director.)",
     titleA: "Say ",
     titleB: "hello",
     titleC: ".",
@@ -79,6 +80,7 @@ export const marketing = {
     privacy: "Privacy Policy",
   },
   marketingAbout: {
+    heroDirection: "(enter, stage left: the founder.)",
     titleA: "Built by an ",
     titleB: "actor",
     titleC: ", for actors.",
@@ -90,6 +92,7 @@ export const marketing = {
     featuredOn: "Featured on",
   },
   marketingSupport: {
+    heroDirection: "(need a hand?)",
     title: "Support",
     titleEnd: ".",
     lede: "Something not working, a billing question, or stuck on your account? Email me and I read every message myself.",
@@ -113,6 +116,7 @@ export const marketing = {
     contactForm: "Contact form",
   },
   marketingThanks: {
+    heroDirection: "(in the programme.)",
     titleA: "Where you’ll ",
     titleB: "find us",
     titleC: ".",

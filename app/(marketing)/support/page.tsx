@@ -27,7 +27,7 @@ export default function SupportPage() {
   return (
     <>
       <StageHero
-        direction="(need a hand?)"
+        direction={<T k="marketingSupport.heroDirection" />}
         title={
           <>
             <em className="italic text-primary"><T k="marketingSupport.title" /></em>

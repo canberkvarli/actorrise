@@ -29,7 +29,7 @@ export default function ContactPage() {
   return (
     <>
       <StageHero
-        direction="(a note to the director.)"
+        direction={<T k="marketingContact.heroDirection" />}
         title={
           <>
             <T k="marketingContact.titleA" />
