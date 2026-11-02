@@ -153,6 +153,12 @@ Create each as a Gmail draft:
   summary: it is too long to type, so Canberk pastes it as a real link.
 - A reply goes on its thread. A new email does not.
 
+**Nobody inside a trial gets a note** (Canberk, 2026-11-02). Not a check-in, not "what are you
+using it for", not as a draft and not as the day's best move. A note to someone a week before
+their card is charged is the trial-ending email he removed on 2026-09-29, whatever it says.
+Section 3 of the brief is read for "Moved" lines only. The same goes for a subscription set to
+cancel: no win-back note unless he asks.
+
 **A reply that names a price** (a membership, a sponsorship, an ad) gets a warm, plain no.
 There is no marketing budget. Leave the free offer to their teachers standing, and do not
 ask for numbers or a cheaper tier.
