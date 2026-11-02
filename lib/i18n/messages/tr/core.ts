@@ -13,6 +13,16 @@ export const core: Widen<typeof enCore> = {
     en: "English",
     tr: "Türkçe",
   },
+  settings: {
+    direction: "(kulis.)",
+    title: "Hesap ayarları",
+    signedInAs: "{email} olarak giriş yaptın",
+    editProfile: "Profili düzenle",
+    billing: "Ödeme",
+    privacy: "Gizlilik politikası",
+    deleteTitle: "Hesabı sil",
+    deleteBody: "Hesabını ve ona bağlı tüm verileri kalıcı olarak sil. Bu işlem geri alınamaz.",
+  },
   nav: {
     search: "Ara",
     actors: "Oyuncular",

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { LanguageSwitch } from "@/components/i18n/LanguageSwitch";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
 import { useT, type MessageKey } from "@/lib/i18n";
@@ -69,6 +70,8 @@ export function TheatreFooter() {
             {t("landingFooter.contact")}
           </ContactModalTrigger>
           <LandingFooterAuthLink />
+          {/* Footer and Settings only, never the nav (Canberk, 2026-11-02). */}
+          <LanguageSwitch tone="dark" />
 
           {/* Icons only here. The founder note spells the handles out, because
               someone who has just read it wants something to type; this row is

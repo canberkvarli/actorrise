@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { LanguageSwitch } from "@/components/i18n/LanguageSwitch";
 import { ContactModal } from "./ContactModal";
 import { APPROVED_PARTNERS } from "@/data/partners";
 import { useT, type MessageKey } from "@/lib/i18n";
@@ -147,6 +148,10 @@ export function MarketingFooter() {
             </p>
             <p>{t("marketingFooter.privacyNote")}</p>
           </div>
+
+          {/* The language lives down here and in Settings, not in the nav
+              (Canberk, 2026-11-02). Most visitors are already right. */}
+          <LanguageSwitch tone="dark" className="mt-4 -ml-1.5" />
         </div>
       </footer>
       <ContactModal open={contactOpen} onOpenChange={setContactOpen} />

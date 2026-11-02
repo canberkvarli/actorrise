@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useAuthModal } from "@/components/auth/AuthModalContext";
 import { TheatreCta } from "./TheatreCta";
-import { LanguageSwitch } from "@/components/i18n/LanguageSwitch";
 import { useT, type MessageKey } from "@/lib/i18n";
 
 /** `labelKey` rather than a label: the pill is translated (lib/i18n). */
@@ -90,7 +89,6 @@ export function TheatreNav({
           ))}
         </div>
         {children}
-        <LanguageSwitch tone="dark" />
         {showAuthLink && <TheatreNavAuthLink />}
         <TheatreCta size="nav" />
       </div>

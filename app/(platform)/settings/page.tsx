@@ -9,21 +9,25 @@ import {
   IconCreditCard,
   IconShield,
   IconAlertTriangle,
+  IconLanguage,
 } from "@tabler/icons-react";
 import { DeleteAccountModal } from "@/components/settings/DeleteAccountModal";
+import { LanguageSwitch } from "@/components/i18n/LanguageSwitch";
+import { useT } from "@/lib/i18n";
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const t = useT();
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-xl">
-      <p className="stage-direction text-xs text-muted-foreground/70 mb-2">(backstage.)</p>
-      <h1 className="font-sans text-2xl font-medium tracking-[-0.02em] mb-6">Account settings</h1>
+      <p className="stage-direction text-xs text-muted-foreground/70 mb-2">{t("settings.direction")}</p>
+      <h1 className="font-sans text-2xl font-medium tracking-[-0.02em] mb-6">{t("settings.title")}</h1>
 
       {user?.email && (
         <p className="text-sm text-muted-foreground mb-6">
-          Signed in as {user.email}
+          {t("settings.signedInAs", { email: user.email })}
         </p>
       )}
 
@@ -33,23 +37,33 @@ export default function SettingsPage() {
           className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/60 transition-colors text-foreground"
         >
           <IconUser className="h-4 w-4 text-muted-foreground" />
-          <span>Edit profile</span>
+          <span>{t("settings.editProfile")}</span>
         </Link>
         <Link
           href="/billing"
           className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/60 transition-colors text-foreground"
         >
           <IconCreditCard className="h-4 w-4 text-muted-foreground" />
-          <span>Billing</span>
+          <span>{t("settings.billing")}</span>
         </Link>
         <Link
           href="/privacy"
           className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted/60 transition-colors text-foreground"
         >
           <IconShield className="h-4 w-4 text-muted-foreground" />
-          <span>Privacy policy</span>
+          <span>{t("settings.privacy")}</span>
         </Link>
       </nav>
+
+      {/* Language. Here rather than in the header (Canberk, 2026-11-02): it is
+          set once, and the browser already picked it right for most people. */}
+      <div className="mt-6 flex items-center justify-between gap-3 rounded-lg border border-border px-4 py-3">
+        <span className="flex items-center gap-3 text-foreground">
+          <IconLanguage className="h-4 w-4 text-muted-foreground" />
+          {t("language.label")}
+        </span>
+        <LanguageSwitch />
+      </div>
 
       {/* Danger Zone - Account Deletion */}
       <div className="mt-12 pt-8 border-t border-border">
@@ -62,9 +76,9 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-base font-medium text-foreground">Delete Account</h2>
+                <h2 className="text-base font-medium text-foreground">{t("settings.deleteTitle")}</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Permanently delete your account and all associated data. This action cannot be undone.
+                  {t("settings.deleteBody")}
                 </p>
                 <Button
                   variant="destructive"
@@ -72,7 +86,7 @@ export default function SettingsPage() {
                   className="mt-3"
                   onClick={() => setDeleteModalOpen(true)}
                 >
-                  Delete Account
+                  {t("settings.deleteTitle")}
                 </Button>
               </div>
             </div>

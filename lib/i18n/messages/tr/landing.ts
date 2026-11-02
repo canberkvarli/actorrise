@@ -107,7 +107,7 @@ export const landing: Widen<typeof en> = {
     keepScrolling: "(kaydırmaya devam.)",
     titleA: "Salon ışıkları ",
     titleB: "yandı.",
-    thereTheyAre: "(işte oradalar. oyuncular.)",
+    thereTheyAre: "(salon dolu. hepsi oyuncu.)",
   },
   landingHouse: {
     statSearches: "oyuncuların şimdiye kadar bulduğu monolog",
@@ -121,10 +121,10 @@ export const landing: Widen<typeof en> = {
     videoPlay: "Doksan saniyelik tanıtımı oynat",
     founderAlt: "Canberk Varli, ActorRise’ın kurucusu",
     founderTag: "(kurucu. o da bir oyuncu.)",
-    noteDirection: "(kulisten bir not.)",
+    noteDirection: "(perde arkasından.)",
     noteA:
-      "Ben bir oyuncuyum. Bunu yaptım çünkü seçme gecelerimi bir parça üzerinde çalışmak yerine parça aramakla geçiriyordum. Şimdi açıyorum, neye ihtiyacım varsa bir arkadaşıma söyler gibi söylüyorum ve bir dakika sonra prova yapıyorum. ",
-    noteB: "Bütün fikir bu.",
+      "Ben de oyuncuyum. ActorRise’ı, seçmelerden önceki akşamlarımı parça çalışarak değil parça arayarak geçirdiğim için yaptım. Şimdi açıyorum, aradığımı bir arkadaşıma anlatır gibi yazıyorum, bir dakika sonra provadayım. ",
+    noteB: "Mesele bu kadar.",
     founderRole: "· kurucu, ActorRise",
     talk: "(konuşmak istersen beni her yerde bulabilirsin. cevap veririm.)",
     freeA: "Ücretsiz başla. ",

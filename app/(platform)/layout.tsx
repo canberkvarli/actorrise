@@ -63,7 +63,6 @@ import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
 import { CallboardLamp, CallboardSheetRow } from "@/components/community/CallboardLamp";
 import { useHeaderLight } from "@/components/layout/useHeaderLight";
 import { HouseLightsRow, HouseLightsSwitch } from "@/components/layout/HouseLightsSwitch";
-import { LanguageSwitch } from "@/components/i18n/LanguageSwitch";
 import { SaveAsk } from "@/components/billing/SaveAsk";
 import { EmailClickBeacon } from "@/components/analytics/EmailClickBeacon";
 import { ClassLinkRedeemer } from "@/components/billing/ClassLinkRedeemer";
@@ -423,7 +422,6 @@ export default function PlatformLayout({
                 ?
               </Link>
               <HouseLightsSwitch />
-              <LanguageSwitch className="hidden sm:flex" />
               <span aria-hidden className="t-appbar__rule mx-1" />
               <div className="relative" ref={dropdownRef}>
                 <button
@@ -815,7 +813,6 @@ export default function PlatformLayout({
                 pill — see HouseLightsRow for why it is a row and not the
                 switch. */}
             <HouseLightsRow onToggle={() => setMobileMenuOpen(false)} />
-            <LanguageSwitch className="px-4 py-2" />
 
             <p className="t-sheet__dir">(curtain call.)</p>
 

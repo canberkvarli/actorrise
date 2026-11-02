@@ -5,6 +5,16 @@ export const core = {
     en: "English",
     tr: "Türkçe",
   },
+  settings: {
+    direction: "(backstage.)",
+    title: "Account settings",
+    signedInAs: "Signed in as {email}",
+    editProfile: "Edit profile",
+    billing: "Billing",
+    privacy: "Privacy policy",
+    deleteTitle: "Delete Account",
+    deleteBody: "Permanently delete your account and all associated data. This action cannot be undone.",
+  },
   nav: {
     search: "Search",
     actors: "Actors",
