@@ -918,7 +918,6 @@ const PhoneScene: React.FC<{ s: Phone; first: boolean }> = ({ s, first }) => {
       {s.cue && <Sfx name="typing" at={20} frames={typeFrames(s.cue)} vol={0.45} />}
       {mode === "search" && s.query && <Sfx name="typing" at={26} frames={Math.ceil(s.query.length * 1.15)} vol={0.45} />}
       {s.tap && <Sfx name="boop_lo" at={s.tap.at + 14} vol={0.7} />}
-      {mode === "read" && <Sfx name="slide" at={sheetAt} vol={0.6} />}
       {mode === "read" && <Sfx name="pencil_short" at={sheetAt + 26} vol={0.4} />}
       <Glow glow={0.6} y="72%" />
       <AbsoluteFill style={{ alignItems: "center", paddingTop: 150 }}>
@@ -1286,7 +1285,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
         const x = slot[i] * 1080 - camEase;
         return (
           <React.Fragment key={i}>
-            {moves[i] && <Sfx name="slide" at={starts[i] - T} vol={0.6} />}
+            {moves[i] && <Sfx name="slide" at={starts[i] - T} vol={0.28} />}
             {moves[i] && (
               <Sequence from={starts[i] - T - 2} durationInFrames={T + 14}>
                 <Streaks seed={i} />

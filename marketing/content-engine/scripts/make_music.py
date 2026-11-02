@@ -320,10 +320,8 @@ def compose(spec):
         mx.note("fx", "timpani", S["bass"][bars_pre % 4] - 12 if S["bass"][bars_pre % 4] > 40 else S["bass"][bars_pre % 4], t_drop, 1.5, 0.6)
     if style == "festive":
         mx.note("fx", "glockenspiel", S["prog"][0][0] + 24, t_drop, 1.2, 0.4)
-    # Air into every other camera move (the drop already has its riser).
-    for i in range(1, len(types)):
-        if moves[i] and abs(starts[i] - t_drop) > 0.3:
-            mx.add("fx", starts[i] - 0.45, swell(), 0.45)
+    # No extra whoosh into the cuts: the template's camera slide is the only one (Canberk, 2026-11-02:
+    # too much shoosh). The drop keeps its riser.
     # Last chord rings out under the end card.
     mx.chord("keys", {"sunny": "electric_piano_1", "pizzicato": "orchestral_harp", "build": "acoustic_grand_piano",
                       "festive": "music_box"}[style], S["prog"][0], max(t_drop, total - 1.6), 1.8, 0.3)
