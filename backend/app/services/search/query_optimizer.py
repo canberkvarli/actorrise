@@ -5,6 +5,16 @@ from difflib import get_close_matches
 from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
 
+from app.services.search.turkish_vocab import (
+    TR_FILLER_WORDS,
+    TR_MAPPINGS,
+    tr_age_range,
+    tr_duration_bounds,
+    tr_lookup,
+    tr_lower,
+    tr_stem,
+)
+
 
 def validate_query(query: str) -> tuple[bool, str]:
     """
@@ -138,17 +148,38 @@ def _derived_filter_words() -> frozenset:
     return frozenset(words)
 
 
+def _is_tr_filter_word(word: str) -> bool:
+    """A (possibly inflected) Turkish word that maps to a filter dimension."""
+    stem = tr_stem(word)
+    return stem is not None and any(stem in TR_MAPPINGS[d] for d in _FILTER_DIMENSIONS)
+
+
+def _all_turkish_known(words: List[str]) -> bool:
+    """Every word is Turkish filter vocabulary or filler, and at least one is
+    vocabulary. "komik monolog kadın" qualifies; "bir monolog" does not."""
+    hits = 0
+    for w in words:
+        if tr_stem(w) is not None:
+            hits += 1
+        elif w not in TR_FILLER_WORDS and not w.isdigit():
+            return False
+    return hits > 0
+
+
 def is_filter_only_query(query) -> bool:
     """True when the query has no semantic content beyond filter vocabulary."""
     if not query or not str(query).strip():
         return False
-    words = re.sub(r"[^a-z0-9\s-]", " ", str(query).lower()).split()
-    vocab = _FILTER_WORDS | _derived_filter_words()
+    # \w rather than a-z: "kadın" used to become "kad n", two residual words,
+    # and every Turkish filter query read as having content of its own.
+    words = re.sub(r"[^\w\s-]", " ", tr_lower(str(query))).split()
+    vocab = _FILTER_WORDS | _derived_filter_words() | TR_FILLER_WORDS
     residual = [
         w for w in words
         if w not in vocab
         and not re.fullmatch(r"\d+[a-z]*|\d+-\d+", w)
         and w.replace("-", "") not in vocab
+        and not _is_tr_filter_word(w)
     ]
     return not residual
 
@@ -198,7 +229,7 @@ class QueryClassifier:
             2: Medium complexity (keywords + embedding) - ~20% of queries
             3: Complex semantic (full AI) - ~10% of queries
         """
-        query_lower = query.lower().strip()
+        query_lower = tr_lower(query).strip()
         word_count = len(query_lower.split())
 
         # Tier 1: Single keyword or very simple
@@ -206,6 +237,15 @@ class QueryClassifier:
             for pattern in cls.TIER_1_PATTERNS:
                 if re.match(pattern, query_lower):
                     return 1
+            # Turkish single words ("komik", "kadınlar", "ihanet").
+            if tr_stem(query_lower) is not None:
+                return 1
+
+        # Turkish, made only of known words ("komik monolog kadın",
+        # "dramatik erkek monoloğu"): keyword extraction covers all of it,
+        # so the LLM parse would be paid for nothing.
+        if 2 <= word_count <= 6 and _all_turkish_known(re.findall(r"\w+", query_lower)):
+            return 2
 
         # Tier 2: 2-8 words with recognizable patterns
         # Extended from 5 to 8 to capture queries like "smart ass monologues for men under 29"
@@ -542,7 +582,7 @@ class KeywordExtractor:
         Returns:
             Dict of extracted filters
         """
-        query_lower = query.lower()
+        query_lower = tr_lower(query)
         words = re.findall(r'\b\w+[-\w]*\b', query_lower)  # Include hyphenated words
 
         filters = {}
@@ -613,6 +653,12 @@ class KeywordExtractor:
                 else:
                     filters['age_range'] = '60+'
 
+        # Turkish ages: "20'li yaşlar", "25 yaşında", "18 yaş altı".
+        if 'age_range' not in filters:
+            tr_age = tr_age_range(query_lower)
+            if tr_age:
+                filters['age_range'] = tr_age
+
         # Extract each filter type
         for word in words:
             # Check author first (highest priority)
@@ -657,6 +703,10 @@ class KeywordExtractor:
             # Check source_type (film/tv)
             if 'source_type' not in filters and word in cls.KEYWORD_MAPPINGS['source_type']:
                 filters['source_type'] = cls.KEYWORD_MAPPINGS['source_type'][word]
+
+            # Turkish, after English so an English word always wins. tr_lookup
+            # handles the inflected forms (kadınlar, monoloğu, erkeği).
+            cls._extract_turkish_word(word, filters, themes_found)
 
         # Check for famous character names (multi-word phrases)
         for char_key, char_name in cls.KEYWORD_MAPPINGS['famous_characters'].items():
@@ -761,7 +811,38 @@ class KeywordExtractor:
                     elif re.search(r'\b(?:long|lungo|largo)\b', dq):
                         filters['min_duration'] = 180
 
+            # Turkish puts the bound after the number: "2 dakikadan kısa".
+            if 'min_duration' not in filters and 'max_duration' not in filters:
+                filters.update(tr_duration_bounds(query_lower))
+
         return filters
+
+    #: (dimension in TR_MAPPINGS, filter key) for the single-valued filters.
+    _TR_SINGLE = (
+        ("author", "author"),
+        ("emotions", "emotion"),
+        ("gender", "gender"),
+        ("age_range", "age_range"),
+        ("category", "category"),
+        ("tone", "tone"),
+        ("source_type", "source_type"),
+    )
+
+    @classmethod
+    def _extract_turkish_word(cls, word: str, filters: Dict, themes_found: List[str]) -> None:
+        if tr_stem(word) is None:
+            return
+        for dim, key in cls._TR_SINGLE:
+            if key not in filters:
+                value = tr_lookup(dim, word)
+                if value is not None:
+                    filters[key] = value
+        theme = tr_lookup("themes", word)
+        if theme and theme not in themes_found:
+            themes_found.append(theme)
+        for theme in tr_lookup("character_type", word) or []:
+            if theme not in themes_found:
+                themes_found.append(theme)
 
     @staticmethod
     def _roman_to_int(roman: str) -> int:
