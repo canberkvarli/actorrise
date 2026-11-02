@@ -70,6 +70,18 @@ function performerColor(p: EffortPoint, out: THREE.Color) {
 
 export type CornerLabel = { id: ActionId; x: number; y: number; share: number; visible: boolean };
 
+/** What the page can ask of the stage. */
+export type SceneApi = {
+  /** Lights down and pull back; resolves when dark. */
+  close: () => Promise<void>;
+  /** Fly the camera back to where it started. */
+  home: () => void;
+};
+
+const easeOutExpo = (t: number) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
+
 type Props = {
   pointRef: React.MutableRefObject<EffortPoint>;
   onDrag: (p: EffortPoint) => void;
@@ -78,6 +90,8 @@ type Props = {
   onFail: (why: string) => void;
   /** WebGPU died (or never really started): the parent remounts us on WebGL2. */
   onGpuLost: () => void;
+  onHover: (id: ActionId | null) => void;
+  apiRef: React.MutableRefObject<SceneApi | null>;
   reducedMotion: boolean;
   forceWebGL: boolean;
 };
@@ -89,13 +103,15 @@ export default function EffortCubeScene({
   onLabels,
   onFail,
   onGpuLost,
+  onHover,
+  apiRef,
   reducedMotion,
   forceWebGL,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   // Keep the latest callbacks without restarting the scene.
-  const cb = useRef({ onDrag, onCorner, onLabels, onFail, onGpuLost });
-  cb.current = { onDrag, onCorner, onLabels, onFail, onGpuLost };
+  const cb = useRef({ onDrag, onCorner, onLabels, onFail, onGpuLost, onHover });
+  cb.current = { onDrag, onCorner, onLabels, onFail, onGpuLost, onHover };
 
   useEffect(() => {
     const el = host.current;
@@ -155,10 +171,12 @@ export default function EffortCubeScene({
       const cube = new THREE.Group();
       scene.add(cube);
 
-      const edges = new THREE.LineSegments(
-        new THREE.EdgesGeometry(new THREE.BoxGeometry(2, 2, 2)),
-        new THREE.LineBasicNodeMaterial({ color: new THREE.Color("#f3d9bf"), transparent: true, opacity: 0.55 }),
-      );
+      const edgesMat = new THREE.LineBasicNodeMaterial({
+        color: new THREE.Color("#f3d9bf"),
+        transparent: true,
+        opacity: 0.55,
+      });
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(2, 2, 2)), edgesMat);
       cube.add(edges);
 
       const glassMat = new THREE.MeshBasicNodeMaterial({
@@ -278,6 +296,7 @@ export default function EffortCubeScene({
       const uDelta = uniform(1 / 60);
       const uFlicker = uniform(0);
       const uDustColor = uniform(new THREE.Color("#ffcf9e"));
+      const uDustFade = uniform(0);
       const size = vec3(SIZE.x, SIZE.y, SIZE.z);
       const origin = vec3(ORIGIN.x, ORIGIN.y, ORIGIN.z);
 
@@ -311,7 +330,7 @@ export default function EffortCubeScene({
       const disc = smoothstep(float(0.5), float(0.0), length(uv().sub(0.5)));
       const twinkle = mix(float(1), sin(time.mul(14).add(seed.mul(40))).mul(0.5).add(0.5), uFlicker);
       dustMat.colorNode = uDustColor;
-      dustMat.opacityNode = disc.mul(seed.mul(0.45).add(0.15)).mul(twinkle);
+      dustMat.opacityNode = disc.mul(seed.mul(0.45).add(0.15)).mul(twinkle).mul(uDustFade);
       const dustSprites = new THREE.Sprite(dustMat);
       dustSprites.count = DUST;
       dustSprites.frustumCulled = false;
@@ -323,7 +342,9 @@ export default function EffortCubeScene({
       const pipeline = new THREE.RenderPipeline(renderer);
       const scenePass = pass(scene, camera);
       const sceneColor = scenePass.getTextureNode("output");
-      pipeline.outputNode = sceneColor.add(bloom(sceneColor, 0.95, 0.55, 0.12));
+      // Everything passes through one fader: the house lights.
+      const uFade = uniform(0);
+      pipeline.outputNode = sceneColor.add(bloom(sceneColor, 0.95, 0.55, 0.12)).mul(uFade);
 
       // ---------- Layout ----------
       const controls = new OrbitControls(camera, renderer.domElement);
@@ -335,6 +356,42 @@ export default function EffortCubeScene({
       controls.maxPolarAngle = Math.PI * 0.49;
       controls.rotateSpeed = 0.6;
 
+      // ---------- Camera flights ----------
+      const rest = { pos: new THREE.Vector3(), target: new THREE.Vector3() };
+      let cubeScale = 1;
+      type Flight = {
+        fromPos: THREE.Vector3;
+        fromTarget: THREE.Vector3;
+        toPos: THREE.Vector3;
+        toTarget: THREE.Vector3;
+        t: number;
+        dur: number;
+        ease: (t: number) => number;
+        done?: () => void;
+      };
+      let flight: Flight | null = null;
+      let closing = false;
+      const flyTo = (
+        pos: THREE.Vector3,
+        target: THREE.Vector3,
+        dur: number,
+        ease = easeOutExpo,
+        done?: () => void,
+      ) => {
+        flight = {
+          fromPos: camera.position.clone(),
+          fromTarget: controls.target.clone(),
+          toPos: pos.clone(),
+          toTarget: target.clone(),
+          t: 0,
+          dur: reducedMotion ? Math.min(dur, 0.2) : dur,
+          ease,
+          done,
+        };
+        controls.enabled = false;
+      };
+      let introStarted = false;
+
       const layout = () => {
         const w = el.clientWidth;
         const h = el.clientHeight;
@@ -342,26 +399,37 @@ export default function EffortCubeScene({
         camera.aspect = w / h;
         if (portrait) {
           cube.position.set(0, 4.15, 0);
-          cube.scale.setScalar(0.8);
+          cubeScale = 0.8;
           performer.position.set(0, 0.55, 0.4);
           performer.scale.setScalar(0.85);
           camera.fov = 52;
-          camera.position.set(3.4, 3.6, 9.2);
-          controls.target.set(0, 2.15, 0);
+          rest.pos.set(3.4, 3.6, 9.2);
+          rest.target.set(0, 2.15, 0);
         } else {
           cube.position.set(-1.8, 1.7, 0);
-          cube.scale.setScalar(1);
+          cubeScale = 1;
           performer.position.set(1.8, 0.2, 0);
           performer.scale.setScalar(1);
           camera.fov = 38;
-          camera.position.set(2.6, 3.0, 8.4);
-          controls.target.set(0, 0.95, 0);
+          rest.pos.set(2.6, 3.0, 8.4);
+          rest.target.set(0, 0.95, 0);
+        }
+        if (!introStarted) {
+          // Arrive from high and far, then settle: about a second.
+          introStarted = true;
+          camera.position.copy(rest.pos).sub(rest.target).multiplyScalar(1.9).add(rest.target);
+          camera.position.y += 2.4;
+          controls.target.copy(rest.target).add(new THREE.Vector3(0, 0.8, 0));
+          flyTo(rest.pos, rest.target, 1.35);
+        } else if (!flight) {
+          camera.position.copy(rest.pos);
+          controls.target.copy(rest.target);
         }
         poolA.value.set(cube.position.x, cube.position.z);
         poolB.value.set(performer.position.x, performer.position.z);
         camera.updateProjectionMatrix();
         renderer.setSize(w, h);
-        controls.update();
+        camera.lookAt(controls.target);
       };
       layout();
       const ro = new ResizeObserver(layout);
@@ -374,6 +442,7 @@ export default function EffortCubeScene({
       const plane = new THREE.Plane();
       const hitV = new THREE.Vector3();
       let dragging = false;
+      let hovered: ActionId | null = null;
       let downAt: { x: number; y: number } | null = null;
 
       const setNdc = (e: PointerEvent) => {
@@ -404,8 +473,14 @@ export default function EffortCubeScene({
           }
           return;
         }
-        const over = ray.intersectObject(pointHit, false).length || ray.intersectObjects(cornerHits, false).length;
-        renderer.domElement.style.cursor = over ? "grab" : "default";
+        const corner = ray.intersectObjects(cornerHits, false)[0];
+        const id = (corner?.object.userData.action as ActionId | undefined) ?? null;
+        if (id !== hovered) {
+          hovered = id;
+          cb.current.onHover(id);
+        }
+        const over = ray.intersectObject(pointHit, false).length || corner;
+        renderer.domElement.style.cursor = over ? (corner ? "pointer" : "grab") : "default";
       };
       const onUp = (e: PointerEvent) => {
         if (dragging) {
@@ -420,17 +495,44 @@ export default function EffortCubeScene({
         }
         downAt = null;
       };
+      const home = () => {
+        if (!closing) flyTo(rest.pos, rest.target, 0.75, easeInOutCubic);
+      };
       const c = renderer.domElement;
+      c.addEventListener("dblclick", home);
       c.addEventListener("pointerdown", onDown);
       c.addEventListener("pointermove", onMove);
       c.addEventListener("pointerup", onUp);
       c.addEventListener("pointercancel", onUp);
       cleanups.push(() => {
+        c.removeEventListener("dblclick", home);
         c.removeEventListener("pointerdown", onDown);
         c.removeEventListener("pointermove", onMove);
         c.removeEventListener("pointerup", onUp);
         c.removeEventListener("pointercancel", onUp);
       });
+
+      let fade = 0; // 0 dark .. 1 lit
+      let closeResolve: (() => void) | null = null;
+      apiRef.current = {
+        home,
+        close: () =>
+          new Promise<void>((resolve) => {
+            if (closing) return resolve();
+            closing = true;
+            closeResolve = resolve;
+            const back = camera.position.clone().sub(controls.target).multiplyScalar(1.35).add(controls.target);
+            back.y += 0.8;
+            flyTo(back, controls.target, 0.42, (t) => t * t);
+          }),
+      };
+      cleanups.push(() => {
+        apiRef.current = null;
+      });
+
+      // Keep it smooth: if frames run long, render fewer pixels.
+      let pixelRatio = Math.min(window.devicePixelRatio, 2);
+      let slowFor = 0;
 
       // ---------- Frame ----------
       const shown = { ...pointRef.current }; // eased toward pointRef
@@ -447,6 +549,29 @@ export default function EffortCubeScene({
       renderer.setAnimationLoop((now) => {
         timer.update(now);
         const dt = Math.min(timer.getDelta(), 0.05);
+        // House lights: up in ~0.9s on arrival, down in ~0.35s on leaving.
+        fade = closing ? Math.max(0, fade - dt / 0.35) : Math.min(1, fade + dt / (reducedMotion ? 0.3 : 0.9));
+        const lit = closing ? fade * fade : 1 - Math.pow(1 - fade, 3);
+        uFade.value = lit;
+        uDustFade.value = lit;
+        if (closing && fade === 0 && closeResolve) {
+          const r = closeResolve;
+          closeResolve = null;
+          r();
+        }
+        // The cube draws itself in: scale up from 70%, edges brighten, corners pop in turn.
+        cube.scale.setScalar(cubeScale * (0.7 + 0.3 * easeOutExpo(fade)));
+        edgesMat.opacity = 0.55 * fade;
+
+        if (!reducedMotion && dt > 1 / 40) slowFor += dt;
+        else slowFor = Math.max(0, slowFor - dt * 0.5);
+        if (slowFor > 1.5 && pixelRatio > 1) {
+          pixelRatio = Math.max(1, pixelRatio - 0.5);
+          renderer.setPixelRatio(pixelRatio);
+          renderer.setSize(el.clientWidth, el.clientHeight);
+          slowFor = 0;
+        }
+
         const target = pointRef.current;
         const ease = 1 - Math.exp(-dt * (dragging ? 30 : 7));
         shown.weight += (target.weight - shown.weight) * ease;
@@ -467,7 +592,8 @@ export default function EffortCubeScene({
           const k = 0.05 + share * 1.9;
           const col = tmpC.clone().multiplyScalar(k);
           threadCol.set([col.r, col.g, col.b, col.r * 0.25, col.g * 0.25, col.b * 0.25], i * 6);
-          corners[i].mesh.scale.setScalar(0.8 + share * 1.8);
+          const pop = easeOutExpo(clamp01(fade * 1.8 - i * 0.07));
+          corners[i].mesh.scale.setScalar((0.8 + share * 1.8) * pop);
           corners[i].mat.color.copy(PALE).multiplyScalar(0.45 + share * 2.2);
         });
         threadGeo.attributes.position.needsUpdate = true;
@@ -508,7 +634,21 @@ export default function EffortCubeScene({
         performerColor(shown, uDustColor.value as THREE.Color);
         poolHeat.value = q.mass;
 
-        controls.update();
+        if (flight) {
+          flight.t = Math.min(1, flight.t + dt / flight.dur);
+          const k = flight.ease(flight.t);
+          camera.position.lerpVectors(flight.fromPos, flight.toPos, k);
+          controls.target.lerpVectors(flight.fromTarget, flight.toTarget, k);
+          camera.lookAt(controls.target);
+          if (flight.t >= 1) {
+            const done = flight.done;
+            flight = null;
+            controls.enabled = !closing;
+            done?.();
+          }
+        } else {
+          controls.update();
+        }
         renderer.compute(stepDust);
         pipeline.render();
 
