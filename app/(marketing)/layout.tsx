@@ -22,10 +22,10 @@ import { theatreFontVars } from "@/lib/fonts/theatre";
  * already lists all of them.
  */
 const MARKETING_LINKS: TheatreNavLink[] = [
-  { href: "/about", label: "About" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/for-students", label: "Students" },
-  { href: "/guides", label: "Guides" },
+  { href: "/about", labelKey: "nav.about" },
+  { href: "/pricing", labelKey: "nav.pricing" },
+  { href: "/for-students", labelKey: "nav.students" },
+  { href: "/guides", labelKey: "nav.guides" },
 ];
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {

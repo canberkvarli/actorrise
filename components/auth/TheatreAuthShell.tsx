@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { theatreFontVars } from "@/lib/fonts/theatre";
+import { T } from "@/lib/i18n";
 
 /**
  * The frame around /login and /signup, matching the auth modal.
@@ -18,7 +19,7 @@ export function TheatreAuthShell({
   footer,
 }: {
   /** Courier eyebrow, parentheses included by the caller. */
-  direction: string;
+  direction: ReactNode;
   title: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
@@ -56,7 +57,7 @@ export function TheatreAuthShell({
           >
             <path d="M19 12H5M11 18l-6-6 6-6" />
           </svg>
-          Back
+          <T k="auth.back" />
         </Link>
 
         <div
@@ -117,11 +118,11 @@ export function TheatreAuthShell({
             color: "var(--t-faint)",
           }}
         >
-          (by continuing you agree to the{" "}
+          <T k="auth.termsBefore" />
           <Link prefetch={false} href="/terms" className="underline hover:no-underline">
-            terms
+            <T k="auth.termsLink" />
           </Link>
-          .)
+          <T k="auth.termsAfter" />
         </p>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useT } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { IconLoader2 } from "@tabler/icons-react";
 import { createBrowserClient } from "@supabase/ssr";
@@ -105,6 +106,7 @@ export function OAuthButtons({
   onEmailClick,
 }: OAuthButtonsProps) {
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(null);
+  const t = useT();
   const [lastUsed, setLastUsed] = useState<LastAuthMethod | null>(null);
 
   useEffect(() => {
@@ -174,7 +176,7 @@ export function OAuthButtons({
                     exit="exit"
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   >
-                    Last used
+                    {t("auth.lastUsed")}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -190,7 +192,7 @@ export function OAuthButtons({
                 ) : (
                   <>
                     <Icon />
-                    <span>Continue with {config.label}</span>
+                    <span>{t("auth.continueWith", { provider: config.label })}</span>
                   </>
                 )}
               </Button>
@@ -210,7 +212,7 @@ export function OAuthButtons({
                   exit="exit"
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 >
-                  Last used
+                  {t("auth.lastUsed")}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -255,7 +257,7 @@ export function OAuthButtons({
             onClick={() => handleOAuthSignIn(provider)}
             disabled={loadingProvider !== null}
             className="h-11 w-11 rounded-lg border-border hover:bg-muted hover:border-foreground/20 transition-all"
-            title={`Continue with ${config.label}`}
+            title={t("auth.continueWith", { provider: config.label })}
           >
             {isLoading ? (
               <IconLoader2 className="h-5 w-5 animate-spin" />
@@ -271,13 +273,14 @@ export function OAuthButtons({
 
 // Divider component for separating OAuth from email/password
 export function OAuthDivider() {
+  const t = useT();
   return (
     <div className="relative my-6">
       <div className="absolute inset-0 flex items-center">
         <span className="w-full border-t border-border" />
       </div>
       <div className="relative flex justify-center text-xs uppercase">
-        <span className="bg-card px-3 text-muted-foreground">or</span>
+        <span className="bg-card px-3 text-muted-foreground">{t("auth.or")}</span>
       </div>
     </div>
   );

@@ -5,14 +5,17 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useAuthModal } from "@/components/auth/AuthModalContext";
 import { TheatreCta } from "./TheatreCta";
+import { LanguageSwitch } from "@/components/i18n/LanguageSwitch";
+import { useT, type MessageKey } from "@/lib/i18n";
 
-export type TheatreNavLink = { href: string; label: string };
+/** `labelKey` rather than a label: the pill is translated (lib/i18n). */
+export type TheatreNavLink = { href: string; labelKey: MessageKey };
 
 /** The landing's own three. Marketing passes its own set. */
 const LANDING_LINKS: TheatreNavLink[] = [
-  { href: "#stage", label: "Search" },
-  { href: "#house", label: "Actors" },
-  { href: "#curtain", label: "iOS" },
+  { href: "#stage", labelKey: "nav.search" },
+  { href: "#house", labelKey: "nav.actors" },
+  { href: "#curtain", labelKey: "nav.ios" },
 ];
 
 /**
@@ -38,6 +41,7 @@ export function TheatreNav({
   /** Extras that sit before the CTA, e.g. the theme toggle. */
   children?: React.ReactNode;
 }) {
+  const t = useT();
   const position = sticky
     ? "sticky top-4 z-50 flex justify-center px-4"
     : "pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4";
@@ -54,7 +58,7 @@ export function TheatreNav({
           boxShadow: "0 10px 40px -10px rgb(0 0 0/.6)",
         }}
       >
-        <Link prefetch={false} href="/" aria-label="ActorRise home" className="flex items-center">
+        <Link prefetch={false} href="/" aria-label={t("nav.home")} className="flex items-center">
           <Image
             src="/transparent_textlogo.png"
             alt="ActorRise"
@@ -81,11 +85,12 @@ export function TheatreNav({
               className="whitespace-nowrap px-2.5 py-1.5 text-[13px] font-medium transition-colors hover:!text-[var(--t-gel)]"
               style={{ color: "var(--t-muted-light-2)" }}
             >
-              {l.label}
+              {t(l.labelKey)}
             </Link>
           ))}
         </div>
         {children}
+        <LanguageSwitch tone="dark" />
         {showAuthLink && <TheatreNavAuthLink />}
         <TheatreCta size="nav" />
       </div>
@@ -108,6 +113,7 @@ export function TheatreNav({
 function TheatreNavAuthLink() {
   const { user, loading } = useAuth();
   const authModal = useAuthModal();
+  const t = useT();
 
   /* 74px is "Practice" at this size in the loaded face, measured rather than
      guessed; "Sign in" is 66. The slot has to fit the WIDER of the two or the
@@ -120,7 +126,7 @@ function TheatreNavAuthLink() {
   if (loading) {
     return (
       <span aria-hidden className={cls} style={{ ...style, opacity: 0 }}>
-        Practice
+        {t("nav.practice")}
       </span>
     );
   }
@@ -128,7 +134,7 @@ function TheatreNavAuthLink() {
   if (user) {
     return (
       <Link prefetch={false} href="/practice" className={cls} style={style}>
-        Practice
+        {t("nav.practice")}
       </Link>
     );
   }
@@ -139,7 +145,7 @@ function TheatreNavAuthLink() {
       className={cls}
       style={style}
     >
-      Sign in
+      {t("nav.signIn")}
     </button>
   );
 }

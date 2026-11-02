@@ -17,6 +17,7 @@ import {
 import Image from "next/image";
 import { AuthProgressiveDisclosure } from "@/components/auth/AuthProgressiveDisclosure";
 import { theatreFontVars } from "@/lib/fonts/theatre";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 type AuthModalMode = "login" | "signup";
 
@@ -25,22 +26,24 @@ type AuthModalOverrides = {
   description?: string;
 };
 
-const DEFAULT_TITLES: Record<AuthModalMode, string> = {
-  signup: "Create your account",
-  login: "Welcome back",
+/* Keys, not strings: the defaults are translated at render (lib/i18n). A
+   caller's override is already in whatever language the caller wrote it. */
+const DEFAULT_TITLES: Record<AuthModalMode, MessageKey> = {
+  signup: "auth.signupTitle",
+  login: "auth.loginTitle",
 };
 
-const DEFAULT_DESCRIPTIONS: Record<AuthModalMode, string> = {
-  signup: "Start free. Upgrade anytime.",
-  login: "Sign in to continue to your dashboard.",
+const DEFAULT_DESCRIPTIONS: Record<AuthModalMode, MessageKey> = {
+  signup: "auth.signupDescription",
+  login: "auth.loginDescription",
 };
 
 /* The eyebrow carries the reassurance, so the card needs two lines of copy
    rather than three. On signup that is the same promise the hero footnote
    makes; a visitor who tapped the CTA has just read it. */
-const DIRECTIONS: Record<AuthModalMode, string> = {
-  signup: "(free to start. no card.)",
-  login: "(the ghost light is still on.)",
+const DIRECTIONS: Record<AuthModalMode, MessageKey> = {
+  signup: "auth.signupDirection",
+  login: "auth.loginDirection",
 };
 
 type AuthModalContextValue = {
@@ -63,13 +66,17 @@ type AuthModalProviderProps = {
 export function AuthModalProvider({ children }: AuthModalProviderProps) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<AuthModalMode>("signup");
-  const [title, setTitle] = useState(DEFAULT_TITLES.signup);
-  const [description, setDescription] = useState(DEFAULT_DESCRIPTIONS.signup);
+  // The copy follows the mode the modal OPENED in, not the tab, as before.
+  const [openedMode, setOpenedMode] = useState<AuthModalMode>("signup");
+  const [overrides, setOverrides] = useState<AuthModalOverrides | undefined>(undefined);
+  const t = useT();
+  const title = overrides?.title ?? t(DEFAULT_TITLES[openedMode]);
+  const description = overrides?.description ?? t(DEFAULT_DESCRIPTIONS[openedMode]);
 
-  const openAuthModal = useCallback((m: AuthModalMode, overrides?: AuthModalOverrides) => {
+  const openAuthModal = useCallback((m: AuthModalMode, o?: AuthModalOverrides) => {
     setMode(m);
-    setTitle(overrides?.title ?? DEFAULT_TITLES[m]);
-    setDescription(overrides?.description ?? DEFAULT_DESCRIPTIONS[m]);
+    setOpenedMode(m);
+    setOverrides(o);
     setOpen(true);
   }, []);
 
@@ -101,7 +108,7 @@ export function AuthModalProvider({ children }: AuthModalProviderProps) {
               />
             </div>
             <p className="t-dir pt-4 text-center" style={{ color: "var(--t-muted-light)" }}>
-              {DIRECTIONS[mode]}
+              {t(DIRECTIONS[mode])}
             </p>
             <DialogTitle
               className="pt-2 text-center"
@@ -129,7 +136,7 @@ export function AuthModalProvider({ children }: AuthModalProviderProps) {
               className="t-auth-tab"
               onClick={() => setMode("signup")}
             >
-              Sign up
+              {t("auth.signUp")}
             </button>
             <button
               type="button"
@@ -138,7 +145,7 @@ export function AuthModalProvider({ children }: AuthModalProviderProps) {
               className="t-auth-tab"
               onClick={() => setMode("login")}
             >
-              Sign in
+              {t("auth.signIn")}
             </button>
           </div>
 

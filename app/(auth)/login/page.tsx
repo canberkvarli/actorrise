@@ -2,6 +2,7 @@ import { AuthProgressiveDisclosure } from "@/components/auth/AuthProgressiveDisc
 import { AuthSwitchLink } from "@/components/auth/AuthSwitchLink";
 import { RedirectIfAuthed } from "@/components/auth/RedirectIfAuthed";
 import { TheatreAuthShell } from "@/components/auth/TheatreAuthShell";
+import { T } from "@/lib/i18n";
 
 export default function LoginPage() {
   return (
@@ -10,12 +11,12 @@ export default function LoginPage() {
           on every request. See RedirectIfAuthed. */}
       <RedirectIfAuthed />
       <TheatreAuthShell
-        direction="(the ghost light is still on.)"
-        title="Welcome back"
+        direction={<T k="auth.loginDirection" />}
+        title={<T k="auth.loginTitle" />}
         footer={
           <>
-            <span>Don&apos;t have an account? </span>
-            <AuthSwitchLink href="/signup">Sign up</AuthSwitchLink>
+            <span><T k="auth.noAccount" /></span>
+            <AuthSwitchLink href="/signup"><T k="auth.signUp" /></AuthSwitchLink>
           </>
         }
       >

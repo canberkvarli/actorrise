@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useAuthModal } from "@/components/auth/AuthModalContext";
+import { useT } from "@/lib/i18n";
 
 type Size = "hero" | "mid" | "nav";
 
@@ -24,6 +25,7 @@ export function TheatreCta({
   const { user } = useAuth();
   const authModal = useAuthModal();
   const router = useRouter();
+  const t = useT();
 
   const handleClick = () => {
     if (user) {
@@ -41,7 +43,7 @@ export function TheatreCta({
       onClick={handleClick}
       className={`t-cta ${sizeClass} ${className}`.trim()}
     >
-      Start rehearsing
+      {t("cta.startRehearsing")}
       {size !== "nav" && (
         <span className="t-cta__dot" aria-hidden>
           <svg

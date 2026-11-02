@@ -16,6 +16,7 @@ import { StaffFlag } from "@/components/analytics/StaffFlag";
 import { OAuthCallbackRedirect } from "@/components/auth/OAuthCallbackRedirect";
 import { LastAuthCookieSync } from "@/components/auth/LastAuthCookieSync";
 import { AttributionCapture } from "@/components/analytics/AttributionCapture";
+import { HtmlLang } from "@/lib/i18n";
 
 const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
@@ -292,6 +293,9 @@ export default function RootLayout({
           <Analytics />
           <GoogleAnalytics />
           <AttributionCapture />
+          {/* The HTML ships in English (static, cached); this flips <html lang>
+              once the browser has decided. See lib/i18n/locale.ts. */}
+          <HtmlLang />
         </ThemeProvider>
       </body>
     </html>

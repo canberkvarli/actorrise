@@ -160,6 +160,8 @@ CLIENT_EVENT_NAMES = frozenset(
         # A teacher's own class link (components/educator/TeacherClassCard.tsx).
         "class_link_self_made",  # {active}: made from the library; inactive waits for Canberk
         "class_link_copied",  # the teacher copied their link
+        # Turkish UI (CAN-18). Only an explicit tap on EN/TR; detection is silent.
+        "language_switched",  # {from, to}
     }
 )
 

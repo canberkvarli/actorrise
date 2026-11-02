@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -29,6 +30,7 @@ export function LoginForm({ redirectTo: redirectToProp }: LoginFormProps = {}) {
   const { login } = useAuth();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
   const [isLoading, setIsLoading] = useState(false);
 
   const redirectTo = redirectToProp ?? searchParams.get("redirect") ?? undefined;
@@ -66,7 +68,7 @@ export function LoginForm({ redirectTo: redirectToProp }: LoginFormProps = {}) {
     <div className="w-full">
       <form method="post" onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("auth.email")}</Label>
             <Input
               id="email"
               type="email"
@@ -80,7 +82,7 @@ export function LoginForm({ redirectTo: redirectToProp }: LoginFormProps = {}) {
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("auth.password")}</Label>
               {/* 14px and underlined, with room to hit it. At 12px grey it was
                   the smallest thing on the card and the one a locked-out
                   actor needs most. */}
@@ -88,7 +90,7 @@ export function LoginForm({ redirectTo: redirectToProp }: LoginFormProps = {}) {
                 href="/forgot-password"
                 className="-my-2 inline-flex min-h-9 items-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
               >
-                Forgot your password?
+                {t("auth.forgotPassword")}
               </Link>
             </div>
             <Input
@@ -119,10 +121,10 @@ export function LoginForm({ redirectTo: redirectToProp }: LoginFormProps = {}) {
             {isLoading ? (
               <>
                 <IconLoader2 className="h-4 w-4 animate-spin" />
-                Signing in...
+                {t("auth.signingIn")}
               </>
             ) : (
-              "Sign in"
+              t("auth.signIn")
             )}
           </Button>
 

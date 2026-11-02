@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -26,6 +27,7 @@ interface SignupFormProps {
 export function SignupForm({ redirectTo }: SignupFormProps = {}) {
   const { signup } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -64,7 +66,7 @@ export function SignupForm({ redirectTo }: SignupFormProps = {}) {
     <div className="w-full">
       <form method="post" onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("auth.email")}</Label>
           <Input
             id="email"
             type="email"
@@ -83,21 +85,21 @@ export function SignupForm({ redirectTo }: SignupFormProps = {}) {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("auth.password")}</Label>
           <div className="relative">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               enterKeyHint="go"
-              placeholder="At least 6 characters"
+              placeholder={t("auth.passwordHint")}
               className="pr-10"
               {...register("password")}
             />
             <button
               type="button"
               onClick={() => setShowPassword((s) => !s)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
               className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
             >
               {showPassword ? <IconEyeOff className="h-4 w-4" /> : <IconEye className="h-4 w-4" />}
@@ -116,10 +118,10 @@ export function SignupForm({ redirectTo }: SignupFormProps = {}) {
           {isLoading ? (
             <>
               <IconLoader2 className="h-4 w-4 animate-spin" />
-              Creating account...
+              {t("auth.creatingAccount")}
             </>
           ) : (
-            "Create account"
+            t("auth.createAccount")
           )}
         </Button>
       </form>

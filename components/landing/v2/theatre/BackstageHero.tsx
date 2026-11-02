@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { TheatreCta } from "./TheatreCta";
+import { useT } from "@/lib/i18n";
 
 /**
  * Act I — backstage. A dark wall of half-remembered lines, one working light,
@@ -64,14 +65,12 @@ function Wall({ lit }: { lit?: boolean }) {
   );
 }
 
-const DIRECTION_ON = "(backstage. five minutes to places.)";
-const DIRECTION_OFF = "(who turned off the ghost light? click it again.)";
-
 export function BackstageHero() {
   const heroRef = useRef<HTMLElement>(null);
   const bulbRef = useRef<HTMLDivElement>(null);
   const [lampOn, setLampOn] = useState(true);
   const lampRef = useRef(true);
+  const t = useT();
 
   /* Physics live in refs. None of this belongs in React state — it changes
      every frame and nothing renders from it. */
@@ -193,7 +192,7 @@ export function BackstageHero() {
         role="button"
         tabIndex={0}
         aria-pressed={lampOn}
-        aria-label={lampOn ? "Turn the ghost light off" : "Turn the ghost light on"}
+        aria-label={lampOn ? t("hero.lampOff") : t("hero.lampOn")}
         onPointerDown={(e) => {
           const b = bulb.current;
           b.drag = true;
@@ -263,19 +262,19 @@ export function BackstageHero() {
         }}
       >
         <p className="t-dir t-rise" style={{ color: "var(--t-muted-light)" }}>
-          {lampOn ? DIRECTION_ON : DIRECTION_OFF}
+          {lampOn ? t("hero.directionOn") : t("hero.directionOff")}
         </p>
 
         <div className="relative mx-auto mt-7 max-w-[1100px]">
           <h1 className="t-h1">
             <span className="t-rise block" style={{ "--t-d": ".1s" } as React.CSSProperties}>
-              Stop hunting.
+              {t("hero.titleA")}
             </span>
             <span
               className="t-rise t-em block"
               style={{ "--t-d": ".25s", color: "var(--t-orange)" } as React.CSSProperties}
             >
-              Start rehearsing.
+              {t("hero.titleB")}
             </span>
           </h1>
         </div>
@@ -291,9 +290,7 @@ export function BackstageHero() {
             } as React.CSSProperties
           }
         >
-          19,000 monologues from real plays, film and TV. Describe the piece the way
-          you&rsquo;d say it to a friend. Then run it with a scene partner who never
-          cancels.
+          {t("hero.body")}
         </p>
 
         <div
@@ -311,10 +308,10 @@ export function BackstageHero() {
               color: "var(--t-faint-2)",
             }}
           >
-            <span>(free to start. no card.)</span>
+            <span>{t("hero.free")}</span>
             <span style={{ opacity: 0.4 }}>·</span>
             <a href="#curtain" className="transition-colors hover:!text-[var(--t-gel)]">
-              (on iOS)
+              {t("hero.onIos")}
             </a>
           </p>
         </div>

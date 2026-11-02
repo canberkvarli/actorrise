@@ -8,6 +8,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useT } from "@/lib/i18n";
 
 type AuthMode = "login" | "signup";
 
@@ -37,6 +38,7 @@ function AuthProgressiveDisclosureInner({
   redirectTo: redirectToProp = "/practice",
 }: AuthProgressiveDisclosureProps) {
   const [showEmailForm, setShowEmailForm] = useState(false);
+  const t = useT();
 
   // ?redirect= wins over the caller's default. Middleware sets it when it
   // bounces you off a page that needed auth (a Green Room invite, checkout),
@@ -46,7 +48,7 @@ function AuthProgressiveDisclosureInner({
   const redirectTo = searchParams.get("redirect") || redirectToProp;
 
   const emailButtonLabel =
-    mode === "login" ? "Sign in with email" : "Continue with email";
+    mode === "login" ? t("auth.signInWithEmail") : t("auth.continueWithEmail");
 
   return (
     <div className="space-y-5">
@@ -70,7 +72,7 @@ function AuthProgressiveDisclosureInner({
             className="inline-flex min-h-11 items-center px-2 text-sm underline underline-offset-4 transition-colors hover:text-[var(--t-cream)]"
             style={{ color: "var(--t-muted-light-2)" }}
           >
-            Forgot your password?
+            {t("auth.forgotPassword")}
           </Link>
         </p>
       )}

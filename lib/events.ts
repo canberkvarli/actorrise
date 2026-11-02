@@ -50,7 +50,8 @@ export type UserEventName =
   | "audition_strip_clicked"
   | "calendar_feed_subscribed"
   | "class_link_self_made"
-  | "class_link_copied";
+  | "class_link_copied"
+  | "language_switched";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

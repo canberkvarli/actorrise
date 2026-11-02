@@ -10,6 +10,7 @@ import { ReadWallModal } from "@/components/monologue/ReadWallModal";
 import { TasteNote } from "@/components/billing/TasteNote";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
+import { useT, useTList } from "@/lib/i18n";
 import { trackEvent } from "@/lib/events";
 import { AuditionStrip } from "@/components/auditions/AuditionStrip";
 import { TeacherClassCard } from "@/components/educator/TeacherClassCard";
@@ -151,6 +152,8 @@ function SearchContent() {
   const searchParams = useSearchParams();
   const reducedMotion = useReducedMotion();
   const { user, isDemoUser } = useAuth();
+  const t = useT();
+  const tList = useTList();
   const { show: showSearchTour, dismiss: dismissSearchTour } =
     useTourTrigger("has_seen_search_tour", { delay: 800 });
   const trialWords = useTrialWords();
@@ -315,45 +318,15 @@ function SearchContent() {
      teach you that you can ask in plain English — was the thing a phone could
      not read. The short set says the same in half the characters. */
   const isPhone = useIsPhone();
+  // The examples live in lib/i18n/messages: a Turkish actor is taught to ask
+  // in Turkish, which the search understands (query_optimizer TR vocabulary).
   const PLAYS_EXAMPLES = useMemo(
-    () =>
-      isPhone
-        ? [
-            "funny, under 2 minutes",
-            "dramatic classical",
-            "comedic, about love",
-            "angry, contemporary",
-            "for drama school",
-            "Shakespeare, young man",
-          ]
-        : [
-            "funny monologue for a 20 year old, under 2 min",
-            "dramatic classical piece for a woman",
-            "comedic monologue about love",
-            "angry male monologue, contemporary",
-            "audition piece for drama school",
-            "Shakespeare monologue for a young man",
-          ],
-    [isPhone],
+    () => [...tList(isPhone ? "search.examplesPlaysShort" : "search.examplesPlays")],
+    [isPhone, tList],
   );
   const FILM_TV_EXAMPLES = useMemo(
-    () =>
-      isPhone
-        ? [
-            "courtroom, intense",
-            "breakup scene",
-            "villain monologue",
-            "awkward first date",
-            "motivational speech",
-          ]
-        : [
-            "courtroom drama, intense closing argument",
-            "breakup scene, emotional",
-            "villain monologue, intimidating",
-            "comedy, awkward first date scene",
-            "war film, motivational speech",
-          ],
-    [isPhone],
+    () => [...tList(isPhone ? "search.examplesFilmTvShort" : "search.examplesFilmTv")],
+    [isPhone, tList],
   );
 
   const queryHighlights = useMemo(() => extractQueryHighlights(queryUsedForResults || playsQuery), [queryUsedForResults, playsQuery]);
@@ -1657,45 +1630,48 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     subscribeNever,
     () => {
       const h = new Date().getHours();
-      if (h < 12) return "this morning";
-      if (h < 17) return "today";
-      return "tonight";
+      if (h < 12) return "whenMorning" as const;
+      if (h < 17) return "whenToday" as const;
+      return "whenTonight" as const;
     },
-    () => "today",
+    () => "whenToday" as const,
   );
+  const when = t(`search.${whenWord}`);
 
   const headDirection =
     /* The shake alone says "no", not "no, because". The direction line is
        already the page's voice; it holds the answer until the box has one. */
     jitter
-      ? "(give me something. a feeling, a play, a name.)"
+      ? t("search.directionNudge")
       : headState === "searching"
-      ? "(the house goes quiet.)"
+      ? t("search.directionSearching")
       : headState === "results"
-        ? "(lights to half.)"
+        ? t("search.directionResults")
         : searchMode === "film_tv"
-          ? "(film & tv. the screen shelf.)"
-          : "(the search. say it out loud.)";
+          ? t("search.directionFilmTv")
+          : t("search.directionPlays");
 
   const headTitle =
     headState === "searching" ? (
       <em className="t-em" style={{ color: "var(--acc)" }}>
-        Looking.
+        {t("search.looking")}
       </em>
     ) : headState === "results" ? (
       <>
-        Here&rsquo;s what{" "}
+        {t("search.resultsA")}
         <em className="t-em" style={{ color: "var(--acc)" }}>
-          came back.
+          {t("search.resultsB")}
         </em>
       </>
     ) : (
       <>
-        What do you{" "}
+        {/* Three parts because the emphasis moves with the word order:
+            "What do you NEED tonight?" / "Bu akşam neye İHTİYACIN var?" */}
+        {t("search.needA", { when })}
         <em className="t-em" style={{ color: "var(--acc)" }}>
-          need
-        </em>{" "}
-        {whenWord}?
+          {t("search.needB", { when })}
+        </em>
+        {t("search.needC", { when })}
       </>
     );
 
@@ -2012,8 +1988,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               placeholder={
                 typewriterText ||
                 (searchMode === "film_tv"
-                  ? isPhone ? "Search scripts…" : "Search scripts, scenes, speeches..."
-                  : isPhone ? "Search monologues…" : "Search monologues...")
+                  ? isPhone ? t("search.placeholderScriptsShort") : t("search.placeholderScripts")
+                  : isPhone ? t("search.placeholderMonologuesShort") : t("search.placeholderMonologues"))
               }
               value={searchMode === "plays" ? playsQuery : filmTvQuery}
               onChange={(e) => {
@@ -2049,8 +2025,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <button
                 type="button"
                 onClick={() => (searchMode === "plays" ? setPlaysQuery("") : setFilmTvQuery(""))}
-                aria-label="Clear search"
-                title="Clear"
+                aria-label={t("search.clearSearch")}
+                title={t("search.clear")}
                 className="t-clear-query"
               >
                 <IconX className="size-4" />
@@ -2059,7 +2035,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <button
               type="button"
               onClick={isLoading ? stopSearch : handleSearch}
-              aria-label={isLoading ? "Stop search" : "Search"}
+              aria-label={isLoading ? t("search.stopSearch") : t("search.search")}
               className="flex h-9 shrink-0 items-center gap-1.5 pl-3.5 pr-1 text-[13px] font-bold transition-transform hover:scale-[1.04] hover:-rotate-[1.5deg] sm:h-11 sm:gap-2.5 sm:pl-5 sm:pr-1.5 sm:text-[15px]"
               style={{
                 borderRadius: 999,
@@ -2069,7 +2045,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 transitionTimingFunction: "var(--t-spring)",
               }}
             >
-              {isLoading ? "Looking" : "Search"}
+              {isLoading ? t("search.searching") : t("search.search")}
               <span
                 className="flex size-6 items-center justify-center rounded-full"
                 style={{ background: "var(--t-cta-dot-bg)", color: "var(--t-cta-dot-fg)" }}
@@ -2104,7 +2080,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               style={{ minHeight: 68, borderRadius: 40 }}
             >
               <IconSparkles className="size-[18px]" />
-              Find for me
+              {t("search.findForMe")}
             </button>
           )}
         </div>
@@ -2133,7 +2109,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   style={{ borderWidth: 1.5 }}
                 >
                   <IconSparkles className="size-[14px]" />
-                  Find for me
+                  {t("search.findForMe")}
                 </button>
               ) : undefined}
               filters={filters}
@@ -2180,7 +2156,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           <Dialog open={showFilters} onOpenChange={setShowFilters}>
             <DialogContent className="max-w-3xl p-0 gap-0">
               <DialogHeader className="border-b border-border/60 px-6 py-4">
-                <DialogTitle className="font-brand text-2xl font-medium">Narrow it down</DialogTitle>
+                <DialogTitle className="font-brand text-2xl font-medium">{t("search.narrowItDown")}</DialogTitle>
                 <DialogDescription className="stage-direction text-xs text-muted-foreground/70">
                   (who you are, what it feels like, how long you have.)
                 </DialogDescription>
