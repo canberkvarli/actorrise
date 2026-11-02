@@ -539,6 +539,246 @@ export const COLLECTIONS: Collection[] = [
     filters: { tones: ["dark"] },
     related: ["othello-monologues", "macbeth-monologues", "monologues-about-revenge"],
   },
+  /* ------------------------------------------------------------------------
+   * Added 2026-11-02. One page per show for the film and TV titles with the
+   * most pieces. Google already lands actors on single film and TV pages
+   * (Lady Bird, Black Swan, Barry). Copyrighted: each entry names the piece and
+   * the length, never the text. Counts are from the corpus on the day.
+   * ---------------------------------------------------------------------- */
+  {
+    slug: "midnight-mass-monologues",
+    title: "Midnight Mass Monologues: Father Paul, Bev, Erin and Riley",
+    h1: { em: "Midnight Mass", rest: "monologues, by character" },
+    direction: "(crockett island.)",
+    description:
+      "Monologues from Midnight Mass by character: Father Paul, Bev, Erin, Riley and Leeza, with tone and running time for each.",
+    intro:
+      "Fifty-seven speeches from the show, the most of any series on ActorRise. Father Paul's sixteen, Bev's twelve, Erin's eleven and Riley's nine, with Leeza and Mildred beside them. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Midnight Mass",
+    filters: { plays: ["Midnight Mass"] },
+    related: ["the-night-manager-monologues", "big-little-lies-monologues", "monologues-about-grief"],
+  },
+  {
+    slug: "breaking-bad-monologues",
+    title: "Breaking Bad Monologues: Jesse, Walt, Saul and Skyler",
+    h1: { em: "Breaking Bad", rest: "monologues, by character" },
+    direction: "(albuquerque.)",
+    description:
+      "Monologues from Breaking Bad by character: Jesse, Walt, Saul, Skyler, Mike and Hank, with tone and running time for each.",
+    intro:
+      "Twenty-five speeches. Jesse's six and Walt's five, then Saul, Skyler, Mike, Gale and Hank, and a few from people who only get one scene and make it count. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Breaking Bad",
+    filters: { plays: ["Breaking Bad"] },
+    related: ["ozark-monologues", "true-detective-monologues", "villain-monologues"],
+  },
+  {
+    slug: "succession-monologues",
+    title: "Succession Monologues: Shiv, Roman, Kendall and Tom",
+    h1: { em: "Succession", rest: "monologues, by character" },
+    direction: "(the roy family.)",
+    description:
+      "Monologues from Succession by character: Shiv, Roman, Kendall, Tom and Caroline, with tone and running time for each.",
+    intro:
+      "Sixteen speeches from the Roy family and the people around them. Shiv's four and Roman's four, Kendall's three, and Tom, Caroline, Frank and Karolina. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Succession",
+    filters: { plays: ["Succession"] },
+    related: ["the-night-manager-monologues", "big-little-lies-monologues", "contemporary-dramatic-monologues-for-women"],
+  },
+  {
+    slug: "ted-lasso-monologues",
+    title: "Ted Lasso Monologues: Ted, Rebecca, Roy and Nate",
+    h1: { em: "Ted Lasso", rest: "monologues, by character" },
+    direction: "(richmond.)",
+    description:
+      "Monologues from Ted Lasso by character: Ted, Rebecca, Roy, Nate and Higgins, with tone and running time for each.",
+    intro:
+      "Sixteen speeches. Ted's six, Rebecca's three, and Roy, Nate, Higgins and Trent. Comedy that turns on a dime, which is exactly what a lot of auditions ask for. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Ted Lasso",
+    filters: { plays: ["Ted Lasso"] },
+    related: ["community-monologues", "contemporary-comedic-monologues-for-women", "comedic-monologues-for-men-under-2-minutes"],
+  },
+  {
+    slug: "bridgerton-monologues",
+    title: "Bridgerton Monologues: Daphne, Kate, Violet and Eloise",
+    h1: { em: "Bridgerton", rest: "monologues, by character" },
+    direction: "(mayfair, the season.)",
+    description:
+      "Monologues from Bridgerton by character: Daphne, Kate, Violet, Eloise, Penelope and Lady Danbury, with tone and running time for each.",
+    intro:
+      "Fifteen speeches. Daphne's four, Kate's three, Violet's two, and Eloise, Penelope, Lady Danbury, Lady Featherington and Anthony. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Bridgerton",
+    filters: { plays: ["Bridgerton"] },
+    related: ["monologues-about-love", "contemporary-dramatic-monologues-for-women", "big-little-lies-monologues"],
+  },
+  {
+    slug: "black-mirror-monologues",
+    title: "Black Mirror Monologues: Bing, Walton and Judge Hope",
+    h1: { em: "Black Mirror", rest: "monologues, by character" },
+    direction: "(a screen, somewhere.)",
+    description:
+      "Monologues from Black Mirror by character: Bing, Walton, Judge Hope and Jonas, with tone and running time for each.",
+    intro:
+      "Fifteen speeches across the anthology. All four of Bing's from Fifteen Million Merits, Walton's four, Judge Hope's three, and Jonas, Max, Rod and Captain Daly. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Black Mirror",
+    filters: { plays: ["Black Mirror"] },
+    related: ["severance-monologues", "midnight-mass-monologues", "contemporary-dramatic-monologues-for-men"],
+  },
+  {
+    slug: "big-little-lies-monologues",
+    title: "Big Little Lies Monologues: Madeline, Jane, Celeste and Renata",
+    h1: { em: "Big Little Lies", rest: "monologues, by character" },
+    direction: "(monterey.)",
+    description:
+      "Monologues from Big Little Lies by character: Madeline, Jane, Celeste, Renata and Ed, with tone and running time for each.",
+    intro:
+      "Twenty-seven speeches. Madeline's seven and Jane's seven, Ed's three, Celeste's two, and Renata among the rest. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Big Little Lies",
+    filters: { plays: ["Big Little Lies"] },
+    related: ["succession-monologues", "contemporary-dramatic-monologues-for-women", "monologues-for-women-over-40"],
+  },
+  {
+    slug: "yellowstone-monologues",
+    title: "Yellowstone Monologues: John Dutton, Jamie and Rainwater",
+    h1: { em: "Yellowstone", rest: "monologues, by character" },
+    direction: "(the ranch.)",
+    description:
+      "Monologues from Yellowstone by character: John Dutton, Jamie Dutton, Rainwater and Senator Perry, with tone and running time for each.",
+    intro:
+      "Fifteen speeches. John Dutton's four, Jamie's two, Rainwater's two, Senator Perry's two, and Pastor Bob, Sarah Atwood and Red Bear. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Yellowstone",
+    filters: { plays: ["Yellowstone"] },
+    related: ["breaking-bad-monologues", "true-detective-monologues", "contemporary-dramatic-monologues-for-men"],
+  },
+  {
+    slug: "community-monologues",
+    title: "Community Monologues: Abed, Jeff, Britta and Annie",
+    h1: { em: "Community", rest: "monologues, by character" },
+    direction: "(greendale.)",
+    description:
+      "Monologues from Community by character: Abed, Jeff, Britta, Annie, Shirley and the Dean, with tone and running time for each.",
+    intro:
+      "Fourteen speeches. Abed's four, Jeff's three, Britta's two, and Annie, Shirley, Duncan and Dean Pelton. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Community",
+    filters: { plays: ["Community"] },
+    related: ["ted-lasso-monologues", "comedic-monologues-for-men-under-2-minutes", "contemporary-comedic-monologues-for-women"],
+  },
+  {
+    slug: "chernobyl-monologues",
+    title: "Chernobyl Monologues: Legasov, Shcherbina and Khomyuk",
+    h1: { em: "Chernobyl", rest: "monologues, by character" },
+    direction: "(pripyat, 1986.)",
+    description:
+      "Monologues from Chernobyl by character: Legasov, Shcherbina and Khomyuk, with tone and running time for each.",
+    intro:
+      "Fourteen speeches. Legasov's seven, Shcherbina's three, Khomyuk's two, and Bacho and Charkov. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Chernobyl",
+    filters: { plays: ["Chernobyl"] },
+    related: ["the-night-manager-monologues", "true-detective-monologues", "contemporary-dramatic-monologues-for-men"],
+  },
+  {
+    slug: "true-detective-monologues",
+    title: "True Detective Monologues: Rust Cohle and Marty Hart",
+    h1: { em: "True Detective", rest: "monologues, by character" },
+    direction: "(louisiana.)",
+    description:
+      "Monologues from True Detective by character: Rust Cohle, Marty Hart and Danvers, with tone and running time for each.",
+    intro:
+      "Twenty-one speeches. Thirteen of them are Rust Cohle's, with Marty Hart's five and Danvers's two. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from True Detective",
+    filters: { plays: ["True Detective"] },
+    related: ["breaking-bad-monologues", "chernobyl-monologues", "contemporary-dramatic-monologues-for-men"],
+  },
+  {
+    slug: "the-night-manager-monologues",
+    title: "The Night Manager Monologues: Burr, Roper, Corkoran and Pine",
+    h1: { em: "The Night Manager", rest: "monologues, by character" },
+    direction: "(a hotel in cairo.)",
+    description:
+      "Monologues from The Night Manager by character: Burr, Roper, Corkoran, Pine, Jed and Sophie, with tone and running time for each.",
+    intro:
+      "Thirty-five speeches. Burr's twelve, Roper's seven, Corkoran's four and Pine's three, with Jed, Sophie and Steadman. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from The Night Manager",
+    filters: { plays: ["The Night Manager"] },
+    related: ["succession-monologues", "chernobyl-monologues", "villain-monologues"],
+  },
+  {
+    slug: "severance-monologues",
+    title: "Severance Monologues: Cobel and Mark",
+    h1: { em: "Severance", rest: "monologues, by character" },
+    direction: "(the severed floor.)",
+    description:
+      "Monologues from Severance by character: Cobel, Mark inside and Mark outside, with tone and running time for each.",
+    intro:
+      "Nine speeches. Cobel's four, and Mark from both sides of the floor. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Severance",
+    filters: { plays: ["Severance"] },
+    related: ["black-mirror-monologues", "midnight-mass-monologues", "contemporary-dramatic-monologues-for-men"],
+  },
+  {
+    slug: "barry-monologues",
+    title: "Barry Monologues: Barry, Sally, Cousineau and Noho Hank",
+    h1: { em: "Barry", rest: "monologues, by character" },
+    direction: "(an acting class in los angeles.)",
+    description:
+      "Monologues from Barry by character: Barry, Sally, Gene Cousineau, Fuches and Noho Hank, with tone and running time for each.",
+    intro:
+      "Nine speeches from the show about an acting class. Barry's three, and Sally, Cousineau, Fuches, Noho Hank, Chris and Ryan. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Barry",
+    filters: { plays: ["Barry"] },
+    related: ["ted-lasso-monologues", "community-monologues", "comedic-monologues-for-men-under-2-minutes"],
+  },
+  {
+    slug: "ozark-monologues",
+    title: "Ozark Monologues: Marty, Del and Bruce",
+    h1: { em: "Ozark", rest: "monologues, by character" },
+    direction: "(the lake.)",
+    description:
+      "Monologues from Ozark by character: Marty Byrde, Del and Bruce, with tone and running time for each.",
+    intro:
+      "Eleven speeches. Bruce's four, Marty's three and Del's three, and Bob Evans. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Ozark",
+    filters: { plays: ["Ozark"] },
+    related: ["breaking-bad-monologues", "yellowstone-monologues", "villain-monologues"],
+  },
+  {
+    slug: "a-few-good-men-monologues",
+    title: "A Few Good Men Monologues: Jessep, Kaffee and Jo",
+    h1: { em: "A Few Good Men", rest: "monologues, by character" },
+    direction: "(the courtroom.)",
+    description:
+      "Monologues from A Few Good Men by character: Colonel Jessep, Kaffee, Jo and Dawson, with tone and running time for each.",
+    intro:
+      "Nine speeches. Five are Colonel Jessep's, with Kaffee, Jo, Dawson and Ross. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from A Few Good Men",
+    filters: { plays: ["A Few Good Men"] },
+    related: ["pulp-fiction-monologues", "the-wolf-of-wall-street-monologues", "villain-monologues"],
+  },
+  {
+    slug: "pulp-fiction-monologues",
+    title: "Pulp Fiction Monologues: Jules, Butch and the Wolf",
+    h1: { em: "Pulp Fiction", rest: "monologues, by character" },
+    direction: "(los angeles.)",
+    description:
+      "Monologues from Pulp Fiction by character: Jules, Butch, Captain Koons and the Wolf, with tone and running time for each.",
+    intro:
+      "Eight speeches. Jules's three, and Butch, Captain Koons, Jimmie, Marsellus and the Wolf. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from Pulp Fiction",
+    filters: { plays: ["Pulp Fiction"] },
+    related: ["a-few-good-men-monologues", "the-wolf-of-wall-street-monologues", "villain-monologues"],
+  },
+  {
+    slug: "the-wolf-of-wall-street-monologues",
+    title: "The Wolf of Wall Street Monologues: Jordan Belfort",
+    h1: { em: "The Wolf of Wall Street", rest: "monologues, by character" },
+    direction: "(the trading floor.)",
+    description:
+      "Monologues from The Wolf of Wall Street by character: Jordan Belfort and Mark Hanna, with tone and running time for each.",
+    intro:
+      "Ten speeches. Nine are Jordan Belfort's and one is Mark Hanna's. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+    query: "monologue from The Wolf of Wall Street",
+    filters: { plays: ["The Wolf Of Wall Street"] },
+    related: ["a-few-good-men-monologues", "pulp-fiction-monologues", "contemporary-dramatic-monologues-for-men"],
+  },
 ];
 
 export function findCollection(slug: string): Collection | null {
