@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -30,23 +32,15 @@ const SEARCH_QUERY = "comedic monologue woman under 2 minutes";
 export default function Page() {
   return (
     <StageHero
-      direction="(quick comedy.)"
+      direction={<T k="seoDirections.comedicWomanUnder2" />}
       title={
-        <>
-          <em className="italic text-primary">Comedic</em> monologue for woman under 2 minutes
-        </>
+        <SeoT k="seoShelf.comedicWomanUnder2.title" slots={{ em: <em className="italic text-primary"><T k="seoShelf.comedicWomanUnder2.titleEm" /></em> }} />
       }
-      lede={
-        <>
-          One of the most common searches we see. ActorRise has thousands of comedic monologues for
-          women, and you can filter by length, tone, and style. Or just describe what you need in
-          plain English.
-        </>
-      }
+      lede={<T k="seoShelf.comedicWomanUnder2.lede" />}
     >
       <Button asChild size="lg" className="rounded-full px-6">
         <Link prefetch={false} href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
-          Search 19,000+ monologues
+          <T k="seoCommon.search19k" />
         </Link>
       </Button>
     </StageHero>

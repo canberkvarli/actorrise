@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -30,23 +32,15 @@ const SEARCH_QUERY = "dramatic monologue contemporary play";
 export default function Page() {
   return (
     <StageHero
-      direction="(modern drama.)"
+      direction={<T k="seoDirections.dramaticContemporary" />}
       title={
-        <>
-          Dramatic monologue from a <em className="italic text-primary">contemporary</em> play
-        </>
+        <SeoT k="seoShelf.dramaticContemporary.title" slots={{ em: <em className="italic text-primary"><T k="seoShelf.dramaticContemporary.titleEm" /></em> }} />
       }
-      lede={
-        <>
-          Looking for something serious, modern, and not overdone? We have thousands of dramatic
-          monologues from contemporary plays. Search by emotion, relationship, or length. No keyword
-          guessing.
-        </>
-      }
+      lede={<T k="seoShelf.dramaticContemporary.lede" />}
     >
       <Button asChild size="lg" className="rounded-full px-6">
         <Link prefetch={false} href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
-          Search 19,000+ monologues
+          <T k="seoCommon.search19k" />
         </Link>
       </Button>
     </StageHero>

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -30,23 +32,15 @@ const SEARCH_QUERY = "classical monologue Shakespeare";
 export default function Page() {
   return (
     <StageHero
-      direction="(the classics.)"
+      direction={<T k="seoDirections.classical" />}
       title={
-        <>
-          <em className="italic text-primary">Classical</em> monologues for auditions
-        </>
+        <SeoT k="seoShelf.classical.title" slots={{ em: <em className="italic text-primary"><T k="seoShelf.classical.titleEm" /></em> }} />
       }
-      lede={
-        <>
-          From Shakespeare to other classic texts. Search by play, character type, or mood. Our
-          database includes thousands of classical pieces, and the AI understands what you mean, not
-          just the words you type.
-        </>
-      }
+      lede={<T k="seoShelf.classical.lede" />}
     >
       <Button asChild size="lg" className="rounded-full px-6">
         <Link prefetch={false} href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
-          Search 19,000+ monologues
+          <T k="seoCommon.search19k" />
         </Link>
       </Button>
     </StageHero>

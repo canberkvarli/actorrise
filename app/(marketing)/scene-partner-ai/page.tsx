@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -61,14 +63,11 @@ export default function Page() {
   return (
     <>
       <StageHero
-        direction="(the rehearsal.)"
+        direction={<T k="seoDirections.scenePartner" />}
         title={
-          <>
-            Scene partner AI: <em className="italic text-primary">rehearse</em> anytime, no
-            scheduling
-          </>
+          <SeoT k="seoScenePartner.title" slots={{ em: <em className="italic text-primary"><T k="seoScenePartner.titleEm" /></em> }} />
         }
-        lede="ScenePartner reads the other lines out loud so you can rehearse scenes on your own. Run your sides before an audition, practice film and TV scenes, or work through monologues with context. It listens for your lines and responds with the next cue."
+        lede={<T k="seoScenePartner.lede" />}
       />
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
@@ -80,88 +79,93 @@ export default function Page() {
         <li className="flex gap-2">
           <span className="text-primary">&middot;</span>
           <span>
-            <strong className="text-foreground">Run sides</strong>: paste or upload your audition
-            sides and rehearse with AI reading the other parts.
+            <SeoT k="seoScenePartner.b1" slots={{ strong: <strong className="text-foreground"><T k="seoScenePartner.b1Strong" /></strong> }} />
           </span>
         </li>
         <li className="flex gap-2">
           <span className="text-primary">&middot;</span>
           <span>
-            <strong className="text-foreground">Film & TV scenes</strong>: rehearse from
-            monologues extracted from iconic screenplays.
+            <SeoT k="seoScenePartner.b2" slots={{ strong: <strong className="text-foreground"><T k="seoScenePartner.b2Strong" /></strong> }} />
           </span>
         </li>
         <li className="flex gap-2">
           <span className="text-primary">&middot;</span>
           <span>
-            <strong className="text-foreground">No scheduling</strong>: rehearse at 2am, on the
-            subway, or five minutes before your audition. No favors needed.
+            <SeoT k="seoScenePartner.b3" slots={{ strong: <strong className="text-foreground"><T k="seoScenePartner.b3Strong" /></strong> }} />
           </span>
         </li>
       </ul>
       <div className="flex flex-wrap gap-4">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link prefetch={false} href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup"><T k="cta.startRehearsing" /></Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link prefetch={false} href="/audition-ai">Learn more about Audition AI</Link>
+          <Link prefetch={false} href="/audition-ai"><T k="seoScenePartner.learnMore" /></Link>
         </Button>
       </div>
 
       <div className="mt-12 space-y-3 text-sm text-muted-foreground">
         <p>
-          Need material first? Try the{" "}
-          <Link prefetch={false} href="/monologue-finder" className="text-foreground underline hover:no-underline">
-            monologue finder
-          </Link>{" "}
-          or browse{" "}
-          <Link prefetch={false} href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
-            dramatic monologues
-          </Link>{" "}
-          and{" "}
-          <Link prefetch={false} href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
-            contemporary monologues
-          </Link>
-          .
+          <SeoT
+            k="seoScenePartner.need"
+            slots={{
+              finder: (
+                <Link prefetch={false} href="/monologue-finder" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.finder" />
+                </Link>
+              ),
+              dramatic: (
+                <Link prefetch={false} href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.dramatic" />
+                </Link>
+              ),
+              contemporary: (
+                <Link prefetch={false} href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.contemporary" />
+                </Link>
+              ),
+            }}
+          />
         </p>
       </div>
 
       <section className="mt-16 border-t border-border pt-12">
-        <h2 className="text-2xl font-bold text-foreground mb-8">Frequently asked questions</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-8"><T k="seoCommon.faqTitle" /></h2>
 
         <div className="space-y-6">
           <div>
             <h3 className="font-semibold text-foreground mb-2">
-              How does ScenePartner AI work?
+              <T k="seoScenePartner.q1" />
             </h3>
             <p className="text-muted-foreground">
-              Pick a scene or monologue, choose which character you want to play, and hit start.
-              ScenePartner reads the other lines out loud using text-to-speech. It listens for your
-              cue lines and advances automatically, so you can rehearse hands-free.
+              <T k="seoScenePartner.a1" />
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-foreground mb-2">
-              Is ScenePartner free?
+              <T k="seoScenePartner.q2" />
             </h3>
             <p className="text-muted-foreground">
-              The free tier includes limited ScenePartner sessions. For unlimited rehearsal, check
-              the{" "}
-              <Link prefetch={false} href="/pricing" className="text-foreground underline hover:no-underline">
-                pricing page
-              </Link>
-              .
+              <SeoT
+                k="seoScenePartner.a2"
+                slots={{
+                  pricing: (
+                <Link prefetch={false} href="/pricing" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.pricing" />
+                </Link>
+              ),
+                }}
+              />
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-foreground mb-2">
-              Can I use my own sides or scripts?
+              <T k="seoScenePartner.q3" />
             </h3>
             <p className="text-muted-foreground">
-              Yes. You can paste or upload your own audition sides and rehearse them with
-              ScenePartner. It works with any text, not just material from the ActorRise database.
+              <T k="seoScenePartner.a3" />
             </p>
           </div>
         </div>

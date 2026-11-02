@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { english } from "@/components/marketing/seo/english";
+import { T, type MessageKey } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -25,39 +28,27 @@ export const metadata: Metadata = {
   alternates: { canonical: `${siteUrl}/how-to-find-a-monologue` },
 };
 
-const FAQ_ITEMS: { q: string; a: string; link?: { href: string; label: string } }[] = [
+const FAQ_ITEMS: { q: MessageKey; a: MessageKey; link?: { href: string; label: MessageKey } }[] = [
+  { q: "seoHowTo.faq.q1", a: "seoHowTo.faq.a1" },
+  { q: "seoHowTo.faq.q2", a: "seoHowTo.faq.a2" },
+  { q: "seoHowTo.faq.q3", a: "seoHowTo.faq.a3" },
+  { q: "seoHowTo.faq.q4", a: "seoHowTo.faq.a4" },
   {
-    q: "How do I find a monologue that fits me?",
-    a: "Start with what the audition asks for (length, tone, contemporary or classical), then narrow to your age range and type. Describe that in plain English and search a real database instead of scrolling anthologies. ActorRise ranks pieces that match your tone, length, and type in seconds.",
-  },
-  {
-    q: "Where can I find monologues for free?",
-    a: "There is a free tier on ActorRise and you do not need a credit card to try it. You can search and read real published monologues right away; paid plans unlock unlimited rehearsals with the AI.",
-  },
-  {
-    q: "How long should an audition monologue be?",
-    a: "Most auditions want 60 seconds to 2 minutes unless the breakdown says otherwise. Always time it out loud, and have a shorter cut ready in case they ask you to trim.",
-  },
-  {
-    q: "How do I avoid an overdone monologue?",
-    a: "The most cut pieces are the ones every actor brings. Use the overdone filter to hide warhorses and surface fresher options that still fit your tone and type.",
-  },
-  {
-    q: "Where do the monologues come from?",
-    a: "From public domain and licensed sources. ActorRise organizes real published text and does not distribute copyrighted play scripts. Full details: ",
-    link: { href: "/sources", label: "Sources & copyright" },
+    q: "seoHowTo.faq.q5",
+    a: "seoHowTo.faq.a5",
+    link: { href: "/sources", label: "seoHowTo.faq.link" },
   },
 ];
 
-const CATEGORY_LINKS: { href: string; label: string }[] = [
-  { href: "/dramatic-monologues", label: "Dramatic monologues" },
-  { href: "/contemporary-monologues", label: "Contemporary monologues" },
-  { href: "/shakespeare-monologues", label: "Shakespeare monologues" },
-  { href: "/monologues-for-women", label: "Monologues for women" },
-  { href: "/monologues-for-men", label: "Monologues for men" },
-  { href: "/monologues/two-minute-monologues", label: "2 minute monologues" },
-  { href: "/monologues/one-minute-monologues", label: "1 minute monologues" },
-  { href: "/monologues/classical-monologues", label: "Classical monologues" },
+const CATEGORY_LINKS: { href: string; label: MessageKey }[] = [
+  { href: "/dramatic-monologues", label: "seoCommon.cat.dramatic" },
+  { href: "/contemporary-monologues", label: "seoCommon.cat.contemporary" },
+  { href: "/shakespeare-monologues", label: "seoCommon.cat.shakespeare" },
+  { href: "/monologues-for-women", label: "seoCommon.cat.women" },
+  { href: "/monologues-for-men", label: "seoCommon.cat.men" },
+  { href: "/monologues/two-minute-monologues", label: "seoCommon.cat.twoMin" },
+  { href: "/monologues/one-minute-monologues", label: "seoCommon.cat.oneMin" },
+  { href: "/monologues/classical-monologues", label: "seoCommon.cat.classical" },
 ];
 
 const faqJsonLd = {
@@ -65,10 +56,10 @@ const faqJsonLd = {
   "@type": "FAQPage",
   mainEntity: FAQ_ITEMS.map((item) => ({
     "@type": "Question",
-    name: item.q,
+    name: english(item.q),
     acceptedAnswer: {
       "@type": "Answer",
-      text: item.link ? `${item.a}${item.link.label}.` : item.a,
+      text: item.link ? `${english(item.a)}${english(item.link.label)}.` : english(item.a),
     },
   })),
 };
@@ -77,13 +68,14 @@ export default function HowToFindAMonologuePage() {
   return (
     <>
       <StageHero
-        direction="(finding the piece.)"
+        direction={<T k="seoDirections.howTo" />}
         title={
-          <>
-            How to find a <em className="italic text-primary">monologue</em> for your audition
-          </>
+          <SeoT
+            k="seoHowTo.title"
+            slots={{ em: <em className="italic text-primary"><T k="seoHowTo.titleEm" /></em> }}
+          />
         }
-        lede="Finding the right monologue is where most of the stress lives: the wrong length, an overdone piece, or something that just is not you. Here is a simple way to find one that fits, fast, without flipping through anthologies the night before a callback."
+        lede={<T k="seoHowTo.lede" />}
       />
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
@@ -94,109 +86,79 @@ export default function HowToFindAMonologuePage() {
 
         <div className="flex flex-wrap gap-4 mb-14">
           <Button asChild size="lg" className="rounded-full px-6">
-            <Link prefetch={false} href="/">Find a monologue now</Link>
+            <Link prefetch={false} href="/"><T k="seoHowTo.findNow" /></Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-            <Link prefetch={false} href="/signup">Start rehearsing</Link>
+            <Link prefetch={false} href="/signup"><T k="cta.startRehearsing" /></Link>
           </Button>
         </div>
 
         <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">
-          1. Start with what the audition actually needs
+          <T k="seoHowTo.s1Title" />
         </h2>
         <p className="text-muted-foreground mb-4">
-          Before you fall in love with a piece, get clear on the brief. The fastest way to waste an
-          hour is to pick something beautiful that the room did not ask for. Nail down four things:
+          <T k="seoHowTo.s1Intro" />
         </p>
         <ul className="space-y-3 text-muted-foreground mb-12">
-          <li className="flex gap-2">
-            <span className="text-primary">·</span>
-            <span>
-              <strong className="text-foreground">Length.</strong> Most auditions want 60 seconds to
-              2 minutes. If the breakdown gives a number, respect it, and time yourself out loud.
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-primary">·</span>
-            <span>
-              <strong className="text-foreground">Tone.</strong> Comedic or dramatic. Match the
-              project. A serious drama callback is not the place for your best stand up bit.
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-primary">·</span>
-            <span>
-              <strong className="text-foreground">Era.</strong> Contemporary or classical. Some
-              programs and schools ask for one of each, so know which you are building.
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-primary">·</span>
-            <span>
-              <strong className="text-foreground">You.</strong> Your age range, casting type, and
-              what you play believably. The piece should sit inside your wheelhouse, not audition for
-              a different actor.
-            </span>
-          </li>
+          {(["length", "tone", "era", "you"] as const).map((b) => (
+            <li key={b} className="flex gap-2">
+              <span className="text-primary">·</span>
+              <span>
+                <SeoT
+                  k={`seoHowTo.${b}`}
+                  slots={{ strong: <strong className="text-foreground"><T k={`seoHowTo.${b}Strong`} /></strong> }}
+                />
+              </span>
+            </li>
+          ))}
         </ul>
 
         <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">
-          2. Search by meaning, not by luck
+          <T k="seoHowTo.s2Title" />
         </h2>
         <p className="text-muted-foreground mb-4">
-          You can dig through monologue books and generic lists, but that means scrolling and guessing
-          at keywords. It is faster to describe what you need the way you would say it to a friend and
-          let a real database do the sorting:
+          <T k="seoHowTo.s2Intro" />
         </p>
         <ul className="space-y-2 text-muted-foreground mb-4">
-          {[
-            "two minute dramatic monologue for a young woman",
-            "comedic monologue for a man, contemporary, under 90 seconds",
-            "a classical monologue that is not Shakespeare",
-            "modern breakup monologue, female, high stakes",
-          ].map((s) => (
+          {(["s1", "s2", "s3", "s4"] as const).map((s) => (
             <li key={s} className="flex gap-2">
               <span className="text-primary">·</span>
-              <span className="italic">&ldquo;{s}&rdquo;</span>
+              <span className="italic">&ldquo;<T k={`seoHowTo.samples.${s}`} />&rdquo;</span>
             </li>
           ))}
         </ul>
         <p className="text-muted-foreground mb-12">
-          That is exactly what the{" "}
-          <Link prefetch={false} href="/monologue-finder" className="text-primary underline underline-offset-4">
-            ActorRise monologue finder
-          </Link>{" "}
-          does. It reads what you describe and ranks real monologues that fit your tone, length,
-          gender, and type, pulled from 19,000+ pieces across plays, film, and TV.
+          <SeoT
+            k="seoHowTo.s2Outro"
+            slots={{
+              link: (
+                <Link prefetch={false} href="/monologue-finder" className="text-primary underline underline-offset-4">
+                  <T k="seoHowTo.s2Link" />
+                </Link>
+              ),
+            }}
+          />
         </p>
 
         <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">
-          3. Pick one that works, and skip the overdone ones
+          <T k="seoHowTo.s3Title" />
         </h2>
         <p className="text-muted-foreground mb-4">
-          A good audition monologue is playable, active, and fresh. Once you have a shortlist, choose
-          the piece that lets you do something, has a real shift or stakes, and is not the same
-          warhorse every other actor is bringing that day. The most cut pieces are the famous ones, so
-          use the overdone filter to hide them and surface something the panel has not heard twelve
-          times already.
+          <T k="seoHowTo.s3p1" />
         </p>
         <p className="text-muted-foreground mb-12">
-          Read the full text, check the source, and make sure it stands on its own out of context. If
-          it needs the whole play to make sense, keep looking.
+          <T k="seoHowTo.s3p2" />
         </p>
 
         <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">
-          4. Rehearse it until it is off the page
+          <T k="seoHowTo.s4Title" />
         </h2>
         <p className="text-muted-foreground mb-12">
-          Finding the piece is half the job. Once it is yours, run it out loud until it is off book and
-          in your body. On ActorRise you can rehearse a monologue right after you find it: a spotlight
-          follows your voice line by line so you can get it off the page before you ever walk into the
-          room.
+          <T k="seoHowTo.s4p" />
         </p>
 
         <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">
-          Browse by what you need
+          <T k="seoHowTo.browseTitle" />
         </h2>
         <div className="flex flex-wrap gap-2 mb-12">
           {CATEGORY_LINKS.map((c) => (
@@ -205,26 +167,26 @@ export default function HowToFindAMonologuePage() {
               href={c.href}
               className="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
             >
-              {c.label}
+              <T k={c.label} />
             </Link>
           ))}
         </div>
 
         <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-6">
-          Common questions
+          <T k="seoCommon.commonQuestions" />
         </h2>
         <div className="space-y-6 mb-14">
           {FAQ_ITEMS.map((item) => (
             <div key={item.q}>
-              <h3 className="font-semibold text-foreground mb-1">{item.q}</h3>
+              <h3 className="font-semibold text-foreground mb-1"><T k={item.q} /></h3>
               <p className="text-muted-foreground">
-                {item.a}
+                <T k={item.a} />
                 {item.link && (
                   <Link prefetch={false}
                     href={item.link.href}
                     className="text-primary underline underline-offset-4"
                   >
-                    {item.link.label}
+                    <T k={item.link.label} />
                   </Link>
                 )}
               </p>
@@ -234,18 +196,17 @@ export default function HowToFindAMonologuePage() {
 
         <div className="rounded-2xl border border-border bg-muted/30 p-8 text-center">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">
-            Find your monologue in seconds
+            <T k="seoHowTo.ctaTitle" />
           </h2>
           <p className="text-muted-foreground mb-6">
-            Describe what you need, get a shortlist of real pieces, and rehearse the strongest one.
-            Free to start, no credit card.
+            <T k="seoHowTo.ctaBody" />
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button asChild size="lg" className="rounded-full px-6">
-              <Link prefetch={false} href="/">Find a monologue now</Link>
+              <Link prefetch={false} href="/"><T k="seoHowTo.findNow" /></Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-              <Link prefetch={false} href="/signup">Start rehearsing</Link>
+              <Link prefetch={false} href="/signup"><T k="cta.startRehearsing" /></Link>
             </Button>
           </div>
         </div>

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -31,23 +33,15 @@ export default function Page() {
   return (
     <>
       <StageHero
-        direction="(the dramatic register.)"
+        direction={<T k="seoDirections.dramatic" />}
         title={
-          <>
-            Dramatic monologues for <em className="italic text-primary">auditions</em>.
-          </>
+          <SeoT k="seoDramatic.title" slots={{ em: <em className="italic text-primary"><T k="seoDramatic.titleEm" /></em> }} />
         }
-        lede={
-          <>
-            Serious, emotional, high-stakes. Search dramatic monologues by tone, era, or character type.
-            Whether you need something gut-wrenching or quietly intense, the AI matches you to real
-            pieces from published plays. No keyword guessing.
-          </>
-        }
+        lede={<T k="seoDramatic.lede" />}
       >
         <Button asChild size="lg" className="rounded-full px-6">
           <Link prefetch={false} href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
-            Search dramatic monologues
+            <T k="seoDramatic.searchBtn" />
           </Link>
         </Button>
       </StageHero>
@@ -55,59 +49,66 @@ export default function Page() {
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <div className="mt-0 space-y-3 text-sm text-muted-foreground">
         <p>
-          Looking for something specific? Try{" "}
-          <Link prefetch={false} href="/shakespeare-monologues" className="text-foreground underline hover:no-underline">
-            Shakespeare monologues
-          </Link>
-          ,{" "}
-          <Link prefetch={false} href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
-            contemporary monologues
-          </Link>
-          , or{" "}
-          <Link prefetch={false} href="/monologues-for-women" className="text-foreground underline hover:no-underline">
-            monologues for women
-          </Link>
-          .
+          <SeoT
+            k="seoDramatic.also"
+            slots={{
+              shakespeare: (
+                <Link prefetch={false} href="/shakespeare-monologues" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.shakespeare" />
+                </Link>
+              ),
+              contemporary: (
+                <Link prefetch={false} href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.contemporary" />
+                </Link>
+              ),
+              women: (
+                <Link prefetch={false} href="/monologues-for-women" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.women" />
+                </Link>
+              ),
+            }}
+          />
         </p>
       </div>
 
       <section className="mt-16 border-t border-border pt-12">
-        <h2 className="text-2xl font-bold text-foreground mb-8">Frequently asked questions</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-8"><T k="seoCommon.faqTitle" /></h2>
 
         <div className="space-y-6">
           <div>
             <h3 className="font-semibold text-foreground mb-2">
-              What makes a good dramatic monologue for an audition?
+              <T k="seoDramatic.q1" />
             </h3>
             <p className="text-muted-foreground">
-              A good dramatic monologue has clear stakes, a shift in emotion, and something for you to
-              play. Avoid pieces that are just sad from start to finish. Look for a monologue where the
-              character wants something and is actively trying to get it.
+              <T k="seoDramatic.a1" />
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-foreground mb-2">
-              How do I find a dramatic monologue that isn&apos;t overdone?
+              <T k="seoDramatic.q2" />
             </h3>
             <p className="text-muted-foreground">
-              ActorRise has an Overdone filter that flags monologues casting directors see constantly.
-              Search for what you need, then toggle the filter to surface fresh material that still
-              fits the tone.
+              <T k="seoDramatic.a2" />
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-foreground mb-2">
-              Can I rehearse my dramatic monologue on ActorRise?
+              <T k="seoDramatic.q3" />
             </h3>
             <p className="text-muted-foreground">
-              Yes.{" "}
-              <Link prefetch={false} href="/scene-partner-ai" className="text-foreground underline hover:no-underline">
-                ScenePartner AI
-              </Link>{" "}
-              lets you rehearse scenes and monologues with AI reading the other lines. Save any
-              monologue and practice it directly in the app.
+              <SeoT
+                k="seoDramatic.a3"
+                slots={{
+                  link: (
+                    <Link prefetch={false} href="/scene-partner-ai" className="text-foreground underline hover:no-underline">
+                      ScenePartner AI
+                    </Link>
+                  ),
+                }}
+              />
             </p>
           </div>
         </div>

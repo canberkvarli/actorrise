@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -22,21 +23,23 @@ export const metadata: Metadata = {
   alternates: { canonical: `${siteUrl}/monologues/movie-monologues` },
 };
 
-const H1 = "Movie monologues for auditions";
-const INTRO = "Film monologues can be great for reels and contemporary calls when you want something recognizable. Search pieces pulled from real screenplays by tone, length, and character type, then rehearse them with ScenePartner.";
-const BULLETS: string[] = ["Pieces drawn from real films, not invented scenes","Filter by tone, length, and character type","Rehearse with ScenePartner reading the other lines"];
-const RELATED: { href: string; label: string }[] = [{"href":"/scene-partner-ai","label":"ScenePartner"},{"href":"/audition-monologues","label":"audition monologues"},{"href":"/contemporary-monologues","label":"contemporary monologues"}];
+const BULLETS = ["seoShelf.movie.b1", "seoShelf.movie.b2", "seoShelf.movie.b3"] as const;
+const RELATED = [
+  { href: "/scene-partner-ai", label: "seoShelf.movie.r1" },
+  { href: "/audition-monologues", label: "seoShelf.movie.r2" },
+  { href: "/contemporary-monologues", label: "seoShelf.movie.r3" },
+] as const;
 
 export default function Page() {
   return (
     <>
-      <StageHero direction="(from the screen.)" title={H1} lede={INTRO}>
+      <StageHero direction={<T k="seoDirections.movie" />} title={<T k="seoShelf.movie.h1" />} lede={<T k="seoShelf.movie.intro" />}>
         <div className="flex flex-wrap gap-4">
           <Button asChild size="lg" className="rounded-full px-6">
-            <Link prefetch={false} href="/signup">Start rehearsing</Link>
+            <Link prefetch={false} href="/signup"><T k="cta.startRehearsing" /></Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-            <Link prefetch={false} href="/">Try the search</Link>
+            <Link prefetch={false} href="/"><T k="seoCommon.trySearch" /></Link>
           </Button>
         </div>
       </StageHero>
@@ -45,17 +48,17 @@ export default function Page() {
           {BULLETS.map((b) => (
             <li key={b} className="flex gap-2">
               <span className="text-primary">·</span>
-              <span>{b}</span>
+              <span><T k={b} /></span>
             </li>
           ))}
         </ul>
         <p className="text-muted-foreground mb-10">
-          Related:{" "}
+          <T k="seoCommon.related" />
           {RELATED.map((r, i) => (
             <span key={r.href}>
               {i > 0 ? " · " : ""}
               <Link prefetch={false} href={r.href} className="text-foreground font-medium underline hover:no-underline">
-                {r.label}
+                <T k={r.label} />
               </Link>
             </span>
           ))}

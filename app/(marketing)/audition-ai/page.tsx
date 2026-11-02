@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { english } from "@/components/marketing/seo/english";
+import { T, type MessageKey } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -25,23 +28,11 @@ export const metadata: Metadata = {
   alternates: { canonical: `${siteUrl}/audition-ai` },
 };
 
-const FAQ_ITEMS: { q: string; a: string; link?: { href: string; label: string } }[] = [
-  {
-    q: "Does ActorRise write monologues with AI?",
-    a: "No. The AI is in the search and the rehearsal, not the writing. Every monologue is a real published piece, so what you bring is something casting can recognize.",
-  },
-  {
-    q: "What is ScenePartner?",
-    a: "An AI reading partner. It reads the other lines in a scene so you can run sides or your monologue out loud anytime, without scheduling someone to feed you cues.",
-  },
-  {
-    q: "What is Audition Mode?",
-    a: "A focused setup with fit-to-type and Overdone filters, so you walk in with pieces that suit the role and feel fresh to casting.",
-  },
-  {
-    q: "Is there a free tier?",
-    a: "Yes, it’s free to start and no credit card is required. Paid plans unlock the full database, saved bookmarks, and ScenePartner rehearsal.",
-  },
+const FAQ_ITEMS: { q: MessageKey; a: MessageKey }[] = [
+  { q: "seoAuditionAi.faq.q1", a: "seoAuditionAi.faq.a1" },
+  { q: "seoAuditionAi.faq.q2", a: "seoAuditionAi.faq.a2" },
+  { q: "seoAuditionAi.faq.q3", a: "seoAuditionAi.faq.a3" },
+  { q: "seoAuditionAi.faq.q4", a: "seoAuditionAi.faq.a4" },
 ];
 
 const faqJsonLd = {
@@ -49,23 +40,25 @@ const faqJsonLd = {
   "@type": "FAQPage",
   mainEntity: FAQ_ITEMS.map((item) => ({
     "@type": "Question",
-    name: item.q,
-    acceptedAnswer: { "@type": "Answer", text: item.a },
+    name: english(item.q),
+    acceptedAnswer: { "@type": "Answer", text: english(item.a) },
   })),
 };
+
+const linkClass = "text-foreground font-medium underline hover:no-underline";
 
 export default function AuditionAiPage() {
   return (
     <>
       <StageHero
-        direction="(the callback.)"
+        direction={<T k="seoDirections.auditionAi" />}
         title={
-          <>
-            Audition AI that helps you <em className="italic text-primary">prep</em>, not replace
-            performance
-          </>
+          <SeoT
+            k="seoAuditionAi.title"
+            slots={{ em: <em className="italic text-primary"><T k="seoAuditionAi.titleEm" /></em> }}
+          />
         }
-        lede="ActorRise uses AI to help you find the right material and rehearse, without generating scripts or replacing the work you do as an actor. Everything you search and practice with is from real published plays and film/TV."
+        lede={<T k="seoAuditionAi.lede" />}
       />
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
@@ -78,107 +71,107 @@ export default function AuditionAiPage() {
         <li className="flex gap-2">
           <span className="text-primary">·</span>
           <span>
-            <strong className="text-foreground">Monologue search</strong>: describe what you need in plain
-            English. It matches you to 19,000+ real monologues by meaning, not just keywords.
+            <SeoT k="seoAuditionAi.b1" slots={{ strong: <strong className="text-foreground"><T k="seoAuditionAi.b1Strong" /></strong> }} />
           </span>
         </li>
         <li className="flex gap-2">
           <span className="text-primary">·</span>
           <span>
-            <strong className="text-foreground">ScenePartner</strong>: rehearse scenes with AI that reads the
-            other lines. Run sides, film/TV references, and your saved monologues so you can walk in ready.
+            <SeoT k="seoAuditionAi.b2" slots={{ strong: <strong className="text-foreground">ScenePartner</strong> }} />
           </span>
         </li>
         <li className="flex gap-2">
           <span className="text-primary">·</span>
           <span>
-            <strong className="text-foreground">Audition Mode</strong>: fit-to-type and Overdone filters so you
-            show up with pieces that suit the role and feel fresh to casting.
+            <SeoT k="seoAuditionAi.b3" slots={{ strong: <strong className="text-foreground"><T k="seoAuditionAi.b3Strong" /></strong> }} />
           </span>
         </li>
         <li className="flex gap-2">
           <span className="text-primary">·</span>
-          <span>It finds and organizes real text. It doesn’t invent or generate monologues.</span>
+          <span><T k="seoAuditionAi.b4" /></span>
         </li>
       </ul>
       <div className="flex flex-wrap gap-4 mb-16">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link prefetch={false} href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup"><T k="cta.startRehearsing" /></Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link prefetch={false} href="/">Try the search</Link>
+          <Link prefetch={false} href="/"><T k="seoCommon.trySearch" /></Link>
         </Button>
       </div>
 
       <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">
-        What the AI does, and what it doesn’t
+        <T k="seoAuditionAi.whatTitle" />
       </h2>
       <p className="text-muted-foreground mb-4">
-        A lot of “AI for actors” means a model writing fake scenes. ActorRise works the other way. The
-        AI reads what you describe and points you to real published pieces, and it reads scene partner
-        lines back to you so you can rehearse. It never writes the monologue.
+        <T k="seoAuditionAi.what1" />
       </p>
       <p className="text-muted-foreground mb-12">
-        That matters in the room. Casting recognizes real material, and a piece you can attribute to a
-        play or film holds up to questions in a way a generated one never will.
+        <T k="seoAuditionAi.what2" />
       </p>
 
       <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">
-        Monologue search
+        <T k="seoAuditionAi.searchTitle" />
       </h2>
       <p className="text-muted-foreground mb-12">
-        Type something like “contemporary dramatic monologue for a woman under two minutes” and get a
-        ranked shortlist of real pieces that fit. No keyword guessing. Start from the{" "}
-        <Link prefetch={false} href="/monologue-finder" className="text-foreground font-medium underline hover:no-underline">
-          monologue finder
-        </Link>{" "}
-        or browse{" "}
-        <Link prefetch={false} href="/audition-monologues" className="text-foreground font-medium underline hover:no-underline">
-          audition monologues
-        </Link>{" "}
-        by type.
+        <SeoT
+          k="seoAuditionAi.search"
+          slots={{
+            finder: (
+              <Link prefetch={false} href="/monologue-finder" className={linkClass}>
+                <T k="seoCommon.links.finder" />
+              </Link>
+            ),
+            audition: (
+              <Link prefetch={false} href="/audition-monologues" className={linkClass}>
+                <T k="seoCommon.links.audition" />
+              </Link>
+            ),
+          }}
+        />
       </p>
 
       <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">
         ScenePartner
       </h2>
       <p className="text-muted-foreground mb-12">
-        Rehearsing alone is the hard part. ScenePartner reads the other lines so you can run a scene or
-        a monologue out loud whenever you want, without booking a friend. See how it works on the{" "}
-        <Link prefetch={false} href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
-          ScenePartner page
-        </Link>
-        .
+        <SeoT
+          k="seoAuditionAi.sp"
+          slots={{
+            link: (
+              <Link prefetch={false} href="/scene-partner-ai" className={linkClass}>
+                <T k="seoAuditionAi.spLink" />
+              </Link>
+            ),
+          }}
+        />
       </p>
 
       <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">
-        Audition Mode and the Overdone filter
+        <T k="seoAuditionAi.modeTitle" />
       </h2>
       <p className="text-muted-foreground mb-4">
-        When you’re prepping for a specific call, Audition Mode narrows things to your type and the
-        role, and the Overdone filter flags pieces casting hears constantly so you can bring something
-        they haven’t.
+        <T k="seoAuditionAi.mode1" />
       </p>
       <p className="text-muted-foreground mb-12">
-        I built ActorRise because I’m an actor, and I wanted prep tools that respect the craft instead
-        of trying to do it for me.
+        <T k="seoAuditionAi.mode2" />
       </p>
 
       <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-6">
-        Frequently asked questions
+        <T k="seoCommon.faqTitle" />
       </h2>
       <ul className="space-y-4 mb-12">
         {FAQ_ITEMS.map((item) => (
           <li key={item.q}>
             <details className="group rounded-lg border border-border/60 bg-card/40 overflow-hidden">
               <summary className="list-none cursor-pointer px-4 py-3 font-medium text-foreground hover:bg-card/60 transition-colors flex items-center justify-between gap-2">
-                <span>{item.q}</span>
+                <span><T k={item.q} /></span>
                 <span className="text-muted-foreground group-open:rotate-180 transition-transform shrink-0" aria-hidden>
                   ▼
                 </span>
               </summary>
               <div className="px-4 pb-4 pt-0 text-muted-foreground text-sm md:text-base leading-relaxed border-t border-border/40">
-                {item.a}
+                <T k={item.a} />
               </div>
             </details>
           </li>
@@ -187,10 +180,10 @@ export default function AuditionAiPage() {
 
       <div className="flex flex-wrap gap-4">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link prefetch={false} href="/signup">Start rehearsing</Link>
+          <Link prefetch={false} href="/signup"><T k="cta.startRehearsing" /></Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link prefetch={false} href="/">Try the search</Link>
+          <Link prefetch={false} href="/"><T k="seoCommon.trySearch" /></Link>
         </Button>
       </div>
       </div>

@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { COLLECTIONS } from "@/lib/monologueCollections";
 import { getCorpusStats, type CorpusStats } from "@/lib/monologueSeo";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { english } from "@/components/marketing/seo/english";
+import { T, type MessageKey } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -41,40 +44,23 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 /** "19,720" reads as a claim about today; "19,700+" stays true all week. */
 const approx = (n: number) => `${fmt(Math.floor(n / 100) * 100)}+`;
 
-function longDate(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(`${iso}T12:00:00Z`);
-  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
-}
+type FaqItem = { q: MessageKey; a: MessageKey; link?: { href: string; label: MessageKey } };
 
-function faqItems(s: CorpusStats): { q: string; a: string; link?: { href: string; label: string } }[] {
-  return [
-    {
-      q: "How big is the monologue database?",
-      a: `${approx(s.pieces)} real monologues: ${fmt(s.plays)} from plays, ${fmt(s.film)} from film and ${fmt(s.tv)} from television, across more than two thousand sources. ${fmt(s.publicDomain)} of them are public domain and printed in full. It grows most weeks; the newest piece is dated on this page.`,
-    },
-    {
-      q: "Are the monologues free to search and read?",
-      a: "Yes. Searching is free and needs no card. A free account reads a set number of full pieces a month; Plus removes the limit and adds unlimited rehearsal with the AI scene partner.",
-    },
-    {
-      q: "Are these real monologues or AI-generated?",
-      a: "Real. The AI is in the search, not the writing. Every entry is a published piece with its character, source and author, so the text you rehearse is text a casting room will recognise.",
-    },
-    {
-      q: "Can I filter out overdone pieces?",
-      a: "Yes. Every piece carries an overdone score, from fresh to warhorse, and the search can hide the ones every actor brings.",
-    },
-    {
-      q: "Can I search by play, show, theme or age?",
-      a: "Yes. Type it the way you would say it: \"a monologue from Hamlet\", \"something about revenge\", \"comedic, teenager, under two minutes\". The browse pages below cover the most asked-for shelves.",
-    },
-    {
-      q: "Where do the monologues come from?",
-      a: "Public-domain plays, printed in full, and licensed or referenced contemporary sources, listed by character, work and length. ActorRise does not distribute copyrighted scripts. Full details: ",
-      link: { href: "/sources", label: "Sources and copyright" },
-    },
-  ];
+const FAQ_ITEMS: FaqItem[] = [
+  { q: "seoDatabase.faq.q1", a: "seoDatabase.faq.a1" },
+  { q: "seoDatabase.faq.q2", a: "seoDatabase.faq.a2" },
+  { q: "seoDatabase.faq.q3", a: "seoDatabase.faq.a3" },
+  { q: "seoDatabase.faq.q4", a: "seoDatabase.faq.a4" },
+  { q: "seoDatabase.faq.q5", a: "seoDatabase.faq.a5" },
+  { q: "seoDatabase.faq.q6", a: "seoDatabase.faq.a6", link: { href: "/sources", label: "seoDatabase.faq.link" } },
+];
+
+/** The counts the first answer quotes: `approx` for the headline, `fmt` for the rest. */
+function countVars(s: CorpusStats) {
+  return {
+    approx: { pieces: s.pieces },
+    nums: { plays: s.plays, film: s.film, tv: s.tv, publicDomain: s.publicDomain },
+  };
 }
 
 const bySlug = (slug: string) => COLLECTIONS.find((c) => c.slug === slug);
@@ -112,24 +98,24 @@ const SHELF_PAGES = [
   "villain-monologues",
 ];
 
-const CATEGORY_LINKS: { href: string; label: string }[] = [
-  { href: "/dramatic-monologues", label: "Dramatic monologues" },
-  { href: "/contemporary-monologues", label: "Contemporary monologues" },
-  { href: "/shakespeare-monologues", label: "Shakespeare monologues" },
-  { href: "/monologues-for-women", label: "Monologues for women" },
-  { href: "/monologues-for-men", label: "Monologues for men" },
-  { href: "/monologues/two-minute-monologues", label: "2 minute monologues" },
-  { href: "/monologues/one-minute-monologues", label: "1 minute monologues" },
-  { href: "/monologues/classical-monologues", label: "Classical monologues" },
+const CATEGORY_LINKS: { href: string; label: MessageKey }[] = [
+  { href: "/dramatic-monologues", label: "seoCommon.cat.dramatic" },
+  { href: "/contemporary-monologues", label: "seoCommon.cat.contemporary" },
+  { href: "/shakespeare-monologues", label: "seoCommon.cat.shakespeare" },
+  { href: "/monologues-for-women", label: "seoCommon.cat.women" },
+  { href: "/monologues-for-men", label: "seoCommon.cat.men" },
+  { href: "/monologues/two-minute-monologues", label: "seoCommon.cat.twoMin" },
+  { href: "/monologues/one-minute-monologues", label: "seoCommon.cat.oneMin" },
+  { href: "/monologues/classical-monologues", label: "seoCommon.cat.classical" },
 ];
 
-function Shelf({ heading, note, slugs }: { heading: string; note: string; slugs: string[] }) {
+function Shelf({ heading, note, slugs }: { heading: MessageKey; note: MessageKey; slugs: string[] }) {
   const pages = slugs.map(bySlug).filter((c): c is NonNullable<typeof c> => !!c);
   if (pages.length === 0) return null;
   return (
     <>
-      <h3 className="font-semibold text-foreground mt-8 mb-1">{heading}</h3>
-      <p className="text-sm text-muted-foreground mb-3">{note}</p>
+      <h3 className="font-semibold text-foreground mt-8 mb-1"><T k={heading} /></h3>
+      <p className="text-sm text-muted-foreground mb-3"><T k={note} /></p>
       <ul className="flex flex-wrap gap-2">
         {pages.map((c) => (
           <li key={c.slug}>
@@ -149,17 +135,26 @@ function Shelf({ heading, note, slugs }: { heading: string; note: string; slugs:
 
 export default async function MonologueDatabasePage() {
   const s = await getCorpusStats();
-  const items = faqItems(s);
-  const added = longDate(s.lastAdded);
+  const counts = countVars(s);
+  const englishCounts = {
+    pieces: approx(s.pieces),
+    plays: fmt(s.plays),
+    film: fmt(s.film),
+    tv: fmt(s.tv),
+    publicDomain: fmt(s.publicDomain),
+  };
 
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: items.map((item) => ({
-      "@type": "Question",
-      name: item.q,
-      acceptedAnswer: { "@type": "Answer", text: item.link ? `${item.a}${item.link.label}.` : item.a },
-    })),
+    mainEntity: FAQ_ITEMS.map((item) => {
+      const a = english(item.a, englishCounts);
+      return {
+        "@type": "Question",
+        name: english(item.q),
+        acceptedAnswer: { "@type": "Answer", text: item.link ? `${a}${english(item.link.label)}.` : a },
+      };
+    }),
   };
   const datasetJsonLd = {
     "@context": "https://schema.org",
@@ -173,83 +168,78 @@ export default async function MonologueDatabasePage() {
     variableMeasured: ["character", "source", "author", "tone", "gender", "age range", "running time", "themes", "overdone score"],
   };
 
+  const stats: [MessageKey, number][] = [
+    ["seoDatabase.stats.pieces", s.pieces],
+    ["seoDatabase.stats.plays", s.plays],
+    ["seoDatabase.stats.film", s.film],
+    ["seoDatabase.stats.tv", s.tv],
+    ["seoDatabase.stats.publicDomain", s.publicDomain],
+    ["seoDatabase.stats.underTwo", s.underTwoMinutes],
+  ];
+
   return (
     <>
       <StageHero
-        direction="(the database.)"
+        direction={<T k="seoDirections.database" />}
         title={
-          <>
-            The <em className="italic text-primary">monologue database</em> built for actors
-          </>
+          <SeoT
+            k="seoDatabase.title"
+            slots={{ em: <em className="italic text-primary"><T k="seoDatabase.titleEm" /></em> }}
+          />
         }
-        lede={`ActorRise is a searchable monologue database: ${approx(s.pieces)} real pieces from plays, film and television. You search by what you actually need, tone, length, gender, age, theme, the play, the show, and read the real text in seconds. Public-domain plays are printed in full.`}
+        lede={<SeoT k="seoDatabase.lede" approx={{ count: s.pieces }} />}
       />
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(datasetJsonLd) }} />
 
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">What is in it, counted</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4"><T k="seoDatabase.countedTitle" /></h2>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-3 mb-4 text-sm">
-          {[
-            ["Monologues", s.pieces],
-            ["From plays", s.plays],
-            ["From film", s.film],
-            ["From television", s.tv],
-            ["Public domain, printed in full", s.publicDomain],
-            ["Under two minutes", s.underTwoMinutes],
-          ]
-            .filter(([, n]) => (n as number) > 0)
+          {stats
+            .filter(([, n]) => n > 0)
             .map(([label, n]) => (
-              <div key={label as string} className="flex justify-between gap-3 border-b border-border py-1.5">
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd className="tabular-nums text-foreground">{fmt(n as number)}</dd>
+              <div key={label} className="flex justify-between gap-3 border-b border-border py-1.5">
+                <dt className="text-muted-foreground"><T k={label} /></dt>
+                <dd className="tabular-nums text-foreground"><SeoT k="seoDatabase.stat" nums={{ n }} /></dd>
               </div>
             ))}
         </dl>
         <p className="text-sm text-muted-foreground mb-12">
-          {added ? `Newest piece added ${added}. ` : ""}
-          Counts are from the live library and refresh weekly. Every piece is a published text with its
-          character, source and author; nothing here was written by a model.
+          {s.lastAdded ? <SeoT k="seoDatabase.newest" dates={{ date: s.lastAdded }} /> : ""}
+          <T k="seoDatabase.countsNote" />
         </p>
 
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">How the search works</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4"><T k="seoDatabase.howTitle" /></h2>
         <p className="text-muted-foreground mb-4">
-          You do not have to guess the right keywords. Describe what you need the way you would say it out
-          loud, and the search ranks pieces that fit:
+          <T k="seoDatabase.howIntro" />
         </p>
         <ul className="space-y-2 text-muted-foreground mb-6">
-          {[
-            "two minute dramatic monologue for a young woman",
-            "comedic contemporary monologue for a man under 90 seconds",
-            "a classical monologue that is not Shakespeare",
-            "something from Euphoria, or anything with that feeling",
-          ].map((q) => (
+          {(["s1", "s2", "s3", "s4"] as const).map((q) => (
             <li key={q} className="flex gap-2">
               <span className="text-primary">·</span>
-              <span className="italic">&ldquo;{q}&rdquo;</span>
+              <span className="italic">&ldquo;<T k={`seoDatabase.samples.${q}`} />&rdquo;</span>
             </li>
           ))}
         </ul>
         <div className="flex flex-wrap gap-4 mb-14">
           <Button asChild size="lg" className="rounded-full px-6">
-            <Link prefetch={false} href="/">Search the database</Link>
+            <Link prefetch={false} href="/"><T k="seoDatabase.searchDb" /></Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-            <Link prefetch={false} href="/signup">Start rehearsing</Link>
+            <Link prefetch={false} href="/signup"><T k="cta.startRehearsing" /></Link>
           </Button>
         </div>
 
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">Browse the database</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2"><T k="seoDatabase.browseTitle" /></h2>
         <p className="text-muted-foreground">
-          Each page below is a real list from the library, not a landing page: the pieces, their characters,
-          sources and running times, and the public-domain text in full.
+          <T k="seoDatabase.browseIntro" />
         </p>
-        <Shelf heading="By play, every speech printed in full" note="Public-domain plays, so the whole text is on the page." slugs={PLAY_PAGES} />
-        <Shelf heading="By show" note="Copyrighted, so each entry names the character, piece and length and the search opens the rest." slugs={SHOW_PAGES} />
-        <Shelf heading="By theme" note="Tagged across the whole library, classical and contemporary." slugs={THEME_PAGES} />
-        <Shelf heading="By gender, age, tone and length" note="The audition asks that never change." slugs={SHELF_PAGES} />
-        <h3 className="font-semibold text-foreground mt-8 mb-3">Wider categories</h3>
+        <Shelf heading="seoDatabase.shelf.playH" note="seoDatabase.shelf.playN" slugs={PLAY_PAGES} />
+        <Shelf heading="seoDatabase.shelf.showH" note="seoDatabase.shelf.showN" slugs={SHOW_PAGES} />
+        <Shelf heading="seoDatabase.shelf.themeH" note="seoDatabase.shelf.themeN" slugs={THEME_PAGES} />
+        <Shelf heading="seoDatabase.shelf.shelfH" note="seoDatabase.shelf.shelfN" slugs={SHELF_PAGES} />
+        <h3 className="font-semibold text-foreground mt-8 mb-3"><T k="seoDatabase.wider" /></h3>
         <div className="flex flex-wrap gap-2 mb-14">
           {CATEGORY_LINKS.map((c) => (
             <Link
@@ -258,21 +248,21 @@ export default async function MonologueDatabasePage() {
               href={c.href}
               className="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
             >
-              {c.label}
+              <T k={c.label} />
             </Link>
           ))}
         </div>
 
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-6">Common questions</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-6"><T k="seoCommon.commonQuestions" /></h2>
         <div className="space-y-6 mb-14">
-          {items.map((item) => (
+          {FAQ_ITEMS.map((item) => (
             <div key={item.q}>
-              <h3 className="font-semibold text-foreground mb-1">{item.q}</h3>
+              <h3 className="font-semibold text-foreground mb-1"><T k={item.q} /></h3>
               <p className="text-muted-foreground">
-                {item.a}
+                <SeoT k={item.a} approx={counts.approx} nums={counts.nums} />
                 {item.link && (
                   <Link prefetch={false} href={item.link.href} className="text-primary underline underline-offset-4">
-                    {item.link.label}
+                    <T k={item.link.label} />
                   </Link>
                 )}
               </p>
@@ -282,17 +272,17 @@ export default async function MonologueDatabasePage() {
 
         <div className="rounded-2xl border border-border bg-muted/30 p-8 text-center">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">
-            Search {approx(s.pieces)} monologues now
+            <SeoT k="seoDatabase.ctaTitle" approx={{ count: s.pieces }} />
           </h2>
           <p className="text-muted-foreground mb-6">
-            Find the right piece, read the real text, and rehearse it. Free to start, no credit card.
+            <T k="seoDatabase.ctaBody" />
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button asChild size="lg" className="rounded-full px-6">
-              <Link prefetch={false} href="/">Search the database</Link>
+              <Link prefetch={false} href="/"><T k="seoDatabase.searchDb" /></Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-              <Link prefetch={false} href="/signup">Start rehearsing</Link>
+              <Link prefetch={false} href="/signup"><T k="cta.startRehearsing" /></Link>
             </Button>
           </div>
         </div>

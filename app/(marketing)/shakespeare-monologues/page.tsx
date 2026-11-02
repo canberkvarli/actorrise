@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -31,24 +33,15 @@ export default function Page() {
   return (
     <>
       <StageHero
-        direction="(the bard.)"
+        direction={<T k="seoDirections.shakespeare" />}
         title={
-          <>
-            <em className="italic text-primary">Shakespeare</em> monologues for auditions.
-          </>
+          <SeoT k="seoShakespeare.title" slots={{ em: <em className="italic text-primary">Shakespeare</em> }} />
         }
-        lede={
-          <>
-            Hamlet, Macbeth, Twelfth Night, A Midsummer Night&apos;s Dream, and dozens more. Search
-            Shakespeare monologues by character, tone, or length. The AI understands what you need, so
-            you can search like &quot;angry speech from a king&quot; or &quot;comedic woman from a
-            Shakespeare comedy&quot; and get real matches.
-          </>
-        }
+        lede={<T k="seoShakespeare.lede" />}
       >
         <Button asChild size="lg" className="rounded-full px-6">
           <Link prefetch={false} href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
-            Search Shakespeare monologues
+            <T k="seoShakespeare.searchBtn" />
           </Link>
         </Button>
       </StageHero>
@@ -56,60 +49,66 @@ export default function Page() {
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <div className="mt-0 space-y-3 text-sm text-muted-foreground">
         <p>
-          Also browse{" "}
-          <Link prefetch={false} href="/monologues/classical-monologues" className="text-foreground underline hover:no-underline">
-            classical monologues
-          </Link>
-          ,{" "}
-          <Link prefetch={false} href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
-            dramatic monologues
-          </Link>
-          , or{" "}
-          <Link prefetch={false} href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
-            contemporary monologues
-          </Link>
-          .
+          <SeoT
+            k="seoShakespeare.also"
+            slots={{
+              classical: (
+                <Link prefetch={false} href="/monologues/classical-monologues" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.classical" />
+                </Link>
+              ),
+              dramatic: (
+                <Link prefetch={false} href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.dramatic" />
+                </Link>
+              ),
+              contemporary: (
+                <Link prefetch={false} href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.contemporary" />
+                </Link>
+              ),
+            }}
+          />
         </p>
       </div>
 
       <section className="mt-16 border-t border-border pt-12">
-        <h2 className="text-2xl font-bold text-foreground mb-8">Frequently asked questions</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-8"><T k="seoCommon.faqTitle" /></h2>
 
         <div className="space-y-6">
           <div>
             <h3 className="font-semibold text-foreground mb-2">
-              What Shakespeare monologues are good for auditions?
+              <T k="seoShakespeare.q1" />
             </h3>
             <p className="text-muted-foreground">
-              It depends on the role. For drama, Hamlet, Macbeth, and Othello have strong options. For
-              comedy, try Twelfth Night, A Midsummer Night&apos;s Dream, or Much Ado About Nothing.
-              The best audition monologue is one that fits the tone of the show you&apos;re auditioning
-              for. Use the search to filter by tone and character type.
+              <T k="seoShakespeare.a1" />
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-foreground mb-2">
-              How long should a Shakespeare monologue be for an audition?
+              <T k="seoShakespeare.q2" />
             </h3>
             <p className="text-muted-foreground">
-              Most auditions ask for 1 to 2 minutes. That&apos;s roughly 15 to 25 lines of verse.
-              If the listing doesn&apos;t specify, aim for under 90 seconds. You can filter by length
-              in the search.
+              <T k="seoShakespeare.a2" />
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-foreground mb-2">
-              Does ActorRise have the full text of Shakespeare monologues?
+              <T k="seoShakespeare.q3" />
             </h3>
             <p className="text-muted-foreground">
-              Yes. Shakespeare&apos;s works are in the public domain, so we include full monologue
-              text you can read, save, and rehearse with{" "}
-              <Link prefetch={false} href="/scene-partner-ai" className="text-foreground underline hover:no-underline">
-                ScenePartner AI
-              </Link>
-              .
+              <SeoT
+                k="seoShakespeare.a3"
+                slots={{
+                  link: (
+                    <Link prefetch={false} href="/scene-partner-ai" className="text-foreground underline hover:no-underline">
+                      ScenePartner AI
+                    </Link>
+                  ),
+                }}
+              />
             </p>
           </div>
         </div>

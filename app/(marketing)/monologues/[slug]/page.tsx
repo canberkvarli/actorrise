@@ -17,6 +17,8 @@ import {
   type PublicMonologue,
 } from "@/lib/monologueSeo";
 import { displayableAuthor } from "@/lib/utils";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -63,6 +65,33 @@ function readableLength(seconds: number | null): string | null {
   const mm = Math.floor(seconds / 60);
   const ss = seconds % 60;
   return mm > 0 ? `${mm}:${ss.toString().padStart(2, "0")} min` : `${ss} sec`;
+}
+
+/** readableLength's wording, as a translated island (min/sec are chrome). */
+function Length({ seconds }: { seconds: number | null }) {
+  if (!seconds) return null;
+  const mm = Math.floor(seconds / 60);
+  const ss = seconds % 60;
+  return mm > 0 ? (
+    <T k="seoMonologue.lenMin" vars={{ mm, ss: ss.toString().padStart(2, "0") }} />
+  ) : (
+    <T k="seoMonologue.lenSec" vars={{ ss }} />
+  );
+}
+
+/** Joins inline pieces with the page's dot separator, skipping the empty ones. */
+function Dotted({ parts, sep }: { parts: React.ReactNode[]; sep: string }) {
+  const shown = parts.filter(Boolean);
+  return (
+    <>
+      {shown.map((part, i) => (
+        <span key={i}>
+          {i > 0 ? sep : null}
+          {part}
+        </span>
+      ))}
+    </>
+  );
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -132,7 +161,9 @@ export default async function PublicMonologuePage({ params }: Params) {
   }
 
   const title = displayTitle(m);
-  const meta = [m.gender, m.tone, readableLength(m.durationSeconds)].filter(Boolean) as string[];
+  const hasPlay = Boolean(m.playTitle && !m.character.toLowerCase().includes(m.playTitle.toLowerCase()));
+  const meta: React.ReactNode[] = [m.gender, m.tone, m.durationSeconds ? <Length seconds={m.durationSeconds} /> : null];
+  const author = displayableAuthor(m.author);
 
   // The links out. Until 2026-10-10 this page linked to no other /monologues/
   // page: 12,000 pages reachable only from the sitemap, passing nothing to
@@ -187,28 +218,34 @@ export default async function PublicMonologuePage({ params }: Params) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd).replace(/</g, "\\u003c") }}
       />
 
-      <p className="text-sm uppercase tracking-[0.18em] text-primary mb-3">Monologue</p>
-      <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground mb-2">{title}</h1>
+      <p className="text-sm uppercase tracking-[0.18em] text-primary mb-3"><T k="seoMonologue.eyebrow" /></p>
+      <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground mb-2">
+        {hasPlay ? (
+          <T k="seoMonologue.titleFrom" vars={{ character: m.character, play: m.playTitle as string }} />
+        ) : (
+          <T k="seoMonologue.titleOnly" vars={{ character: m.character }} />
+        )}
+      </h1>
       <p className="text-muted-foreground mb-1">
         {m.playTitle ? (
-          <>
-            From <span className="text-foreground">{m.playTitle}</span>
-          </>
+          <SeoT k="seoMonologue.from" slots={{ play: <span className="text-foreground">{m.playTitle}</span> }} />
         ) : (
-          "Monologue"
+          <T k="seoMonologue.eyebrow" />
         )}
-        {displayableAuthor(m.author) ? ` by ${displayableAuthor(m.author)}` : null}
+        {author ? <T k="seoMonologue.by" vars={{ author }} /> : null}
       </p>
-      {meta.length > 0 && (
-        <p className="text-sm text-muted-foreground capitalize mb-8">{meta.join("  ·  ")}</p>
+      {meta.some(Boolean) && (
+        <p className="text-sm text-muted-foreground capitalize mb-8">
+          <Dotted parts={meta} sep="  ·  " />
+        </p>
       )}
 
       <div className="flex flex-wrap gap-3 mb-10">
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link prefetch={false} href={`/monologue/${m.id}/work`}>Rehearse this free</Link>
+          <Link prefetch={false} href={`/monologue/${m.id}/work`}><T k="seoMonologue.rehearseThisFree" /></Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link prefetch={false} href="/">Find more monologues</Link>
+          <Link prefetch={false} href="/"><T k="seoMonologue.findMore" /></Link>
         </Button>
       </div>
 
@@ -219,17 +256,22 @@ export default async function PublicMonologuePage({ params }: Params) {
       ) : (
         <div className="rounded-xl border border-border bg-muted/30 p-6 mb-12">
           <p className="text-muted-foreground">
-            This piece is from a copyrighted{" "}
-            {m.sourceType === "film" ? "film" : m.sourceType === "tv" ? "TV series" : "work"}, so the
-            full text isn&apos;t published here. You can bring your own copy of the lines and rehearse it
-            on ActorRise.
+            <T
+              k={
+                m.sourceType === "film"
+                  ? "seoMonologue.copyrightFilm"
+                  : m.sourceType === "tv"
+                    ? "seoMonologue.copyrightTv"
+                    : "seoMonologue.copyrightWork"
+              }
+            />
           </p>
         </div>
       )}
 
       {(about.length > 0 || tags.length > 0) && (
         <section className="mb-12">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground mb-3">About this piece</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground mb-3"><T k="seoMonologue.about" /></h2>
           {about.map((line) => (
             <p key={line} className="text-muted-foreground mb-2">
               {line}
@@ -237,7 +279,19 @@ export default async function PublicMonologuePage({ params }: Params) {
           ))}
           {tags.length > 0 && (
             <p className="text-sm text-muted-foreground capitalize">
-              {[m.ageRange ? `${m.ageRange.replace("+", " and up")}` : null, ...tags].filter(Boolean).join("  ·  ")}
+              <Dotted
+                parts={[
+                  m.ageRange ? (
+                    m.ageRange.includes("+") ? (
+                      <T k="seoMonologue.ageUp" vars={{ age: m.ageRange.replace("+", "") }} />
+                    ) : (
+                      m.ageRange
+                    )
+                  ) : null,
+                  ...tags,
+                ]}
+                sep="  ·  "
+              />
             </p>
           )}
         </section>
@@ -251,18 +305,17 @@ export default async function PublicMonologuePage({ params }: Params) {
 
       <div className="rounded-2xl border border-border bg-muted/30 p-8 text-center">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">
-          Rehearse {m.character}&apos;s monologue
+          <T k="seoMonologue.rehearseTitle" vars={{ character: m.character }} />
         </h2>
         <p className="text-muted-foreground mb-6">
-          Run it out loud with a spotlight that follows your voice, line by line, until it&apos;s off the
-          page. Free to start, no credit card.
+          <T k="seoMonologue.rehearseBody" />
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Button asChild size="lg" className="rounded-full px-6">
-            <Link prefetch={false} href={`/monologue/${m.id}/work`}>Rehearse free</Link>
+            <Link prefetch={false} href={`/monologue/${m.id}/work`}><T k="seoMonologue.rehearseFree" /></Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-            <Link prefetch={false} href="/signup">Start rehearsing</Link>
+            <Link prefetch={false} href="/signup"><T k="cta.startRehearsing" /></Link>
           </Button>
         </div>
       </div>
@@ -270,12 +323,12 @@ export default async function PublicMonologuePage({ params }: Params) {
       {siblings.length > 0 && (
         <section className="mt-14">
           <h2 className="text-xl font-semibold tracking-tight text-foreground mb-1">
-            More from {m.playTitle}
+            <T k="seoMonologue.moreFrom" vars={{ play: m.playTitle ?? "" }} />
           </h2>
           {playPage && (
             <p className="text-sm text-muted-foreground mb-4">
               <Link prefetch={false} href={`/monologues/${playPage.slug}`} className="text-primary underline underline-offset-4">
-                Every speech from {m.playTitle}, printed in full
+                <T k="seoMonologue.everySpeech" vars={{ play: m.playTitle ?? "" }} />
               </Link>
             </p>
           )}
@@ -290,7 +343,7 @@ export default async function PublicMonologuePage({ params }: Params) {
                   {s.character}
                 </Link>
                 <span className="ml-3 text-sm text-muted-foreground capitalize">
-                  {[s.tone, readableLength(s.durationSeconds)].filter(Boolean).join(" · ")}
+                  <Dotted parts={[s.tone, s.durationSeconds ? <Length seconds={s.durationSeconds} /> : null]} sep=" · " />
                 </span>
               </li>
             ))}
@@ -300,7 +353,7 @@ export default async function PublicMonologuePage({ params }: Params) {
 
       {shelves.length > 0 && (
         <section className="mt-12">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground mb-3">Browse</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground mb-3"><T k="seoMonologue.browse" /></h2>
           <ul className="flex flex-wrap gap-2">
             {shelves.map((c) => (
               <li key={c.slug}>
@@ -319,7 +372,7 @@ export default async function PublicMonologuePage({ params }: Params) {
                 href="/monologue-database"
                 className="inline-block rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
               >
-                The whole database
+                <T k="seoMonologue.wholeDb" />
               </Link>
             </li>
           </ul>

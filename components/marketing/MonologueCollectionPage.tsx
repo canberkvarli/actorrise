@@ -5,6 +5,8 @@ import { StageHero } from "@/components/marketing/StageHero";
 import { COLLECTIONS, type Collection } from "@/lib/monologueCollections";
 import { monologueSlug, type CollectionMonologue } from "@/lib/monologueSeo";
 import { displayableAuthor } from "@/lib/utils";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { T, type MessageKey } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -15,10 +17,10 @@ function readableLength(seconds: number | null): string | null {
   return mm > 0 ? `${mm}:${ss.toString().padStart(2, "0")}` : `0:${ss.toString().padStart(2, "0")}`;
 }
 
-function sourceWord(sourceType: string): string {
-  if (sourceType === "film") return "film";
-  if (sourceType === "tv") return "TV";
-  return "play";
+function sourceWord(sourceType: string): MessageKey {
+  if (sourceType === "film") return "seoCollection.film";
+  if (sourceType === "tv") return "seoCollection.tv";
+  return "seoCollection.play";
 }
 
 /**
@@ -63,21 +65,26 @@ export function MonologueCollectionPage({ collection, monologues }: { collection
         lede={collection.intro}
       >
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link href={searchHref}>Search all of them</Link>
+          <Link href={searchHref}><T k="seoCollection.searchAll" /></Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/signup">Start rehearsing</Link>
+          <Link href="/signup"><T k="cta.startRehearsing" /></Link>
         </Button>
       </StageHero>
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-3xl">
         {monologues.length === 0 ? (
           <p className="text-muted-foreground mb-10">
-            Nothing matched this shelf right now.{" "}
-            <Link href={searchHref} className="text-foreground font-medium underline hover:no-underline">
-              Try the search
-            </Link>
-            .
+            <SeoT
+              k="seoCollection.nothing"
+              slots={{
+                link: (
+                  <Link href={searchHref} className="text-foreground font-medium underline hover:no-underline">
+                    <T k="seoCommon.trySearch" />
+                  </Link>
+                ),
+              }}
+            />
           </p>
         ) : (
           <ol className="divide-y divide-border">
@@ -97,14 +104,26 @@ export function MonologueCollectionPage({ collection, monologues }: { collection
                         <Link href={href} className="text-foreground hover:text-primary">
                           {m.character}
                           {m.playTitle ? (
-                            <span className="text-muted-foreground font-normal"> from {m.playTitle}</span>
+                            <span className="text-muted-foreground font-normal">
+                              <T k="seoCollection.fromPlay" vars={{ play: m.playTitle }} />
+                            </span>
                           ) : null}
                         </Link>
                       </h2>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {[author, sourceWord(m.sourceType), m.tone, len ? `${len} min` : null]
+                        {[
+                          author,
+                          <T key="source" k={sourceWord(m.sourceType)} />,
+                          m.tone,
+                          len ? <T key="len" k="seoCollection.lenMin" vars={{ len }} /> : null,
+                        ]
                           .filter(Boolean)
-                          .join("  ·  ")}
+                          .map((part, j) => (
+                            <span key={j}>
+                              {j > 0 ? "  ·  " : null}
+                              {part}
+                            </span>
+                          ))}
                       </p>
                       {turn ? <p className="mt-2 text-sm italic leading-relaxed text-foreground">{turn}</p> : null}
                       {m.teaser ? (
@@ -119,14 +138,12 @@ export function MonologueCollectionPage({ collection, monologues }: { collection
         )}
 
         <p className="mt-8 text-sm text-muted-foreground">
-          Length is estimated at a performing pace of about 130 words a minute, with a breath at each sentence.
-          Public-domain pieces are printed in full on their own page; copyrighted ones list the character and the
-          source.
+          <T k="seoCollection.lengthNote" />
         </p>
 
         {related.length > 0 ? (
           <p className="mt-8 text-muted-foreground">
-            Related:{" "}
+            <T k="seoCommon.related" />
             {related.map((r, i) => (
               <span key={r.slug}>
                 {i > 0 ? " · " : ""}
@@ -143,17 +160,16 @@ export function MonologueCollectionPage({ collection, monologues }: { collection
         </div>
 
         <div className="mt-12 rounded-2xl border border-border bg-muted/30 p-8 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">Not the one yet?</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2"><T k="seoCollection.notYet" /></h2>
           <p className="text-muted-foreground mb-6">
-            Describe the piece the way you would to a coach and the search reads the whole corpus, not this
-            shelf. Free to start, no credit card.
+            <T k="seoCollection.notYetBody" />
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button asChild size="lg" className="rounded-full px-6">
-              <Link href={searchHref}>Search the corpus</Link>
+              <Link href={searchHref}><T k="seoCollection.searchCorpus" /></Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-              <Link href="/signup">Start rehearsing</Link>
+              <Link href="/signup"><T k="cta.startRehearsing" /></Link>
             </Button>
           </div>
         </div>

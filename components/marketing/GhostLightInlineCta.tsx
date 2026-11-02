@@ -1,4 +1,5 @@
 import { appStoreUrl } from "@/lib/appStore";
+import { SeoT } from "@/components/marketing/seo/SeoT";
 
 /**
  * The app, offered at the one moment it makes obvious sense.
@@ -15,7 +16,8 @@ import { appStoreUrl } from "@/lib/appStore";
  *
  * No `"use client"`. These pages are statically generated with a day's
  * revalidate, and they are the SEO surface, so shipping JavaScript to render one
- * sentence would be a poor trade. That also means no platform sniffing, hence
+ * sentence would be a poor trade. The sentence itself is a <SeoT> island so it
+ * can be read in Turkish; the server still renders it in English. That also means no platform sniffing, hence
  * "on iPhone" said plainly rather than a button that lies to Android.
  */
 export function GhostLightInlineCta() {
@@ -27,17 +29,21 @@ export function GhostLightInlineCta() {
         className="size-2 shrink-0 rounded-full bg-primary shadow-[0_0_10px_2px_color-mix(in_oklab,var(--primary)_45%,transparent)]"
       />
       <p className="text-sm leading-relaxed text-muted-foreground">
-        Learning this one?{" "}
-        <a
-          href={appStoreUrl("monologue_page")}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-foreground underline decoration-primary/40 underline-offset-4 transition-colors hover:decoration-primary"
-        >
-          Ghost Light
-        </a>{" "}
-        keeps your saved pieces on your phone and reads them offline, in the
-        wings or on the train. Free on iPhone.
+        <SeoT
+          k="seoGhostLight.line"
+          slots={{
+            link: (
+              <a
+                href={appStoreUrl("monologue_page")}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-foreground underline decoration-primary/40 underline-offset-4 transition-colors hover:decoration-primary"
+              >
+                Ghost Light
+              </a>
+            ),
+          }}
+        />
       </p>
     </aside>
   );

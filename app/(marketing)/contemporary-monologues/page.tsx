@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -31,23 +33,15 @@ export default function Page() {
   return (
     <>
       <StageHero
-        direction="(the modern canon.)"
+        direction={<T k="seoDirections.contemporary" />}
         title={
-          <>
-            Contemporary monologues for <em className="italic text-primary">auditions</em>.
-          </>
+          <SeoT k="seoContemporary.title" slots={{ em: <em className="italic text-primary"><T k="seoContemporary.titleEm" /></em> }} />
         }
-        lede={
-          <>
-            Modern plays, current voices, pieces that feel alive. Search contemporary monologues by tone,
-            character type, or theme. The AI understands what you mean, so &quot;funny monologue from a
-            recent play about family&quot; actually works.
-          </>
-        }
+        lede={<T k="seoContemporary.lede" />}
       >
         <Button asChild size="lg" className="rounded-full px-6">
           <Link prefetch={false} href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
-            Search contemporary monologues
+            <T k="seoContemporary.searchBtn" />
           </Link>
         </Button>
       </StageHero>
@@ -55,55 +49,57 @@ export default function Page() {
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <div className="mt-0 space-y-3 text-sm text-muted-foreground">
         <p>
-          Also try{" "}
-          <Link prefetch={false} href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
-            dramatic monologues
-          </Link>
-          ,{" "}
-          <Link prefetch={false} href="/monologues-for-men" className="text-foreground underline hover:no-underline">
-            monologues for men
-          </Link>
-          , or{" "}
-          <Link prefetch={false} href="/shakespeare-monologues" className="text-foreground underline hover:no-underline">
-            Shakespeare monologues
-          </Link>
-          .
+          <SeoT
+            k="seoContemporary.also"
+            slots={{
+              dramatic: (
+                <Link prefetch={false} href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.dramatic" />
+                </Link>
+              ),
+              men: (
+                <Link prefetch={false} href="/monologues-for-men" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.men" />
+                </Link>
+              ),
+              shakespeare: (
+                <Link prefetch={false} href="/shakespeare-monologues" className="text-foreground underline hover:no-underline">
+                  <T k="seoCommon.links.shakespeare" />
+                </Link>
+              ),
+            }}
+          />
         </p>
       </div>
 
       <section className="mt-16 border-t border-border pt-12">
-        <h2 className="text-2xl font-bold text-foreground mb-8">Frequently asked questions</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-8"><T k="seoCommon.faqTitle" /></h2>
 
         <div className="space-y-6">
           <div>
             <h3 className="font-semibold text-foreground mb-2">
-              What counts as a contemporary monologue?
+              <T k="seoContemporary.q1" />
             </h3>
             <p className="text-muted-foreground">
-              Generally anything written from the 1950s onward, though most people mean the last 20 to
-              30 years. If the audition asks for &quot;contemporary,&quot; they usually want something
-              modern that sounds like how people actually talk today.
+              <T k="seoContemporary.a1" />
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-foreground mb-2">
-              Why do auditions ask for a contemporary monologue?
+              <T k="seoContemporary.q2" />
             </h3>
             <p className="text-muted-foreground">
-              Casting wants to see how you handle realistic, everyday language. Contemporary pieces
-              show your natural instincts without the added challenge of verse or heightened text.
+              <T k="seoContemporary.a2" />
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-foreground mb-2">
-              Can I search by playwright or play title?
+              <T k="seoContemporary.q3" />
             </h3>
             <p className="text-muted-foreground">
-              Yes. You can search by playwright name, play title, or describe the kind of piece you
-              want. Try something like &quot;monologue from a play about siblings&quot; and the AI
-              will find relevant matches.
+              <T k="seoContemporary.a3" />
             </p>
           </div>
         </div>
