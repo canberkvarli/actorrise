@@ -161,10 +161,11 @@ someone in section 2: the server emails them a day after their wall.
   CURTAIN, or thread. Send with the Gmail `send_message` tool, `htmlBody` only. If any
   condition fails, leave it as a draft and say which in the summary. The summary lists every
   note sent with its subject, under "Notes sent", not "drafts waiting".
-- After sending, append each address to `outputs/conversion/written.txt` as
-  `<address>   # <date> <subject>`. The brief reads that file and leaves them out of section 5
-  from then on; the database never sees a Gmail draft, so without it the same people come back
-  the next day.
+- After sending, log each one: `scripts/contact_log.py add <address> --kind note --subject
+  "SENT <subject>"`. That row is in the `contact_log` table, which the brief reads to leave them
+  out of section 5 from then on; the database never sees a Gmail draft, so without it the same
+  people come back the next day. (Until 2026-11-02 this was `outputs/conversion/written.txt`.
+  The file is still read where it exists, but nothing new goes in it: a cloud run cannot see it.)
 - Skip anyone with no real activity to talk about, and say in the summary that you did.
 - Skip a throwaway address (a mail-drop domain, no name), and anyone whose searches say
   they are a child. Say in the summary that you did, without saying who.
@@ -177,8 +178,8 @@ Check again if more than an hour has passed since it ran.
 the emails we sent, to whom and what; no duplicates, and not two different people at the
 same organization"):
 `cd backend && uv run --with openpyxl python scripts/contact_log.py check <address> --org "<org>"`.
-It reads `outputs/conversion/contacts.csv`, `written.txt`, every `tracker-append.csv` and the outreach
-tracker, and matches the address, the organisation's domain, and the organisation name.
+It reads the `contact_log` table (every touch since the 2026-11-02 import, from any
+machine), plus the old files where they exist on this one, and matches the address, the organisation's domain, and the organisation name.
 Also search Gmail `in:sent (to:<address> OR to:<domain>)` for anything it cannot see. A
 hit means: do not open a new thread. Either it is the one chase (below), or it is nothing.
 After every draft or send: `scripts/contact_log.py add <address> --kind <note|educator|

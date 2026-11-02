@@ -9,11 +9,15 @@ loop's notes), each week's tracker-append.csv (drafted outreach), and Gmail.
 
     uv run python scripts/contact_log.py check <address> [--org "<name>"]
     uv run python scripts/contact_log.py add <address> --kind <kind> --subject "<s>" [--org "<name>"]
+    uv run --with openpyxl python scripts/contact_log.py import
 
 `check` prints every earlier touch it can find for the address, for its domain
 (when the domain is an organisation's, not gmail.com and friends), and for the
-organisation name, and exits 1 if there is any. `add` appends one row to the
-log. The log is outputs/conversion/contacts.csv: gitignored, because it names people.
+organisation name, and exits 1 if there is any. `add` writes one row to the
+`contact_log` table (2026-11-02: the record moved from a gitignored CSV into the
+database, so a cloud session sees the same history as the laptop). `import`
+copies the old files in once; it is safe to run again. The files are still read
+when they exist, for anything written before the import.
 
 Gmail is not read here (no credentials in the backend). The loops search
 Gmail's sent folder for the address and the domain alongside this check.
@@ -29,6 +33,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "backend"))
 LOG = ROOT / "outputs" / "conversion" / "contacts.csv"
 WRITTEN = ROOT / "outputs" / "conversion" / "written.txt"
 TRACKER = ROOT / "ActorRise_Outreach_Tracker.xlsx"
@@ -52,8 +57,21 @@ def norm_org(name: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (name or "").lower()).strip()
 
 
-def _rows() -> list[dict]:
-    """Every earlier touch, from every source, in one shape."""
+def _db_rows() -> list[dict]:
+    from sqlalchemy import text
+
+    from app.core.database import engine
+    with engine.connect().execution_options(postgresql_readonly=True) as conn:
+        rows = conn.execute(text(
+            "SELECT contacted_on, address, domain, organization, kind, subject, source "
+            "FROM contact_log")).mappings().all()
+    return [{"date": str(r["contacted_on"] or ""), "address": r["address"], "domain": r["domain"],
+             "organization": r["organization"], "kind": r["kind"], "subject": r["subject"],
+             "source": f"db:{r['source']}"} for r in rows]
+
+
+def _file_rows() -> list[dict]:
+    """The pre-database record: whatever of it exists on this machine."""
     out: list[dict] = []
     if LOG.exists():
         with LOG.open() as f:
@@ -96,6 +114,43 @@ def _rows() -> list[dict]:
     return out
 
 
+def _rows() -> list[dict]:
+    """Every earlier touch, from every source, in one shape."""
+    return _db_rows() + _file_rows()
+
+
+def _date(v: str):
+    m = re.match(r"(\d{4}-\d{2}-\d{2})", v or "")
+    return dt.date.fromisoformat(m.group(1)) if m else None
+
+
+def _insert(conn, r: dict) -> None:
+    from sqlalchemy import text
+    conn.execute(text(
+        "INSERT INTO contact_log (contacted_on, address, domain, organization, kind, subject, source) "
+        "VALUES (:d, :a, :dom, :o, :k, :s, :src)"),
+        {"d": _date(r.get("date", "")), "a": (r.get("address") or "").strip().lower(),
+         "dom": r.get("domain") or "", "o": r.get("organization") or "", "k": r.get("kind") or "",
+         "s": r.get("subject") or "", "src": r.get("source") or "contact_log"})
+
+
+def import_files() -> int:
+    """Copy the file record into the table, skipping rows it already holds."""
+    from app.core.database import engine
+    have = {(r["address"], r["kind"], r["subject"], r["date"]) for r in _db_rows()}
+    n = 0
+    with engine.begin() as conn:
+        for r in _file_rows():
+            key = ((r.get("address") or "").strip().lower(), r.get("kind") or "", r.get("subject") or "",
+                   str(_date(r.get("date", "")) or ""))
+            if key in have or not (key[0] or r.get("organization")):
+                continue
+            have.add(key)
+            _insert(conn, r)
+            n += 1
+    return n
+
+
 def check(address: str, org: str | None) -> list[dict]:
     a = address.strip().lower()
     d = domain_of(a)
@@ -115,14 +170,11 @@ def check(address: str, org: str | None) -> list[dict]:
 
 
 def add(address: str, kind: str, subject: str, org: str | None) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    new = not LOG.exists()
-    with LOG.open("a", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=FIELDS)
-        if new:
-            w.writeheader()
-        w.writerow({"date": dt.date.today().isoformat(), "address": address.strip().lower(),
-                    "domain": domain_of(address), "organization": org or "", "kind": kind, "subject": subject})
+    from app.core.database import engine
+    with engine.begin() as conn:
+        _insert(conn, {"date": dt.date.today().isoformat(), "address": address,
+                       "domain": domain_of(address), "organization": org or "", "kind": kind,
+                       "subject": subject, "source": "contact_log"})
 
 
 def main() -> None:
@@ -136,7 +188,11 @@ def main() -> None:
     a.add_argument("--kind", required=True, help="note | educator | checkin | outreach | chase | reply")
     a.add_argument("--subject", required=True)
     a.add_argument("--org")
+    sub.add_parser("import", help="copy contacts.csv, written.txt, tracker-append.csv and the tracker in")
     args = p.parse_args()
+    if args.cmd == "import":
+        print(f"imported {import_files()} rows")
+        return
     if args.cmd == "check":
         hits = check(args.address, args.org)
         if not hits:

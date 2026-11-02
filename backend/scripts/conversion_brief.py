@@ -393,19 +393,26 @@ def change(now: int, before: int) -> str:
 WRITTEN = backend_dir.parent / "outputs" / "conversion" / "written.txt"
 
 
-def written_to() -> list[str]:
-    """Addresses the loop has drafted a personal note to: one per line, anything
-    after a # is a comment. The loop appends; the brief leaves them out of
-    section 5. Returns a placeholder when the file is empty, since `not in ()`
-    is not SQL."""
-    if not WRITTEN.exists():
-        return ["nobody@nowhere"]
-    addrs = []
-    for line in WRITTEN.read_text().splitlines():
-        addr = line.split("#", 1)[0].strip().lower()
-        if "@" in addr:
-            addrs.append(addr)
-    return addrs or ["nobody@nowhere"]
+def written_to(conn=None) -> list[str]:
+    """Addresses already written to: written.txt when this machine has it (one per
+    line, anything after a # is a comment), plus every address in the
+    contact_log table, which is the record a cloud session can see too. The
+    brief leaves them out of section 5. Returns a placeholder when there are
+    none, since `not in ()` is not SQL."""
+    addrs = set()
+    if WRITTEN.exists():
+        for line in WRITTEN.read_text().splitlines():
+            addr = line.split("#", 1)[0].strip().lower()
+            if "@" in addr:
+                addrs.add(addr)
+    if conn is not None:
+        from sqlalchemy import text
+        try:
+            addrs |= {r[0] for r in conn.execute(text(
+                "SELECT DISTINCT lower(address) FROM contact_log WHERE address LIKE '%@%'"))}
+        except Exception:  # noqa: BLE001 — table not created yet
+            conn.rollback()
+    return sorted(addrs) or ["nobody@nowhere"]
 
 
 def build(conn) -> str:
@@ -425,7 +432,7 @@ def build(conn) -> str:
     ]
 
     walked = q(WALKED_AWAY, days=2, limit=25)
-    worth = [r for r in q(WORTH, written=written_to()) if r[4] > 0]
+    worth = [r for r in q(WORTH, written=written_to(conn)) if r[4] > 0]
 
     # Ghost Light. Apple's analytics columns are NULL until the first instance
     # lands (about a day after the report request), and a NULL is "not from
