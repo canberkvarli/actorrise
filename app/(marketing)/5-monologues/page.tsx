@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { API_URL } from "@/lib/api";
 import { StageHero } from "@/components/marketing/StageHero";
+import { useT } from "@/lib/i18n";
 
 type LeadMagnetItem = {
   id: number;
@@ -23,6 +24,7 @@ export default function FiveMonologuesPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [list, setList] = useState<LeadMagnetItem[]>([]);
+  const t = useT();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +39,7 @@ export default function FiveMonologuesPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setStatus("error");
-        setErrorMessage(data?.error || "Something went wrong. Please try again.");
+        setErrorMessage(data?.error || t("audFive.errGeneric"));
         return;
       }
       setStatus("success");
@@ -48,7 +50,7 @@ export default function FiveMonologuesPage() {
       }
     } catch {
       setStatus("error");
-      setErrorMessage("Network error. Please try again.");
+      setErrorMessage(t("audFive.errNetwork"));
     }
   };
 
@@ -56,10 +58,10 @@ export default function FiveMonologuesPage() {
     return (
       <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
         <h1 className="font-brand font-semibold text-3xl md:text-4xl text-foreground mb-2">
-          Here are your 5 monologues
+          {t("audFive.successTitle")}
         </h1>
         <p className="text-muted-foreground mb-8">
-          Fresh pieces casting directors would rather see. Find the full text and more like these on ActorRise.
+          {t("audFive.successBody")}
         </p>
         <ul className="space-y-6 mb-10">
           {list.length > 0 ? (
@@ -69,31 +71,33 @@ export default function FiveMonologuesPage() {
                   {m.character_name}, {m.title}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  From <em>{m.play_title}</em> by {m.author}
+                  {t("audFive.fromA", { author: m.author })}
+                  <em>{m.play_title}</em>
+                  {t("audFive.fromB", { author: m.author })}
                   {m.estimated_duration_seconds > 0 && (
-                    <span> · {Math.round(m.estimated_duration_seconds / 60)} min</span>
+                    <span> · {t("audFive.minutes", { n: Math.round(m.estimated_duration_seconds / 60) })}</span>
                   )}
                 </div>
                 {m.scene_description && (
                   <p className="text-sm text-muted-foreground mt-2">{m.scene_description}</p>
                 )}
                 <Button asChild variant="outline" size="sm" className="mt-3">
-                  <Link prefetch={false} href={`/monologue/${m.id}`}>View on ActorRise</Link>
+                  <Link prefetch={false} href={`/monologue/${m.id}`}>{t("audFive.viewOn")}</Link>
                 </Button>
               </li>
             ))
           ) : (
             <li className="text-muted-foreground">
-              We couldn&apos;t load the list right now.{" "}
+              {t("audFive.loadFailA")}
               <Link prefetch={false} href="/monologues" className="text-primary underline">
-                Browse monologues
-              </Link>{" "}
-              to find fresh pieces.
+                {t("audFive.loadFailLink")}
+              </Link>
+              {t("audFive.loadFailB")}
             </li>
           )}
         </ul>
         <Button asChild size="lg" className="rounded-full px-6">
-          <Link prefetch={false} href="/signup">Start rehearsing on ActorRise</Link>
+          <Link prefetch={false} href="/signup">{t("audFive.startRehearsing")}</Link>
         </Button>
       </div>
     );
@@ -102,28 +106,24 @@ export default function FiveMonologuesPage() {
   return (
     <>
       <StageHero
-        direction="(your shortlist.)"
+        direction={t("audFive.direction")}
         title={
           <>
-            5 monologues casting directors would rather <em className="italic text-primary">see</em>
+            {t("audFive.titleA")}
+            <em className="italic text-primary">{t("audFive.titleEm")}</em>
+            {t("audFive.titleB")}
           </>
         }
-        lede={
-          <>
-            Tired of overdone pieces? Get a curated list of fresh monologues, the kind that make
-            casting directors sit up. Enter your email and we&apos;ll send you the list and links to
-            find them on ActorRise.
-          </>
-        }
+        lede={t("audFive.lede")}
       />
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="lead-magnet-email">Email</Label>
+          <Label htmlFor="lead-magnet-email">{t("auth.email")}</Label>
           <Input
             id="lead-magnet-email"
             type="email"
-            placeholder="you@example.com"
+            placeholder={t("audFive.placeholder")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -135,12 +135,11 @@ export default function FiveMonologuesPage() {
           <p className="text-sm text-destructive">{errorMessage}</p>
         )}
         <Button type="submit" size="lg" disabled={status === "loading"} className="rounded-full px-6">
-          {status === "loading" ? "Sending…" : "Send me the list"}
+          {status === "loading" ? t("audFive.sending") : t("audFive.send")}
         </Button>
       </form>
       <p className="mt-8 text-sm text-muted-foreground">
-        No spam. We&apos;ll only use your email to send this list and occasional ActorRise updates.
-        Unsubscribe anytime.
+        {t("audFive.privacy")}
       </p>
       </div>
     </>

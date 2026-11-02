@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { useTheatreStats } from "./useTheatreStats";
 
 const TITLES = [
@@ -27,11 +28,12 @@ const TITLES = [
  * get sliced off by the overflow clip without them.
  */
 export function PlayMarquee() {
+  const t = useT();
   const { plays } = useTheatreStats();
 
   return (
     <section
-      aria-label="Plays in the library"
+      aria-label={t("landingMarquee.label")}
       className="overflow-hidden pb-10 pt-12"
       style={{ background: "var(--t-ink)", borderBottom: "1px solid oklch(0.22 0.02 55)" }}
     >
@@ -44,9 +46,9 @@ export function PlayMarquee() {
           style={{ animation: "t-marq 60s linear infinite", lineHeight: 1.25 }}
         >
           {[0, 1].map((copy) =>
-            TITLES.map((t) => (
+            TITLES.map((title) => (
               <span
-                key={`${copy}-${t}`}
+                key={`${copy}-${title}`}
                 aria-hidden={copy === 1}
                 className="flex items-center gap-8 whitespace-nowrap px-4 transition-colors hover:!text-[var(--t-gel)]"
                 style={{
@@ -57,7 +59,7 @@ export function PlayMarquee() {
                   color: "oklch(0.35 0.03 55)",
                 }}
               >
-                {t}
+                {title}
                 <span
                   aria-hidden
                   className="size-3 shrink-0 rounded-full"
@@ -72,7 +74,7 @@ export function PlayMarquee() {
         className="t-dir mt-6 text-center"
         style={{ fontSize: 13, color: "var(--t-faint)" }}
       >
-        (a few of the {plays}+ plays, films and shows in the library.)
+        {t("landingMarquee.caption", { plays })}
       </p>
     </section>
   );

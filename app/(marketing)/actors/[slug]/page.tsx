@@ -8,11 +8,13 @@ import { HeadshotGallery } from "@/components/founding-actor/HeadshotGallery";
 import { SocialLinkIcons } from "@/components/founding-actor/SocialLinkIcons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StageHero } from "@/components/marketing/StageHero";
+import { useT } from "@/lib/i18n";
 
 export default function ActorPage() {
   const params = useParams();
   const slug = params.slug as string;
   const { data: actor, isLoading } = useFoundingActor(slug);
+  const t = useT();
 
   if (isLoading) {
     return (
@@ -34,16 +36,16 @@ export default function ActorPage() {
     return (
       <div className="container mx-auto px-4 sm:px-6 py-16 md:py-24 max-w-3xl text-center">
         <h1 className="text-2xl font-bold text-foreground mb-4">
-          Actor not found
+          {t("audActors.notFoundTitle")}
         </h1>
         <p className="text-muted-foreground mb-6">
-          This actor page doesn&apos;t exist or is not published yet.
+          {t("audActors.notFoundBody")}
         </p>
         <Link prefetch={false}
           href="/actors"
           className="text-primary hover:underline font-medium"
         >
-          &larr; Back to all actors
+          {t("audActors.backToAll")}
         </Link>
       </div>
     );
@@ -52,7 +54,7 @@ export default function ActorPage() {
   return (
     <>
       <StageHero
-        direction="(now playing.)"
+        direction={t("audActors.nowPlaying")}
         title={actor.name}
         lede={actor.descriptor || undefined}
       />
@@ -64,7 +66,7 @@ export default function ActorPage() {
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
       >
         <ArrowLeft className="h-4 w-4" />
-        All actors
+        {t("audActors.allActors")}
       </Link>
 
       <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-8 md:gap-12">

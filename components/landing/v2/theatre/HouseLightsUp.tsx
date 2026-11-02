@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
+import { useT } from "@/lib/i18n";
 import { useScrollProgress } from "./useScrollProgress";
 
 /**
@@ -13,6 +14,7 @@ import { useScrollProgress } from "./useScrollProgress";
  * the moment is gone.
  */
 export function HouseLightsUp() {
+  const t = useT();
   const creamRef = useRef<HTMLDivElement>(null);
 
   const apply = useCallback((p: number) => {
@@ -23,7 +25,7 @@ export function HouseLightsUp() {
   return (
     <section
       ref={sectionRef as React.RefObject<HTMLElement>}
-      aria-label="House lights up"
+      aria-label={t("landingLights.label")}
       className="relative"
       style={{ height: "220vh", background: "var(--t-stage)" }}
     >
@@ -34,12 +36,12 @@ export function HouseLightsUp() {
         >
           <div className="max-w-[1000px]">
             <p className="t-dir" style={{ color: "var(--t-muted-light)" }}>
-              (keep scrolling.)
+              {t("landingLights.keepScrolling")}
             </p>
             <p className="t-h2 t-h2--big mt-5">
-              House lights{" "}
+              {t("landingLights.titleA")}
               <em className="t-em" style={{ color: "var(--t-line-dark-3)" }}>
-                up.
+                {t("landingLights.titleB")}
               </em>
             </p>
           </div>
@@ -57,12 +59,12 @@ export function HouseLightsUp() {
         >
           <div className="max-w-[1000px]">
             <p className="t-dir" style={{ color: "var(--t-muted-dark-2)" }}>
-              (and there they are. the actors.)
+              {t("landingLights.thereTheyAre")}
             </p>
             <p className="t-h2 t-h2--big mt-5">
-              House lights{" "}
+              {t("landingLights.titleA")}
               <em className="t-em" style={{ color: "var(--t-orange-deep)" }}>
-                up.
+                {t("landingLights.titleB")}
               </em>
             </p>
           </div>

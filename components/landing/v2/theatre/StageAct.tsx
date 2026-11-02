@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useT, type MessageKey } from "@/lib/i18n";
 import { useReducedMotion } from "./useReducedMotion";
 
 /**
@@ -13,16 +14,14 @@ import { useReducedMotion } from "./useReducedMotion";
  * old live demo.
  */
 
-const QUERY = "angry woman in her twenties, under two minutes, not shakespeare";
-
 type Result = {
   n: string;
   who: string;
   play: string;
   line: string;
   len: string;
-  tone: string;
-  overdone: string;
+  tone: MessageKey;
+  overdone: MessageKey;
   /** 1 = a warhorse, styled in orange rather than gel. */
   od: 0 | 1;
 };
@@ -34,8 +33,8 @@ const RESULTS: Result[] = [
     play: "Hedda Gabler · Ibsen",
     line: "Oh, if you could only understand how poor I am. And fate has made you so rich.",
     len: "1:40",
-    tone: "cold fury",
-    overdone: "fresh",
+    tone: "landingStage.toneHedda",
+    overdone: "landingStage.fresh",
     od: 0,
   },
   {
@@ -44,8 +43,8 @@ const RESULTS: Result[] = [
     play: "Miss Julie · Strindberg",
     line: "Do you think I'm afraid of you? Then you don't know what I am.",
     len: "1:55",
-    tone: "wounded pride",
-    overdone: "rarely done",
+    tone: "landingStage.toneJulie",
+    overdone: "landingStage.rarelyDone",
     od: 0,
   },
   {
@@ -54,44 +53,50 @@ const RESULTS: Result[] = [
     play: "The Seagull · Chekhov",
     line: "I'm a seagull. No, that's not it. I'm an actress. Yes.",
     len: "1:50",
-    tone: "unraveling",
-    overdone: "often seen",
+    tone: "landingStage.toneNina",
+    overdone: "landingStage.oftenSeen",
     od: 1,
   },
 ];
 
+/** Play text stays as printed; only the "you" lines are the app talking, so
+    those two are dictionary keys and are translated at render. */
 type Line = { who: string; text: string; you: boolean };
 
 const SCRIPT: Line[] = [
   { who: "Tesman", text: "Aunt Julle sends her love, Hedda. She'll come by this evening.", you: false },
-  { who: "You · Hedda", text: "(your line. it waits.)", you: true },
+  { who: "landingStage.youHedda", text: "landingStage.yourLine", you: true },
   { who: "Tesman", text: "Hedda? Aren't you going to say anything?", you: false },
-  { who: "You · Hedda", text: "(you take your time. it still waits.)", you: true },
+  { who: "landingStage.youHedda", text: "landingStage.takeYourTime", you: true },
   { who: "Brack", text: "Good afternoon, Mrs. Tesman. May I come in for a moment?", you: false },
 ];
 
-const FEATURES = [
+const FEATURES: { head: MessageKey; body: MessageKey; accent: string; tilt: string }[] = [
   {
-    head: "Meaning,",
-    body: 'not keywords. "Something funny that isn\'t Shakespeare" works.',
+    head: "landingStage.meaningHead",
+    body: "landingStage.meaningBody",
     accent: "var(--t-gel)",
     tilt: "-1deg",
   },
   {
-    head: "Overdone",
-    body: "scores on every piece, from fresh to warhorse. Know what you're walking in with.",
+    head: "landingStage.overdoneHead",
+    body: "landingStage.overdoneBody",
     accent: "var(--t-orange)",
     tilt: "1deg",
   },
   {
-    head: "Real text.",
-    body: "Every monologue is the published words. The AI finds; it never writes a line.",
+    head: "landingStage.realHead",
+    body: "landingStage.realBody",
     accent: "var(--t-gel)",
     tilt: "-1deg",
   },
 ];
 
 export function StageAct() {
+  const t = useT();
+  /* The typed query follows the language, so the effect below restarts the
+     demo when the locale lands after hydration. */
+  const query = t("landingStage.query");
   const reduced = useReducedMotion();
   const [playedTyped, setTyped] = useState("");
   const [playedThinking, setThinking] = useState(false);
@@ -102,7 +107,7 @@ export function StageAct() {
   /* Reduced motion gets the finished scene rather than a frozen empty one.
      It is derived, not stored: the demo simply never runs, so there is no
      state to seed and nothing to keep in sync. */
-  const typed = reduced ? QUERY : playedTyped;
+  const typed = reduced ? query : playedTyped;
   const thinking = reduced ? false : playedThinking;
   const results = reduced ? RESULTS : playedResults;
   const lines = reduced ? SCRIPT : playedLines;
@@ -123,8 +128,8 @@ export function StageAct() {
       let i = 0;
       const type = () => {
         i += 1;
-        setTyped(QUERY.slice(0, i));
-        if (i < QUERY.length) {
+        setTyped(query.slice(0, i));
+        if (i < query.length) {
           after(28 + Math.random() * 40, type);
         } else {
           setThinking(true);
@@ -155,7 +160,7 @@ export function StageAct() {
       pending.forEach(clearTimeout);
       pending.length = 0;
     };
-  }, [reduced]);
+  }, [reduced, query]);
 
   return (
     <section
@@ -173,13 +178,14 @@ export function StageAct() {
       />
       <div className="relative mx-auto max-w-[1240px]">
         <p className="t-dir" style={{ color: "var(--t-muted-light)" }}>
-          (places. lights to half. the search.)
+          {t("landingStage.direction")}
         </p>
         <h2 className="t-h2 mt-4 max-w-[900px]">
-          Describe it like you&rsquo;d{" "}
+          {t("landingStage.titleA")}
           <em className="t-em" style={{ color: "var(--t-gel)" }}>
-            say it out loud.
+            {t("landingStage.titleB")}
           </em>
+          {t("landingStage.titleC")}
         </h2>
 
         <div
@@ -209,7 +215,7 @@ export function StageAct() {
                 transform: "rotate(2deg)",
               }}
             >
-              (act i · the search)
+              {t("landingStage.searchTag")}
             </div>
 
             <div
@@ -274,7 +280,7 @@ export function StageAct() {
                       animation: "t-pulse 1s ease-in-out infinite",
                     }}
                   />
-                  (reading 19,000 pieces&hellip;)
+                  {t("landingStage.reading")}
                 </p>
               )}
               {results.map((r, k) => (
@@ -334,7 +340,7 @@ export function StageAct() {
                         className="rounded-full px-2.5 py-[3px]"
                         style={{ background: "oklch(0.92 0.02 80)" }}
                       >
-                        {r.tone}
+                        {t(r.tone)}
                       </span>
                       <span
                         className="rounded-full px-2.5 py-[3px]"
@@ -345,7 +351,7 @@ export function StageAct() {
                           color: r.od ? "oklch(0.45 0.16 45)" : "oklch(0.30 0.05 100)",
                         }}
                       >
-                        {r.overdone}
+                        {t(r.overdone)}
                       </span>
                     </p>
                   </div>
@@ -379,7 +385,7 @@ export function StageAct() {
                 transform: "rotate(-2deg)",
               }}
             >
-              (act ii · 2am. the rehearsal.)
+              {t("landingStage.rehearsalTag")}
             </div>
 
             <div className="flex items-center justify-between gap-3">
@@ -389,7 +395,7 @@ export function StageAct() {
               >
                 ScenePartner{" "}
                 <em className="t-em" style={{ color: "var(--t-gel)" }}>
-                  · Hedda Gabler, act ii
+                  {t("landingStage.rehearsalScene")}
                 </em>
               </p>
               <span
@@ -409,7 +415,7 @@ export function StageAct() {
                     animation: "t-pulse 1.4s ease-in-out infinite",
                   }}
                 />
-                listening
+                {t("landingStage.listening")}
               </span>
             </div>
 
@@ -432,7 +438,7 @@ export function StageAct() {
                       color: l.you ? "var(--t-gel)" : "var(--t-orange)",
                     }}
                   >
-                    {l.who}
+                    {l.you ? t(l.who as MessageKey) : l.who}
                   </span>
                   <p
                     className="m-0 px-4 py-3"
@@ -446,7 +452,7 @@ export function StageAct() {
                       fontStyle: l.you ? "italic" : "normal",
                     }}
                   >
-                    {l.text}
+                    {l.you ? t(l.text as MessageKey) : l.text}
                   </p>
                 </div>
               ))}
@@ -463,7 +469,7 @@ export function StageAct() {
               }}
             >
               <span aria-hidden className="h-px flex-1" style={{ background: "var(--t-line-dark-3)" }} />
-              (it waits for your cue. every time.)
+              {t("landingStage.waitsForCue")}
               <span aria-hidden className="h-px flex-1" style={{ background: "var(--t-line-dark-3)" }} />
             </div>
           </div>
@@ -505,13 +511,13 @@ export function StageAct() {
                   color: f.accent,
                 }}
               >
-                {f.head}
+                {t(f.head)}
               </p>
               <p
                 className="m-0 mt-1.5 text-base leading-relaxed"
                 style={{ color: "var(--t-muted-light-3)" }}
               >
-                {f.body}
+                {t(f.body)}
               </p>
             </div>
           ))}

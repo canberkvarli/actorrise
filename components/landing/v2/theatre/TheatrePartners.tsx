@@ -24,6 +24,7 @@ import {
   type PartnerItem,
 } from "@/data/partners";
 import { trackPartnerClicked } from "@/lib/analytics";
+import { useT } from "@/lib/i18n";
 
 /**
  * Organizations approved in /admin/organizations (GET /api/partners). Same
@@ -57,16 +58,14 @@ function useOrgPartners(): OrgPartner[] {
   return rows;
 }
 
-function listNames(names: string[]): string {
+function listNames(names: string[], and: string): string {
   if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return `${names.slice(0, -1).join(", ")} ${and} ${names[names.length - 1]}`;
 }
 
 /** "the Virginia Theatre Association" / "X and Y" / "X, Y and Z" */
-function listPartnerNames(partners: PartnerItem[]): string {
-  const names = partners.map((p) => p.name);
-  if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+function listPartnerNames(partners: PartnerItem[], and: string): string {
+  return listNames(partners.map((p) => p.name), and);
 }
 
 function PartnerMark({ partner, solo }: { partner: PartnerItem; solo: boolean }) {
@@ -101,6 +100,7 @@ function PartnerMark({ partner, solo }: { partner: PartnerItem; solo: boolean })
 }
 
 export function TheatrePartners() {
+  const t = useT();
   const orgs = useOrgPartners();
   const orgMarks: PartnerItem[] = orgs
     .filter((o) => o.show === "logo" && o.logo && o.url)
@@ -115,7 +115,7 @@ export function TheatrePartners() {
   return (
     <div className="mt-[120px]">
       <p className="t-dir" style={{ color: "var(--t-muted-dark-2)" }}>
-        (who&rsquo;s listing us.)
+        {t("landingPartners.direction")}
       </p>
 
       {marks.length < PARTNERS_MIN_TO_SHOW ? null : asRow ? (
@@ -140,11 +140,11 @@ export function TheatrePartners() {
             className="m-0 text-[17px]"
             style={{ fontFamily: "var(--t-display)", color: "var(--t-text)" }}
           >
-            Listed by the{" "}
+            {t("landingPartners.listedA")}
             <em className="t-em" style={{ color: "var(--t-orange-deep)" }}>
-              {listPartnerNames(marks)}
+              {listPartnerNames(marks, t("landingPartners.and"))}
             </em>
-            .
+            {t("landingPartners.listedB")}
           </p>
         </div>
       )}
@@ -153,11 +153,11 @@ export function TheatrePartners() {
           className="m-0 mt-5 text-[17px]"
           style={{ fontFamily: "var(--t-display)", color: "var(--t-text)" }}
         >
-          Used in classes at{" "}
+          {t("landingPartners.classesA")}
           <em className="t-em" style={{ color: "var(--t-orange-deep)" }}>
-            {listNames(classes)}
+            {listNames(classes, t("landingPartners.and"))}
           </em>
-          .
+          {t("landingPartners.classesB")}
         </p>
       )}
     </div>

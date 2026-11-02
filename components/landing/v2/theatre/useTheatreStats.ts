@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { API_URL } from "@/lib/api";
+import { useLocale } from "@/lib/i18n";
 import { useReducedMotion } from "./useReducedMotion";
 
 /**
@@ -61,6 +62,8 @@ export function useTheatreStats() {
   const [stats, setStats] = useState<PublicStats | null>(null);
   const [shownSearches, setShownSearches] = useState<number | null>(null);
   const reduced = useReducedMotion();
+  /* Turkish groups thousands with a dot: 19.000, not 19,000. */
+  const fmt = useLocale() === "tr" ? "tr-TR" : "en-US";
 
   /* The latest known target, so the counter effect can read it without
      re-subscribing every time a poll lands. */
@@ -145,12 +148,12 @@ export function useTheatreStats() {
   return {
     barRef,
     /** Live, animated. "monologues found by actors, so far" */
-    searches: searches.toLocaleString("en-US"),
+    searches: searches.toLocaleString(fmt),
     /** "19,000+" — floored to the thousand. */
-    monologues: floorTo(monologues, 1000).toLocaleString("en-US"),
+    monologues: floorTo(monologues, 1000).toLocaleString(fmt),
     /** "2,100+" — floored to the hundred, for the marquee caption. */
-    plays: floorTo(plays, 100).toLocaleString("en-US"),
+    plays: floorTo(plays, 100).toLocaleString(fmt),
     /** "900+" — floored to the hundred. */
-    users: floorTo(users, 100).toLocaleString("en-US"),
+    users: floorTo(users, 100).toLocaleString(fmt),
   };
 }

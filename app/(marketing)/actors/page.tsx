@@ -4,26 +4,24 @@ import { useFoundingActors } from "@/hooks/useFoundingActors";
 import { FoundingActorCard } from "@/components/founding-actor/FoundingActorCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StageHero } from "@/components/marketing/StageHero";
+import { useT } from "@/lib/i18n";
 
 export default function ActorsPage() {
   const { data: actors, isLoading } = useFoundingActors();
+  const t = useT();
 
   return (
     <>
       <StageHero
-        direction="(the company.)"
+        direction={t("audActors.direction")}
         title={
           <>
-            The founding <em className="italic text-primary">actors</em>
+            {t("audActors.titleA")}
+            <em className="italic text-primary">{t("audActors.titleEm")}</em>
+            {t("audActors.titleB")}
           </>
         }
-        lede={
-          <>
-            The actors who backed ActorRise from day one. They shape the
-            platform, tell me what&apos;s broken, and help build something that
-            actually serves the craft.
-          </>
-        }
+        lede={t("audActors.lede")}
       />
       <div className="container mx-auto px-4 sm:px-6 py-12 md:py-16">
         <div className="max-w-5xl mx-auto">
@@ -57,7 +55,7 @@ export default function ActorsPage() {
           </div>
         ) : (
           <p className="text-center text-muted-foreground">
-            No actors to display yet.
+            {t("audActors.empty")}
           </p>
         )}
 
@@ -67,9 +65,7 @@ export default function ActorsPage() {
             stays: a real conversation, not a form. */}
         <div className="mt-14 border-t border-border/60 pt-10 text-center">
           <p className="mx-auto max-w-xl text-base leading-relaxed text-muted-foreground">
-            Using ActorRise and want to tell me what&apos;s broken, or what you
-            wish it did? Send me an email. I read every one, and it is how most
-            of this got built.
+            {t("audActors.feedback")}
           </p>
           <a
             href="mailto:canberk@actorrise.com?subject=ActorRise"

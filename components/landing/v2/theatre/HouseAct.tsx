@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 import { SOCIALS, externalProps } from "@/lib/socials";
 import { TESTIMONIALS } from "@/data/testimonials";
 import { TheatreCta } from "./TheatreCta";
@@ -28,6 +29,7 @@ const PIN = [
  * versions in the design prototype. The stats are live.
  */
 export function HouseAct() {
+  const t = useT();
   const { barRef, searches, monologues, users } = useTheatreStats();
   const [playing, setPlaying] = useState(false);
 
@@ -35,7 +37,7 @@ export function HouseAct() {
      directly below — having his testimonial up on the wall as well made the
      section read as one man quoting himself. Needs a headshot, because the
      card is built around one. */
-  const notices = TESTIMONIALS.filter((t) => t.image && !t.isFounder).slice(0, PIN.length);
+  const notices = TESTIMONIALS.filter((n) => n.image && !n.isFounder).slice(0, PIN.length);
 
   return (
     <section
@@ -54,31 +56,31 @@ export function HouseAct() {
             borderBottom: "2px solid var(--t-text)",
           }}
         >
-          <Stat value={searches} label="monologues found by actors, so far" divider />
-          <Stat value={monologues} plus label="pieces from plays, film and TV" divider inset />
-          <Stat value={users} plus label="actors rehearsing with ActorRise" last />
+          <Stat value={searches} label={t("landingHouse.statSearches")} divider />
+          <Stat value={monologues} plus label={t("landingHouse.statPieces")} divider inset />
+          <Stat value={users} plus label={t("landingHouse.statActors")} last />
         </div>
 
         {/* --- Notices ----------------------------------------------------- */}
         <div className="mt-[120px]">
           <p className="t-dir" style={{ color: "var(--t-muted-dark-2)" }}>
-            (the notices.)
+            {t("landingHouse.noticesDirection")}
           </p>
           <h2 className="t-h2 mt-4 max-w-[900px]">
-            Real actors.{" "}
+            {t("landingHouse.noticesA")}
             <em className="t-em" style={{ color: "var(--t-orange-deep)" }}>
-              Real feedback.
+              {t("landingHouse.noticesB")}
             </em>
           </h2>
           <div
             className="mt-14 grid items-start gap-8"
             style={{ gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))" }}
           >
-            {notices.map((t, i) => {
+            {notices.map((notice, i) => {
               const pin = PIN[i];
               return (
                 <figure
-                  key={t.name}
+                  key={notice.name}
                   className="relative m-0 px-6 pb-7 pt-6 transition-[transform,box-shadow] duration-[450ms]"
                   style={{
                     borderRadius: 6,
@@ -111,7 +113,7 @@ export function HouseAct() {
                   />
                   <div className="flex items-center gap-3.5">
                     <Image
-                      src={t.image as string}
+                      src={notice.image as string}
                       alt=""
                       width={64}
                       height={64}
@@ -119,9 +121,9 @@ export function HouseAct() {
                       style={{ border: "2px solid var(--t-text)" }}
                     />
                     <figcaption>
-                      <p className="m-0 text-[17px] font-bold -tracking-[.01em]">{t.name}</p>
+                      <p className="m-0 text-[17px] font-bold -tracking-[.01em]">{notice.name}</p>
                       <p className="m-0 mt-0.5 text-[13px]" style={{ color: "var(--t-muted-dark)" }}>
-                        {t.descriptor}
+                        {notice.descriptor}
                       </p>
                     </figcaption>
                   </div>
@@ -134,7 +136,7 @@ export function HouseAct() {
                       color: "oklch(0.22 0.01 45)",
                     }}
                   >
-                    &ldquo;{t.quote}&rdquo;
+                    &ldquo;{notice.quote}&rdquo;
                   </blockquote>
                 </figure>
               );
@@ -145,7 +147,7 @@ export function HouseAct() {
         {/* --- Video ------------------------------------------------------- */}
         <div id="watch" className="mt-[140px]">
           <p className="t-dir text-center" style={{ color: "var(--t-muted-dark-2)" }}>
-            (ninety seconds. watch it work.)
+            {t("landingHouse.videoDirection")}
           </p>
           <div
             className="relative mx-auto mt-7 max-w-[1000px] overflow-hidden transition-transform duration-500"
@@ -169,7 +171,7 @@ export function HouseAct() {
                 <iframe
                   className="absolute inset-0 size-full"
                   src={`https://www.youtube.com/embed/${YOUTUBE_ID}?autoplay=1&rel=0&modestbranding=1`}
-                  title="ActorRise in ninety seconds"
+                  title={t("landingHouse.videoTitle")}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
@@ -191,7 +193,7 @@ export function HouseAct() {
                   <button
                     type="button"
                     onClick={() => setPlaying(true)}
-                    aria-label="Play the ninety second demo"
+                    aria-label={t("landingHouse.videoPlay")}
                     className="absolute inset-0 flex items-center justify-center"
                   >
                     <span
@@ -234,7 +236,7 @@ export function HouseAct() {
           <div className="relative justify-self-center">
             <Image
               src="/testimonials/canberk/canberk.jpg"
-              alt="Canberk Varli, founder of ActorRise"
+              alt={t("landingHouse.founderAlt")}
               width={380}
               height={475}
               className="block w-[min(100%,380px)] object-cover object-top"
@@ -258,12 +260,12 @@ export function HouseAct() {
                 animation: "t-wobble 5s ease-in-out infinite",
               }}
             >
-              (the founder. also an actor.)
+              {t("landingHouse.founderTag")}
             </span>
           </div>
           <div>
             <p className="t-dir" style={{ color: "var(--t-muted-dark-2)" }}>
-              (a note, from the wings.)
+              {t("landingHouse.noteDirection")}
             </p>
             <p
               className="m-0 mt-5"
@@ -275,18 +277,15 @@ export function HouseAct() {
                 textWrap: "pretty",
               }}
             >
-              I&rsquo;m an actor. I built this because I was spending audition nights
-              hunting for a piece instead of working on one. Now I open it, say what I
-              need the way I&rsquo;d say it to a friend, and I&rsquo;m rehearsing in a
-              minute.{" "}
+              {t("landingHouse.noteA")}
               <em className="t-em" style={{ color: "var(--t-orange-deep)" }}>
-                That&rsquo;s the whole idea.
+                {t("landingHouse.noteB")}
               </em>
             </p>
             <p className="m-0 mt-6 text-base font-bold">
               Canberk Varli{" "}
               <span className="font-normal" style={{ color: "var(--t-muted-dark)" }}>
-                · founder, ActorRise
+                {t("landingHouse.founderRole")}
               </span>
             </p>
 
@@ -302,7 +301,7 @@ export function HouseAct() {
                 trait reads self-conscious; naming the thing you will actually do
                 is the version you can keep. */}
             <p className="t-dir mt-7" style={{ color: "var(--t-muted-dark-2)" }}>
-              (and if you want to talk, find me anywhere. i answer.)
+              {t("landingHouse.talk")}
             </p>
             <div className="mt-3.5 flex flex-wrap items-center gap-x-6 gap-y-3">
               {SOCIALS.map(({ label, href, Icon }) => (
@@ -343,18 +342,16 @@ export function HouseAct() {
                 letterSpacing: "-.02em",
               }}
             >
-              Free to start.{" "}
+              {t("landingHouse.freeA")}
               <em className="t-em" style={{ color: "var(--t-gel)" }}>
-                No card.
+                {t("landingHouse.freeB")}
               </em>
             </p>
             <p
               className="m-0 mt-3.5 text-[17px] leading-relaxed"
               style={{ color: "var(--t-muted-light-3)" }}
             >
-              Five searches a month, free, forever. Plus is $12 a month when you want
-              unlimited searches and more time with ScenePartner. Teaching a class? Your
-              students get a month free through your class link.
+              {t("landingHouse.priceBody")}
             </p>
           </div>
           <TheatreCta size="mid" />

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useRef, useState } from "react";
 import { appStoreUrl } from "@/lib/appStore";
+import { useT, useTList } from "@/lib/i18n";
 import { useReducedMotion } from "./useReducedMotion";
 import { useScrollProgress } from "./useScrollProgress";
 
@@ -19,17 +20,19 @@ import { useScrollProgress } from "./useScrollProgress";
  * flat out and leave an empty stage.
  */
 
+/** Names and alt text live in the dictionary (landingGhost.shotNames /
+    shotAlts), in this same order. */
 const SHOTS = [
-  { file: "01-scene", name: "Scene partner", alt: "Your scene partner, any hour. It reads the other parts, you just act." },
-  { file: "02-sides", name: "Your sides", alt: "Drop in your sides. PDF, Word or paste, it finds the cast. Pick your part." },
-  { file: "03-board", name: "The board", alt: "Your week, on the board. A reminder the night before, straight to your piece." },
-  { file: "04-call-sheet", name: "Call sheet", alt: "Every call, on one sheet. Paste the casting email, it fills itself in." },
-  { file: "05-how-did-it-go", name: "After the room", alt: "How did it go? Callback, booked, waiting or passed. Write down what landed." },
-  { file: "06-tonight", name: "Tonight's speech", alt: "A new speech every night, one piece each evening on your home screen." },
-  { file: "07-search", name: "Search", alt: "Say what you need. A grieving mother, something funny, under two minutes." },
-  { file: "08-overdone", name: "Overdone", alt: "Know what's overdone first. Every piece is marked before the panel sees it." },
-  { file: "09-reading", name: "On paper", alt: "Sides, on paper. The whole speech, the way it was printed." },
-  { file: "10-film-tv", name: "Film and TV", alt: "Film and TV too. The screen shelf, scenes and speeches with their posters." },
+  { file: "01-scene" },
+  { file: "02-sides" },
+  { file: "03-board" },
+  { file: "04-call-sheet" },
+  { file: "05-how-did-it-go" },
+  { file: "06-tonight" },
+  { file: "07-search" },
+  { file: "08-overdone" },
+  { file: "09-reading" },
+  { file: "10-film-tv" },
 ];
 
 const N = SHOTS.length;
@@ -48,6 +51,7 @@ function AppleMark() {
 }
 
 function StoreButton() {
+  const t = useT();
   return (
     <a
       href={appStoreUrl("landing_teaser")}
@@ -57,21 +61,22 @@ function StoreButton() {
       style={{ background: "var(--t-cream)", color: BG, transitionTimingFunction: "var(--t-spring)" }}
     >
       <AppleMark />
-      Download on the App Store
+      {t("landingGhost.download")}
     </a>
   );
 }
 
 function Heading({ compact }: { compact?: boolean }) {
+  const t = useT();
   return (
     <>
       <p className="t-dir" style={{ color: "var(--t-muted-light)" }}>
-        (the house empties. one lamp stays lit on the stage.)
+        {t("landingGhost.direction")}
       </p>
       <h2 className="t-h2 mt-4" style={compact ? { fontSize: "clamp(40px, 4.6vw, 68px)" } : undefined}>
-        Ghost Light.{" "}
+        {t("landingGhost.titleA")}
         <em className="t-em" style={{ color: "var(--t-orange)" }}>
-          The rehearsal room, in your pocket.
+          {t("landingGhost.titleB")}
         </em>
       </h2>
     </>
@@ -80,6 +85,8 @@ function Heading({ compact }: { compact?: boolean }) {
 
 /** The phone version, and the one for reduced motion: a strip to swipe. */
 function Strip() {
+  const t = useT();
+  const alts = useTList()("landingGhost.shotAlts");
   const stripRef = useRef<HTMLDivElement>(null);
   const step = (dir: 1 | -1) => {
     const el = stripRef.current;
@@ -96,8 +103,7 @@ function Strip() {
         <div className="max-w-[720px]">
           <Heading />
           <p className="m-0 mt-5 max-w-[56ch] text-[17px] leading-relaxed" style={{ color: "var(--t-muted-light-2)" }}>
-            ActorRise on your iPhone. A scene partner at any hour, your sides read back, every audition on one board,
-            and a new speech on your home screen each night. Saves work offline.
+            {t("landingGhost.body")}
           </p>
           <div className="mt-7">
             <StoreButton />
@@ -112,7 +118,7 @@ function Strip() {
           paddingInline: "max(24px, calc((100vw - 1240px) / 2 + 24px))",
           scrollPaddingInline: "max(24px, calc((100vw - 1240px) / 2 + 24px))",
         }}
-        aria-label="Ghost Light screens"
+        aria-label={t("landingGhost.screensLabel")}
       >
         {SHOTS.map((s, i) => (
           <figure
@@ -130,7 +136,7 @@ function Strip() {
           >
             <Image
               src={`/ghostlight/shots/${s.file}.webp`}
-              alt={s.alt}
+              alt={alts[i]}
               width={720}
               height={1565}
               sizes="(max-width: 1000px) 230px, 300px"
@@ -143,13 +149,13 @@ function Strip() {
 
       <div className="mx-auto mt-6 flex max-w-[1240px] items-center justify-between gap-4 px-6">
         <p className="t-dir m-0" style={{ color: "var(--t-muted-light)" }}>
-          (ten screens. swipe along.)
+          {t("landingGhost.swipe")}
         </p>
         <div className="flex gap-2">
-          <button type="button" onClick={() => step(-1)} aria-label="Earlier screens" className={arrow} style={{ border: "1.5px solid var(--t-cta-bd)" }}>
+          <button type="button" onClick={() => step(-1)} aria-label={t("landingGhost.earlier")} className={arrow} style={{ border: "1.5px solid var(--t-cta-bd)" }}>
             <span aria-hidden>←</span>
           </button>
-          <button type="button" onClick={() => step(1)} aria-label="Later screens" className={arrow} style={{ border: "1.5px solid var(--t-cta-bd)" }}>
+          <button type="button" onClick={() => step(1)} aria-label={t("landingGhost.later")} className={arrow} style={{ border: "1.5px solid var(--t-cta-bd)" }}>
             <span aria-hidden>→</span>
           </button>
         </div>
@@ -168,6 +174,10 @@ function stagePosition(p: number): number {
 
 /** Desktop: the flats in the wings. */
 function Wings() {
+  const t = useT();
+  const tList = useTList();
+  const names = tList("landingGhost.shotNames");
+  const alts = tList("landingGhost.shotAlts");
   const flats = useRef<(HTMLDivElement | null)[]>([]);
   const meter = useRef<HTMLDivElement>(null);
   const shownRef = useRef(0);
@@ -228,7 +238,7 @@ function Wings() {
           <div className="min-w-0 max-w-[520px]">
             <Heading compact />
 
-            <ol className="m-0 mt-7 list-none p-0" aria-label="What's in the app">
+            <ol className="m-0 mt-7 list-none p-0" aria-label={t("landingGhost.inTheApp")}>
               {SHOTS.map((s, i) => {
                 const on = i === shown;
                 return (
@@ -255,7 +265,7 @@ function Wings() {
                           transitionTimingFunction: "var(--t-spring)",
                         }}
                       >
-                        {s.name}
+                        {names[i]}
                       </span>
                     </button>
                   </li>
@@ -302,7 +312,7 @@ function Wings() {
               >
                 <Image
                   src={`/ghostlight/shots/${s.file}.webp`}
-                  alt={s.alt}
+                  alt={alts[i]}
                   width={720}
                   height={1565}
                   sizes="340px"

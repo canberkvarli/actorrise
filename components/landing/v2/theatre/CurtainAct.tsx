@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
+import { useT } from "@/lib/i18n";
 import { TheatreCta } from "./TheatreCta";
 import { useScrollProgress } from "./useScrollProgress";
 
@@ -16,6 +17,7 @@ import { useScrollProgress } from "./useScrollProgress";
  * end. They are opposite ends of the same evening.
  */
 export function CurtainAct() {
+  const t = useT();
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLDivElement>(null);
@@ -57,14 +59,14 @@ export function CurtainAct() {
           }}
         >
           <p className="t-dir" style={{ color: "var(--t-muted-light)" }}>
-            (the ghost light stays on. the stage is never empty.)
+            {t("landingCurtain.direction")}
           </p>
           <h2 className="t-h2 t-h2--big mt-5 max-w-[1100px]">
-            Your{" "}
+            {t("landingCurtain.titleA")}
             <em className="t-em" style={{ color: "var(--t-orange)" }}>
-              scene partner
-            </em>{" "}
-            is already waiting.
+              {t("landingCurtain.titleB")}
+            </em>
+            {t("landingCurtain.titleC")}
           </h2>
           <div className="mt-10">
             <TheatreCta />
@@ -101,7 +103,7 @@ export function CurtainAct() {
               textShadow: "0 10px 40px rgb(0 0 0/.5)",
             }}
           >
-            (curtain.)
+            {t("landingCurtain.curtain")}
           </p>
         </div>
       </div>

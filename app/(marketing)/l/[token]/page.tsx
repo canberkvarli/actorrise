@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { T } from "@/lib/i18n";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.actorrise.com";
 
@@ -54,11 +55,14 @@ export default async function SharedListPage({ params }: Props) {
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-16 sm:py-24">
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-        {list.by ? `From ${list.by}, on Ghost Light` : "From Ghost Light"}
+        {list.by ? <T k="audList.fromBy" vars={{ by: list.by }} /> : <T k="audList.fromGhostLight" />}
       </p>
       <h1 className="mt-3 font-brand text-4xl leading-tight text-foreground sm:text-5xl">{list.title}</h1>
       <p className="mt-3 text-muted-foreground">
-        {list.items.length} {list.items.length === 1 ? "piece" : "pieces"}
+        <T
+          k={list.items.length === 1 ? "audList.piecesOne" : "audList.piecesMany"}
+          vars={{ n: list.items.length }}
+        />
       </p>
 
       <ol className="mt-10 divide-y divide-border/60 border-y border-border/60">
@@ -68,9 +72,14 @@ export default async function SharedListPage({ params }: Props) {
             <div className="min-w-0 flex-1">
               <p className="font-brand text-xl text-foreground">{item.title}</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {item.kind === "sides"
-                  ? ["Sides", item.author].filter(Boolean).join(" · ")
-                  : [item.character, item.work, item.author].filter(Boolean).join(" · ")}
+                {item.kind === "sides" ? (
+                  <>
+                    <T k="audList.sides" />
+                    {item.author ? ` · ${item.author}` : ""}
+                  </>
+                ) : (
+                  [item.character, item.work, item.author].filter(Boolean).join(" · ")
+                )}
               </p>
             </div>
             {minutes(item.minutes) ? (
@@ -81,9 +90,9 @@ export default async function SharedListPage({ params }: Props) {
       </ol>
 
       <p className="mt-12 text-sm text-muted-foreground">
-        Made with Ghost Light, the app actors use to find a monologue and run their scenes.{" "}
+        <T k="audList.footer" />
         <Link href="/" className="text-primary underline underline-offset-4">
-          See it
+          <T k="audList.seeIt" />
         </Link>
       </p>
     </main>

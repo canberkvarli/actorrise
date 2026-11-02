@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { useReducedMotion } from "./useReducedMotion";
 
 /**
@@ -22,11 +23,11 @@ import { useReducedMotion } from "./useReducedMotion";
 
 type Mode = "script" | "cues" | "off";
 
-const MODES: { id: Mode; label: string }[] = [
-  { id: "script", label: "Script" },
-  { id: "cues", label: "Cues" },
-  { id: "off", label: "Off book" },
-];
+const MODES = [
+  { id: "script", label: "landingRehearsal.modeScript" },
+  { id: "cues", label: "landingRehearsal.modeCues" },
+  { id: "off", label: "landingRehearsal.modeOff" },
+] as const satisfies readonly { id: Mode; label: string }[];
 
 const CUE = "Before all else, you are a wife and a mother.";
 const LINE =
@@ -56,6 +57,7 @@ const dir = {
 };
 
 export function RehearsalRoom() {
+  const t = useT();
   const reduced = useReducedMotion();
   const [mode, setMode] = useState<Mode>("cues");
   /** Words the actor has said so far (off book fills them as they come). */
@@ -141,12 +143,12 @@ export function RehearsalRoom() {
       />
       <div className="relative mx-auto max-w-[1240px]">
         <p className="t-dir" style={{ color: "var(--t-muted-light)" }}>
-          (act ii, continued. the rehearsal room.)
+          {t("landingRehearsal.direction")}
         </p>
         <h2 className="t-h2 mt-4 max-w-[960px]">
-          Bring your sides.{" "}
+          {t("landingRehearsal.titleA")}
           <em className="t-em" style={{ color: "var(--t-orange)" }}>
-            Leave off book.
+            {t("landingRehearsal.titleB")}
           </em>
         </h2>
 
@@ -172,13 +174,13 @@ export function RehearsalRoom() {
                 transform: "rotate(-2deg)",
               }}
             >
-              (hold the book how you need it.)
+              {t("landingRehearsal.bookTag")}
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div
                 role="tablist"
-                aria-label="How much of your line to show"
+                aria-label={t("landingRehearsal.modesLabel")}
                 className="inline-flex rounded-full p-1"
                 style={{ background: "var(--t-paper)", border: "1.5px solid var(--t-line-light-2)" }}
               >
@@ -197,13 +199,13 @@ export function RehearsalRoom() {
                         color: on ? "var(--t-cream)" : "var(--t-muted-dark-2)",
                       }}
                     >
-                      {m.label}
+                      {t(m.label)}
                     </button>
                   );
                 })}
               </div>
               <p className="m-0" style={{ ...dir, fontSize: 13, color: "var(--t-muted-dark-2)" }}>
-                A Doll&rsquo;s House · act iii
+                {t("landingRehearsal.scene")}
               </p>
             </div>
 
@@ -232,7 +234,7 @@ export function RehearsalRoom() {
                     className="m-0"
                     style={{ ...dir, fontStyle: "normal", fontSize: 11, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--t-orange)" }}
                   >
-                    You · Nora
+                    {t("landingRehearsal.youNora")}
                   </p>
                   {mode !== "script" && (
                     <button
@@ -246,7 +248,7 @@ export function RehearsalRoom() {
                         transitionTimingFunction: "var(--t-spring)",
                       }}
                     >
-                      Line!
+                      {t("landingRehearsal.lineButton")}
                     </button>
                   )}
                 </div>
@@ -263,9 +265,9 @@ export function RehearsalRoom() {
             </div>
 
             <p className="m-0 mt-5 text-[15px] leading-relaxed" style={{ color: "var(--t-muted-dark-2)" }}>
-              Read it, run it on cues, then take the book away. Dry up and say{" "}
-              <strong style={{ color: "var(--t-text-soft)" }}>&ldquo;line&rdquo;</strong> out loud, the way you would in
-              a rehearsal room. The next words come back, marked as given, so you know where you went off.
+              {t("landingRehearsal.howA")}
+              <strong style={{ color: "var(--t-text-soft)" }}>{t("landingRehearsal.howB")}</strong>
+              {t("landingRehearsal.howC")}
             </p>
           </div>
 
@@ -309,9 +311,9 @@ export function RehearsalRoom() {
                 </div>
                 <div className="min-w-0">
                   <p className="m-0" style={{ fontFamily: "var(--t-display)", fontSize: 28, lineHeight: 1.05 }}>
-                    Your sides,{" "}
+                    {t("landingRehearsal.sidesA")}
                     <em className="t-em" style={{ color: "var(--t-gel)" }}>
-                      read back.
+                      {t("landingRehearsal.sidesB")}
                     </em>
                   </p>
                   <div className="mt-3 flex flex-wrap gap-1.5">
@@ -328,8 +330,7 @@ export function RehearsalRoom() {
                 </div>
               </div>
               <p className="m-0 mt-5 text-[15px] leading-relaxed" style={{ color: "var(--t-muted-light-3)" }}>
-                Drop in the file your sides came in. It finds the scenes and who&rsquo;s in them. You pick your part, and
-                your partner reads every other line, out loud, waiting on your cue.
+                {t("landingRehearsal.sidesBody")}
               </p>
             </div>
 
@@ -338,9 +339,9 @@ export function RehearsalRoom() {
               style={{ border: "1.5px solid var(--t-line-dark-2)" }}
             >
               <p className="m-0" style={{ fontFamily: "var(--t-display)", fontSize: 28, lineHeight: 1.05 }}>
-                271 scenes,{" "}
+                {t("landingRehearsal.shelfA")}
                 <em className="t-em" style={{ color: "var(--t-orange)" }}>
-                  already cut.
+                  {t("landingRehearsal.shelfB")}
                 </em>
               </p>
               <div className="mt-5 flex h-[112px] items-end gap-[5px] overflow-hidden" aria-hidden>
@@ -374,8 +375,7 @@ export function RehearsalRoom() {
                 ))}
               </div>
               <p className="m-0 mt-5 text-[15px] leading-relaxed" style={{ color: "var(--t-muted-light-3)" }}>
-                Two-person scenes from Ibsen, Shakespeare, Chekhov, Wilde and Molière, on the shelf and ready to run
-                tonight. No script to find first.
+                {t("landingRehearsal.shelfBody")}
               </p>
             </div>
           </div>

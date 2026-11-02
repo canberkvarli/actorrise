@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { T, type MessageKey } from "@/lib/i18n";
 
 /**
  * A note for teachers, pinned to the callboard. The class link a teacher makes
@@ -10,33 +11,33 @@ import Link from "next/link";
  * Index cards on a board, each at its own angle; a hover squares one up.
  */
 
-const CARDS = [
+const CARDS: { n: string; head: MessageKey; body: MessageKey; chip?: string; rot: string; mt: string }[] = [
   {
     n: "1",
-    head: "Make your link",
-    body: "One tap from your library. That's your class's door.",
+    head: "landingClass.card1Head",
+    body: "landingClass.card1Body",
     chip: "actorrise.com/join/your-class",
     rot: "-2deg",
     mt: "0px",
   },
   {
     n: "2",
-    head: "Sign up together",
-    body: "One class period, about ten minutes. Every student gets a month of Plus, on me.",
+    head: "landingClass.card2Head",
+    body: "landingClass.card2Body",
     rot: "1.5deg",
     mt: "28px",
   },
   {
     n: "3",
-    head: "Share your own scenes",
-    body: "Bring in the scenes you teach. Your class rehearses them. Nobody else can see them, ever.",
+    head: "landingClass.card3Head",
+    body: "landingClass.card3Body",
     rot: "-1deg",
     mt: "8px",
   },
   {
     n: "4",
-    head: "See who's working",
-    body: "Who joined, who's rehearsing, what they finished. Never what they searched for.",
+    head: "landingClass.card4Head",
+    body: "landingClass.card4Body",
     rot: "2deg",
     mt: "36px",
   },
@@ -53,17 +54,17 @@ export function ClassAct() {
         <div className="flex flex-wrap items-end justify-between gap-x-12 gap-y-6">
           <div className="max-w-[760px]">
             <p className="t-dir" style={{ color: "var(--t-muted-dark-2)" }}>
-              (a note for teachers, pinned to the callboard.)
+              <T k="landingClass.direction" />
             </p>
             <h2 className="t-h2 mt-4">
-              Bring the{" "}
+              <T k="landingClass.titleA" />
               <em className="t-em" style={{ color: "var(--t-gel-ink)" }}>
-                whole class.
+                <T k="landingClass.titleB" />
               </em>
+              <T k="landingClass.titleC" />
             </h2>
             <p className="m-0 mt-5 max-w-[58ch] text-[17px] leading-relaxed" style={{ color: "var(--t-muted-dark)" }}>
-              One link, and every student is in, rehearsing between classes with a partner who never cancels. For
-              actors 13 and up.
+              <T k="landingClass.body" />
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -72,14 +73,14 @@ export function ClassAct() {
               className="inline-flex h-12 items-center rounded-full px-6 text-[15px] font-semibold transition-transform duration-300 hover:-translate-y-0.5"
               style={{ background: "var(--t-text)", color: "var(--t-cream)", transitionTimingFunction: "var(--t-spring)" }}
             >
-              For teachers
+              <T k="landingClass.forTeachers" />
             </Link>
             <Link
               href="/pricing#schools"
               className="inline-flex h-12 items-center rounded-full px-6 text-[15px] font-semibold transition-colors"
               style={{ border: "1.5px solid var(--t-text)" }}
             >
-              Class plans from $249 a year
+              <T k="landingClass.classPlans" />
             </Link>
           </div>
         </div>
@@ -121,10 +122,10 @@ export function ClassAct() {
                   >
                     {c.n}
                   </span>
-                  <span className="text-[19px] font-bold leading-tight -tracking-[.01em]">{c.head}</span>
+                  <span className="text-[19px] font-bold leading-tight -tracking-[.01em]"><T k={c.head} /></span>
                 </p>
                 <p className="m-0 mt-3 text-[15px] leading-[26.5px]" style={{ color: "oklch(0.32 0.01 50)" }}>
-                  {c.body}
+                  <T k={c.body} />
                 </p>
                 {c.chip && (
                   <p

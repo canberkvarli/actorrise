@@ -4,19 +4,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
+import { useT, type MessageKey } from "@/lib/i18n";
 import { SOCIALS, externalProps } from "@/lib/socials";
 
-const LINKS = [
-  { href: "/about", label: "About" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/for-students", label: "Students" },
-  { href: "/for-teachers", label: "Teachers" },
-  { href: "/sources", label: "Sources & copyright" },
-  { href: "/privacy", label: "Privacy" },
-  { href: "/terms", label: "Terms" },
+const LINKS: { href: string; label: MessageKey }[] = [
+  { href: "/about", label: "nav.about" },
+  { href: "/pricing", label: "nav.pricing" },
+  { href: "/for-students", label: "nav.students" },
+  { href: "/for-teachers", label: "landingFooter.teachers" },
+  { href: "/sources", label: "landingFooter.sources" },
+  { href: "/privacy", label: "landingFooter.privacy" },
+  { href: "/terms", label: "landingFooter.terms" },
 ];
 
 export function TheatreFooter() {
+  const t = useT();
   return (
     <footer
       className="px-6 py-10"
@@ -28,7 +30,7 @@ export function TheatreFooter() {
     >
       <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-x-8 gap-y-4">
         <div className="flex items-center gap-3.5">
-          <Link prefetch={false} href="/" aria-label="ActorRise home">
+          <Link prefetch={false} href="/" aria-label={t("nav.home")}>
             <Image
               src="/transparent_textlogo.png"
               alt="ActorRise"
@@ -47,7 +49,7 @@ export function TheatreFooter() {
               color: "var(--t-faint)",
             }}
           >
-            (built by an actor, for actors. © {new Date().getFullYear()})
+            {t("landingFooter.builtBy", { year: new Date().getFullYear() })}
           </p>
         </div>
         <div
@@ -60,10 +62,12 @@ export function TheatreFooter() {
               href={l.href}
               className="transition-colors hover:!text-[var(--t-gel)]"
             >
-              {l.label}
+              {t(l.label)}
             </Link>
           ))}
-          <ContactModalTrigger className="!text-[var(--t-muted-light-2)] hover:!text-[var(--t-gel)]" />
+          <ContactModalTrigger className="!text-[var(--t-muted-light-2)] hover:!text-[var(--t-gel)]">
+            {t("landingFooter.contact")}
+          </ContactModalTrigger>
           <LandingFooterAuthLink />
 
           {/* Icons only here. The founder note spells the handles out, because
@@ -79,18 +83,22 @@ export function TheatreFooter() {
             className="h-4 w-px"
             style={{ background: "var(--t-line-dark)" }}
           />
-          {SOCIALS.map(({ name, href, Icon }) => (
+          {SOCIALS.map(({ name, href, Icon }) => {
+            // Brand names stay as they are; only "Email" is a word to translate.
+            const label = name === "Email" ? t("landingFooter.email") : name;
+            return (
             <a
               key={name}
               href={href}
               {...externalProps(href)}
-              aria-label={name}
-              title={name}
+              aria-label={label}
+              title={label}
               className="transition-colors hover:!text-[var(--t-gel)]"
             >
               <Icon className="h-[18px] w-[18px]" aria-hidden />
             </a>
-          ))}
+            );
+          })}
         </div>
       </div>
     </footer>
