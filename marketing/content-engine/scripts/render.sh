@@ -12,7 +12,8 @@ BROWSER_FLAG=(); [ -n "$CHROME" ] && BROWSER_FLAG=(--browser-executable="$CHROME
 PROPS="$(python3 -c 'import json,sys; print(json.dumps({"spec": json.load(open(sys.argv[1]))}))' "$SPEC")"
 # Music bed, if the spec asks for one (public/music/<id>.wav).
 if python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get("music") else 1)' "$SPEC"; then
-  python3 scripts/make_music.py "$SPEC"
+  # ElevenLabs Music when the key is here (licensed, sounds like a real track), else our sampled beds.
+  python3 scripts/eleven.py music "$SPEC" || python3 scripts/make_music.py "$SPEC"
 fi
 CORES="$(nproc 2>/dev/null || echo 2)"
 if [ "${2:-}" = "still" ]; then

@@ -196,7 +196,6 @@ const NightScene: React.FC<{ s: Night }> = ({ s }) => {
   const hour = minute / 12 + 330;
   return (
     <AbsoluteFill>
-      <Sfx name="pencil_long" at={0} vol={0.8} />
       <Sfx name="boop_lo" at={50} vol={0.7} />
       <Sfx name="typing" at={66} frames={typeFrames(s.cue)} vol={0.6} />
       <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
@@ -246,7 +245,6 @@ const BooksScene: React.FC<{ s: Books }> = ({ s }) => {
   ];
   return (
     <AbsoluteFill>
-      <Sfx name="pencil_long" at={0} vol={0.7} />
       <Sfx name="boop_lo" at={18} vol={0.7} />
       <Sfx name="boop_hi" at={36} vol={0.7} />
       <Sfx name="toss" at={44} vol={0.8} />
@@ -490,13 +488,12 @@ const ThinkingScene: React.FC<{ s: Thinking }> = ({ s }) => {
   const strikeAt = 64;
   return (
     <AbsoluteFill>
-      <Sfx name="pencil_long" at={0} vol={0.7} />
       <Sfx name="pop" at={16} vol={0.5} />
       <Sfx name="pop" at={24} vol={0.5} />
       <Sfx name="pop" at={32} vol={0.5} />
       <Sfx name="boop_lo" at={18} vol={0.6} />
       <Sfx name="boop_hi" at={36} vol={0.6} />
-      <Sfx name="pencil_short" at={strikeAt} vol={0.8} />
+      <Sfx name="pencil_short" at={strikeAt} vol={0.4} />
       <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
         <Ink d="M150 330 L 930 330 L 930 900 L 150 900 Z" start={0} dur={22} w={7} fill={CORK} />
         <Ink d="M178 356 L 902 356 L 902 874 L 178 874 Z" start={8} dur={18} w={3} color={C.inkSoft} />
@@ -541,11 +538,10 @@ const EmailScene: React.FC<{ s: Email }> = ({ s }) => {
   let used = 0;
   return (
     <AbsoluteFill>
-      <Sfx name="pencil_long" at={0} vol={0.7} />
       <Sfx name="chime" at={16} vol={0.8} />
       <Sfx name="pop" at={18} vol={0.5} />
       <Sfx name="typing" at={bodyAt} frames={Math.ceil(bodyLen * 0.6)} vol={0.45} />
-      <Sfx name="pencil_short" at={Math.round(markAt)} vol={0.8} />
+      <Sfx name="pencil_short" at={Math.round(markAt)} vol={0.4} />
       {s.cue && <Sfx name="boop_hi" at={Math.round(markAt) + 12} vol={0.6} />}
       <Glow glow={0.4} y="48%" />
       <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
@@ -918,14 +914,12 @@ const PhoneScene: React.FC<{ s: Phone; first: boolean }> = ({ s, first }) => {
   return (
     <AbsoluteFill>
       {first && <Sfx name="pop" at={6} vol={0.8} />}
-      {first && <Sfx name="pencil_short" at={0} vol={0.6} />}
       <Sfx name="boop_hi" at={8} vol={0.6} />
       {s.cue && <Sfx name="typing" at={20} frames={typeFrames(s.cue)} vol={0.45} />}
       {mode === "search" && s.query && <Sfx name="typing" at={26} frames={Math.ceil(s.query.length * 1.15)} vol={0.45} />}
       {s.tap && <Sfx name="boop_lo" at={s.tap.at + 14} vol={0.7} />}
       {mode === "read" && <Sfx name="slide" at={sheetAt} vol={0.6} />}
-      {mode === "read" && <Sfx name="pencil_short" at={sheetAt + 26} vol={0.7} />}
-      {mode === "read" && <Sfx name="pencil_short" at={sheetAt + 38} vol={0.6} />}
+      {mode === "read" && <Sfx name="pencil_short" at={sheetAt + 26} vol={0.4} />}
       <Glow glow={0.6} y="72%" />
       <AbsoluteFill style={{ alignItems: "center", paddingTop: 150 }}>
         <Rise at={6}>
@@ -1006,8 +1000,6 @@ const StageScene: React.FC<{ s: Stage }> = ({ s }) => {
   const bubble = prog(f, bubbleAt, bubbleAt + 12);
   return (
     <AbsoluteFill>
-      <Sfx name="pencil_long" at={0} vol={0.75} />
-      <Sfx name="pencil_short" at={26} vol={0.5} />
       <Sfx name="chime" at={34} vol={0.7} />
       <Sfx name="typing" at={40} frames={typeFrames(s.cue)} vol={0.45} />
       <Sfx name="pop" at={bubbleAt} vol={0.6} />
@@ -1087,7 +1079,6 @@ const EndScene: React.FC<{ s: End }> = ({ s }) => {
   const inner = `M${L + 26} ${Tt + 26} L ${perfX - 26} ${Tt + 26} L ${perfX - 26} ${B - 26} L ${L + 26} ${B - 26} Z`;
   return (
     <AbsoluteFill>
-      <Sfx name="pencil_long" at={0} vol={0.6} />
       <Sfx name="pop" at={14} vol={0.8} />
       <Sfx name="thud" at={stampAt + 2} vol={0.9} />
       <Sfx name="boop_lo" at={stampAt + 4} vol={0.5} />
