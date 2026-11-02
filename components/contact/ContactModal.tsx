@@ -16,18 +16,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { useT, type MessageKey } from "@/lib/i18n";
 
-const CATEGORIES = [
-  { value: "partnership", label: "Partnership" },
-  { value: "feedback", label: "Feedback" },
-  { value: "bug", label: "Bug report" },
-  { value: "collaboration", label: "Collaboration" },
-  { value: "support", label: "Support" },
-  { value: "business_discount", label: "Business discount" },
-  { value: "teacher_school_coach_discount", label: "Teacher / school / coach access" },
-  { value: "student_discount", label: "Student access" },
-  { value: "other", label: "Other" },
-] as const;
+const CATEGORIES: readonly { value: string; label: MessageKey }[] = [
+  { value: "partnership", label: "marketingContactModal.catPartnership" },
+  { value: "feedback", label: "marketingContactModal.catFeedback" },
+  { value: "bug", label: "marketingContactModal.catBug" },
+  { value: "collaboration", label: "marketingContactModal.catCollaboration" },
+  { value: "support", label: "marketingContactModal.catSupport" },
+  { value: "business_discount", label: "marketingContactModal.catBusiness" },
+  { value: "teacher_school_coach_discount", label: "marketingContactModal.catTeacher" },
+  { value: "student_discount", label: "marketingContactModal.catStudent" },
+  { value: "other", label: "marketingContactModal.catOther" },
+];
 
 export interface ContactModalProps {
   open: boolean;
@@ -37,6 +38,7 @@ export interface ContactModalProps {
 }
 
 export function ContactModal({ open, onOpenChange, initialCategory }: ContactModalProps) {
+  const t = useT();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [category, setCategory] = useState<string>("other");
@@ -59,16 +61,17 @@ export function ContactModal({ open, onOpenChange, initialCategory }: ContactMod
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !message.trim()) {
-      toast.error("Please fill in name and message.");
+      toast.error(t("marketingContactModal.missing"));
       return;
     }
     setSending(true);
     try {
-      const { data } = await api.post<{ ok: boolean; message: string }>(
+      await api.post<{ ok: boolean; message: string }>(
         "/api/contact",
         { name: name.trim(), email: email.trim() || undefined, category, message: message.trim() }
       );
-      toast.success(data?.message ?? "Message sent! I'll get back to you soon.");
+      // The server's confirmation is English; ours follows the visitor's language.
+      toast.success(t("marketingContactModal.sent"));
       reset();
       onOpenChange(false);
     } catch (err: unknown) {
@@ -76,7 +79,7 @@ export function ContactModal({ open, onOpenChange, initialCategory }: ContactMod
         err instanceof Error
           ? err.message
           : (err as { response?: { data?: { detail?: string } } })?.response?.data
-              ?.detail ?? "Failed to send. You can email canberk@actorrise.com directly.";
+              ?.detail ?? t("marketingContactModal.failed");
       toast.error(message);
     } finally {
       setSending(false);
@@ -89,19 +92,18 @@ export function ContactModal({ open, onOpenChange, initialCategory }: ContactMod
         className={`t-modal theatre-tokens ${theatreFontVars} max-w-[30rem] border-0 p-7`}
       >
         <DialogHeader>
-          <p className="t-modal__dir">(a note to the booth.)</p>
-          <DialogTitle className="t-modal__title">Get in touch</DialogTitle>
+          <p className="t-modal__dir">{t("marketingContactModal.direction")}</p>
+          <DialogTitle className="t-modal__title">{t("marketingContactModal.title")}</DialogTitle>
           <DialogDescription className="t-modal__body">
-            Partnership, feedback, bugs, collaboration. I built ActorRise on my own and
-            really appreciate your support. I&apos;ll reply as soon as I can.
+            {t("marketingContactModal.description")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="contact-name">Name</Label>
+            <Label htmlFor="contact-name">{t("marketingContactModal.name")}</Label>
             <Input
               id="contact-name"
-              placeholder="Your name"
+              placeholder={t("marketingContactModal.namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={200}
@@ -109,7 +111,7 @@ export function ContactModal({ open, onOpenChange, initialCategory }: ContactMod
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="contact-email">Email <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Label htmlFor="contact-email">{t("marketingContactModal.email")} <span className="text-muted-foreground font-normal">{t("marketingContactModal.optional")}</span></Label>
             <Input
               id="contact-email"
               type="email"
@@ -120,29 +122,29 @@ export function ContactModal({ open, onOpenChange, initialCategory }: ContactMod
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="contact-category">What&apos;s this about?</Label>
+            <Label htmlFor="contact-category">{t("marketingContactModal.category")}</Label>
             <Select
               value={category}
               onValueChange={setCategory}
               disabled={sending}
             >
               <SelectTrigger id="contact-category">
-                <SelectValue placeholder="Category" />
+                <SelectValue placeholder={t("marketingContactModal.categoryPlaceholder")} />
               </SelectTrigger>
               <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-w-[min(calc(100vw-2rem),20rem)]">
                 {CATEGORIES.map((c) => (
                   <SelectItem key={c.value} value={c.value} className="py-2.5">
-                    {c.label}
+                    {t(c.label)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="contact-message">Message</Label>
+            <Label htmlFor="contact-message">{t("marketingContactModal.message")}</Label>
             <Textarea
               id="contact-message"
-              placeholder="Tell me what's on your mind..."
+              placeholder={t("marketingContactModal.messagePlaceholder")}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
@@ -158,10 +160,10 @@ export function ContactModal({ open, onOpenChange, initialCategory }: ContactMod
               onClick={() => onOpenChange(false)}
               disabled={sending}
             >
-              Cancel
+              {t("marketingContactModal.cancel")}
             </Button>
             <Button type="submit" disabled={sending}>
-              {sending ? "Sending…" : "Send message"}
+              {sending ? t("marketingContactModal.sending") : t("marketingContactModal.send")}
             </Button>
           </div>
         </form>

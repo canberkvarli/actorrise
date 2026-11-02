@@ -5,38 +5,40 @@ import Image from "next/image";
 import Link from "next/link";
 import { ContactModal } from "./ContactModal";
 import { APPROVED_PARTNERS } from "@/data/partners";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 const linkCls = "shrink-0 transition-colors hover:!text-[var(--t-gel)]";
 
-const LINKS = [
-  { href: "/monologue-finder", label: "Monologue finder" },
-  { href: "/audition-monologues", label: "Audition monologues" },
-  { href: "/audition-ai", label: "Audition AI" },
-  { href: "/guides", label: "Guides" },
-  { href: "/blog", label: "Blog" },
-  { href: "/about", label: "About" },
-  { href: "/actors", label: "Actors" },
-  { href: "/for-students", label: "Students & educators" },
-  { href: "/for-teachers", label: "For teachers" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/sources", label: "Sources & copyright" },
-  { href: "/terms", label: "Terms" },
-  { href: "/privacy", label: "Privacy" },
+/* Labels are dictionary keys; play titles in BROWSE stay as written in every language. */
+const LINKS: { href: string; label: MessageKey }[] = [
+  { href: "/monologue-finder", label: "marketingFooter.monologueFinder" },
+  { href: "/audition-monologues", label: "marketingFooter.auditionMonologues" },
+  { href: "/audition-ai", label: "marketingFooter.auditionAi" },
+  { href: "/guides", label: "nav.guides" },
+  { href: "/blog", label: "marketingFooter.blog" },
+  { href: "/about", label: "nav.about" },
+  { href: "/actors", label: "nav.actors" },
+  { href: "/for-students", label: "marketingFooter.studentsEducators" },
+  { href: "/for-teachers", label: "marketingFooter.forTeachers" },
+  { href: "/pricing", label: "nav.pricing" },
+  { href: "/sources", label: "marketingFooter.sources" },
+  { href: "/terms", label: "marketingFooter.terms" },
+  { href: "/privacy", label: "marketingFooter.privacy" },
 ];
 
 /* The shelves, on every marketing page. Until 2026-10-10 nothing on the home
    page linked the database or a single collection, so Google reached them
    only through the sitemap. Eight is enough to say what is here; the
    database page lists the rest. */
-const BROWSE = [
-  { href: "/monologue-database", label: "The monologue database" },
-  { href: "/monologues/hamlet-monologues", label: "Hamlet" },
-  { href: "/monologues/romeo-and-juliet-monologues", label: "Romeo and Juliet" },
-  { href: "/monologues/macbeth-monologues", label: "Macbeth" },
-  { href: "/monologues/monologues-about-love", label: "About love" },
-  { href: "/monologues/comedic-monologues-for-teens", label: "Comedic, for teens" },
-  { href: "/monologues/monologues-for-women-over-40", label: "Women over 40" },
-  { href: "/monologues/one-minute-monologues-for-men", label: "One minute, for men" },
+const BROWSE: ({ href: string; key: MessageKey } | { href: string; title: string })[] = [
+  { href: "/monologue-database", key: "marketingFooter.database" },
+  { href: "/monologues/hamlet-monologues", title: "Hamlet" },
+  { href: "/monologues/romeo-and-juliet-monologues", title: "Romeo and Juliet" },
+  { href: "/monologues/macbeth-monologues", title: "Macbeth" },
+  { href: "/monologues/monologues-about-love", key: "marketingFooter.aboutLove" },
+  { href: "/monologues/comedic-monologues-for-teens", key: "marketingFooter.comedicTeens" },
+  { href: "/monologues/monologues-for-women-over-40", key: "marketingFooter.womenOver40" },
+  { href: "/monologues/one-minute-monologues-for-men", key: "marketingFooter.oneMinuteMen" },
 ];
 
 /**
@@ -47,6 +49,7 @@ const BROWSE = [
  * surface changed.
  */
 export function MarketingFooter() {
+  const t = useT();
   const [contactOpen, setContactOpen] = useState(false);
 
   return (
@@ -64,7 +67,7 @@ export function MarketingFooter() {
         <div className="mx-auto max-w-[1240px]">
           <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
             <div className="flex items-center gap-3.5">
-              <Link prefetch={false} href="/" aria-label="ActorRise home">
+              <Link prefetch={false} href="/" aria-label={t("nav.home")}>
                 <Image
                   src="/transparent_textlogo.png"
                   alt="ActorRise"
@@ -83,25 +86,25 @@ export function MarketingFooter() {
                   color: "var(--t-faint)",
                 }}
               >
-                (built by an actor, for actors. © {new Date().getFullYear()})
+                {t("marketingFooter.tagline", { year: new Date().getFullYear() })}
               </p>
             </div>
 
             <nav
               className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 text-sm"
               style={{ color: "var(--t-muted-light-2)" }}
-              aria-label="Footer links"
+              aria-label={t("marketingFooter.linksLabel")}
             >
               {LINKS.map((l) => (
                 <Link prefetch={false} key={l.href} href={l.href} className={linkCls}>
-                  {l.label}
+                  {t(l.label)}
                 </Link>
               ))}
               {/* Hidden until an organization has approved a listing, so this
                   never points at an empty page. */}
               {APPROVED_PARTNERS.length > 0 && (
                 <Link prefetch={false} href="/thanks" className={linkCls}>
-                  With thanks
+                  {t("marketingFooter.withThanks")}
                 </Link>
               )}
               <button
@@ -109,7 +112,7 @@ export function MarketingFooter() {
                 onClick={() => setContactOpen(true)}
                 className={`${linkCls} text-left`}
               >
-                Contact
+                {t("marketingFooter.contact")}
               </button>
             </nav>
           </div>
@@ -117,12 +120,12 @@ export function MarketingFooter() {
           <nav
             className="mt-5 flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 text-sm"
             style={{ color: "var(--t-muted-light-2)" }}
-            aria-label="Browse monologues"
+            aria-label={t("marketingFooter.browseLabel")}
           >
-            <span style={{ color: "var(--t-faint)" }}>Browse</span>
+            <span style={{ color: "var(--t-faint)" }}>{t("marketingFooter.browse")}</span>
             {BROWSE.map((l) => (
               <Link prefetch={false} key={l.href} href={l.href} className={linkCls}>
-                {l.label}
+                {"key" in l ? t(l.key) : l.title}
               </Link>
             ))}
           </nav>
@@ -132,18 +135,17 @@ export function MarketingFooter() {
             style={{ borderColor: "var(--t-line-dark)", color: "var(--t-faint)" }}
           >
             <p>
-              Every piece links back to its source (see{" "}
+              {t("marketingFooter.legalA")}
               <Link prefetch={false} href="/sources" className="underline hover:no-underline">
-                Sources
+                {t("marketingFooter.legalSources")}
               </Link>
-              ); I never host full scripts of copyrighted works. Rights holders can
-              request removal anytime via{" "}
+              {t("marketingFooter.legalB")}
               <a href="mailto:canberk@actorrise.com" className="underline hover:no-underline">
                 canberk@actorrise.com
               </a>
-              .
+              {t("marketingFooter.legalC")}
             </p>
-            <p>I don&apos;t sell your data. Your searches are private.</p>
+            <p>{t("marketingFooter.privacyNote")}</p>
           </div>
         </div>
       </footer>

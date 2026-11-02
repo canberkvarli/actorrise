@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StageHero } from "@/components/marketing/StageHero";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -29,19 +30,19 @@ export default function SupportPage() {
         direction="(need a hand?)"
         title={
           <>
-            <em className="italic text-primary">Support</em>.
+            <em className="italic text-primary"><T k="marketingSupport.title" /></em>
+            <T k="marketingSupport.titleEnd" />
           </>
         }
-        lede="Something not working, a billing question, or stuck on your account? Email me and I read every message myself."
+        lede={<T k="marketingSupport.lede" />}
       />
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-3xl">
         <div className="space-y-8 text-muted-foreground">
           <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">Get help</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-3"><T k="marketingSupport.getHelp" /></h2>
             <p className="mb-3">
-              For anything at all, account issues, billing and subscriptions, a bug, or a
-              monologue you cannot find, email me directly:
+              <T k="marketingSupport.getHelpBody" />
             </p>
             <p>
               <a
@@ -52,51 +53,48 @@ export default function SupportPage() {
               </a>
             </p>
             <p className="mt-4 text-sm">
-              I am a solo founder and I read everything. I aim to reply within 1 to 2 business days.
+              <T k="marketingSupport.replyTime" />
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">Common questions</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-3"><T k="marketingSupport.common" /></h2>
             <ul className="space-y-3">
               <li>
-                <span className="text-foreground font-medium">Managing your subscription.</span>{" "}
-                You can start, change, or cancel your membership from your account settings in the
-                app. If you are stuck, email me and I will sort it out.
+                <span className="text-foreground font-medium"><T k="marketingSupport.subLabel" /></span>{" "}
+                <T k="marketingSupport.subBody" />
               </li>
               <li>
-                <span className="text-foreground font-medium">Refunds or billing.</span>{" "}
-                Email me at the address above with the email you signed up with and I will help.
+                <span className="text-foreground font-medium"><T k="marketingSupport.refundLabel" /></span>{" "}
+                <T k="marketingSupport.refundBody" />
               </li>
               <li>
-                <span className="text-foreground font-medium">Can&apos;t find a monologue.</span>{" "}
-                Tell me what you searched for and what you were hoping to find. I add and fix
-                content constantly.
+                <span className="text-foreground font-medium"><T k="marketingSupport.findLabel" /></span>{" "}
+                <T k="marketingSupport.findBody" />
               </li>
               <li>
-                <span className="text-foreground font-medium">Deleting your account.</span>{" "}
-                You can delete your account and data from account settings, or email me to do it
-                for you.
+                <span className="text-foreground font-medium"><T k="marketingSupport.deleteLabel" /></span>{" "}
+                <T k="marketingSupport.deleteBody" />
               </li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">More</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-3"><T k="marketingSupport.more" /></h2>
             <ul className="space-y-2">
               <li>
                 <Link prefetch={false} href="/contact" className="text-foreground underline hover:no-underline">
-                  Contact form
+                  <T k="marketingSupport.contactForm" />
                 </Link>
               </li>
               <li>
                 <Link prefetch={false} href="/privacy" className="text-foreground underline hover:no-underline">
-                  Privacy Policy
+                  <T k="marketingContact.privacy" />
                 </Link>
               </li>
               <li>
                 <Link prefetch={false} href="/terms" className="text-foreground underline hover:no-underline">
-                  Terms of Service
+                  <T k="marketingContact.terms" />
                 </Link>
               </li>
             </ul>

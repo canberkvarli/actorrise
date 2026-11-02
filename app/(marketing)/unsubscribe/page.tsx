@@ -5,7 +5,11 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { useT, useTList, type MessageKey } from "@/lib/i18n";
 
+/* Sent to the backend in English whatever the page language, so the
+   feedback email stays readable. The visitor sees marketingUnsubscribe.reasons
+   at the same index. */
 const REASONS = [
   "I get too many emails",
   "The content isn't relevant to me",
@@ -29,6 +33,9 @@ export default function UnsubscribePage() {
 }
 
 function UnsubscribeContent() {
+  const t = useT();
+  const tList = useTList();
+  const reasonLabels = tList("marketingUnsubscribe.reasons");
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
   const token = searchParams.get("token");
@@ -36,7 +43,7 @@ function UnsubscribeContent() {
   const [status, setStatus] = useState<
     "loading" | "success" | "error" | "resubscribed"
   >("loading");
-  const [errorMsg, setErrorMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState<MessageKey | null>(null);
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(false);
@@ -74,17 +81,17 @@ function UnsubscribeContent() {
         if (res.ok) {
           setStatus("resubscribed");
         } else {
-          setErrorMsg("Couldn't undo that. Email me and I'll fix it.");
+          setErrorMsg("marketingUnsubscribe.errUndo");
         }
       })
-      .catch(() => setErrorMsg("Couldn't undo that. Email me and I'll fix it."))
+      .catch(() => setErrorMsg("marketingUnsubscribe.errUndo"))
       .finally(() => setUndoing(false));
   };
 
   useEffect(() => {
     if (!email || !token) {
       setStatus("error");
-      setErrorMsg("Invalid unsubscribe link.");
+      setErrorMsg("marketingUnsubscribe.errInvalid");
       return;
     }
 
@@ -96,12 +103,12 @@ function UnsubscribeContent() {
           setStatus("success");
         } else {
           setStatus("error");
-          setErrorMsg("This link is invalid or has expired.");
+          setErrorMsg("marketingUnsubscribe.errExpired");
         }
       })
       .catch(() => {
         setStatus("error");
-        setErrorMsg("Something went wrong. Please try again.");
+        setErrorMsg("marketingUnsubscribe.errGeneric");
       });
   }, [email, token]);
 
@@ -119,7 +126,7 @@ function UnsubscribeContent() {
         {status === "loading" && (
           <div className="space-y-4">
             <Loader2 className="h-10 w-10 text-primary animate-spin mx-auto" />
-            <p className="text-muted-foreground">Processing your request...</p>
+            <p className="text-muted-foreground">{t("marketingUnsubscribe.processing")}</p>
           </div>
         )}
 
@@ -129,25 +136,25 @@ function UnsubscribeContent() {
             <div className="space-y-3">
               <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
               <h1 className="text-xl font-semibold text-foreground">
-                You&apos;ve been unsubscribed
+                {t("marketingUnsubscribe.doneTitle")}
               </h1>
               <p className="text-muted-foreground text-sm">
-                You won&apos;t receive marketing emails from ActorRise anymore.
+                {t("marketingUnsubscribe.doneBody")}
               </p>
               {/* Misclicks are the most common reason people land here.
                   Fix it on the spot instead of sending them to settings. */}
               <p className="text-muted-foreground text-sm">
-                Didn&apos;t mean to?{" "}
+                {t("marketingUnsubscribe.misclick")}{" "}
                 <button
                   onClick={handleUndo}
                   disabled={undoing}
                   className="font-medium text-primary hover:underline disabled:opacity-50"
                 >
-                  {undoing ? "Undoing..." : "Undo this"}
+                  {undoing ? t("marketingUnsubscribe.undoing") : t("marketingUnsubscribe.undo")}
                 </button>
               </p>
               {errorMsg && (
-                <p className="text-destructive text-sm">{errorMsg}</p>
+                <p className="text-destructive text-sm">{t(errorMsg)}</p>
               )}
             </div>
 
@@ -155,10 +162,10 @@ function UnsubscribeContent() {
             {!feedbackSent ? (
               <div className="rounded-xl border border-border bg-card p-5 text-left space-y-4">
                 <p className="text-sm font-medium text-foreground">
-                  Mind sharing why? (optional)
+                  {t("marketingUnsubscribe.why")}
                 </p>
                 <div className="space-y-2">
-                  {REASONS.map((reason) => (
+                  {REASONS.map((reason, i) => (
                     <label
                       key={reason}
                       className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm cursor-pointer transition-colors ${
@@ -186,7 +193,7 @@ function UnsubscribeContent() {
                           <div className="h-2 w-2 rounded-full bg-primary" />
                         )}
                       </div>
-                      {reason}
+                      {reasonLabels[i] ?? reason}
                     </label>
                   ))}
                 </div>
@@ -200,8 +207,8 @@ function UnsubscribeContent() {
                       rows={3}
                       placeholder={
                         selectedReason === "Other"
-                          ? "What made you leave?"
-                          : "Anything else? (optional)"
+                          ? t("marketingUnsubscribe.otherPlaceholder")
+                          : t("marketingUnsubscribe.commentPlaceholder")
                       }
                       className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
                     />
@@ -210,7 +217,7 @@ function UnsubscribeContent() {
                       disabled={sendingFeedback}
                       className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >
-                      {sendingFeedback ? "Sending..." : "Submit feedback"}
+                      {sendingFeedback ? t("marketingUnsubscribe.sending") : t("marketingUnsubscribe.submit")}
                     </button>
                   </>
                 )}
@@ -218,7 +225,7 @@ function UnsubscribeContent() {
             ) : (
               <div className="rounded-xl border border-border bg-card p-5">
                 <p className="text-sm text-muted-foreground">
-                  Thanks for letting me know. I appreciate the honesty.
+                  {t("marketingUnsubscribe.thanks")}
                 </p>
               </div>
             )}
@@ -227,7 +234,7 @@ function UnsubscribeContent() {
               href="/"
               className="inline-block text-sm font-medium text-primary hover:underline"
             >
-              Back to ActorRise
+              {t("marketingUnsubscribe.back")}
             </Link>
           </div>
         )}
@@ -237,17 +244,16 @@ function UnsubscribeContent() {
           <div className="space-y-4">
             <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
             <h1 className="text-xl font-semibold text-foreground">
-              You&apos;re back on the list
+              {t("marketingUnsubscribe.backTitle")}
             </h1>
             <p className="text-muted-foreground text-sm">
-              Nothing changed. You&apos;ll keep getting the occasional email
-              from me, and you can unsubscribe from any of them.
+              {t("marketingUnsubscribe.backBody")}
             </p>
             <Link prefetch={false}
               href="/"
               className="inline-block text-sm font-medium text-primary hover:underline"
             >
-              Back to ActorRise
+              {t("marketingUnsubscribe.back")}
             </Link>
           </div>
         )}
@@ -257,21 +263,21 @@ function UnsubscribeContent() {
           <div className="space-y-4">
             <XCircle className="h-12 w-12 text-destructive mx-auto" />
             <h1 className="text-xl font-semibold text-foreground">
-              Something went wrong
+              {t("marketingUnsubscribe.errorTitle")}
             </h1>
-            <p className="text-muted-foreground text-sm">{errorMsg}</p>
+            <p className="text-muted-foreground text-sm">{errorMsg ? t(errorMsg) : ""}</p>
             <div className="flex flex-col items-center gap-2">
               <Link prefetch={false}
                 href="/"
                 className="inline-block text-sm font-medium text-primary hover:underline"
               >
-                Back to ActorRise
+                {t("marketingUnsubscribe.back")}
               </Link>
               <a
                 href="mailto:canberk@actorrise.com"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                Need help? Email canberk@actorrise.com
+                {t("marketingUnsubscribe.needHelp", { email: "canberk@actorrise.com" })}
               </a>
             </div>
           </div>

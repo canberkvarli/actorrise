@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { IconX } from "@tabler/icons-react";
 
 import { appStoreUrl } from "@/lib/appStore";
+import { useT } from "@/lib/i18n";
 
 /**
  * Ghost Light is out, said where people actually are.
@@ -25,6 +26,7 @@ import { appStoreUrl } from "@/lib/appStore";
 const DISMISS_KEY = "ar_ghostlight_launch_v1";
 
 export function AppLaunchBar() {
+  const t = useT();
   /* Two states, not one. `mounted` gates on the first client render because
      localStorage does not exist on the server: rendering the bar during SSR and
      then removing it in an effect is a hydration mismatch, and this page already
@@ -56,21 +58,21 @@ export function AppLaunchBar() {
   return (
     <div
       role="region"
-      aria-label="Ghost Light iOS app announcement"
+      aria-label={t("marketingLaunchBar.label")}
       className="t-launchbar relative z-30"
     >
       {/* pr-10 keeps the text clear of the close button, which is absolute so it
           stays pinned right however the sentence wraps at 320px. */}
       <div className="container mx-auto flex items-center justify-center gap-x-3 gap-y-1 px-4 py-2 pr-10 text-center sm:px-6">
         <p className="t-launchbar__line">
-          Ghost Light is out on the App Store.{" "}
+          {t("marketingLaunchBar.line")}{" "}
           <a
             href={appStoreUrl("launch_bar")}
             target="_blank"
             rel="noopener noreferrer"
             className="t-launchbar__link"
           >
-            Get it free
+            {t("marketingLaunchBar.link")}
           </a>
         </p>
       </div>
@@ -78,7 +80,7 @@ export function AppLaunchBar() {
       <button
         type="button"
         onClick={dismiss}
-        aria-label="Dismiss announcement"
+        aria-label={t("marketingLaunchBar.dismiss")}
         className="t-launchbar__close absolute right-1 top-1/2 -translate-y-1/2 sm:right-3"
       >
         <IconX className="h-4 w-4" />

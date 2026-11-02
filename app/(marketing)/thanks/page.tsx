@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ArrowUpRight } from "lucide-react";
 import { StageHero } from "@/components/marketing/StageHero";
+import { T, type MessageKey } from "@/lib/i18n";
 import {
   APPROVED_PARTNERS,
   PARTNER_CATEGORY_LABELS,
@@ -28,6 +29,15 @@ export const metadata: Metadata = {
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/thanks` },
+};
+
+/** Category headings that have a translation; anything else falls back to the data's label. */
+const CATEGORY_KEYS: Record<string, MessageKey> = {
+  chapter: "marketingThanks.catChapter",
+  theater: "marketingThanks.catTheater",
+  studio: "marketingThanks.catStudio",
+  school: "marketingThanks.catSchool",
+  newsletter: "marketingThanks.catNewsletter",
 };
 
 /** Known categories in their listed order, then anything unrecognised, alphabetically. */
@@ -105,35 +115,35 @@ export default function ThanksPage() {
         direction="(in the programme.)"
         title={
           <>
-            Where you&rsquo;ll <em className="italic text-primary">find us</em>.
+            <T k="marketingThanks.titleA" />
+            <em className="italic text-primary"><T k="marketingThanks.titleB" /></em>
+            <T k="marketingThanks.titleC" />
           </>
         }
-        lede={
-          <>
-            Theatre chapters, companies, studios, schools and newsletters that point their actors
-            at ActorRise. If you run one and want a listing, write to me.
-          </>
-        }
+        lede={<T k="marketingThanks.lede" />}
       />
 
       <div className="container mx-auto max-w-3xl px-6 py-12 md:py-16">
         {partners.length === 0 ? (
           <p className="text-muted-foreground">
-            Nothing listed here yet. If your organization has ActorRise in a resource guide or
-            newsletter, email{" "}
+            <T k="marketingThanks.emptyA" />
             <a
               href="mailto:canberk@actorrise.com"
               className="text-primary underline hover:no-underline"
             >
               canberk@actorrise.com
-            </a>{" "}
-            and I will add you.
+            </a>
+            <T k="marketingThanks.emptyB" />
           </p>
         ) : (
           categories.map((category) => (
             <section key={category} className="mb-10 last:mb-0">
               <h2 className="mb-4 text-xl font-semibold text-foreground">
-                {PARTNER_CATEGORY_LABELS[category] || category}
+                {CATEGORY_KEYS[category] ? (
+                  <T k={CATEGORY_KEYS[category]} />
+                ) : (
+                  PARTNER_CATEGORY_LABELS[category] || category
+                )}
               </h2>
               <div className="grid gap-3">
                 {partners

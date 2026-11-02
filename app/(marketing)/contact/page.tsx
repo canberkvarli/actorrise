@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ContactPageForm } from "@/components/contact/ContactPageForm";
 import { StageHero } from "@/components/marketing/StageHero";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -31,10 +32,12 @@ export default function ContactPage() {
         direction="(a note to the director.)"
         title={
           <>
-            Say <em className="italic text-primary">hello</em>.
+            <T k="marketingContact.titleA" />
+            <em className="italic text-primary"><T k="marketingContact.titleB" /></em>
+            <T k="marketingContact.titleC" />
           </>
         }
-        lede="Questions, feedback, bug reports, anything. It goes straight to my inbox, and I read every message."
+        lede={<T k="marketingContact.lede" />}
       />
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-3xl">
@@ -43,9 +46,9 @@ export default function ContactPage() {
           <ContactPageForm />
         </section>
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Or email directly</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-3"><T k="marketingContact.emailTitle" /></h2>
           <p className="mb-3">
-            For account issues, billing questions, or technical support:
+            <T k="marketingContact.emailBody" />
           </p>
           <p>
             <a
@@ -56,26 +59,26 @@ export default function ContactPage() {
             </a>
           </p>
           <p className="mt-4 text-sm">
-            I aim to respond within 1–2 business days.
+            <T k="marketingContact.responseTime" />
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Other links</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-3"><T k="marketingContact.otherLinks" /></h2>
           <ul className="space-y-2">
             <li>
               <Link prefetch={false} href="/terms" className="text-foreground underline hover:no-underline">
-                Terms of Service
+                <T k="marketingContact.terms" />
               </Link>
             </li>
             <li>
               <Link prefetch={false} href="/privacy" className="text-foreground underline hover:no-underline">
-                Privacy Policy
+                <T k="marketingContact.privacy" />
               </Link>
             </li>
             <li>
               <Link prefetch={false} href="/sources" className="text-foreground underline hover:no-underline">
-                Sources & copyright
+                <T k="marketingFooter.sources" />
               </Link>
             </li>
           </ul>

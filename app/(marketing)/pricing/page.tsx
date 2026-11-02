@@ -14,141 +14,137 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { StageHero } from "@/components/marketing/StageHero";
+import { useT, useTList, type ListKey, type MessageKey } from "@/lib/i18n";
 
-const faqs = [
-  {
-    question: "Can I switch plans later?",
-    answer:
-      "Yes. Move up, move down or cancel whenever you like. The change lands at the end of the period you already paid for.",
-  },
-  {
-    question: "What happens when I hit the search limit?",
-    answer:
-      "AI search pauses until the month turns over, or until you move up. Browsing the library by hand stays open either way.",
-  },
-  {
-    question: "What counts as a ScenePartner scene?",
-    answer:
-      "Each new scene you start counts once. Run that same scene as many times as you want and it still counts once.",
-  },
-  {
-    question: "I'm a student. Is there a discount?",
-    answer:
-      "Students don't pay at all. Ask your teacher to make a class link (it takes them a minute in the library), sign up through it, and you get Plus for a month, free. For students 13 and up.",
-  },
-  {
-    question: "I teach. Can I get this for my students?",
-    answer:
-      "Yes. Sign up, pick Teacher, and make your class link from the library. Your class gets Plus free for a month, and your own account is on me. After that, a class plan keeps everyone on for the school year: Classroom $249 a year for up to 40 students, Program $499 for up to 150, a quote for a district or studio.",
-  },
-  {
-    question: "How does a school pay?",
-    answer:
-      "One invoice to the school for the year. Card, bank transfer and purchase orders are all fine. Email me at canberk@actorrise.com and I'll send a quote your principal or finance office can approve.",
-  },
-  {
-    question: "How do I pay?",
-    answer:
-      "Visa, Mastercard and Amex, through Stripe. The card details never touch my server.",
-  },
-  {
-    question: "Can I cancel any time?",
-    answer:
-      "Any time, no commitment. You keep access to the end of the period you paid for, and your bookmarks stay put whatever you decide.",
-  },
+type Translate = ReturnType<typeof useT>;
+
+/* Prices stay in code, not in the dictionaries, so a translation can never
+   quote a different number than the one Stripe charges. */
+const SCHOOL_PRICES = { classroom: "$249", program: "$499" };
+
+const faqs: { q: MessageKey; a: MessageKey; vars?: Record<string, string> }[] = [
+  { q: "marketingPricing.q1", a: "marketingPricing.a1" },
+  { q: "marketingPricing.q2", a: "marketingPricing.a2" },
+  { q: "marketingPricing.q3", a: "marketingPricing.a3" },
+  { q: "marketingPricing.q4", a: "marketingPricing.a4" },
+  { q: "marketingPricing.q5", a: "marketingPricing.a5", vars: SCHOOL_PRICES },
+  { q: "marketingPricing.q6", a: "marketingPricing.a6" },
+  { q: "marketingPricing.q7", a: "marketingPricing.a7" },
+  { q: "marketingPricing.q8", a: "marketingPricing.a8" },
 ];
 
 const QUOTE = "mailto:canberk@actorrise.com?subject=Class%20plan%20quote";
 
-const SCHOOL_PLANS = [
+const SCHOOL_PLANS: {
+  key: string;
+  name: MessageKey;
+  /** A literal price, or a dictionary key when there is no number ("Quote"). */
+  price: { amount: string } | { key: MessageKey };
+  per: MessageKey | null;
+  who: MessageKey;
+  feats: ListKey;
+  cta: MessageKey;
+  href: string;
+  pick: boolean;
+}[] = [
   {
-    name: "Classroom",
-    price: "$249",
-    per: "/year",
-    who: "One teacher, up to 40 students.",
-    feats: ["Plus for every student, all year", "Your class page: who joined, who's working", "One invoice to the school"],
-    cta: "Start with your class",
+    key: "classroom",
+    name: "marketingPricing.classroomName",
+    price: { amount: SCHOOL_PRICES.classroom },
+    per: "marketingPricing.perYear",
+    who: "marketingPricing.classroomWho",
+    feats: "marketingPricing.classroomFeats",
+    cta: "marketingPricing.classroomCta",
     href: "/signup",
     pick: false,
   },
   {
-    name: "Program",
-    price: "$499",
-    per: "/year",
-    who: "One school, up to 150 students.",
-    feats: ["Every class in the program on one plan", "Plus for every student, all year", "Purchase orders welcome"],
-    cta: "Get a quote",
+    key: "program",
+    name: "marketingPricing.programName",
+    price: { amount: SCHOOL_PRICES.program },
+    per: "marketingPricing.perYear",
+    who: "marketingPricing.programWho",
+    feats: "marketingPricing.programFeats",
+    cta: "marketingPricing.getQuote",
     href: QUOTE,
     pick: true,
   },
   {
-    name: "District or studio",
-    price: "Quote",
-    per: "",
-    who: "Several schools, or an acting studio.",
-    feats: ["Seats sized to you", "One agreement, one invoice", "Set up with me directly"],
-    cta: "Get a quote",
+    key: "district",
+    name: "marketingPricing.districtName",
+    price: { key: "marketingPricing.districtPrice" },
+    per: null,
+    who: "marketingPricing.districtWho",
+    feats: "marketingPricing.districtFeats",
+    cta: "marketingPricing.getQuote",
     href: QUOTE,
     pick: false,
   },
 ];
 
-function getFeaturesList(tier: PricingTier): string[] {
+function getFeaturesList(tier: PricingTier, t: Translate): string[] {
   const features: string[] = [];
 
   // Full pieces a month. The read wall's own number, served with the tier.
   // Every paid tier reads without a cap (subscriptions.usage_limits).
   const reads = tier.features.monologue_reads_per_month;
   if (tier.name !== "free") {
-    features.push("Every monologue, start to finish");
+    features.push(t("marketingPricing.featEveryMonologue"));
   } else if (reads && reads > 0) {
-    features.push(`${reads} full monologues a month`);
+    features.push(t("marketingPricing.featReads", { count: reads }));
   }
 
   // Monologue rehearsals — the core value
   const rehearsals = tier.features.monologue_sessions;
   if (rehearsals === -1) {
-    features.push("Unlimited monologue rehearsals");
+    features.push(t("marketingPricing.featUnlimitedRehearsals"));
   } else if (rehearsals && rehearsals > 0) {
-    features.push(`${rehearsals} free rehearsals, then a week of Plus free, two if you finish a scene`);
+    features.push(t("marketingPricing.featRehearsals", { count: rehearsals }));
   }
 
   // AI searches
   if (tier.features.ai_searches_per_month === -1) {
-    features.push("Unlimited AI searches");
+    features.push(t("marketingPricing.featUnlimitedSearches"));
   } else {
-    features.push(`${tier.features.ai_searches_per_month} AI searches/mo`);
+    features.push(
+      t("marketingPricing.featSearches", { count: tier.features.ai_searches_per_month }),
+    );
   }
 
   // ScenePartner
   if (tier.features.scene_partner_trial_only) {
-    features.push("1 ScenePartner trial");
+    features.push(t("marketingPricing.featScenePartnerTrial"));
   } else {
     const scenes = tier.features.scene_partner_sessions;
     if (scenes === -1) {
-      features.push("Unlimited ScenePartner scenes");
+      features.push(t("marketingPricing.featUnlimitedScenes"));
     } else if (scenes && scenes > 0) {
-      features.push(`${scenes} ScenePartner scenes/mo`);
+      features.push(t("marketingPricing.featScenes", { count: scenes }));
     }
   }
 
   // Script uploads
   const scripts = tier.features.scene_partner_scripts;
   if (scripts === -1) {
-    features.push("Unlimited script uploads");
+    features.push(t("marketingPricing.featUnlimitedScripts"));
   } else if (scripts && scripts > 0) {
-    features.push(`${scripts} script upload${scripts > 1 ? "s" : ""}`);
+    features.push(
+      t(scripts > 1 ? "marketingPricing.featScripts" : "marketingPricing.featScript", {
+        count: scripts,
+      }),
+    );
   }
 
   // Overdone filter
   if (tier.name !== "free") {
-    features.push("Overdone filter");
+    features.push(t("marketingPricing.featOverdone"));
   }
 
   return features;
 }
 
 function FAQAccordion() {
+  const t = useT();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
@@ -170,7 +166,7 @@ function FAQAccordion() {
               className="t-faq__q"
               aria-expanded={open}
             >
-              <span>{faq.question}</span>
+              <span>{t(faq.q)}</span>
               <motion.span
                 aria-hidden
                 animate={{ rotate: open ? 180 : 0 }}
@@ -189,7 +185,7 @@ function FAQAccordion() {
               transition={{ duration: 0.2 }}
               className="t-faq__a"
             >
-              <p className="pb-5 pr-6">{faq.answer}</p>
+              <p className="pb-5 pr-6">{t(faq.a, faq.vars)}</p>
             </motion.div>
           </motion.div>
         );
@@ -201,6 +197,8 @@ function FAQAccordion() {
 export default function PricingPage() {
   // Default to annual — it's the better deal for the actor and the better LTV,
   // so lead with it (they can flip to monthly).
+  const t = useT();
+  const tList = useTList();
   const [isAnnual, setIsAnnual] = useState(true);
   const { data: allTiers = DEFAULT_PRICING_TIERS, isLoading } = usePricingTiers();
   // "Monologues" is Ghost Light's tier, sold in the App Store through
@@ -237,13 +235,15 @@ export default function PricingPage() {
   return (
     <>
       <StageHero
-        direction="(the ticket.)"
+        direction={t("marketingPricing.direction")}
         title={
           <>
-            Your <em className="italic text-primary">craft</em>, your plan.
+            {t("marketingPricing.titleA")}
+            <em className="italic text-primary">{t("marketingPricing.titleB")}</em>
+            {t("marketingPricing.titleC")}
           </>
         }
-        lede="Plus is $8.25 a month, billed $99 a year. Start free, no card."
+        lede={t("marketingPricing.lede", { monthly: "$8.25", yearly: "$99" })}
       />
 
       {/* `t-box-office` because that is what this page is, and because it carries
@@ -251,14 +251,14 @@ export default function PricingPage() {
           layout already mounts theatre-tokens and the three faces. */}
       <div className="t-box-office container mx-auto max-w-7xl px-4 py-10 sm:py-16">
         <div className="mb-10 flex flex-col items-center gap-2">
-          <div className="t-switch" role="group" aria-label="Billing period">
+          <div className="t-switch" role="group" aria-label={t("marketingPricing.billingPeriod")}>
             <button
               type="button"
               className="t-switch__opt"
               aria-pressed={!isAnnual}
               onClick={() => setIsAnnual(false)}
             >
-              Monthly
+              {t("marketingPricing.monthly")}
             </button>
             <button
               type="button"
@@ -266,11 +266,11 @@ export default function PricingPage() {
               aria-pressed={isAnnual}
               onClick={() => setIsAnnual(true)}
             >
-              Annual
+              {t("marketingPricing.annual")}
             </button>
           </div>
           <p className="t-box-office__dir" style={{ minHeight: 18 }}>
-            {isAnnual ? "(saves up to 31%.)" : ""}
+            {isAnnual ? t("marketingPricing.saves") : ""}
           </p>
         </div>
 
@@ -300,7 +300,7 @@ export default function PricingPage() {
                 : null;
 
             const isHighlighted = tier.name === "plus";
-            const features = getFeaturesList(tier);
+            const features = getFeaturesList(tier, t);
             const isFree = tier.name === "free";
 
             return (
@@ -314,7 +314,7 @@ export default function PricingPage() {
                 <div
                   className={`t-ticket t-ticket--stub${isHighlighted ? " t-ticket--pick" : ""}`}
                 >
-                  {isHighlighted && <span className="t-ticket__flag">Most taken</span>}
+                  {isHighlighted && <span className="t-ticket__flag">{t("marketingPricing.mostTaken")}</span>}
 
                   <h3 className="t-ticket__plan" style={{ fontSize: 22 }}>
                     {tier.display_name}
@@ -322,16 +322,19 @@ export default function PricingPage() {
 
                   <p className="t-ticket__price">
                     {formatPrice(price)}
-                    <span className="t-ticket__per">/mo</span>
+                    <span className="t-ticket__per">{t("marketingPricing.perMonth")}</span>
                   </p>
 
                   {isAnnual && tier.annual_price_cents && tier.annual_price_cents > 0 ? (
                     <p className="t-ticket__fine" style={{ marginTop: 8 }}>
-                      Billed at {formatPrice(tier.annual_price_cents)} a year
                       {savings && savings.savings > 0
-                        ? `, saving ${formatPrice(savings.savings)}`
-                        : ""}
-                      .
+                        ? t("marketingPricing.billedYearSaving", {
+                            price: formatPrice(tier.annual_price_cents),
+                            savings: formatPrice(savings.savings),
+                          })
+                        : t("marketingPricing.billedYear", {
+                            price: formatPrice(tier.annual_price_cents),
+                          })}
                     </p>
                   ) : null}
 
@@ -358,7 +361,7 @@ export default function PricingPage() {
                       isHighlighted ? "" : " t-ticket__cta--quiet"
                     }`}
                   >
-                    {isFree ? "Start free" : "Take this one"}
+                    {isFree ? t("marketingPricing.startFree") : t("marketingPricing.takeThis")}
                   </Link>
                 </div>
               </motion.div>
@@ -371,30 +374,29 @@ export default function PricingPage() {
             one invoice (backend: class_link.py plan). Prices set 2026-10-29,
             just under StageAgent's school plans. */}
         <div id="schools" className="mx-auto mt-4 max-w-5xl">
-          <p className="t-box-office__dir text-center">(for classes and schools.)</p>
+          <p className="t-box-office__dir text-center">{t("marketingPricing.schoolsDirection")}</p>
           <h2 className="t-box-office__title text-center" style={{ marginBottom: 8 }}>
-            Bring your whole class.
+            {t("marketingPricing.schoolsTitle")}
           </h2>
           <p className="mx-auto mb-8 max-w-2xl text-center text-[15px] leading-normal" style={{ color: "var(--t-muted-dark, inherit)" }}>
-            Your class gets Plus free for a month through your class link. A class plan keeps every
-            student on for the school year, and you see who joined and what they&rsquo;ve done.
+            {t("marketingPricing.schoolsBody")}
           </p>
           <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-3 sm:gap-6">
             {SCHOOL_PLANS.map((plan) => (
-              <div key={plan.name} className="relative h-full">
+              <div key={plan.key} className="relative h-full">
                 <div className={`t-ticket t-ticket--stub${plan.pick ? " t-ticket--pick" : ""}`}>
                   <h3 className="t-ticket__plan" style={{ fontSize: 22 }}>
-                    {plan.name}
+                    {t(plan.name)}
                   </h3>
                   <p className="t-ticket__price">
-                    {plan.price}
-                    {plan.per ? <span className="t-ticket__per">{plan.per}</span> : null}
+                    {"key" in plan.price ? t(plan.price.key) : plan.price.amount}
+                    {plan.per ? <span className="t-ticket__per">{t(plan.per)}</span> : null}
                   </p>
                   <p className="t-ticket__fine" style={{ marginTop: 8 }}>
-                    {plan.who}
+                    {t(plan.who)}
                   </p>
                   <ul className="t-ticket__feats">
-                    {plan.feats.map((f) => (
+                    {tList(plan.feats).map((f) => (
                       <li key={f} className="t-ticket__feat">
                         {f}
                       </li>
@@ -404,7 +406,7 @@ export default function PricingPage() {
                     href={plan.href}
                     className={`t-ticket__cta mt-5 w-full${plan.pick ? "" : " t-ticket__cta--quiet"}`}
                   >
-                    {plan.cta}
+                    {t(plan.cta)}
                   </a>
                 </div>
               </div>
@@ -413,7 +415,7 @@ export default function PricingPage() {
         </div>
 
         <div className="mx-auto mt-16 max-w-3xl">
-          <p className="t-box-office__dir">(the back of the programme.)</p>
+          <p className="t-box-office__dir">{t("marketingPricing.faqDirection")}</p>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -421,7 +423,7 @@ export default function PricingPage() {
             className="t-box-office__title"
             style={{ marginBottom: 18 }}
           >
-            Questions, answered.
+            {t("marketingPricing.faqTitle")}
           </motion.h2>
           <FAQAccordion />
         </div>
