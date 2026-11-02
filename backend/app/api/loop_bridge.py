@@ -81,7 +81,10 @@ def run(job: Job, authorization: str | None = Header(default=None)) -> dict:
         raise HTTPException(status_code=409, detail="another loop script is running, try again shortly")
     try:
         # A list, never a shell: arguments are data.
-        p = subprocess.run(cmd, cwd=BACKEND, capture_output=True, text=True, timeout=TIMEOUT_S)
+        # The scripts find `app` from the repo layout (<repo>/backend); the image is
+        # the backend folder alone, at /app, so hand them the path.
+        env = {**os.environ, "PYTHONPATH": str(BACKEND)}
+        p = subprocess.run(cmd, cwd=BACKEND, env=env, capture_output=True, text=True, timeout=TIMEOUT_S)
         return {"returncode": p.returncode, "stdout": p.stdout[-MAX_OUT:], "stderr": p.stderr[-MAX_OUT:]}
     except subprocess.TimeoutExpired:
         return {"returncode": 124, "stdout": "", "stderr": f"timed out after {TIMEOUT_S}s"}

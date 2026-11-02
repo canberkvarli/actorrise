@@ -23,6 +23,7 @@ def ran(monkeypatch):
     calls = []
 
     def fake_run(cmd, **kw):
+        assert kw["env"]["PYTHONPATH"] == str(loop_bridge.BACKEND)
         calls.append(cmd)
         return subprocess.CompletedProcess(cmd, 0, stdout="ok\n", stderr="")
 
