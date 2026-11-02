@@ -192,7 +192,15 @@ class Monologue(Base):
     scene_description = Column(Text, nullable=True)  # Setting and situation
 
     # Search & Discovery
-    # Embedding: text-embedding-3-large (1536 dims for pgvector HNSW indexing)
+    # Embedding: text-embedding-3-large, 1536 dims.
+    #
+    # The column is halfvec(1536) in the database since 2026-11-02 (CAN-20):
+    # 476 -> 322 MB, and a test of 8 searches returned the same top 20 in the
+    # same order. It stays `Vector` here on purpose. pgvector-python's HALFVEC
+    # returns a HalfVector object, and the recommender and dedupe code do numpy
+    # maths on this value; Vector parses halfvec's text form into a numpy array
+    # just the same. Postgres casts vector -> halfvec implicitly, so writes and
+    # `<=>` comparisons need nothing either. The index is halfvec_cosine_ops.
     embedding_vector = deferred(Column(Vector(1536), nullable=True))
     search_tags = Column(ARRAY(String), nullable=True)  # Searchable keywords
 

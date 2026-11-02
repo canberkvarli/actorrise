@@ -169,7 +169,8 @@ def _create_index(engine):
         conn.execute(text("""
             CREATE INDEX CONCURRENTLY ix_monologues_embedding_vector_hnsw
             ON monologues
-            USING hnsw (embedding_vector vector_cosine_ops)
+            -- halfvec since 2026-11-02 (CAN-20); vector_cosine_ops would fail now.
+            USING hnsw (embedding_vector halfvec_cosine_ops)
             WITH (m = 16, ef_construction = 64)
         """))
 
