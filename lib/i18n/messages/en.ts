@@ -12,8 +12,16 @@ import { landing } from "./en/landing";
 import { marketing } from "./en/marketing";
 import { audiences } from "./en/audiences";
 import { seo } from "./en/seo";
+import { appSearch } from "./en/appSearch";
+import { appMonologue } from "./en/appMonologue";
+import { appPractice } from "./en/appPractice";
+import { appScenes } from "./en/appScenes";
+import { appAuditions } from "./en/appAuditions";
+import { appShell } from "./en/appShell";
+import { appAccount } from "./en/appAccount";
+import { content } from "./en/content";
 import type { Widen } from "./types";
 
-export const en = { ...core, ...landing, ...marketing, ...audiences, ...seo };
+export const en = { ...core, ...landing, ...marketing, ...audiences, ...seo, ...appSearch, ...appMonologue, ...appPractice, ...appScenes, ...appAuditions, ...appShell, ...appAccount, ...content };
 
 export type Messages = Widen<typeof en>;
