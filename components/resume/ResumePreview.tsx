@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Credit } from "@/types/resume";
 import { CREDIT_CATEGORIES } from "@/types/resume";
+import { useT } from "@/lib/i18n";
 
 export interface ResumeProfile {
   name?: string | null;
@@ -60,6 +61,7 @@ export default function ResumePreview({
   /** Changes when something lands. The sheet lights briefly where it landed. */
   flash?: string | number | null;
 }) {
+  const t = useT();
   const contact = [profile.location, email].filter(Boolean).join("  ·  ");
   const stats = [
     profile.height,
@@ -175,7 +177,7 @@ export default function ResumePreview({
         })}
 
         {credits.length === 0 && (
-          <p className="t-paper__empty">a résumé starts with one credit.</p>
+          <p className="t-paper__empty">{t("appAuditionsResume.sheetEmpty")}</p>
         )}
 
         {profile.training_background?.trim() && (

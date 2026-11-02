@@ -5,12 +5,13 @@ import { toast } from "sonner";
 
 import type { Audition } from "@/lib/auditions";
 import { useAskAudition, useForgetAsk } from "@/hooks/useAuditions";
-import { SAVE_FAILED } from "./SidesSection";
+import { useT } from "@/lib/i18n";
 
 /** One question box about this audition. Answers come from what's saved on it, and stay until you take them off. */
 export function AskMe({ a }: { a: Audition }) {
   const ask = useAskAudition();
   const forget = useForgetAsk();
+  const t = useT();
   const [q, setQ] = useState("");
   const [error, setError] = useState<string | null>(null);
   // Leaving rows fold away before the server copy drops them.
@@ -26,7 +27,7 @@ export function AskMe({ a }: { a: Audition }) {
           next.delete(at);
           return next;
         });
-        toast.error(SAVE_FAILED);
+        toast.error(t("appAuditionsErr.saveFailed"));
       },
     });
   }
@@ -34,8 +35,8 @@ export function AskMe({ a }: { a: Audition }) {
   return (
     <section id="aud-ask-me" aria-labelledby="aud-ask-h">
       <div className="aud-sec-head">
-        <h2 id="aud-ask-h" className="aud-sec-title text-[26px]">Ask me</h2>
-        <span className="aud-cap-muted text-[13px]">about this audition</span>
+        <h2 id="aud-ask-h" className="aud-sec-title text-[26px]">{t("appAuditionsAsk.title")}</h2>
+        <span className="aud-cap-muted text-[13px]">{t("appAuditionsAsk.sub")}</span>
       </div>
       {asks.length > 0 && (
         <ul className="mb-4 grid">
@@ -47,8 +48,8 @@ export function AskMe({ a }: { a: Audition }) {
                   <button
                     type="button"
                     className="aud-x aud-focus"
-                    aria-label={`Take "${x.q}" off the page`}
-                    title="Take it off"
+                    aria-label={t("appAuditionsAsk.takeOffLabel", { q: x.q })}
+                    title={t("appAuditionsAsk.takeOff")}
                     disabled={leaving.has(x.at)}
                     onClick={() => remove(x.at)}
                   >
@@ -76,27 +77,27 @@ export function AskMe({ a }: { a: Audition }) {
               const detail = (err as { response?: { status?: number; data?: { detail?: unknown } } }).response;
               setError(
                 detail?.status === 403
-                  ? "That's all my questions for this month on your plan."
-                  : "I couldn't answer that just now. Try again in a moment.",
+                  ? t("appAuditionsAsk.quota")
+                  : t("appAuditionsAsk.failed"),
               );
             },
           });
         }}
       >
-        <label className="sr-only" htmlFor="aud-ask-input">Ask me about this audition</label>
+        <label className="sr-only" htmlFor="aud-ask-input">{t("appAuditionsAsk.label")}</label>
         <input
           id="aud-ask-input"
           className="aud-input min-w-0 flex-1 px-4 py-3 text-[17px]"
-          placeholder="where do I park? what should I wear?"
+          placeholder={t("appAuditionsAsk.placeholder")}
           maxLength={500}
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
         <button type="submit" disabled={ask.isPending || q.trim().length < 2} className="aud-ask-btn aud-focus px-5 text-[15px] font-semibold">
-          {ask.isPending ? "Thinking" : "Ask"}
+          {ask.isPending ? t("appAuditionsAsk.thinking") : t("appAuditionsAsk.ask")}
         </button>
       </form>
-      {ask.isPending && <p className="aud-pencil-muted aud-thinking mt-2 text-[17px]" role="status">(thinking it over)</p>}
+      {ask.isPending && <p className="aud-pencil-muted aud-thinking mt-2 text-[17px]" role="status">{t("appAuditionsAsk.thinkingOver")}</p>}
       {error && <p className="aud-cap-muted mt-2 text-[13.5px]" role="alert">{error}</p>}
     </section>
   );

@@ -10,13 +10,13 @@ import type { Audition, AuditionPiece } from "@/lib/auditions";
 import { uploadSides, useAddPiece, useAssist, useRemovePiece, useUpdateAudition } from "@/hooks/useAuditions";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { useScript } from "@/hooks/useScripts";
+import { useLocale, useT } from "@/lib/i18n";
 import { SidesReader } from "./SidesReader";
-
-export const SAVE_FAILED = "That didn't save. Try again in a moment.";
 
 /** Casting sent sides that aren't here yet: take the PDF, attach it, it loads into ScenePartner. */
 export function useAddSides(a: Audition) {
   const update = useUpdateAudition();
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   async function take(file: File | undefined) {
@@ -25,12 +25,12 @@ export function useAddSides(a: Audition) {
     const id = await uploadSides(file);
     if (id == null) {
       setBusy(false);
-      toast.error("Those sides didn't load. Try the PDF again.");
+      toast.error(t("appAuditionsSides.didntLoad"));
       return;
     }
     update.mutate({ id: a.id, user_script_id: id }, {
-      onSuccess: () => toast.success("Got them. They're loading into ScenePartner."),
-      onError: () => toast.error(SAVE_FAILED),
+      onSuccess: () => toast.success(t("appAuditionsSides.gotThem")),
+      onError: () => toast.error(t("appAuditionsErr.saveFailed")),
       onSettled: () => setBusy(false),
     });
   }
@@ -59,17 +59,20 @@ function pages(text: string): [string, string] {
   return [text.slice(0, at).trim(), text.slice(at).trim()];
 }
 
-function runsNote(a: Audition): string | null {
+function runsNote(a: Audition, t: ReturnType<typeof useT>, tag: string): string | null {
   const runs = a.prep?.runs ?? 0;
-  if (!runs) return "not run yet";
+  if (!runs) return t("appAuditionsSides.notRun");
   const last = a.prep?.last_run_at
-    ? new Date(a.prep.last_run_at).toLocaleDateString("en-US", { weekday: "long" })
+    ? new Date(a.prep.last_run_at).toLocaleDateString(tag, { weekday: "long" })
     : null;
-  return `run ${runs === 1 ? "once" : runs === 2 ? "twice" : `${runs} times`}${last ? `, last on ${last}` : ""}`;
+  const ran = runs === 1 ? t("appAuditionsSides.runOnce") : runs === 2 ? t("appAuditionsSides.runTwice") : t("appAuditionsSides.runTimes", { n: runs });
+  return last ? t("appAuditionsSides.lastOn", { runs: ran, day: last }) : ran;
 }
 
 /** Their sides as paper, my read on the scene, or what they asked you to bring of your own. */
 export function SidesSection({ a }: { a: Audition }) {
+  const t = useT();
+  const tag = useLocale() === "tr" ? "tr-TR" : "en-US";
   const steps = a.prep?.steps ?? [];
   const sidesStep = steps.find((s) => s.key === "sides");
   const upload = steps.find((s) => s.key === "upload");
@@ -101,14 +104,14 @@ export function SidesSection({ a }: { a: Audition }) {
   }, [canRead, key, a.id, assist]);
   const read = a.assist.read?.line;
 
-  const title = sidesStep || upload ? "Their sides" : piece ? "Your piece" : "What you're bringing";
+  const title = sidesStep || upload ? t("appAuditionsSides.theirSides") : piece ? t("appAuditionsSides.yourPiece") : t("appAuditionsSides.bringing");
   const excerpt = a.sides?.excerpt;
 
   return (
     <section id="aud-sides" aria-labelledby="aud-sides-h">
       <div className="aud-sec-head">
         <h2 id="aud-sides-h" className="aud-sec-title text-[26px]">{title}</h2>
-        {sidesStep && <span className="aud-cap-muted text-[13px]">{loading ? "still loading" : runsNote(a)}</span>}
+        {sidesStep && <span className="aud-cap-muted text-[13px]">{loading ? t("appAuditionsSides.stillLoading") : runsNote(a, t, tag)}</span>}
       </div>
 
       {sidesStep && (
@@ -117,7 +120,7 @@ export function SidesSection({ a }: { a: Audition }) {
             <button
               type="button"
               className="aud-pages aud-focus grid w-full gap-3.5 text-left sm:grid-cols-2"
-              aria-label="Read your sides"
+              aria-label={t("appAuditionsSides.readYourSides")}
               onClick={() => setReading(true)}
             >
               {pages(excerpt).map((p, i) => p && (
@@ -125,11 +128,11 @@ export function SidesSection({ a }: { a: Audition }) {
                   {p}
                 </span>
               ))}
-              <span className="aud-pages-cue" aria-hidden>Read them</span>
+              <span className="aud-pages-cue" aria-hidden>{t("appAuditionsSides.readThem")}</span>
             </button>
           ) : (
             <p className="aud-pencil-muted text-[18px]">
-              {loading ? "(they're loading into ScenePartner. give it a minute.)" : status === "failed" ? "(those sides didn't read. open them in ScenePartner to try again.)" : `(${a.sides?.title ?? "your sides"} are attached.)`}
+              {loading ? t("appAuditionsSides.loadingIn") : status === "failed" ? t("appAuditionsSides.failed") : t("appAuditionsSides.attached", { title: a.sides?.title ?? t("appAuditionsSides.yourSides") })}
             </p>
           )}
           {(read || (assist.isPending && !read)) && (
@@ -137,15 +140,15 @@ export function SidesSection({ a }: { a: Audition }) {
               {read ? (
                 <p className="aud-pencil text-[19px] leading-snug">{read}</p>
               ) : (
-                <p className="aud-pencil-muted aud-thinking text-[18px]" role="status">(reading the scene)</p>
+                <p className="aud-pencil-muted aud-thinking text-[18px]" role="status">{t("appAuditionsSides.readingScene")}</p>
               )}
-              <p className="aud-cap-muted mt-2 text-[12.5px]">A read on the scene from your sides.</p>
+              <p className="aud-cap-muted mt-2 text-[12.5px]">{t("appAuditionsSides.readNote")}</p>
             </div>
           )}
           <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[14px]">
             {(excerpt || status === "completed") && (
               <button type="button" className="aud-link font-semibold" onClick={() => setReading(true)}>
-                read them here
+                {t("appAuditionsSides.readHere")}
               </button>
             )}
             <Link
@@ -153,10 +156,10 @@ export function SidesSection({ a }: { a: Audition }) {
               className="aud-link"
               onClick={() => trackEvent("audition_prep_started", { audition_id: a.id, kind: "sides" })}
             >
-              run them with ScenePartner
+              {t("appAuditionsSides.runWith")}
             </Link>
             <button type="button" className="aud-link aud-cap-muted" disabled={add.busy} onClick={add.pick}>
-              {add.busy ? "swapping them" : "swap the PDF"}
+              {add.busy ? t("appAuditionsSides.swapping") : t("appAuditionsSides.swap")}
             </button>
             {add.field}
           </p>
@@ -166,9 +169,9 @@ export function SidesSection({ a }: { a: Audition }) {
 
       {upload && (
         <div className="aud-card flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
-          <p className="aud-pencil-muted text-[18px]">(casting sent sides. add the PDF and they&apos;ll sit right here.)</p>
+          <p className="aud-pencil-muted text-[18px]">{t("appAuditionsSides.uploadAsk")}</p>
           <button type="button" disabled={add.busy} onClick={add.pick} className="aud-quiet-chip aud-focus px-4 py-2 text-[14px] font-semibold">
-            {add.busy ? "Adding them" : "Add the PDF"}
+            {add.busy ? t("appAuditionsSides.addingThem") : t("appAuditionsSides.addPdf")}
           </button>
           {add.field}
         </div>
@@ -177,7 +180,7 @@ export function SidesSection({ a }: { a: Audition }) {
       {piece && (
         <div className={sidesStep || upload ? "mt-6" : ""}>
           <p className="text-[16px]">
-            They want <span className="aud-pencil text-[19px]">{a.material_raw ?? "a piece of your choice"}</span>.
+            {t("appAuditionsSides.theyWantA")}<span className="aud-pencil text-[19px]">{a.material_raw ?? t("appAuditionsSides.yourChoice")}</span>{t("appAuditionsSides.theyWantB")}
           </p>
           <Pieces a={a} />
           <p className="mt-2 text-[14px]">
@@ -186,7 +189,7 @@ export function SidesSection({ a }: { a: Audition }) {
               className="aud-link"
               onClick={() => trackEvent("audition_prep_started", { audition_id: a.id, kind: "monologue" })}
             >
-              find one in the library
+              {t("appAuditionsSides.findOne")}
             </Link>
           </p>
         </div>
@@ -194,20 +197,20 @@ export function SidesSection({ a }: { a: Audition }) {
 
       {!sidesStep && !upload && !piece && (
         <>
-          <p className="aud-pencil-muted text-[18px]">(nothing in the notice about what to prepare.)</p>
+          <p className="aud-pencil-muted text-[18px]">{t("appAuditionsSides.nothing")}</p>
           <Pieces a={a} />
         </>
       )}
       {!piece && (sidesStep || upload) && a.pieces.length > 0 && (
-        <div className="mt-5"><Pieces a={a} label="Also bringing" /></div>
+        <div className="mt-5"><Pieces a={a} label={t("appAuditionsSides.alsoBringing")} /></div>
       )}
     </section>
   );
 }
 
-function pieceName(p: AuditionPiece): string {
-  if (!p.monologue_id) return "A scene";
-  if (!p.title) return "A monologue";
+function pieceName(p: AuditionPiece, t: ReturnType<typeof useT>): string {
+  if (!p.monologue_id) return t("appAuditionsSides.aScene");
+  if (!p.title) return t("appAuditionsSides.aMonologue");
   return p.character && !p.title.includes(p.character) ? `${p.title}, ${p.character}` : p.title;
 }
 
@@ -215,6 +218,7 @@ function pieceName(p: AuditionPiece): string {
 function Pieces({ a, label }: { a: Audition; label?: string }) {
   const add = useAddPiece();
   const remove = useRemovePiece();
+  const t = useT();
   const { data: saved } = useBookmarks();
   const attached = new Set(a.pieces.map((p) => p.monologue_id));
   const choices = (saved ?? []).filter((m) => !attached.has(m.id));
@@ -228,8 +232,8 @@ function Pieces({ a, label }: { a: Audition; label?: string }) {
           {a.pieces.map((p) => (
             <li key={p.id} className="aud-tick-row flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2 text-[15px]">
               <span className="min-w-0 break-words">
-                {pieceName(p)}
-                {p.play_title && <span className="aud-cap-muted"> from {p.play_title}</span>}
+                {pieceName(p, t)}
+                {p.play_title && <span className="aud-cap-muted">{t("appAuditionsSides.from", { play: p.play_title })}</span>}
               </span>
               {p.monologue_id && (
                 <Link
@@ -237,17 +241,17 @@ function Pieces({ a, label }: { a: Audition; label?: string }) {
                   onClick={() => trackEvent("audition_prep_started", { audition_id: a.id, kind: "monologue" })}
                   className="aud-link text-[13.5px]"
                 >
-                  work on it
+                  {t("appAuditionsSides.workOn")}
                 </Link>
               )}
               <button
                 type="button"
                 className="aud-link aud-cap-muted text-[13.5px]"
                 disabled={remove.isPending}
-                aria-label={`Take ${pieceName(p)} off this audition`}
-                onClick={() => remove.mutate({ id: a.id, piece_id: p.id }, { onError: () => toast.error(SAVE_FAILED) })}
+                aria-label={t("appAuditionsSides.takeOffLabel", { name: pieceName(p, t) })}
+                onClick={() => remove.mutate({ id: a.id, piece_id: p.id }, { onError: () => toast.error(t("appAuditionsErr.saveFailed")) })}
               >
-                take it off
+                {t("appAuditionsSides.takeOff")}
               </button>
             </li>
           ))}
@@ -256,19 +260,19 @@ function Pieces({ a, label }: { a: Audition; label?: string }) {
       {choices.length > 0 && (
         <select
           className="aud-input mt-2 max-w-full px-2.5 py-2 text-[14px]"
-          aria-label="Bring a monologue you saved"
+          aria-label={t("appAuditionsSides.bringSaved")}
           value=""
           disabled={add.isPending}
           onChange={(e) => {
             const id = Number(e.target.value);
             if (!id) return;
             add.mutate({ id: a.id, monologue_id: id }, {
-              onSuccess: () => toast.success("Got it. That's the one you're bringing."),
-              onError: () => toast.error(SAVE_FAILED),
+              onSuccess: () => toast.success(t("appAuditionsSides.savedPicked")),
+              onError: () => toast.error(t("appAuditionsErr.saveFailed")),
             });
           }}
         >
-          <option value="">{a.pieces.length ? "Add another one you saved" : "Pick one you saved"}</option>
+          <option value="">{a.pieces.length ? t("appAuditionsSides.addAnother") : t("appAuditionsSides.pickSaved")}</option>
           {choices.map((m) => (
             <option key={m.id} value={m.id}>
               {m.character_name}, {m.play_title}

@@ -1,5 +1,6 @@
 // Pure helpers behind DraftCard: form values from a parse or a saved audition, and the body back out.
 // Relative import so vitest (no path aliases) can load this file on its own.
+import type { MessageKey } from "../../lib/i18n";
 import { changedFields, fromLocalInput, toLocalInput, type Audition, type AuditionKind, type Draft, type ThroughKind } from "../../lib/auditions";
 
 export type DraftValues = {
@@ -57,18 +58,24 @@ export function patchFromValues(a: Audition, v: DraftValues): Record<string, unk
 }
 
 // The backend's 400s are written for developers. The ones an actor can actually hit, in my words.
-const FRIENDLY: [RegExp, string][] = [
-  [/^tape_link must be/, "That tape link needs to be a full link, starting with http."],
-  [/^tz must be/, "I couldn't read that time zone. Try again from your own browser."],
-  [/^project is required/, "I need the name of the project to save this."],
-  [/^user_script_id must be/, "I couldn't find those sides on your account. Try adding them again."],
-  [/^kind must be/, "Pick in person, self tape or virtual for this one."],
-  [/^through_kind must be/, "Pick agent, manager or self for who put you up."],
+// English inline (vitest reads this file without the dictionary); the key is what a translator looks up.
+const FRIENDLY: [RegExp, MessageKey, string][] = [
+  [/^tape_link must be/, "appAuditionsErr.tapeLink", "That tape link needs to be a full link, starting with http."],
+  [/^tz must be/, "appAuditionsErr.tz", "I couldn't read that time zone. Try again from your own browser."],
+  [/^project is required/, "appAuditionsErr.project", "I need the name of the project to save this."],
+  [/^user_script_id must be/, "appAuditionsErr.script", "I couldn't find those sides on your account. Try adding them again."],
+  [/^kind must be/, "appAuditionsErr.kind", "Pick in person, self tape or virtual for this one."],
+  [/^through_kind must be/, "appAuditionsErr.throughKind", "Pick agent, manager or self for who put you up."],
 ];
 
-/** The API's message, in friendlier words when I know it, else as sent, else a plain fallback. */
-export function errMessage(e: unknown): string {
+/**
+ * The API's message, in friendlier words when I know it, else as sent, else a plain fallback.
+ * Pass the component's t() to get the friendly words in the reader's language.
+ */
+export function errMessage(e: unknown, t?: (key: MessageKey) => string): string {
+  const say = (key: MessageKey, english: string) => (t ? t(key) : english);
   const m = (e as { message?: unknown })?.message;
-  if (typeof m !== "string" || !m || m.startsWith("[object")) return "That didn't save. Check the fields and try again.";
-  return FRIENDLY.find(([re]) => re.test(m))?.[1] ?? m;
+  if (typeof m !== "string" || !m || m.startsWith("[object")) return say("appAuditionsErr.fallback", "That didn't save. Check the fields and try again.");
+  const hit = FRIENDLY.find(([re]) => re.test(m));
+  return hit ? say(hit[1], hit[2]) : m;
 }

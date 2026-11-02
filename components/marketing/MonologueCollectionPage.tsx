@@ -7,6 +7,7 @@ import { monologueSlug, type CollectionMonologue } from "@/lib/monologueSeo";
 import { displayableAuthor } from "@/lib/utils";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { T, type MessageKey } from "@/lib/i18n";
+import { ContentT } from "@/components/seo/ContentT";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -56,13 +57,25 @@ export function MonologueCollectionPage({ collection, monologues }: { collection
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
       <StageHero
-        direction={collection.direction}
+        direction={<ContentT k={`contentCollections.${collection.slug}.direction`} fallback={collection.direction} />}
         title={
-          <>
-            <em className="italic text-primary">{collection.h1.em}</em> {collection.h1.rest}
-          </>
+          <ContentT
+            k={`contentCollections.${collection.slug}.h1`}
+            fallback={
+              <>
+                <em className="italic text-primary">{collection.h1.em}</em> {collection.h1.rest}
+              </>
+            }
+            slots={{
+              em: (
+                <em className="italic text-primary">
+                  <ContentT k={`contentCollections.${collection.slug}.em`} fallback={collection.h1.em} />
+                </em>
+              ),
+            }}
+          />
         }
-        lede={collection.intro}
+        lede={<ContentT k={`contentCollections.${collection.slug}.intro`} fallback={collection.intro} />}
       >
         <Button asChild size="lg" className="rounded-full px-6">
           <Link href={searchHref}><T k="seoCollection.searchAll" /></Link>
@@ -125,7 +138,14 @@ export function MonologueCollectionPage({ collection, monologues }: { collection
                             </span>
                           ))}
                       </p>
-                      {turn ? <p className="mt-2 text-sm italic leading-relaxed text-foreground">{turn}</p> : null}
+                      {turn ? (
+                        <p className="mt-2 text-sm italic leading-relaxed text-foreground">
+                          <ContentT
+                            k={`contentCollections.${collection.slug}.picks.${m.id}` as MessageKey}
+                            fallback={turn}
+                          />
+                        </p>
+                      ) : null}
                       {m.teaser ? (
                         <p className="mt-2 font-typewriter text-sm leading-relaxed text-foreground/80">{m.teaser}</p>
                       ) : null}
@@ -148,7 +168,7 @@ export function MonologueCollectionPage({ collection, monologues }: { collection
               <span key={r.slug}>
                 {i > 0 ? " · " : ""}
                 <Link href={`/monologues/${r.slug}`} className="text-foreground font-medium underline hover:no-underline">
-                  {r.title.toLowerCase()}
+                  <ContentT k={`contentCollections.${r.slug}.title`} fallback={r.title} lower />
                 </Link>
               </span>
             ))}

@@ -1,3 +1,7 @@
+"use client";
+
+import { useT } from "@/lib/i18n";
+
 /**
  * The shape of an audition's page while the list loads: the same columns and
  * rhythm as AuditionFile, in faint paper blocks, so the real page lands in
@@ -9,8 +13,9 @@ function Bar({ w, h = 12, className = "" }: { w: string; h?: number; className?:
 }
 
 export function FileSkeleton() {
+  const t = useT();
   return (
-    <div className="aud-skeleton grid gap-x-12 gap-y-10 lg:grid-cols-[minmax(0,1fr)_280px]" role="status" aria-label="Loading your auditions">
+    <div className="aud-skeleton grid gap-x-12 gap-y-10 lg:grid-cols-[minmax(0,1fr)_280px]" role="status" aria-label={t("appAuditionsSkeleton.loading")}>
       <div className="min-w-0">
         <Bar w="150px" h={10} />
         <Bar w="min(520px, 85%)" h={64} className="mt-4" />

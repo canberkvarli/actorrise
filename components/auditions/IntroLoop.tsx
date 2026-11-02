@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useReducedMotion } from "framer-motion";
 
+import { useT } from "@/lib/i18n";
 import { SLIDES } from "./AuditionsIntro";
 import { IntroStage } from "./intro/IntroScenes";
 import s from "./intro/intro.module.css";
@@ -17,6 +18,7 @@ const LOOP_MS = [9000, 8000, 9000];
  * finished picture until a dot is picked.
  */
 export function IntroLoop({ onExpand }: { onExpand: (step: number) => void }) {
+  const t = useT();
   const [i, setI] = useState(0);
   const [visible, setVisible] = useState(true);
   const reduced = useReducedMotion();
@@ -53,7 +55,7 @@ export function IntroLoop({ onExpand }: { onExpand: (step: number) => void }) {
   return (
     <section
       ref={ref}
-      aria-label="How it works"
+      aria-label={t("appAuditionsIntro.howItWorks")}
       className={s.inline}
       data-paused={paused ? "true" : undefined}
     >
@@ -64,8 +66,8 @@ export function IntroLoop({ onExpand }: { onExpand: (step: number) => void }) {
         <button
           type="button"
           className={s.inlineExpand}
-          aria-label="Watch it bigger"
-          title="Watch it bigger"
+          aria-label={t("appAuditionsIntro.watchBigger")}
+          title={t("appAuditionsIntro.watchBigger")}
           onClick={() => onExpand(i)}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -74,16 +76,16 @@ export function IntroLoop({ onExpand }: { onExpand: (step: number) => void }) {
         </button>
       </div>
       <div className={s.inlineCopy}>
-        <p key={`t${i}`} className={s.inlineTitle}>{slide.title}</p>
-        <p key={`b${i}`} className={s.inlineBody}>{slide.body}</p>
-        <p className="sr-only">{slide.picture}</p>
-        <div className={s.inlineDots} role="group" aria-label="Pick a step">
+        <p key={`t${i}`} className={s.inlineTitle}>{t(slide.title)}</p>
+        <p key={`b${i}`} className={s.inlineBody}>{t(slide.body)}</p>
+        <p className="sr-only">{t(slide.picture)}</p>
+        <div className={s.inlineDots} role="group" aria-label={t("appAuditionsIntro.pickStep")}>
           {SLIDES.map((x, n) => (
             <button
               key={n}
               type="button"
               className={s.inlineDot}
-              aria-label={`Step ${n + 1}: ${x.title}`}
+              aria-label={t("appAuditionsIntro.stepLabel", { n: n + 1, title: t(x.title) })}
               aria-current={n === i ? "step" : undefined}
               data-state={n < i || (n === i && (reduced || paused)) ? "done" : n === i ? "now" : undefined}
               style={{ "--dot-ms": `${LOOP_MS[n]}ms` } as CSSProperties}

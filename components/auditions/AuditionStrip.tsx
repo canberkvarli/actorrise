@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { trackEvent } from "@/lib/events";
 import { useAuditions } from "@/hooks/useAuditions";
+import { useT } from "@/lib/i18n";
 
 const KEY = "aud-strip-dismissed";
 
@@ -24,6 +25,7 @@ const KEY = "aud-strip-dismissed";
  */
 export function AuditionStrip({ surface }: { surface: "rehearse" | "monologues" }) {
   const { data } = useAuditions();
+  const t = useT();
   // Read as an external store, hidden on the server pass, so SSR and the
   // first client pass agree without an effect that sets state on mount.
   const storedHidden = useSyncExternalStore(subscribeNever, readDismissed, () => true);
@@ -56,10 +58,10 @@ export function AuditionStrip({ surface }: { surface: "rehearse" | "monologues" 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
         <div className="min-w-0 max-w-[46ch]">
           <h2 id="aud-strip-h" className="text-[17px] font-semibold leading-snug">
-            Got an audition coming up?
+            {t("appAuditionsStrip.title")}
           </h2>
           <p className="mt-1 text-[15px] leading-normal" style={{ color: "var(--t-muted-dark)" }}>
-            Paste the casting email and I&apos;ll keep you on it, reminders included.
+            {t("appAuditionsStrip.body")}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -68,7 +70,7 @@ export function AuditionStrip({ surface }: { surface: "rehearse" | "monologues" 
             onClick={() => trackEvent("audition_strip_clicked", { surface })}
             className="inline-flex h-11 items-center rounded-full bg-primary px-5 text-[15px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
           >
-            Add it
+            {t("appAuditionsStrip.add")}
           </Link>
           <button
             type="button"
@@ -76,7 +78,7 @@ export function AuditionStrip({ surface }: { surface: "rehearse" | "monologues" 
             className="inline-flex h-11 items-center rounded-full px-4 text-sm underline-offset-4 transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
             style={{ color: "var(--t-muted-dark)" }}
           >
-            Not now
+            {t("appAuditionsStrip.notNow")}
           </button>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { IconBook, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import type { Monologue } from '@/types/actor';
+import { useT } from '@/lib/i18n';
 
 interface MonologueReferenceProps {
   monologue: Monologue;
@@ -16,6 +17,7 @@ interface MonologueReferenceProps {
  * Sits below the video; mobile-first.
  */
 export function MonologueReference({ monologue, open, onToggle }: MonologueReferenceProps) {
+  const t = useT();
   return (
     <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] overflow-hidden">
       <button
@@ -26,7 +28,7 @@ export function MonologueReference({ monologue, open, onToggle }: MonologueRefer
         <div className="flex items-center gap-2.5 min-w-0">
           <IconBook className="w-4 h-4 text-primary shrink-0" />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-white truncate">Your lines</p>
+            <p className="text-sm font-medium text-white truncate">{t("appAuditionsTape.yourLines")}</p>
             <p className="text-[11px] text-white/40 truncate">{monologue.title}</p>
           </div>
         </div>

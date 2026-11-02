@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StageHero } from "@/components/marketing/StageHero";
 import { BLOG_POSTS } from "@/lib/blog/posts";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { ContentT } from "@/components/seo/ContentT";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -25,22 +28,13 @@ export const metadata: Metadata = {
   alternates: { canonical: `${siteUrl}/blog` },
 };
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-}
-
 export default function BlogIndexPage() {
   return (
     <>
       <StageHero
-        direction="(from the wings.)"
-        title={<>Blog</>}
-        lede={
-          <>
-            Practical writing for actors on choosing monologues, prepping auditions, and rehearsing
-            smarter. Written by an actor, not a marketing team.
-          </>
-        }
+        direction={<T k="contentBlog.direction" />}
+        title={<T k="contentBlog.title" />}
+        lede={<T k="contentBlog.lede" />}
       />
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
@@ -48,19 +42,21 @@ export default function BlogIndexPage() {
         {BLOG_POSTS.map((post) => (
           <li key={post.slug} className="border-b border-border/60 pb-8 last:border-0">
             <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
-              {formatDate(post.date)} · {post.readingMinutes} min read
+              <SeoT k="contentBlog.meta" dates={{ date: post.date }} vars={{ minutes: post.readingMinutes }} />
             </p>
             <h2 className="text-xl md:text-2xl font-semibold tracking-tight mb-2">
               <Link prefetch={false} href={`/blog/${post.slug}`} className="text-foreground hover:text-primary transition-colors">
-                {post.title}
+                <ContentT k={`contentBlog.posts.${post.slug}.title`} fallback={post.title} />
               </Link>
             </h2>
-            <p className="text-muted-foreground">{post.excerpt}</p>
+            <p className="text-muted-foreground">
+              <ContentT k={`contentBlog.posts.${post.slug}.excerpt`} fallback={post.excerpt} />
+            </p>
             <Link prefetch={false}
               href={`/blog/${post.slug}`}
               className="inline-block mt-3 text-sm text-primary font-medium hover:underline"
             >
-              Read more
+              <T k="contentBlog.readMore" />
             </Link>
           </li>
         ))}

@@ -5,6 +5,7 @@ import { IconChevronDown } from "@tabler/icons-react";
 
 import { readIntroSeen, readLoopOpen, writeLoopOpen } from "@/lib/auditionIntro";
 import { isPhoneViewport } from "@/lib/viewport";
+import { useT } from "@/lib/i18n";
 import { IntroLoop } from "./IntroLoop";
 
 /* The open/closed choice lives in localStorage; this is the store React reads
@@ -35,6 +36,7 @@ function setLoopOpen(open: boolean) {
  */
 export function HowItWorks({ onExpand }: { onExpand: (step: number) => void }) {
   const open = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const t = useT();
 
   return (
     <div>
@@ -45,7 +47,7 @@ export function HowItWorks({ onExpand }: { onExpand: (step: number) => void }) {
         aria-controls="aud-how-it-works"
         className="flex w-full items-center justify-between py-2 text-left"
       >
-        <span className="aud-eyebrow">How it works</span>
+        <span className="aud-eyebrow">{t("appAuditionsIntro.howItWorks")}</span>
         <IconChevronDown
           className="size-4 transition-transform duration-300"
           style={{ transform: open ? "rotate(180deg)" : "none" }}

@@ -13,6 +13,8 @@ import { CREDIT_CATEGORIES } from "@/types/resume";
 import ResumePreview, { type ResumeProfile } from "@/components/resume/ResumePreview";
 import CreditsBoard from "@/components/resume/CreditsBoard";
 import { theatreFontVars } from "@/lib/fonts/theatre";
+import { useT, type MessageKey } from "@/lib/i18n";
+import { CATEGORY_LABEL_KEY } from "@/components/resume/CreditsBoard";
 
 interface ProfileResp extends ResumeProfile {
   name?: string | null;
@@ -45,17 +47,24 @@ const EMPTY_FORM: CreditInput = {
 };
 
 // Role-column hint by medium (theatre = character name; screen = billing size).
-const ROLE_HINT: Record<string, string> = {
-  theatre: "Role (character)",
-  film: "Role (Lead / Supporting)",
-  tv: "Role (Series Regular / Guest…)",
-  commercial: "Role",
-  voiceover: "Role",
-  other: "Role",
+const ROLE_HINT: Record<string, MessageKey> = {
+  theatre: "appAuditionsResume.roleTheatre",
+  film: "appAuditionsResume.roleFilm",
+  tv: "appAuditionsResume.roleTv",
+  commercial: "appAuditionsResume.role",
+  voiceover: "appAuditionsResume.role",
+  other: "appAuditionsResume.role",
+};
+
+/** The union value is stored as is; only its label is translated. */
+const UNION_LABEL: Partial<Record<string, MessageKey>> = {
+  "Non-union": "appAuditionsResume.unionNon",
+  Other: "appAuditionsResume.unionOther",
 };
 
 export default function ResumePage() {
   const { user } = useAuth();
+  const t = useT();
   const [profile, setProfile] = useState<ProfileResp | null>(null);
   const [credits, setCredits] = useState<Credit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,7 +133,7 @@ export default function ResumePage() {
            something else, pushing it would put a credit with no id on the
            board — it would render, fail to delete, and vanish on reload. */
         if (!res.data || typeof res.data.id !== "number") {
-          throw new Error("The credit saved, but came back in a shape I don't recognise.");
+          throw new Error(t("appAuditionsResume.badShape"));
         }
         setCredits((cur) => [...cur, res.data]);
         flashAt(res.data.id);
@@ -144,12 +153,12 @@ export default function ResumePage() {
           ? detail
           : err instanceof Error && err.message
             ? err.message
-            : "Couldn't save that credit. Try again in a moment.",
+            : t("appAuditionsResume.saveFailed"),
       );
     } finally {
       setSaving(false);
     }
-  }, [form, editingId, saving, resetForm, flashAt]);
+  }, [form, editingId, saving, resetForm, flashAt, t]);
 
   /* Has the actor started filling this row in? Production is the only required
      field, so everything else is evidence of intent without it. */
@@ -185,10 +194,10 @@ export default function ResumePage() {
         await api.delete(`/api/resume/credits/${id}`);
       } catch {
         if (removed) setCredits((cur) => [...cur, removed as Credit]);
-        toast.error("Couldn't delete that credit. It's still on your résumé.");
+        toast.error(t("appAuditionsResume.deleteFailed"));
       }
     },
-    [editingId, resetForm]
+    [editingId, resetForm, t]
   );
 
   // Persist after a drag: read the latest state via an identity updater, PUT the
@@ -306,11 +315,10 @@ export default function ResumePage() {
           you a PDF. */}
       <header className="t-resume__head">
         <div className="min-w-0">
-          <p className="t-slug">(your résumé.)</p>
-          <h1 className="t-resume__title">Résumé</h1>
+          <p className="t-slug">{t("appAuditionsResume.slug")}</p>
+          <h1 className="t-resume__title">{t("appAuditionsResume.title")}</h1>
           <p className="t-resume__note">
-            Drag a credit to reorder it, or across to another medium. Your name
-            comes off your <Link href="/profile">profile</Link>.
+            {t("appAuditionsResume.noteA")}<Link href="/profile">{t("appAuditionsResume.noteLink")}</Link>{t("appAuditionsResume.noteB")}
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-start gap-1.5">
@@ -320,12 +328,12 @@ export default function ResumePage() {
             disabled={downloading}
             className="t-cta t-cta--paper t-cta--stub disabled:opacity-60"
           >
-            {downloading ? "Preparing…" : "Download the PDF"}
+            {downloading ? t("appAuditionsResume.preparing") : t("appAuditionsResume.download")}
             <span className="t-cta__dot" aria-hidden>
               <IconDownload className="h-4 w-4" />
             </span>
           </button>
-          <p className="t-paper__fine">free downloads carry a small watermark.</p>
+          <p className="t-paper__fine">{t("appAuditionsResume.watermark")}</p>
         </div>
       </header>
 
@@ -336,15 +344,15 @@ export default function ResumePage() {
           {/* Details / header stats */}
           <section className="t-build">
             <h2 className="t-build__head">
-              <span>The header</span>
-              <span className="t-build__aside">age is left off, on purpose</span>
+              <span>{t("appAuditionsResume.header")}</span>
+              <span className="t-build__aside">{t("appAuditionsResume.noAge")}</span>
             </h2>
             <div className="mt-2 grid grid-cols-2 gap-x-5 gap-y-1">
               <input
                 defaultValue={profile?.height || ""}
                 onChange={(e) => patchProfile({ height: e.target.value })}
                 onBlur={(e) => saveProfile({ height: e.target.value })}
-                placeholder="Height (e.g. 5'9&quot;)"
+                placeholder={t("appAuditionsResume.height")}
                 className={FIELD}
               />
               <select
@@ -355,30 +363,30 @@ export default function ResumePage() {
                 }}
                 className={FIELD}
               >
-                <option value="">Union status</option>
+                <option value="">{t("appAuditionsResume.union")}</option>
                 {UNION_STATUSES.map((u) => (
-                  <option key={u} value={u}>{u}</option>
+                  <option key={u} value={u}>{UNION_LABEL[u] ? t(UNION_LABEL[u]) : u}</option>
                 ))}
               </select>
               <input
                 defaultValue={profile?.hair_color || ""}
                 onChange={(e) => patchProfile({ hair_color: e.target.value })}
                 onBlur={(e) => saveProfile({ hair_color: e.target.value })}
-                placeholder="Hair"
+                placeholder={t("appAuditionsResume.hair")}
                 className={FIELD}
               />
               <input
                 defaultValue={profile?.eye_color || ""}
                 onChange={(e) => patchProfile({ eye_color: e.target.value })}
                 onBlur={(e) => saveProfile({ eye_color: e.target.value })}
-                placeholder="Eyes"
+                placeholder={t("appAuditionsResume.eyes")}
                 className={FIELD}
               />
               <input
                 defaultValue={profile?.location || ""}
                 onChange={(e) => patchProfile({ location: e.target.value })}
                 onBlur={(e) => saveProfile({ location: e.target.value })}
-                placeholder="Location (city only)"
+                placeholder={t("appAuditionsResume.location")}
                 className={`${FIELD} col-span-2`}
               />
             </div>
@@ -387,7 +395,7 @@ export default function ResumePage() {
           {/* Add / edit credit */}
           <section className="t-build">
             <h2 className="t-build__head">
-              <span>{editingId != null ? "Edit the credit" : "Add a credit"}</span>
+              <span>{editingId != null ? t("appAuditionsResume.editCredit") : t("appAuditionsResume.addCredit")}</span>
             </h2>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {CREDIT_CATEGORIES.map((c) => {
@@ -400,7 +408,7 @@ export default function ResumePage() {
                     aria-pressed={active}
                     className="t-medium"
                   >
-                    {c.label}
+                    {CATEGORY_LABEL_KEY[c.id] ? t(CATEGORY_LABEL_KEY[c.id]) : c.label}
                   </button>
                 );
               })}
@@ -409,32 +417,32 @@ export default function ResumePage() {
               <input
                 value={form.production}
                 onChange={(e) => setForm((f) => ({ ...f, production: e.target.value }))}
-                placeholder="Production / title *"
+                placeholder={t("appAuditionsResume.production")}
                 className={FIELD}
               />
               <div className="grid grid-cols-2 gap-x-5 gap-y-1">
                 <input
                   value={form.role}
                   onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-                  placeholder={ROLE_HINT[form.category] || "Role"}
+                  placeholder={t(ROLE_HINT[form.category] ?? "appAuditionsResume.role")}
                   className={FIELD}
                 />
                 <input
                   value={form.year}
                   onChange={(e) => setForm((f) => ({ ...f, year: e.target.value }))}
-                  placeholder="Year"
+                  placeholder={t("appAuditionsResume.year")}
                   className={FIELD}
                 />
                 <input
                   value={form.company}
                   onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-                  placeholder="Company / theatre / network"
+                  placeholder={t("appAuditionsResume.company")}
                   className={FIELD}
                 />
                 <input
                   value={form.director}
                   onChange={(e) => setForm((f) => ({ ...f, director: e.target.value }))}
-                  placeholder="Director"
+                  placeholder={t("appAuditionsResume.director")}
                   className={FIELD}
                 />
               </div>
@@ -445,11 +453,11 @@ export default function ResumePage() {
                   disabled={!form.production.trim() || saving}
                   className="t-medium t-medium--go disabled:opacity-45"
                 >
-                  {editingId != null ? "save it" : "add the credit"}
+                  {editingId != null ? t("appAuditionsResume.saveIt") : t("appAuditionsResume.add")}
                 </button>
                 {editingId != null && (
                   <button type="button" onClick={resetForm} className="t-medium">
-                    cancel
+                    {t("appAuditionsResume.cancel")}
                   </button>
                 )}
                 {/* Why the button is dead, said only once you've earned the
@@ -464,7 +472,7 @@ export default function ResumePage() {
                     anything you didn't already know. */}
                 {editingId == null && !form.production.trim() && rowStarted && (
                   <span className="t-build__aside">
-                    give it a production or title first
+                    {t("appAuditionsResume.needProduction")}
                   </span>
                 )}
               </div>
@@ -474,7 +482,7 @@ export default function ResumePage() {
           {/* Credits board (drag within + across categories) */}
           {credits.length === 0 ? (
             <p className="t-credit__drop text-center">
-              nothing on the board yet.
+              {t("appAuditionsResume.emptyBoard")}
             </p>
           ) : (
             <CreditsBoard
@@ -489,7 +497,7 @@ export default function ResumePage() {
           {/* Special skills */}
           <section className="t-build">
             <h2 className="t-build__head">
-              <span>Special skills</span>
+              <span>{t("appAuditionsResume.skills")}</span>
             </h2>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {(profile?.special_skills || []).map((s) => (
@@ -498,7 +506,7 @@ export default function ResumePage() {
                   <button
                     type="button"
                     onClick={() => removeSkill(s)}
-                    aria-label={`Remove ${s}`}
+                    aria-label={t("appAuditionsResume.removeSkill", { skill: s })}
                     className="[&_svg]:size-3"
                   >
                     <IconX />
@@ -516,7 +524,7 @@ export default function ResumePage() {
                     addSkill();
                   }
                 }}
-                placeholder="Dialects, stage combat, singing…"
+                placeholder={t("appAuditionsResume.skillsPlaceholder")}
                 className={`${FIELD} flex-1`}
               />
               <button
@@ -525,7 +533,7 @@ export default function ResumePage() {
                 disabled={!skillInput.trim()}
                 className="t-medium mb-1 disabled:opacity-45"
               >
-                add
+                {t("appAuditionsResume.addSkill")}
               </button>
             </div>
           </section>

@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { uploadMonologue, type MonologueUploadData } from "@/lib/api";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 import { Upload, Loader2 } from "lucide-react";
 
 interface MonologueUploadModalProps {
@@ -22,6 +23,7 @@ export function MonologueUploadModal({
   onOpenChange,
   onSuccess,
 }: MonologueUploadModalProps) {
+  const t = useT();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<MonologueUploadData>({
     title: "",
@@ -39,7 +41,7 @@ export function MonologueUploadModal({
     e.preventDefault();
 
     if (!formData.title || !formData.character_name || !formData.text || !formData.play_title || !formData.author) {
-      toast.error("Please fill in all required fields");
+      toast.error(t("appAuditionsUpload.required"));
       return;
     }
 
@@ -47,7 +49,7 @@ export function MonologueUploadModal({
 
     try {
       await uploadMonologue(formData);
-      toast.success("Monologue uploaded successfully!");
+      toast.success(t("appAuditionsUploadMono.success"));
 
       // Reset form
       setFormData({
@@ -66,7 +68,7 @@ export function MonologueUploadModal({
       onSuccess?.();
     } catch (error: any) {
       console.error("Upload error:", error);
-      toast.error(error?.response?.data?.detail || "Failed to upload monologue");
+      toast.error(error?.response?.data?.detail || t("appAuditionsUploadMono.failed"));
     } finally {
       setIsLoading(false);
     }
@@ -76,19 +78,19 @@ export function MonologueUploadModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Upload Your Monologue</DialogTitle>
+          <DialogTitle>{t("appAuditionsUploadMono.title")}</DialogTitle>
           <DialogDescription>
-            Upload your own script or monologue. It will be analyzed by AI and saved to your collection.
+            {t("appAuditionsUploadMono.description")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title">Monologue Title *</Label>
+            <Label htmlFor="title">{t("appAuditionsUploadMono.fieldTitle")}</Label>
             <Input
               id="title"
-              placeholder="Sarah's Opening Monologue"
+              placeholder={t("appAuditionsUploadMono.titlePlaceholder")}
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               required
@@ -97,10 +99,10 @@ export function MonologueUploadModal({
 
           {/* Character Name */}
           <div className="space-y-2">
-            <Label htmlFor="character_name">Character Name *</Label>
+            <Label htmlFor="character_name">{t("appAuditionsUploadMono.fieldCharacter")}</Label>
             <Input
               id="character_name"
-              placeholder="Sarah"
+              placeholder={t("appAuditionsUploadMono.characterPlaceholder")}
               value={formData.character_name}
               onChange={(e) => setFormData({ ...formData, character_name: e.target.value })}
               required
@@ -110,20 +112,20 @@ export function MonologueUploadModal({
           {/* Play Info */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="play_title">Play/Script Title *</Label>
+              <Label htmlFor="play_title">{t("appAuditionsUpload.playTitle")}</Label>
               <Input
                 id="play_title"
-                placeholder="My Original Script"
+                placeholder={t("appAuditionsUpload.playPlaceholder")}
                 value={formData.play_title}
                 onChange={(e) => setFormData({ ...formData, play_title: e.target.value })}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="author">Author *</Label>
+              <Label htmlFor="author">{t("appAuditionsUpload.author")}</Label>
               <Input
                 id="author"
-                placeholder="Your Name"
+                placeholder={t("appAuditionsUpload.authorPlaceholder")}
                 value={formData.author}
                 onChange={(e) => setFormData({ ...formData, author: e.target.value })}
                 required
@@ -134,28 +136,28 @@ export function MonologueUploadModal({
           {/* Character Details */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="character_gender">Character Gender (Optional)</Label>
+              <Label htmlFor="character_gender">{t("appAuditionsUploadMono.gender")}</Label>
               <Select
                 value={formData.character_gender || "__none__"}
                 onValueChange={(v) => setFormData({ ...formData, character_gender: v === "__none__" ? undefined : v })}
               >
                 <SelectTrigger id="character_gender">
-                  <SelectValue placeholder="Select gender" />
+                  <SelectValue placeholder={t("appAuditionsUploadMono.selectGender")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Select gender</SelectItem>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="non-binary">Non-binary</SelectItem>
-                  <SelectItem value="any">Any</SelectItem>
+                  <SelectItem value="__none__">{t("appAuditionsUploadMono.selectGender")}</SelectItem>
+                  <SelectItem value="male">{t("appAuditionsUpload.male")}</SelectItem>
+                  <SelectItem value="female">{t("appAuditionsUpload.female")}</SelectItem>
+                  <SelectItem value="non-binary">{t("appAuditionsUpload.nonBinary")}</SelectItem>
+                  <SelectItem value="any">{t("appAuditionsUpload.any")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="character_age_range">Age Range (Optional)</Label>
+              <Label htmlFor="character_age_range">{t("appAuditionsUploadMono.age")}</Label>
               <Input
                 id="character_age_range"
-                placeholder="20s, 30-40, 50+"
+                placeholder={t("appAuditionsUploadMono.agePlaceholder")}
                 value={formData.character_age_range || ""}
                 onChange={(e) => setFormData({ ...formData, character_age_range: e.target.value })}
               />
@@ -164,10 +166,10 @@ export function MonologueUploadModal({
 
           {/* Monologue Text */}
           <div className="space-y-2">
-            <Label htmlFor="text">Monologue Text *</Label>
+            <Label htmlFor="text">{t("appAuditionsUploadMono.text")}</Label>
             <Textarea
               id="text"
-              placeholder="Paste your monologue text here..."
+              placeholder={t("appAuditionsUploadMono.textPlaceholder")}
               value={formData.text}
               onChange={(e) => setFormData({ ...formData, text: e.target.value })}
               required
@@ -178,10 +180,10 @@ export function MonologueUploadModal({
 
           {/* Stage Directions */}
           <div className="space-y-2">
-            <Label htmlFor="stage_directions">Stage Directions (Optional)</Label>
+            <Label htmlFor="stage_directions">{t("appAuditionsUploadMono.directions")}</Label>
             <Textarea
               id="stage_directions"
-              placeholder="[Enters from stage left, visibly upset]"
+              placeholder={t("appAuditionsUploadMono.directionsPlaceholder")}
               value={formData.stage_directions || ""}
               onChange={(e) => setFormData({ ...formData, stage_directions: e.target.value })}
               rows={2}
@@ -190,10 +192,10 @@ export function MonologueUploadModal({
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Personal Notes (Optional)</Label>
+            <Label htmlFor="notes">{t("appAuditionsUploadMono.notes")}</Label>
             <Textarea
               id="notes"
-              placeholder="Your notes about this piece..."
+              placeholder={t("appAuditionsUploadMono.notesPlaceholder")}
               value={formData.notes || ""}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={3}
@@ -208,18 +210,18 @@ export function MonologueUploadModal({
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Cancel
+              {t("appAuditionsUpload.cancel")}
             </Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Uploading...
+                  {t("appAuditionsUpload.uploading")}
                 </>
               ) : (
                 <>
                   <Upload className="w-4 h-4 mr-2" />
-                  Upload Monologue
+                  {t("appAuditionsUploadMono.submit")}
                 </>
               )}
             </Button>

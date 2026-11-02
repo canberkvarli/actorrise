@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { IconSend, IconCheck, IconAlertCircle, IconClock, IconSparkles, IconCircleCheck, IconCircleX, IconRobot } from "@tabler/icons-react";
 import api from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -34,6 +35,7 @@ interface SubmissionResult {
 
 export default function SubmitMonologuePage() {
   const queryClient = useQueryClient();
+  const t = useT();
   const [formData, setFormData] = useState({
     title: "",
     character_name: "",
@@ -59,23 +61,23 @@ export default function SubmitMonologuePage() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.title.trim()) {
-      newErrors.title = "Title is required";
+      newErrors.title = t("appAuditionsSubmit.errTitle");
     }
     if (!formData.character_name.trim()) {
-      newErrors.character_name = "Character name is required";
+      newErrors.character_name = t("appAuditionsSubmit.errCharacter");
     }
     if (!formData.text.trim()) {
-      newErrors.text = "Monologue text is required";
+      newErrors.text = t("appAuditionsSubmit.errText");
     } else if (formData.text.trim().split(/\s+/).length < 30) {
-      newErrors.text = "Monologue must be at least 30 words";
+      newErrors.text = t("appAuditionsSubmit.errShort");
     } else if (formData.text.trim().split(/\s+/).length > 1000) {
-      newErrors.text = "Monologue must be less than 1000 words";
+      newErrors.text = t("appAuditionsSubmit.errLong");
     }
     if (!formData.play_title.trim()) {
-      newErrors.play_title = "Play title is required";
+      newErrors.play_title = t("appAuditionsSubmit.errPlay");
     }
     if (!formData.author.trim()) {
-      newErrors.author = "Author is required";
+      newErrors.author = t("appAuditionsSubmit.errAuthor");
     }
 
     setErrors(newErrors);
@@ -114,7 +116,7 @@ export default function SubmitMonologuePage() {
       setResult({
         success: false,
         status: "rejected",
-        message: error.response?.data?.detail || "Failed to submit monologue. Please try again.",
+        message: error.response?.data?.detail || t("appAuditionsSubmit.failed"),
       });
     } finally {
       setIsSubmitting(false);
@@ -145,14 +147,13 @@ export default function SubmitMonologuePage() {
             talking about itself in the third person, in a compliance register.
             The rights requirement is stated twice more below, where it binds. */}
         <p className="stage-direction mb-2 text-xs text-muted-foreground/70">
-          (found something good?)
+          {t("appAuditionsSubmit.direction")}
         </p>
         <h1 className="font-brand mb-2 text-3xl font-semibold lg:text-4xl">
-          Submit a monologue
+          {t("appAuditionsSubmit.title")}
         </h1>
         <p className="text-muted-foreground">
-          Send me a piece other actors should know about. I read every one before
-          it goes in.
+          {t("appAuditionsSubmit.sub")}
         </p>
       </motion.div>
 
@@ -164,24 +165,24 @@ export default function SubmitMonologuePage() {
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
                 <IconCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
               </span>
-              Submission received!
+              {t("appAuditionsSubmit.received")}
             </DialogTitle>
             <DialogDescription>
               {result?.status === "approved"
-                ? "Your monologue was approved and is now available in the library."
+                ? t("appAuditionsSubmit.approvedBody")
                 : result?.status === "manual_review"
-                  ? "Your submission is under review. A moderator will check it and you'll receive an email with the decision (typically within 24 to 48 hours)."
-                  : "Thanks for submitting. Check the status below."}
+                  ? t("appAuditionsSubmit.reviewBody")
+                  : t("appAuditionsSubmit.thanksBody")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button asChild className="w-full sm:w-auto">
               <Link href="/monologues" onClick={() => setShowSuccessModal(false)}>
-                Browse monologues
+                {t("appAuditionsSubmit.browse")}
               </Link>
             </Button>
             <Button variant="outline" onClick={() => setShowSuccessModal(false)} className="w-full sm:w-auto">
-              Close
+              {t("appAuditionsSubmit.close")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -198,10 +199,10 @@ export default function SubmitMonologuePage() {
             <Alert className="border-green-500 bg-green-50 dark:bg-green-950/20">
               <IconCheck className="h-5 w-5 text-green-600" />
               <AlertDescription className="text-green-900 dark:text-green-100">
-                <strong className="font-semibold">Approved!</strong> {result.message}
+                <strong className="font-semibold">{t("appAuditionsSubmit.approved")}</strong> {result.message}
                 <div className="mt-2">
                   <Link href="/monologues" className="text-green-700 dark:text-green-300 underline hover:no-underline">
-                    Browse monologues →
+                    {t("appAuditionsSubmit.browseArrow")}
                   </Link>
                 </div>
               </AlertDescription>
@@ -212,13 +213,13 @@ export default function SubmitMonologuePage() {
             <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
               <IconClock className="h-5 w-5 text-amber-600" />
               <AlertDescription className="text-amber-900 dark:text-amber-100">
-                <strong className="font-semibold">Under Review</strong> {result.message}
+                <strong className="font-semibold">{t("appAuditionsSubmit.underReview")}</strong> {result.message}
                 {result.estimated_review_time && (
-                  <p className="mt-1 text-sm">Estimated review time: {result.estimated_review_time}</p>
+                  <p className="mt-1 text-sm">{t("appAuditionsSubmit.estimated", { time: result.estimated_review_time })}</p>
                 )}
                 <div className="mt-2">
                   <Link href="/monologues" className="text-amber-700 dark:text-amber-300 underline hover:no-underline">
-                    Browse monologues →
+                    {t("appAuditionsSubmit.browseArrow")}
                   </Link>
                 </div>
               </AlertDescription>
@@ -229,9 +230,9 @@ export default function SubmitMonologuePage() {
             <Alert className="border-red-500 bg-red-50 dark:bg-red-950/20">
               <IconAlertCircle className="h-5 w-5 text-red-600" />
               <AlertDescription className="text-red-900 dark:text-red-100">
-                <strong className="font-semibold">Not Accepted</strong> {result.message}
+                <strong className="font-semibold">{t("appAuditionsSubmit.notAccepted")}</strong> {result.message}
                 {result.reason && (
-                  <p className="mt-1 text-sm"><strong>Reason:</strong> {result.reason}</p>
+                  <p className="mt-1 text-sm"><strong>{t("appAuditionsSubmit.reason")}</strong> {result.reason}</p>
                 )}
                 {result.details && (
                   <p className="mt-1 text-sm">{result.details}</p>
@@ -250,9 +251,9 @@ export default function SubmitMonologuePage() {
       >
         <Card>
           <CardHeader>
-            <CardTitle>Monologue Details</CardTitle>
+            <CardTitle>{t("appAuditionsSubmit.details")}</CardTitle>
             <CardDescription>
-              Please ensure the work is in the public domain (published before 1928) or that you have proper rights to share it.
+              {t("appAuditionsSubmit.detailsBody")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -260,11 +261,11 @@ export default function SubmitMonologuePage() {
               {/* Title */}
               <div className="space-y-2">
                 <Label htmlFor="title">
-                  Monologue Title <span className="text-red-500">*</span>
+                  {t("appAuditionsSubmit.fieldTitle")} <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="title"
-                  placeholder="Hamlet's Soliloquy"
+                  placeholder={t("appAuditionsSubmit.titlePlaceholder")}
                   value={formData.title}
                   onChange={(e) => handleChange("title", e.target.value)}
                   className={errors.title ? "border-red-500" : ""}
@@ -275,7 +276,7 @@ export default function SubmitMonologuePage() {
               {/* Character Name */}
               <div className="space-y-2">
                 <Label htmlFor="character_name">
-                  Character Name <span className="text-red-500">*</span>
+                  {t("appAuditionsSubmit.fieldCharacter")} <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="character_name"
@@ -290,7 +291,7 @@ export default function SubmitMonologuePage() {
               {/* Play Title */}
               <div className="space-y-2">
                 <Label htmlFor="play_title">
-                  Play Title <span className="text-red-500">*</span>
+                  {t("appAuditionsSubmit.fieldPlay")} <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="play_title"
@@ -305,7 +306,7 @@ export default function SubmitMonologuePage() {
               {/* Author */}
               <div className="space-y-2">
                 <Label htmlFor="author">
-                  Author <span className="text-red-500">*</span>
+                  {t("appAuditionsSubmit.fieldAuthor")} <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="author"
@@ -320,11 +321,11 @@ export default function SubmitMonologuePage() {
               {/* Monologue Text */}
               <div className="space-y-2">
                 <Label htmlFor="text">
-                  Monologue Text <span className="text-red-500">*</span>
+                  {t("appAuditionsSubmit.fieldText")} <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
                   id="text"
-                  placeholder="Enter the monologue text here..."
+                  placeholder={t("appAuditionsSubmit.textPlaceholder")}
                   value={formData.text}
                   onChange={(e) => handleChange("text", e.target.value)}
                   className={`min-h-[300px] font-mono ${errors.text ? "border-red-500" : ""}`}
@@ -335,28 +336,28 @@ export default function SubmitMonologuePage() {
                       <span className="text-red-500">{errors.text}</span>
                     ) : (
                       <span>
-                        {wordCount} words • ~{estimatedDuration} seconds
+                        {t("appAuditionsSubmit.wordCount", { n: wordCount, s: estimatedDuration })}
                       </span>
                     )}
                   </div>
-                  <span className="text-xs">30-1000 words required</span>
+                  <span className="text-xs">{t("appAuditionsSubmit.wordsRequired")}</span>
                 </div>
               </div>
 
               {/* Optional Notes */}
               <div className="space-y-2">
                 <Label htmlFor="notes">
-                  Notes (Optional)
+                  {t("appAuditionsSubmit.fieldNotes")}
                 </Label>
                 <Textarea
                   id="notes"
-                  placeholder="Act 3, Scene 1 / Public domain / etc."
+                  placeholder={t("appAuditionsSubmit.notesPlaceholder")}
                   value={formData.notes}
                   onChange={(e) => handleChange("notes", e.target.value)}
                   className="min-h-[80px]"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Help us verify copyright status and context
+                  {t("appAuditionsSubmit.notesHelp")}
                 </p>
               </div>
 
@@ -364,7 +365,7 @@ export default function SubmitMonologuePage() {
               <Alert>
                 <IconAlertCircle className="h-4 w-4" />
                 <AlertDescription className="text-sm">
-                  <strong>Copyright Notice:</strong> By submitting, you confirm that this work is either in the public domain (published before 1928) or that you have the right to share it. Works protected by copyright will be rejected.
+                  <strong>{t("appAuditionsSubmit.copyrightLabel")}</strong>{t("appAuditionsSubmit.copyrightBody")}
                 </AlertDescription>
               </Alert>
 
@@ -378,12 +379,12 @@ export default function SubmitMonologuePage() {
                   {isSubmitting ? (
                     <>
                       <span className="animate-spin mr-2">⏳</span>
-                      Submitting...
+                      {t("appAuditionsSubmit.submitting")}
                     </>
                   ) : (
                     <>
                       <IconSend className="h-4 w-4 mr-2" />
-                      Submit Monologue
+                      {t("appAuditionsSubmit.submit")}
                     </>
                   )}
                 </Button>
@@ -394,7 +395,7 @@ export default function SubmitMonologuePage() {
                   asChild
                 >
                   <Link href="/monologues">
-                    Browse Monologues
+                    {t("appAuditionsSubmit.browseCaps")}
                   </Link>
                 </Button>
               </div>
@@ -412,31 +413,31 @@ export default function SubmitMonologuePage() {
       >
         <Card>
           <CardHeader>
-            <CardTitle>Submission Guidelines</CardTitle>
+            <CardTitle>{t("appAuditionsSubmit.guidelines")}</CardTitle>
             <CardDescription>
-              Public domain or licensed works only. 30–1000 words, complete and well formatted.
+              {t("appAuditionsSubmit.guidelinesBody")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm text-muted-foreground">
             <div className="flex gap-3">
               <IconCircleCheck className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400 mt-0.5" />
               <div>
-                <p className="font-medium text-foreground mb-1">Acceptable</p>
-                <p>Classical and pre-1928 plays, or works with a clear Creative Commons license.</p>
+                <p className="font-medium text-foreground mb-1">{t("appAuditionsSubmit.acceptable")}</p>
+                <p>{t("appAuditionsSubmit.acceptableBody")}</p>
               </div>
             </div>
             <div className="flex gap-3">
               <IconCircleX className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
               <div>
-                <p className="font-medium text-foreground mb-1">Not acceptable</p>
-                <p>Copyrighted contemporary works, incomplete text, spam, or missing attribution.</p>
+                <p className="font-medium text-foreground mb-1">{t("appAuditionsSubmit.notAcceptable")}</p>
+                <p>{t("appAuditionsSubmit.notAcceptableBody")}</p>
               </div>
             </div>
             <div className="flex gap-3">
               <IconRobot className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
               <div>
-                <p className="font-medium text-foreground mb-1">Review</p>
-                <p>AI checks first; unclear cases go to moderators. You’ll get an email with the decision (usually within 24–48 hours).</p>
+                <p className="font-medium text-foreground mb-1">{t("appAuditionsSubmit.review")}</p>
+                <p>{t("appAuditionsSubmit.reviewGuide")}</p>
               </div>
             </div>
           </CardContent>

@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { uploadScene, type SceneUploadData, type SceneLineUploadData } from "@/lib/api";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 import { Upload, Loader2, Plus, Trash2 } from "lucide-react";
 
 interface SceneUploadModalProps {
@@ -22,6 +23,7 @@ export function SceneUploadModal({
   onOpenChange,
   onSuccess,
 }: SceneUploadModalProps) {
+  const t = useT();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<SceneUploadData>({
     title: "",
@@ -52,7 +54,7 @@ export function SceneUploadModal({
 
   const removeLine = (index: number) => {
     if (formData.lines.length <= 2) {
-      toast.error("Scene must have at least 2 lines");
+      toast.error(t("appAuditionsUploadScene.minLines"));
       return;
     }
     setFormData({
@@ -72,14 +74,14 @@ export function SceneUploadModal({
 
     if (!formData.title || !formData.play_title || !formData.author ||
         !formData.character_1_name || !formData.character_2_name) {
-      toast.error("Please fill in all required fields");
+      toast.error(t("appAuditionsUpload.required"));
       return;
     }
 
     // Validate lines
     const validLines = formData.lines.filter(line => line.character_name && line.text);
     if (validLines.length < 2) {
-      toast.error("Scene must have at least 2 lines with character name and text");
+      toast.error(t("appAuditionsUploadScene.minValidLines"));
       return;
     }
 
@@ -90,7 +92,7 @@ export function SceneUploadModal({
         ...formData,
         lines: validLines,
       });
-      toast.success("Scene uploaded successfully! You can now rehearse it with Scene Partner.");
+      toast.success(t("appAuditionsUploadScene.success"));
 
       // Reset form
       setFormData({
@@ -120,7 +122,7 @@ export function SceneUploadModal({
       const errorMessage = error && typeof error === 'object' && 'response' in error
         ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
         : undefined;
-      toast.error(errorMessage || "Failed to upload scene");
+      toast.error(errorMessage || t("appAuditionsUploadScene.failed"));
     } finally {
       setIsLoading(false);
     }
@@ -130,22 +132,22 @@ export function SceneUploadModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Upload Your Scene</DialogTitle>
+          <DialogTitle>{t("appAuditionsUploadScene.title")}</DialogTitle>
           <DialogDescription>
-            Upload a two-person scene to rehearse with AI Scene Partner.
+            {t("appAuditionsUploadScene.description")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
           {/* Scene Info */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Scene Information</h3>
+            <h3 className="font-semibold text-lg">{t("appAuditionsUploadScene.info")}</h3>
 
             <div className="space-y-2">
-              <Label htmlFor="title">Scene Title *</Label>
+              <Label htmlFor="title">{t("appAuditionsUploadScene.fieldTitle")}</Label>
               <Input
                 id="title"
-                placeholder="Kitchen Confrontation"
+                placeholder={t("appAuditionsUploadScene.titlePlaceholder")}
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
@@ -154,20 +156,20 @@ export function SceneUploadModal({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="play_title">Play/Script Title *</Label>
+                <Label htmlFor="play_title">{t("appAuditionsUpload.playTitle")}</Label>
                 <Input
                   id="play_title"
-                  placeholder="My Original Script"
+                  placeholder={t("appAuditionsUpload.playPlaceholder")}
                   value={formData.play_title}
                   onChange={(e) => setFormData({ ...formData, play_title: e.target.value })}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="author">Author *</Label>
+                <Label htmlFor="author">{t("appAuditionsUpload.author")}</Label>
                 <Input
                   id="author"
-                  placeholder="Your Name"
+                  placeholder={t("appAuditionsUpload.authorPlaceholder")}
                   value={formData.author}
                   onChange={(e) => setFormData({ ...formData, author: e.target.value })}
                   required
@@ -176,10 +178,10 @@ export function SceneUploadModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description (Optional)</Label>
+              <Label htmlFor="description">{t("appAuditionsUploadScene.descriptionLabel")}</Label>
               <Textarea
                 id="description"
-                placeholder="Brief description of what happens in this scene..."
+                placeholder={t("appAuditionsUploadScene.descriptionPlaceholder")}
                 value={formData.description || ""}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={2}
@@ -187,10 +189,10 @@ export function SceneUploadModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="setting">Setting (Optional)</Label>
+              <Label htmlFor="setting">{t("appAuditionsUploadScene.setting")}</Label>
               <Input
                 id="setting"
-                placeholder="A kitchen at night"
+                placeholder={t("appAuditionsUploadScene.settingPlaceholder")}
                 value={formData.setting || ""}
                 onChange={(e) => setFormData({ ...formData, setting: e.target.value })}
               />
@@ -199,45 +201,45 @@ export function SceneUploadModal({
 
           {/* Characters */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Characters</h3>
+            <h3 className="font-semibold text-lg">{t("appAuditionsUploadScene.characters")}</h3>
 
             {/* Character 1 */}
             <div className="border rounded-lg p-4 space-y-3">
-              <h4 className="font-medium">Character 1</h4>
+              <h4 className="font-medium">{t("appAuditionsUploadScene.character1")}</h4>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="char1_name">Name *</Label>
+                  <Label htmlFor="char1_name">{t("appAuditionsUploadScene.name")}</Label>
                   <Input
                     id="char1_name"
-                    placeholder="Sarah"
+                    placeholder={t("appAuditionsUploadScene.char1Placeholder")}
                     value={formData.character_1_name}
                     onChange={(e) => setFormData({ ...formData, character_1_name: e.target.value })}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="char1_gender">Gender</Label>
+                  <Label htmlFor="char1_gender">{t("appAuditionsUploadScene.gender")}</Label>
                   <Select
                     value={formData.character_1_gender || "__none__"}
                     onValueChange={(v) => setFormData({ ...formData, character_1_gender: v === "__none__" ? undefined : v })}
                   >
                     <SelectTrigger id="char1_gender">
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={t("appAuditionsUploadScene.select")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Select</SelectItem>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="non-binary">Non-binary</SelectItem>
-                      <SelectItem value="any">Any</SelectItem>
+                      <SelectItem value="__none__">{t("appAuditionsUploadScene.select")}</SelectItem>
+                      <SelectItem value="male">{t("appAuditionsUpload.male")}</SelectItem>
+                      <SelectItem value="female">{t("appAuditionsUpload.female")}</SelectItem>
+                      <SelectItem value="non-binary">{t("appAuditionsUpload.nonBinary")}</SelectItem>
+                      <SelectItem value="any">{t("appAuditionsUpload.any")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="char1_age">Age Range</Label>
+                  <Label htmlFor="char1_age">{t("appAuditionsUploadScene.age")}</Label>
                   <Input
                     id="char1_age"
-                    placeholder="20s"
+                    placeholder={t("appAuditionsUploadScene.age1Placeholder")}
                     value={formData.character_1_age_range || ""}
                     onChange={(e) => setFormData({ ...formData, character_1_age_range: e.target.value })}
                   />
@@ -247,41 +249,41 @@ export function SceneUploadModal({
 
             {/* Character 2 */}
             <div className="border rounded-lg p-4 space-y-3">
-              <h4 className="font-medium">Character 2</h4>
+              <h4 className="font-medium">{t("appAuditionsUploadScene.character2")}</h4>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="char2_name">Name *</Label>
+                  <Label htmlFor="char2_name">{t("appAuditionsUploadScene.name")}</Label>
                   <Input
                     id="char2_name"
-                    placeholder="John"
+                    placeholder={t("appAuditionsUploadScene.char2Placeholder")}
                     value={formData.character_2_name}
                     onChange={(e) => setFormData({ ...formData, character_2_name: e.target.value })}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="char2_gender">Gender</Label>
+                  <Label htmlFor="char2_gender">{t("appAuditionsUploadScene.gender")}</Label>
                   <Select
                     value={formData.character_2_gender || "__none__"}
                     onValueChange={(v) => setFormData({ ...formData, character_2_gender: v === "__none__" ? undefined : v })}
                   >
                     <SelectTrigger id="char2_gender">
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={t("appAuditionsUploadScene.select")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Select</SelectItem>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="non-binary">Non-binary</SelectItem>
-                      <SelectItem value="any">Any</SelectItem>
+                      <SelectItem value="__none__">{t("appAuditionsUploadScene.select")}</SelectItem>
+                      <SelectItem value="male">{t("appAuditionsUpload.male")}</SelectItem>
+                      <SelectItem value="female">{t("appAuditionsUpload.female")}</SelectItem>
+                      <SelectItem value="non-binary">{t("appAuditionsUpload.nonBinary")}</SelectItem>
+                      <SelectItem value="any">{t("appAuditionsUpload.any")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="char2_age">Age Range</Label>
+                  <Label htmlFor="char2_age">{t("appAuditionsUploadScene.age")}</Label>
                   <Input
                     id="char2_age"
-                    placeholder="30s"
+                    placeholder={t("appAuditionsUploadScene.age2Placeholder")}
                     value={formData.character_2_age_range || ""}
                     onChange={(e) => setFormData({ ...formData, character_2_age_range: e.target.value })}
                   />
@@ -293,10 +295,10 @@ export function SceneUploadModal({
           {/* Scene Lines */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-lg">Dialogue Lines</h3>
+              <h3 className="font-semibold text-lg">{t("appAuditionsUploadScene.lines")}</h3>
               <Button type="button" variant="outline" size="sm" onClick={addLine}>
                 <Plus className="w-4 h-4 mr-1" />
-                Add Line
+                {t("appAuditionsUploadScene.addLine")}
               </Button>
             </div>
 
@@ -304,7 +306,7 @@ export function SceneUploadModal({
               {formData.lines.map((line, index) => (
                 <div key={index} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Line {index + 1}</span>
+                    <span className="text-sm font-medium">{t("appAuditionsUploadScene.line", { n: index + 1 })}</span>
                     {formData.lines.length > 2 && (
                       <Button
                         type="button"
@@ -319,29 +321,29 @@ export function SceneUploadModal({
 
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-2">
-                      <Label>Character</Label>
+                      <Label>{t("appAuditionsUploadScene.character")}</Label>
                       <Select
                         value={line.character_name || undefined}
                         onValueChange={(v) => updateLine(index, "character_name", v)}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select" />
+                          <SelectValue placeholder={t("appAuditionsUploadScene.select")} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value={formData.character_1_name || "Character 1"}>
-                            {formData.character_1_name || "Character 1"}
+                            {formData.character_1_name || t("appAuditionsUploadScene.character1")}
                           </SelectItem>
                           <SelectItem value={formData.character_2_name || "Character 2"}>
-                            {formData.character_2_name || "Character 2"}
+                            {formData.character_2_name || t("appAuditionsUploadScene.character2")}
                           </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="col-span-2 space-y-2">
-                      <Label>Text</Label>
+                      <Label>{t("appAuditionsUploadScene.text")}</Label>
                       <Textarea
-                        placeholder="Dialogue text..."
+                        placeholder={t("appAuditionsUploadScene.textPlaceholder")}
                         value={line.text}
                         onChange={(e) => updateLine(index, "text", e.target.value)}
                         rows={2}
@@ -351,9 +353,9 @@ export function SceneUploadModal({
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Stage Direction (Optional)</Label>
+                    <Label>{t("appAuditionsUploadScene.direction")}</Label>
                     <Input
-                      placeholder="[angrily]"
+                      placeholder={t("appAuditionsUploadScene.directionPlaceholder")}
                       value={line.stage_direction || ""}
                       onChange={(e) => updateLine(index, "stage_direction", e.target.value)}
                     />
@@ -365,13 +367,13 @@ export function SceneUploadModal({
 
           {/* Context */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Context (Optional)</h3>
+            <h3 className="font-semibold text-lg">{t("appAuditionsUploadScene.context")}</h3>
 
             <div className="space-y-2">
-              <Label htmlFor="context_before">What happens before this scene?</Label>
+              <Label htmlFor="context_before">{t("appAuditionsUploadScene.before")}</Label>
               <Textarea
                 id="context_before"
-                placeholder="Context leading up to this scene..."
+                placeholder={t("appAuditionsUploadScene.beforePlaceholder")}
                 value={formData.context_before || ""}
                 onChange={(e) => setFormData({ ...formData, context_before: e.target.value })}
                 rows={2}
@@ -379,10 +381,10 @@ export function SceneUploadModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="context_after">What happens after this scene?</Label>
+              <Label htmlFor="context_after">{t("appAuditionsUploadScene.after")}</Label>
               <Textarea
                 id="context_after"
-                placeholder="Context following this scene..."
+                placeholder={t("appAuditionsUploadScene.afterPlaceholder")}
                 value={formData.context_after || ""}
                 onChange={(e) => setFormData({ ...formData, context_after: e.target.value })}
                 rows={2}
@@ -398,18 +400,18 @@ export function SceneUploadModal({
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Cancel
+              {t("appAuditionsUpload.cancel")}
             </Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Uploading...
+                  {t("appAuditionsUpload.uploading")}
                 </>
               ) : (
                 <>
                   <Upload className="w-4 h-4 mr-2" />
-                  Upload Scene
+                  {t("appAuditionsUploadScene.submit")}
                 </>
               )}
             </Button>

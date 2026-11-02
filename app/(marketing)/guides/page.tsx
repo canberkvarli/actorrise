@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { VideoSchema } from "@/components/seo/VideoSchema";
 import { GuideVideoCard } from "@/components/guides/GuideVideoCard";
+import { SeoT } from "@/components/marketing/seo/SeoT";
+import { ContentT } from "@/components/seo/ContentT";
+import { T } from "@/lib/i18n";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -54,18 +57,14 @@ export default function GuidesPage() {
   return (
     <>
       <StageHero
-        direction="(director's notes.)"
+        direction={<T k="contentGuides.direction" />}
         title={
-          <>
-            Guides &amp; tutorials for <em className="italic text-primary">actors</em>.
-          </>
+          <SeoT
+            k="contentGuides.title"
+            slots={{ em: <em className="italic text-primary"><T k="contentGuides.titleEm" /></em> }}
+          />
         }
-        lede={
-          <>
-            Short videos on getting the most out of ActorRise, from finding the right monologue to
-            rehearsing with ScenePartner. More are on the way.
-          </>
-        }
+        lede={<T k="contentGuides.lede" />}
       />
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
@@ -81,32 +80,40 @@ export default function GuidesPage() {
               duration={guide.duration}
             />
             <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">
-              {guide.title}
+              <ContentT k={`contentGuides.videos.${guide.youtubeId}.title`} fallback={guide.title} />
             </h2>
             <GuideVideoCard youtubeId={guide.youtubeId} title={guide.title} />
-            <p className="text-muted-foreground mt-4">{guide.description}</p>
+            <p className="text-muted-foreground mt-4">
+              <ContentT k={`contentGuides.videos.${guide.youtubeId}.description`} fallback={guide.description} />
+            </p>
           </section>
         ))}
       </div>
 
       <div className="mt-16 pt-12 border-t border-border/60">
         <p className="text-muted-foreground mb-6">
-          Ready to try it yourself? Start from the{" "}
-          <Link prefetch={false} href="/monologue-finder" className="text-foreground font-medium underline hover:no-underline">
-            monologue finder
-          </Link>{" "}
-          or rehearse with{" "}
-          <Link prefetch={false} href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
-            ScenePartner
-          </Link>
-          .
+          <SeoT
+            k="contentGuides.tryIt"
+            slots={{
+              finder: (
+                <Link prefetch={false} href="/monologue-finder" className="text-foreground font-medium underline hover:no-underline">
+                  <T k="contentGuides.finderLink" />
+                </Link>
+              ),
+              partner: (
+                <Link prefetch={false} href="/scene-partner-ai" className="text-foreground font-medium underline hover:no-underline">
+                  ScenePartner
+                </Link>
+              ),
+            }}
+          />
         </p>
         <div className="flex flex-wrap gap-4">
           <Button asChild size="lg" className="rounded-full px-6">
-            <Link prefetch={false} href="/signup">Start rehearsing</Link>
+            <Link prefetch={false} href="/signup"><T k="cta.startRehearsing" /></Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-            <Link prefetch={false} href="/">Try the search</Link>
+            <Link prefetch={false} href="/"><T k="seoCommon.trySearch" /></Link>
           </Button>
         </div>
       </div>

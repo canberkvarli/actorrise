@@ -8,29 +8,31 @@ import { IconX } from "@tabler/icons-react";
 
 import { Dialog, DialogClose, DialogDescription, DialogOverlay, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { theatreFontVars } from "@/lib/fonts/theatre";
+import { useT, type MessageKey } from "@/lib/i18n";
 import { IntroStage, SceneCapture, SceneNotes, ScenePrep } from "./intro/IntroScenes";
 import s from "./intro/intro.module.css";
 
-export const SLIDES = [
+/** Each card's words are dictionary keys; t() them where they render. */
+export const SLIDES: readonly { title: MessageKey; body: MessageKey; scene: typeof SceneCapture; picture: MessageKey }[] = [
   {
-    title: "Every audition, one rail.",
-    body: "Paste the casting email or drop the breakdown and I'll read it into a ticket. Or fill it in yourself, that's always free.",
+    title: "appAuditionsIntro.s1Title",
+    body: "appAuditionsIntro.s1Body",
     scene: SceneCapture,
-    picture: "A casting email is pasted into the box, read, and folded into a ticket at the top of the rail.",
+    picture: "appAuditionsIntro.s1Picture",
   },
   {
-    title: "Each one gets its own page.",
-    body: "Read your sides right there, run them with ScenePartner, and tick off what to pack as you go.",
+    title: "appAuditionsIntro.s2Title",
+    body: "appAuditionsIntro.s2Body",
     scene: ScenePrep,
-    picture: "A ticket opens its prep room and the three steps tick off one by one.",
+    picture: "appAuditionsIntro.s2Picture",
   },
   {
-    title: "I'll keep you on it.",
-    body: "A note three days out, one the night before, and one the morning after so you can log how it went. Add the calendar feed and they show up next to everything else.",
+    title: "appAuditionsIntro.s3Title",
+    body: "appAuditionsIntro.s3Body",
     scene: SceneNotes,
-    picture: "Three notes land on the week around the audition, and the morning after asks how it went.",
+    picture: "appAuditionsIntro.s3Picture",
   },
-] as const;
+];
 
 /**
  * Three big cards on what /auditions is, each with a small looping scene of
@@ -56,6 +58,7 @@ export function AuditionsIntro({
   onCaptured: () => void;
   firstOne: boolean;
 }) {
+  const t = useT();
   const [i, setI] = useState(0);
   const [wasOpen, setWasOpen] = useState(open);
   const [hidden, setHidden] = useState(false);
@@ -123,10 +126,10 @@ export function AuditionsIntro({
                     exit={reduced ? { opacity: 1 } : { opacity: 0, y: -6 }}
                     transition={{ type: "tween", duration: reduced ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
                   >
-                    <p className={s.step}>({i + 1} of {SLIDES.length})</p>
-                    <DialogTitle className={s.title}>{slide.title}</DialogTitle>
-                    <DialogDescription className={s.body}>{slide.body}</DialogDescription>
-                    <p className="sr-only">{slide.picture}</p>
+                    <p className={s.step}>{t("appAuditionsIntro.step", { n: i + 1, total: SLIDES.length })}</p>
+                    <DialogTitle className={s.title}>{t(slide.title)}</DialogTitle>
+                    <DialogDescription className={s.body}>{t(slide.body)}</DialogDescription>
+                    <p className="sr-only">{t(slide.picture)}</p>
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -140,7 +143,7 @@ export function AuditionsIntro({
                 <div className={s.actions}>
                   {i > 0 && (
                     <button type="button" className={s.back} onClick={() => setI(i - 1)}>
-                      Back
+                      {t("appAuditionsIntro.back")}
                     </button>
                   )}
                   {last ? (
@@ -154,11 +157,11 @@ export function AuditionsIntro({
                         onCapture();
                       }}
                     >
-                      {firstOne ? "Add my first audition" : "Add an audition"}
+                      {firstOne ? t("appAuditionsIntro.addFirst") : t("appAuditionsIntro.add")}
                     </button>
                   ) : (
                     <button type="button" className={`${s.pill} ${s.next}`} onClick={() => setI(i + 1)}>
-                      Next
+                      {t("appAuditionsIntro.next")}
                     </button>
                   )}
                 </div>
@@ -166,7 +169,7 @@ export function AuditionsIntro({
             </div>
           </div>
           {/* Last in the tab order, so opening lands on Next rather than on the way out. */}
-          <DialogClose aria-label="Close" className={s.close}>
+          <DialogClose aria-label={t("appAuditionsIntro.close")} className={s.close}>
             <IconX className="size-4" aria-hidden />
           </DialogClose>
         </DialogPrimitive.Content>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { BenchSkeleton } from "@/components/rehearse/BenchSkeleton";
 import { useNextAudition } from "@/hooks/useAuditions";
 import { theatreFontVars } from "@/lib/fonts/theatre";
+import { useT } from "@/lib/i18n";
 
 /**
  * Where login sends people. With an audition in the next 14 days: its prep
@@ -17,13 +18,14 @@ import { theatreFontVars } from "@/lib/fonts/theatre";
  */
 export default function NextAuditionHop() {
   const router = useRouter();
+  const t = useT();
   const { data, isError } = useNextAudition();
   useEffect(() => {
     if (isError) router.replace("/rehearse");
     else if (data) router.replace(data.audition ? `/auditions/${data.audition.id}?from=login` : "/rehearse");
   }, [data, isError, router]);
   return (
-    <div role="status" aria-label="Loading" className={`theatre-tokens theatre-collection ${theatreFontVars}`}>
+    <div role="status" aria-label={t("appAuditionsShell.loading")} className={`theatre-tokens theatre-collection ${theatreFontVars}`}>
       <div className="relative isolate mx-auto w-full max-w-[1160px] px-5 py-8 sm:py-14 md:px-[14px]">
         <BenchSkeleton />
       </div>

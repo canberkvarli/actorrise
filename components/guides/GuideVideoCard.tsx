@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
+import { translate, useLocale, useT } from "@/lib/i18n";
 
 /**
  * Lazy YouTube card: shows the thumbnail until clicked, then swaps in the
@@ -9,13 +10,19 @@ import { IconPlayerPlayFilled } from "@tabler/icons-react";
  */
 export function GuideVideoCard({ youtubeId, title }: { youtubeId: string; title: string }) {
   const [playing, setPlaying] = useState(false);
+  const t = useT();
+  const locale = useLocale();
+  // The English title comes from the page's GUIDES list; other languages read the dictionary.
+  const key = `contentGuides.videos.${youtubeId}.title` as const;
+  const found = locale === "en" ? key : translate(locale, key);
+  const label = found === key ? title : found;
 
   return (
     <div className="relative w-full overflow-hidden bg-black" style={{ aspectRatio: "16/9" }}>
       {playing ? (
         <iframe
           src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1`}
-          title={title}
+          title={label}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
           className="absolute inset-0 w-full h-full"
@@ -25,14 +32,14 @@ export function GuideVideoCard({ youtubeId, title }: { youtubeId: string; title:
           type="button"
           onClick={() => setPlaying(true)}
           className="group absolute inset-0 w-full h-full cursor-pointer"
-          aria-label={`Play ${title}`}
+          aria-label={t("contentGuides.play", { title: label })}
         >
           <img
             src={`https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`}
             onError={(e) => {
               e.currentTarget.src = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
             }}
-            alt={`${title} thumbnail`}
+            alt={t("contentGuides.thumbnail", { title: label })}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
           />
           <div className="absolute inset-0 bg-black/25 group-hover:bg-black/15 transition-colors" />

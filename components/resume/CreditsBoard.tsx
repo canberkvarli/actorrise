@@ -26,6 +26,25 @@ import { CSS } from "@dnd-kit/utilities";
 import { IconPencil, IconTrash } from "@tabler/icons-react";
 import type { Credit } from "@/types/resume";
 import { CREDIT_CATEGORIES, CATEGORY_HEADING } from "@/types/resume";
+import { useT, type MessageKey } from "@/lib/i18n";
+
+/** Display words for each medium id; the id is what the API stores. */
+export const CATEGORY_LABEL_KEY: Record<string, MessageKey> = {
+  theatre: "appAuditionsCredits.labelTheatre",
+  film: "appAuditionsCredits.labelFilm",
+  tv: "appAuditionsCredits.labelTv",
+  commercial: "appAuditionsCredits.labelCommercial",
+  voiceover: "appAuditionsCredits.labelVoiceover",
+  other: "appAuditionsCredits.labelOther",
+};
+const CATEGORY_HEADING_KEY: Record<string, MessageKey> = {
+  theatre: "appAuditionsCredits.headTheatre",
+  film: "appAuditionsCredits.headFilm",
+  tv: "appAuditionsCredits.headTv",
+  commercial: "appAuditionsCredits.headCommercial",
+  voiceover: "appAuditionsCredits.headVoiceover",
+  other: "appAuditionsCredits.headOther",
+};
 
 const CONTAINER_PREFIX = "container:";
 const containerId = (cat: string) => `${CONTAINER_PREFIX}${cat}`;
@@ -41,6 +60,7 @@ function CreditRow({
   onDelete?: (id: number) => void;
   overlay?: boolean;
 }) {
+  const t = useT();
   const sortable = useSortable({ id: credit.id });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
   const style = {
@@ -59,7 +79,7 @@ function CreditRow({
           icon floating over it — the same correction the script shelf needed. */}
       <button
         type="button"
-        aria-label="Drag to reorder or move category"
+        aria-label={t("appAuditionsCredits.drag")}
         className="t-credit__grip"
         {...attributes}
         {...listeners}
@@ -84,7 +104,7 @@ function CreditRow({
           <button
             type="button"
             onClick={() => onEdit?.(credit)}
-            aria-label={`Edit ${credit.production}`}
+            aria-label={t("appAuditionsCredits.edit", { name: credit.production })}
             className="t-credit__act [&_svg]:size-4"
           >
             <IconPencil />
@@ -92,7 +112,7 @@ function CreditRow({
           <button
             type="button"
             onClick={() => onDelete?.(credit.id)}
-            aria-label={`Delete ${credit.production}`}
+            aria-label={t("appAuditionsCredits.delete", { name: credit.production })}
             className="t-credit__act t-credit__act--cut [&_svg]:size-4"
           >
             <IconTrash />
@@ -117,12 +137,13 @@ function CategoryColumn({
   onDelete: (id: number) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: containerId(catId) });
+  const t = useT();
   // Hide empty categories unless a drag is in progress (then they're drop targets).
   if (rows.length === 0 && !dragging) return null;
   return (
     <section className="t-build">
       <h3 className="t-build__head">
-        <span>{CATEGORY_HEADING[catId]}</span>
+        <span>{CATEGORY_HEADING_KEY[catId] ? t(CATEGORY_HEADING_KEY[catId]) : CATEGORY_HEADING[catId]}</span>
         {rows.length > 0 && <span className="t-build__aside">{rows.length}</span>}
       </h3>
       <SortableContext items={rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
@@ -132,7 +153,7 @@ function CategoryColumn({
         >
           {rows.length === 0 ? (
             <p className="t-credit__drop" data-over={isOver || undefined}>
-              drop one here
+              {t("appAuditionsCredits.dropHere")}
             </p>
           ) : (
             rows.map((c) => (

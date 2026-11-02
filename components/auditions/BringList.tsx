@@ -5,11 +5,12 @@ import { toast } from "sonner";
 
 import type { Audition, BringItem } from "@/lib/auditions";
 import { useUpdateAudition } from "@/hooks/useAuditions";
-import { SAVE_FAILED } from "./SidesSection";
+import { useT } from "@/lib/i18n";
 
 /** What to bring, ticked as you pack: the casting email's list, my suggestions, and anything you add. */
 export function BringList({ a }: { a: Audition }) {
   const update = useUpdateAudition();
+  const t = useT();
   // Shown at once, saved behind: a tick should never wait on the network.
   const [items, setItems] = useState<BringItem[]>(a.bring_list);
   const [seen, setSeen] = useState(a.bring_list);
@@ -25,7 +26,7 @@ export function BringList({ a }: { a: Audition }) {
     update.mutate({ id: a.id, bring_list: next }, {
       onError: () => {
         setItems(before);
-        toast.error(SAVE_FAILED);
+        toast.error(t("appAuditionsErr.saveFailed"));
       },
     });
   }
@@ -35,19 +36,19 @@ export function BringList({ a }: { a: Audition }) {
   return (
     <section id="aud-bring" aria-labelledby="aud-bring-h" className="scroll-mt-24">
       <div className="aud-sec-head">
-        <h2 id="aud-bring-h" className="aud-sec-title text-[26px]">Bring</h2>
+        <h2 id="aud-bring-h" className="aud-sec-title text-[26px]">{t("appAuditionsBring.title")}</h2>
         {items.length > 0 && (
           <span className="flex items-center gap-2.5 text-[13px]">
             <span className="aud-pack-bar" aria-hidden>
               <span style={{ transform: `scaleX(${packed / items.length})` }} />
             </span>
             <span className={packed === items.length ? "aud-pack-done font-semibold" : "aud-cap-muted"}>
-              {packed === items.length ? "all packed" : `${packed} of ${items.length} packed`}
+              {packed === items.length ? t("appAuditionsBring.allPacked") : t("appAuditionsBring.packed", { n: packed, total: items.length })}
             </span>
           </span>
         )}
       </div>
-      {items.length === 0 && <p className="aud-pencil-muted text-[18px]">(nothing on the list yet.)</p>}
+      {items.length === 0 && <p className="aud-pencil-muted text-[18px]">{t("appAuditionsBring.nothing")}</p>}
       <ul>
         {items.map((item, i) => (
           <li key={item.text} className="aud-tick-row aud-row-in group flex items-start gap-3 py-2.5 text-[15px]" data-on={item.done ? "true" : "false"}>
@@ -61,17 +62,17 @@ export function BringList({ a }: { a: Audition }) {
               <span className="aud-check mt-0.5" data-on={item.done ? "true" : "false"} aria-hidden />
               <span className="aud-tick-text min-w-0 break-words">
                 <span className="aud-marker">{item.text}</span>
-                {item.src === "ai" && <span className="aud-pencil-muted text-[15px]"> (my idea)</span>}
+                {item.src === "ai" && <span className="aud-pencil-muted text-[15px]">{t("appAuditionsBring.myIdea")}</span>}
               </span>
             </label>
             {item.src !== "email" && (
               <button
                 type="button"
                 className="aud-cap-muted aud-focus px-1 text-[13px] underline-offset-2 hover:underline"
-                aria-label={`Take ${item.text} off the list`}
+                aria-label={t("appAuditionsBring.takeOffLabel", { item: item.text })}
                 onClick={() => save(items.filter((_, j) => j !== i))}
               >
-                remove
+                {t("appAuditionsBring.remove")}
               </button>
             )}
           </li>
@@ -87,16 +88,16 @@ export function BringList({ a }: { a: Audition }) {
           setDraft("");
         }}
       >
-        <label className="sr-only" htmlFor="aud-bring-add">Add something to bring</label>
+        <label className="sr-only" htmlFor="aud-bring-add">{t("appAuditionsBring.addLabel")}</label>
         <input
           id="aud-bring-add"
           className="aud-input min-w-0 flex-1 px-4 py-2.5 text-[17px]"
-          placeholder="add something to bring"
+          placeholder={t("appAuditionsBring.addPlaceholder")}
           maxLength={200}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
         />
-        {draft.trim() && <button type="submit" className="aud-ask-btn aud-row-in aud-focus px-4 text-[15px] font-semibold">Add</button>}
+        {draft.trim() && <button type="submit" className="aud-ask-btn aud-row-in aud-focus px-4 text-[15px] font-semibold">{t("appAuditionsBring.add")}</button>}
       </form>
     </section>
   );

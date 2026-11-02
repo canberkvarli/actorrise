@@ -33,6 +33,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Monologue } from '@/types/actor';
 import { MonologueReference } from '@/components/audition/MonologueReference';
+import { useLocale, useT } from '@/lib/i18n';
 
 // Tier limits
 const FEEDBACK_LIMITS: Record<string, number> = { free: 1, solo: 10, plus: 30, pro: 60 };
@@ -40,13 +41,13 @@ const SAVE_LIMITS: Record<string, number> = { free: 0, solo: 0, plus: 15, pro: 5
 
 type PageState = 'setup' | 'preview' | 'countdown' | 'recording' | 'recorded';
 
-function getNextResetDate(): string {
+function getNextResetDate(t: ReturnType<typeof useT>, tag: string): string {
   const now = new Date();
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const daysUntil = Math.ceil((nextMonth.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (daysUntil <= 1) return 'tomorrow';
-  if (daysUntil <= 7) return `in ${daysUntil} days`;
-  return nextMonth.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (daysUntil <= 1) return t('appAuditionsTape.resetTomorrow');
+  if (daysUntil <= 7) return t('appAuditionsTape.resetInDays', { n: daysUntil });
+  return nextMonth.toLocaleDateString(tag, { month: 'short', day: 'numeric' });
 }
 
 function formatTime(seconds: number): string {
@@ -65,6 +66,8 @@ export default function AuditionModePage() {
 
 function AuditionModeContent() {
   const router = useRouter();
+  const t = useT();
+  const tag = useLocale() === 'tr' ? 'tr-TR' : 'en-US';
   const searchParams = useSearchParams();
   const monologueId = searchParams.get('monologue');
   const { subscription } = useSubscription();
@@ -315,12 +318,12 @@ function AuditionModeContent() {
       });
       setFeedbackUsedThisMonth((prev) => prev + 1);
     } catch (err: any) {
-      const msg = err?.message || 'Analysis failed. Please try again.';
+      const msg = err?.message || t('appAuditionsTape.analysisFailed');
       setAnalysisError(msg);
     } finally {
       setIsAnalyzing(false);
     }
-  }, [recordedBlob, duration, feedbackUsedThisMonth, feedbackLimit, monologue]);
+  }, [recordedBlob, duration, feedbackUsedThisMonth, feedbackLimit, monologue, t]);
 
   const handleSaveToLibrary = useCallback(async () => {
     if (!recordedBlob || isSaving || savedTapeId) return;
@@ -369,9 +372,9 @@ function AuditionModeContent() {
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <IconAlertCircle className="w-12 h-12 text-white/20 mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-white mb-2">Browser Not Supported</h1>
+          <h1 className="text-xl font-semibold text-white mb-2">{t('appAuditionsTape.unsupportedTitle')}</h1>
           <p className="text-white/40">
-            Your browser doesn&apos;t support video recording. Please use Chrome, Firefox, or Safari on desktop.
+            {t('appAuditionsTape.unsupportedBody')}
           </p>
         </div>
       </div>
@@ -408,7 +411,7 @@ function AuditionModeContent() {
             <button
               onClick={() => router.back()}
               className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-              title="Exit Audition Mode"
+              title={t('appAuditionsTape.exit')}
             >
               <IconArrowLeft className="w-5 h-5 text-white/70" />
             </button>
@@ -416,7 +419,7 @@ function AuditionModeContent() {
               {monologue ? (
                 <>
                   <h1 className="text-lg font-semibold text-white truncate">
-                    Rehearsing: {monologue.title}
+                    {t('appAuditionsTape.rehearsing', { title: monologue.title })}
                   </h1>
                   <p className="text-xs text-white/40 truncate">
                     {monologue.character_name}
@@ -425,8 +428,8 @@ function AuditionModeContent() {
                 </>
               ) : (
                 <>
-                  <h1 className="text-lg font-semibold text-white">Audition Mode</h1>
-                  <p className="text-xs text-white/40">Record your self-tape, get AI feedback</p>
+                  <h1 className="text-lg font-semibold text-white">{t('appAuditionsTape.title')}</h1>
+                  <p className="text-xs text-white/40">{t('appAuditionsTape.sub')}</p>
                 </>
               )}
             </div>
@@ -441,7 +444,7 @@ function AuditionModeContent() {
               >
                 <IconSparkles className="w-3.5 h-3.5 text-primary" />
                 <span className="font-medium text-primary">{feedbackRemaining}</span>
-                <span className="text-white/40 text-xs hidden sm:inline">feedback left</span>
+                <span className="text-white/40 text-xs hidden sm:inline">{t('appAuditionsTape.feedbackLeft')}</span>
                 <IconInfoCircle className="w-3 h-3 text-white/30" />
               </button>
               <AnimatePresence>
@@ -452,22 +455,22 @@ function AuditionModeContent() {
                     exit={{ opacity: 0, y: 4 }}
                     className="absolute right-0 top-full mt-2 w-64 p-3 rounded-lg border border-white/10 bg-neutral-900 shadow-lg z-20"
                   >
-                    <p className="text-xs font-medium text-white mb-1">AI Feedback Credits</p>
+                    <p className="text-xs font-medium text-white mb-1">{t('appAuditionsTape.creditsTitle')}</p>
                     <p className="text-xs text-white/50 mb-2">
-                      After recording, our AI casting director analyzes your performance — pacing, emotion, framing, and more.
+                      {t('appAuditionsTape.creditsBody')}
                     </p>
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-white/40">
-                        {feedbackUsedThisMonth}/{feedbackLimit} used this month
+                        {t('appAuditionsTape.usedThisMonth', { used: feedbackUsedThisMonth, limit: feedbackLimit })}
                       </span>
                       {feedbackRemaining <= 0 && (
                         <Link href="/pricing" className="text-primary font-medium hover:underline">
-                          Get more
+                          {t('appAuditionsTape.getMore')}
                         </Link>
                       )}
                     </div>
                     <div className="mt-2 pt-2 border-t border-white/10 text-xs text-white/30">
-                      Resets {getNextResetDate()}
+                      {t('appAuditionsTape.resets', { when: getNextResetDate(t, tag) })}
                     </div>
                   </motion.div>
                 )}
@@ -508,7 +511,7 @@ function AuditionModeContent() {
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center bg-black/95">
                         <IconCamera className="w-10 h-10 text-white/20 mb-3" />
-                        <p className="text-sm text-white/30">Requesting camera access...</p>
+                        <p className="text-sm text-white/30">{t('appAuditionsTape.requestingCamera')}</p>
                       </div>
                     )}
 
@@ -528,14 +531,14 @@ function AuditionModeContent() {
                       <button
                         onClick={() => setShowGrid(!showGrid)}
                         className="p-2 rounded-lg bg-black/40 hover:bg-black/60 transition-colors"
-                        title="Toggle framing grid"
+                        title={t('appAuditionsTape.toggleGrid')}
                       >
                         <IconGridDots className={`w-5 h-5 ${showGrid ? 'text-primary' : 'text-white/60'}`} />
                       </button>
                       <button
                         onClick={() => setShowSettings(!showSettings)}
                         className="p-2 rounded-lg bg-black/40 hover:bg-black/60 transition-colors"
-                        title="Recording settings"
+                        title={t('appAuditionsTape.recordingSettings')}
                       >
                         <IconSettings className={`w-5 h-5 ${showSettings ? 'text-primary' : 'text-white/60'}`} />
                       </button>
@@ -551,13 +554,13 @@ function AuditionModeContent() {
                           className="absolute top-4 right-16 w-64 rounded-lg border border-white/10 bg-black/80 backdrop-blur-md p-4 z-10"
                         >
                           <div className="flex items-center justify-between mb-3">
-                            <p className="text-sm font-medium text-white">Settings</p>
+                            <p className="text-sm font-medium text-white">{t('appAuditionsTape.settings')}</p>
                             <button onClick={() => setShowSettings(false)}>
                               <IconX className="w-4 h-4 text-white/40 hover:text-white/80" />
                             </button>
                           </div>
                           <div className="flex items-center justify-between mb-3">
-                            <label className="text-xs text-white/70">Countdown</label>
+                            <label className="text-xs text-white/70">{t('appAuditionsTape.countdown')}</label>
                             <button
                               onClick={() => setCountdownEnabled(!countdownEnabled)}
                               className={`w-9 h-5 rounded-full transition-colors relative ${countdownEnabled ? 'bg-primary' : 'bg-white/20'}`}
@@ -567,7 +570,7 @@ function AuditionModeContent() {
                           </div>
                           {countdownEnabled && (
                             <div className="flex items-center justify-between mb-3">
-                              <label className="text-xs text-white/70">Duration</label>
+                              <label className="text-xs text-white/70">{t('appAuditionsTape.duration')}</label>
                               <div className="flex items-center gap-1">
                                 {[3, 5, 10].map((d) => (
                                   <button
@@ -575,14 +578,14 @@ function AuditionModeContent() {
                                     onClick={() => setCountdownDuration(d)}
                                     className={`px-2 py-0.5 rounded text-xs transition-colors ${countdownDuration === d ? 'bg-primary text-white' : 'bg-white/10 text-white/50 hover:bg-white/20'}`}
                                   >
-                                    {d}s
+                                    {t('appAuditionsTape.seconds', { n: d })}
                                   </button>
                                 ))}
                               </div>
                             </div>
                           )}
                           <div className="flex items-center justify-between">
-                            <label className="text-xs text-white/70">Framing grid</label>
+                            <label className="text-xs text-white/70">{t('appAuditionsTape.framingGrid')}</label>
                             <button
                               onClick={() => setShowGrid(!showGrid)}
                               className={`w-9 h-5 rounded-full transition-colors relative ${showGrid ? 'bg-primary' : 'bg-white/20'}`}
@@ -597,7 +600,7 @@ function AuditionModeContent() {
                     {/* Bottom — Record button */}
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pt-16 pb-6">
                       <div className="flex flex-col items-center gap-3">
-                        <p className="text-sm text-white/50">Position yourself in frame, then hit record</p>
+                        <p className="text-sm text-white/50">{t('appAuditionsTape.positionYourself')}</p>
                         <div className="relative">
                           <motion.div
                             animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.15, 0.4] }}
@@ -610,7 +613,7 @@ function AuditionModeContent() {
                             className="relative gap-2 px-8 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg shadow-red-600/40"
                           >
                             <IconPlayerRecord className="w-5 h-5" />
-                            Record
+                            {t('appAuditionsTape.record')}
                           </Button>
                         </div>
                       </div>
@@ -707,7 +710,7 @@ function AuditionModeContent() {
                         animate={{ opacity: 1 }}
                         className="absolute top-4 left-1/2 -translate-x-1/2"
                       >
-                        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">PAUSED</Badge>
+                        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">{t('appAuditionsTape.paused')}</Badge>
                       </motion.div>
                     )}
 
@@ -785,14 +788,14 @@ function AuditionModeContent() {
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-sm text-white/60 hover:text-white hover:bg-white/[0.08] transition-colors"
                     >
                       <IconRefresh className="w-4 h-4" />
-                      New take
+                      {t('appAuditionsTape.newTake')}
                     </button>
                     <button
                       onClick={handleDownload}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-sm text-white/60 hover:text-white hover:bg-white/[0.08] transition-colors"
                     >
                       <IconDownload className="w-4 h-4" />
-                      Download
+                      {t('appAuditionsTape.download')}
                     </button>
                   </div>
                   <div className="flex-1" />
@@ -844,19 +847,19 @@ function AuditionModeContent() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-white">
-                              {isAnalyzing ? 'Analyzing your take...' : 'Get AI Director Notes'}
+                              {isAnalyzing ? t('appAuditionsTape.analyzing') : t('appAuditionsTape.getNotes')}
                             </p>
                             <p className="text-xs text-white/40 mt-1 leading-relaxed">
                               {isAnalyzing
-                                ? 'Reviewing pacing, emotion, framing & delivery'
-                                : 'Personalized notes on pacing, emotion, framing & delivery'}
+                                ? t('appAuditionsTape.reviewing')
+                                : t('appAuditionsTape.personalized')}
                             </p>
                           </div>
                         </div>
                         {!isAnalyzing && (
                           <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
-                            <span className="text-[11px] text-white/25">{feedbackRemaining} credit{feedbackRemaining !== 1 ? 's' : ''} remaining</span>
-                            <span className="text-xs font-medium text-primary">Analyze &rarr;</span>
+                            <span className="text-[11px] text-white/25">{t(feedbackRemaining !== 1 ? 'appAuditionsTape.creditsRemaining' : 'appAuditionsTape.creditsRemainingOne', { n: feedbackRemaining })}</span>
+                            <span className="text-xs font-medium text-primary">{t('appAuditionsTape.analyze')}</span>
                           </div>
                         )}
                       </motion.button>
@@ -867,9 +870,9 @@ function AuditionModeContent() {
                             <IconSparkles className="w-5 h-5 text-white/15" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-white/25">AI Director Notes</p>
+                            <p className="text-sm font-semibold text-white/25">{t('appAuditionsTape.notesTitle')}</p>
                             <p className="text-xs text-white/15 mt-1 leading-relaxed">
-                              Record at least 30 seconds to get personalized feedback on your performance.
+                              {t('appAuditionsTape.recordLonger')}
                             </p>
                           </div>
                         </div>
@@ -885,8 +888,8 @@ function AuditionModeContent() {
                           <IconLock className="w-5 h-5 text-white/25" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-white/40">No credits remaining</p>
-                          <p className="text-xs text-primary/60 mt-1">Upgrade your plan for more AI feedback &rarr;</p>
+                          <p className="text-sm font-semibold text-white/40">{t('appAuditionsTape.noCredits')}</p>
+                          <p className="text-xs text-primary/60 mt-1">{t('appAuditionsTape.upgrade')}</p>
                         </div>
                       </div>
                     </Link>
@@ -905,7 +908,7 @@ function AuditionModeContent() {
                         <div className="px-5 py-4 border-b border-white/10 bg-white/[0.02]">
                           <div className="flex items-center gap-2.5">
                             <IconSparkles className="w-5 h-5 text-primary" />
-                            <h3 className="font-semibold text-lg text-white">Director Notes</h3>
+                            <h3 className="font-semibold text-lg text-white">{t('appAuditionsTape.directorNotes')}</h3>
                           </div>
                         </div>
                         <div className="p-5 space-y-5">
@@ -914,7 +917,7 @@ function AuditionModeContent() {
                               <IconAlertCircle className="w-8 h-8 text-red-400/50 mx-auto mb-2" />
                               <p className="text-sm text-white/50 mb-3">{analysisError}</p>
                               <Button size="sm" variant="ghost" onClick={handleGetFeedback} className="text-primary hover:text-primary">
-                                Try again
+                                {t('appAuditionsTape.tryAgain')}
                               </Button>
                             </div>
                           ) : isAnalyzing ? (
@@ -926,7 +929,7 @@ function AuditionModeContent() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.4, delay: 0 }}
                               >
-                                <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2">Overall Rating</p>
+                                <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2">{t('appAuditionsTape.overallRating')}</p>
                                 <div className="flex items-center gap-1">
                                   {[1, 2, 3, 4, 5].map((star, i) => (
                                     <motion.div
@@ -950,16 +953,16 @@ function AuditionModeContent() {
                                   </motion.span>
                                 </div>
                               </motion.div>
-                              <FeedbackSection title="Summary" content={feedback.summary} delay={0.15} />
-                              <FeedbackSection title="Performance & Presence" content={feedback.performance} delay={0.25} />
-                              <FeedbackSection title="Pacing & Delivery" content={feedback.pacingAndDelivery} delay={0.35} />
-                              <FeedbackSection title="Framing & Setup" content={feedback.framingAndSetup} delay={0.45} />
+                              <FeedbackSection title={t('appAuditionsTape.summary')} content={feedback.summary} delay={0.15} />
+                              <FeedbackSection title={t('appAuditionsTape.performance')} content={feedback.performance} delay={0.25} />
+                              <FeedbackSection title={t('appAuditionsTape.pacing')} content={feedback.pacingAndDelivery} delay={0.35} />
+                              <FeedbackSection title={t('appAuditionsTape.framing')} content={feedback.framingAndSetup} delay={0.45} />
                               <motion.div
                                 initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.4, delay: 0.55 }}
                               >
-                                <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2">For Your Next Take</p>
+                                <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2">{t('appAuditionsTape.nextTake')}</p>
                                 <ul className="space-y-2">
                                   {feedback.tips.map((tip, i) => (
                                     <motion.li
@@ -988,7 +991,7 @@ function AuditionModeContent() {
                       savedTapeId ? (
                         <div className="flex items-center gap-3 px-4 py-3">
                           <IconDeviceFloppy className="w-4 h-4 text-green-400" />
-                          <span className="text-sm text-green-400 flex-1">Saved to Library</span>
+                          <span className="text-sm text-green-400 flex-1">{t('appAuditionsTape.saved')}</span>
                         </div>
                       ) : (
                         <button
@@ -998,27 +1001,27 @@ function AuditionModeContent() {
                         >
                           <IconDeviceFloppy className={`w-4 h-4 ${isSaving ? 'text-white/25 animate-pulse' : 'text-white/50'}`} />
                           <span className="text-sm text-white/60 flex-1">
-                            {isSaving ? 'Saving...' : 'Save to Library'}
+                            {isSaving ? t('appAuditionsTape.saving') : t('appAuditionsTape.save')}
                           </span>
                         </button>
                       )
                     ) : (
                       <Link href="/pricing" className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
                         <IconDeviceFloppy className="w-4 h-4 text-white/20" />
-                        <span className="text-sm text-white/30 flex-1">Save to Library</span>
+                        <span className="text-sm text-white/30 flex-1">{t('appAuditionsTape.save')}</span>
                         <span className="text-[10px] text-white/15">Plus</span>
                       </Link>
                     )}
                     {canShare ? (
                       <button disabled className="w-full flex items-center gap-3 px-4 py-3 text-left">
                         <IconShare className="w-4 h-4 text-white/25" />
-                        <span className="text-sm text-white/30 flex-1">Share with Casting</span>
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Soon</Badge>
+                        <span className="text-sm text-white/30 flex-1">{t('appAuditionsTape.share')}</span>
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{t('appAuditionsTape.soon')}</Badge>
                       </button>
                     ) : (
                       <Link href="/pricing" className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
                         <IconShare className="w-4 h-4 text-white/20" />
-                        <span className="text-sm text-white/30 flex-1">Share with Casting</span>
+                        <span className="text-sm text-white/30 flex-1">{t('appAuditionsTape.share')}</span>
                         <span className="text-[10px] text-white/15">Pro</span>
                       </Link>
                     )}
@@ -1032,13 +1035,13 @@ function AuditionModeContent() {
                       transition={{ delay: 0.6 }}
                       className="rounded-xl border border-primary/15 p-4 bg-primary/[0.04]"
                     >
-                      <p className="font-medium text-sm text-white">Unlock your full potential</p>
+                      <p className="font-medium text-sm text-white">{t('appAuditionsTape.unlockTitle')}</p>
                       <p className="text-xs text-white/35 mt-1 mb-3">
-                        More AI notes, cloud saves, shareable links for casting directors.
+                        {t('appAuditionsTape.unlockBody')}
                       </p>
                       <Button asChild size="sm" className="gap-2 w-full">
                         <Link href="/pricing">
-                          View Plans
+                          {t('appAuditionsTape.viewPlans')}
                           <IconArrowRight className="w-4 h-4" />
                         </Link>
                       </Button>
@@ -1079,6 +1082,7 @@ function FeedbackSection({ title, content, delay = 0 }: { title: string; content
 }
 
 function FeedbackSkeleton() {
+  const t = useT();
   return (
     <div className="space-y-5">
       <div>
@@ -1111,7 +1115,7 @@ function FeedbackSkeleton() {
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
           <IconSparkles className="w-4 h-4 text-primary/50" />
         </motion.div>
-        <p className="text-xs text-white/40">Analyzing your performance...</p>
+        <p className="text-xs text-white/40">{t('appAuditionsTape.analyzingPerformance')}</p>
       </div>
     </div>
   );

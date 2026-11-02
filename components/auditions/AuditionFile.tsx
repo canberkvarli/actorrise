@@ -5,7 +5,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 import { trackEvent } from "@/lib/events";
-import { eyebrow, KIND_LABEL, nextStep, sectionOrder, whenSentence, type Audition, type FileSection } from "@/lib/auditions";
+import { nextStep, sectionOrder, type Audition, type FileSection } from "@/lib/auditions";
+import { useT, type MessageKey } from "@/lib/i18n";
 import { useUpdateAudition } from "@/hooks/useAuditions";
 import { AfterRoom } from "./AfterRoom";
 import { AskMe } from "./AskMe";
@@ -13,20 +14,23 @@ import { BringList } from "./BringList";
 import { DraftCard } from "./DraftCard";
 import { errMessage, patchFromValues, valuesFromAudition, type DraftValues } from "./draftValues";
 import { FileDetails, OtherAuditions, ReminderLine, RemoveLink } from "./FileAside";
-import { SAVE_FAILED, SidesSection, useAddSides } from "./SidesSection";
+import { SidesSection, useAddSides } from "./SidesSection";
+import { useAuditionWords } from "./useAuditionWords";
 import { useCallbackAction } from "./useCallbackAction";
 
 /** One voice for a logged outcome from the morning-after email (AuditionsShell's ?logged=). */
-export const OUTCOME_NOTE: Record<"good" | "callback" | "no", string> = {
-  good: "Got it, it felt good. Fingers crossed for you.",
-  callback: "A callback! I moved it to Callback. Go get it.",
-  no: "Got it. Not this time, on to the next one.",
+export const OUTCOME_NOTE_KEY: Record<"good" | "callback" | "no", MessageKey> = {
+  good: "appAuditionsFile.outcomeGood",
+  callback: "appAuditionsFile.outcomeCallback",
+  no: "appAuditionsFile.outcomeNo",
 };
 
 const PILL = "aud-pill aud-focus bg-primary text-primary-foreground inline-flex h-12 items-center justify-center px-6 text-[15.5px] max-sm:w-full";
 
 /** The one orange button. Everything else on the page is quieter than this. */
 function Primary({ a, now }: { a: Audition; now: Date }) {
+  const t = useT();
+  const words = useAuditionWords();
   const step = nextStep(a, now);
   const add = useAddSides(a);
   const callback = useCallbackAction(a);
@@ -34,7 +38,7 @@ function Primary({ a, now }: { a: Audition; now: Date }) {
   if (step.kind === "callback") {
     return (
       <button type="button" className={PILL} disabled={callback.busy} onClick={callback.go}>
-        {callback.busy ? "Adding it" : step.label}
+        {callback.busy ? t("appAuditionsFile.addingIt") : words.stepLabel(step)}
       </button>
     );
   }
@@ -45,7 +49,7 @@ function Primary({ a, now }: { a: Audition; now: Date }) {
         className={PILL}
         onClick={() => trackEvent("audition_prep_started", { audition_id: a.id, kind: step.step === "sides" ? "sides" : "monologue" })}
       >
-        {step.label}
+        {words.stepLabel(step)}
       </Link>
     );
   }
@@ -53,7 +57,7 @@ function Primary({ a, now }: { a: Audition; now: Date }) {
     return (
       <>
         <button type="button" className={PILL} disabled={add.busy} onClick={add.pick}>
-          {add.busy ? "Adding them" : step.label}
+          {add.busy ? t("appAuditionsFile.addingThem") : words.stepLabel(step)}
         </button>
         {add.field}
       </>
@@ -70,13 +74,14 @@ function Primary({ a, now }: { a: Audition; now: Date }) {
         el?.querySelector<HTMLElement>("textarea, input:not([type=checkbox])")?.focus({ preventScroll: true });
       }}
     >
-      {step.label}
+      {words.stepLabel(step)}
     </button>
   );
 }
 
 function Edit({ a, onClose }: { a: Audition; onClose: () => void }) {
   const update = useUpdateAudition();
+  const t = useT();
 
   function save(v: DraftValues) {
     const patch = patchFromValues(a, v);
@@ -85,9 +90,9 @@ function Edit({ a, onClose }: { a: Audition; onClose: () => void }) {
     update.mutate({ id: a.id, ...patch }, {
       onSuccess: () => {
         onClose();
-        toast.success(moved && a.reminders_on ? "Got it. Any reminders still to come follow the new time." : "Fixed. Thanks for catching that.");
+        toast.success(moved && a.reminders_on ? t("appAuditionsFile.savedMoved") : t("appAuditionsFile.savedFixed"));
       },
-      onError: (e) => toast.error(errMessage(e)),
+      onError: (e) => toast.error(errMessage(e, t)),
     });
   }
 
@@ -103,10 +108,10 @@ function Edit({ a, onClose }: { a: Audition; onClose: () => void }) {
               const on = e.target.checked;
               // Back on with every moment switched off would still send nothing: start again from all three.
               const reset = on && a.reminder_moments.length === 0 ? { reminder_moments: null } : {};
-              update.mutate({ id: a.id, reminders_on: on, ...reset }, { onError: () => toast.error(SAVE_FAILED) });
+              update.mutate({ id: a.id, reminders_on: on, ...reset }, { onError: () => toast.error(t("appAuditionsErr.saveFailed")) });
             }}
           />
-          email me about this one
+          {t("appAuditionsFile.emailMe")}
         </label>
         <RemoveLink a={a} />
       </div>
@@ -123,10 +128,11 @@ export function AuditionFile({ a, list, now, next = false, startEditing = false 
   a: Audition; list: Audition[]; now: Date; next?: boolean; startEditing?: boolean;
 }) {
   const [editing, setEditing] = useState(startEditing);
+  const words = useAuditionWords();
   if (editing) return <Edit a={a} onClose={() => setEditing(false)} />;
 
-  const role = [a.role, a.kind !== "in_person" ? KIND_LABEL[a.kind] : null].filter(Boolean).join(" · ");
-  const when = whenSentence(a);
+  const role = [a.role, a.kind !== "in_person" ? words.kind(a.kind) : null].filter(Boolean).join(" · ");
+  const when = words.whenSentence(a);
   const place = a.location?.split(",")[0];
   const sections: Record<FileSection, React.ReactNode> = {
     sides: <SidesSection a={a} />,
@@ -138,7 +144,7 @@ export function AuditionFile({ a, list, now, next = false, startEditing = false 
   return (
     <article className="aud-file-in grid gap-x-12 gap-y-10 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="min-w-0">
-        <p className="aud-eyebrow">{eyebrow(a, now, next)}</p>
+        <p className="aud-eyebrow">{words.eyebrow(a, now, next)}</p>
         <h1 className="aud-file-title mt-3 break-words text-[52px] md:text-[76px]">{a.project}</h1>
         {role && <p className="mt-3 text-[17px] md:text-[19px]">{role}</p>}
         {(when || place) && (

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { trackEvent } from "@/lib/events";
 import { isApplePlatform, subscribeUrl, type CalendarProvider } from "@/lib/calendarFeed";
 import { useCalendarLink } from "@/hooks/useAuditions";
+import { useT } from "@/lib/i18n";
 
 type Surface = "header" | "first_save";
 
@@ -23,6 +24,7 @@ const PROVIDERS: { id: CalendarProvider; label: string; newTab: boolean }[] = [
  */
 export function CalendarOptions({ surface }: { surface: Surface }) {
   const { data, isError, refetch, isFetching } = useCalendarLink(true);
+  const t = useT();
   // Decided after mount so the server render and the first client render agree.
   const [apple, setApple] = useState(true);
   useEffect(() => setApple(isApplePlatform(navigator as Parameters<typeof isApplePlatform>[0])), []);
@@ -31,14 +33,14 @@ export function CalendarOptions({ surface }: { surface: Surface }) {
   if (isError && !data) {
     return (
       <p className="aud-cap-muted text-sm">
-        I couldn&apos;t get your link.{" "}
+        {t("appAuditionsCal.linkFailed")}{" "}
         <button type="button" className="aud-link aud-focus" disabled={isFetching} onClick={() => refetch()}>
-          {isFetching ? "trying again" : "try again"}
+          {isFetching ? t("appAuditionsCal.tryingAgain") : t("appAuditionsCal.tryAgain")}
         </button>
       </p>
     );
   }
-  if (!data) return <p className="aud-cap-muted text-sm" role="status">Getting your link.</p>;
+  if (!data) return <p className="aud-cap-muted text-sm" role="status">{t("appAuditionsCal.gettingLink")}</p>;
 
   async function copy(url: string) {
     try {
@@ -49,11 +51,11 @@ export function CalendarOptions({ surface }: { surface: Surface }) {
       return;
     }
     picked("copy");
-    toast.success("Copied. Add it in your calendar as a subscription from a URL.");
+    toast.success(t("appAuditionsCal.copied"));
   }
 
   return (
-    <ul className="flex flex-wrap items-center gap-2" aria-label="Subscribe in">
+    <ul className="flex flex-wrap items-center gap-2" aria-label={t("appAuditionsCal.subscribeIn")}>
       {PROVIDERS.filter((p) => p.id !== "apple" || apple).map((p) => (
         <li key={p.id}>
           <a
@@ -69,7 +71,7 @@ export function CalendarOptions({ surface }: { surface: Surface }) {
       ))}
       <li>
         <button type="button" className="aud-link aud-cap-muted aud-focus px-1 text-sm font-medium" onClick={() => copy(data.url)}>
-          copy link
+          {t("appAuditionsCal.copyLink")}
         </button>
       </li>
     </ul>
@@ -84,6 +86,7 @@ export const CALENDAR_PANEL_ID = "aud-calendar-panel";
  * under the header rather than squeezed beside "How it works".
  */
 export function CalendarToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -92,23 +95,24 @@ export function CalendarToggle({ open, onToggle }: { open: boolean; onToggle: ()
       aria-controls={CALENDAR_PANEL_ID}
       onClick={onToggle}
     >
-      put them in your calendar
+      {t("appAuditionsCal.toggle")}
     </button>
   );
 }
 
 export function CalendarPanel({ onClose }: { onClose: () => void }) {
+  const t = useT();
   return (
     <div id={CALENDAR_PANEL_ID} className="aud-cal-panel mb-6 w-full max-w-[400px] px-5 pb-4 pt-3.5">
       <div className="flex items-start justify-between gap-3">
-        <p className="aud-sec-title text-[22px]">In your calendar</p>
-        <button type="button" className="aud-x aud-focus -mr-1.5" aria-label="Close" onClick={onClose}>
+        <p className="aud-sec-title text-[22px]">{t("appAuditionsCal.panelTitle")}</p>
+        <button type="button" className="aud-x aud-focus -mr-1.5" aria-label={t("appAuditionsCal.close")} onClick={onClose}>
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
             <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
           </svg>
         </button>
       </div>
-      <p className="aud-cap-muted mb-3.5 mt-1 text-[13.5px] leading-snug">Every audition shows up next to everything else, and I keep it up to date.</p>
+      <p className="aud-cap-muted mb-3.5 mt-1 text-[13.5px] leading-snug">{t("appAuditionsCal.panelBody")}</p>
       <CalendarOptions surface="header" />
     </div>
   );
@@ -117,14 +121,15 @@ export function CalendarPanel({ onClose }: { onClose: () => void }) {
 /** Offered once, right after the first audition is saved. */
 export function CalendarOffer({ onDone }: { onDone: () => void }) {
   const title = useId();
+  const t = useT();
   return (
     <section aria-labelledby={title} className="aud-cal-offer px-4 py-4">
-      <p className="aud-hero-dir aud-cap-muted text-[15px]">(one more thing)</p>
-      <h2 id={title} className="aud-title mt-0.5 text-[26px] leading-tight">Put them in your calendar?</h2>
-      <p className="mb-3.5 mt-1 text-sm">Every audition you add shows up there too, and I keep it up to date.</p>
+      <p className="aud-hero-dir aud-cap-muted text-[15px]">{t("appAuditionsCal.offerDirection")}</p>
+      <h2 id={title} className="aud-title mt-0.5 text-[26px] leading-tight">{t("appAuditionsCal.offerTitle")}</h2>
+      <p className="mb-3.5 mt-1 text-sm">{t("appAuditionsCal.offerBody")}</p>
       <CalendarOptions surface="first_save" />
       <button type="button" className="aud-link aud-cap-muted aud-focus mt-3 text-sm" onClick={onDone}>
-        not now
+        {t("appAuditionsCal.notNow")}
       </button>
     </section>
   );

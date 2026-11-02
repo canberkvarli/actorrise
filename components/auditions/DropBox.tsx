@@ -11,13 +11,15 @@ import { markCalendarOffer } from "@/lib/calendarFeed";
 import { uploadSides, useCreateAudition, useParseBreakdown } from "@/hooks/useAuditions";
 import { DraftCard, bodyFromValues, valuesFromDraft, type DraftValues } from "./DraftCard";
 import { errMessage } from "./draftValues";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 // First person, no dashes. Free and Plus point at /pricing; Pro has nowhere to go.
 function QuotaLine({ tier, limit }: { tier: AuditionQuota["tier"]; limit: number }) {
-  const all = <>That&apos;s all {limit} of your reads this month. </>;
-  if (tier === "pro") return <>{all}They come back next month, and you can fill this one in yourself.</>;
+  const t = useT();
+  const all = <>{t("appAuditionsDrop.quotaAll", { limit })}</>;
+  if (tier === "pro") return <>{all}{t("appAuditionsDrop.quotaPro")}</>;
   const next = tier === "plus" ? { to: "Pro", n: 100 } : { to: "Plus", n: 30 };
-  return <>{all}<Link href="/pricing" className="underline">{next.to} reads {next.n}</Link> a month, or fill it in yourself below, that&apos;s always free.</>;
+  return <>{all}<Link href="/pricing" className="underline">{t("appAuditionsDrop.quotaLink", { tier: next.to, n: next.n })}</Link>{t("appAuditionsDrop.quotaRest")}</>;
 }
 
 type Stage = "idle" | "reading" | "card";
@@ -25,12 +27,12 @@ type Stage = "idle" | "reading" | "card";
 const MAX_BYTES = 10 * 1024 * 1024;
 
 /** What the reading line says while the parse runs. It steps every 1.6s and holds on the last. */
-export const READING_BEATS = [
-  "Reading it.",
-  "Finding the date and the room.",
-  "Looking for what they want you to bring.",
-  "Nearly there.",
-] as const;
+export const READING_BEATS: readonly MessageKey[] = [
+  "appAuditionsDrop.beat1",
+  "appAuditionsDrop.beat2",
+  "appAuditionsDrop.beat3",
+  "appAuditionsDrop.beat4",
+];
 const BEAT_MS = 1600;
 
 /**
@@ -52,6 +54,7 @@ export function DropBox({
   firstOne?: boolean;
 }) {
   const router = useRouter();
+  const t = useT();
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [over, setOver] = useState(false);
@@ -97,11 +100,11 @@ export function DropBox({
     if (!f) return null;
     const isPdf = f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
     if (!isPdf) {
-      toast.message("Sides need to be a PDF.");
+      toast.message(t("appAuditionsDrop.notPdf"));
       return null;
     }
     if (f.size > MAX_BYTES) {
-      toast.message("That PDF is over 10MB. Try a smaller one.");
+      toast.message(t("appAuditionsDrop.tooBig"));
       return null;
     }
     setFile(f);
@@ -120,12 +123,12 @@ export function DropBox({
       setDraft(res.draft);
       setParsedOk(res.ok);
       setManual(false);
-      if (!res.ok) toast.message("I couldn't read that one. Fill it in and I'll keep your text in the notes.");
+      if (!res.ok) toast.message(t("appAuditionsDrop.couldntRead"));
     } catch (e) {
       if (mine !== run.current) return;
       const err = e as Error & { detail?: { error?: string; quota?: AuditionQuota } };
       if (err.detail?.error === "audition_parse_quota") setQuotaHit({ tier: err.detail.quota?.tier ?? "free", limit: err.detail.quota?.limit ?? 5 });
-      else toast.error(errMessage(e));
+      else toast.error(errMessage(e, t));
       setDraft(null);
       setParsedOk(false);
       setManual(true);
@@ -150,7 +153,7 @@ export function DropBox({
       if (file) {
         if (scriptId.current == null) scriptId.current = await uploadSides(file);
         if (scriptId.current != null) body.user_script_id = scriptId.current;
-        else toast.message("Your audition is saved, but the sides didn't load. You can upload them in ScenePartner.");
+        else toast.message(t("appAuditionsDrop.sidesDidntLoad"));
       }
       const parsed = draft && !manual && parsedOk ? draft : null;
       if (parsed?.material && v.material_raw === valuesFromDraft(parsed).material_raw) body.material = parsed.material;
@@ -163,7 +166,7 @@ export function DropBox({
       reset();
       router.push(`/auditions/${a.id}`);
     } catch (e) {
-      toast.error(errMessage(e));
+      toast.error(errMessage(e, t));
     } finally {
       busy.current = false;
       setSaving(false);
@@ -231,12 +234,12 @@ export function DropBox({
           <div role="status" aria-live="polite" className={`flex flex-col justify-center ${compact ? "min-h-[176px] gap-3.5 px-4 py-5" : "min-h-[240px] gap-[18px] px-[26px] py-7"}`}>
             <div className="flex items-center gap-4">
               <LampSketch size={compact ? 36 : 48} />
-              <p key={beat} className={`aud-beat aud-hero-dir ${compact ? "text-[22px]" : "text-[28px]"} leading-[1.1]`}>{READING_BEATS[beat]}</p>
+              <p key={beat} className={`aud-beat aud-hero-dir ${compact ? "text-[22px]" : "text-[28px]"} leading-[1.1]`}>{t(READING_BEATS[beat])}</p>
             </div>
             <div className="aud-track" aria-hidden="true"><span /></div>
             <div className="aud-cap-muted flex justify-between gap-3 text-sm">
-              <span>Usually a few seconds.</span>
-              <button type="button" className="aud-link aud-focus" onClick={stop}>stop</button>
+              <span>{t("appAuditionsDrop.usually")}</span>
+              <button type="button" className="aud-link aud-focus" onClick={stop}>{t("appAuditionsDrop.stop")}</button>
             </div>
           </div>
         ) : dragging ? (
@@ -244,17 +247,17 @@ export function DropBox({
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="aud-brand-ink">
               <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
             </svg>
-            <p className={`aud-hero-dir ${compact ? "text-[24px]" : "text-[30px]"} leading-[1.1]`}>Let go. I&apos;ll read it.</p>
-            <p className="aud-cap-muted text-sm">A breakdown or sides, as a PDF.</p>
+            <p className={`aud-hero-dir ${compact ? "text-[24px]" : "text-[30px]"} leading-[1.1]`}>{t("appAuditionsDrop.letGo")}</p>
+            <p className="aud-cap-muted text-sm">{t("appAuditionsDrop.dropHint")}</p>
           </div>
         ) : (
           <>
-            <label htmlFor={pasteId} className="sr-only">Casting email or breakdown</label>
+            <label htmlFor={pasteId} className="sr-only">{t("appAuditionsDrop.pasteLabel")}</label>
             <textarea
               ref={area}
               id={pasteId}
               rows={compact ? 3 : 5}
-              placeholder="Paste it here. The whole email is fine, signature and all."
+              placeholder={t("appAuditionsDrop.pastePlaceholder")}
               value={text}
               onChange={(e) => setText(e.target.value)}
             />
@@ -267,14 +270,14 @@ export function DropBox({
                   <span className="min-w-0">
                     <span className="aud-cap-strong break-all">{file.name}</span>{" "}
                     <button type="button" className="aud-link aud-focus" onClick={() => { setFile(null); scriptId.current = null; }}>
-                      take it off
+                      {t("appAuditionsDrop.takeItOff")}
                     </button>
                   </span>
                 ) : (
                   <span>
-                    Drop the breakdown or sides PDF, or{" "}
+                    {t("appAuditionsDrop.dropA")}
                     <button type="button" className="aud-link aud-cap-strong aud-focus" onClick={() => fileInput.current?.click()}>
-                      choose a file
+                      {t("appAuditionsDrop.chooseFile")}
                     </button>
                   </span>
                 )}
@@ -284,7 +287,7 @@ export function DropBox({
                 disabled={!!quotaHit}
                 className={`aud-pill aud-focus ml-auto bg-primary text-primary-foreground ${compact ? "h-10 px-5 text-[15px]" : "h-12 px-6 text-base"} disabled:opacity-50`}
               >
-                Read it
+                {t("appAuditionsDrop.readIt")}
               </button>
               <input ref={fileInput} type="file" accept="application/pdf" className="sr-only" tabIndex={-1} onChange={(e) => {
                   // Same as a drop: a good PDF starts reading straight away.
@@ -307,7 +310,7 @@ export function DropBox({
           className={`aud-link aud-cap-muted aud-focus font-medium ${compact ? "text-sm" : "text-[15px]"}`}
           onClick={() => { setManual(true); setStage("card"); }}
         >
-          or fill it in yourself
+          {t("appAuditionsDrop.fillYourself")}
         </button>
       </div>
     </div>

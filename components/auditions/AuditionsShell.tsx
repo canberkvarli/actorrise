@@ -5,12 +5,13 @@ import { flushSync } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { theatreFontVars } from "@/lib/fonts/theatre";
+import { useT } from "@/lib/i18n";
 import { trackEvent } from "@/lib/events";
 import { useAuditions } from "@/hooks/useAuditions";
 import { markIntroSeen, readIntroSeen, shouldAutoShowIntro } from "@/lib/auditionIntro";
 import { AuditionsIntro } from "./AuditionsIntro";
 import { DropBox } from "./DropBox";
-import { AuditionFile, OUTCOME_NOTE } from "./AuditionFile";
+import { AuditionFile, OUTCOME_NOTE_KEY } from "./AuditionFile";
 import { CalendarOffer, CalendarPanel, CalendarToggle } from "./CalendarLink";
 import { FileSkeleton } from "./FileSkeleton";
 import { HowItWorks } from "./HowItWorks";
@@ -24,6 +25,7 @@ import { takeCalendarOffer } from "@/lib/calendarFeed";
  */
 export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   const params = useSearchParams();
+  const tr = useT();
   const { data: list = [], isLoading, isError, refetch, isFetching } = useAuditions();
   const now = useMemo(() => new Date(), [list]); // eslint-disable-line react-hooks/exhaustive-deps
   const fallback = list.find((a) => a.scope === "upcoming") ?? list[0] ?? null;
@@ -49,7 +51,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   const source = params.get("from") === "onboarding" ? "onboarding" : "parse";
   // The outcome email's confirm button lands on /auditions/{id}?logged=<o>&ar=after.
   const loggedParam = params.get("logged");
-  const loggedNote = loggedParam && loggedParam in OUTCOME_NOTE ? OUTCOME_NOTE[loggedParam as keyof typeof OUTCOME_NOTE] : undefined;
+  const loggedNote = loggedParam && loggedParam in OUTCOME_NOTE_KEY ? tr(OUTCOME_NOTE_KEY[loggedParam as keyof typeof OUTCOME_NOTE_KEY]) : undefined;
   const logged = selectedId != null && open?.id === selectedId ? loggedNote : undefined;
   const failed = isError && list.length === 0;
   // An empty rail turns the page into one ask: the capture box, centre stage.
@@ -125,9 +127,9 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
   }
   const retry = (
     <p className="aud-muted mt-6 text-sm">
-      I couldn&apos;t load your auditions.{" "}
+      {tr("appAuditionsShell.loadFailed")}{" "}
       <button type="button" className="underline underline-offset-2" disabled={isFetching} onClick={() => refetch()}>
-        {isFetching ? "Trying again" : "Try again"}
+        {isFetching ? tr("appAuditionsShell.tryingAgain") : tr("appAuditionsShell.tryAgain")}
       </button>
     </p>
   );
@@ -161,12 +163,12 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
             <p role="status" className="aud-dir aud-muted mt-4 text-[13.5px]">{loggedNote}</p>
           )}
           <section aria-labelledby="aud-ask" className="aud-rise mx-auto mt-10 flex max-w-[760px] flex-col items-center text-center md:mt-14">
-            <p className="aud-hero-dir aud-cap-muted text-lg md:text-xl">(house is dark. one lamp on.)</p>
+            <p className="aud-hero-dir aud-cap-muted text-lg md:text-xl">{tr("appAuditionsShell.emptyDirection")}</p>
             <h1 id="aud-ask" className="aud-hero-h mt-2.5">
-              <span className="sr-only">Auditions. </span>Got one <em>coming up?</em>
+              <span className="sr-only">{tr("appAuditionsShell.srAuditions")}</span>{tr("appAuditionsShell.askA")}<em>{tr("appAuditionsShell.askB")}</em>
             </h1>
             <p className="mt-5 max-w-[30em] text-[17px] leading-normal md:text-[19px]">
-              Paste the casting email or drop the sides. I&apos;ll read it into a ticket and keep you on it.
+              {tr("appAuditionsShell.askBody")}
             </p>
             <div ref={capture} className="mt-9 w-full max-w-[720px] text-left">
               <DropBox startOpen={startOpen} source={source} size="hero" firstOne />
@@ -185,12 +187,12 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
       ) : (
       <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 md:pb-20 md:pt-10">
         <div className="mb-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
-          <h1 className="sr-only">Auditions</h1>
+          <h1 className="sr-only">{tr("appAuditionsShell.srTitle")}</h1>
           {list.length > 0 && <CalendarToggle open={calOpen} onToggle={() => setCalOpen((v) => !v)} />}
           <button
             type="button"
-            aria-label="How it works"
-            title="How it works"
+            aria-label={tr("appAuditionsShell.howItWorks")}
+            title={tr("appAuditionsShell.howItWorks")}
             className="aud-help-q aud-focus"
             onClick={() => {
               setIntroStep(0);
@@ -207,7 +209,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
             onClick={() => (adding ? setAdding(false) : openAdd())}
           >
             <span aria-hidden className="aud-add-plus text-lg leading-none" data-open={adding ? "true" : "false"}>+</span>
-            {adding ? "Close" : "Add an audition"}
+            {adding ? tr("appAuditionsShell.close") : tr("appAuditionsShell.addAudition")}
           </button>
         </div>
         {list.length > 0 && (
@@ -221,7 +223,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
           <div id="aud-add" ref={capture} className="mx-auto mb-8 w-full max-w-2xl">
             <div className="mb-2 flex justify-end">
               <button type="button" className="aud-link aud-cap-muted aud-focus text-sm font-medium" onClick={() => setAdding(false)}>
-                close
+                {tr("appAuditionsShell.closeLower")}
               </button>
             </div>
             <DropBox startOpen={startOpen} source={source} size="compact" firstOne={list.length === 0} />
@@ -244,7 +246,7 @@ export function AuditionsShell({ selectedId }: { selectedId: number | null }) {
             startEditing={params.get("edit") === "1" && open.id === selectedId}
           />
         ) : selectedId != null ? (
-          <p className="aud-muted text-sm">That audition isn&apos;t on your rail.</p>
+          <p className="aud-muted text-sm">{tr("appAuditionsShell.notOnRail")}</p>
         ) : null}
         {offer && <div className="aud-row-in mt-6 max-w-[440px]">{offer}</div>}
       </div>
