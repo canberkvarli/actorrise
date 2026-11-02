@@ -55,7 +55,19 @@ type Phone = {
 };
 type Stage = { type: "stage"; seconds: number; time: string; cue: string; quote: string; accent: string };
 type End = { type: "end"; seconds: number; brand: string; tagline: string; action: string; kicker?: string };
-export type StoryScene = Night | Books | Thinking | Phone | Stage | End;
+/** An email lands: card draws on, header rows appear, the body types in, one phrase gets underlined. */
+type Email = {
+  type: "email";
+  seconds: number;
+  line: string;
+  accent: string;
+  from: string;
+  subject: string;
+  body: string; // lines split by \n
+  mark?: string; // phrase in the body to underline in orange
+  cue?: string;
+};
+export type StoryScene = Night | Books | Thinking | Email | Phone | Stage | End;
 export type StorySpec = { id: string; scenes: StoryScene[] };
 export const storyFrames = (s: StorySpec) =>
   s.scenes.reduce((n, sc) => n + Math.round(sc.seconds * FPS), 0);
@@ -505,6 +517,96 @@ const ThinkingScene: React.FC<{ s: Thinking }> = ({ s }) => {
           <Headline text={s.line2} accent={s.accent} color={C.ink} size={92} />
         </Rise>
       </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+// ---------- the email that changes the week ----------
+const EmailScene: React.FC<{ s: Email }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const L = 130, R = 950, Tt = 560, B = 1250;
+  const card = `M${L + 30} ${Tt} C ${L + 300} ${Tt - 4}, ${R - 300} ${Tt + 4}, ${R - 30} ${Tt} C ${R - 8} ${Tt}, ${R} ${Tt + 10}, ${R} ${Tt + 30} L ${R + 2} ${B - 30} C ${R} ${B - 8}, ${R - 10} ${B}, ${R - 30} ${B} L ${L + 30} ${B + 2} C ${L + 8} ${B}, ${L} ${B - 10}, ${L} ${B - 30} L ${L - 2} ${Tt + 30} C ${L} ${Tt + 8}, ${L + 10} ${Tt}, ${L + 30} ${Tt} Z`;
+  const env = `M${L + 60} ${Tt + 60} L ${L + 160} ${Tt + 60} L ${L + 160} ${Tt + 130} L ${L + 60} ${Tt + 130} Z M${L + 60} ${Tt + 62} L ${L + 110} ${Tt + 102} L ${L + 160} ${Tt + 62}`;
+  const ping = spring({ frame: f - 16, fps, config: { damping: 9, mass: 0.5 } });
+  const bodyAt = 34;
+  const lines = s.body.split("\n");
+  // characters revealed so far across all body lines
+  const shown = Math.max(0, Math.floor((f - bodyAt) / 0.6));
+  const bodyLen = s.body.replace(/\n/g, "").length;
+  const markAt = bodyAt + bodyLen * 0.6 + 4;
+  const under = prog(f, markAt, markAt + 10);
+  let used = 0;
+  return (
+    <AbsoluteFill>
+      <Sfx name="pencil_long" at={0} vol={0.7} />
+      <Sfx name="chime" at={16} vol={0.8} />
+      <Sfx name="pop" at={18} vol={0.5} />
+      <Sfx name="typing" at={bodyAt} frames={Math.ceil(bodyLen * 0.6)} vol={0.45} />
+      <Sfx name="pencil_short" at={Math.round(markAt)} vol={0.8} />
+      {s.cue && <Sfx name="boop_hi" at={Math.round(markAt) + 12} vol={0.6} />}
+      <Glow glow={0.4} y="48%" />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Ink d={card} start={0} dur={24} w={6} fill="#fbf7ef" />
+        <Ink d={env} start={10} dur={14} w={5} fill="rgba(232,121,43,0.3)" />
+        <Ink d={`M${L + 50} ${Tt + 260} C ${L + 300} ${Tt + 256}, ${R - 300} ${Tt + 264}, ${R - 50} ${Tt + 260}`} start={22} dur={12} w={3} color={C.inkSoft} />
+        {/* the little red dot of a new message */}
+        <circle cx={L + 160} cy={Tt + 60} r={20 * ping} fill={C.orange} stroke={C.ink} strokeWidth={ping > 0.05 ? 4 : 0} />
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={8}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={112} />
+        </Rise>
+      </AbsoluteFill>
+      <div style={{ position: "absolute", left: L + 200, top: Tt + 52, width: R - L - 250 }}>
+        <Rise at={18}>
+          <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 24, letterSpacing: 3, color: C.inkSoft }}>FROM</div>
+          <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 44, color: C.ink, lineHeight: 1.1 }}>{s.from}</div>
+        </Rise>
+      </div>
+      <div style={{ position: "absolute", left: L + 60, top: Tt + 170, width: R - L - 120 }}>
+        <Rise at={24}>
+          <div style={{ fontFamily: F.serifI, fontStyle: "italic", fontSize: 46, color: C.ink, lineHeight: 1.1 }}>{s.subject}</div>
+        </Rise>
+      </div>
+      <div style={{ position: "absolute", left: L + 60, top: Tt + 300, width: R - L - 120 }}>
+        {lines.map((l, i) => {
+          const from = used;
+          used += l.length;
+          const vis = l.slice(0, Math.max(0, Math.min(l.length, shown - from)));
+          const k = s.mark ? l.indexOf(s.mark) : -1;
+          const content =
+            k < 0 || vis.length < k + (s.mark?.length ?? 0) ? (
+              vis
+            ) : (
+              <>
+                {vis.slice(0, k)}
+                <span
+                  style={{
+                    color: under > 0 ? C.orange : C.ink,
+                    backgroundImage: `linear-gradient(${C.orange}, ${C.orange})`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "0 92%",
+                    backgroundSize: `${under * 100}% 7px`,
+                  }}
+                >
+                  {s.mark}
+                </span>
+                {vis.slice(k + (s.mark?.length ?? 0))}
+              </>
+            );
+          return (
+            <div key={i} style={{ fontFamily: F.type, fontStyle: "italic", fontSize: 44, color: C.ink, lineHeight: "70px", minHeight: 70 }}>
+              {content}
+            </div>
+          );
+        })}
+      </div>
+      {s.cue && (
+        <div style={{ position: "absolute", left: 0, right: 0, top: B + 50 }}>
+          <Cue text={s.cue} color={C.orange} at={Math.round(markAt) + 12} />
+        </div>
+      )}
     </AbsoluteFill>
   );
 };
@@ -1175,6 +1277,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
     return sc.type === "night" ? <NightScene s={sc} /> :
       sc.type === "books" ? <BooksScene s={sc} /> :
       sc.type === "thinking" ? <ThinkingScene s={sc} /> :
+      sc.type === "email" ? <EmailScene s={sc} /> :
       sc.type === "phone" ? <PhoneScene s={sc} first={firstPhone} /> :
       sc.type === "stage" ? <StageScene s={sc} /> :
       <EndScene s={sc} />;

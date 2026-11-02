@@ -1,0 +1,101 @@
+{
+  "id": "2026-11-02-callback-funny",
+  "scenes": [
+    {
+      "type": "email",
+      "seconds": 4.2,
+      "line": "Callback.",
+      "accent": "Callback.",
+      "from": "Casting",
+      "subject": "Re: your audition",
+      "body": "Loved the Chekhov.\nBring something funny.\nUnder a minute. Thursday.",
+      "mark": "funny.",
+      "cue": "(you only do sad ones.)"
+    },
+    {
+      "type": "thinking",
+      "seconds": 3.4,
+      "line1": "Everything I have",
+      "line2": "is tragic.",
+      "accent": "tragic.",
+      "notes": ["Medea", "Hedda", "Nina"],
+      "strike": 1
+    },
+    {
+      "type": "phone",
+      "mode": "search",
+      "seconds": 3.9,
+      "line": "Type a name.",
+      "accent": "name.",
+      "cue": "(that funny one from Wilde.)",
+      "query": "algernon",
+      "chips": ["character", "comedic"],
+      "tap": { "at": 44, "x": 749, "y": 1113 },
+      "resultsCue": "(you typed: algernon)",
+      "results": [
+        {
+          "character": "Algernon",
+          "source": "The Importance of Being Earnest · Wilde",
+          "meta": "0:45 · comedic",
+          "quote": "\"I have invented an invaluable permanent invalid called Bunbury.\""
+        },
+        {
+          "character": "Algernon",
+          "source": "The Importance of Being Earnest · Wilde",
+          "meta": "0:58 · comedic",
+          "quote": "\"You look as if your name was Ernest.\""
+        },
+        {
+          "character": "Algernon",
+          "source": "The Importance of Being Earnest · Wilde",
+          "meta": "1:30 · comedic",
+          "quote": "\"Once a week is quite enough to dine with one's own relations.\""
+        }
+      ]
+    },
+    {
+      "type": "phone",
+      "mode": "read",
+      "seconds": 3.9,
+      "line": "Under a minute.",
+      "accent": "minute.",
+      "read": {
+        "tag": "ALGERNON",
+        "title": "Being",
+        "titleItalic": "Earnest",
+        "meta": "Oscar Wilde · 1895 · act i · 0:45",
+        "text": "I have invented an\ninvaluable permanent\ninvalid called Bunbury,\nin order that I may be\nable to go down into the\ncountry whenever I choose.",
+        "mark": 2,
+        "note": "dry."
+      }
+    },
+    {
+      "type": "stage",
+      "seconds": 4.0,
+      "time": "Thursday.",
+      "cue": "(callback.)",
+      "quote": "“Bunbury? Do it again.”",
+      "accent": "again."
+    },
+    {
+      "type": "end",
+      "seconds": 3.6,
+      "brand": "Ghost Light",
+      "tagline": "(monologues for actors.)",
+      "action": "Free on the App Store",
+      "kicker": "(now playing.)"
+    }
+  ],
+  "source": {
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "sql": "select m.id, m.character_name, m.estimated_duration_seconds as secs, m.overdone_score, m.primary_emotion, m.tone, m.themes, m.text from monologues m join plays p on p.id=m.play_id where m.character_name ilike 'algernon%' and p.title ilike '%earnest%' order by m.estimated_duration_seconds",
+    "checked": "select p.title, count(*) from monologues m join plays p on p.id=m.play_id where m.character_name ilike '%algernon%' group by 1  -> The Importance of Being Earnest, 3",
+    "rows": [
+      { "id": 4236, "character": "Algernon", "play": "The Importance of Being Earnest", "author": "Oscar Wilde", "year": 1895, "secs": 45, "overdone": 0.6, "tone": "comedic", "emotion": "joy" },
+      { "id": 4232, "character": "Algernon", "play": "The Importance of Being Earnest", "author": "Oscar Wilde", "year": 1895, "secs": 58, "overdone": 0.6, "tone": "comedic", "emotion": "confusion" },
+      { "id": 4237, "character": "Algernon", "play": "The Importance of Being Earnest", "author": "Oscar Wilde", "year": 1895, "secs": 90, "overdone": 0.6, "tone": "comedic", "emotion": "disgust" }
+    ],
+    "public_domain": "Wilde died 1900, play published 1895: text on screen is fine. Quoted lines are verbatim from rows 4236, 4232 and 4237.",
+    "feature": "character"
+  }
+}
