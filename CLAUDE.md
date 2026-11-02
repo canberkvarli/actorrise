@@ -63,6 +63,20 @@ When spawning subagents (Agent/Task tool), the routing block is automatically in
 
 ---
 
+# Cloud sessions (Claude Code on the web, the desktop app's cloud, the phone)
+
+The `actorrise` cloud environment carries the prod keys (Canberk, 2026-11-02), so a cloud
+session reads and writes the real database, Stripe and RevenueCat, the same as the laptop.
+Two rules hold there:
+
+- **Never start the backend server** (`uvicorn`, `run.sh`, `npm run dev:backend` or anything that
+  imports `app.main` and serves). It starts the prod schedulers: lifecycle emails, push
+  notifications, Ghost Light reminders. A second copy sends everything twice. Scripts in
+  `backend/scripts/` are fine; they do not start the schedulers.
+- **No memory files there.** What the laptop's memory knows is not in a cloud session. Who was
+  written to is the `contact_log` table (`scripts/contact_log.py`), not a file, so the check
+  before every email works the same in both places.
+
 # Answers go in the chat, not in report files
 
 Canberk, 2026-10-23: research, findings, designs and recommendations go straight
