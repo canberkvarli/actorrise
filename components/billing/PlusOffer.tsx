@@ -6,9 +6,25 @@ import Link from "next/link";
 import { ClassRoute } from "@/components/billing/ClassRoute";
 import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useTrialWords } from "@/hooks/useTrialWords";
 import { trackPaywallCtaClicked } from "@/lib/analytics";
-import { plusGains, plusOffer, type WallKind } from "@/lib/paywall/offer";
+import {
+  PLUS_ANNUAL,
+  PLUS_MONTHLY,
+  PLUS_PER_MONTH_ON_ANNUAL,
+  plusOffer,
+  type WallKind,
+} from "@/lib/paywall/offer";
+import { useLocale, useT, type MessageKey } from "@/lib/i18n";
+import { chargeDateIn, useTrialText } from "@/components/billing/trialText";
+
+/** lib/paywall/offer.ts's PLUS_GAINS, said in the reader's language. */
+const GAIN_KEYS: Record<WallKind, MessageKey> = {
+  read: "appAccountPlusOffer.gainRead",
+  search: "appAccountPlusOffer.gainSearch",
+  rehearse: "appAccountPlusOffer.gainRehearse",
+  sides: "appAccountPlusOffer.gainSides",
+};
+const GAIN_ORDER: WallKind[] = ["read", "search", "rehearse", "sides"];
 
 interface PlusOfferProps {
   /** The gate, for ?from= and analytics. */
@@ -31,21 +47,46 @@ interface PlusOfferProps {
  *
  * Carries no theatre tokens of its own: every host already binds them.
  */
-export function PlusOffer({ feature, lead, onDismiss, dismissLabel = "not now" }: PlusOfferProps) {
+export function PlusOffer({ feature, lead, onDismiss, dismissLabel }: PlusOfferProps) {
   const { subscription } = useSubscription();
   const tier = subscription?.tier_name ?? "free";
-  const words = useTrialWords();
+  const words = useTrialText();
+  const t = useT();
+  const locale = useLocale();
   // The date is read once per mount, so the printed day does not move under
   // a wall left open past midnight.
   const [now] = useState(() => new Date());
-  const offer = plusOffer(feature, words, now);
+  // Links only: the words are built below in the reader's language.
+  const links = plusOffer(feature, words, now);
+  const forYear = t("appAccountPlusOffer.forTheYear", { annual: PLUS_ANNUAL });
+  const on = chargeDateIn(locale, now, words.days);
+  const offer = {
+    href: links.href,
+    monthlyHref: links.monthlyHref,
+    perMonth: PLUS_PER_MONTH_ON_ANNUAL,
+    perMonthNote: t("appAccountPlusOffer.perMonthNote", { annual: PLUS_ANNUAL }),
+    cta: words.tasted
+      ? t("appAccountPlusOffer.keepPlusYear", { annual: PLUS_ANNUAL })
+      : t("appAccountTrial.cta", { short: words.short }),
+    rows: (words.tasted
+      ? [[t("appAccountPlusOffer.today"), forYear]]
+      : [
+          [t("appAccountPlusOffer.today"), "$0"],
+          [on, forYear],
+        ]) as [string, string][],
+    fine: words.tasted
+      ? t("appAccountPlusOffer.fineTasted")
+      : t("appAccountPlusOffer.fine", { date: on }),
+    monthlyLabel: t("appAccountPlusOffer.monthly", { monthly: PLUS_MONTHLY }),
+  };
+  const gains = [lead, ...GAIN_ORDER.filter((k) => k !== lead)];
 
   return (
     <div className="t-plus">
       <ul className="t-modal__list">
-        {plusGains(lead).map((gain) => (
+        {gains.map((gain) => (
           <li key={gain} className="t-modal__item">
-            {gain}
+            {t(GAIN_KEYS[gain])}
           </li>
         ))}
       </ul>
@@ -93,7 +134,7 @@ export function PlusOffer({ feature, lead, onDismiss, dismissLabel = "not now" }
 
       {onDismiss && (
         <button type="button" onClick={onDismiss} className="t-plus__dismiss">
-          {dismissLabel}
+          {dismissLabel ?? t("appAccountUpgrade.notNow")}
         </button>
       )}
     </div>

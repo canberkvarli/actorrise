@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
 import { ScriptPagesSketch } from "@/components/brand/sketches";
+import { useT } from "@/lib/i18n";
 
 /**
  * What the answers buy you, shown while you answer.
@@ -34,8 +35,13 @@ type Props = {
 };
 
 function Piece({ m }: { m: Monologue }) {
+  const t = useT();
   const mins = Math.round((m.estimated_duration_seconds || 0) / 60);
-  const meta = [m.character_age_range, m.tone, mins ? `${mins} min` : null].filter(
+  const meta = [
+    m.character_age_range,
+    m.tone,
+    mins ? t("appAccountPayoff.minutes", { n: mins }) : null,
+  ].filter(
     Boolean,
   );
 
@@ -93,14 +99,20 @@ type Lane = {
  * why this never renders an error.
  */
 function LaneRead({ lane }: { lane: Lane }) {
+  const t = useT();
   return (
     <>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="font-brand text-xl font-medium text-foreground">
-          Your lane
+          {t("appAccountPayoff.yourLane")}
         </h2>
         <span className="text-xs text-muted-foreground/60">
-          from {lane.credits_counted} credit{lane.credits_counted === 1 ? "" : "s"}
+          {t(
+            lane.credits_counted === 1
+              ? "appAccountPayoff.fromCredit"
+              : "appAccountPayoff.fromCredits",
+            { n: lane.credits_counted },
+          )}
         </span>
       </div>
 
@@ -121,7 +133,7 @@ function LaneRead({ lane }: { lane: Lane }) {
       {lane.pieces.length > 0 && (
         <>
           <p className="mt-6 text-xs uppercase tracking-[0.14em] text-muted-foreground/60">
-            Speeches in that lane
+            {t("appAccountPayoff.speechesInLane")}
           </p>
           <motion.div
             initial="hidden"
@@ -158,6 +170,7 @@ function LaneRead({ lane }: { lane: Lane }) {
 export function ProfilePayoff({ signature, ready, because }: Props) {
   // Hold the signature still for a beat. Every select fires a save AND would
   // otherwise fire a recommendation request; the actor is usually mid-thought.
+  const t = useT();
   const [settled, setSettled] = useState(signature);
   useEffect(() => {
     const id = setTimeout(() => setSettled(signature), DEBOUNCE_MS);
@@ -204,7 +217,7 @@ export function ProfilePayoff({ signature, ready, because }: Props) {
     <section className="mt-10 border-t border-border/70 pt-8">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="font-brand text-xl font-medium text-foreground">
-          What this gets you
+          {t("appAccountPayoff.whatThisGets")}
         </h2>
         <AnimatePresence mode="wait">
           <motion.p
@@ -216,8 +229,8 @@ export function ProfilePayoff({ signature, ready, because }: Props) {
             className="stage-direction text-xs text-muted-foreground/70"
           >
             {because.length > 0
-              ? `(because you said ${because.join(", ")}.)`
-              : "(tell me who you are and I'll pick.)"}
+              ? t("appAccountPayoff.because", { list: because.join(", ") })
+              : t("appAccountPayoff.tellMe")}
           </motion.p>
         </AnimatePresence>
       </div>
@@ -225,10 +238,7 @@ export function ProfilePayoff({ signature, ready, because }: Props) {
       {!ready ? (
         <div className="t-credit__drop mt-6 flex flex-col items-center gap-3 px-4 py-10 text-center">
           <ScriptPagesSketch size={56} className="text-muted-foreground/50" />
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Give me an age range and what you act in, and pieces picked for you
-            will show up right here.
-          </p>
+          <p className="max-w-sm text-sm text-muted-foreground">{t("appAccountPayoff.notReady")}</p>
         </div>
       ) : items.length === 0 ? (
         <div className="mt-6 grid gap-3 sm:grid-cols-3">

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 interface InlineEditFieldProps {
   value: string;
@@ -42,6 +43,7 @@ export function InlineEditField({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const [saving, setSaving] = useState(false);
+  const t = useT();
 
   // Update editValue when value prop changes
   React.useEffect(() => {
@@ -70,9 +72,9 @@ export function InlineEditField({
     try {
       await onSave(editValue.trim());
       setIsEditing(false);
-      toast.success("Saved");
+      toast.success(t("appAccountUi.saved"));
     } catch (error) {
-      toast.error("Failed to save");
+      toast.error(t("appAccountUi.saveFailed"));
       console.error("Save error:", error);
     } finally {
       setSaving(false);
@@ -186,7 +188,7 @@ export function InlineEditField({
                   displayClassName
                 )}
               >
-                {value || <span className="text-muted-foreground italic">Click to edit</span>}
+                {value || <span className="text-muted-foreground italic">{t("appAccountUi.clickToEdit")}</span>}
               </button>
             )}
           </motion.div>

@@ -42,6 +42,56 @@ import {
   HEIGHT_FEET,
   HEIGHT_INCHES,
 } from "@/lib/profileOptions";
+import { useT, type MessageKey } from "@/lib/i18n";
+
+/**
+ * How a stored option value reads. The value itself (sent to the API, kept in
+ * the database) never changes; only the words on screen do. Anything not
+ * listed (a city, "SAG", a free-text "Other: ...") prints as stored.
+ */
+const OPTION_LABEL: Record<string, MessageKey> = {
+  Male: "appAccountOptions.male",
+  Female: "appAccountOptions.female",
+  "Non-binary": "appAccountOptions.nonBinary",
+  Other: "appAccountOptions.other",
+  Regional: "appAccountOptions.regional",
+  Slender: "appAccountOptions.slender",
+  Medium: "appAccountOptions.medium",
+  Athletic: "appAccountOptions.athletic",
+  Curvy: "appAccountOptions.curvy",
+  "Non-union": "appAccountOptions.nonUnion",
+  "Leading Man/Woman": "appAccountOptions.leading",
+  "Character Actor": "appAccountOptions.characterActor",
+  Ingénue: "appAccountOptions.ingenue",
+  Comic: "appAccountOptions.comic",
+  Drama: "appAccountOptions.drama",
+  Comedy: "appAccountOptions.comedy",
+  Classical: "appAccountOptions.classical",
+  Contemporary: "appAccountOptions.contemporary",
+  Musical: "appAccountOptions.musical",
+  Conservatory: "appAccountOptions.conservatory",
+  "Studio training": "appAccountOptions.studioTraining",
+  "University / College": "appAccountOptions.university",
+  Asian: "appAccountOptions.asian",
+  Black: "appAccountOptions.black",
+  "Hispanic / Latine": "appAccountOptions.hispanic",
+  Indigenous: "appAccountOptions.indigenous",
+  "Middle Eastern": "appAccountOptions.middleEastern",
+  White: "appAccountOptions.white",
+  Multiracial: "appAccountOptions.multiracial",
+  Student: "appAccountOptions.student",
+  Emerging: "appAccountOptions.emerging",
+  Professional: "appAccountOptions.professional",
+};
+
+/** ACTOR_TYPE_LABELS, by id. */
+const ACTOR_TYPE_KEY: Record<string, MessageKey> = {
+  theater: "appAccountOptions.typeTheater",
+  film: "appAccountOptions.typeFilm",
+  voice: "appAccountOptions.typeVoice",
+  student: "appAccountOptions.student",
+  other: "appAccountOptions.other",
+};
 
 function parseHeight(h: string | undefined): { feet: string; inches: string } {
   if (!h || !h.trim()) return { feet: "__none__", inches: "__none__" };
@@ -75,10 +125,10 @@ type ProfileFormData = z.infer<typeof profileSchema>;
  * These name what the actor is doing in each one.
  */
 const TAB_RAIL = [
-  { value: "basic", label: "Who you are" },
-  { value: "acting", label: "How you work" },
-  { value: "preferences", label: "What you see" },
-] as const;
+  { value: "basic", label: "appAccountProfile.tabWho" },
+  { value: "acting", label: "appAccountProfile.tabHow" },
+  { value: "preferences", label: "appAccountProfile.tabWhat" },
+] as const satisfies readonly { value: string; label: MessageKey }[];
 
 /** Fields rise in together on a tab change rather than appearing all at once. */
 const RISE = {
@@ -133,6 +183,15 @@ function GroupRule({ children }: { children: React.ReactNode }) {
 export function ActorProfileForm() {
   const queryClient = useQueryClient();
   const { user, refreshUser } = useAuth();
+  const t = useT();
+  const opt = useCallback(
+    (value: string | undefined | null) => {
+      if (!value) return "";
+      const key = OPTION_LABEL[value];
+      return key ? t(key) : value;
+    },
+    [t],
+  );
   // A drama teacher should not be asked for her union status. Educators get the
   // short version of this page: name, market, school and a photo. Students keep
   // the full actor profile — they are actors, they just have a teacher.
@@ -155,9 +214,9 @@ export function ActorProfileForm() {
       await api.patch("/api/auth/onboarding", { organization: organization.trim() });
       await refreshUser();
     } catch {
-      toast.error("Couldn't save that. Try again?");
+      toast.error(t("appAccountProfile.orgSaveFailed"));
     }
-  }, [organization, organizationLoaded, user?.organization, refreshUser]);
+  }, [organization, organizationLoaded, user?.organization, refreshUser, t]);
 
   const { data: cachedProfile, isLoading: isQueryLoading, isFetching: isQueryFetching } = useProfileFormData();
   // Show skeleton only on very first load (no cached data at all). Revisits render instantly.
@@ -315,36 +374,39 @@ export function ActorProfileForm() {
    * is that it reads like something, so a gap in it reads like a gap.
    */
   const actorTypeText = useMemo(
-    () => actorTypes.map((id) => ACTOR_TYPE_LABELS[id] || id).join(", "),
-    [actorTypes],
+    () =>
+      actorTypes
+        .map((id) => (ACTOR_TYPE_KEY[id] ? t(ACTOR_TYPE_KEY[id]) : ACTOR_TYPE_LABELS[id] || id))
+        .join(", "),
+    [actorTypes, t],
   );
   const experienceLabel = useMemo(
-    () => EXPERIENCE_LEVELS.find((l) => l.id === experienceLevel)?.label || "",
-    [experienceLevel],
+    () => opt(EXPERIENCE_LEVELS.find((l) => l.id === experienceLevel)?.label || ""),
+    [experienceLevel, opt],
   );
 
   const callSheet = useMemo(() => {
     if (isEducator) {
       return {
         primary: [
-          { key: "location", value: location, blank: "market", tab: "basic", fieldId: "location" },
-          { key: "organization", value: organization, blank: "school or studio", tab: "basic", fieldId: "organization" },
+          { key: "location", value: opt(location), blank: t("appAccountProfile.blankMarket"), tab: "basic", fieldId: "location" },
+          { key: "organization", value: organization, blank: t("appAccountProfile.blankSchool"), tab: "basic", fieldId: "organization" },
         ] as CallSheetSlot[],
         secondary: [] as CallSheetSlot[],
       };
     }
     const primary: CallSheetSlot[] = [
-      { key: "age_range", value: ageRange, blank: "age range", tab: "basic", fieldId: "age_range" },
-      { key: "gender", value: gender, blank: "gender", tab: "basic", fieldId: "gender" },
-      { key: "union_status", value: unionStatus, blank: "union status", tab: "acting", fieldId: "union_status" },
-      { key: "location", value: location, blank: "market", tab: "basic", fieldId: "location" },
+      { key: "age_range", value: ageRange, blank: t("appAccountProfile.blankAge"), tab: "basic", fieldId: "age_range" },
+      { key: "gender", value: opt(gender), blank: t("appAccountProfile.blankGender"), tab: "basic", fieldId: "gender" },
+      { key: "union_status", value: opt(unionStatus), blank: t("appAccountProfile.blankUnion"), tab: "acting", fieldId: "union_status" },
+      { key: "location", value: opt(location), blank: t("appAccountProfile.blankMarket"), tab: "basic", fieldId: "location" },
     ];
     const secondary: CallSheetSlot[] = [
-      { key: "type", value: actorTypeText, blank: "what you act in", tab: "acting", fieldId: "actor-types" },
-      { key: "experience_level", value: experienceLabel, blank: "experience", tab: "acting", fieldId: "experience_level" },
+      { key: "type", value: actorTypeText, blank: t("appAccountProfile.blankActIn"), tab: "acting", fieldId: "actor-types" },
+      { key: "experience_level", value: experienceLabel, blank: t("appAccountProfile.blankExperience"), tab: "acting", fieldId: "experience_level" },
     ];
     return { primary, secondary };
-  }, [isEducator, organization, ageRange, gender, unionStatus, location, actorTypeText, experienceLabel]);
+  }, [isEducator, organization, ageRange, gender, unionStatus, location, actorTypeText, experienceLabel, opt, t]);
 
   /**
    * Only the fields the recommender actually reads. Height and name do not
@@ -360,7 +422,11 @@ export function ActorProfileForm() {
     (preferredGenresValue || []).join(","),
   ].join("|");
   const payoffReady = Boolean(ageRange && (actorTypes.length > 0 || experienceLevel));
-  const payoffBecause = [ageRange, gender?.toLowerCase(), actorTypeText.toLowerCase()].filter(
+  const payoffBecause = [
+    ageRange,
+    opt(gender).toLocaleLowerCase(),
+    actorTypeText.toLocaleLowerCase(),
+  ].filter(
     Boolean,
   ) as string[];
 
@@ -370,10 +436,10 @@ export function ActorProfileForm() {
    */
   const overdoneCopy = useMemo(() => {
     const v = Number(overdoneSensitivity ?? 0.5);
-    if (v <= 0.3) return "Only the pieces everyone in the room has already heard.";
-    if (v <= 0.6) return "The well-worn ones, before you get attached to them.";
-    return "Anything a reader might recognise, so you can go somewhere else.";
-  }, [overdoneSensitivity]);
+    if (v <= 0.3) return t("appAccountProfile.overdoneLow");
+    if (v <= 0.6) return t("appAccountProfile.overdoneMid");
+    return t("appAccountProfile.overdoneHigh");
+  }, [overdoneSensitivity, t]);
 
   /** A blank on the call sheet is a shortcut to the field that fills it. */
   const jumpToField = useCallback((tab: string, fieldId: string) => {
@@ -578,7 +644,7 @@ export function ActorProfileForm() {
         if (abort.signal.aborted) return;
         console.error("❌ Save error:", err);
         const error = err as { response?: { data?: { detail?: string | Array<{ msg?: string } | string> | Record<string, unknown> } } };
-        let errorMessage = "Failed to save profile";
+        let errorMessage = t("appAccountProfile.saveFailed");
         if (error.response?.data?.detail) {
           if (typeof error.response.data.detail === 'string') {
             errorMessage = error.response.data.detail;
@@ -601,7 +667,7 @@ export function ActorProfileForm() {
     name, ageRange, gender, ethnicity, height, build, location,
     experienceLevel, type, actorTypes, trainingBackground, unionStatus,
     preferredGenresValue, overdoneSensitivity, profileBias, headshotUrl,
-    hasInitialized, isQueryLoading, buildSaveData, queryClient
+    hasInitialized, isQueryLoading, buildSaveData, queryClient, t
   ]);
 
   const handleHeadshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -610,19 +676,19 @@ export function ActorProfileForm() {
       console.log("File selected:", file.name, file.type, file.size);
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        toast.error("Please upload an image file");
+        toast.error(t("appAccountProfile.notImage"));
         return;
       }
       
       // Validate file size
       if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image size must be less than 5MB");
+        toast.error(t("appAccountProfile.tooBig", { mb: 5 }));
         return;
       }
       
       // Check minimum file size (very small files might be corrupted)
       if (file.size < 100) {
-        toast.error("Image file is too small. Please upload a valid image.");
+        toast.error(t("appAccountProfile.tooSmall"));
         return;
       }
       
@@ -631,13 +697,13 @@ export function ActorProfileForm() {
       reader.onloadend = () => {
         const base64String = reader.result as string;
         if (!base64String || base64String.length < 100) {
-          toast.error("Failed to read image file. Please try again.");
+          toast.error(t("appAccountProfile.readFailed"));
           return;
         }
         
         // Validate the base64 string
         if (!base64String.startsWith("data:image/")) {
-          toast.error("Invalid image format. Please try uploading again.");
+          toast.error(t("appAccountPhoto.errFormat"));
           return;
         }
         
@@ -648,7 +714,7 @@ export function ActorProfileForm() {
       
       reader.onerror = () => {
         console.error("FileReader error:", reader.error);
-        toast.error("Failed to read image file. Please try again.");
+        toast.error(t("appAccountProfile.readFailed"));
       };
       
       reader.readAsDataURL(file);
@@ -712,10 +778,10 @@ export function ActorProfileForm() {
         // Close editor immediately after successful upload
         setShowEditor(false);
         setImageToEdit(null);
-        toast.success("Headshot uploaded successfully!");
+        toast.success(t("appAccountProfile.uploaded"));
       } catch (err: unknown) {
         const error = err as { response?: { data?: { detail?: string | Array<{ msg?: string } | string> | Record<string, unknown> } } };
-        let errorMessage = "Failed to upload headshot";
+        let errorMessage = t("appAccountProfile.uploadFailed");
         if (error.response?.data?.detail) {
           if (typeof error.response.data.detail === 'string') {
             errorMessage = error.response.data.detail;
@@ -753,7 +819,7 @@ export function ActorProfileForm() {
   };
 
   const handleDeletePhoto = async () => {
-    if (!confirm("Are you sure you want to delete your headshot?")) {
+    if (!confirm(t("appAccountProfile.confirmDelete"))) {
       return;
     }
 
@@ -770,10 +836,10 @@ export function ActorProfileForm() {
        setValue("headshot_url", "", { shouldDirty: false });
        setHeadshotPreview(null);
        prevValuesRef.current.headshotUrl = "";
-       toast.success("Headshot deleted successfully");
+       toast.success(t("appAccountProfile.deleted"));
      } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string | Array<{ msg?: string } | string> | Record<string, unknown> } } };
-      let errorMessage = "Failed to delete headshot";
+      let errorMessage = t("appAccountProfile.deleteFailed");
       if (error.response?.data?.detail) {
         if (typeof error.response.data.detail === 'string') {
           errorMessage = error.response.data.detail;
@@ -841,11 +907,11 @@ export function ActorProfileForm() {
                       type="button"
                       onClick={handlePhotoClick}
                       className="relative w-24 h-36 sm:w-32 sm:h-48 rounded-md overflow-hidden border-2 border-border bg-muted shadow-sm hover:shadow-md hover:border-primary/60 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 group"
-                      aria-label="View headshot"
+                      aria-label={t("appAccountProfile.viewHeadshot")}
                     >
                       <img
                         src={headshotPreview}
-                        alt="Headshot preview"
+                        alt={t("appAccountProfile.headshotPreview")}
                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-200"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
@@ -866,7 +932,7 @@ export function ActorProfileForm() {
                     >
                       <IconPhoto className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
                       <span className="text-xs text-muted-foreground group-hover:text-foreground text-center px-2">
-                        Upload
+                        {t("appAccountProfile.upload")}
                       </span>
                       <Input 
                         id="headshot" 
@@ -880,7 +946,7 @@ export function ActorProfileForm() {
                 </div>
                 {/* One line, not a paragraph. The frame already says "photo". */}
                 <p className="stage-direction w-24 text-[11px] leading-snug text-muted-foreground/70 sm:w-32">
-                  {headshotPreview ? "(tap to replace.)" : "(optional.)"}
+                  {headshotPreview ? t("appAccountProfile.tapToReplace") : t("appAccountProfile.optional")}
                 </p>
               </div>
           </motion.div>
@@ -909,15 +975,15 @@ export function ActorProfileForm() {
               reached by keyboard either. */}
           {!isEducator && (
           <TabsList className="grid w-full grid-cols-3 gap-0 rounded-none border-b border-border bg-transparent p-0">
-            {TAB_RAIL.map((t) => (
+            {TAB_RAIL.map((tab) => (
               <TabsTrigger
-                key={t.value}
-                value={t.value}
-                id={t.value === "preferences" ? "profile-preferences" : undefined}
+                key={tab.value}
+                value={tab.value}
+                id={tab.value === "preferences" ? "profile-preferences" : undefined}
                 className="relative rounded-none px-2 pb-3 pt-2 text-[13px] font-medium leading-tight text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none sm:text-sm"
               >
-                {t.label}
-                {activeTab === t.value && (
+                {t(tab.label)}
+                {activeTab === tab.value && (
                   // layoutId, so the underline slides between tabs instead of
                   // blinking out and back in somewhere else.
                   <motion.span
@@ -936,21 +1002,21 @@ export function ActorProfileForm() {
               <motion.div initial="hidden" animate="show" variants={RISE_LIST}>
                   <div className="t-profile__panel">
                     <SectionHead
-                      title="Who you are"
+                      title={t("appAccountProfile.tabWho")}
                       aside={
                         isEducator
-                          ? "(so I know who I'm setting up, and where.)"
-                          : "(what a casting office reads before you open your mouth.)"
+                          ? t("appAccountProfile.asideWhoEducator")
+                          : t("appAccountProfile.asideWho")
                       }
                     />
                     <div className="space-y-6">
-                      <GroupRule>Needed to match you</GroupRule>
+                      <GroupRule>{t("appAccountProfile.needed")}</GroupRule>
                       <Field className="max-w-sm">
                         <FieldLabel
                           htmlFor="name"
-                          hint="Your stage name is fine. It shows on the callboard if you have that on, nowhere else."
+                          hint={t("appAccountProfile.hintName")}
                         >
-                          Name
+                          {t("appAccountProfile.name")}
                         </FieldLabel>
                         <Input
                           id="name"
@@ -962,7 +1028,9 @@ export function ActorProfileForm() {
                             animate={{ opacity: 1 }}
                             className="text-sm text-destructive"
                           >
-                            {errors.name.message}
+                            {errors.name.message === "Name is required"
+                              ? t("appAccountProfile.nameRequired")
+                              : errors.name.message}
                           </motion.p>
                         )}
                       </Field>
@@ -972,16 +1040,16 @@ export function ActorProfileForm() {
                         <Field>
                           <FieldLabel
                             htmlFor="age_range"
-                            hint="Casting reads you by range, not birthday. This filters every search you run."
+                            hint={t("appAccountProfile.hintAge")}
                           >
-                            Age range
+                            {t("appAccountProfile.ageRange")}
                           </FieldLabel>
                         <Select
                           value={watch("age_range") || undefined}
                           onValueChange={(v) => setValue("age_range", v)}
                         >
                           <SelectTrigger id="age_range">
-                            <SelectValue placeholder="Select age range" />
+                            <SelectValue placeholder={t("appAccountProfile.selectAge")} />
                           </SelectTrigger>
                           <SelectContent>
                             {AGE_RANGES.map((r) => (
@@ -1003,26 +1071,26 @@ export function ActorProfileForm() {
                         <Field>
                           <FieldLabel
                             htmlFor="gender"
-                            hint="Only used to match characters written for a gender. Pick Other and say your own if none of these fit."
+                            hint={t("appAccountProfile.hintGender")}
                           >
-                            Gender identity
+                            {t("appAccountProfile.gender")}
                           </FieldLabel>
                         <Select
                           value={watch("gender")?.startsWith("Other") ? "Other" : watch("gender") || undefined}
                           onValueChange={(v) => setValue("gender", v)}
                         >
                           <SelectTrigger id="gender">
-                            <SelectValue placeholder="Select gender" />
+                            <SelectValue placeholder={t("appAccountProfile.selectGender")} />
                           </SelectTrigger>
                           <SelectContent>
                             {GENDERS.map((g) => (
-                              <SelectItem key={g} value={g}>{g}</SelectItem>
+                              <SelectItem key={g} value={g}>{opt(g)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         {(watch("gender") === "Other" || watch("gender")?.startsWith("Other:")) && (
                           <Input
-                            placeholder="Please specify"
+                            placeholder={t("appAccountProfile.specify")}
                             className="mt-2"
                             value={watch("gender")?.startsWith("Other:") ? watch("gender")?.slice(7).trim() : ""}
                             onChange={(e) => setValue("gender", e.target.value ? `Other: ${e.target.value}` : "Other")}
@@ -1046,26 +1114,26 @@ export function ActorProfileForm() {
                       <Field>
                         <FieldLabel
                           htmlFor="location"
-                          hint="Your market, not your address. It decides which theatres and auditions I put in front of you."
+                          hint={t("appAccountProfile.hintLocation")}
                         >
-                          Location / market
+                          {t("appAccountProfile.location")}
                         </FieldLabel>
                         <Select
                           value={watch("location")?.startsWith("Other") ? "Other" : watch("location") || undefined}
                           onValueChange={(v) => setValue("location", v)}
                         >
                           <SelectTrigger id="location">
-                            <SelectValue placeholder="Select location" />
+                            <SelectValue placeholder={t("appAccountProfile.selectLocation")} />
                           </SelectTrigger>
                           <SelectContent>
                             {LOCATIONS.map((loc) => (
-                              <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                              <SelectItem key={loc} value={loc}>{opt(loc)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         {(watch("location") === "Other" || watch("location")?.startsWith("Other:")) && (
                           <Input
-                            placeholder="Please specify"
+                            placeholder={t("appAccountProfile.specify")}
                             className="mt-2"
                             value={watch("location")?.startsWith("Other:") ? watch("location")?.slice(7).trim() : ""}
                             onChange={(e) => setValue("location", e.target.value ? `Other: ${e.target.value}` : "Other")}
@@ -1086,9 +1154,9 @@ export function ActorProfileForm() {
                         <Field>
                           <FieldLabel
                             htmlFor="organization"
-                            hint="School, studio or company. It's how I keep your students grouped with you."
+                            hint={t("appAccountProfile.hintOrg")}
                           >
-                            School or studio
+                            {t("appAccountProfile.org")}
                           </FieldLabel>
                           <Input
                             id="organization"
@@ -1103,31 +1171,31 @@ export function ActorProfileForm() {
 
                       {!isEducator && (
                       <>
-                      <GroupRule>Optional, sharpens the picks</GroupRule>
+                      <GroupRule>{t("appAccountProfile.optionalRule")}</GroupRule>
                       <Field>
                         <FieldLabel
                           htmlFor="ethnicity"
-                          hint="Only for roles written for a specific background. Never shown to anyone, and leaving it blank costs you nothing."
+                          hint={t("appAccountProfile.hintEthnicity")}
                         >
-                          Ethnicity
+                          {t("appAccountProfile.ethnicity")}
                         </FieldLabel>
                         <Select
                           value={watch("ethnicity")?.startsWith("Other") ? "Other" : watch("ethnicity") || "__none__"}
                           onValueChange={(v) => setValue("ethnicity", v === "__none__" ? "" : v)}
                         >
                           <SelectTrigger id="ethnicity">
-                            <SelectValue placeholder="Select" />
+                            <SelectValue placeholder={t("appAccountProfile.select")} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="__none__">Select</SelectItem>
+                            <SelectItem value="__none__">{t("appAccountProfile.select")}</SelectItem>
                             {ETHNICITY_OPTIONS.map((e) => (
-                              <SelectItem key={e} value={e}>{e}</SelectItem>
+                              <SelectItem key={e} value={e}>{opt(e)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         {(watch("ethnicity") === "Other" || watch("ethnicity")?.startsWith("Other:")) && (
                           <Input
-                            placeholder="Please specify"
+                            placeholder={t("appAccountProfile.specify")}
                             className="mt-2"
                             value={watch("ethnicity")?.startsWith("Other:") ? watch("ethnicity")?.slice(7).trim() : ""}
                             onChange={(e) => setValue("ethnicity", e.target.value ? `Other: ${e.target.value}` : "Other")}
@@ -1139,9 +1207,9 @@ export function ActorProfileForm() {
                         <Field>
                           <FieldLabel
                             htmlFor="height-feet"
-                            hint="Comes up for roles with a physical requirement. It never filters a monologue out."
+                            hint={t("appAccountProfile.hintHeight")}
                           >
-                            Height
+                            {t("appAccountProfile.height")}
                           </FieldLabel>
                           <div className="flex gap-2">
                             <Select
@@ -1156,7 +1224,7 @@ export function ActorProfileForm() {
                               }}
                             >
                               <SelectTrigger id="height-feet" className="flex-1 min-w-0">
-                                <SelectValue placeholder="Ft" />
+                                <SelectValue placeholder={t("appAccountProfile.ft")} />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="__none__">-</SelectItem>
@@ -1181,7 +1249,7 @@ export function ActorProfileForm() {
                               }}
                             >
                               <SelectTrigger id="height-inches" className="flex-1 min-w-0">
-                                <SelectValue placeholder="In" />
+                                <SelectValue placeholder={t("appAccountProfile.in")} />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="__none__">-</SelectItem>
@@ -1196,27 +1264,27 @@ export function ActorProfileForm() {
                         <Field>
                           <FieldLabel
                             htmlFor="build"
-                            hint="Same as height: it shapes role suggestions, not which speeches you can play."
+                            hint={t("appAccountProfile.hintBuild")}
                           >
-                            Build
+                            {t("appAccountProfile.build")}
                           </FieldLabel>
                           <Select
                             value={watch("build")?.startsWith("Other") ? "Other" : watch("build") || "__none__"}
                             onValueChange={(v) => setValue("build", v === "__none__" ? "" : v)}
                           >
                             <SelectTrigger id="build">
-                              <SelectValue placeholder="Select build" />
+                              <SelectValue placeholder={t("appAccountProfile.selectBuild")} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="__none__">Select build</SelectItem>
+                              <SelectItem value="__none__">{t("appAccountProfile.selectBuild")}</SelectItem>
                               {BUILD_OPTIONS.map((b) => (
-                                <SelectItem key={b} value={b}>{b}</SelectItem>
+                                <SelectItem key={b} value={b}>{opt(b)}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                           {(watch("build") === "Other" || watch("build")?.startsWith("Other:")) && (
                             <Input
-                              placeholder="Please specify"
+                              placeholder={t("appAccountProfile.specify")}
                               className="mt-2"
                               value={watch("build")?.startsWith("Other:") ? watch("build")?.slice(7).trim() : ""}
                               onChange={(e) => setValue("build", e.target.value ? `Other: ${e.target.value}` : "Other")}
@@ -1236,18 +1304,18 @@ export function ActorProfileForm() {
               <motion.div initial="hidden" animate="show" variants={RISE_LIST}>
                   <div className="t-profile__panel">
                     <SectionHead
-                      title="How you work"
-                      aside="(where you came up, and what you walk into.)"
+                      title={t("appAccountProfile.tabHow")}
+                      aside={t("appAccountProfile.asideHow")}
                     />
                     <div className="space-y-6">
-                      <GroupRule>Needed to match you</GroupRule>
+                      <GroupRule>{t("appAccountProfile.needed")}</GroupRule>
                       <Field>
                         <FieldLabel
-                          hint="Theater pulls from plays. Film & TV pulls from scripts. Pick both if you do both, and you get both."
+                          hint={t("appAccountProfile.hintActIn")}
                         >
-                          What you act in
+                          {t("appAccountProfile.actIn")}
                         </FieldLabel>
-                        <p className="text-xs text-muted-foreground">Pick every one that applies.</p>
+                        <p className="text-xs text-muted-foreground">{t("appAccountProfile.pickAll")}</p>
                         <div id="actor-types" tabIndex={-1} className="flex flex-wrap gap-2 pt-1">
                           {ACTOR_TYPE_IDS.filter((id) => id !== "other").map((id) => {
                             const isSelected = actorTypes.includes(id);
@@ -1268,7 +1336,7 @@ export function ActorProfileForm() {
                                     : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
                                 }`}
                               >
-                                {ACTOR_TYPE_LABELS[id] || id}
+                                {ACTOR_TYPE_KEY[id] ? t(ACTOR_TYPE_KEY[id]) : ACTOR_TYPE_LABELS[id] || id}
                               </motion.button>
                             );
                           })}
@@ -1279,24 +1347,24 @@ export function ActorProfileForm() {
                           htmlFor="experience_level"
                           hint={
                             <>
-                              <strong>Student</strong> — studying, or just starting.<br />
-                              <strong>Emerging</strong> — some credits, building it.<br />
-                              <strong>Professional</strong> — established, working.
+                              <strong>{opt("Student")}</strong>{t("appAccountProfile.hintStudent")}<br />
+                              <strong>{opt("Emerging")}</strong>{t("appAccountProfile.hintEmerging")}<br />
+                              <strong>{opt("Professional")}</strong>{t("appAccountProfile.hintProfessional")}
                             </>
                           }
                         >
-                          Experience level
+                          {t("appAccountProfile.experience")}
                         </FieldLabel>
                         <Select
                           value={watch("experience_level") || undefined}
                           onValueChange={(v) => setValue("experience_level", v)}
                         >
                           <SelectTrigger id="experience_level">
-                            <SelectValue placeholder="Select experience level" />
+                            <SelectValue placeholder={t("appAccountProfile.selectExperience")} />
                           </SelectTrigger>
                           <SelectContent>
                             {EXPERIENCE_LEVELS.map((l) => (
-                              <SelectItem key={l.id} value={l.id}>{l.label}</SelectItem>
+                              <SelectItem key={l.id} value={l.id}>{opt(l.label)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -1319,30 +1387,30 @@ export function ActorProfileForm() {
                           htmlFor="union_status"
                           hint={
                             <>
-                              <strong>Non-union</strong> — not a member of anything.<br />
-                              <strong>SAG-E</strong> — eligible to join SAG-AFTRA, not in yet.<br />
-                              <strong>SAG</strong> — full SAG-AFTRA member.
+                              <strong>{opt("Non-union")}</strong>{t("appAccountProfile.hintNonUnion")}<br />
+                              <strong>SAG-E</strong>{t("appAccountProfile.hintSagE")}<br />
+                              <strong>SAG</strong>{t("appAccountProfile.hintSag")}
                             </>
                           }
                         >
-                          Union status
+                          {t("appAccountProfile.union")}
                         </FieldLabel>
                         <Select
                           value={watch("union_status")?.startsWith("Other") ? "Other" : watch("union_status") || undefined}
                           onValueChange={(v) => setValue("union_status", v)}
                         >
                           <SelectTrigger id="union_status">
-                            <SelectValue placeholder="Select union status" />
+                            <SelectValue placeholder={t("appAccountProfile.selectUnion")} />
                           </SelectTrigger>
                           <SelectContent>
                             {UNION_STATUSES.map((s) => (
-                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                              <SelectItem key={s} value={s}>{opt(s)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         {(watch("union_status") === "Other" || watch("union_status")?.startsWith("Other:")) && (
                           <Input
-                            placeholder="Please specify"
+                            placeholder={t("appAccountProfile.specify")}
                             className="mt-2"
                             value={watch("union_status")?.startsWith("Other:") ? watch("union_status")?.slice(7).trim() : ""}
                             onChange={(e) => setValue("union_status", e.target.value ? `Other: ${e.target.value}` : "Other")}
@@ -1364,42 +1432,42 @@ export function ActorProfileForm() {
                           stops guessing from dropdowns and reads the lane off
                           what you have actually been cast in. */}
                       <Field>
-                        <FieldLabel hint="Three is enough to see a pattern. The full résumé, with company, director and a PDF, lives on the résumé page.">
-                          What you&apos;ve been cast in
+                        <FieldLabel hint={t("appAccountProfile.hintCredits")}>
+                          {t("appAccountProfile.credits")}
                         </FieldLabel>
                         <p className="text-xs text-muted-foreground">
-                          Three and I can tell you what lane you read as.
+                          {t("appAccountProfile.creditsSub")}
                         </p>
                         <div className="pt-1">
                           <CreditsInline />
                         </div>
                       </Field>
 
-                      <GroupRule>Optional, sharpens the picks</GroupRule>
+                      <GroupRule>{t("appAccountProfile.optionalRule")}</GroupRule>
                       <Field>
                         <FieldLabel
                           htmlFor="type"
-                          hint="The lane you actually get cast in. Optional, but of everything here it moves the picks the most."
+                          hint={t("appAccountProfile.hintType")}
                         >
-                          Character type
+                          {t("appAccountProfile.characterType")}
                         </FieldLabel>
                         <Select
                           value={typeof watch("type") === "string" && watch("type")?.startsWith("Other") ? "Other" : watch("type") || "__none__"}
                           onValueChange={(v) => setValue("type", v === "__none__" ? "" : v)}
                         >
                           <SelectTrigger id="type">
-                            <SelectValue placeholder="Select character type" />
+                            <SelectValue placeholder={t("appAccountProfile.selectType")} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="__none__">None</SelectItem>
-                            {CHARACTER_TYPES.map((t) => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            <SelectItem value="__none__">{t("appAccountProfile.none")}</SelectItem>
+                            {CHARACTER_TYPES.map((ct) => (
+                              <SelectItem key={ct} value={ct}>{opt(ct)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         {(watch("type") === "Other" || (typeof watch("type") === "string" && watch("type")?.startsWith("Other:"))) && (
                           <Input
-                            placeholder="Please specify"
+                            placeholder={t("appAccountProfile.specify")}
                             className="mt-2"
                             value={typeof watch("type") === "string" && watch("type")?.startsWith("Other:") ? (watch("type") as string)?.slice(7).trim() : ""}
                             onChange={(e) => setValue("type", e.target.value ? `Other: ${e.target.value}` : "Other")}
@@ -1419,27 +1487,27 @@ export function ActorProfileForm() {
                       <Field>
                         <FieldLabel
                           htmlFor="training_background"
-                          hint="Meisner, Method, Chekhov, none of the above. It shapes how rehearsal notes are written for you, not what search returns."
+                          hint={t("appAccountProfile.hintTraining")}
                         >
-                          Training background
+                          {t("appAccountProfile.training")}
                         </FieldLabel>
                         <Select
                           value={watch("training_background")?.startsWith("Other") ? "Other" : watch("training_background") || "__none__"}
                           onValueChange={(v) => setValue("training_background", v === "__none__" ? "" : v)}
                         >
                           <SelectTrigger id="training_background">
-                            <SelectValue placeholder="Select" />
+                            <SelectValue placeholder={t("appAccountProfile.select")} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="__none__">Select</SelectItem>
-                            {TRAINING_BACKGROUND_OPTIONS.map((t) => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            <SelectItem value="__none__">{t("appAccountProfile.select")}</SelectItem>
+                            {TRAINING_BACKGROUND_OPTIONS.map((tb) => (
+                              <SelectItem key={tb} value={tb}>{opt(tb)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         {(watch("training_background") === "Other" || watch("training_background")?.startsWith("Other:")) && (
                           <Input
-                            placeholder="Please specify"
+                            placeholder={t("appAccountProfile.specify")}
                             className="mt-2"
                             value={watch("training_background")?.startsWith("Other:") ? watch("training_background")?.slice(7).trim() : ""}
                             onChange={(e) => setValue("training_background", e.target.value ? `Other: ${e.target.value}` : "Other")}
@@ -1455,19 +1523,18 @@ export function ActorProfileForm() {
               <motion.div initial="hidden" animate="show" variants={RISE_LIST}>
                   <div className="t-profile__panel">
                     <SectionHead
-                      title="What you see"
-                      aside="(how hard the search leans on all of the above.)"
+                      title={t("appAccountProfile.tabWhat")}
+                      aside={t("appAccountProfile.asideWhat")}
                     />
                     <div className="space-y-6">
                       <Field>
                         <div className="flex items-start justify-between gap-6 rounded-lg border border-border/60 bg-muted/40 p-4">
                           <div className="min-w-0">
                             <Label htmlFor="profile_bias" className="text-sm font-medium">
-                              Use my profile when I search
+                              {t("appAccountProfile.bias")}
                             </Label>
                             <p className="mt-1 text-sm text-muted-foreground">
-                              Results get weighted toward your range, type and market.
-                              Turn it off and you search the whole library flat.
+                              {t("appAccountProfile.biasBody")}
                             </p>
                           </div>
                           <Switch
@@ -1479,8 +1546,8 @@ export function ActorProfileForm() {
                       </Field>
 
                       <Field>
-                        <FieldLabel hint="Not a filter. These float to the top; nothing gets hidden because it isn't on the list.">
-                          Genres you gravitate to
+                        <FieldLabel hint={t("appAccountProfile.hintGenres")}>
+                          {t("appAccountProfile.genres")}
                         </FieldLabel>
                         {/* Chips, like the actor types above — the form asked the
                             same kind of question two different ways. */}
@@ -1500,7 +1567,7 @@ export function ActorProfileForm() {
                                     : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
                                 }`}
                               >
-                                {genre}
+                                {opt(genre)}
                               </motion.button>
                             );
                           })}
@@ -1512,9 +1579,9 @@ export function ActorProfileForm() {
                       <Field>
                         <FieldLabel
                           htmlFor="sensitivity"
-                          hint="Every piece carries a score for how often it gets used in auditions. This decides at what point I warn you."
+                          hint={t("appAccountProfile.hintOverdone")}
                         >
-                          Warn me about overdone pieces
+                          {t("appAccountProfile.overdone")}
                         </FieldLabel>
                         <p className="text-sm text-muted-foreground">
                           {overdoneCopy}
@@ -1533,8 +1600,8 @@ export function ActorProfileForm() {
                           className="w-full cursor-pointer appearance-none bg-transparent focus:outline-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-[var(--primary)] [&::-moz-range-track]:h-1 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-border [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-border [&::-webkit-slider-thumb]:-mt-1.5 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--primary)]"
                         />
                         <div className="flex justify-between text-[11px] uppercase tracking-[0.12em] text-muted-foreground/70">
-                          <span>only the warhorses</span>
-                          <span>anything familiar</span>
+                          <span>{t("appAccountProfile.warhorses")}</span>
+                          <span>{t("appAccountProfile.familiar")}</span>
                         </div>
                       </Field>
                     </div>
@@ -1571,7 +1638,7 @@ export function ActorProfileForm() {
               type="button"
               onClick={() => setShowPhotoViewer(false)}
               className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-white rounded-sm"
-              aria-label="Close viewer"
+              aria-label={t("appAccountProfile.closeViewer")}
             >
               <IconX className="h-8 w-8" />
             </button>
@@ -1580,7 +1647,7 @@ export function ActorProfileForm() {
             <div className="relative w-full bg-black rounded-lg overflow-hidden flex items-center justify-center" style={{ minHeight: '60vh' }}>
               <img
                 src={headshotPreview}
-                alt="Headshot"
+                alt={t("appAccountProfile.headshot")}
                 className="max-w-full max-h-[70vh] object-contain"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
@@ -1601,7 +1668,7 @@ export function ActorProfileForm() {
                 size="lg"
               >
                 <IconEdit className="h-5 w-5" />
-                Edit Photo
+                {t("appAccountPhoto.title")}
               </Button>
               <Button
                 onClick={handleReplacePhoto}
@@ -1610,7 +1677,7 @@ export function ActorProfileForm() {
                 size="lg"
               >
                 <IconUpload className="h-5 w-5" />
-                Replace Photo
+                {t("appAccountProfile.replacePhoto")}
               </Button>
               <Input 
                 id="headshot-replace-modal" 
@@ -1634,7 +1701,7 @@ export function ActorProfileForm() {
                 ) : (
                   <IconTrash className="h-5 w-5" />
                 )}
-                Delete Photo
+                {t("appAccountProfile.deletePhoto")}
               </Button>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { SocialLinkIcons } from "./SocialLinkIcons";
+import { useT } from "@/lib/i18n";
 
 interface Headshot {
   url: string;
@@ -28,6 +29,7 @@ export function FoundingActorCard({
   socialLinks,
 }: FoundingActorCardProps) {
   const router = useRouter();
+  const t = useT();
   const primaryHeadshot =
     headshots.find((h) => h.is_primary) || headshots[0];
 
@@ -46,7 +48,7 @@ export function FoundingActorCard({
         <div className="relative w-full aspect-[4/5] bg-muted">
           <Image
             src={primaryHeadshot.url}
-            alt={`${name} headshot`}
+            alt={t("appAccountFounding.headshotAlt", { name })}
             fill
             className="object-cover object-top group-hover:scale-[1.02] transition-transform duration-300"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -83,7 +85,7 @@ export function FoundingActorCard({
         <div className="mt-3 flex items-center justify-between">
           <SocialLinkIcons socialLinks={socialLinks} />
           <span className="text-xs text-primary font-medium group-hover:underline">
-            Learn more &rarr;
+            {t("appAccountFounding.learnMore")}
           </span>
         </div>
       </div>

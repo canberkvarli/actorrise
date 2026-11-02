@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { SCRIPT_GENRES } from "@/lib/genreOptions";
+import { useT } from "@/lib/i18n";
 
 interface GenreSelectProps {
   value: string;
@@ -20,7 +21,9 @@ interface GenreSelectProps {
   className?: string;
 }
 
-export function GenreSelect({ value, onValueChange, placeholder = "Select genre", className }: GenreSelectProps) {
+export function GenreSelect({ value, onValueChange, placeholder: placeholderProp, className }: GenreSelectProps) {
+  const t = useT();
+  const placeholder = placeholderProp ?? t("appAccountUi.selectGenre");
   const [isCustom, setIsCustom] = React.useState(false);
   const [customValue, setCustomValue] = React.useState("");
 
@@ -71,7 +74,7 @@ export function GenreSelect({ value, onValueChange, placeholder = "Select genre"
           onChange={(e) => setCustomValue(e.target.value)}
           onBlur={handleCustomBlur}
           onKeyDown={handleCustomKeyDown}
-          placeholder="Enter custom genre"
+          placeholder={t("appAccountUi.customGenre")}
           className={className}
           maxLength={30}
           autoFocus
@@ -103,7 +106,7 @@ export function GenreSelect({ value, onValueChange, placeholder = "Select genre"
             </SelectItem>
           ))}
           <SelectItem value="custom">
-            <span className="text-muted-foreground italic">Custom...</span>
+            <span className="text-muted-foreground italic">{t("appAccountUi.custom")}</span>
           </SelectItem>
         </SelectGroup>
       </SelectContent>

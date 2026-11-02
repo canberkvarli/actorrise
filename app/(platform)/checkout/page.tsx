@@ -10,9 +10,9 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSubscription } from "@/hooks/useSubscription";
-import { chargeDate } from "@/lib/paywall/offer";
-import { useTrialWords } from "@/hooks/useTrialWords";
-import { cap } from "@/lib/trial";
+import { PLUS_ANNUAL, PLUS_MONTHLY } from "@/lib/paywall/offer";
+import { useLocale, useT } from "@/lib/i18n";
+import { capIn, chargeDateIn, moneyIn, useTrialText } from "@/components/billing/trialText";
 import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +26,9 @@ import { theatreFontVars } from "@/lib/fonts/theatre";
 /* The (platform) layout binds no theatre surface, so the page carries the
    tokens and the three faces itself. Without both, every --t-* below resolves
    to nothing and the font-family declarations are dropped whole. */
+/** Set by the tier fetch; said in the reader's language when shown. */
+const LOAD_ERROR = "__load_error__";
+
 const shell = `t-box-office theatre-tokens ${theatreFontVars} container mx-auto max-w-2xl px-4 py-16`;
 
 interface PricingTier {
@@ -70,7 +73,10 @@ function CheckoutContent() {
   const { subscription } = useSubscription();
   // A week, or two for an actor who has finished a scene. The server decides
   // and runs it; this page only prints what /me says.
-  const words = useTrialWords();
+  const words = useTrialText();
+  const t = useT();
+  const locale = useLocale();
+  const shownError = error === LOAD_ERROR ? t("appAccountCheckout.loadError") : error;
   // Free trial: first-time Plus members get it free ($0 today). Explicit
   // ?trial=1 (or legacy ?promo=FOUNDER3) forces it; otherwise a first-time Plus
   // monthly checkout defaults to the trial. Returning subscribers (already have a
@@ -101,7 +107,7 @@ function CheckoutContent() {
       })
       .catch((err) => {
         console.error("Failed to fetch tier:", err);
-        setError("Failed to load pricing information. Please try again.");
+        setError(LOAD_ERROR);
         setIsLoading(false);
       });
   }, [tierName, router]);
@@ -135,15 +141,13 @@ function CheckoutContent() {
     // that no longer exists to someone already holding a dead code. It names
     // no length now: the trial's length is the server's to say.
     if (["FOUNDER", "FOUNDER3", "FOUNDER6", "FOUNDER12"].includes(code)) {
-      triggerShake("That code has retired. Start the free trial instead.");
+      triggerShake(t("appAccountCheckout.codeRetired"));
     } else if (code === "STXQ5NU4" || code === "STUDENT50") {
       // Retired 2026-09-16. Students no longer get a percentage off; schools and
       // studios come in as an organisation and I open Plus for the class. Kept
       // in the list so a remembered code gets an answer and a next step rather
       // than "invalid coupon".
-      triggerShake(
-        "That code has retired. If you're with a school or a studio, email canberk@actorrise.com and I'll set your class up.",
-      );
+      triggerShake(t("appAccountCheckout.codeRetiredSchool"));
     } else if (code === "STARTUPS" || code === "STARTUPS24") {
       setPromoApplied("STARTUPS");
       setPromoError(null);
@@ -154,7 +158,7 @@ function CheckoutContent() {
       setPromoApplied("STUDENT");
       setPromoError(null);
     } else if (code) {
-      triggerShake("Invalid promo code.");
+      triggerShake(t("appAccountCheckout.invalidCode"));
     } else {
       setPromoApplied(null);
       setPromoError(null);
@@ -211,7 +215,7 @@ function CheckoutContent() {
         err && typeof err === "object" && "response" in err
           ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
           : undefined;
-      setError(detail || "Failed to start checkout. Please try again.");
+      setError(detail || t("appAccountCheckout.startError"));
       setIsCheckingOut(false);
     }
   };
@@ -228,20 +232,31 @@ function CheckoutContent() {
     return base;
   };
 
-  const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+  const formatPrice = (cents: number) => moneyIn(locale, cents);
 
   const calculateMonthlyPrice = () => {
     if (!tier) return "$0";
     // The trial rolls into the period picked (server side since 2026-10-31).
     if (isTrial && period === "annual" && tier.annual_price_cents)
-      return `$${(tier.annual_price_cents / 100).toFixed(2)}/year after trial`;
-    if (isTrial) return `$${(tier.monthly_price_cents / 100).toFixed(2)}/month after trial`;
+      return t("appAccountCheckout.yearAfterTrial", { price: formatPrice(tier.annual_price_cents) });
+    if (isTrial)
+      return t("appAccountCheckout.monthAfterTrial", { price: formatPrice(tier.monthly_price_cents) });
     const price = getPrice();
     if (period === "annual" && tier.annual_price_cents) {
-      return `$${(price / 12 / 100).toFixed(2)}/month`;
+      return t("appAccountCheckout.perMonth", { price: formatPrice(price / 12) });
     }
-    return `$${(price / 100).toFixed(2)}/month`;
+    return t("appAccountCheckout.perMonth", { price: formatPrice(price) });
   };
+  const periodLabel =
+    period === "annual"
+      ? t("appAccountBilling.periodAnnual")
+      : period === "monthly"
+        ? t("appAccountBilling.periodMonthly")
+        : period;
+  const afterTrial =
+    period === "annual"
+      ? t("appAccountCheckout.thenYear", { annual: PLUS_ANNUAL })
+      : t("appAccountCheckout.thenMonth", { monthly: PLUS_MONTHLY });
 
   if (isLoading) {
     return (
@@ -256,16 +271,16 @@ function CheckoutContent() {
   if (!tier || error) {
     return (
       <div className={shell}>
-        <p className="t-box-office__dir">(the house is dark.)</p>
-        <h1 className="t-box-office__title">Something went wrong.</h1>
+        <p className="t-box-office__dir">{t("appAccountCheckout.darkDirection")}</p>
+        <h1 className="t-box-office__title">{t("appAccountCheckout.wrongTitle")}</h1>
         <div className="t-ticket">
           <p className="t-ticket__blurb">
-            {error || "I couldn't load the checkout information."}
+            {shownError || t("appAccountCheckout.wrongBody")}
           </p>
           <div className="t-ticket__foot">
             <Link href="/pricing" className="t-ticket__cta">
               <IconArrowLeft className="h-4 w-4" />
-              Back to pricing
+              {t("appAccountCheckout.backToPricing")}
             </Link>
           </div>
         </div>
@@ -275,15 +290,17 @@ function CheckoutContent() {
 
   return (
     <div className={shell}>
-      <p className="t-box-office__dir">(the box office.)</p>
+      <p className="t-box-office__dir">{t("appAccountBilling.direction")}</p>
       <h1 className="t-box-office__title">
         {isTrial ? (
           <>
-            {cap(words.span)}, <em>on me.</em>
+            {t("appAccountCheckout.trialTitleA", { span: capIn(words.span, locale) })}
+            <em>{t("appAccountCheckout.trialTitleB")}</em>
           </>
         ) : (
           <>
-            Your seat, <em>held.</em>
+            {t("appAccountCheckout.seatTitleA")}
+            <em>{t("appAccountCheckout.seatTitleB")}</em>
           </>
         )}
       </h1>
@@ -291,24 +308,24 @@ function CheckoutContent() {
       <div className="t-ticket">
         <div className="t-ticket__head">
           <h2 className="t-ticket__plan">{tier.display_name}</h2>
-          <span className="t-ticket__tag">{period}</span>
+          <span className="t-ticket__tag">{periodLabel}</span>
         </div>
         <p className="t-ticket__blurb">{tier.description}</p>
 
         <hr className="t-ticket__rule" />
 
         <div className="t-ticket__row">
-          <span className="t-ticket__label">Billing</span>
+          <span className="t-ticket__label">{t("appAccountCheckout.billing")}</span>
           <span className="t-ticket__lead" aria-hidden />
-          <span className="t-ticket__val capitalize">{period}</span>
+          <span className="t-ticket__val capitalize">{periodLabel}</span>
         </div>
         <div className="t-ticket__row">
-          <span className="t-ticket__label">Rate</span>
+          <span className="t-ticket__label">{t("appAccountCheckout.rate")}</span>
           <span className="t-ticket__lead" aria-hidden />
           <span className="t-ticket__val">{calculateMonthlyPrice()}</span>
         </div>
         <div className="t-ticket__row">
-          <span className="t-ticket__label">Due today</span>
+          <span className="t-ticket__label">{t("appAccountCheckout.dueToday")}</span>
           <span className="t-ticket__lead" aria-hidden />
           <span className="t-ticket__total">{formatPrice(getPrice())}</span>
         </div>
@@ -318,26 +335,25 @@ function CheckoutContent() {
           promoApplied !== "STUDENT" && (
             <div className="t-ticket__note">
               <p className="t-ticket__note-title">
-                Saves{" "}
-                {formatPrice(
-                  tier.monthly_price_cents * 12 - (tier.annual_price_cents || 0),
-                )}{" "}
-                on the year
+                {t("appAccountCheckout.saves", {
+                  amount: formatPrice(
+                    tier.monthly_price_cents * 12 - (tier.annual_price_cents || 0),
+                  ),
+                })}
               </p>
               <p className="t-ticket__note-body">
-                31% off the month-to-month rate.
+                {t("appAccountCheckout.savesBody", { pct: 31 })}
               </p>
             </div>
           )}
 
         {isTrial && (
           <div className="t-ticket__note">
-            <p className="t-ticket__note-title">Nothing is charged today.</p>
+            <p className="t-ticket__note-title">{t("appAccountCheckout.nothingToday")}</p>
             <p className="t-ticket__note-body">
-              Card on file, $0 for {words.days} days, then{" "}
-              {period === "annual" ? "$99 for the year" : "$12 a month"}, charged on{" "}
-              <span suppressHydrationWarning>{chargeDate(new Date(), words.days)}</span>.
-              Cancel before then and you pay nothing.{" "}
+              {t("appAccountCheckout.trialNoteA", { days: words.days, then: afterTrial })}
+              <span suppressHydrationWarning>{chargeDateIn(locale, new Date(), words.days)}</span>
+              {t("appAccountCheckout.trialNoteB")}{" "}
               <EarnSecondWeek />
             </p>
           </div>
@@ -350,16 +366,16 @@ function CheckoutContent() {
               <div className="t-ticket__note flex items-center justify-between gap-3">
                 <p className="t-ticket__note-title">
                   {promoApplied === "BUSINESS"
-                    ? "BUSINESS applied. 100% off for 3 months."
+                    ? t("appAccountCheckout.appliedBusiness")
                     : promoApplied === "STUDENT"
-                      ? "STUDENT applied. 100% off for 6 months."
-                      : "STARTUPS applied. 50% off."}
+                      ? t("appAccountCheckout.appliedStudent")
+                      : t("appAccountCheckout.appliedStartups")}
                 </p>
                 <button
                   type="button"
                   onClick={removePromo}
                   className="t-ticket__quiet shrink-0 no-underline"
-                  aria-label="Remove code"
+                  aria-label={t("appAccountCheckout.removeCode")}
                 >
                   <IconX className="h-4 w-4" />
                 </button>
@@ -368,7 +384,7 @@ function CheckoutContent() {
               <>
                 <div className={`flex gap-2${promoShake ? " animate-shake" : ""}`}>
                   <Input
-                    placeholder="Promo code"
+                    placeholder={t("appAccountCheckout.promoPlaceholder")}
                     value={promoCode}
                     onChange={(e) => {
                       setPromoCode(e.target.value.toUpperCase());
@@ -385,7 +401,7 @@ function CheckoutContent() {
                     className="t-ticket__cta"
                     style={{ height: 44, padding: "0 20px", fontSize: 14 }}
                   >
-                    Apply
+                    {t("appAccountCheckout.apply")}
                   </button>
                 </div>
                 {promoError && (
@@ -397,11 +413,10 @@ function CheckoutContent() {
                 {tier?.name === "plus" && !words.tasted && (
                   <div className="t-ticket__note">
                     <p className="t-ticket__note-title">
-                      First time on Plus? Take {words.span} free.
+                      {t("appAccountCheckout.firstTime", { span: words.span })}
                     </p>
                     <p className="t-ticket__note-body">
-                      Card required, nothing charged for {words.days} days, then{" "}
-                      {period === "annual" ? "$99 for the year" : "$12 a month"}.
+                      {t("appAccountCheckout.firstTimeBody", { days: words.days, then: afterTrial })}
                     </p>
                     <Link
                       href={`/checkout?tier=plus&period=${period === "annual" ? "annual" : "monthly"}&trial=1`}
@@ -414,14 +429,8 @@ function CheckoutContent() {
                 )}
 
                 <div className="t-ticket__note">
-                  <p className="t-ticket__note-title">
-                    Student, teacher, school or coach?
-                  </p>
-                  <p className="t-ticket__note-body">
-                    Tell me who you are and I&apos;ll sort you out. Students get
-                    a discount; teachers, schools and coaches get a rate of their
-                    own.
-                  </p>
+                  <p className="t-ticket__note-title">{t("appAccountCheckout.rateQ")}</p>
+                  <p className="t-ticket__note-body">{t("appAccountCheckout.rateBody")}</p>
                   <button
                     type="button"
                     onClick={() => {
@@ -431,14 +440,14 @@ function CheckoutContent() {
                     className="t-ticket__cta mt-3"
                     style={{ height: 40, padding: "0 18px", fontSize: 14 }}
                   >
-                    Ask for a rate
+                    {t("appAccountCheckout.askRate")}
                   </button>
                 </div>
 
                 {/* A sentence with a control in it: same flex trap as the
                     terms line below, so it takes the note treatment too. */}
                 <p className="t-ticket__fine t-ticket__fine--note">
-                  No code yet?{" "}
+                  {t("appAccountCheckout.noCodeA")}
                   <button
                     type="button"
                     onClick={() => {
@@ -447,9 +456,9 @@ function CheckoutContent() {
                     }}
                     className="t-ticket__quiet"
                   >
-                    ask me for one
+                    {t("appAccountCheckout.noCodeLink")}
                   </button>
-                  , and I&apos;ll get back to you.
+                  {t("appAccountCheckout.noCodeB")}
                 </p>
               </>
             )}
@@ -458,7 +467,7 @@ function CheckoutContent() {
 
         {error && (
           <div className="t-ticket__note t-ticket__note--bad">
-            <p className="t-ticket__note-title">{error}</p>
+            <p className="t-ticket__note-title">{shownError}</p>
           </div>
         )}
 
@@ -470,33 +479,33 @@ function CheckoutContent() {
             className="t-ticket__cta"
           >
             {isCheckingOut
-              ? "Taking you to Stripe..."
+              ? t("appAccountCheckout.toStripe")
               : isTrial
                 ? words.cta
-                : "Continue to payment"}
+                : t("appAccountCheckout.continue")}
           </button>
           <Link href="/pricing" className="t-ticket__quiet">
-            back to the plans
+            {t("appAccountCheckout.backToPlans")}
           </Link>
         </div>
 
         <ul className="t-ticket__fine">
-          <li>Cancel any time from billing settings.</li>
-          <li>Payment is handled by Stripe. The card never touches my server.</li>
-          <li>Renews automatically until you cancel.</li>
+          <li>{t("appAccountCheckout.fine1")}</li>
+          <li>{t("appAccountCheckout.fine2")}</li>
+          <li>{t("appAccountCheckout.fine3")}</li>
         </ul>
       </div>
 
       <p className="t-ticket__fine t-ticket__fine--note" style={{ marginTop: 20 }}>
-        Subscribing means you agree to the{" "}
+        {t("appAccountCheckout.agreeA")}
         <Link href="/terms" className="t-ticket__quiet">
-          terms
-        </Link>{" "}
-        and the{" "}
-        <Link href="/privacy" className="t-ticket__quiet">
-          privacy policy
+          {t("appAccountCheckout.agreeTerms")}
         </Link>
-        .
+        {t("appAccountCheckout.agreeB")}
+        <Link href="/privacy" className="t-ticket__quiet">
+          {t("appAccountCheckout.agreePrivacy")}
+        </Link>
+        {t("appAccountCheckout.agreeC")}
       </p>
 
       <RequestPromoCodeModal

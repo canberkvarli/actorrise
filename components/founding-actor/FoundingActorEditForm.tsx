@@ -24,6 +24,7 @@ import {
   IconLoader2,
 } from "@tabler/icons-react";
 import Image from "next/image";
+import { useT } from "@/lib/i18n";
 
 interface FoundingActorEditFormProps {
   actor: FoundingActorPublic;
@@ -31,6 +32,7 @@ interface FoundingActorEditFormProps {
 
 export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
   const queryClient = useQueryClient();
+  const t = useT();
 
   // Form state
   const [bio, setBio] = useState(actor.bio || "");
@@ -61,12 +63,9 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
         social_links: socialLinks,
       });
       queryClient.invalidateQueries({ queryKey: ["founding-actors"] });
-      toast.success(
-        "Thank you for your updates! Your page is now live.",
-        { duration: 5000 },
-      );
+      toast.success(t("appAccountFounding.saved"), { duration: 5000 });
     } catch (err) {
-      toast.error("Failed to save changes. Please try again.");
+      toast.error(t("appAccountFounding.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -94,9 +93,9 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
       setHeadshots(res.data.headshots);
       setEditingImage(null);
       queryClient.invalidateQueries({ queryKey: ["founding-actors"] });
-      toast.success("Headshot uploaded!");
+      toast.success(t("appAccountFounding.uploaded"));
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || "Failed to upload headshot.";
+      const detail = err?.response?.data?.detail || t("appAccountFounding.uploadFailed");
       toast.error(detail);
     } finally {
       setUploadingHeadshot(false);
@@ -110,9 +109,9 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
       );
       setHeadshots(res.data.headshots);
       queryClient.invalidateQueries({ queryKey: ["founding-actors"] });
-      toast.success("Headshot removed.");
+      toast.success(t("appAccountFounding.removed"));
     } catch {
-      toast.error("Failed to remove headshot.");
+      toast.error(t("appAccountFounding.removeFailed"));
     }
   };
 
@@ -124,9 +123,9 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
       );
       setHeadshots(res.data.headshots);
       queryClient.invalidateQueries({ queryKey: ["founding-actors"] });
-      toast.success("Primary headshot updated.");
+      toast.success(t("appAccountFounding.primaryUpdated"));
     } catch {
-      toast.error("Failed to update primary headshot.");
+      toast.error(t("appAccountFounding.primaryFailed"));
     }
   };
 
@@ -135,7 +134,7 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
     return (
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Crop your headshot. Portrait orientation (4:5) works best.
+          {t("appAccountFounding.crop")}
         </p>
         <PhotoEditor
           image={editingImage}
@@ -152,68 +151,68 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
       <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="bio" className="gap-1.5">
           <IconUser className="h-4 w-4" />
-          <span className="hidden sm:inline">Bio</span>
+          <span className="hidden sm:inline">{t("appAccountFounding.tabBio")}</span>
         </TabsTrigger>
         <TabsTrigger value="headshots" className="gap-1.5">
           <IconPhoto className="h-4 w-4" />
-          <span className="hidden sm:inline">Headshots</span>
+          <span className="hidden sm:inline">{t("appAccountFounding.tabHeadshots")}</span>
         </TabsTrigger>
         <TabsTrigger value="social" className="gap-1.5">
           <IconLink className="h-4 w-4" />
-          <span className="hidden sm:inline">Links</span>
+          <span className="hidden sm:inline">{t("appAccountFounding.tabLinks")}</span>
         </TabsTrigger>
         <TabsTrigger value="preview" className="gap-1.5">
           <IconEye className="h-4 w-4" />
-          <span className="hidden sm:inline">Preview</span>
+          <span className="hidden sm:inline">{t("appAccountFounding.tabPreview")}</span>
         </TabsTrigger>
       </TabsList>
 
       {/* Bio & Details */}
       <TabsContent value="bio" className="space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="descriptor">Title / Descriptor</Label>
+          <Label htmlFor="descriptor">{t("appAccountFounding.descriptor")}</Label>
           <Input
             id="descriptor"
             value={descriptor}
             onChange={(e) => setDescriptor(e.target.value)}
-            placeholder="e.g. Actor · Voice Actor · Comedian"
+            placeholder={t("appAccountFounding.descriptorPlaceholder")}
           />
           <p className="text-xs text-muted-foreground">
-            Shown below your name on the homepage and your actor page.
+            {t("appAccountFounding.descriptorHint")}
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="quote">Testimonial Quote</Label>
+          <Label htmlFor="quote">{t("appAccountFounding.quote")}</Label>
           <Textarea
             id="quote"
             value={quote}
             onChange={(e) => setQuote(e.target.value)}
-            placeholder="What would you like to say about ActorRise?"
+            placeholder={t("appAccountFounding.quotePlaceholder")}
             rows={4}
           />
           <p className="text-xs text-muted-foreground">
-            {quote.length} characters. Shorter quotes (under 260 chars) display best on the homepage.
+            {t("appAccountFounding.quoteHint", { n: quote.length })}
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="bio">Bio</Label>
+          <Label htmlFor="bio">{t("appAccountFounding.tabBio")}</Label>
           <Textarea
             id="bio"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            placeholder="Tell us about yourself, your acting journey, and what drives you..."
+            placeholder={t("appAccountFounding.bioPlaceholder")}
             rows={8}
           />
           <p className="text-xs text-muted-foreground">
-            Shown on your dedicated actor page. Write in first or third person.
+            {t("appAccountFounding.bioHint")}
           </p>
         </div>
 
         <Button onClick={handleSave} disabled={saving}>
           {saving && <IconLoader2 className="h-4 w-4 animate-spin mr-2" />}
-          Save Changes
+          {t("appAccountFounding.save")}
         </Button>
       </TabsContent>
 
@@ -228,9 +227,9 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
         />
 
         <div className="space-y-2">
-          <Label>Your Headshots ({headshots.length}/3)</Label>
+          <Label>{t("appAccountFounding.yourHeadshots", { n: headshots.length, max: 3 })}</Label>
           <p className="text-xs text-muted-foreground">
-            Upload up to 3 headshots. Portrait orientation recommended. The primary headshot is shown on the homepage.
+            {t("appAccountFounding.headshotsHint", { max: 3 })}
           </p>
         </div>
 
@@ -244,7 +243,7 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
                 <div className="relative aspect-[4/5]">
                   <Image
                     src={h.url}
-                    alt={`Headshot ${i + 1}`}
+                    alt={t("appAccountFounding.headshotN", { n: i + 1 })}
                     fill
                     className="object-cover object-top"
                     sizes="(max-width: 640px) 100vw, 33vw"
@@ -252,7 +251,7 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
                 </div>
                 {h.is_primary && (
                   <span className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-0.5 font-medium">
-                    Primary
+                    {t("appAccountFounding.primary")}
                   </span>
                 )}
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-2 flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
@@ -264,7 +263,7 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
                       onClick={() => handleSetPrimary(i)}
                     >
                       <IconStar className="h-3 w-3 mr-1" />
-                      Primary
+                      {t("appAccountFounding.primary")}
                     </Button>
                   )}
                   <Button
@@ -282,7 +281,7 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
         ) : (
           <div className="rounded-lg border-2 border-dashed border-border/60 bg-muted/20 p-8 text-center">
             <IconPhoto className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">No headshots uploaded yet</p>
+            <p className="text-sm text-muted-foreground">{t("appAccountFounding.noHeadshots")}</p>
           </div>
         )}
 
@@ -292,7 +291,7 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
             onClick={() => fileInputRef.current?.click()}
           >
             <IconUpload className="h-4 w-4 mr-2" />
-            Upload Headshot
+            {t("appAccountFounding.upload")}
           </Button>
         )}
       </TabsContent>
@@ -301,7 +300,7 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
       <TabsContent value="social" className="space-y-5">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="social-imdb">IMDb URL</Label>
+            <Label htmlFor="social-imdb">{t("appAccountFounding.imdbUrl")}</Label>
             <Input
               id="social-imdb"
               value={socialLinks.imdb || ""}
@@ -310,12 +309,12 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="social-website">Website</Label>
+            <Label htmlFor="social-website">{t("appAccountFounding.website")}</Label>
             <Input
               id="social-website"
               value={socialLinks.website || ""}
               onChange={(e) => handleSocialLinkChange("website", e.target.value)}
-              placeholder="https://yourwebsite.com"
+              placeholder={t("appAccountFounding.websitePlaceholder")}
             />
           </div>
           <div className="space-y-2">
@@ -324,7 +323,7 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
               id="social-instagram"
               value={socialLinks.instagram || ""}
               onChange={(e) => handleSocialLinkChange("instagram", e.target.value)}
-              placeholder="@yourusername"
+              placeholder={t("appAccountFounding.handlePlaceholder")}
             />
           </div>
           <div className="space-y-2">
@@ -333,22 +332,23 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
               id="social-x"
               value={socialLinks.x || ""}
               onChange={(e) => handleSocialLinkChange("x", e.target.value)}
-              placeholder="@yourusername"
+              placeholder={t("appAccountFounding.handlePlaceholder")}
             />
           </div>
         </div>
 
         <Button onClick={handleSave} disabled={saving}>
           {saving && <IconLoader2 className="h-4 w-4 animate-spin mr-2" />}
-          Save Changes
+          {t("appAccountFounding.save")}
         </Button>
       </TabsContent>
 
       {/* Preview */}
       <TabsContent value="preview" className="space-y-5">
         <p className="text-sm text-muted-foreground">
-          This is how your page will appear to visitors at{" "}
-          <span className="font-mono text-xs">/actors/{actor.slug}</span>.
+          {t("appAccountFounding.previewA")}
+          <span className="font-mono text-xs">/actors/{actor.slug}</span>
+          {t("appAccountFounding.previewB")}
         </p>
 
         <div className="rounded-xl border border-border/60 bg-card p-6 sm:p-8">

@@ -7,6 +7,7 @@ import api from "@/lib/api";
 import { useMySharing } from "@/hooks/useClassShelf";
 import { useUsageLimits } from "@/hooks/useSubscription";
 import { trackEvent } from "@/lib/events";
+import { useLocale, useT, type Locale } from "@/lib/i18n";
 
 type ClassLinkSummary = {
   code: string;
@@ -19,8 +20,15 @@ type ClassLinkSummary = {
   plan_ends_at?: string | null;
 };
 
-function planDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+/** English keeps the browser's own date order, as it always has. */
+const dateTag = (locale: Locale) => (locale === "tr" ? "tr-TR" : undefined);
+
+function planDate(iso: string, locale: Locale): string {
+  return new Date(iso).toLocaleDateString(dateTag(locale), {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 const SITE = "actorrise.com";
@@ -49,17 +57,19 @@ export function ClassLinkPanel({
   shared: number;
   unlockAt: number | null;
 }) {
+  const t = useT();
+  const locale = useLocale();
   const next = !link.active
-    ? "I switch new links on by hand when the address isn't a school's, usually within a day. Hold it until this says Live."
+    ? t("appAccountClass.nextPending")
     : students === 0
-      ? "Send it when the class is together. One class period, about ten minutes, and everyone's in."
+      ? t("appAccountClass.nextSend")
       : null;
 
   return (
     <div className="min-w-0">
       <div className="flex items-center justify-between gap-4">
         <h2 id="class-card-h" className="text-[17px] font-semibold leading-snug">
-          Your class
+          {t("appAccountClass.yourClass")}
         </h2>
         <span
           className="inline-flex items-center gap-2 border px-2.5 py-1 text-[12px] font-semibold uppercase tracking-[0.08em]"
@@ -70,7 +80,11 @@ export function ClassLinkPanel({
             className={`size-1.5 rounded-full ${link.active ? "bg-primary" : ""}`}
             style={link.active ? undefined : { background: "var(--t-muted-dark)" }}
           />
-          {link.active ? <span className="text-primary">Live</span> : "Switching on"}
+          {link.active ? (
+            <span className="text-primary">{t("appAccountClass.live")}</span>
+          ) : (
+            t("appAccountClass.switchingOn")
+          )}
         </span>
       </div>
 
@@ -84,7 +98,7 @@ export function ClassLinkPanel({
           className="shrink-0 border-l px-4 text-[14px] font-semibold transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-current"
           style={line}
         >
-          {copied ? "Copied" : "Copy"}
+          {copied ? t("appAccountClass.copied") : t("appAccountClass.copy")}
         </button>
       </div>
       {next && (
@@ -94,29 +108,34 @@ export function ClassLinkPanel({
       )}
 
       <dl className="mt-5 grid grid-cols-1 border sm:grid-cols-3" style={line}>
-        <Stat label="Students in" value={String(students)}>
+        <Stat label={t("appAccountClass.studentsIn")} value={String(students)}>
           {unlockAt && students < unlockAt ? (
             <>
               <Meter of={unlockAt} filled={students} />
-              <span>
-                {unlockAt - students} more and your uploads are unlimited
-              </span>
+              <span>{t("appAccountClass.moreToUnlock", { n: unlockAt - students })}</span>
             </>
           ) : students > 0 ? (
             <Link href="/class" className={textLink}>
-              See your class
+              {t("appAccountClass.seeClass")}
             </Link>
           ) : (
-            "Nobody yet"
+            t("appAccountClass.nobodyYet")
           )}
         </Stat>
-        <Stat label="Scenes shared" value={String(shared)}>
+        <Stat label={t("appAccountClass.scenesShared")} value={String(shared)}>
           <Link href="/practice" className={textLink}>
-            {shared ? "Share more" : "Share a scene"}
+            {shared ? t("appAccountClass.shareMore") : t("appAccountClass.shareScene")}
           </Link>
         </Stat>
-        <Stat label="Their Plus" value={link.plan_ends_at ? shortDate(link.plan_ends_at) : "1 month"}>
-          {link.plan_ends_at ? `On your class plan, to ${planDate(link.plan_ends_at)}` : "Each, from the day they join, on me"}
+        <Stat
+          label={t("appAccountClass.theirPlus")}
+          value={
+            link.plan_ends_at ? shortDate(link.plan_ends_at, locale) : t("appAccountClass.oneMonth")
+          }
+        >
+          {link.plan_ends_at
+            ? t("appAccountClass.onClassPlan", { date: planDate(link.plan_ends_at, locale) })
+            : t("appAccountClass.eachFromJoin")}
         </Stat>
       </dl>
     </div>
@@ -155,8 +174,8 @@ function Meter({ of, filled }: { of: number; filled: number }) {
   );
 }
 
-function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+function shortDate(iso: string, locale: Locale): string {
+  return new Date(iso).toLocaleDateString(dateTag(locale), { month: "short", day: "numeric" });
 }
 
 /**
@@ -178,6 +197,7 @@ export function TeacherClassCard() {
   // The count is the teacher's own; nobody else is ever told what is shared.
   const { data: sharing } = useMySharing(!!link);
   const { usage } = useUsageLimits();
+  const t = useT();
 
   useEffect(() => {
     let live = true;
@@ -233,30 +253,30 @@ export function TeacherClassCard() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
           <div className="min-w-0 max-w-[52ch]">
             <h2 id="class-card-h" className="text-[17px] font-semibold leading-snug">
-              Bring your class in
+              {t("appAccountClass.bringTitle")}
             </h2>
             <p className="mt-1 text-[15px] leading-normal" style={{ color: "var(--t-muted-dark)" }}>
-              Make a link for your students. Everyone who signs up through it gets Plus for a month, on me.
+              {t("appAccountClass.bringBody")}
             </p>
             <label className="mt-3 block text-sm" style={{ color: "var(--t-muted-dark)" }}>
-              <span className="sr-only">Your school or studio</span>
+              <span className="sr-only">{t("appAccountClass.school")}</span>
               <input
                 value={school}
                 onChange={(e) => setSchool(e.target.value)}
                 maxLength={120}
-                placeholder="Your school or studio (optional)"
+                placeholder={t("appAccountClass.schoolPlaceholder")}
                 className="h-11 w-full max-w-sm border bg-transparent px-3 text-[15px] outline-none focus-visible:border-current"
                 style={{ borderColor: "var(--t-line-light-2)", color: "var(--t-text)" }}
               />
             </label>
             {failed && (
               <p className="mt-2 text-sm" style={{ color: "var(--t-muted-dark)" }}>
-                That didn&apos;t go through. Try once more, or email canberk@actorrise.com and I&apos;ll make it.
+                {t("appAccountClass.failed")}
               </p>
             )}
           </div>
           <button type="button" onClick={make} disabled={making} className={`${pill} bg-primary text-primary-foreground`}>
-            {making ? "Making it" : "Make my class link"}
+            {making ? t("appAccountClass.making") : t("appAccountClass.make")}
           </button>
         </div>
       ) : (

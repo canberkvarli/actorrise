@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { Label } from "@/components/ui/label";
+import { useLocale, useT } from "@/lib/i18n";
 import {
   Tooltip,
   TooltipContent,
@@ -32,6 +33,8 @@ export function FieldLabel({
   hint?: ReactNode;
   className?: string;
 }) {
+  const t = useT();
+  const locale = useLocale();
   /* The hint hangs off the LABEL rather than off an icon beside it.
      An info circle per label meant eleven small circles down one column, which
      reads as eleven warnings; and the thing you had to hit was 14px wide. The
@@ -56,8 +59,10 @@ export function FieldLabel({
             // field the explanation belongs to.
             aria-label={
               typeof children === "string"
-                ? `Why ${children.toLowerCase()} is asked`
-                : "Why this is asked"
+                ? t("appAccountProfile.whyAsked", {
+                    field: children.toLocaleLowerCase(locale === "tr" ? "tr-TR" : "en-US"),
+                  })
+                : t("appAccountProfile.whyThisAsked")
             }
             className="t-profile__why cursor-help focus:outline-none"
           >

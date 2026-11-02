@@ -5,7 +5,9 @@ import { IconX } from "@tabler/icons-react";
 
 import { useSubscription, useUsageLimits } from "@/hooks/useSubscription";
 import { theatreFontVars } from "@/lib/fonts/theatre";
-import { spanOfDays, tasteDays } from "@/lib/trial";
+import { tasteDays } from "@/lib/trial";
+import { useT } from "@/lib/i18n";
+import { useSpanOfDays } from "./trialText";
 
 /**
  * Free Plus with no card (backend services/taste.py): three days from the
@@ -30,6 +32,8 @@ export function TasteNote({
   const { subscription, mutate } = useSubscription();
   const { mutate: mutateUsage } = useUsageLimits();
   const [closed, setClosed] = useState(false);
+  const t = useT();
+  const spanOfDays = useSpanOfDays();
 
   // The grant happened on the server just now; /me and the meter are cached
   // and still say free until they are asked again.
@@ -44,14 +48,14 @@ export function TasteNote({
   if (!running || closed) return null;
 
   const length = tasteDays(taste) ?? daysUntil(grantedEndsAt);
-  const left = daysLeft(taste?.ends_at ?? grantedEndsAt);
+  const left = leftWords(daysLeftCount(taste?.ends_at ?? grantedEndsAt), t);
   const body = granted
     ? length
-      ? `You've been busy. Here's ${spanOfDays(length)} of everything, on me. No card.`
-      : "You've been busy. Here's Plus, on me. No card."
+      ? t("appAccountTaste.grantedSpan", { span: spanOfDays(length) })
+      : t("appAccountTaste.granted")
     : left
-      ? `Plus, on me: ${left}.`
-      : "Plus, on me.";
+      ? t("appAccountTaste.runningLeft", { left })
+      : t("appAccountTaste.running");
 
   const foot = aboveRunBar
     ? "bottom-[calc(11rem+env(safe-area-inset-bottom,0px))] lg:bottom-4"
@@ -63,7 +67,7 @@ export function TasteNote({
         <button
           type="button"
           onClick={() => setClosed(true)}
-          aria-label="Close"
+          aria-label={t("appAccountUi.close")}
           className="t-offer__x shrink-0"
           style={{ position: "static" }}
         >
@@ -81,12 +85,22 @@ function daysUntil(endsAt: string | null | undefined, now: number = Date.now()):
   return Number.isFinite(days) && days > 0 ? days : null;
 }
 
-/** "5 days left", "3 hours left". Empty when there is no end to count to. */
-export function daysLeft(endsAt: string | null | undefined, now: number = Date.now()): string {
-  if (!endsAt) return "";
+type Left = { unit: "lessThanHour" | "hours" | "days"; n: number } | null;
+
+/** What is left of the taste, counted. null when there is no end to count to. */
+function daysLeftCount(endsAt: string | null | undefined, now: number = Date.now()): Left {
+  if (!endsAt) return null;
   const hours = Math.max(0, (new Date(endsAt).getTime() - now) / 36e5);
-  if (hours < 1) return "less than an hour left";
-  if (hours < 24) return `${Math.ceil(hours)} ${Math.ceil(hours) === 1 ? "hour" : "hours"} left`;
-  const days = Math.ceil(hours / 24);
-  return `${days} ${days === 1 ? "day" : "days"} left`;
+  if (hours < 1) return { unit: "lessThanHour", n: 0 };
+  if (hours < 24) return { unit: "hours", n: Math.ceil(hours) };
+  return { unit: "days", n: Math.ceil(hours / 24) };
+}
+
+/** "5 days left", "3 hours left". Empty when there is no end to count to. */
+function leftWords(left: Left, t: ReturnType<typeof useT>): string {
+  if (!left) return "";
+  if (left.unit === "lessThanHour") return t("appAccountTaste.lessThanHour");
+  if (left.unit === "hours")
+    return t(left.n === 1 ? "appAccountTaste.hourLeft" : "appAccountTaste.hoursLeft", { n: left.n });
+  return t(left.n === 1 ? "appAccountTaste.dayLeft" : "appAccountTaste.daysLeft", { n: left.n });
 }

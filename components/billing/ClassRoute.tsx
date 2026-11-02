@@ -1,4 +1,7 @@
+"use client";
+
 import type { CSSProperties } from "react";
+import { useT } from "@/lib/i18n";
 
 /**
  * The way through a wall for an actor who has no card: a student.
@@ -11,13 +14,14 @@ import type { CSSProperties } from "react";
  * dead end.
  */
 export function ClassRoute({ className, style }: { className?: string; style?: CSSProperties }) {
+  const t = useT();
   return (
     <p className={className} style={style}>
-      In a class? Your teacher can get you in free. Ask them to email{" "}
+      {t("appAccountClassRoute.before")}
       <a href="mailto:canberk@actorrise.com" className="underline underline-offset-2">
         canberk@actorrise.com
       </a>
-      .
+      {t("appAccountClassRoute.after")}
     </p>
   );
 }

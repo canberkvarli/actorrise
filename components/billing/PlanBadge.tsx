@@ -15,6 +15,7 @@
  */
 
 import { theatreFontVars } from "@/lib/fonts/theatre";
+import { useT } from "@/lib/i18n";
 
 interface PlanBadgeProps {
   planName: string;
@@ -38,8 +39,10 @@ export function PlanBadge({
   showIcon = true,
   className,
 }: PlanBadgeProps) {
+  const t = useT();
   const key = planName.toLowerCase();
-  const label = DISPLAY[key] ?? "Free";
+  // Plan names are brands and stay as they are; only "Free" is a word.
+  const label = key === "free" || !DISPLAY[key] ? t("appAccountBilling.free") : DISPLAY[key];
   const paid = key !== "free";
 
   return (

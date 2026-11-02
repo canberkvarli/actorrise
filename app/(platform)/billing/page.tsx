@@ -37,36 +37,62 @@ import {
   useUsageLimits,
   type UsageLimits,
 } from "@/hooks/useSubscription";
-import { useTrialWords } from "@/hooks/useTrialWords";
-import { cap, plusHref } from "@/lib/trial";
+import { plusHref } from "@/lib/trial";
+import { PLUS_MONTHLY } from "@/lib/paywall/offer";
+import { useLocale, useT, type Locale, type MessageKey } from "@/lib/i18n";
+import { capIn, moneyIn, useTrialText } from "@/components/billing/trialText";
 
 /** What each tier opens. Copy only — the numbers come from the same table the
  *  pricing page quotes, and nothing here is derived from the user's account. */
+type OpensLabel = "searches" | "collection" | "scripts" | "scenepartner" | "uploads";
+const NO_LIMIT = "noLimit";
+const NOT_ON_FREE = "notOnFree";
+
 const WHAT_IT_OPENS: Record<
   string,
-  { label: string; value: string; unit?: string; none?: boolean }[]
+  { label: OpensLabel; value: string; unit?: "month" | "toTry"; none?: boolean }[]
 > = {
   unlimited: [
-    { label: "searches", value: "no limit" },
-    { label: "collection", value: "no limit" },
-    { label: "scripts", value: "no limit" },
-    { label: "scenepartner", value: "100", unit: "a month" },
-    { label: "uploads", value: "no limit" },
+    { label: "searches", value: NO_LIMIT },
+    { label: "collection", value: NO_LIMIT },
+    { label: "scripts", value: NO_LIMIT },
+    { label: "scenepartner", value: "100", unit: "month" },
+    { label: "uploads", value: NO_LIMIT },
   ],
   plus: [
-    { label: "searches", value: "150", unit: "a month" },
-    { label: "collection", value: "no limit" },
+    { label: "searches", value: "150", unit: "month" },
+    { label: "collection", value: NO_LIMIT },
     { label: "scripts", value: "10" },
-    { label: "scenepartner", value: "30", unit: "a month" },
+    { label: "scenepartner", value: "30", unit: "month" },
     { label: "uploads", value: "10" },
   ],
   free: [
-    { label: "searches", value: "10", unit: "a month" },
+    { label: "searches", value: "10", unit: "month" },
     { label: "collection", value: "5" },
     { label: "scripts", value: "3" },
-    { label: "scenepartner", value: "1", unit: "to try" },
-    { label: "uploads", value: "not on free", none: true },
+    { label: "scenepartner", value: "1", unit: "toTry" },
+    { label: "uploads", value: NOT_ON_FREE, none: true },
   ],
+};
+
+const OPENS_LABEL: Record<OpensLabel, MessageKey> = {
+  searches: "appAccountBilling.labelSearches",
+  collection: "appAccountBilling.labelCollection",
+  scripts: "appAccountBilling.labelScripts",
+  scenepartner: "appAccountBilling.labelScenePartner",
+  uploads: "appAccountBilling.labelUploads",
+};
+
+/** API enums shown to the reader. Anything unknown prints as it came. */
+const PERIOD_LABEL: Record<string, MessageKey> = {
+  monthly: "appAccountBilling.periodMonthly",
+  annual: "appAccountBilling.periodAnnual",
+  yearly: "appAccountBilling.periodYearly",
+};
+const STATUS_LABEL: Record<string, MessageKey> = {
+  failed: "appAccountBilling.statusFailed",
+  pending: "appAccountBilling.statusPending",
+  refunded: "appAccountBilling.statusRefunded",
 };
 
 export default function BillingPage() {
@@ -77,7 +103,11 @@ export default function BillingPage() {
   const { subscription, isLoading: subLoading, isError: subError } = useSubscription();
   const { usage, isLoading: usageLoading } = useUsageLimits();
   const { history: billingHistory, isLoading: historyLoading } = useBillingHistory();
-  const words = useTrialWords();
+  const words = useTrialText();
+  const t = useT();
+  const locale = useLocale();
+  const formatDate = (d: string) => formatDateIn(locale, d);
+  const formatPrice = (cents: number) => moneyIn(locale, cents);
 
   const isLoading = subLoading || usageLoading || historyLoading;
 
@@ -99,7 +129,7 @@ export default function BillingPage() {
       toast.error(
         typeof detail === "string"
           ? detail
-          : "Couldn't open the billing portal. Try again, or use Contact in the menu.",
+          : t("appAccountBilling.portalError"),
       );
       setIsManagingSubscription(false);
     }
@@ -116,17 +146,14 @@ export default function BillingPage() {
       <div className={shell}>
         <Head />
         <div className="t-bill mt-8 max-w-md">
-          <p className="t-bill__head">the window is shut</p>
-          <p className="t-stub__terms">
-            I couldn&apos;t load your plan just now. Nothing has changed on your
-            account, so refresh and it should come back.
-          </p>
+          <p className="t-bill__head">{t("appAccountBilling.errorHead")}</p>
+          <p className="t-stub__terms">{t("appAccountBilling.errorBody")}</p>
           <button
             type="button"
             onClick={() => window.location.reload()}
             className="t-bring-in mt-5"
           >
-            Try again
+            {t("appAccountBilling.tryAgain")}
           </button>
         </div>
       </div>
@@ -167,37 +194,41 @@ export default function BillingPage() {
         >
           <div className="t-stub__top">
             <p className="t-stub__rail">
-              <span>admit one</span>
+              <span>{t("appAccountBilling.admitOne")}</span>
               <span className="t-stub__serial">
-                {subscription?.status === "trialing" ? "on trial" : " "}
+                {subscription?.status === "trialing" ? t("appAccountBilling.onTrial") : " "}
               </span>
             </p>
 
             <h2 className="t-stub__tier">
-              {subscription?.tier_display_name ?? "Free"}
+              {subscription?.tier_display_name ?? t("appAccountBilling.free")}
             </h2>
 
             <p className="t-stub__terms">
               {isFree ? (
-                <>
-                  the house seats. everything below is open to you, and the
-                  numbers are small on purpose.
-                </>
+                <>{t("appAccountBilling.freeTerms")}</>
               ) : (
                 <>
-                  {subscription?.billing_period ? `billed ${subscription.billing_period}` : null}
+                  {subscription?.billing_period
+                    ? t("appAccountBilling.billed", {
+                        period: labelOf(PERIOD_LABEL, subscription.billing_period, t),
+                      })
+                    : null}
                   {subscription?.billing_period && subscription?.current_period_end ? " · " : null}
                   {subscription?.current_period_end
-                    ? `${subscription.cancel_at_period_end ? "ends" : "renews"} ${formatDate(
-                        subscription.current_period_end,
-                      )}`
+                    ? t(
+                        subscription.cancel_at_period_end
+                          ? "appAccountBilling.endsOn"
+                          : "appAccountBilling.renewsOn",
+                        { date: formatDate(subscription.current_period_end) },
+                      )
                     : null}
                 </>
               )}
             </p>
 
             {subscription?.cancel_at_period_end && (
-              <span className="t-stub__ending">ends at the period</span>
+              <span className="t-stub__ending">{t("appAccountBilling.endsAtPeriod")}</span>
             )}
 
             <div className="t-stub__actions">
@@ -207,14 +238,16 @@ export default function BillingPage() {
                     href={plusHref("billing", words.tasted)}
                     className="t-cta t-cta--paper t-cta--stub"
                   >
-                    {words.tasted ? "Get Plus, $12 a month" : `${cap(words.span)} of Plus, free`}
+                    {words.tasted
+                      ? t("appAccountBilling.getPlusMonthly", { price: PLUS_MONTHLY })
+                      : t("appAccountBilling.spanOfPlusFree", { span: capIn(words.span, locale) })}
                     <span className="t-cta__dot" aria-hidden>
                       <IconGift className="h-4 w-4" />
                     </span>
                   </Link>
                   <Link href="/pricing" className="t-bring-in">
                     <IconSparkles className="h-4 w-4" />
-                    See the plans
+                    {t("appAccountBilling.seePlans")}
                   </Link>
                 </>
               ) : subscription?.has_stripe_customer ? (
@@ -225,16 +258,18 @@ export default function BillingPage() {
                   className="t-bring-in disabled:opacity-60"
                 >
                   <IconCreditCard className="h-4 w-4" />
-                  {isManagingSubscription ? "Opening…" : "Manage subscription"}
+                  {isManagingSubscription
+                    ? t("appAccountBilling.opening")
+                    : t("appAccountBilling.manage")}
                 </button>
               ) : (
                 /* Comped accounts have no Stripe customer, so there is no
                    portal to send them to. Saying so is kinder than a button
                    that errors. */
                 <p className="t-stub__terms" style={{ marginTop: 0 }}>
-                  this one is on the house, so there is nothing to manage.{" "}
+                  {t("appAccountBilling.onTheHouse")}{" "}
                   <Link href="/pricing" className="t-note__ask">
-                    the plans
+                    {t("appAccountBilling.thePlans")}
                   </Link>
                 </p>
               )}
@@ -244,15 +279,28 @@ export default function BillingPage() {
           <div aria-hidden className="t-stub__perf" />
 
           <div className="t-stub__bottom">
-            <p className="t-bill__head">what it opens</p>
+            <p className="t-bill__head">{t("appAccountBilling.whatItOpens")}</p>
             <div className="mt-2">
               {opens.map((row) => (
                 <div key={row.label} className="t-leader" data-none={row.none || undefined}>
-                  <span>{row.label}</span>
+                  <span>{t(OPENS_LABEL[row.label])}</span>
                   <span aria-hidden className="t-leader__dots" />
                   <span className="t-leader__value">
-                    {row.value}
-                    {row.unit && <em> {row.unit}</em>}
+                    {row.value === NO_LIMIT
+                      ? t("appAccountBilling.noLimit")
+                      : row.value === NOT_ON_FREE
+                        ? t("appAccountBilling.notOnFree")
+                        : row.value}
+                    {row.unit && (
+                      <em>
+                        {" "}
+                        {t(
+                          row.unit === "month"
+                            ? "appAccountBilling.unitMonth"
+                            : "appAccountBilling.unitToTry",
+                        )}
+                      </em>
+                    )}
                   </span>
                 </div>
               ))}
@@ -269,26 +317,26 @@ export default function BillingPage() {
             className="t-bill"
           >
             <p className="t-bill__head">
-              this month
-              <span className="t-bill__aside">(resets on the 1st.)</span>
+              {t("appAccountBilling.thisMonth")}
+              <span className="t-bill__aside">{t("appAccountBilling.resets")}</span>
             </p>
 
             <div className="mt-4 space-y-4">
               <Meter
-                label="searches"
+                label={t("appAccountBilling.labelSearches")}
                 used={usage?.ai_searches_used ?? 0}
                 limit={usage?.ai_searches_limit ?? 0}
               />
               {usage && usage.scene_partner_limit > 0 && (
                 <Meter
-                  label="scenepartner"
+                  label={t("appAccountBilling.labelScenePartner")}
                   used={usage.scene_partner_used}
                   limit={usage.scene_partner_limit}
                 />
               )}
               {usage && usage.craft_coach_limit > 0 && (
                 <Meter
-                  label="craft coach"
+                  label={t("appAccountBilling.labelCraftCoach")}
                   used={usage.craft_coach_used}
                   limit={usage.craft_coach_limit}
                 />
@@ -297,9 +345,9 @@ export default function BillingPage() {
 
             {usage && runningLow(usage) && (
               <p className="t-note mt-5">
-                <span>running low on searches.</span>
+                <span>{t("appAccountBilling.runningLow")}</span>
                 <Link href="/pricing" className="t-note__ask">
-                  more of them
+                  {t("appAccountBilling.moreOfThem")}
                   <IconArrowUpRight className="inline h-3 w-3 align-[-1px]" />
                 </Link>
               </p>
@@ -313,15 +361,17 @@ export default function BillingPage() {
               transition={{ duration: 0.4, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
               className="t-bill"
             >
-              <p className="t-bill__head">receipts</p>
+              <p className="t-bill__head">{t("appAccountBilling.receipts")}</p>
               <div className="mt-3">
                 {billingHistory.map((item) => (
                   <div key={item.id} className="t-receipt">
                     <span className="t-receipt__what">
-                      {item.description || "Payment"}
+                      {item.description || t("appAccountBilling.payment")}
                       <span className="t-receipt__when">
                         {formatDate(item.created_at)}
-                        {item.status !== "succeeded" ? ` · ${item.status}` : ""}
+                        {item.status !== "succeeded"
+                          ? ` · ${labelOf(STATUS_LABEL, item.status, t)}`
+                          : ""}
                       </span>
                     </span>
                     <span
@@ -335,7 +385,7 @@ export default function BillingPage() {
                         href={item.invoice_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        aria-label={`Invoice for ${formatDate(item.created_at)}`}
+                        aria-label={t("appAccountBilling.invoiceFor", { date: formatDate(item.created_at) })}
                         className="t-receipt__pdf"
                       >
                         <IconDownload className="h-4 w-4" />
@@ -353,9 +403,9 @@ export default function BillingPage() {
             transition={{ duration: 0.4, delay: 0.18 }}
             className="t-note px-1"
           >
-            <span>student, teacher, coach or school?</span>
+            <span>{t("appAccountBilling.discountQ")}</span>
             <button type="button" onClick={() => setPromoModalOpen(true)} className="t-note__ask">
-              ask for a discount
+              {t("appAccountBilling.discountAsk")}
             </button>
           </motion.p>
         </div>
@@ -367,14 +417,15 @@ export default function BillingPage() {
 }
 
 function Head() {
+  const t = useT();
   return (
     <motion.div
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
     >
-      <p className="t-slug">(the box office.)</p>
-      <h1 className="t-stage-title t-boxoffice-title">Billing</h1>
+      <p className="t-slug">{t("appAccountBilling.direction")}</p>
+      <h1 className="t-stage-title t-boxoffice-title">{t("appAccountBilling.title")}</h1>
     </motion.div>
   );
 }
@@ -382,6 +433,7 @@ function Head() {
 /** One line of the meter. A limit of -1 is "no limit", which has no bar to
  *  draw — a full track would read as "you are out". */
 function Meter({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const t = useT();
   const unlimited = limit === -1;
   const pct = unlimited || limit <= 0 ? 0 : Math.min((used / limit) * 100, 100);
   return (
@@ -389,14 +441,16 @@ function Meter({ label, used, limit }: { label: string; used: number; limit: num
       <p className="t-meter__row">
         <span>{label}</span>
         <span className="t-meter__count">
-          {unlimited ? `${used} · no limit` : `${used} / ${limit}`}
+          {unlimited
+            ? t("appAccountBilling.meterUnlimited", { used })
+            : `${used} / ${limit}`}
         </span>
       </p>
       {!unlimited && (
         <div
           className="t-meter"
           role="progressbar"
-          aria-label={`${label} used this month`}
+          aria-label={t("appAccountBilling.meterAria", { label })}
           aria-valuenow={Math.round(pct)}
           aria-valuemin={0}
           aria-valuemax={100}
@@ -413,10 +467,19 @@ function runningLow(usage: UsageLimits) {
   return usage.ai_searches_used / usage.ai_searches_limit > 0.8;
 }
 
-const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+function labelOf(
+  map: Record<string, MessageKey>,
+  raw: string,
+  t: (key: MessageKey) => string,
+): string {
+  const key = map[raw];
+  return key ? t(key) : raw;
+}
 
 /** "14 oct 2026" — the Courier margin note, not "October 14, 2026". */
-const formatDate = (dateString: string) =>
-  new Date(dateString)
-    .toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-    .toLowerCase();
+const formatDateIn = (locale: Locale, dateString: string) => {
+  const tag = locale === "tr" ? "tr-TR" : "en-GB";
+  return new Date(dateString)
+    .toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" })
+    .toLocaleLowerCase(tag);
+};

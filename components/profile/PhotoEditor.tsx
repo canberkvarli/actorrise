@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import Cropper from "react-easy-crop";
 import { Button } from "@/components/ui/button";
+import { useT, type MessageKey } from "@/lib/i18n";
 import { IconZoomIn, IconZoomOut, IconRotateClockwise, IconX, IconCheck, IconLoader2 } from "@tabler/icons-react";
 
 interface PhotoEditorProps {
@@ -24,13 +25,14 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
-  const [imageError, setImageError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<MessageKey | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const t = useT();
 
   // Validate image when it changes
   useEffect(() => {
     if (!image) {
-      setImageError("No image provided");
+      setImageError("appAccountPhoto.errNone");
       return;
     }
     
@@ -48,12 +50,12 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
     if (isDataUrl) {
       const dataUrlMatch = image.match(/^data:image\/(\w+);base64,(.+)$/);
       if (!dataUrlMatch) {
-        setImageError("Invalid image format. Please try uploading again.");
+        setImageError("appAccountPhoto.errFormat");
         return;
       }
       const [, format, base64Data] = dataUrlMatch;
       if (!base64Data || base64Data.length < 100) {
-        setImageError("Image data is too small or corrupted. Please try uploading again.");
+        setImageError("appAccountPhoto.errSmall");
         return;
       }
       console.log("Data URL validated:", { format, dataLength: base64Data.length });
@@ -67,7 +69,7 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
       clearTimeout(timeoutId);
       console.log("Image loaded successfully, dimensions:", testImg.width, "x", testImg.height);
       if (testImg.width === 0 || testImg.height === 0) {
-        setImageError("Image has invalid dimensions. Please try uploading again.");
+        setImageError("appAccountPhoto.errDimensions");
         return;
       }
       setImageError(null);
@@ -77,18 +79,18 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
       clearTimeout(timeoutId);
       console.error("Failed to load image:", error);
       if (isDataUrl) {
-        setImageError("Failed to load image. The file may be corrupted. Please try uploading a different image.");
+        setImageError("appAccountPhoto.errCorrupt");
       } else if (isUrl) {
-        setImageError("Failed to load image from URL. Please check your internet connection or try uploading again.");
+        setImageError("appAccountPhoto.errUrl");
       } else {
-        setImageError("Failed to load image. Please try uploading again.");
+        setImageError("appAccountPhoto.errLoad");
       }
     };
     
     // Set a timeout for image loading (10 seconds)
     timeoutId = setTimeout(() => {
       testImg.onerror = null; // Prevent double error
-      setImageError("Image took too long to load. Please try uploading again.");
+      setImageError("appAccountPhoto.errSlow");
     }, 10000);
     
     testImg.src = image;
@@ -197,7 +199,7 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
       <div className="relative w-full max-w-4xl bg-background rounded-lg shadow-lg overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Edit Photo</h2>
+          <h2 className="text-lg font-semibold">{t("appAccountPhoto.title")}</h2>
           <Button
             variant="ghost"
             size="icon"
@@ -213,8 +215,8 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
           {imageError ? (
             <div className="flex items-center justify-center h-full text-destructive">
               <div className="text-center">
-                <p className="text-lg font-semibold mb-2">Image Error</p>
-                <p className="text-sm">{imageError}</p>
+                <p className="text-lg font-semibold mb-2">{t("appAccountPhoto.errTitle")}</p>
+                <p className="text-sm">{t(imageError)}</p>
               </div>
             </div>
           ) : image ? (
@@ -233,7 +235,7 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
             />
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
-              <p>No image to display</p>
+              <p>{t("appAccountPhoto.noImage")}</p>
             </div>
           )}
         </div>
@@ -242,7 +244,7 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
         <div className="p-4 border-t space-y-3">
           {/* Zoom Controls */}
           <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground min-w-[60px]">Zoom</span>
+            <span className="text-xs text-muted-foreground min-w-[60px]">{t("appAccountPhoto.zoom")}</span>
             <div className="flex items-center gap-2 flex-1">
               <Button
                 variant="ghost"
@@ -272,14 +274,14 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
                 <IconZoomIn className="h-3.5 w-3.5" />
               </Button>
               <span className="text-xs text-muted-foreground min-w-[40px] text-right">
-                {Math.round(zoom * 100)}%
+                {t("appAccountCallSheet.pct", { pct: Math.round(zoom * 100) })}
               </span>
             </div>
           </div>
 
           {/* Rotation Control */}
           <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground min-w-[60px]">Rotate</span>
+            <span className="text-xs text-muted-foreground min-w-[60px]">{t("appAccountPhoto.rotate")}</span>
             <div className="flex items-center gap-2 flex-1">
               <Button
                 variant="ghost"
@@ -307,18 +309,18 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSaving}>
-              Cancel
+              {t("appAccountDelete.cancel")}
             </Button>
             <Button size="sm" onClick={handleSave} disabled={isSaving || !croppedAreaPixels}>
               {isSaving ? (
                 <>
                   <IconLoader2 className="h-4 w-4 animate-spin" />
-                  Saving...
+                  {t("appAccountPhoto.saving")}
                 </>
               ) : (
                 <>
                   <IconCheck className="h-4 w-4" />
-                  Save
+                  {t("appAccountPhoto.save")}
                 </>
               )}
             </Button>

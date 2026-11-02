@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useTrialWords } from "@/hooks/useTrialWords";
+import { useT } from "@/lib/i18n";
 
 interface EarnSecondWeekProps {
   /** Classes for the link itself. */
@@ -32,11 +33,12 @@ export function EarnSecondWeek({
   lineStyle,
 }: EarnSecondWeekProps) {
   const words = useTrialWords();
+  const t = useT();
   if (words.earned || words.tasted) return null;
 
   const link = (
     <Link href="/practice" className={className}>
-      Finish a scene first and it&rsquo;s two weeks.
+      {t("appAccountTrial.earnSecondWeek")}
     </Link>
   );
   if (!lineClassName && !lineStyle) return link;

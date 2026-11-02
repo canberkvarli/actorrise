@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 /**
  * The profile, read back as a casting line.
@@ -45,9 +46,9 @@ type Props = {
 
 /** Stored value -> the word on the mark. Actors get nothing: on a page built
  *  for actors, "ACTOR" is a label on the room you are standing in. */
-const CREDIT_MARK: Record<string, string> = {
-  educator: "Teaching",
-  student: "Studying",
+const CREDIT_MARK: Record<string, MessageKey> = {
+  educator: "appAccountCallSheet.teaching",
+  student: "appAccountCallSheet.studying",
 };
 
 function Blank({
@@ -110,8 +111,10 @@ export function ProfileCallSheet({
   organization,
 }: Props) {
   const reduce = useReducedMotion();
+  const t = useT();
   const pct = Math.round(completion);
-  const mark = accountType ? CREDIT_MARK[accountType] : null;
+  const markKey = accountType ? CREDIT_MARK[accountType] : null;
+  const mark = markKey ? t(markKey) : null;
 
   return (
     <div id="profile-progress" className="border-b border-border/70 pb-6">
@@ -122,7 +125,9 @@ export function ProfileCallSheet({
           {/* "the line casting reads" is an actor's frame. A drama teacher is
               not waiting on a casting office, so she gets her own. */}
           <p className="mb-2 text-xs italic tracking-[0.08em] text-muted-foreground/70">
-            {accountType === "educator" ? "(who you are, and where you teach.)" : "(the line casting reads.)"}
+            {accountType === "educator"
+              ? t("appAccountCallSheet.directionEducator")
+              : t("appAccountCallSheet.direction")}
           </p>
 
           {/* The actor's name IS the page title. There was a separate "Your
@@ -138,7 +143,7 @@ export function ProfileCallSheet({
                 onClick={() => onJump("basic", "name")}
                 className="font-brand text-3xl font-medium leading-tight text-muted-foreground/60 underline decoration-dashed underline-offset-8 transition-colors hover:text-primary sm:text-4xl"
               >
-                your name
+                {t("appAccountCallSheet.yourName")}
               </button>
             </h1>
           )}
@@ -171,7 +176,7 @@ export function ProfileCallSheet({
 
         <div className="shrink-0 text-right">
           <span className="font-typewriter text-2xl tabular-nums text-foreground/80">
-            {pct}%
+            {t("appAccountCallSheet.pct", { pct })}
           </span>
           {/* The save state lives here rather than in a floating box bottom
               right. It belongs beside the thing that changed. */}
@@ -186,7 +191,9 @@ export function ProfileCallSheet({
                   transition={{ duration: 0.25 }}
                   className="stage-direction text-[11px] text-muted-foreground/70"
                 >
-                  {saveStatus === "saving" ? "(saving.)" : "(saved.)"}
+                  {saveStatus === "saving"
+                    ? t("appAccountCallSheet.saving")
+                    : t("appAccountCallSheet.saved")}
                 </motion.p>
               )}
             </AnimatePresence>

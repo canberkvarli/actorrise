@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { PlusOffer } from "@/components/billing/PlusOffer";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useTrialWords } from "@/hooks/useTrialWords";
+import { useT } from "@/lib/i18n";
+import { useTrialText } from "@/components/billing/trialText";
 import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
 import type { WallKind } from "@/lib/paywall/offer";
 
@@ -19,10 +20,11 @@ interface UpgradeModalProps {
   lead?: WallKind;
 }
 
-const PRO_BENEFITS = [
-  "Unlimited script uploads",
-  "Everything in Plus, with no monthly cap on sides",
-];
+/** Pro's price, as the pricing page quotes it. Figures, not words. */
+const PRO_MONTHLY = "$24";
+const PRO_ANNUAL = "$199";
+
+const PRO_BENEFITS = ["appAccountUpgrade.proBenefit1", "appAccountUpgrade.proBenefit2"] as const;
 
 /**
  * The wall for the ScenePartner side: script uploads, the community shelf,
@@ -39,7 +41,8 @@ export function UpgradeModal({
 }: UpgradeModalProps) {
   const { subscription } = useSubscription();
   const currentTier = subscription?.tier_name ?? "free";
-  const words = useTrialWords();
+  const words = useTrialText();
+  const t = useT();
 
   // Fires once per open, keyed on the gate that triggered it. `feature` is the
   // whole point: it answers which wall actually makes an actor reach for a card,
@@ -58,21 +61,23 @@ export function UpgradeModal({
       <DialogContent
         className={`t-modal theatre-tokens ${theatreFontVars} max-h-[92dvh] max-w-[26rem] overflow-y-auto border-0 p-7`}
       >
-        <p className="t-modal__dir">(one more seat in the house.)</p>
+        <p className="t-modal__dir">{t("appAccountUpgrade.direction")}</p>
         {isPlus ? (
           <>
-            <DialogTitle className="t-modal__title">That&rsquo;s a Pro thing.</DialogTitle>
+            <DialogTitle className="t-modal__title">{t("appAccountUpgrade.proTitle")}</DialogTitle>
             <DialogDescription className="t-modal__body">
-              {message || "Pro takes the cap off your sides."}
+              {message || t("appAccountUpgrade.proBody")}
             </DialogDescription>
             <p className="t-modal__price">
-              $24
-              <span className="t-modal__price-note">a month, or $199 a year</span>
+              {PRO_MONTHLY}
+              <span className="t-modal__price-note">
+                {t("appAccountUpgrade.proPriceNote", { annual: PRO_ANNUAL })}
+              </span>
             </p>
             <ul className="t-modal__list">
               {PRO_BENEFITS.map((benefit) => (
                 <li key={benefit} className="t-modal__item">
-                  {benefit}
+                  {t(benefit)}
                 </li>
               ))}
             </ul>
@@ -82,22 +87,27 @@ export function UpgradeModal({
                 onClick={() => trackPaywallCtaClicked(feature, "wall", currentTier)}
                 href={`/checkout?tier=pro&period=monthly&from=${encodeURIComponent(feature)}`}
               >
-                Move to Pro
+                {t("appAccountUpgrade.moveToPro")}
               </Link>
             </div>
             <button type="button" onClick={() => onOpenChange(false)} className="t-plus__dismiss">
-              not now
+              {t("appAccountUpgrade.notNow")}
             </button>
           </>
         ) : (
           <>
             <DialogTitle className="t-modal__title">
-              {words.tasted ? words.overTitle : "That one's on Plus."}
+              {words.tasted ? words.overTitle : t("appAccountUpgrade.plusTitle")}
             </DialogTitle>
             <DialogDescription className="t-modal__body">
-              {message || words.overBody || "Plus opens it, and the rest of the house with it."}
+              {message || words.overBody || t("appAccountUpgrade.plusBody")}
             </DialogDescription>
-            <PlusOffer feature={feature} lead={lead} onDismiss={() => onOpenChange(false)} />
+            <PlusOffer
+              feature={feature}
+              lead={lead}
+              onDismiss={() => onOpenChange(false)}
+              dismissLabel={t("appAccountUpgrade.notNow")}
+            />
           </>
         )}
       </DialogContent>

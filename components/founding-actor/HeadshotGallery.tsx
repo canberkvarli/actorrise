@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 interface Headshot {
   url: string;
@@ -17,6 +18,7 @@ interface HeadshotGalleryProps {
 }
 
 export function HeadshotGallery({ headshots, name, className }: HeadshotGalleryProps) {
+  const t = useT();
   const primaryIndex = headshots.findIndex((h) => h.is_primary);
   const [activeIndex, setActiveIndex] = useState(primaryIndex >= 0 ? primaryIndex : 0);
 
@@ -30,7 +32,7 @@ export function HeadshotGallery({ headshots, name, className }: HeadshotGalleryP
       <div className="relative w-full aspect-[4/5] rounded-lg overflow-hidden bg-muted ring-2 ring-border/50 shadow-lg">
         <Image
           src={active.url}
-          alt={`${name} headshot`}
+          alt={t("appAccountFounding.headshotAlt", { name })}
           fill
           className="object-cover object-top"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
@@ -55,7 +57,7 @@ export function HeadshotGallery({ headshots, name, className }: HeadshotGalleryP
             >
               <Image
                 src={h.url}
-                alt={h.caption || `${name} headshot ${i + 1}`}
+                alt={h.caption || t("appAccountFounding.headshotAltN", { name, n: i + 1 })}
                 fill
                 className="object-cover object-top"
                 sizes="64px"

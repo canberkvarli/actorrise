@@ -4,10 +4,12 @@ import * as React from "react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { IconSun, IconMoon } from "@tabler/icons-react"
+import { useT } from "@/lib/i18n"
 
 export function ThemeToggle() {
   const { setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
+  const t = useT()
 
   React.useEffect(() => {
     setMounted(true)
@@ -35,7 +37,7 @@ export function ThemeToggle() {
   if (!mounted) {
     // Pre-hydration placeholder: theme is unknown, so the label stays generic.
     return (
-      <Button variant="ghost" size="icon" className={sizing} aria-label="Toggle theme">
+      <Button variant="ghost" size="icon" className={sizing} aria-label={t("appAccountUi.toggleTheme")}>
         <IconSun className="h-4 w-4" />
       </Button>
     )
@@ -51,7 +53,7 @@ export function ThemeToggle() {
       onClick={handleToggle}
       // The button had no accessible name at all, icon-only with no label, so it
       // announced as just "button".
-      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      aria-label={isDark ? t("appAccountUi.toLight") : t("appAccountUi.toDark")}
     >
       {isDark ? (
         <IconSun className="h-4 w-4" />

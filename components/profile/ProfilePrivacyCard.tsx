@@ -3,6 +3,7 @@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useShareActivity } from "@/hooks/useCommunityFeed";
+import { useT } from "@/lib/i18n";
 
 /**
  * Callboard visibility, surfaced on the profile.
@@ -18,13 +19,14 @@ import { useShareActivity } from "@/hooks/useCommunityFeed";
 export function ProfilePrivacyCard() {
   const { shareActivity, isLoading, setShareActivity } = useShareActivity();
   const on = shareActivity !== false;
+  const t = useT();
 
   return (
     /* The last card on the page, and the only box left once the form became a
        document. It is a headed block like the rest now. */
     <section className="t-build mt-12">
       <h2 className="t-build__head">
-        <span>Privacy</span>
+        <span>{t("appAccountPrivacy.head")}</span>
       </h2>
 
       <div className="mt-4 flex items-start justify-between gap-6">
@@ -33,17 +35,14 @@ export function ProfilePrivacyCard() {
               htmlFor="share-activity"
               className="text-sm font-medium text-foreground"
             >
-              Show my activity on the callboard
+              {t("appAccountPrivacy.label")}
             </Label>
             <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted-foreground">
-              Other actors can see your first name, city, and photo next to
-              pieces you read, save, or rehearse. What you type into search is
-              never shown to anyone.
+              {t("appAccountPrivacy.body")}
             </p>
             {!isLoading && !on && (
               <p className="mt-2 text-xs text-muted-foreground/70">
-                You&rsquo;re hidden. Nothing you&rsquo;ve done shows on the
-                callboard, including before you turned this off.
+                {t("appAccountPrivacy.hidden")}
               </p>
             )}
           </div>
@@ -53,7 +52,7 @@ export function ProfilePrivacyCard() {
             checked={on}
             disabled={isLoading}
             onCheckedChange={(next) => setShareActivity(next)}
-            aria-label="Show my activity on the callboard"
+            aria-label={t("appAccountPrivacy.label")}
           />
       </div>
     </section>

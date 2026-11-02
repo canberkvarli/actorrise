@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export interface ConfirmDeleteDialogProps {
   open: boolean;
@@ -26,10 +27,11 @@ export function ConfirmDeleteDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = "Delete",
+  confirmLabel,
   onConfirm,
   isLoading = false,
 }: ConfirmDeleteDialogProps) {
+  const t = useT();
   const handleConfirm = async () => {
     try {
       await onConfirm();
@@ -61,7 +63,7 @@ export function ConfirmDeleteDialog({
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
           >
-            Cancel
+            {t("appAccountDelete.cancel")}
           </Button>
           <Button
             type="button"
@@ -71,11 +73,11 @@ export function ConfirmDeleteDialog({
             className="gap-2"
           >
             {isLoading ? (
-              "Deleting…"
+              t("appAccountUi.deletingEllipsis")
             ) : (
               <>
                 <Trash2 className="h-4 w-4" />
-                {confirmLabel}
+                {confirmLabel ?? t("appAccountUi.delete")}
               </>
             )}
           </Button>

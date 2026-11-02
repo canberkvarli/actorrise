@@ -2,6 +2,7 @@
 
 import { Film, Globe, Instagram, Youtube, Star } from "lucide-react";
 import { IconBrandX } from "@tabler/icons-react";
+import { useT } from "@/lib/i18n";
 
 interface SocialLinkIconsProps {
   socialLinks: Record<string, string>;
@@ -65,6 +66,7 @@ export function SocialLinkIcons({
     (p) => socialLinks[p.key] && socialLinks[p.key].trim() !== "",
   );
 
+  const t = useT();
   if (entries.length === 0) return null;
 
   return (
@@ -77,7 +79,7 @@ export function SocialLinkIcons({
             href={p.buildUrl(socialLinks[p.key])}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={p.label}
+            aria-label={p.key === "website" ? t("appAccountFounding.website") : p.label}
             onClick={(e) => e.stopPropagation()}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >

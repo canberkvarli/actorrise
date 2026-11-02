@@ -8,6 +8,7 @@ import { IconX } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n";
 
 /**
  * Three rows asking what you have been cast in.
@@ -37,6 +38,7 @@ const ROWS = 3;
 
 export function CreditsInline({ onChanged }: { onChanged?: () => void }) {
   const qc = useQueryClient();
+  const t = useT();
   const [drafts, setDrafts] = useState<Draft[]>(() =>
     Array.from({ length: ROWS }, () => ({ ...EMPTY })),
   );
@@ -109,7 +111,7 @@ export function CreditsInline({ onChanged }: { onChanged?: () => void }) {
                 <button
                   type="button"
                   onClick={() => remove.mutate(c.id)}
-                  aria-label={`Remove ${c.production}`}
+                  aria-label={t("appAccountCredits.remove", { production: c.production })}
                   className="ml-1 text-muted-foreground/40 opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
                 >
                   <IconX className="h-3.5 w-3.5" />
@@ -126,17 +128,17 @@ export function CreditsInline({ onChanged }: { onChanged?: () => void }) {
             value={d.production}
             onChange={(e) => setRow(i, { production: e.target.value })}
             onKeyDown={(e) => e.key === "Enter" && commit(i)}
-            placeholder={i === 0 ? "Hamlet" : "Show or film"}
+            placeholder={i === 0 ? "Hamlet" : t("appAccountCredits.showOrFilm")}
             className="min-w-0 flex-[2]"
-            aria-label="Production"
+            aria-label={t("appAccountCredits.production")}
           />
           <Input
             value={d.role}
             onChange={(e) => setRow(i, { role: e.target.value })}
             onKeyDown={(e) => e.key === "Enter" && commit(i)}
-            placeholder={i === 0 ? "Laertes" : "Role"}
+            placeholder={i === 0 ? "Laertes" : t("appAccountCredits.role")}
             className="min-w-0 flex-[2]"
-            aria-label="Role"
+            aria-label={t("appAccountCredits.role")}
           />
           <Input
             value={d.year}
@@ -144,7 +146,7 @@ export function CreditsInline({ onChanged }: { onChanged?: () => void }) {
             onKeyDown={(e) => e.key === "Enter" && commit(i)}
             placeholder="2024"
             className="w-20 shrink-0"
-            aria-label="Year"
+            aria-label={t("appAccountCredits.year")}
           />
           {/* Stage or screen, one tap. Never a silent default. */}
           <div className="flex shrink-0 overflow-hidden rounded-lg border border-border">
@@ -160,7 +162,7 @@ export function CreditsInline({ onChanged }: { onChanged?: () => void }) {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {c === "theatre" ? "Stage" : "Screen"}
+                {c === "theatre" ? t("appAccountCredits.stage") : t("appAccountCredits.screen")}
               </button>
             ))}
           </div>
@@ -172,7 +174,7 @@ export function CreditsInline({ onChanged }: { onChanged?: () => void }) {
             onClick={() => commit(i)}
             className="shrink-0"
           >
-            Add
+            {t("appAccountCredits.add")}
           </Button>
         </div>
       ))}

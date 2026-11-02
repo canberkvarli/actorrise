@@ -15,6 +15,7 @@ import api from "@/lib/api";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/lib/i18n";
 
 interface SubscriptionData {
   tier_name: string;
@@ -26,6 +27,16 @@ interface SubscriptionData {
 export default function SuccessPage() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const t = useT();
+  const period = subscription?.billing_period;
+  const periodLabel =
+    period === "annual"
+      ? t("appAccountBilling.periodAnnual")
+      : period === "yearly"
+        ? t("appAccountBilling.periodYearly")
+        : period === "monthly"
+          ? t("appAccountBilling.periodMonthly")
+          : period;
 
   useEffect(() => {
     // Fetch updated subscription (may take a moment for webhook to process)
@@ -65,10 +76,10 @@ export default function SuccessPage() {
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
           <IconCheck className="h-8 w-8 text-primary" />
         </div>
-        <h1 className="font-brand font-semibold text-4xl mb-2">Welcome to {subscription?.tier_display_name}!</h1>
-        <p className="text-xl text-muted-foreground">
-          Your subscription is now active. Let's get started.
-        </p>
+        <h1 className="font-brand font-semibold text-4xl mb-2">
+          {t("appAccountSuccess.welcome", { plan: subscription?.tier_display_name ?? "" })}
+        </h1>
+        <p className="text-xl text-muted-foreground">{t("appAccountSuccess.active")}</p>
       </motion.div>
 
       <motion.div
@@ -79,49 +90,49 @@ export default function SuccessPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Subscription Details</CardTitle>
+              <CardTitle>{t("appAccountSuccess.details")}</CardTitle>
               <Badge variant="default">{subscription?.tier_display_name}</Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Plan</p>
+                <p className="text-sm text-muted-foreground mb-1">{t("appAccountSuccess.plan")}</p>
                 <p className="font-medium">{subscription?.tier_display_name}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Billing</p>
-                <p className="font-medium capitalize">{subscription?.billing_period}</p>
+                <p className="text-sm text-muted-foreground mb-1">{t("appAccountCheckout.billing")}</p>
+                <p className="font-medium capitalize">{periodLabel}</p>
               </div>
             </div>
 
             <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
               <h3 className="font-medium mb-2 flex items-center gap-2">
                 <IconSparkles className="h-4 w-4 text-accent" />
-                What's Next?
+                {t("appAccountSuccess.next")}
               </h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <IconCheck className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
-                  <span>Start searching for monologues with AI-powered semantic search</span>
+                  <span>{t("appAccountSuccess.next1")}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <IconCheck className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
-                  <span>Get personalized recommendations based on your profile</span>
+                  <span>{t("appAccountSuccess.next2")}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <IconCheck className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
-                  <span>Bookmark your favorite monologues for quick access</span>
+                  <span>{t("appAccountSuccess.next3")}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <IconCheck className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
-                  <span>Download monologues in PDF and TXT formats</span>
+                  <span>{t("appAccountSuccess.next4")}</span>
                 </li>
                 {(subscription?.tier_name === "elite" || subscription?.tier_name === "unlimited") && (
                   <>
                     <li className="flex items-start gap-2">
                       <IconCheck className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
-                      <span>Create collections to organize your repertoire</span>
+                      <span>{t("appAccountSuccess.next5")}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <IconCheck className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
@@ -129,7 +140,7 @@ export default function SuccessPage() {
                           tab in the nav. Promising it as "coming soon" on the
                           page someone lands on straight after paying is the
                           worst possible place to be out of date. */}
-                      <span>Upload your own scripts and run them with ScenePartner</span>
+                      <span>{t("appAccountSuccess.next6")}</span>
                     </li>
                   </>
                 )}
@@ -137,18 +148,18 @@ export default function SuccessPage() {
             </div>
 
             <div className="text-xs text-muted-foreground space-y-1">
-              <p>• Receipt has been sent to your email</p>
-              <p>• You can manage your subscription anytime from billing settings</p>
-              <p>• Need help? Contact us at canberk@actorrise.com</p>
+              <p>• {t("appAccountSuccess.fine1")}</p>
+              <p>• {t("appAccountSuccess.fine2")}</p>
+              <p>• {t("appAccountSuccess.fine3")}</p>
             </div>
           </CardContent>
           <CardFooter className="flex gap-2">
             <Button asChild variant="outline" className="flex-1">
-              <Link href="/billing">View Billing</Link>
+              <Link href="/billing">{t("appAccountSuccess.viewBilling")}</Link>
             </Button>
             <Button asChild className="flex-1">
               <Link href="/monologues">
-                Browse Monologues
+                {t("appAccountSuccess.browse")}
                 <IconArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -157,9 +168,9 @@ export default function SuccessPage() {
       </motion.div>
 
       <p className="text-center text-sm text-muted-foreground mt-6">
-        Questions?{" "}
+        {t("appAccountSuccess.questions")}{" "}
         <Link href="/contact" className="underline">
-          Contact Support
+          {t("appAccountSuccess.contact")}
         </Link>
       </p>
     </div>

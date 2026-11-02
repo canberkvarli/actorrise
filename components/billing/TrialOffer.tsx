@@ -12,7 +12,8 @@ import Link from "next/link";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { IconX } from "@tabler/icons-react";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useTrialWords } from "@/hooks/useTrialWords";
+import { useT } from "@/lib/i18n";
+import { useTrialText } from "./trialText";
 import {
   trackPaywallCtaClicked,
   trackTrialOfferShown,
@@ -207,7 +208,8 @@ export function TrialOfferCard({
   onDismiss,
   tone = "dark",
 }: CardProps) {
-  const words = useTrialWords();
+  const words = useTrialText();
+  const t = useT();
   return (
     /* theatre-tokens and the faces ride on the card: both hosts (scene review,
        the practice panel) bind neither, so without them every --t-* resolves
@@ -220,13 +222,13 @@ export function TrialOfferCard({
       <button
         type="button"
         onClick={onDismiss}
-        aria-label="Not now"
+        aria-label={t("appAccountTrialOffer.notNow")}
         className="t-offer__x"
       >
         <IconX className="h-4 w-4" />
       </button>
 
-      <p className="t-offer__dir">(an offer, while you have a moment.)</p>
+      <p className="t-offer__dir">{t("appAccountTrialOffer.direction")}</p>
       <p className="t-offer__title">{headline}</p>
       <p className="t-offer__body">{body}</p>
 
@@ -236,7 +238,7 @@ export function TrialOfferCard({
         </Link>
       </div>
 
-      <p className="t-offer__fine">$0 today, cancel any time before it renews.</p>
+      <p className="t-offer__fine">{t("appAccountTrialOffer.fine")}</p>
     </div>
   );
 }
@@ -264,7 +266,8 @@ export function TrialOfferBanner({
    */
   aboveRunBar?: boolean;
 }) {
-  const words = useTrialWords();
+  const words = useTrialText();
+  const t = useT();
   // Whole class names, both of them: Tailwind cannot see a computed one.
   const foot = aboveRunBar
     ? "bottom-[calc(11rem+env(safe-area-inset-bottom,0px))] lg:bottom-4"
@@ -282,7 +285,7 @@ export function TrialOfferBanner({
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Not now"
+          aria-label={t("appAccountTrialOffer.notNow")}
           className="t-offer__x shrink-0"
           style={{ position: "static" }}
         >
