@@ -145,6 +145,9 @@ def _norm_title(v: str) -> str:
     ended up 99.6% authorless.
     """
     v = (v or "").lower().replace("&", " and ")
+    # An apostrophe joins, it does not split: the slug says "buellers", so
+    # "Bueller's" must fold to the same word, not "bueller s".
+    v = re.sub(r"['\u2019]", "", v)
     v = re.sub(r"[^\w\s]", " ", v)
     v = re.sub(r"\s+", " ", v).strip()
     return re.sub(r"^(the|a|an)\s+", "", v)
@@ -200,7 +203,10 @@ def get_or_create_play(db, meta, slug, ref) -> Play:
     """
     from sqlalchemy import text as _sa_text
 
-    title = (meta.get("title") or "").strip()
+    # The reference spells the title properly ("Mid90s", "Ferris Bueller's Day
+    # Off"); the slug-derived one is title-cased and stripped of punctuation.
+    title = ((ref.title if ref is not None and ref.title else None)
+             or meta.get("title") or "").strip()
     year = (ref.year if ref and ref.year else meta.get("year"))
     if title:
         # Compare on the PUNCTUATION-STRIPPED title, not a lowercase equality.
