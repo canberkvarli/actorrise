@@ -12,6 +12,7 @@ import {
   RoseSketch,
   SkullSketch,
 } from "@/components/brand/sketches";
+import { useT, useTList, type ListKey } from "@/lib/i18n";
 
 /**
  * The wait, staged.
@@ -37,31 +38,13 @@ type SearchMode = "plays" | "film_tv" | "for_you";
 
 /** Lower case and parenthesised on purpose — these are invented asides, which
  *  is what `.stage-direction` (which force-lowercases) is actually for. */
-const BEATS: Record<SearchMode, string[]> = {
-  plays: [
-    "(the house goes quiet.)",
-    "(reading twelve thousand pages.)",
-    "(listening for the one that lands.)",
-    "(marking the speeches worth your time.)",
-    "(almost.)",
-  ],
-  film_tv: [
-    "(the house goes quiet.)",
-    "(rolling through the reels.)",
-    "(listening for the one that lands.)",
-    "(marking the scenes worth your time.)",
-    "(almost.)",
-  ],
+const BEATS: Record<SearchMode, ListKey> = {
+  plays: "appMonologueCurtain.beatsPlays",
+  film_tv: "appMonologueCurtain.beatsFilmTv",
   /* Find for me is not a search — nobody typed anything. These beats describe
      what it is actually doing with the profile, so the wait explains the
      feature instead of filling time. */
-  for_you: [
-    "(reading your profile.)",
-    "(putting the overdone ones back.)",
-    "(looking for what you haven't been sent.)",
-    "(casting you against type, once.)",
-    "(almost.)",
-  ],
+  for_you: "appMonologueCurtain.beatsForYou",
 };
 
 const BEAT_MS = 2400;
@@ -124,7 +107,9 @@ export function SearchCurtain({
   /** Abandon the search. Same `stopSearch` the submit button calls. */
   onStop?: () => void;
 }) {
-  const beats = BEATS[mode];
+  const t = useT();
+  const tList = useTList();
+  const beats = tList(BEATS[mode]);
   const [beat, setBeat] = useState(0);
   const reduced = useReducedMotion();
 
@@ -214,7 +199,7 @@ export function SearchCurtain({
           transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
           className="mt-7 text-center font-brand text-2xl font-medium text-foreground sm:text-3xl"
         >
-          {name ? <>Casting you, {name}.</> : <>Casting you.</>}
+          {name ? t("appMonologueCurtain.castingName", { name }) : t("appMonologueCurtain.casting")}
         </motion.p>
       )}
 
@@ -283,15 +268,15 @@ export function SearchCurtain({
           className="t-dir mt-6 underline underline-offset-4"
           style={{ fontSize: 13, color: "var(--t-muted-dark-2)" }}
         >
-          (stop.)
+          {t("appMonologueCurtain.stop")}
         </button>
       )}
 
       {/* One steady announcement, rather than five as the beats change. */}
       <span className="sr-only">
         {mode === "for_you"
-          ? "Finding monologues that suit your profile…"
-          : "Searching for monologues…"}
+          ? t("appMonologueCurtain.srForYou")
+          : t("appMonologueCurtain.srSearching")}
       </span>
     </motion.div>
   );

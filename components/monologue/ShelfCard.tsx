@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Monologue } from "@/types/actor";
 import { MonologueSourceTag, sourceTagOf } from "@/components/search/SourceTag";
+import { useT } from "@/lib/i18n";
 
 /**
  * The card used by both pre-search shelves — "Picked for your type" and
@@ -23,8 +24,9 @@ import { MonologueSourceTag, sourceTagOf } from "@/components/search/SourceTag";
  * meaning of "trending", so the shelf that has an order shows it.
  */
 export function ShelfCard({ m, rank }: { m: Monologue; rank?: number }) {
+  const t = useT();
   const mins = Math.round((m.estimated_duration_seconds || 0) / 60);
-  const meta = [m.character_age_range, m.tone, mins ? `${mins} min` : null].filter(Boolean);
+  const meta = [m.character_age_range, m.tone, mins ? t("appMonologueShelf.mins", { n: mins }) : null].filter(Boolean);
   const kind = sourceTagOf(m);
 
   /* Nothing rather than an echo. A title role ("Hamlet" from Hamlet) printed

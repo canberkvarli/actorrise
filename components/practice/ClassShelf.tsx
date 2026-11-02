@@ -16,7 +16,8 @@ import {
 import type { UserScript } from "@/hooks/useScripts";
 import { useAuth } from "@/lib/auth";
 import { filterShelf } from "@/lib/classShelf";
-import { formatSceneDuration } from "@/lib/scenes";
+import { useT } from "@/lib/i18n";
+import { sceneDurationLabel } from "@/components/practice/practiceLabels";
 
 /** Scripts shown before "show all": a teacher may share hundreds. */
 const FIRST_SHOWN = 6;
@@ -39,6 +40,7 @@ export function ClassShelves() {
 }
 
 function TeacherShelf({ shelf }: { shelf: Shelf }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [all, setAll] = useState(false);
   const [openId, setOpenId] = useState<number | null>(null);
@@ -47,14 +49,16 @@ function TeacherShelf({ shelf }: { shelf: Shelf }) {
   const shown = all || query ? matches : matches.slice(0, FIRST_SHOWN);
 
   return (
-    <section aria-label={`From ${shelf.teacher}`}>
+    <section aria-label={t("appPracticeClassShelf.from", { teacher: shelf.teacher })}>
       <div
         className="mb-3 flex items-baseline justify-between gap-3 pb-3"
         style={{ borderBottom: "1.5px solid var(--t-line-dark-2)" }}
       >
-        <h2 className="t-shelf-heading">From {shelf.teacher}</h2>
+        <h2 className="t-shelf-heading">{t("appPracticeClassShelf.from", { teacher: shelf.teacher })}</h2>
         <span className="text-[12px] text-[color:var(--t-muted-light)]">
-          {shelf.scripts.length} {shelf.scripts.length === 1 ? "script" : "scripts"}
+          {t(shelf.scripts.length === 1 ? "appPracticeClassShelf.scriptOne" : "appPracticeClassShelf.scriptMany", {
+            n: shelf.scripts.length,
+          })}
         </span>
       </div>
 
@@ -65,7 +69,7 @@ function TeacherShelf({ shelf }: { shelf: Shelf }) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Find a scene or a character"
+            placeholder={t("appPracticeClassShelf.findPlaceholder")}
             className="w-full bg-transparent text-[14px] text-[color:var(--t-text)] placeholder:text-[color:var(--t-muted-light)] focus:outline-none"
           />
         </label>
@@ -82,11 +86,11 @@ function TeacherShelf({ shelf }: { shelf: Shelf }) {
         ))}
       </ul>
       {query && matches.length === 0 && (
-        <p className="px-1 py-3 text-[13px] text-[color:var(--t-muted-light)]">Nothing on this shelf matches.</p>
+        <p className="px-1 py-3 text-[13px] text-[color:var(--t-muted-light)]">{t("appPracticeClassShelf.nothingMatches")}</p>
       )}
       {!query && !all && matches.length > FIRST_SHOWN && (
         <button type="button" onClick={() => setAll(true)} className="t-shelf-link mt-3 px-1">
-          show all {matches.length}
+          {t("appPracticeClassShelf.showAll", { n: matches.length })}
         </button>
       )}
     </section>
@@ -94,6 +98,7 @@ function TeacherShelf({ shelf }: { shelf: Shelf }) {
 }
 
 function ScriptRow({ script, open, onToggle }: { script: ClassShelfScript; open: boolean; onToggle: () => void }) {
+  const t = useT();
   // One scene: the script is the scene, so the row goes straight to it.
   if (script.scenes.length === 1) {
     const scene = script.scenes[0];
@@ -119,7 +124,7 @@ function ScriptRow({ script, open, onToggle }: { script: ClassShelfScript; open:
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[15px] font-semibold text-[color:var(--t-text)]">{script.title}</span>
-          <span className="block text-[13px] text-[color:var(--t-muted-light)]">{script.scenes.length} scenes</span>
+          <span className="block text-[13px] text-[color:var(--t-muted-light)]">{t("appPracticeClassShelf.scenes", { n: script.scenes.length })}</span>
         </span>
         <IconChevronDown
           className={`h-4 w-4 shrink-0 text-[color:var(--t-muted-light)] transition-transform ${open ? "rotate-180" : ""}`}
@@ -150,6 +155,7 @@ function SceneLink({
   title: string;
   subtitle?: string;
 }) {
+  const t = useT();
   return (
     <Link
       href={`/practice/${scriptId}/scenes/${scene.id}`}
@@ -161,10 +167,10 @@ function SceneLink({
         </span>
         <span className="block truncate text-[13px] text-[color:var(--t-muted-light)]">
           {subtitle ? `${subtitle} · ` : ""}
-          {scene.character_1_name} &amp; {scene.character_2_name} · {formatSceneDuration(scene.estimated_duration_seconds)}
+          {scene.character_1_name} &amp; {scene.character_2_name} · {sceneDurationLabel(t, scene.estimated_duration_seconds)}
         </span>
       </span>
-      <span className="shrink-0 text-[12px] text-primary">Rehearse</span>
+      <span className="shrink-0 text-[12px] text-primary">{t("appPracticeClassShelf.rehearse")}</span>
     </Link>
   );
 }
@@ -178,6 +184,7 @@ export function ClassShareSwitch({ script }: { script: Pick<UserScript, "id" | "
   const { user } = useAuth();
   const { data: sharing } = useMySharing(user?.account_type === "educator");
   const share = useShareWithClass();
+  const t = useT();
   // Optimistic: the switch moves when tapped, and goes back if the server says no.
   const [pending, setPending] = useState<boolean | null>(null);
   if (!sharing?.can_share || script.is_sample) return null;
@@ -185,7 +192,7 @@ export function ClassShareSwitch({ script }: { script: Pick<UserScript, "id" | "
   if (script.class_share === "hidden") {
     return (
       <p className="mb-5 text-[13px] text-[color:var(--t-muted-light)]">
-        This script was taken down from your class shelf. Write to canberk@actorrise.com about it.
+        {t("appPracticeClassShelf.takenDown", { email: "canberk@actorrise.com" })}
       </p>
     );
   }
@@ -196,11 +203,11 @@ export function ClassShareSwitch({ script }: { script: Pick<UserScript, "id" | "
       style={{ borderTop: "1px solid var(--t-line-light-2)", borderBottom: "1px solid var(--t-line-light-2)" }}
     >
       <label htmlFor={`class-share-${script.id}`} className="min-w-0">
-        <span className="block text-[14px] font-semibold text-[color:var(--t-text)]">Share with my class</span>
+        <span className="block text-[14px] font-semibold text-[color:var(--t-text)]">{t("appPracticeClassShelf.shareWithClass")}</span>
         <span className="block text-[13px] text-[color:var(--t-muted-light)]">
           {on
-            ? "Your students see it under your name in ScenePartner. Nobody else does."
-            : "Only the students who joined through your class link would see it."}
+            ? t("appPracticeClassShelf.sharedOn")
+            : t("appPracticeClassShelf.sharedOff")}
         </span>
       </label>
       <Switch
@@ -218,9 +225,9 @@ export function ClassShareSwitch({ script }: { script: Pick<UserScript, "id" | "
                   e && typeof e === "object" && "response" in e
                     ? (e as { response?: { data?: { detail?: string } } }).response?.data?.detail
                     : null;
-                toast.error(typeof detail === "string" ? detail : "Couldn't change that. Try again.");
+                toast.error(typeof detail === "string" ? detail : t("appPracticeClassShelf.changeFailed"));
               },
-              onSuccess: () => toast.success(next ? "Shared with your class" : "Taken off your class shelf"),
+              onSuccess: () => toast.success(next ? t("appPracticeClassShelf.sharedToast") : t("appPracticeClassShelf.unsharedToast")),
             },
           );
         }}

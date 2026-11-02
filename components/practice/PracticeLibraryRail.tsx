@@ -13,6 +13,8 @@ import {
 import { getGenreInkColor, getGenreSpineColor } from "@/lib/genreColors";
 import type { UserScript } from "@/hooks/useScripts";
 import { entrance } from "@/lib/motion";
+import { useT } from "@/lib/i18n";
+import { genreLabel } from "@/components/practice/practiceLabels";
 
 interface PracticeLibraryRailProps {
   /** Ordered scripts (user scripts first, demo last). */
@@ -59,6 +61,7 @@ export function PracticeLibraryRail({
   orientation = "row",
   onReorder,
 }: PracticeLibraryRailProps) {
+  const t = useT();
   const column = orientation === "column";
   const mine = scripts.filter((s) => !s.is_sample);
   const pinned = scripts.filter((s) => s.is_sample);
@@ -135,7 +138,11 @@ export function PracticeLibraryRail({
     next.splice(to, 0, ...next.splice(from, 1));
     moveTo(next); // held arrow keys are not one request per repeat either
     setAnnouncement(
-      `${byId.get(scriptId)?.title ?? "Script"}, position ${to + 1} of ${next.length}`,
+      t("appPracticeRail.position", {
+        title: byId.get(scriptId)?.title ?? t("appPracticeRail.script"),
+        n: to + 1,
+        total: next.length,
+      }),
     );
   };
 
@@ -153,7 +160,7 @@ export function PracticeLibraryRail({
     : "flex gap-2.5 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
   return (
-    <nav aria-label="Your scripts">
+    <nav aria-label={t("appPracticeRail.yourScripts")}>
       {canArrange ? (
         <Reorder.Group
           axis={column ? "y" : "x"}
@@ -246,6 +253,7 @@ function DraggableCard({
   onRequestReport: () => void;
 }) {
   const controls = useDragControls();
+  const t = useT();
   const [held, setHeld] = useState(false);
 
   return (
@@ -271,7 +279,7 @@ function DraggableCard({
         thread={
           <button
             type="button"
-            aria-label={`Reorder ${script.title}, position ${position} of ${total}. Use the arrow keys to move it.`}
+            aria-label={t("appPracticeRail.reorder", { title: script.title, n: position, total })}
             onPointerDown={(event) => {
               // Focus first: preventDefault below stops the browser selecting
               // text through the drag, but it also stops the button taking
@@ -328,15 +336,16 @@ export function ScriptCard({
   onRequestReport: () => void;
 }) {
   const reduce = useReducedMotion();
+  const t = useT();
   const isProcessing =
     script.processing_status === "processing" || script.processing_status === "pending";
   const sceneCount = script.num_scenes_extracted;
   const note = isProcessing
-    ? "reading…"
+    ? t("appPracticeRail.reading")
     : script.is_sample
-      ? "house copy"
+      ? t("appPracticeRail.houseCopy")
       : sceneCount > 0
-        ? `${sceneCount} ${sceneCount === 1 ? "scene" : "scenes"}`
+        ? t(sceneCount === 1 ? "appPracticeRail.sceneOne" : "appPracticeRail.sceneMany", { n: sceneCount })
         : "";
 
   return (
@@ -373,7 +382,7 @@ export function ScriptCard({
                 not an author called "Unknown". Either one simply is not on the
                 cover, and the rule between them is drawn by CSS so a missing
                 one never leaves a stranded separator. */}
-            {script.genre && <span className="t-script__stamp">{script.genre}</span>}
+            {script.genre && <span className="t-script__stamp">{genreLabel(t, script.genre)}</span>}
             {script.author && script.author.toLowerCase() !== "unknown" && (
               <span className="t-script__author">{script.author}</span>
             )}
@@ -386,7 +395,7 @@ export function ScriptCard({
       {!script.is_sample && (
         <Popover>
           <PopoverTrigger asChild>
-            <button type="button" aria-label="Script actions" className="t-script__more">
+            <button type="button" aria-label={t("appPracticeRail.actions")} className="t-script__more">
               <IconDots className="h-3.5 w-3.5" />
             </button>
           </PopoverTrigger>
@@ -397,7 +406,7 @@ export function ScriptCard({
               onClick={onRequestReport}
             >
               <IconFlag className="h-3.5 w-3.5" />
-              Flag extraction issue
+              {t("appPracticeRail.flag")}
             </button>
             <button
               type="button"
@@ -405,7 +414,7 @@ export function ScriptCard({
               onClick={onRequestDelete}
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Delete script
+              {t("appPracticeRail.delete")}
             </button>
           </PopoverContent>
         </Popover>

@@ -19,6 +19,8 @@ import { Stage } from './Stage';
 import { Dock, TopBar } from './Dock';
 import { Ending } from './Ending';
 import { FirstRunHint } from './FirstRunHint';
+import { useErrorText } from './errorText';
+import { useT } from '@/lib/i18n';
 
 /** Whatever the server said, the actor reads one plain sentence. */
 const failure = () => plainError('other');
@@ -42,6 +44,8 @@ const failure = () => plainError('other');
  */
 export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload; guided: boolean; go: boolean }) {
   const router = useRouter();
+  const t = useT();
+  const errorText = useErrorText();
   const { snapshot, readiness, canBegin, prepare, begin, tryUnlock, gated, pause, resume, skip, back, jumpTo, leave } = useRehearsal(payload);
   const [goPart] = useState(() => skipsCurtain(payload.characters, getMyRoles(payload.scene.id),
     { go, resume: Boolean(payload.resume), guided }));
@@ -56,7 +60,7 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   const pausedRef = useRef(false);
   const guidedStarted = useRef(false);
   const state = snapshot?.state ?? 'ready';
-  const error = readiness.error ?? prepError;
+  const error = errorText(readiness.error ?? prepError);
   // How much of their own lines the actor reads from, kept per scene, and the
   // words they called for this run, by line.
   // The guided first scene is a taste: the whole script, and no switch for it.
@@ -176,13 +180,13 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
       {straight && !canBegin && !error && state === 'ready' && (
         <div role="status" className="r-getting">
           <span className="r-spin r-spin--big" aria-hidden />
-          <span>Getting ready</span>
+          <span>{t('appScenesRehearse.gettingReady')}</span>
         </div>
       )}
       {waitingTap && !error && (
         <button type="button" className="fixed inset-0 z-40 block w-full cursor-default" onClick={begin}>
           <motion.span className="r-chrome r-soft absolute inset-x-0 top-[40dvh] text-center text-base"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25, duration: 0.3 }}>Tap to begin</motion.span>
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25, duration: 0.3 }}>{t('appScenesRehearse.tapToBegin')}</motion.span>
         </button>
       )}
       {ended && !error && <Ending scene={payload.scene} guided={guided} onAgain={onAgain} onLeave={onLeave} />}
@@ -190,7 +194,7 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
         <p className="r-chrome fixed inset-x-0 bottom-0 z-40 px-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-4 text-center"
           style={{ background: 'var(--t-paper)' }}>
           {error}{' '}
-          <button type="button" className="r-soft inline-flex min-h-11 items-center underline underline-offset-4" onClick={onLeave}>Leave</button>
+          <button type="button" className="r-soft inline-flex min-h-11 items-center underline underline-offset-4" onClick={onLeave}>{t('appScenesRehearse.leave')}</button>
         </p>
       )}
       <FirstRunHint />

@@ -11,6 +11,7 @@ import {
 } from "@tabler/icons-react";
 
 import { InstantTooltip } from "@/components/ui/instant-tooltip";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 /**
  * The working bar.
@@ -33,10 +34,10 @@ import { InstantTooltip } from "@/components/ui/instant-tooltip";
 
 export type Mode = "read" | "cut" | "copy";
 
-export const MODES: { id: Mode; label: string; hint: string }[] = [
-  { id: "read", label: "Read", hint: "The piece as written" },
-  { id: "cut", label: "Cut", hint: "Trim it to an audition length" },
-  { id: "copy", label: "Copy", hint: "Print or copy your sides" },
+export const MODES: { id: Mode; label: MessageKey; hint: MessageKey }[] = [
+  { id: "read", label: "appMonologueBar.read", hint: "appMonologueBar.readHint" },
+  { id: "cut", label: "appMonologueBar.cut", hint: "appMonologueBar.cutHint" },
+  { id: "copy", label: "appMonologueBar.copy", hint: "appMonologueBar.copyHint" },
 ];
 
 interface WorkingBarProps {
@@ -110,6 +111,7 @@ export const WorkingBar = forwardRef<HTMLDivElement, WorkingBarProps>(
     },
     ref,
   ) {
+    const t = useT();
     const modes = readOnly ? MODES.filter((m) => m.id === "read") : MODES;
 
     return (
@@ -136,7 +138,7 @@ export const WorkingBar = forwardRef<HTMLDivElement, WorkingBarProps>(
         >
           <div
             role="tablist"
-            aria-label="How to view this piece"
+            aria-label={t("appMonologueBar.tablist")}
             className="inline-flex gap-0.5"
           >
             {modes.map((m) => (
@@ -144,7 +146,7 @@ export const WorkingBar = forwardRef<HTMLDivElement, WorkingBarProps>(
                 key={m.id}
                 role="tab"
                 aria-selected={mode === m.id}
-                title={m.hint}
+                title={t(m.hint)}
                 onClick={() => onModeChange(m.id)}
                 className="relative h-10 rounded-full px-2.5 text-[13px] font-bold transition-transform duration-300 hover:scale-[1.04] sm:px-4 sm:text-sm"
                 style={{
@@ -160,14 +162,14 @@ export const WorkingBar = forwardRef<HTMLDivElement, WorkingBarProps>(
                     transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />
                 )}
-                <span className="relative">{m.label}</span>
+                <span className="relative">{t(m.label)}</span>
               </button>
             ))}
           </div>
 
           <div className="inline-flex flex-shrink-0 items-center gap-0.5">
             <BarButton
-              label={noteCount > 0 ? `Your notes · ${noteCount}` : "Note this line"}
+              label={noteCount > 0 ? t("appMonologueBar.yourNotes", { n: noteCount }) : t("appMonologueBar.noteLine")}
               onClick={onNote}
               active={noteCount > 0 || hasNotes}
             >
@@ -177,7 +179,7 @@ export const WorkingBar = forwardRef<HTMLDivElement, WorkingBarProps>(
             {/* Off-book status: a record of where you are, not a way to get
                 there. The drill it used to sit beside is in the margin. */}
             <BarButton
-              label={memorized ? "Off book — tap to unmark" : "Mark as off book"}
+              label={memorized ? t("appMonologueBar.offBookUnmark") : t("appMonologueBar.markOffBook")}
               onClick={onToggleMemorized}
               pressed={memorized}
               active={memorized}
@@ -196,7 +198,7 @@ export const WorkingBar = forwardRef<HTMLDivElement, WorkingBarProps>(
                 reading column — and on a phone that edge is the screen.
                 Right-aligned it can only grow inwards. */}
             <BarButton
-              label={saved ? "In your collection" : "Save to collection"}
+              label={saved ? t("appMonologueBar.inCollection") : t("appMonologueBar.save")}
               onClick={onToggleSaved}
               pressed={saved}
               filled={saved}
@@ -211,7 +213,7 @@ export const WorkingBar = forwardRef<HTMLDivElement, WorkingBarProps>(
                 fifth control in a row that already did not fit a phone. */}
             {onEdit && (
               <span className="hidden sm:inline-flex">
-                <BarButton label="Edit monologue" onClick={onEdit}>
+                <BarButton label={t("appMonologueBar.edit")} onClick={onEdit}>
                   <IconEdit className="h-[18px] w-[18px]" />
                 </BarButton>
               </span>

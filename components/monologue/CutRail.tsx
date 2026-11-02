@@ -1,6 +1,7 @@
 "use client";
 
 import { formatClock } from "@/lib/estimateDuration";
+import { useT } from "@/lib/i18n";
 
 /**
  * The shared vocabulary for choosing an audition cut.
@@ -41,9 +42,10 @@ export function CutMeter({
   /** Live length while hovering a candidate end line. */
   previewSeconds?: number | null;
 }) {
+  const t = useT();
   const shown = previewSeconds ?? cutSeconds;
   const pct = fullSeconds > 0 ? Math.min(100, (shown / fullSeconds) * 100) : 0;
-  const ticks = TARGETS.filter((t) => t < fullSeconds);
+  const ticks = TARGETS.filter((target) => target < fullSeconds);
   const trimmed = Math.max(0, fullSeconds - shown);
 
   return (
@@ -55,12 +57,12 @@ export function CutMeter({
         <span className="text-right text-xs text-muted-foreground">
           {trimmed > 0 ? (
             <>
-              {formatClock(trimmed)} trimmed
+              {t("appMonologueCut.trimmed", { clock: formatClock(trimmed) })}
               <br />
-              of {formatClock(fullSeconds)}
+              {t("appMonologueCut.trimmedOf", { clock: formatClock(fullSeconds) })}
             </>
           ) : (
-            <>the whole piece</>
+            <>{t("appMonologueCut.wholePiece")}</>
           )}
         </span>
       </div>
@@ -74,25 +76,25 @@ export function CutMeter({
           }`}
           style={{ width: `${pct}%` }}
         />
-        {ticks.map((t) => (
+        {ticks.map((tick) => (
           <span
-            key={t}
+            key={tick}
             aria-hidden
             className="absolute top-0 h-2 w-px bg-foreground/40"
-            style={{ left: `${(t / fullSeconds) * 100}%` }}
+            style={{ left: `${(tick / fullSeconds) * 100}%` }}
           />
         ))}
       </div>
 
       <div className="relative mt-1 h-4">
-        {ticks.map((t) => (
+        {ticks.map((tick) => (
           <span
-            key={t}
+            key={tick}
             aria-hidden
             className="absolute -translate-x-1/2 font-typewriter text-[10px] text-muted-foreground"
-            style={{ left: `${(t / fullSeconds) * 100}%` }}
+            style={{ left: `${(tick / fullSeconds) * 100}%` }}
           >
-            {formatClock(t)}
+            {formatClock(tick)}
           </span>
         ))}
       </div>
@@ -121,6 +123,7 @@ export function CutLine({
   onClick: () => void;
   onHover?: () => void;
 }) {
+  const t = useT();
   const selected =
     state === "in" || state === "preview" || state === "start-only" || state === "neutral";
   return (
@@ -151,7 +154,7 @@ export function CutLine({
           aria-hidden
           className="absolute left-0 top-1 font-typewriter text-[10px] uppercase tracking-[0.14em] text-primary"
         >
-          {edge}
+          {edge === "in" ? t("appMonologueCut.edgeIn") : t("appMonologueCut.edgeOut")}
         </span>
       )}
       <span

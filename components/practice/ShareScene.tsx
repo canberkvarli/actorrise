@@ -6,7 +6,9 @@ import { IconLoader2 } from "@tabler/icons-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useDecline, useShare, useShareable, useWithdraw } from "@/hooks/useShelf";
-import { describeCharacter, guessWorkKind, shareMoment, type ShareableScene } from "@/lib/shelf";
+import { guessWorkKind, shareMoment, type ShareableScene } from "@/lib/shelf";
+import { characterLabel, toneLabel } from "@/components/practice/practiceLabels";
+import { useT } from "@/lib/i18n";
 
 /*
  * Sharing a scene, where the scene came in.
@@ -25,6 +27,7 @@ const QUIET = `${PILL} text-[color:var(--t-muted-light)] hover:text-[color:var(-
 /** The ask above an opened script's scenes, at whichever moment is due. */
 export function ShareAsk({ scriptId }: { scriptId: number }) {
   const shareable = useShareable(true, scriptId);
+  const t = useT();
   const decline = useDecline();
   const [sharing, setSharing] = useState<ShareableScene | null>(null);
   const [sharedTitle, setSharedTitle] = useState<string | null>(null);
@@ -39,11 +42,11 @@ export function ShareAsk({ scriptId }: { scriptId: number }) {
     return (
       <Ask>
         <p className="text-sm text-[color:var(--t-text)]">
-          {sharedTitle} is in the scene library. Actors who find it bring their own copy.
+          {t("appPracticeShare.inLibrary", { title: sharedTitle })}
         </p>
         <div className="mt-2">
           <button type="button" className={QUIET} onClick={() => { setSharedTitle(null); setAnswered(true); }}>
-            Done
+            {t("appPracticeShare.done")}
           </button>
         </div>
       </Ask>
@@ -81,21 +84,21 @@ export function ShareAsk({ scriptId }: { scriptId: number }) {
       <p className="text-sm leading-relaxed text-[color:var(--t-text)]">
         {moment.kind === "upload" ? (
           <>
-            Other actors are looking for scenes like this. Share where it is?{" "}
+            {t("appPracticeShare.uploadAsk")}{" "}
             <span className="text-[color:var(--t-muted-light)]">
-              Only the title and where it sits go up, never your script.
+              {t("appPracticeShare.uploadAskNote")}
             </span>
           </>
         ) : (
-          <>You ran {asked[0].title}. Share where it is, so other actors can find it?</>
+          <>{t("appPracticeShare.ranAsk", { title: asked[0].title })}</>
         )}
       </p>
       <div className="mt-2.5 flex items-center gap-1">
         <button type="button" className={PRIMARY} onClick={() => setSharing(asked[0])}>
-          Share
+          {t("appPracticeShare.share")}
         </button>
         <button type="button" className={QUIET} onClick={notNow} disabled={decline.isPending}>
-          Not now
+          {t("appPracticeShare.notNow")}
         </button>
       </div>
     </Ask>
@@ -103,8 +106,9 @@ export function ShareAsk({ scriptId }: { scriptId: number }) {
 }
 
 function Ask({ children }: { children: React.ReactNode }) {
+  const t = useT();
   return (
-    <div className="mb-5 border-l-2 border-[color:var(--t-gel-ink)] py-1 pl-4" role="region" aria-label="Share with other actors">
+    <div className="mb-5 border-l-2 border-[color:var(--t-gel-ink)] py-1 pl-4" role="region" aria-label={t("appPracticeShare.shareWithActors")}>
       {children}
     </div>
   );
@@ -129,6 +133,7 @@ export function ShareForm({
   onShared: () => void;
 }) {
   const share = useShare();
+  const t = useT();
   const [work, setWork] = useState(scene.script_title);
   const [kind, setKind] = useState(() => guessWorkKind(scene.where_guess));
   const [where, setWhere] = useState(scene.where_guess);
@@ -158,12 +163,17 @@ export function ShareForm({
     );
   };
 
-  const facts = [scene.characters.map(describeCharacter).join(" & "), scene.tone].filter(Boolean).join(" · ");
+  const facts = [
+    scene.characters.map((c) => characterLabel(t, c)).join(" & "),
+    scene.tone ? toneLabel(t, scene.tone) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <form onSubmit={submit} className="max-w-md space-y-3 text-sm">
       {choices && choices.length > 1 && (
-        <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Which scene">
+        <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={t("appPracticeShare.whichScene")}>
           {choices.map((c) => (
             <button
               key={c.scene_id}
@@ -183,46 +193,46 @@ export function ShareForm({
         {facts ? ` · ${facts}` : ""}
       </p>
       <label className="block space-y-1">
-        <span className="text-xs text-[color:var(--t-muted-light)]">Where it is</span>
+        <span className="text-xs text-[color:var(--t-muted-light)]">{t("appPracticeShare.whereLabel")}</span>
         <Input
           autoFocus
           value={where}
           onChange={(e) => setWhere(e.target.value)}
-          placeholder="Act 2, the garden · 40 minutes in · S1E3"
+          placeholder={t("appPracticeShare.wherePlaceholder")}
           maxLength={200}
           required
         />
       </label>
       <div className="flex gap-2">
         <label className="block min-w-0 flex-1 space-y-1">
-          <span className="text-xs text-[color:var(--t-muted-light)]">From</span>
+          <span className="text-xs text-[color:var(--t-muted-light)]">{t("appPracticeShare.from")}</span>
           <Input value={work} onChange={(e) => setWork(e.target.value)} maxLength={200} required />
         </label>
         <label className="block w-24 space-y-1">
-          <span className="text-xs text-[color:var(--t-muted-light)]">Kind</span>
+          <span className="text-xs text-[color:var(--t-muted-light)]">{t("appPracticeShare.kind")}</span>
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value as typeof kind)}
             className="h-10 w-full cursor-pointer rounded-md border border-input bg-background px-2 text-sm text-foreground"
           >
-            <option value="play">Play</option>
-            <option value="film">Film</option>
-            <option value="tv">TV</option>
+            <option value="play">{t("appPracticeShare.kindPlay")}</option>
+            <option value="film">{t("appPracticeShare.kindFilm")}</option>
+            <option value="tv">{t("appPracticeShare.kindTv")}</option>
           </select>
         </label>
       </div>
       <label className="flex cursor-pointer items-center gap-2 text-[color:var(--t-muted-light)]">
         <Checkbox checked={showName} onChange={(e) => setShowName(e.target.checked)} />
-        Show my first name on it
+        {t("appPracticeShare.showName")}
       </label>
       {share.isError && <p className="text-destructive">{(share.error as Error).message}</p>}
       <div className="flex items-center gap-1">
         <button type="submit" className={PRIMARY} disabled={share.isPending || !work.trim() || !where.trim()}>
           {share.isPending && <IconLoader2 className="h-3.5 w-3.5 animate-spin" />}
-          Share
+          {t("appPracticeShare.share")}
         </button>
         <button type="button" className={QUIET} onClick={onCancel}>
-          Cancel
+          {t("appPracticeShare.cancel")}
         </button>
       </div>
     </form>
@@ -236,6 +246,7 @@ export function ShareForm({
 export function ShareRowAction({ item }: { item: ShareableScene | undefined }) {
   const [open, setOpen] = useState(false);
   const withdraw = useWithdraw();
+  const t = useT();
   if (!item) return null;
 
   if (item.ask === "shared" && item.shelf_id != null) {
@@ -243,8 +254,10 @@ export function ShareRowAction({ item }: { item: ShareableScene | undefined }) {
     return (
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[color:var(--t-muted-light)]">
         <span>
-          In the scene library
-          {item.open_count > 0 ? ` · ${item.open_count} ${item.open_count === 1 ? "actor" : "actors"} picked it up` : ""}
+          {t("appPracticeShare.inSceneLibrary")}
+          {item.open_count > 0
+            ? t(item.open_count === 1 ? "appPracticeShare.pickedUpOne" : "appPracticeShare.pickedUpMany", { n: item.open_count })
+            : ""}
         </span>
         <button
           type="button"
@@ -252,7 +265,7 @@ export function ShareRowAction({ item }: { item: ShareableScene | undefined }) {
           onClick={() => withdraw.mutate(shelfId)}
           disabled={withdraw.isPending}
         >
-          Take it down
+          {t("appPracticeShare.takeDown")}
         </button>
       </p>
     );
@@ -265,7 +278,7 @@ export function ShareRowAction({ item }: { item: ShareableScene | undefined }) {
       onClick={() => setOpen(true)}
       className="text-xs text-[color:var(--t-muted-light)] underline-offset-4 hover:text-[color:var(--t-text)] hover:underline"
     >
-      Share with other actors
+      {t("appPracticeShare.shareWithActors")}
     </button>
   );
 }

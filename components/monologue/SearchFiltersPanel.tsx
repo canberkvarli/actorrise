@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FreshnessToggle } from "@/components/search/FreshnessToggle";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 /** The nine free-text/select filters the search page keeps in one state object. */
 export type SearchFilters = {
@@ -38,36 +39,40 @@ export const EMPTY_FILTERS: SearchFilters = {
   max_duration: "",
 };
 
-type Option = string | { value: string; label: string };
-type Group = { key: keyof SearchFilters; label: string; options: Option[] };
+/* Values are what the backend filters on and stay English; only the label
+   shown beside them is translated (appMonologueFilters.opt.<value>). */
+type Option = string | { value: string; label: MessageKey };
+type Group = { key: keyof SearchFilters; label: MessageKey; options: Option[] };
 
 /** Character | Mood & Style | Practical — the three columns, as data. */
 const CHARACTER: Group[] = [
-  { key: "gender", label: "Gender", options: ["male", "female", "any"] },
-  { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
+  { key: "gender", label: "appMonologueFilters.gender", options: ["male", "female", "any"] },
+  { key: "age_range", label: "appMonologueFilters.ageRange", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
 ];
 
 const MOOD: Group[] = [
-  { key: "emotion", label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
-  { key: "tone", label: "Tone", options: ["dramatic", "comedic", "dark", "romantic", "philosophical", "contemplative"] },
-  { key: "theme", label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
+  { key: "emotion", label: "appMonologueFilters.emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
+  { key: "tone", label: "appMonologueFilters.tone", options: ["dramatic", "comedic", "dark", "romantic", "philosophical", "contemplative"] },
+  { key: "theme", label: "appMonologueFilters.theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
 ];
 
 const PRACTICAL: Group[] = [
-  { key: "category", label: "Category", options: ["classical", "contemporary"] },
-  { key: "difficulty", label: "Difficulty", options: ["beginner", "intermediate", "advanced"] },
+  { key: "category", label: "appMonologueFilters.category", options: ["classical", "contemporary"] },
+  { key: "difficulty", label: "appMonologueFilters.difficulty", options: ["beginner", "intermediate", "advanced"] },
   {
     key: "max_duration",
-    label: "Max Duration",
+    label: "appMonologueFilters.maxDuration",
     options: [
-      { value: "60", label: "1 min" },
-      { value: "90", label: "1.5 min" },
-      { value: "120", label: "2 min" },
-      { value: "180", label: "3 min" },
-      { value: "300", label: "5 min" },
+      { value: "60", label: "appMonologueFilters.min1" },
+      { value: "90", label: "appMonologueFilters.min15" },
+      { value: "120", label: "appMonologueFilters.min2" },
+      { value: "180", label: "appMonologueFilters.min3" },
+      { value: "300", label: "appMonologueFilters.min5" },
     ],
   },
 ];
+
+const ALL_GROUPS = [...CHARACTER, ...MOOD, ...PRACTICAL];
 
 interface SearchFiltersPanelProps {
   filters: SearchFilters;
@@ -100,32 +105,52 @@ export function SearchFiltersPanel({
   getFilterDisplay,
   className = "hidden md:block mt-4 p-4 bg-card border border-border rounded-lg",
 }: SearchFiltersPanelProps) {
+  const t = useT();
   const set = (key: keyof SearchFilters, value: string) =>
     onChange({ ...filters, [key]: value });
+
+  /** A string option's label, or the raw value when the dictionary has none. */
+  const optLabel = (value: string) => {
+    const key = `appMonologueFilters.opt.${value}` as MessageKey;
+    const label = t(key);
+    return label === key ? value : label;
+  };
+
+  /** The chip's "gender: Female", with both halves in the reader's language. */
+  const chipKey = (key: string) => {
+    const group = ALL_GROUPS.find((g) => g.key === key);
+    return group ? t(group.label) : key.replace(/_/g, " ");
+  };
+  const chipValue = (key: string, value: string) => {
+    const group = ALL_GROUPS.find((g) => g.key === key);
+    const opt = group?.options.find((o) => (typeof o === "string" ? o : o.value) === value);
+    if (opt === undefined) return getFilterDisplay(key, value).split(": ").pop();
+    return typeof opt === "string" ? optLabel(opt) : t(opt.label);
+  };
 
   const renderGroup = (title: string, groups: Group[], extra?: React.ReactNode) => (
     <div className="space-y-2.5">
       <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">{title}</h4>
       {groups.map(({ key, label, options }) => (
         <div key={key} className="space-y-1">
-          <Label className="text-[11px] text-muted-foreground">{label}</Label>
+          <Label className="text-[11px] text-muted-foreground">{t(label)}</Label>
           <Select
             value={filters[key] || "__any__"}
             onValueChange={(v) => set(key, v === "__any__" ? "" : v)}
           >
             <SelectTrigger className="w-full h-9 px-2.5 text-sm">
-              <SelectValue placeholder="Any" />
+              <SelectValue placeholder={t("appMonologueFilters.any")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__any__">Any</SelectItem>
+              <SelectItem value="__any__">{t("appMonologueFilters.any")}</SelectItem>
               {options.map((opt) =>
                 typeof opt === "string" ? (
                   <SelectItem key={opt} value={opt} className="capitalize">
-                    {opt}
+                    {optLabel(opt)}
                   </SelectItem>
                 ) : (
                   <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {t(opt.label)}
                   </SelectItem>
                 ),
               )}
@@ -145,16 +170,16 @@ export function SearchFiltersPanel({
       className={className}
     >
       <div className="grid grid-cols-3 gap-6">
-        {renderGroup("Character", CHARACTER)}
-        {renderGroup("Mood & Style", MOOD)}
+        {renderGroup(t("appMonologueFilters.character"), CHARACTER)}
+        {renderGroup(t("appMonologueFilters.mood"), MOOD)}
         {renderGroup(
-          "Practical",
+          t("appMonologueFilters.practical"),
           PRACTICAL,
           <div className="space-y-1">
-            <Label className="text-[11px] text-muted-foreground">Author</Label>
+            <Label className="text-[11px] text-muted-foreground">{t("appMonologueFilters.author")}</Label>
             <input
               type="text"
-              placeholder="e.g. Shakespeare"
+              placeholder={t("appMonologueFilters.authorPlaceholder")}
               value={filters.author}
               onChange={(e) => set("author", e.target.value)}
               className="w-full h-9 px-2.5 text-sm rounded-md border border-input bg-background"
@@ -175,8 +200,8 @@ export function SearchFiltersPanel({
               key={key}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted/80 text-foreground border border-border/40 capitalize"
             >
-              <span className="text-muted-foreground">{key.replace(/_/g, " ")}:</span>{" "}
-              {getFilterDisplay(key, value).split(": ").pop()}
+              <span className="text-muted-foreground">{chipKey(key)}:</span>{" "}
+              {chipValue(key, value)}
               <button
                 onClick={() => set(key as keyof SearchFilters, "")}
                 className="ml-0.5 hover:text-destructive"
@@ -187,8 +212,8 @@ export function SearchFiltersPanel({
           ))}
           {hasFreshnessFilter && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted/80 text-foreground border border-border/40">
-              <span className="text-muted-foreground">originality:</span>{" "}
-              {maxOverdoneScore <= 0.3 ? "Fresh picks" : "Popular too"}
+              <span className="text-muted-foreground">{t("appMonologueFilters.originality")}</span>{" "}
+              {maxOverdoneScore <= 0.3 ? t("appMonologueFilters.freshPicks") : t("appMonologueFilters.popularToo")}
               <button
                 onClick={() => onMaxOverdoneScoreChange(1)}
                 className="ml-0.5 hover:text-destructive"
@@ -204,7 +229,7 @@ export function SearchFiltersPanel({
             }}
             className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
           >
-            Clear all
+            {t("appMonologueFilters.clearAll")}
           </button>
         </div>
       )}

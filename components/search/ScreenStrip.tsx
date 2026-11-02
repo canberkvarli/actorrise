@@ -2,6 +2,7 @@
 
 import { MonologueSpeech } from "@/components/monologue/MonologueSpeech";
 import type { Monologue } from "@/types/actor";
+import { useT } from "@/lib/i18n";
 
 /**
  * A few film and TV pieces under a Plays search the plays could not serve
@@ -27,19 +28,20 @@ export function ScreenStrip({
   isModerator?: boolean;
   onEdit?: (id: number) => void;
 }) {
+  const t = useT();
   if (pieces.length === 0) return null;
   return (
-    <section aria-label="From film and TV" className="mt-8 mb-4 border-t border-border pt-3">
+    <section aria-label={t("appSearchScreenStrip.aria")} className="mt-8 mb-4 border-t border-border pt-3">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className="stage-direction text-sm text-muted-foreground">
-          (the same ask, from film and TV.)
+          {t("appSearchScreenStrip.direction")}
         </span>
         <button
           type="button"
           onClick={onSeeAll}
           className="text-sm text-primary underline-offset-4 hover:underline"
         >
-          More in Film &amp; TV
+          {t("appSearchScreenStrip.more")}
         </button>
       </div>
       <div>

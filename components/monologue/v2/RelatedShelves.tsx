@@ -8,6 +8,7 @@ import { formatClock } from "@/lib/estimateDuration";
 import { clothFor, emblemFor } from "@/components/monologue/PlayCover";
 import { Glyph } from "@/components/brand/glyphs";
 import { useOthersFromPlay, useSimilarPieces } from "@/hooks/useRelatedPieces";
+import { useT } from "@/lib/i18n";
 
 /**
  * What to read next, in the two shapes an actor actually asks for it.
@@ -51,11 +52,12 @@ function ShelfHeading({
 
 export function OthersFromPlay({ monologue }: { monologue: Monologue }) {
   const { data } = useOthersFromPlay(monologue.id);
+  const t = useT();
   if (!data || data.length === 0) return null;
 
   return (
     <section className="mt-[72px]">
-      <ShelfHeading accent={`${monologue.play_title}.`}>Others from</ShelfHeading>
+      <ShelfHeading accent={`${monologue.play_title}.`}>{t("appMonologueRelated.othersFrom")}</ShelfHeading>
       <div
         className="mt-[18px] border-t"
         style={{ borderColor: "var(--t-line-light)" }}
@@ -84,7 +86,7 @@ export function OthersFromPlay({ monologue }: { monologue: Monologue }) {
             >
               {m.estimated_duration_seconds
                 ? formatClock(m.estimated_duration_seconds)
-                : `${m.word_count} words`}
+                : t("appMonologueRelated.words", { n: m.word_count })}
             </span>
           </Link>
         ))}
@@ -95,6 +97,7 @@ export function OthersFromPlay({ monologue }: { monologue: Monologue }) {
 
 export function SameRegister({ monologue }: { monologue: Monologue }) {
   const { data } = useSimilarPieces(monologue.id);
+  const t = useT();
   if (!data || data.length === 0) return null;
 
   // What these actually have in common, said in the piece's own vocabulary
@@ -102,14 +105,14 @@ export function SameRegister({ monologue }: { monologue: Monologue }) {
   /* "female's roles" is not a thing anyone says. The column stores the
      adjective; a casting breakdown uses the noun. */
   const ROLES: Record<string, string> = {
-    female: "women's roles",
-    male: "men's roles",
-    "non-binary": "non-binary roles",
+    female: t("appMonologueRelated.womensRoles"),
+    male: t("appMonologueRelated.mensRoles"),
+    "non-binary": t("appMonologueRelated.nonBinaryRoles"),
   };
   const gender = monologue.character_gender?.toLowerCase();
   const register = [
     monologue.tone || monologue.primary_emotion,
-    gender && gender !== "any" ? (ROLES[gender] ?? `${gender} roles`) : null,
+    gender && gender !== "any" ? (ROLES[gender] ?? t("appMonologueRelated.genderRoles", { gender })) : null,
     monologue.category,
   ]
     .filter(Boolean)
@@ -118,7 +121,7 @@ export function SameRegister({ monologue }: { monologue: Monologue }) {
 
   return (
     <section className="mt-16">
-      <ShelfHeading accent="register.">Same</ShelfHeading>
+      <ShelfHeading accent={t("appMonologueRelated.sameB")}>{t("appMonologueRelated.sameA")}</ShelfHeading>
       {register && (
         <p
           className="t-m__dir mt-1.5 text-[12px]"

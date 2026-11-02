@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import LampSketch from "@/components/onboarding/LampSketch";
+import { useT } from "@/lib/i18n";
 
 /**
  * /first-scene — the zero-setup first rehearsal.
@@ -35,6 +36,7 @@ interface FirstPiece {
 
 export default function FirstScenePage() {
   const router = useRouter();
+  const t = useT();
   const { user, loading, refreshUser } = useAuth();
   const fetchedRef = useRef(false);
   const leftRef = useRef(false);
@@ -118,7 +120,7 @@ export default function FirstScenePage() {
   return (
     <div className="t-first-scene" role="status" aria-live="polite">
       <LampSketch size={84} />
-      <p className="t-first-scene__line">(finding you something to say.)</p>
+      <p className="t-first-scene__line">{t("appScenesFirst.finding")}</p>
     </div>
   );
 }

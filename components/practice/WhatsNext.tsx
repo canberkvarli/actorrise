@@ -6,6 +6,7 @@ import { IconScissors, IconPlayerPlayFilled } from "@tabler/icons-react";
 
 import type { WhatsNext as WhatsNextData } from "@/hooks/useWhatsNext";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
+import { useT } from "@/lib/i18n";
 
 /**
  * The stage — what the rehearsal room puts in front of you when you walk in.
@@ -76,6 +77,7 @@ function ActionDot({ children }: { children: React.ReactNode }) {
 
 export function WhatsNext({ data }: { data: WhatsNextData }) {
   const { rung, script, scene, line, character, progress } = data;
+  const t = useT();
 
   const sceneSlug = [scene?.act, scene?.scene_number].filter(Boolean).join(" · ");
 
@@ -92,11 +94,11 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
   // The label under the title. Says who you are in the scene and where you
   // stopped, in that order, because the role is the part worth remembering.
   const standing = [
-    character ? `you ${character}` : null,
+    character ? t("appPracticeWhatsNext.youAre", { character }) : null,
     rung === "resume" && progress?.total
-      ? `line ${progress.current} of ${progress.total}`
+      ? t("appPracticeWhatsNext.lineOf", { current: progress.current, total: progress.total })
       : progress?.total
-        ? `${progress.total} lines`
+        ? t("appPracticeWhatsNext.lines", { n: progress.total })
         : null,
   ]
     .filter(Boolean)
@@ -107,18 +109,18 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
       <motion.div custom={0} variants={rise} initial="hidden" animate="visible">
         <Slug>
           {rung === "resume"
-            ? "where you left off"
+            ? t("appPracticeWhatsNext.slugResume")
             : rung === "start"
-              ? "ready when you are"
+              ? t("appPracticeWhatsNext.slugStart")
               : rung === "cut"
-                ? "waiting to be cut"
-                : "on the house"}
+                ? t("appPracticeWhatsNext.slugCut")
+                : t("appPracticeWhatsNext.slugDemo")}
           {sceneSlug ? `  ·  ${sceneSlug}` : ""}
         </Slug>
       </motion.div>
 
       <motion.div custom={1} variants={rise} initial="hidden" animate="visible">
-        <Title>{script?.title ?? "Your first scene"}</Title>
+        <Title>{script?.title ?? t("appPracticeWhatsNext.firstScene")}</Title>
       </motion.div>
 
       {line && (
@@ -141,10 +143,10 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
           style={{ borderLeft: "2px dashed var(--t-line-dark-3)" }}
         >
           <p className="t-cue-who" style={{ color: "var(--t-muted-light)" }}>
-            not yet cut
+            {t("appPracticeWhatsNext.notYetCut")}
           </p>
           <p className="t-cue-text" style={{ color: "var(--t-muted-light-2)" }}>
-            It&apos;s on the shelf, but nobody has cut it into scenes yet.
+            {t("appPracticeWhatsNext.notYetCutBody")}
           </p>
         </motion.div>
       )}
@@ -158,14 +160,14 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
       >
         {rung === "cut" ? (
           <Link href={`/practice?script=${script?.id}`} className={ACTION}>
-            Cut the scenes
+            {t("appPracticeWhatsNext.cutScenes")}
             <ActionDot>
               <IconScissors className="size-4" />
             </ActionDot>
           </Link>
         ) : (
           <Link href={href} className={ACTION}>
-            {rung === "resume" ? "Pick it up" : rung === "demo" ? "Read it with me" : "Start it"}
+            {rung === "resume" ? t("appPracticeWhatsNext.pickUp") : rung === "demo" ? t("appPracticeWhatsNext.readWithMe") : t("appPracticeWhatsNext.startIt")}
             <ActionDot>
               <IconPlayerPlayFilled className="size-3.5" />
             </ActionDot>
@@ -181,7 +183,7 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
         )}
 
         {rung === "demo" && (
-          <UploadScriptButton variant="compact" className="t-bring-in">or bring your own</UploadScriptButton>
+          <UploadScriptButton variant="compact" className="t-bring-in">{t("appPracticeWhatsNext.bringYourOwn")}</UploadScriptButton>
         )}
       </motion.div>
     </div>
@@ -190,20 +192,23 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
 
 /** Nothing on the shelf and no sample seeded. Rare, but it cannot be blank. */
 export function NothingYet() {
+  const t = useT();
   return (
     <div className="flex min-w-0 flex-col">
-      <Slug>from the top</Slug>
+      <Slug>{t("appPracticeWhatsNext.fromTheTop")}</Slug>
       <Title>
-        Your first <em className="italic" style={{ color: "var(--t-gel-ink)" }}>scene</em> starts here.
+        {t("appPracticeWhatsNext.nothingTitleA")}
+        <em className="italic" style={{ color: "var(--t-gel-ink)" }}>{t("appPracticeWhatsNext.nothingTitleB")}</em>
+        {t("appPracticeWhatsNext.nothingTitleC")}
       </Title>
       <p
         className="mt-6 max-w-[40ch] text-[17px] leading-relaxed"
         style={{ color: "var(--t-muted-light-2)" }}
       >
-        Bring in a script and I&apos;ll read every other role with you.
+        {t("appPracticeWhatsNext.nothingBody")}
       </p>
       <div className="mt-8">
-        <UploadScriptButton variant="primary" className="t-stage-action">Upload a script</UploadScriptButton>
+        <UploadScriptButton variant="primary" className="t-stage-action">{t("appPracticeWhatsNext.uploadScript")}</UploadScriptButton>
       </div>
     </div>
   );

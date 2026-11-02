@@ -19,20 +19,20 @@ import { TourSpotlight, type TourStep } from "@/components/onboarding/TourSpotli
 const STEPS: TourStep[] = [
   {
     targetId: "scenepartner-stage",
-    title: "It opens where you stopped.",
-    body: "The stage holds the last thing you were working on, and the way straight back into it. No list to hunt through.",
+    title: "appShellTours.spStageTitle",
+    body: "appShellTours.spStageBody",
     placement: "bottom",
   },
   {
     targetId: "scenepartner-bring-in",
-    title: "Bring your own sides.",
-    body: "Drop in a PDF or paste the text. The scenes and characters pull themselves out, and I'll read every role that isn't yours.",
+    title: "appShellTours.spBringTitle",
+    body: "appShellTours.spBringBody",
     placement: "bottom",
   },
   {
     targetId: "scenepartner-shelf",
-    title: "Everything you've brought in.",
-    body: "Tap a spine to open it and cut it into scenes. Drag the threads to put them in the order you're working.",
+    title: "appShellTours.spShelfTitle",
+    body: "appShellTours.spShelfBody",
     placement: "top",
   },
 ];

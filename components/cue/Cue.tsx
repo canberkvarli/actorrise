@@ -12,20 +12,14 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
 import { plusHref } from "@/lib/trial";
 import { trackPaywallCtaClicked, trackUpgradeModalViewed } from "@/lib/analytics";
+import { useT, useTList } from "@/lib/i18n";
 import s from "./cue.module.css";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-// Said once, the first time the window opens on an empty day. Cue itself is
-// told not to repeat it.
-const HELLO = "I'm Cue, Canberk's assistant stage manager. He reads everything, and I cover the desk while he's away.";
-
-const STARTERS = [
-  "Find me a monologue",
-  "How does ScenePartner work?",
-  "What do I get with Plus?",
-  "I want to talk to Canberk",
-];
+// The hello (appScenesCue.hello) is said once, the first time the window
+// opens on an empty day. Cue itself is told not to repeat it. The starters are
+// sent as the actor's own message, so they go in the actor's language.
 
 /**
  * Cue: the Q in the corner and the window it opens. Visuals follow the Claude
@@ -35,6 +29,8 @@ const STARTERS = [
  * button. On a phone the window is the whole screen with its own close.
  */
 export function Cue() {
+  const t = useT();
+  const tList = useTList();
   const [open, setOpen] = useState(false);
   const [thread, setThread] = useState<CueThread | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -49,10 +45,10 @@ export function Cue() {
     if (!open || thread) return;
     api
       .get<CueThread>("/api/cue/thread")
-      .then(({ data: t }) => {
-        setThread(t);
-        setMsgs(t.messages);
-        setCapped(t.capped);
+      .then(({ data }) => {
+        setThread(data);
+        setMsgs(data.messages);
+        setCapped(data.capped);
       })
       .catch(() => setThread({ messages: [], is_plus: false, used: 0, limit: null, capped: false }));
   }, [open, thread]);
@@ -104,15 +100,15 @@ export function Cue() {
             setDraft(text);
             setCapped(true);
           }
-          if (e.type === "done") setThread((t) => (t ? { ...t, used: t.used + 1 } : t));
+          if (e.type === "done") setThread((th) => (th ? { ...th, used: th.used + 1 } : th));
         });
       } catch {
-        append("I couldn't reach the desk just now. Try again in a moment.");
+        append(t("appScenesCue.unreachable"));
       } finally {
         setBusy(false);
       }
     },
-    [draft, busy],
+    [draft, busy, t],
   );
 
   const left = thread?.limit != null ? Math.max(0, thread.limit - thread.used) : null;
@@ -123,14 +119,14 @@ export function Cue() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        aria-label={open ? "Close Cue" : "Ask Cue"}
+        aria-label={open ? t("appScenesCue.close") : t("appScenesCue.ask")}
         aria-expanded={open}
         data-open={open}
         className={s.launcher}
       >
         {open ? <IconX size={26} stroke={1.75} /> : <CueMark size={36} />}
         <span className={s.tag} aria-hidden>
-          (ask Cue)
+          {t("appScenesCue.tag")}
         </span>
       </button>
 
@@ -139,7 +135,7 @@ export function Cue() {
           <motion.section
             key="cue-window"
             role="dialog"
-            aria-label="Cue"
+            aria-label={t("appScenesCue.name")}
             initial={reduce ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.6 }}
             animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0 }}
@@ -151,24 +147,24 @@ export function Cue() {
                 <CueMark size={30} />
               </span>
               <div className="min-w-0">
-                <p className={s.name}>Cue</p>
+                <p className={s.name}>{t("appScenesCue.name")}</p>
                 <p className={s.sub}>
                   <span className={s.gel} aria-hidden />
-                  assistant stage manager, on the desk
+                  {t("appScenesCue.sub")}
                 </p>
               </div>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close Cue" className={s.close}>
+              <button type="button" onClick={() => setOpen(false)} aria-label={t("appScenesCue.close")} className={s.close}>
                 <IconX size={18} />
               </button>
             </header>
 
             <div ref={scroller} className={s.log}>
-              <p className={s.aside}>(he&rsquo;s in rehearsal. i&rsquo;ve got the desk.)</p>
+              <p className={s.aside}>{t("appScenesCue.aside")}</p>
               {fresh && (
                 <>
-                  <p className={`${s.bubble} ${s.theirs}`}>{HELLO}</p>
+                  <p className={`${s.bubble} ${s.theirs}`}>{t("appScenesCue.hello")}</p>
                   <div className={s.chips}>
-                    {STARTERS.map((q) => (
+                    {tList("appScenesCue.starters").map((q) => (
                       <button key={q} type="button" onClick={() => void send(q)} className={s.chip}>
                         {q}
                       </button>
@@ -195,7 +191,7 @@ export function Cue() {
                   </p>
                 ) : (
                   <p key={i} className={`${s.bubble} ${s.theirs} ${s.typing}`} aria-live="polite">
-                    (checking the book.)
+                    {t("appScenesCue.checking")}
                   </p>
                 ),
               )}
@@ -225,16 +221,16 @@ export function Cue() {
                     }}
                     rows={1}
                     maxLength={2000}
-                    placeholder={capped ? "Teacher or billing? Tell me here" : "Ask Cue something"}
-                    aria-label="Message Cue"
+                    placeholder={capped ? t("appScenesCue.placeholderCapped") : t("appScenesCue.placeholder")}
+                    aria-label={t("appScenesCue.message")}
                     className={s.input}
                   />
                   <button type="submit" disabled={!draft.trim() || busy} className={s.send}>
-                    Send
+                    {t("appScenesCue.send")}
                   </button>
                 </div>
                 {!capped && left != null && left <= 3 && (
-                  <p className={s.left}>{left === 0 ? "Last one this month." : `${left} left this month.`}</p>
+                  <p className={s.left}>{left === 0 ? t("appScenesCue.lastOne") : t("appScenesCue.left", { n: left })}</p>
                 )}
               </form>
             )}
@@ -247,6 +243,7 @@ export function Cue() {
 
 /** The free allowance is spent. Same wall, same words, as the free reads. */
 function CueWall() {
+  const t = useT();
   const { subscription } = useSubscription();
   const tier = subscription?.tier_name ?? "free";
   const words = useTrialWords();
@@ -258,11 +255,10 @@ function CueWall() {
   return (
     <div className={`t-wall ${s.wall}`}>
       <p className="t-wall__title" style={{ fontSize: 24 }}>
-        That&rsquo;s your Cue for the month.
+        {t("appScenesCue.wallTitle")}
       </p>
       <p className="t-wall__body">
-        Plus gets far more of me, and every piece in the library start to finish. Canberk still reads
-        everything at canberk@actorrise.com.
+        {t("appScenesCue.wallBody")}
       </p>
       <div className="t-wall__foot">
         <Link
@@ -273,7 +269,7 @@ function CueWall() {
           {words.cta}
         </Link>
         <Link href="/pricing" className="t-wall__quiet">
-          what else is in it
+          {t("appScenesCue.whatElse")}
         </Link>
       </div>
       <p className="t-wall__body" style={{ marginTop: 12, fontSize: 12 }}>

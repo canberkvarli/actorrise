@@ -8,6 +8,7 @@ import {
   useRestoreMonologue,
 } from "@/hooks/useRecentlyRemoved";
 import { leadName } from "@/lib/collectionMeta";
+import { useT } from "@/lib/i18n";
 
 /**
  * A quiet safety net at the bottom of the Collection: monologues you removed in
@@ -18,6 +19,7 @@ import { leadName } from "@/lib/collectionMeta";
  * nothing.
  */
 export function RecentlyRemoved() {
+  const t = useT();
   const { data } = useRecentlyRemoved();
   const restore = useRestoreMonologue();
   const [open, setOpen] = useState(false);
@@ -39,7 +41,7 @@ export function RecentlyRemoved() {
           className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`}
           aria-hidden
         />
-        (recently removed · {items.length}.)
+        {t("appScenesHub.removed", { n: items.length })}
       </button>
 
       {open && (
@@ -66,13 +68,13 @@ export function RecentlyRemoved() {
                   className="t-restore"
                 >
                   <IconRotateClockwise className="size-3.5" aria-hidden />
-                  Restore
+                  {t("appScenesHub.restore")}
                 </button>
               </li>
             ))}
           </ul>
           <p className="mt-1.5 font-typewriter text-xs italic tracking-[0.06em] text-[var(--t-faint)]">
-            (kept for 30 days.)
+            {t("appScenesHub.kept")}
           </p>
         </motion.div>
       )}

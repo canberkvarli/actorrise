@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/auth";
 import { EditMonologueModal } from "@/components/admin/EditMonologueModal";
 import type { EditMonologueBody } from "@/components/admin/EditMonologueModal";
 import { toast } from "sonner";
+import { useT, useLocale } from "@/lib/i18n";
 
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { OneSheet } from "@/components/monologue/v2/OneSheet";
@@ -58,6 +59,8 @@ export default function MonologueDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const t = useT();
+  const locale = useLocale();
   const [monologue, setMonologue] = useState<Monologue | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   /** The request came back wrong, as opposed to coming back empty. */
@@ -220,16 +223,16 @@ export default function MonologueDetailPage() {
   useEffect(() => {
     if (!monologue) return;
     if ((notes ?? "") === (monologue.notes ?? "")) return;
-    const t = setTimeout(flushNotes, 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(flushNotes, 1000);
+    return () => clearTimeout(timer);
   }, [notes, monologue, flushNotes]);
 
   /* Let "saved" fade rather than sit there claiming a save that has scrolled
      out of relevance. */
   useEffect(() => {
     if (notesState !== "saved") return;
-    const t = setTimeout(() => setNotesState("idle"), 2200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setNotesState("idle"), 2200);
+    return () => clearTimeout(timer);
   }, [notesState]);
 
   /**
@@ -350,15 +353,15 @@ export default function MonologueDetailPage() {
         <div className="flex flex-col items-center gap-4 text-center">
           <GhostLightSketch size={72} className="text-muted-foreground/50" />
           <p className="stage-direction text-xs text-muted-foreground/70">
-            {loadFailed ? "(the lights went out mid-scene.)" : "(nothing on this hook.)"}
+            {loadFailed ? t("appMonologuePage.failedDirection") : t("appMonologuePage.goneDirection")}
           </p>
           <h2 className="font-brand text-2xl font-medium text-foreground">
-            {loadFailed ? "This piece wouldn't load" : "This piece has left the stage"}
+            {loadFailed ? t("appMonologuePage.failedTitle") : t("appMonologuePage.goneTitle")}
           </h2>
           <p className="max-w-sm text-sm text-muted-foreground">
             {loadFailed
-              ? "That's on my end, not yours. The piece is still there."
-              : "It may have been taken down since you saved it."}
+              ? t("appMonologuePage.failedBody")
+              : t("appMonologuePage.goneBody")}
           </p>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
             {loadFailed && (
@@ -368,14 +371,14 @@ export default function MonologueDetailPage() {
                   fetchMonologue(params.id as string);
                 }}
               >
-                Try again
+                {t("appMonologuePage.tryAgain")}
               </Button>
             )}
             <Button
               variant={loadFailed ? "outline" : "default"}
               onClick={() => router.push("/monologues")}
             >
-              Back to monologues
+              {t("appMonologuePage.backToMonologues")}
             </Button>
           </div>
         </div>
@@ -524,13 +527,13 @@ export default function MonologueDetailPage() {
                     }}
                   >
                     <p className="t-m__display m-0 text-[22px] leading-[1.1]">
-                      Saved to your collection.
+                      {t("appMonologuePage.savedTitle")}
                     </p>
                     <p
                       className="m-0 mt-1 text-sm"
                       style={{ color: "var(--t-muted-dark)" }}
                     >
-                      Make it yours. Cut it to time, mark a beat, or run it.
+                      {t("appMonologuePage.savedBody")}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
@@ -539,7 +542,7 @@ export default function MonologueDetailPage() {
                         className="h-10 rounded-full border-[1.5px] px-4 text-[13px] font-bold"
                         style={{ borderColor: "var(--t-text)" }}
                       >
-                        Cut it to time
+                        {t("appMonologuePage.cutToTime")}
                       </button>
                       <button
                         type="button"
@@ -547,7 +550,7 @@ export default function MonologueDetailPage() {
                         className="h-10 rounded-full border-[1.5px] px-4 text-[13px] font-bold"
                         style={{ borderColor: "var(--t-text)" }}
                       >
-                        Mark a beat
+                        {t("appMonologuePage.markBeat")}
                       </button>
                       <button
                         type="button"
@@ -558,7 +561,7 @@ export default function MonologueDetailPage() {
                           color: "var(--t-cta-fg)",
                         }}
                       >
-                        Run it
+                        {t("appMonologuePage.runIt")}
                       </button>
                     </div>
                   </div>
@@ -577,9 +580,9 @@ export default function MonologueDetailPage() {
             >
               <div className="flex items-baseline justify-between gap-3">
                 <h2 className="t-m__display m-0 text-[26px] leading-[1.1]">
-                  On the{" "}
+                  {t("appMonologuePage.wholePieceA")}
                   <em className="italic" style={{ color: "var(--t-orange-deep)" }}>
-                    whole piece.
+                    {t("appMonologuePage.wholePieceB")}
                   </em>
                 </h2>
                 {/* Was silent. It saved on blur only, so a note typed and then
@@ -596,7 +599,7 @@ export default function MonologueDetailPage() {
                         : "var(--t-faint)",
                   }}
                 >
-                  {notesState === "saving" ? "(saving.)" : notesState === "saved" ? "(saved.)" : ""}
+                  {notesState === "saving" ? t("appMonologuePage.saving") : notesState === "saved" ? t("appMonologuePage.saved") : ""}
                 </span>
               </div>
               <textarea
@@ -605,7 +608,7 @@ export default function MonologueDetailPage() {
                 onChange={(e) => setNotes(e.target.value)}
                 onFocus={noteNotesFocused}
                 onBlur={flushNotes}
-                placeholder="Who you're talking to, what you want, why now…"
+                placeholder={t("appMonologuePage.notesPlaceholder")}
                 rows={4}
                 className="t-m__textarea mt-3.5 w-full resize-y rounded-2xl border-[1.5px] px-4 py-3.5 text-[15px] leading-[1.7]"
                 style={{
@@ -626,10 +629,16 @@ export default function MonologueDetailPage() {
               }}
             >
               <p className="m-0 max-w-[56ch]">
-                {monologue.word_count > 0 ? `${monologue.word_count} words · ` : ""}
-                published text
-                {monologue.translator ? `, ${monologue.translator} translation` : ""}.
-                Nothing here is generated.
+                {monologue.word_count > 0
+                  ? t("appMonologuePage.provenanceWords", {
+                      n: monologue.word_count.toLocaleString(locale === "tr" ? "tr-TR" : "en-US"),
+                    })
+                  : ""}
+                {t("appMonologuePage.provenancePublished")}
+                {monologue.translator
+                  ? t("appMonologuePage.provenanceTranslation", { translator: monologue.translator })
+                  : ""}
+                {t("appMonologuePage.provenanceEnd")}
               </p>
               {monologue.source_url && (
                 <a
@@ -639,8 +648,8 @@ export default function MonologueDetailPage() {
                   className="t-m__dir inline-flex items-center gap-1 text-[12px] underline underline-offset-4"
                 >
                   {monologue.source_type === "film" || monologue.source_type === "tv"
-                    ? "view script"
-                    : "view full play"}
+                    ? t("appMonologuePage.viewScript")
+                    : t("appMonologuePage.viewPlay")}
                   <IconExternalLink className="h-3.5 w-3.5" />
                 </a>
               )}

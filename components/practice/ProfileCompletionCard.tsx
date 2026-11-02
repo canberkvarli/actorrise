@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { useProfileStats } from "@/hooks/useDashboardData";
 import { useAuth } from "@/lib/auth";
 import { IconX, IconArrowRight } from "@tabler/icons-react";
+import { useT } from "@/lib/i18n";
 
 const DISMISS_KEY = "actorrise.practice.profileCardDismissed.v1";
 
@@ -20,6 +21,7 @@ const DISMISS_KEY = "actorrise.practice.profileCardDismissed.v1";
  */
 export function ProfileCompletionCard() {
   const { isDemoUser } = useAuth();
+  const t = useT();
   const { data: stats } = useProfileStats(isDemoUser);
   const [dismissed, setDismissed] = useState<boolean | null>(null);
 
@@ -49,7 +51,7 @@ export function ProfileCompletionCard() {
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 pr-7">
         <div className="flex-1 min-w-0">
           <p className="text-sm text-foreground">
-            Your profile is {percent}% complete.
+            {t("appPracticeProfileCard.complete", { percent })}
           </p>
           <div className="mt-2">
             <Progress value={percent} className="h-1.5 bg-border" />
@@ -59,14 +61,14 @@ export function ProfileCompletionCard() {
           href="/profile"
           className="group inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90 transition-colors self-start sm:self-auto whitespace-nowrap"
         >
-          Complete your profile
+          {t("appPracticeProfileCard.cta")}
           <IconArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>
       <button
         type="button"
         onClick={handleDismiss}
-        aria-label="Dismiss profile completion card"
+        aria-label={t("appPracticeProfileCard.dismiss")}
         className="absolute top-2 right-2 inline-flex items-center justify-center rounded-md h-7 w-7 text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
       >
         <IconX className="h-4 w-4" />

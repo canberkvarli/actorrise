@@ -2,6 +2,7 @@
 
 import { IconPlayerPlay } from "@tabler/icons-react";
 import { runClock } from "@/lib/runClock";
+import { useT } from "@/lib/i18n";
 
 /**
  * The one thing you came here to do, on a phone.
@@ -15,6 +16,7 @@ import { runClock } from "@/lib/runClock";
  * from lg up the margin has it.
  */
 export function RunBar({ onRehearse, seconds }: { onRehearse: () => void; seconds?: number }) {
+  const t = useT();
   return (
     <div
       /* Clears the tab bar and the home indicator together. At a flat 76px it
@@ -34,7 +36,7 @@ export function RunBar({ onRehearse, seconds }: { onRehearse: () => void; second
           style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
         >
           <span>
-            Run it
+            {t("appMonologuePage.runIt")}
             {seconds ? (
               <span className="ml-2 font-medium opacity-70">{runClock(seconds)}</span>
             ) : null}

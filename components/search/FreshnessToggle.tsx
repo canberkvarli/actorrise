@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 interface FreshnessToggleProps {
   value: number;
@@ -10,16 +11,17 @@ interface FreshnessToggleProps {
 }
 
 const OPTIONS = [
-  { label: "Fresh picks", value: 0.3, plus: true },
-  { label: "Popular too", value: 0.7, plus: true },
-  { label: "Show all", value: 1.0, plus: false },
-] as const;
+  { label: "appSearchFreshness.freshPicks", value: 0.3, plus: true },
+  { label: "appSearchFreshness.popularToo", value: 0.7, plus: true },
+  { label: "appSearchFreshness.showAll", value: 1.0, plus: false },
+] as const satisfies readonly { label: MessageKey; value: number; plus: boolean }[];
 
 /** Originality is a Plus filter. Free accounts see the options with a Plus
  *  mark; tapping one opens the trial modal and leaves the filter alone. The
  *  server ignores the cap for free accounts either way. Locked only once the
  *  subscription has loaded and says free, so nothing flashes for Plus. */
 export function FreshnessToggle({ value, onChange }: FreshnessToggleProps) {
+  const t = useT();
   const { subscription } = useSubscription();
   const locked = subscription?.tier_name === "free";
   const [asking, setAsking] = useState(false);
@@ -28,8 +30,8 @@ export function FreshnessToggle({ value, onChange }: FreshnessToggleProps) {
   return (
     <div className="space-y-2">
       <div>
-        <p className="text-sm font-medium text-foreground">Originality</p>
-        <p className="text-xs text-muted-foreground mt-0.5">Hide commonly used pieces</p>
+        <p className="text-sm font-medium text-foreground">{t("appSearchFreshness.title")}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{t("appSearchFreshness.hint")}</p>
       </div>
       <div className="inline-flex rounded-lg border border-border/60 overflow-hidden">
         {OPTIONS.map((opt) => {
@@ -47,7 +49,7 @@ export function FreshnessToggle({ value, onChange }: FreshnessToggleProps) {
                   : "bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
             >
-              {opt.label}
+              {t(opt.label)}
               {gated && (
                 <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-primary">Plus</span>
               )}
@@ -59,8 +61,8 @@ export function FreshnessToggle({ value, onChange }: FreshnessToggleProps) {
         open={asking}
         onOpenChange={setAsking}
         feature="filter_originality"
-        title="Fresh picks are a Plus thing."
-        description="Plus hides the pieces every panel has heard this season, so what you walk in with is yours. Free to start, card on file, cancel before it renews."
+        title={t("appSearchFreshness.paywallTitle")}
+        description={t("appSearchFreshness.paywallBody")}
       />
     </div>
   );

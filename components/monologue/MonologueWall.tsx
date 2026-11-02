@@ -6,6 +6,7 @@ import { useTrialWords } from "@/hooks/useTrialWords";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { trackUpgradeModalViewed } from "@/lib/analytics";
 import { PlusOffer } from "@/components/billing/PlusOffer";
+import { useT } from "@/lib/i18n";
 
 interface MonologueWallProps {
   /** Where the wall fired, for begin_checkout attribution. */
@@ -30,6 +31,7 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
   const { subscription } = useSubscription();
   const currentTier = subscription?.tier_name ?? "free";
   const words = useTrialWords();
+  const t = useT();
 
   useEffect(() => {
     trackUpgradeModalViewed({ feature, tier_current: currentTier });
@@ -50,22 +52,15 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
       />
 
       <hr className="t-wall__rule" />
-      <p className="t-wall__dir">(the rest is behind the curtain.)</p>
+      <p className="t-wall__dir">{t("appMonologueWall.direction")}</p>
       {/* No number. The cap has already moved once and copy that names it
           goes stale silently, which is the same reason MonologuePaywallModal
           refuses to count. */}
       <p className="t-wall__title">
-        {words.tasted ? words.overTitle : <>That&rsquo;s your free reads for the month.</>}
+        {words.tasted ? words.overTitle : t("appMonologueWall.titleCurly")}
       </p>
       <p className="t-wall__body">
-        {words.tasted ? (
-          words.overBody
-        ) : (
-          <>
-            Plus opens this piece and every other, start to finish. Anything
-            you&rsquo;ve already read this month stays open.
-          </>
-        )}
+        {words.tasted ? words.overBody : t("appMonologueWall.bodyCurly")}
       </p>
 
       <PlusOffer feature={feature} lead="read" />

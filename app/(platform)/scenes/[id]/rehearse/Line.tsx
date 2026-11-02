@@ -4,6 +4,7 @@ import { Fragment, memo, useMemo, type CSSProperties } from 'react';
 import type { RehearsalLine } from '@/lib/rehearsal/contract';
 import { displayRuns } from '@/lib/rehearsal/display-words';
 import { showWord, type Book } from '@/lib/rehearsal/book';
+import { useT } from '@/lib/i18n';
 
 /** Where the line sits against the run: already said, being said now, still to come. */
 export type When = 'past' | 'live' | 'next';
@@ -42,18 +43,19 @@ interface Props {
  * which read as the words jumping.
  */
 function LineView({ line, mine, when, heard, speaking, at, jumpable, cueStyle, book = 'script', given = NONE }: Props) {
+  const t = useT();
   const words = useMemo(() => displayRuns(line.text), [line.text]);
   const off = mine && book !== 'script';
   return (
     <li data-line={line.index} data-mine={mine} data-when={when} data-speaking={speaking}
       data-jumpable={jumpable} tabIndex={jumpable ? 0 : undefined}
-      aria-label={jumpable ? `Start from ${line.character}: ${line.text.slice(0, 40)}` : undefined}
+      aria-label={jumpable ? t('appScenesRehearse.startFrom', { character: line.character, text: line.text.slice(0, 40) }) : undefined}
       aria-current={when === 'live' ? 'step' : undefined}
       data-book={off ? book : undefined} className="r-line" style={cueStyle}>
       <span aria-hidden className="r-light" />
       <p className="r-who">
         <span className="r-name">{line.character}</span>
-        {mine && <span className="r-you">you</span>}
+        {mine && <span className="r-you">{t('appScenesRehearse.you')}</span>}
       </p>
       {line.direction && <p className="r-dir">{line.direction}</p>}
       <p className="r-text">

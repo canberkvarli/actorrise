@@ -40,6 +40,7 @@ import { displayableAuthor } from "@/lib/utils";
 import { MicWaveform } from "@/components/scenepartner/MicWaveform";
 import { firstTakeEnd } from "@/lib/firstTake";
 import { groupIntoThoughts } from "@/lib/runLines";
+import { useT } from "@/lib/i18n";
 
 /** How far through the line (in order) you must read before it advances — high
  *  enough that it won't jump mid-sentence, low enough that a dropped word or two
@@ -100,6 +101,7 @@ function linesFromMonologue(m: Monologue): string[] {
 }
 
 export function MonologueCueing({ monologue, onExit, autoStart = false }: MonologueCueingProps) {
+  const t = useT();
   const lines = useMemo(() => linesFromMonologue(monologue), [monologue]);
 
   const [started, setStarted] = useState(false);
@@ -398,8 +400,8 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
   // Stall timer: quiet on the current line → cue it (reveal the text).
   useEffect(() => {
     if (!sayLive || !isListening) return;
-    const t = setTimeout(() => setRevealCurrent(true), STALL_MS);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setRevealCurrent(true), STALL_MS);
+    return () => clearTimeout(timer);
   }, [transcript, activeIndex, sayLive, isListening]);
 
   // Advance once you've read most of the current line, measured against the
@@ -477,11 +479,11 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
       setListenExhausted(true);
       return;
     }
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       restartsRef.current += 1;
       startListening();
     }, 400);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [sayLive, tapToAdvance, isListening, listenExhausted, startListening]);
 
   const resetRun = useCallback(() => {
@@ -658,7 +660,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
   const spokenCount = spokenPrefixCount(currentLine, transcript);
 
   if (lines.length === 0) {
-    return <p className="font-sans text-[var(--stage-fg)]/50">This piece has no usable text to run.</p>;
+    return <p className="font-sans text-[var(--stage-fg)]/50">{t("appMonologueRun.noText")}</p>;
   }
 
   return (
@@ -697,7 +699,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
       <header className="relative z-10 mx-auto flex w-full max-w-3xl items-center gap-3 px-5 pt-4">
         <button
           onClick={onExit}
-          aria-label="Leave"
+          aria-label={t("appMonologueRun.leave")}
           className="text-[var(--stage-fg)]/40 transition-colors hover:text-[var(--stage-fg)]/80"
         >
           <IconArrowLeft className="h-5 w-5" />
@@ -716,7 +718,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
           )}
           <button
             onClick={onToggleFav}
-            aria-label={favorited ? "Remove from saved" : "Save this monologue"}
+            aria-label={favorited ? t("appMonologueRun.unsave") : t("appMonologueRun.save")}
             aria-pressed={favorited}
             className={`transition-colors ${favorited ? "text-primary" : "text-[var(--stage-fg)]/40 hover:text-[var(--stage-fg)]/80"}`}
           >
@@ -753,25 +755,31 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
               {/* Was "Off book", which fought the hide-the-lines control below —
                   two different meanings of off-book on one screen. Say where we
                   are instead. */}
-              <span className="stage-direction text-xs text-[var(--stage-fg)]/45">(places.)</span>
+              <span className="stage-direction text-xs text-[var(--stage-fg)]/45">{t("appMonologueRun.places")}</span>
               <p className="max-w-md text-2xl font-medium leading-snug text-[var(--stage-fg)]">
                 {tapToAdvance
-                  ? "Run it at your own pace. Tap to move through it."
-                  : "Say it out loud. I’ll follow along."}
+                  ? t("appMonologueRun.tapIntro")
+                  : t("appMonologueRun.voiceIntro")}
               </p>
               <p className="text-sm text-[var(--stage-fg)]/45">
                 {monologue.play_title}
                 {displayableAuthor(monologue.author) ? ` · ${displayableAuthor(monologue.author)}` : ""}
               </p>
               <p className="text-xs text-[var(--stage-fg)]/35">
-                {lines.length} line{lines.length === 1 ? "" : "s"}
+                {lines.length === 1
+                  ? t("appMonologueRun.oneLine")
+                  : t("appMonologueRun.lines", { n: lines.length })}
                 {monologue.estimated_duration_seconds
-                  ? ` · about ${Math.max(1, Math.round(monologue.estimated_duration_seconds / 60))} min`
+                  ? t("appMonologueRun.aboutMin", {
+                      n: Math.max(1, Math.round(monologue.estimated_duration_seconds / 60)),
+                    })
                   : ""}
               </p>
               {inTrial && (
                 <p className="text-xs uppercase tracking-[0.2em] text-primary/85">
-                  {trialDaysLeft} {trialDaysLeft === 1 ? "day" : "days"} of full access left
+                  {trialDaysLeft === 1
+                    ? t("appMonologueRun.trialOneDay")
+                    : t("appMonologueRun.trialDays", { n: trialDaysLeft })}
                 </p>
               )}
             </div>
@@ -781,7 +789,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
               className="group inline-flex h-12 items-center gap-2.5 rounded-full bg-primary px-8 text-sm font-semibold tracking-wide text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <IconPlayerPlayFilled className="h-4 w-4" />
-              Begin
+              {t("appMonologueRun.begin")}
             </button>
 
             <MonologuePaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
@@ -799,30 +807,32 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
             exit={{ opacity: 0 }}
             className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-10 text-center"
           >
-            <span className="stage-direction text-xs text-[var(--stage-fg)]/45">(first take.)</span>
-            <h2 className="text-3xl font-medium text-[var(--stage-fg)]/90">That&apos;s the opening.</h2>
+            <span className="stage-direction text-xs text-[var(--stage-fg)]/45">{t("appMonologueRun.firstTake")}</span>
+            <h2 className="text-3xl font-medium text-[var(--stage-fg)]/90">{t("appMonologueRun.openingTitle")}</h2>
             <p className="max-w-xs text-sm leading-relaxed text-[var(--stage-fg)]/50">
-              {lines.length - sectionEnd} more line{lines.length - sectionEnd === 1 ? "" : "s"} to the end.
+              {lines.length - sectionEnd === 1
+                ? t("appMonologueRun.oneMoreLine")
+                : t("appMonologueRun.moreLines", { n: lines.length - sectionEnd })}
             </p>
             <button
               onClick={keepGoing}
               className="inline-flex h-12 items-center gap-2.5 rounded-full bg-primary px-8 text-sm font-semibold tracking-wide text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              Keep going
+              {t("appMonologueRun.keepGoing")}
             </button>
             <button
               onClick={() => startSay(sectionStart, offBook)}
               className="inline-flex items-center gap-2 rounded-full border border-[var(--stage-fg)]/15 px-6 py-3 text-sm font-medium text-[var(--stage-fg)]/80 transition-colors hover:border-primary hover:text-[var(--stage-fg)]"
             >
               <IconRefresh className="h-4 w-4" />
-              Run the opening again
+              {t("appMonologueRun.openingAgain")}
             </button>
             {onExit && (
               <button
                 onClick={onExit}
                 className="text-sm text-[var(--stage-fg)]/40 underline-offset-4 transition-colors hover:text-[var(--stage-fg)]/70 hover:underline"
               >
-                Back to the piece
+                {t("appMonologueRun.backToPiece")}
               </button>
             )}
           </motion.div>
@@ -838,10 +848,10 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
             className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-10 text-center"
           >
             <GhostLightSketch size={56} className="text-[var(--stage-fg)]/40" />
-            <span className="text-[0.68rem] uppercase tracking-[0.3em] text-primary">Curtain</span>
-            <h2 className="font-brand text-3xl font-medium text-[var(--stage-fg)]/90">You made it through.</h2>
+            <span className="text-[0.68rem] uppercase tracking-[0.3em] text-primary">{t("appMonologueRun.curtain")}</span>
+            <h2 className="font-brand text-3xl font-medium text-[var(--stage-fg)]/90">{t("appMonologueRun.doneTitle")}</h2>
             <p className="max-w-xs text-sm leading-relaxed text-[var(--stage-fg)]/45">
-              Run it again, or take it into the room.
+              {t("appMonologueRun.doneBody")}
             </p>
 
             {/* This screen used to offer one action — restart — so finishing a
@@ -853,7 +863,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
                 className="inline-flex items-center gap-2 rounded-full border border-[var(--stage-fg)]/15 px-6 py-3 text-sm font-medium text-[var(--stage-fg)]/80 transition-colors hover:border-primary hover:text-[var(--stage-fg)]"
               >
                 <IconRefresh className="h-4 w-4" />
-                Run it again
+                {t("appMonologueRun.runAgain")}
               </button>
               <button
                 onClick={markOffBook}
@@ -869,7 +879,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
                 ) : (
                   <IconBulb className="h-4 w-4" />
                 )}
-                {markedOffBook ? "Marked off book" : "I'm off book"}
+                {markedOffBook ? t("appMonologueRun.markedOffBook") : t("appMonologueRun.imOffBook")}
               </button>
             </div>
             {onExit && (
@@ -877,7 +887,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
                 onClick={onExit}
                 className="text-sm text-[var(--stage-fg)]/40 underline-offset-4 transition-colors hover:text-[var(--stage-fg)]/70 hover:underline"
               >
-                Back to the piece
+                {t("appMonologueRun.backToPiece")}
               </button>
             )}
 
@@ -918,7 +928,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
               ref={scrollRef}
               role={tapLive ? "button" : undefined}
               tabIndex={tapLive ? 0 : undefined}
-              aria-label={tapLive ? (offBook && !revealCurrent ? "Tap to see the line" : "Tap to advance") : undefined}
+              aria-label={tapLive ? (offBook && !revealCurrent ? t("appMonologueRun.tapToSee") : t("appMonologueRun.tapToAdvance")) : undefined}
               onClick={tapLive ? tapStage : undefined}
               onKeyDown={
                 tapLive
@@ -1020,12 +1030,12 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
                     {/* If the mic dropped out mid-run, say so. Switching the rules
                         of the screen without a word is how the old silent failure
                         read as the app being broken. */}
-                    {micDead || listenExhausted ? "Mic dropped" : "Tap mode"}
+                    {micDead || listenExhausted ? t("appMonologueRun.micDropped") : t("appMonologueRun.tapMode")}
                   </span>
                 ) : (
                   <span className="pointer-events-none flex select-none items-center gap-2.5">
                     <MicWaveform active={isListening} className="w-16" />
-                    {isListening ? "Listening" : "Paused"}
+                    {isListening ? t("appMonologueRun.listening") : t("appMonologueRun.paused")}
                   </span>
                 )}
                 {tapToAdvance && isSupported && !micDead && !listenExhausted && (
@@ -1037,7 +1047,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
                     }}
                     className="pointer-events-auto normal-case tracking-normal text-[0.78rem] text-[var(--stage-fg)]/70 underline decoration-[var(--stage-fg)]/30 underline-offset-4 hover:text-[var(--stage-fg)]"
                   >
-                    Use my voice
+                    {t("appMonologueRun.useVoice")}
                   </button>
                 )}
                 {!tapToAdvance && (
@@ -1048,7 +1058,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
                     }}
                     className="pointer-events-auto normal-case tracking-normal text-[0.78rem] text-[var(--stage-fg)]/70 underline decoration-[var(--stage-fg)]/30 underline-offset-4 hover:text-[var(--stage-fg)]"
                   >
-                    Tap instead
+                    {t("appMonologueRun.tapInstead")}
                   </button>
                 )}
               </div>
@@ -1063,7 +1073,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
                   rel="noopener noreferrer"
                   className="pointer-events-auto font-sans text-[0.78rem] text-[var(--stage-fg)]/70 underline decoration-[var(--stage-fg)]/30 underline-offset-4 hover:text-[var(--stage-fg)]"
                 >
-                  Safari can&apos;t hear you here. The Ghost Light app can.
+                  {t("appMonologueRun.safari")}
                 </a>
               )}
               {/* Three fixed slots: Restart, the one thing to do next, the
@@ -1077,7 +1087,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
                   className="flex flex-col items-center gap-1 justify-self-start font-sans text-[0.68rem] text-[var(--stage-fg)]/55 transition-colors hover:text-[var(--stage-fg)]"
                 >
                   <IconRefresh size={20} stroke={1.6} />
-                  Restart
+                  {t("appMonologueRun.restart")}
                 </button>
                 <button
                   onClick={() => {
@@ -1090,11 +1100,11 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
                   {offBook && !revealCurrent ? (
                     <>
                       <IconEye size={20} stroke={1.8} />
-                      Show line
+                      {t("appMonologueRun.showLine")}
                     </>
                   ) : (
                     <>
-                      Next line
+                      {t("appMonologueRun.nextLine")}
                       <IconPlayerTrackNext size={18} stroke={1.8} />
                     </>
                   )}
@@ -1110,7 +1120,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
                   }`}
                 >
                   {offBook ? <IconEyeOff size={20} stroke={1.6} /> : <IconEye size={20} stroke={1.6} />}
-                  {offBook ? "Lines off" : "Lines on"}
+                  {offBook ? t("appMonologueRun.linesOff") : t("appMonologueRun.linesOn")}
                 </button>
               </div>
             </div>

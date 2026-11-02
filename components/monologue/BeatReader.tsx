@@ -8,6 +8,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { anchorFor, type BeatUnit } from "@/lib/beatUnits";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /**
  * The piece, with a margin you can write in.
@@ -82,6 +83,7 @@ function BeatLine({
   onSave: (body: string) => void;
 }) {
   const marked = body.trim().length > 0;
+  const t = useT();
 
   return (
     <div
@@ -122,7 +124,7 @@ function BeatLine({
         type="button"
         onClick={() => (open ? onClose() : onOpen())}
         disabled={disabled}
-        aria-label={marked ? "Edit note on this line" : "Note this line"}
+        aria-label={marked ? t("appMonologueBeat.editNote") : t("appMonologueBar.noteLine")}
         aria-expanded={open}
         className={cn(
           "mt-1 flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-full border-[1.5px] transition-all duration-200",
@@ -186,6 +188,7 @@ function BeatComposer({
   onSave: (body: string) => void;
 }) {
   const [value, setValue] = useState(body);
+  const t = useT();
   const ref = useRef<HTMLTextAreaElement>(null);
   // The last value handed to onSave, so blur-after-Enter doesn't save twice.
   const savedRef = useRef(body);
@@ -224,7 +227,7 @@ function BeatComposer({
         className="t-m__mono m-0 text-[11px] uppercase tracking-[0.14em]"
         style={{ color: "var(--t-muted-dark-2)" }}
       >
-        beat
+        {t("appMonologueBeat.label")}
       </p>
       <textarea
         ref={ref}
@@ -250,14 +253,14 @@ function BeatComposer({
           }
         }}
         rows={1}
-        placeholder="what changes here?"
+        placeholder={t("appMonologueBeat.placeholder")}
         className="t-m__textarea mt-1 w-full resize-none border-0 py-0.5 font-sans text-[13px] leading-relaxed outline-none"
       />
       <p
         className="t-m__mono m-0 text-[11px]"
         style={{ color: "var(--t-faint)" }}
       >
-        enter to keep · esc to cancel
+        {t("appMonologueBeat.keys")}
       </p>
     </div>
   );

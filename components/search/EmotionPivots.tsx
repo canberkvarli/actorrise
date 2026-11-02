@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useT } from "@/lib/i18n";
+import { useValueLabel } from "@/components/search/searchI18n";
 
 /**
  * The third exit from a search that found nothing: stop typing, start
@@ -11,9 +13,11 @@ import Link from "next/link";
 export const EMOTION_PIVOTS = ["joy", "sadness", "anger", "fear", "melancholy", "hope"] as const;
 
 export function EmotionPivots({ className = "" }: { className?: string }) {
+  const t = useT();
+  const valueLabel = useValueLabel();
   return (
     <p className={`text-sm text-muted-foreground ${className}`}>
-      or browse by feeling:{" "}
+      {t("appSearchPivots.lead")}{" "}
       {EMOTION_PIVOTS.map((emotion, i) => (
         <span key={emotion}>
           {i > 0 ? " · " : ""}
@@ -21,7 +25,7 @@ export function EmotionPivots({ className = "" }: { className?: string }) {
             href={`/monologues?emotion=${emotion}`}
             className="text-foreground underline-offset-4 hover:underline"
           >
-            {emotion}
+            {valueLabel("emotion", emotion)}
           </Link>
         </span>
       ))}

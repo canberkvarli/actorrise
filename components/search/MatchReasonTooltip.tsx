@@ -3,6 +3,7 @@
 import { IconInfoCircle } from "@tabler/icons-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { MatchReason, MatchReasonCategory } from "@/lib/matchReasons";
+import { useT } from "@/lib/i18n";
 
 const CATEGORY_TEXT_COLOR: Record<MatchReasonCategory, string> = {
   score: "text-foreground font-semibold",
@@ -21,6 +22,7 @@ interface MatchReasonTooltipProps {
 }
 
 export function MatchReasonTooltip({ reasons }: MatchReasonTooltipProps) {
+  const t = useT();
   if (reasons.length === 0) return null;
 
   return (
@@ -32,10 +34,10 @@ export function MatchReasonTooltip({ reasons }: MatchReasonTooltipProps) {
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
-            aria-label="Why this result matched"
+            aria-label={t("appSearchMatch.whyAria")}
           >
             <IconInfoCircle className="h-3 w-3" />
-            <span>Why this?</span>
+            <span>{t("appSearchMatch.why")}</span>
           </button>
         </TooltipTrigger>
         <TooltipContent

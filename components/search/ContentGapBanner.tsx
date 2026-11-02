@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
+import { useT, type MessageKey } from "@/lib/i18n";
+import { withSlots, useJoinList } from "@/components/search/searchI18n";
 
 interface ContentGapBannerProps {
   play: string | null;
@@ -22,16 +24,11 @@ interface ContentGapBannerProps {
   onSwitchSource?: (sourceType: string) => void;
 }
 
-const SOURCE_LABELS: Record<string, string> = {
-  play: "Plays",
-  film: "Film & TV",
-  tv: "Film & TV",
+const SOURCE_LABELS: Record<string, MessageKey> = {
+  play: "appSearchGap.plays",
+  film: "appSearchGap.filmTv",
+  tv: "appSearchGap.filmTv",
 };
-
-function sourceLabel(types: string[]): string {
-  const labels = Array.from(new Set(types.map((t) => SOURCE_LABELS[t] ?? t)));
-  return labels.length > 1 ? labels.slice(0, -1).join(", ") + " and " + labels.at(-1) : labels[0];
-}
 
 /**
  * Two different messages, because they are two different facts.
@@ -48,12 +45,21 @@ export function ContentGapBanner({
   carriedButEmpty,
   onSwitchSource,
 }: ContentGapBannerProps) {
+  const t = useT();
+  const joinList = useJoinList();
   const [requested, setRequested] = useState(false);
   const [loading, setLoading] = useState(false);
 
   if (!play && !author) return null;
 
-  const label = play && author ? `${play} by ${author}` : play || `works by ${author}`;
+  const sourceLabel = (types: string[]): string =>
+    joinList(Array.from(new Set(types.map((s) => (SOURCE_LABELS[s] ? t(SOURCE_LABELS[s]) : s)))));
+
+  const label =
+    play && author
+      ? t("appSearchGap.playBy", { play, author })
+      : play || t("appSearchGap.worksBy", { author: author ?? "" });
+  const bold = <span className="font-semibold">{label}</span>;
 
   // We have it, the tab filtered it out. Point them at it. Compact inline row —
   // it sits above unrelated same-tab results, so it must read as a quiet redirect,
@@ -63,7 +69,7 @@ export function ContentGapBanner({
     return (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 border-l-primary bg-muted/30 px-3 py-2.5 text-sm">
         <span className="text-foreground">
-          <span className="font-semibold">{label}</span> lives in {sourceLabel(availableIn)}.
+          {withSlots(t("appSearchGap.livesIn", { where: sourceLabel(availableIn) }), { label: bold })}
         </span>
         {onSwitchSource && (
           <button
@@ -71,7 +77,7 @@ export function ContentGapBanner({
             onClick={() => onSwitchSource(target)}
             className="font-medium text-primary underline-offset-4 hover:underline dark:text-[#e56320]"
           >
-            Take me there →
+            {t("appSearchGap.takeMeThere")}
           </button>
         )}
       </div>
@@ -97,18 +103,14 @@ export function ContentGapBanner({
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 border-l-primary bg-muted/30 px-3 py-2.5 text-sm">
       <span className="text-foreground">
         {carriedButEmpty ? (
-          <>
-            We have <span className="font-semibold">{label}</span>, but no monologues from it yet
-          </>
+          withSlots(t("appSearchGap.carriedEmpty"), { label: bold })
         ) : (
-          <>
-            No <span className="font-semibold">{label}</span> yet
-          </>
+          withSlots(t("appSearchGap.notYet"), { label: bold })
         )}
-        {!requested && <span className="text-muted-foreground"> — closest pieces below.</span>}
+        {!requested && <span className="text-muted-foreground">{t("appSearchGap.closestBelow")}</span>}
       </span>
       {requested ? (
-        <span className="text-xs text-muted-foreground">Noted, thanks. I&apos;ll look for it.</span>
+        <span className="text-xs text-muted-foreground">{t("appSearchGap.noted")}</span>
       ) : (
         <button
           type="button"
@@ -116,7 +118,7 @@ export function ContentGapBanner({
           disabled={loading}
           className="font-medium text-primary underline-offset-4 hover:underline disabled:opacity-60 dark:text-[#e56320]"
         >
-          {loading ? "Requesting…" : "Request it →"}
+          {loading ? t("appSearchGap.requesting") : t("appSearchGap.requestIt")}
         </button>
       )}
     </div>

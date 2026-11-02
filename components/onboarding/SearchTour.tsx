@@ -13,20 +13,20 @@ import { TourSpotlight, type TourStep } from "@/components/onboarding/TourSpotli
 const STEPS: TourStep[] = [
   {
     targetId: "search-input",
-    title: "Ask for it in plain English.",
-    body: "\"A Chekhov monologue for a woman in her 30s.\" Describe the audition the way you'd say it out loud.",
+    title: "appShellTours.searchInputTitle",
+    body: "appShellTours.searchInputBody",
     placement: "bottom",
   },
   {
     targetId: "search-find-for-me",
-    title: "Or let me choose.",
-    body: "Find for me reads your profile and pulls pieces you haven't come across yet.",
+    title: "appShellTours.searchFindTitle",
+    body: "appShellTours.searchFindBody",
     placement: "bottom",
   },
   {
     targetId: "search-results",
-    title: "Best fit, first.",
-    body: "Results are ranked on your type and what you asked for, and the overdone ones are pushed down.",
+    title: "appShellTours.searchResultsTitle",
+    body: "appShellTours.searchResultsBody",
     placement: "top",
   },
 ];

@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useLocale, useT } from "@/lib/i18n";
 
 /** The extensions the server reads. A .docx is turned into text at the door. */
 export const SCRIPT_ACCEPT = ".pdf,.docx,.txt";
@@ -39,6 +40,8 @@ interface BringInScriptDialogProps {
 export function BringInScriptDialog({ open, onOpenChange, onFile, onFiles }: BringInScriptDialogProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [text, setText] = useState("");
+  const t = useT();
+  const locale = useLocale();
 
   const close = () => {
     onOpenChange(false);
@@ -59,13 +62,13 @@ export function BringInScriptDialog({ open, onOpenChange, onFile, onFiles }: Bri
     if (body.length < MIN_PASTE_CHARS) return;
     // The time keeps the name unique: the shelf refuses a second script with
     // a filename it already holds.
-    const stamp = new Date().toLocaleString("en-US", {
+    const stamp = new Date().toLocaleString(locale === "tr" ? "tr-TR" : "en-US", {
       month: "short",
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
     });
-    const file = new File([body], `Pasted script ${stamp.replace(/[/:]/g, ".")}.txt`, {
+    const file = new File([body], `${t("appPracticeBringIn.pastedName", { stamp: stamp.replace(/[/:]/g, ".") })}.txt`, {
       type: "text/plain",
     });
     close();
@@ -78,9 +81,9 @@ export function BringInScriptDialog({ open, onOpenChange, onFile, onFiles }: Bri
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : close())}>
       <DialogContent className="w-full max-w-lg">
         <DialogHeader>
-          <DialogTitle>Bring in a script</DialogTitle>
+          <DialogTitle>{t("appPracticeBringIn.title")}</DialogTitle>
           <DialogDescription>
-            PDF, Word or a text file{onFiles ? ", one or a whole folder of them" : ""}. Or paste the scene below.
+            {onFiles ? t("appPracticeBringIn.descriptionMany") : t("appPracticeBringIn.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -98,24 +101,24 @@ export function BringInScriptDialog({ open, onOpenChange, onFile, onFiles }: Bri
           className="w-full gap-2 h-11 font-medium bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           <IconUpload className="h-4 w-4" />
-          Choose a file
+          {t("appPracticeBringIn.chooseFile")}
         </Button>
 
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="h-px flex-1 bg-border" />
-          or paste it
+          {t("appPracticeBringIn.orPaste")}
           <span className="h-px flex-1 bg-border" />
         </div>
 
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={"MAYA\nYou're late.\n\nDAN\nI know. I know."}
+          placeholder={t("appPracticeBringIn.placeholder")}
           rows={8}
           className="text-sm max-h-[40vh]"
         />
         <Button type="button" variant="outline" onClick={usePasted} disabled={tooShort} className="w-full">
-          Read this
+          {t("appPracticeBringIn.readThis")}
         </Button>
       </DialogContent>
     </Dialog>

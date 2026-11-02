@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { IconX, IconSparkles } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/i18n";
 import { useIsPhone } from "@/hooks/useIsPhone";
 import ProfileOnboardingFlow from "@/components/onboarding/ProfileOnboardingFlow";
 
@@ -18,6 +19,7 @@ const DISMISS_KEY = "arc.profileBackfillDismissed";
  */
 export default function ProfileBackfillCard() {
   const { user, loading } = useAuth();
+  const t = useT();
   // Not on phones: a corner card over a 390px screen is a third of it, and
   // the five taps it offers are the same ones the first-run card already asked.
   const isPhone = useIsPhone();
@@ -65,31 +67,31 @@ export default function ProfileBackfillCard() {
             <button
               type="button"
               onClick={handleDismiss}
-              aria-label="Dismiss"
+              aria-label={t("appShellOnboarding.backfillDismiss")}
               className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center text-muted-foreground transition-colors hover:text-foreground [&_svg]:size-4"
             >
               <IconX />
             </button>
             <div className="flex items-center gap-2 text-primary [&_svg]:size-4">
               <IconSparkles />
-              <span className="text-xs font-medium uppercase tracking-wide">Make it yours</span>
+              <span className="text-xs font-medium uppercase tracking-wide">{t("appShellOnboarding.backfillEyebrow")}</span>
             </div>
             <p className="mt-2 font-sans text-lg font-semibold leading-tight text-foreground">
-              Tune your results in 5 taps
+              {t("appShellOnboarding.backfillTitle")}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Tell me how you&apos;re cast and I&apos;ll surface monologues that actually fit you.
+              {t("appShellOnboarding.backfillBody")}
             </p>
             <div className="mt-3 flex items-center gap-2">
               <Button onClick={() => setFlowOpen(true)} size="sm" className="rounded-full">
-                Personalize
+                {t("appShellOnboarding.backfillGo")}
               </Button>
               <button
                 type="button"
                 onClick={handleDismiss}
                 className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
-                Not now
+                {t("appShellOnboarding.backfillLater")}
               </button>
             </div>
           </motion.div>

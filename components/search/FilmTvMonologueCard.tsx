@@ -6,6 +6,7 @@ import { Badge } from "../ui/badge";
 import { IconExternalLink, IconPlayerPlay } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import type { FilmTvMonologue } from "../../types/filmTv";
+import { useT } from "@/lib/i18n";
 
 function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null) return "-";
@@ -25,8 +26,10 @@ export function FilmTvMonologueCard({
   onSelect,
   index = 0,
 }: FilmTvMonologueCardProps) {
+  const t = useT();
   const toneTags = mono.tone?.slice(0, 3) ?? [];
-  const sourceTypeLabel = mono.source_type === "tv" ? "TV" : mono.source_type === "film" ? "Film" : null;
+  const sourceTypeLabel =
+    mono.source_type === "tv" ? t("appSearchFilmTv.tv") : mono.source_type === "film" ? t("appSearchFilmTv.film") : null;
   const yearLabel = mono.source_year != null ? mono.source_year : "";
 
   return (
@@ -52,7 +55,7 @@ export function FilmTvMonologueCard({
                     variant="secondary"
                     className="shrink-0 text-[10px] font-normal bg-muted/80 text-muted-foreground"
                   >
-                    Reference only
+                    {t("appSearchFilmTv.referenceOnly")}
                   </Badge>
                 </div>
                 <p className="font-typewriter text-sm text-muted-foreground line-clamp-1">
@@ -60,7 +63,7 @@ export function FilmTvMonologueCard({
                   {yearLabel ? ` (${yearLabel})` : ""}
                 </p>
                 {mono.actor_name && (
-                  <p className="text-xs text-muted-foreground">with {mono.actor_name}</p>
+                  <p className="text-xs text-muted-foreground">{t("appSearchFilmTv.withActor", { name: mono.actor_name })}</p>
                 )}
               </div>
             </div>
@@ -104,12 +107,12 @@ export function FilmTvMonologueCard({
             {/* Tone/themes: same pills as plays themes */}
             {(toneTags.length > 0 || (mono.themes && mono.themes.length > 0)) && (
               <div className="flex flex-wrap gap-1.5">
-                {toneTags.map((t) => (
+                {toneTags.map((tone) => (
                   <span
-                    key={t}
+                    key={tone}
                     className="text-xs px-2 py-0.5 bg-secondary/10 text-secondary-foreground/90 font-medium capitalize"
                   >
-                    {t}
+                    {tone}
                   </span>
                 ))}
                 {mono.themes?.slice(0, 2).map((theme) => (
@@ -136,11 +139,11 @@ export function FilmTvMonologueCard({
             <div className="flex items-center gap-3">
               {mono.estimated_duration_seconds != null && (
                 <span className="font-medium">
-                  ~{formatDuration(mono.estimated_duration_seconds)} min
+                  {t("appSearchFilmTv.minutes", { d: formatDuration(mono.estimated_duration_seconds) })}
                 </span>
               )}
               {mono.word_count_approx != null && (
-                <span>~{mono.word_count_approx} words</span>
+                <span>{t("appSearchFilmTv.words", { n: mono.word_count_approx })}</span>
               )}
             </div>
             <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -152,7 +155,7 @@ export function FilmTvMonologueCard({
                   className="inline-flex items-center gap-1 px-2 py-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-xs font-medium"
                 >
                   <IconExternalLink className="h-3 w-3" />
-                  Script
+                  {t("appSearchFilmTv.script")}
                 </a>
               )}
               {mono.youtube_url && (
@@ -163,7 +166,7 @@ export function FilmTvMonologueCard({
                   className="inline-flex items-center gap-1 px-2 py-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-xs font-medium"
                 >
                   <IconPlayerPlay className="h-3 w-3" />
-                  Watch
+                  {t("appSearchFilmTv.watch")}
                 </a>
               )}
             </div>

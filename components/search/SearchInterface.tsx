@@ -16,6 +16,8 @@ import { MonologueCard } from "./MonologueCard";
 import { RequestQueryButton } from "./RequestQueryButton";
 import { motion, AnimatePresence } from "framer-motion";
 import { addSearchToHistory } from "@/lib/searchHistory";
+import { useT, useTList } from "@/lib/i18n";
+import { withSlots } from "@/components/search/searchI18n";
 
 type MonologueSearchResponse = {
   results: Monologue[];
@@ -38,18 +40,10 @@ type SearchFilters = {
   max_duration?: number;
 };
 
-const LOADING_MESSAGES = [
-  "Asking Shakespeare for advice...",
-  "Consulting the drama gods...",
-  "Squeezing the monologue database...",
-  "Searching backstage...",
-  "Finding your perfect piece...",
-  "Digging through the classics...",
-  "Working our magic...",
-  "Rifling through the script pile...",
-];
-
 export function SearchInterface() {
+  const t = useT();
+  const tList = useTList();
+  const LOADING_MESSAGES = tList("appSearchLegacy.loading");
   const [profileBias, setProfileBias] = useState(true);
   const [query, setQuery] = useState("");
   // Shared filter state (manual filters + era/category)
@@ -217,7 +211,7 @@ export function SearchInterface() {
             ? (raw as { message: string }).message
             : error instanceof Error
               ? error.message
-              : "Search failed. Please try again.";
+              : t("appSearchLegacy.searchFailed");
       setSearchError(message);
       setResults([]);
       setWeakMatch(false);
@@ -225,7 +219,7 @@ export function SearchInterface() {
     } finally {
       setIsLoading(false);
     }
-  }, [query, profileBias, filters, era, searchHistory, PERSIST_KEY]);
+  }, [query, profileBias, filters, era, searchHistory, PERSIST_KEY, t]);
 
   useEffect(() => {
     // Auto-search when filters change (if profile bias is off)
@@ -247,7 +241,7 @@ export function SearchInterface() {
       setLoadingMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
     }, 2000);
     return () => clearInterval(interval);
-  }, [isLoading]);
+  }, [isLoading, LOADING_MESSAGES.length]);
 
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
   const hasActiveFilters = activeFilters.length > 0;
@@ -295,9 +289,9 @@ export function SearchInterface() {
                 className="flex items-center justify-between pb-3"
               >
                 <div className="space-y-0.5">
-                  <Label className="text-sm font-semibold">Era</Label>
+                  <Label className="text-sm font-semibold">{t("appSearchLegacy.era")}</Label>
                   <p className="text-xs text-muted-foreground">
-                    Choose whether to search classical or contemporary monologues, or both
+                    {t("appSearchLegacy.eraHint")}
                   </p>
                 </div>
                 <div className="inline-flex rounded-full border border-border overflow-hidden text-xs">
@@ -313,7 +307,7 @@ export function SearchInterface() {
                         : "bg-background text-muted-foreground hover:bg-muted/50"
                     }`}
                   >
-                    Either
+                    {t("appSearchLegacy.either")}
                   </button>
                   <button
                     type="button"
@@ -327,7 +321,7 @@ export function SearchInterface() {
                         : "bg-background text-muted-foreground hover:bg-muted/50"
                     }`}
                   >
-                    Contemporary
+                    {t("appSearchLegacy.contemporary")}
                   </button>
                   <button
                     type="button"
@@ -341,7 +335,7 @@ export function SearchInterface() {
                         : "bg-background text-muted-foreground hover:bg-muted/50"
                     }`}
                   >
-                    Classical
+                    {t("appSearchLegacy.classical")}
                   </button>
                 </div>
               </motion.div>
@@ -356,10 +350,10 @@ export function SearchInterface() {
                 <div className="space-y-0.5">
                   <Label htmlFor="profile-bias" className="text-base font-semibold flex items-center gap-2 text-foreground">
                     <IconSparkles className="h-4 w-4 text-primary" />
-                    AI-Powered Search
+                    {t("appSearchLegacy.aiSearch")}
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Results are tailored to your profile (gender, age) when enabled. Match to your type and to the casting scenario. Just describe the audition in plain English.
+                    {t("appSearchLegacy.aiSearchHint")}
                   </p>
                 </div>
                 <Switch
@@ -382,13 +376,13 @@ export function SearchInterface() {
                   >
                       <Label htmlFor="smart-search" className="flex items-center gap-2">
                         <IconSparkles className="h-4 w-4 text-foreground animate-pulse" />
-                      Smart Search
+                      {t("appSearchLegacy.smartSearch")}
                     </Label>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 relative flex items-center">
                         <Input
                           id="smart-search"
-                          placeholder={`Try "to be or not to be" or "funny piece for a middle-aged man"`}
+                          placeholder={t("appSearchLegacy.smartPlaceholder")}
                           value={query}
                           onChange={(e) => setQuery(e.target.value)}
                           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -401,7 +395,7 @@ export function SearchInterface() {
                             animate={{ opacity: 1, scale: 1 }}
                             onClick={() => setQuery("")}
                             className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/50 transition-colors"
-                            aria-label="Clear search"
+                            aria-label={t("appSearchLegacy.clearSearch")}
                           >
                             <IconX className="h-4 w-4" />
                           </motion.button>
@@ -413,14 +407,14 @@ export function SearchInterface() {
                         ) : (
                           <>
                             <IconSearch className="h-4 w-4" />
-                            Search
+                            {t("appSearchLegacy.search")}
                           </>
                         )}
                       </Button>
                     </div>
                     {searchHistory.length > 0 && (
                       <div className="relative flex flex-wrap gap-2 mt-2 border border-border rounded-lg p-3">
-                        <span className="text-xs text-muted-foreground">Recent:</span>
+                        <span className="text-xs text-muted-foreground">{t("appSearchLegacy.recent")}</span>
                         {searchHistory.map((item, idx) => (
                           <motion.button
                             key={idx}
@@ -439,7 +433,7 @@ export function SearchInterface() {
                         <button
                           onClick={clearSearchHistory}
                           className="absolute top-2 right-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                          aria-label="Clear search history"
+                          aria-label={t("appSearchLegacy.clearHistory")}
                         >
                           <IconX className="h-4 w-4" />
                         </button>
@@ -458,12 +452,12 @@ export function SearchInterface() {
                     <div className="space-y-2">
                       <Label htmlFor="search" className="flex items-center gap-2">
                         <IconSearch className="h-4 w-4" />
-                        Search Monologues
+                        {t("appSearchLegacy.searchMonologues")}
                       </Label>
                       <div className="flex items-center gap-2">
                         <Input
                           id="search"
-                          placeholder="Search by title, author, or excerpt..."
+                          placeholder={t("appSearchLegacy.manualPlaceholder")}
                           value={query}
                           onChange={(e) => setQuery(e.target.value)}
                           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -484,7 +478,7 @@ export function SearchInterface() {
                       <div className="flex items-center justify-between">
                         <Label className="flex items-center gap-2">
                           <IconFilter className="h-4 w-4" />
-                          Filters
+                          {t("appSearchLegacy.filters")}
                         </Label>
                         {hasActiveFilters && (
                           <Button
@@ -493,13 +487,13 @@ export function SearchInterface() {
                             onClick={clearAllFilters}
                             className="text-xs"
                           >
-                            Clear all
+                            {t("appSearchLegacy.clearAll")}
                           </Button>
                         )}
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="age-range">Age Range</Label>
+                          <Label htmlFor="age-range">{t("appSearchLegacy.ageRange")}</Label>
                           <Select
                             value={filters.age_range || "__none__"}
                             onValueChange={(v) =>
@@ -507,10 +501,10 @@ export function SearchInterface() {
                             }
                           >
                             <SelectTrigger id="age-range" className="min-h-[44px]">
-                              <SelectValue placeholder="All" />
+                              <SelectValue placeholder={t("appSearchLegacy.all")} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="__none__">All</SelectItem>
+                              <SelectItem value="__none__">{t("appSearchLegacy.all")}</SelectItem>
                               <SelectItem value="18-25">18-25</SelectItem>
                               <SelectItem value="25-35">25-35</SelectItem>
                               <SelectItem value="35-45">35-45</SelectItem>
@@ -521,7 +515,7 @@ export function SearchInterface() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="gender">Gender</Label>
+                          <Label htmlFor="gender">{t("appSearchLegacy.gender")}</Label>
                           <Select
                             value={filters.gender || "__none__"}
                             onValueChange={(v) =>
@@ -529,19 +523,19 @@ export function SearchInterface() {
                             }
                           >
                             <SelectTrigger id="gender" className="min-h-[44px]">
-                              <SelectValue placeholder="All" />
+                              <SelectValue placeholder={t("appSearchLegacy.all")} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="__none__">All</SelectItem>
-                              <SelectItem value="Male">Male</SelectItem>
-                              <SelectItem value="Female">Female</SelectItem>
-                              <SelectItem value="Non-binary">Non-binary</SelectItem>
+                              <SelectItem value="__none__">{t("appSearchLegacy.all")}</SelectItem>
+                              <SelectItem value="Male">{t("appSearchLegacy.male")}</SelectItem>
+                              <SelectItem value="Female">{t("appSearchLegacy.female")}</SelectItem>
+                              <SelectItem value="Non-binary">{t("appSearchLegacy.nonBinary")}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="genre">Genre</Label>
+                          <Label htmlFor="genre">{t("appSearchLegacy.genre")}</Label>
                           <Select
                             value={filters.genre || "__none__"}
                             onValueChange={(v) =>
@@ -549,20 +543,20 @@ export function SearchInterface() {
                             }
                           >
                             <SelectTrigger id="genre" className="min-h-[44px]">
-                              <SelectValue placeholder="All" />
+                              <SelectValue placeholder={t("appSearchLegacy.all")} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="__none__">All</SelectItem>
-                              <SelectItem value="Drama">Drama</SelectItem>
-                              <SelectItem value="Comedy">Comedy</SelectItem>
-                              <SelectItem value="Classical">Classical</SelectItem>
+                              <SelectItem value="__none__">{t("appSearchLegacy.all")}</SelectItem>
+                              <SelectItem value="Drama">{t("appSearchLegacy.drama")}</SelectItem>
+                              <SelectItem value="Comedy">{t("appSearchLegacy.comedy")}</SelectItem>
+                              <SelectItem value="Classical">{t("appSearchLegacy.classical")}</SelectItem>
                               <SelectItem value="Shakespeare">Shakespeare</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="theme">Theme</Label>
+                          <Label htmlFor="theme">{t("appSearchLegacy.theme")}</Label>
                           <Select
                             value={filters.theme || "__none__"}
                             onValueChange={(v) =>
@@ -570,27 +564,27 @@ export function SearchInterface() {
                             }
                           >
                             <SelectTrigger id="theme" className="min-h-[44px]">
-                              <SelectValue placeholder="All Themes" />
+                              <SelectValue placeholder={t("appSearchLegacy.allThemes")} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="__none__">All Themes</SelectItem>
-                              <SelectItem value="Love">Love</SelectItem>
-                              <SelectItem value="Loss">Loss</SelectItem>
-                              <SelectItem value="Desire">Desire</SelectItem>
-                              <SelectItem value="Broken Promises">Broken Promises</SelectItem>
-                              <SelectItem value="Rejection">Rejection</SelectItem>
-                              <SelectItem value="Change">Change</SelectItem>
-                              <SelectItem value="Identity">Identity</SelectItem>
-                              <SelectItem value="Conflict">Conflict</SelectItem>
-                              <SelectItem value="Redemption">Redemption</SelectItem>
-                              <SelectItem value="Ambition">Ambition</SelectItem>
-                              <SelectItem value="Revenge">Revenge</SelectItem>
+                              <SelectItem value="__none__">{t("appSearchLegacy.allThemes")}</SelectItem>
+                              <SelectItem value="Love">{t("appSearchLegacy.love")}</SelectItem>
+                              <SelectItem value="Loss">{t("appSearchLegacy.loss")}</SelectItem>
+                              <SelectItem value="Desire">{t("appSearchLegacy.desire")}</SelectItem>
+                              <SelectItem value="Broken Promises">{t("appSearchLegacy.brokenPromises")}</SelectItem>
+                              <SelectItem value="Rejection">{t("appSearchLegacy.rejection")}</SelectItem>
+                              <SelectItem value="Change">{t("appSearchLegacy.change")}</SelectItem>
+                              <SelectItem value="Identity">{t("appSearchLegacy.identity")}</SelectItem>
+                              <SelectItem value="Conflict">{t("appSearchLegacy.conflict")}</SelectItem>
+                              <SelectItem value="Redemption">{t("appSearchLegacy.redemption")}</SelectItem>
+                              <SelectItem value="Ambition">{t("appSearchLegacy.ambition")}</SelectItem>
+                              <SelectItem value="Revenge">{t("appSearchLegacy.revenge")}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="category">Category</Label>
+                          <Label htmlFor="category">{t("appSearchLegacy.category")}</Label>
                           <Select
                             value={filters.category || "__none__"}
                             onValueChange={(value) => {
@@ -606,12 +600,12 @@ export function SearchInterface() {
                             }}
                           >
                             <SelectTrigger id="category" className="min-h-[44px]">
-                              <SelectValue placeholder="All Categories" />
+                              <SelectValue placeholder={t("appSearchLegacy.allCategories")} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="__none__">All Categories</SelectItem>
-                              <SelectItem value="Contemporary">Contemporary</SelectItem>
-                              <SelectItem value="Classical">Classical</SelectItem>
+                              <SelectItem value="__none__">{t("appSearchLegacy.allCategories")}</SelectItem>
+                              <SelectItem value="Contemporary">{t("appSearchLegacy.contemporary")}</SelectItem>
+                              <SelectItem value="Classical">{t("appSearchLegacy.classical")}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -654,7 +648,7 @@ export function SearchInterface() {
           <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <p className="text-sm text-destructive font-medium">{searchError}</p>
             <Button variant="outline" size="sm" onClick={() => handleSearch()}>
-              Try again
+              {t("appSearchLegacy.tryAgain")}
             </Button>
           </CardContent>
         </Card>
@@ -721,9 +715,9 @@ export function SearchInterface() {
                 >
                   <IconSearch className="h-16 w-16 text-muted-foreground/50" />
                 </motion.div>
-                <h3 className="text-lg font-semibold mb-2">No monologues found</h3>
+                <h3 className="text-lg font-semibold mb-2">{t("appSearchLegacy.noneFound")}</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Try adjusting your search terms or filters
+                  {t("appSearchLegacy.noneFoundHint")}
                 </p>
                 {/* Zero results is the strongest demand signal there is, and it
                     was the one place that told the actor to go away and rephrase
@@ -743,7 +737,7 @@ export function SearchInterface() {
                     category: "",
                   });
                 }}>
-                  Clear Search
+                  {t("appSearchLegacy.clearSearchButton")}
                 </Button>
               </CardContent>
             </Card>
@@ -763,10 +757,10 @@ export function SearchInterface() {
               {weakMatch ? (
                 <div className="border border-border border-l-2 border-l-primary bg-muted/40 px-4 py-3">
                   <p className="text-sm font-medium text-foreground">
-                    No strong matches for that.
+                    {t("appSearchLegacy.weakTitle")}
                   </p>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    Here are the closest ones I found. Try simpler terms or fewer filters to narrow in.
+                    {t("appSearchLegacy.weakBody")}
                   </p>
                   {/* A weak result set is the moment we learn what the library
                       is missing, and this surface used to drop it on the floor:
@@ -777,15 +771,21 @@ export function SearchInterface() {
               ) : broadened && broadened.relaxed.length > 0 ? (
                 <div className="border border-border border-l-2 border-l-primary bg-muted/40 px-4 py-3">
                   <p className="text-sm font-medium text-foreground">
-                    Only a few exact matches, so I broadened the {broadened.relaxed.join(" and ")}.
+                    {t("appSearchLegacy.broadened", { fields: broadened.relaxed.join(t("appSearchList.and")) })}
                   </p>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    Showing <span className="font-semibold text-foreground">{results.length}</span> closest monologue{results.length !== 1 ? "s" : ""}.
+                    {withSlots(
+                      t(results.length !== 1 ? "appSearchLegacy.showingClosestMany" : "appSearchLegacy.showingClosestOne"),
+                      { n: <span className="font-semibold text-foreground">{results.length}</span> },
+                    )}
                   </p>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Found <span className="font-semibold text-foreground">{results.length}</span> monologue{results.length !== 1 ? "s" : ""}
+                  {withSlots(
+                    t(results.length !== 1 ? "appSearchLegacy.foundMany" : "appSearchLegacy.foundOne"),
+                    { n: <span className="font-semibold text-foreground">{results.length}</span> },
+                  )}
                 </p>
               )}
             </motion.div>

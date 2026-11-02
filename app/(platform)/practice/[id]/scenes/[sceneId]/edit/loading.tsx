@@ -2,21 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-
-const LOADING_TEXTS = [
-  "Setting the scene...",
-  "Arranging the script pages...",
-  "Warming up the stage lights...",
-  "Finding your mark...",
-  "Cueing the spotlight...",
-];
+import { useTList } from "@/lib/i18n";
 
 export default function SceneEditLoading() {
+  const tList = useTList();
+  const LOADING_TEXTS = tList("appPracticeEditLoading.lines");
+  const count = LOADING_TEXTS.length;
   const [idx, setIdx] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setIdx((i) => (i + 1) % LOADING_TEXTS.length), 2500);
+    const t = setInterval(() => setIdx((i) => (i + 1) % count), 2500);
     return () => clearInterval(t);
-  }, []);
+  }, [count]);
 
   return (
     <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
@@ -35,7 +31,7 @@ export default function SceneEditLoading() {
           animate={{ opacity: 1, y: 0 }}
           className="text-neutral-500 text-sm"
         >
-          {LOADING_TEXTS[idx]}
+          {LOADING_TEXTS[idx % count]}
         </motion.p>
       </div>
     </div>

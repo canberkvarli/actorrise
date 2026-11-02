@@ -5,6 +5,7 @@ import { IconUpload, IconLoader2 } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { useUpload } from "@/components/practice/UploadProvider";
+import { useT } from "@/lib/i18n";
 
 interface UploadScriptButtonProps {
   /** Visual variant. `primary` = large hero CTA (orange), `compact` = small inline button. */
@@ -31,8 +32,9 @@ export function UploadScriptButton({
   className,
 }: UploadScriptButtonProps) {
   const { isUploading, phaseLabel, openPicker } = useUpload();
+  const t = useT();
 
-  const busyLabel = phaseLabel ?? "Uploading…";
+  const busyLabel = phaseLabel ?? t("appPracticeUploadButton.uploading");
   const isPrimary = variant === "primary";
   const iconSize = isPrimary ? "h-4 w-4" : "h-3.5 w-3.5";
 
@@ -57,7 +59,7 @@ export function UploadScriptButton({
         ) : (
           <>
             <IconUpload className={iconSize} />
-            {children ?? (isPrimary ? "Upload your first script" : "Upload script")}
+            {children ?? (isPrimary ? t("appPracticeUploadButton.uploadFirst") : t("appPracticeUploadButton.upload"))}
           </>
         )}
       </Button>

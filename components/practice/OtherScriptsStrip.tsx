@@ -3,6 +3,7 @@
 import { getGenreInkColor, getGenreSpineColor } from "@/lib/genreColors";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
 import type { UserScript } from "@/hooks/useScripts";
+import { useT } from "@/lib/i18n";
 
 interface OtherScriptsStripProps {
   /** The shelf in its order; the open one is left out here. */
@@ -27,17 +28,18 @@ interface OtherScriptsStripProps {
 const STRIP_MAX = 12;
 
 export function OtherScriptsStrip({ scripts, openId, onSelect, onShowShelf }: OtherScriptsStripProps) {
+  const t = useT();
   const others = scripts.filter((s) => s.id !== openId);
   const shown = others.slice(0, STRIP_MAX);
   const more = others.length - shown.length;
 
   return (
-    <nav aria-label="Other scripts" className="t-strip">
+    <nav aria-label={t("appPracticeStrip.otherScripts")} className="t-strip">
       <div className="t-strip__head">
-        <h2 className="t-shelf-heading">On the shelf</h2>
+        <h2 className="t-shelf-heading">{t("appPracticeStrip.onTheShelf")}</h2>
         <span id="scenepartner-bring-in">
           <UploadScriptButton variant="compact" className="t-bring-in">
-            Bring in a script
+            {t("appPracticeStrip.bringIn")}
           </UploadScriptButton>
         </span>
       </div>
@@ -62,7 +64,7 @@ export function OtherScriptsStrip({ scripts, openId, onSelect, onShowShelf }: Ot
           {more > 0 && onShowShelf && (
             <li className="min-w-0 max-w-full self-center">
               <button type="button" onClick={onShowShelf} className="t-shelf-link px-1">
-                + {more} more on the shelf
+                {t("appPracticeStrip.moreOnShelf", { n: more })}
               </button>
             </li>
           )}

@@ -14,6 +14,7 @@ import {
   SpotlightSketch,
   StageDoorSketch,
 } from "@/components/brand/sketches";
+import { useLocale, useT, type MessageKey } from "@/lib/i18n";
 
 /**
  * The read-through.
@@ -64,28 +65,43 @@ type Props = {
  * characters are"); on a list of nine they become a wall, so the list gets the
  * short form and the headline keeps the sentence.
  */
-const RUN_OF_SHOW: { match: string; label: string; Sketch: typeof MasksSketch }[] = [
-  { match: "Taking your script", label: "Taking it in", Sketch: StageDoorSketch },
-  { match: "Uploading file", label: "Taking it in", Sketch: StageDoorSketch },
-  { match: "Opening the script", label: "Opening it", Sketch: StageDoorSketch },
-  { match: "Reading through every page", label: "Reading every page", Sketch: ScriptPagesSketch },
-  { match: "Learning who the characters are", label: "Learning the characters", Sketch: MasksSketch },
-  { match: "Analyzing", label: "Learning the characters", Sketch: MasksSketch },
-  { match: "Mapping out the acts and scenes", label: "Mapping acts and scenes", Sketch: MarqueeSketch },
-  { match: "Pulling every line of dialogue", label: "Pulling the dialogue", Sketch: MicSketch },
-  { match: "Figuring out the tone", label: "Finding the tone", Sketch: SpotlightSketch },
-  { match: "Cleaning up dialogue", label: "Finding the tone", Sketch: SpotlightSketch },
-  { match: "Assembling your rehearsal scenes", label: "Setting your scenes", Sketch: FootlightsSketch },
+const RUN_OF_SHOW: { match: string; label: MessageKey; Sketch: typeof MasksSketch }[] = [
+  { match: "Taking your script", label: "appPracticeUploadStage.takingIn", Sketch: StageDoorSketch },
+  { match: "Uploading file", label: "appPracticeUploadStage.takingIn", Sketch: StageDoorSketch },
+  { match: "Opening the script", label: "appPracticeUploadStage.opening", Sketch: StageDoorSketch },
+  { match: "Reading through every page", label: "appPracticeUploadStage.reading", Sketch: ScriptPagesSketch },
+  { match: "Learning who the characters are", label: "appPracticeUploadStage.characters", Sketch: MasksSketch },
+  { match: "Analyzing", label: "appPracticeUploadStage.characters", Sketch: MasksSketch },
+  { match: "Mapping out the acts and scenes", label: "appPracticeUploadStage.mapping", Sketch: MarqueeSketch },
+  { match: "Pulling every line of dialogue", label: "appPracticeUploadStage.dialogue", Sketch: MicSketch },
+  { match: "Figuring out the tone", label: "appPracticeUploadStage.tone", Sketch: SpotlightSketch },
+  { match: "Cleaning up dialogue", label: "appPracticeUploadStage.tone", Sketch: SpotlightSketch },
+  { match: "Assembling your rehearsal scenes", label: "appPracticeUploadStage.setting", Sketch: FootlightsSketch },
 ];
 
 /** The list the card prints: the labels above, in order, without repeats. */
-const BILL = RUN_OF_SHOW.reduce<string[]>((acc, p) => {
+const BILL = RUN_OF_SHOW.reduce<MessageKey[]>((acc, p) => {
   if (!acc.includes(p.label)) acc.push(p.label);
   return acc;
 }, []);
 
 function entryFor(phase: string) {
   return RUN_OF_SHOW.find((p) => phase.startsWith(p.match));
+}
+
+/**
+ * A progress group as the reader's language says it. The groups are English
+ * on the wire (UploadProvider matches the server's lines against them), so
+ * English shows them as they are and another language shows the name of the
+ * pass on the bill. A raw server line nobody has named stays as sent.
+ */
+export function phaseText(t: (key: MessageKey) => string, locale: string, phase: string): string {
+  if (locale === "en") return phase;
+  if (phase.startsWith("Naming the script")) return t("appPracticeUploadStage.naming");
+  if (phase.startsWith("Taking your files")) return t("appPracticeUploadStage.takingFiles");
+  if (phase.startsWith("Preparing")) return t("appPracticeUploadStage.preparing");
+  const entry = entryFor(phase);
+  return entry ? t(entry.label) : phase;
 }
 
 export function UploadStage({
@@ -101,12 +117,24 @@ export function UploadStage({
   onMinimize,
 }: Props) {
   const reduce = useReducedMotion();
+  const t = useT();
+  const locale = useLocale();
 
   const last = steps[steps.length - 1];
   const phase = scanning ? "Opening the script" : last?.group ?? "Taking your script";
   const entry = entryFor(phase);
   const Sketch = doneInfo ? SpotlightSketch : entry?.Sketch ?? ScriptPagesSketch;
-  const headline = doneInfo ? "Ready when you are" : phase;
+  /* The phase is the server's sentence, in English. English shows it as sent;
+     another language shows the name of the pass it belongs to, when known. */
+  const headline = doneInfo
+    ? t("appPracticeUploadStage.ready")
+    : locale !== "en"
+      ? phaseText(t, locale, phase)
+      : scanning
+        ? t("appPracticeUploadStage.openingScript")
+        : !last
+          ? t("appPracticeUploadStage.takingScript")
+          : phase;
 
   /* Where we are on the bill. -1 while the phase is one the list does not know
      about, which keeps every row "to come" rather than guessing. `extractionDone`
@@ -148,7 +176,7 @@ export function UploadStage({
         <button
           type="button"
           onClick={onMinimize}
-          aria-label="Keep working while this runs"
+          aria-label={t("appPracticeUploadStage.keepWorking")}
           className="absolute right-2.5 top-2.5 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors"
           style={{ color: "var(--t-muted-dark-2)" }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "var(--t-text)")}
@@ -204,7 +232,7 @@ export function UploadStage({
                 className="m-0 text-[12px] italic tracking-[0.08em]"
                 style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}
               >
-                {doneInfo ? "(that's the read-through.)" : "(reading it through.)"}
+                {doneInfo ? t("appPracticeUploadStage.doneDirection") : t("appPracticeUploadStage.readingDirection")}
               </p>
               <AnimatePresence mode="wait">
                 <motion.h2
@@ -224,7 +252,9 @@ export function UploadStage({
                 style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark)" }}
               >
                 {doneInfo
-                  ? `${doneInfo.scenes} scene${doneInfo.scenes === 1 ? "" : "s"} to rehearse`
+                  ? t(doneInfo.scenes === 1 ? "appPracticeUploadStage.toRehearseOne" : "appPracticeUploadStage.toRehearseMany", {
+                      n: doneInfo.scenes,
+                    })
                   : fileName}
               </p>
             </div>
@@ -272,7 +302,7 @@ export function UploadStage({
                         color: "var(--t-text)",
                       }}
                     >
-                      {label}
+                      {t(label)}
                     </span>
                   </li>
                 );
@@ -308,7 +338,7 @@ export function UploadStage({
                 onMouseEnter={(e) => (e.currentTarget.style.color = "var(--t-text)")}
                 onMouseLeave={(e) => (e.currentTarget.style.color = "var(--t-faint)")}
               >
-                {expanded ? "hide the log" : "every step"}
+                {expanded ? t("appPracticeUploadStage.hideLog") : t("appPracticeUploadStage.everyStep")}
               </button>
               <AnimatePresence initial={false}>
                 {expanded && (
@@ -355,7 +385,7 @@ export function UploadStage({
                 className="inline-flex h-12 items-center justify-between gap-3 rounded-full pl-6 pr-2 text-[15px] font-bold"
                 style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
               >
-                Open the script
+                {t("appPracticeUploadStage.openScript")}
                 <span
                   className="inline-flex h-9 w-9 items-center justify-center rounded-full"
                   style={{ background: "var(--t-cta-dot-bg)", color: "var(--t-cta-dot-fg)" }}
@@ -374,7 +404,7 @@ export function UploadStage({
                   className="t-mem__ghost"
                 >
                   <IconChevronDown className="h-4 w-4" />
-                  Keep working while this runs
+                  {t("appPracticeUploadStage.keepWorking")}
                 </button>
                 <button
                   type="button"
@@ -385,7 +415,7 @@ export function UploadStage({
                   onMouseLeave={(e) => (e.currentTarget.style.color = "var(--t-faint)")}
                 >
                   <IconX className="h-3 w-3" />
-                  stop
+                  {t("appPracticeUploadStage.stop")}
                 </button>
               </>
             )}

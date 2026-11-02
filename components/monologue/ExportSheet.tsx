@@ -7,6 +7,7 @@ import { Monologue } from "@/types/actor";
 import { displayableAuthor } from "@/lib/utils";
 import { estimateDurationSeconds, formatClock } from "@/lib/estimateDuration";
 import { applyCut } from "@/lib/monologueSegments";
+import { useT } from "@/lib/i18n";
 
 /**
  * Audition-ready export: the actor's CUT only (or the full piece if none set),
@@ -23,6 +24,7 @@ export function ExportSheet({
   embedded?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
+  const t = useT();
 
   const source = useMemo(() => {
     const author = displayableAuthor(monologue.author);
@@ -47,33 +49,33 @@ export function ExportSheet({
   const seconds = estimateDurationSeconds(cutText);
 
   const plainText = useMemo(() => {
-    const header = [monologue.character_name, source ? `from ${source}` : ""]
-      .filter(Boolean)
-      .join(" ");
+    const header = source
+      ? t("appMonologueSides.copyHeader", { character: monologue.character_name ?? "", source }).trim()
+      : monologue.character_name ?? "";
     return `${header}\n\n${cutText.trim()}\n`;
-  }, [monologue.character_name, source, cutText]);
+  }, [monologue.character_name, source, cutText, t]);
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(plainText);
       setCopied(true);
-      toast.success("Copied to clipboard");
+      toast.success(t("appMonologueSides.copied"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Couldn't copy. Select and copy manually.");
+      toast.error(t("appMonologueSides.copyFailed"));
     }
   }
 
   function print() {
     const w = window.open("", "_blank", "width=680,height=800");
     if (!w) {
-      toast.error("Allow pop-ups to print.");
+      toast.error(t("appMonologueSides.allowPopups"));
       return;
     }
     const esc = (s: string) =>
       s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     w.document.write(`<!doctype html><html><head><title>${esc(
-      monologue.character_name || "Monologue",
+      monologue.character_name || t("appMonologueSides.printTitle"),
     )}</title><style>
       body{font-family:"Courier Prime",ui-monospace,monospace;margin:1in;color:#111;line-height:1.6;font-size:13pt}
       h1{font-size:15pt;margin:0 0 2pt}
@@ -93,17 +95,19 @@ export function ExportSheet({
     <div className="space-y-3">
       <div className="flex items-baseline justify-between gap-3">
         <div>
-          {!embedded && <h2 className="text-base font-semibold">Audition copy</h2>}
+          {!embedded && <h2 className="text-base font-semibold">{t("appMonologueExport.heading")}</h2>}
           <p className="text-sm text-muted-foreground">
-            {isCut ? `Your cut · ${formatClock(seconds)}` : `Full piece · ${formatClock(seconds)}`}
+            {isCut
+              ? t("appMonologueExport.yourCut", { clock: formatClock(seconds) })
+              : t("appMonologueExport.fullPiece", { clock: formatClock(seconds) })}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={copy}>
-            {copied ? "Copied" : "Copy"}
+            {copied ? t("appMonologueSides.copiedLabel") : t("appMonologueBar.copy")}
           </Button>
           <Button variant="outline" size="sm" onClick={print}>
-            Print
+            {t("appMonologueSides.print")}
           </Button>
         </div>
       </div>

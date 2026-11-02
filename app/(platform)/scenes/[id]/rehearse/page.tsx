@@ -8,6 +8,7 @@ import { theatreFontVars, typewriterFontVar } from '@/lib/fonts/theatre';
 import type { ScenePayload } from '@/lib/rehearsal/contract';
 import { plainError } from '@/lib/rehearsal/prepare';
 import { RehearseScreen } from './RehearseScreen';
+import { useErrorText } from './errorText';
 
 /**
  * /scenes/<id>/rehearse — fetch the scene, hand off. `?guided=1` is the first
@@ -26,6 +27,7 @@ export default function RehearsePage() {
   const [payload, setPayload] = useState<ScenePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { refreshUser } = useAuth();
+  const errorText = useErrorText();
 
   // The guided run sets has_seen_first_rehearsal on the server. Pull the user
   // again on the way out, so the next page does not invite them to the scene
@@ -47,7 +49,7 @@ export default function RehearsePage() {
 
   return (
     <div className={`theatre-tokens theatre-rehearsal overflow-x-clip ${theatreFontVars} ${typewriterFontVar}`}>
-      {error && <p className="r-chrome mx-auto max-w-prose px-6 py-16">{error}</p>}
+      {error && <p className="r-chrome mx-auto max-w-prose px-6 py-16">{errorText(error)}</p>}
       {payload && <RehearseScreen payload={payload} guided={guided} go={go} />}
     </div>
   );

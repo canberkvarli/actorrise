@@ -15,6 +15,7 @@ import { theatreFontVars } from "@/lib/fonts/theatre";
 import { MasksSketch } from "@/components/brand/sketches";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 interface AddSceneToScriptModalProps {
   open: boolean;
@@ -68,11 +69,11 @@ function readScene(body: string): ReadScene {
   return { lines, cast };
 }
 
-const CURTAIN_LINES = [
-  "Setting the stage…",
-  "Cue the actors…",
-  "Raising the curtain…",
-  "Places, everyone…",
+const CURTAIN_LINES: MessageKey[] = [
+  "appScenesAdd.curtain1",
+  "appScenesAdd.curtain2",
+  "appScenesAdd.curtain3",
+  "appScenesAdd.curtain4",
 ];
 
 export function AddSceneToScriptModal({
@@ -83,6 +84,7 @@ export function AddSceneToScriptModal({
   defaultAct,
   onSceneAdded,
 }: AddSceneToScriptModalProps) {
+  const t = useT();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [act, setAct] = useState("__none__");
@@ -91,7 +93,7 @@ export function AddSceneToScriptModal({
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [curtain, setCurtain] = useState(CURTAIN_LINES[0]);
-  const [errors, setErrors] = useState<{ title?: string; body?: string }>({});
+  const [errors, setErrors] = useState<{ title?: MessageKey; body?: MessageKey }>({});
 
   const titleRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -130,11 +132,11 @@ export function AddSceneToScriptModal({
   };
 
   const handleSubmit = async () => {
-    const next: { title?: string; body?: string } = {};
-    if (!title.trim()) next.title = "Give the scene a name.";
-    if (!body.trim()) next.body = "There's nothing to rehearse yet.";
-    else if (read.lines < 2) next.body = "Two lines at least — it takes two to play it.";
-    else if (read.cast.length < 2) next.body = "Only one voice so far. Who are they talking to?";
+    const next: { title?: MessageKey; body?: MessageKey } = {};
+    if (!title.trim()) next.title = "appScenesAdd.errTitle";
+    if (!body.trim()) next.body = "appScenesAdd.errEmpty";
+    else if (read.lines < 2) next.body = "appScenesAdd.errTwoLines";
+    else if (read.cast.length < 2) next.body = "appScenesAdd.errOneVoice";
 
     if (Object.keys(next).length > 0) {
       setErrors(next);
@@ -155,7 +157,7 @@ export function AddSceneToScriptModal({
         scene_number: sceneNumber.trim() || undefined,
         body: body.trim(),
       });
-      toast.success("Scene added");
+      toast.success(t("appScenesAdd.added"));
       reset();
       onOpenChange(false);
       onSceneAdded();
@@ -163,7 +165,7 @@ export function AddSceneToScriptModal({
       const detail =
         (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
         (error instanceof Error ? error.message : null);
-      toast.error(typeof detail === "string" ? detail : "Couldn't add that scene");
+      toast.error(typeof detail === "string" ? detail : t("appScenesAdd.failed"));
     } finally {
       setSubmitting(false);
     }
@@ -180,7 +182,7 @@ export function AddSceneToScriptModal({
       <DialogContent
         className={`t-formsheet theatre-tokens ${theatreFontVars} max-w-[620px] gap-0 border-0 p-0`}
       >
-        <DialogTitle className="sr-only">Add a scene</DialogTitle>
+        <DialogTitle className="sr-only">{t("appScenesAdd.heading")}</DialogTitle>
 
         {/* The curtain, while it is being filed. */}
         <AnimatePresence>
@@ -204,7 +206,7 @@ export function AddSceneToScriptModal({
                   className="m-0 mt-4 text-[13px] italic tracking-[0.06em]"
                   style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark)" }}
                 >
-                  {curtain}
+                  {t(curtain)}
                 </motion.p>
               </AnimatePresence>
             </motion.div>
@@ -212,13 +214,13 @@ export function AddSceneToScriptModal({
         </AnimatePresence>
 
         <div className="max-h-[68vh] overflow-y-auto px-7 pb-5 pt-7 sm:px-8">
-          <p className="t-formsheet__slug">(written in by hand.)</p>
-          <h2 className="t-formsheet__title">Add a scene</h2>
+          <p className="t-formsheet__slug">{t("appScenesAdd.slug")}</p>
+          <h2 className="t-formsheet__title">{t("appScenesAdd.heading")}</h2>
 
           <div className="mt-6 space-y-4">
             <div>
               <label className="t-field__label" htmlFor="add-scene-title">
-                What&apos;s the scene?
+                {t("appScenesAdd.whatScene")}
               </label>
               <input
                 ref={titleRef}
@@ -230,31 +232,31 @@ export function AddSceneToScriptModal({
                   setTitle(e.target.value);
                   if (errors.title) setErrors((p) => ({ ...p, title: undefined }));
                 }}
-                placeholder="The confrontation"
+                placeholder={t("appScenesAdd.titlePlaceholder")}
                 maxLength={200}
                 autoFocus
               />
-              {errors.title && <p className="t-field__error">{errors.title}</p>}
+              {errors.title && <p className="t-field__error">{t(errors.title)}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="t-field__label">
-                  Act {existingActs.length === 0 && <em>optional</em>}
+                  {t("appScenesAdd.act")} {existingActs.length === 0 && <em>{t("appScenesAdd.optional")}</em>}
                 </label>
                 {existingActs.length > 0 ? (
                   <Select value={act} onValueChange={setAct}>
                     <SelectTrigger className="t-field__input h-auto">
-                      <SelectValue placeholder="Which act" />
+                      <SelectValue placeholder={t("appScenesAdd.whichAct")} />
                     </SelectTrigger>
                     <SelectContent position="popper" sideOffset={4}>
-                      <SelectItem value="__none__">No act</SelectItem>
+                      <SelectItem value="__none__">{t("appScenesAdd.noAct")}</SelectItem>
                       {existingActs.map((a) => (
                         <SelectItem key={a} value={a}>
                           {a}
                         </SelectItem>
                       ))}
-                      <SelectItem value="__new__">A new act…</SelectItem>
+                      <SelectItem value="__new__">{t("appScenesAdd.newAct")}</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
@@ -262,7 +264,7 @@ export function AddSceneToScriptModal({
                     className="t-field__input"
                     value={customAct}
                     onChange={(e) => setCustomAct(e.target.value)}
-                    placeholder="Act 2"
+                    placeholder={t("appScenesAdd.actPlaceholder")}
                     maxLength={100}
                   />
                 )}
@@ -271,7 +273,7 @@ export function AddSceneToScriptModal({
                     className="t-field__input mt-2"
                     value={customAct}
                     onChange={(e) => setCustomAct(e.target.value)}
-                    placeholder="Act 3"
+                    placeholder={t("appScenesAdd.newActPlaceholder")}
                     maxLength={100}
                     autoFocus
                   />
@@ -279,13 +281,13 @@ export function AddSceneToScriptModal({
               </div>
               <div>
                 <label className="t-field__label">
-                  Scene <em>optional</em>
+                  {t("appScenesAdd.scene")} <em>{t("appScenesAdd.optional")}</em>
                 </label>
                 <input
                   className="t-field__input"
                   value={sceneNumber}
                   onChange={(e) => setSceneNumber(e.target.value)}
-                  placeholder="Scene 2"
+                  placeholder={t("appScenesAdd.scenePlaceholder")}
                   maxLength={50}
                 />
               </div>
@@ -293,28 +295,28 @@ export function AddSceneToScriptModal({
 
             <div>
               <label className="t-field__label" htmlFor="add-scene-desc">
-                What happens <em>optional</em>
+                {t("appScenesAdd.whatHappens")} <em>{t("appScenesAdd.optional")}</em>
               </label>
               <input
                 id="add-scene-desc"
                 className="t-field__input"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="They finally say it out loud."
+                placeholder={t("appScenesAdd.whatHappensPlaceholder")}
                 maxLength={500}
               />
             </div>
 
             <div>
               <label className="t-field__label" htmlFor="add-scene-body">
-                The dialogue
+                {t("appScenesAdd.dialogue")}
               </label>
               <p
                 className="m-0 mb-2 text-[12px]"
                 style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}
               >
-                One line each, the way a script sets it:{" "}
-                <span style={{ color: "var(--t-text)", fontWeight: 700 }}>NAME: the line</span>
+                {t("appScenesAdd.formatHint")}{" "}
+                <span style={{ color: "var(--t-text)", fontWeight: 700 }}>{t("appScenesAdd.formatExample")}</span>
               </p>
               <textarea
                 ref={bodyRef}
@@ -331,7 +333,7 @@ export function AddSceneToScriptModal({
                 }
                 rows={7}
               />
-              {errors.body && <p className="t-field__error">{errors.body}</p>}
+              {errors.body && <p className="t-field__error">{t(errors.body)}</p>}
 
               {/* The read-back. This is the whole point of the rebuild: what
                   the app has understood, while there is still time to change
@@ -358,8 +360,10 @@ export function AddSceneToScriptModal({
                         style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}
                       >
                         {read.cast.length === 0
-                          ? "nobody yet"
-                          : `in this scene · ${read.lines} line${read.lines === 1 ? "" : "s"}`}
+                          ? t("appScenesAdd.nobody")
+                          : read.lines === 1
+                            ? t("appScenesAdd.inSceneOne")
+                            : t("appScenesAdd.inScene", { n: read.lines })}
                       </p>
 
                       {read.cast.length > 0 ? (
@@ -390,8 +394,7 @@ export function AddSceneToScriptModal({
                           className="m-0 mt-2 text-[13px]"
                           style={{ color: "var(--t-muted-dark)" }}
                         >
-                          I can&apos;t see a name yet. Put the character before a colon and
-                          I&apos;ll pick them up.
+                          {t("appScenesAdd.noName")}
                         </p>
                       )}
 
@@ -400,7 +403,7 @@ export function AddSceneToScriptModal({
                           className="m-0 mt-2.5 text-[13px]"
                           style={{ color: "var(--t-muted-dark)" }}
                         >
-                          One voice so far. A scene needs someone to play against.
+                          {t("appScenesAdd.oneVoice")}
                         </p>
                       )}
                     </div>
@@ -419,8 +422,8 @@ export function AddSceneToScriptModal({
             style={{ fontFamily: "var(--t-direction)", color: "var(--t-faint)" }}
           >
             {ready
-              ? `(${read.cast.length} in it, ${read.lines} lines.)`
-              : "(two people, two lines.)"}
+              ? t("appScenesAdd.readyNote", { cast: read.cast.length, n: read.lines })
+              : t("appScenesAdd.needNote")}
           </p>
           <div className="flex items-center gap-2.5">
             <button
@@ -429,7 +432,7 @@ export function AddSceneToScriptModal({
               onClick={() => onOpenChange(false)}
               disabled={submitting}
             >
-              Cancel
+              {t("appScenesAdd.cancel")}
             </button>
             <button
               type="button"
@@ -437,7 +440,7 @@ export function AddSceneToScriptModal({
               onClick={handleSubmit}
               disabled={submitting}
             >
-              {submitting ? "Adding…" : ready ? `Add ${read.lines} lines` : "Add scene"}
+              {submitting ? t("appScenesAdd.adding") : ready ? t("appScenesAdd.addN", { n: read.lines }) : t("appScenesAdd.addScene")}
             </button>
           </div>
         </div>

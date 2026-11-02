@@ -13,6 +13,7 @@ import { posterAt, overdoneBand } from "@/lib/poster";
 import { PlayCover, clothFor } from "@/components/monologue/PlayCover";
 import { PieceWhisper } from "@/components/community/Whisper";
 import { usePieceActivity } from "@/hooks/useCallboardPulse";
+import { useT } from "@/lib/i18n";
 
 export interface MonologueDetailContentProps {
   monologue: Monologue;
@@ -74,6 +75,7 @@ function castingFacts(monologue: Monologue): string[] {
  */
 export function OverdoneMark({ score }: { score: number | null | undefined }) {
   const band = overdoneBand(score);
+  const t = useT();
   if (!band) return null;
   const tone = [
     "text-teal-700 dark:text-teal-300",   // Fresh
@@ -85,8 +87,8 @@ export function OverdoneMark({ score }: { score: number | null | undefined }) {
     <span
       title={
         band.level >= 2
-          ? "You will not be the only one bringing this today."
-          : "How often a casting room hears this piece."
+          ? t("appMonologueSheet.ticksHigh")
+          : t("appMonologueSheet.ticksLow")
       }
       className={`inline-flex items-center gap-1.5 font-typewriter text-[11px] uppercase tracking-[0.16em] ${tone}`}
     >
@@ -158,6 +160,7 @@ export function MonologueOneSheet({
       top-left corner, because the poster starts at this container's padding. */
   backSlot?: React.ReactNode;
 }) {
+  const t = useT();
   const author = displayableAuthor(monologue.author);
   const facts = castingFacts(monologue);
   const poster = posterAt(monologue.poster_url, 600);
@@ -235,7 +238,7 @@ export function MonologueOneSheet({
                 <div className="relative aspect-[2/3]">
                   <Image
                     src={poster}
-                    alt={`${monologue.play_title} poster`}
+                    alt={t("appMonologueDetail.posterAlt", { play: monologue.play_title })}
                     fill
                     unoptimized
                     sizes="(max-width: 640px) 38vw, 230px"
@@ -258,7 +261,7 @@ export function MonologueOneSheet({
 
           <div className="min-w-0 flex-1 pb-1">
             <p className="font-typewriter text-[11px] italic tracking-[0.08em] text-white/70 sm:text-sm">
-              from {monologue.play_title}
+              {t("appMonologueSheet.from", { play: monologue.play_title })}
             </p>
 
             {/* Playfair, per the app-wide rule that every big title matches the
@@ -338,6 +341,7 @@ export function MonologueHeader({
   headerActions?: React.ReactNode;
   standalone?: boolean;
 }) {
+  const t = useT();
   const meta = metaFor(monologue);
   const author = displayableAuthor(monologue.author);
 
@@ -354,7 +358,7 @@ export function MonologueHeader({
           <div className="h-28 w-[74px] shrink-0 overflow-hidden rounded-md border border-border bg-muted shadow-sm sm:h-40 sm:w-[106px]">
             <Image
               src={monologue.poster_url}
-              alt={monologue.play_title || "Poster"}
+              alt={monologue.play_title || t("appMonologueDetail.poster")}
               width={128}
               height={192}
               className="h-full w-full object-cover"
@@ -370,8 +374,9 @@ export function MonologueHeader({
               class lower-cases everything, which mangles "The Seagull" and the
               author's name. */}
           <p className="font-typewriter text-xs italic tracking-[0.08em] text-muted-foreground/80 sm:text-sm">
-            from {monologue.play_title}
-            {author ? `, by ${author}` : ""}
+            {author
+              ? t("appMonologueDetail.fromBy", { play: monologue.play_title, author })
+              : t("appMonologueSheet.from", { play: monologue.play_title })}
           </p>
 
           <h1
@@ -449,11 +454,12 @@ export function MonologueBody({
       in a second copy. */
   textSlot?: React.ReactNode;
 }) {
+  const t = useT();
   if (isBibliographicText(monologue.text)) {
     return (
       <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-        <p className="mb-1 font-medium text-foreground">Text not available</p>
-        <p>This entry appears to contain catalog data rather than the monologue itself.</p>
+        <p className="mb-1 font-medium text-foreground">{t("appMonologueRead.unavailableTitle")}</p>
+        <p>{t("appMonologueRead.unavailableBody")}</p>
         {monologue.source_url && (
           <a
             href={monologue.source_url}
@@ -461,7 +467,7 @@ export function MonologueBody({
             rel="noopener noreferrer"
             className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
           >
-            View source
+            {t("appMonologueRead.viewSource")}
           </a>
         )}
       </div>
@@ -472,7 +478,7 @@ export function MonologueBody({
     <div className="space-y-3">
       {stageDirectionPercentage(monologue.text) > 50 && (
         <p className="text-xs text-muted-foreground">
-          Stage directions are dimmed; the spoken lines are in normal text.
+          {t("appMonologueDetail.dimmed")}
         </p>
       )}
       <div
@@ -508,6 +514,7 @@ export function MonologueFooter({
   monologue: Monologue;
   onEdit?: (monologueId: number) => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-4 text-xs text-muted-foreground">
       {/* Was "86 views · 1 saved". Neither answers a question an actor has, and
@@ -516,7 +523,7 @@ export function MonologueFooter({
           "Frequently performed" also lived here, three screens below the point
           of decision; it is a proper readout in the header now. */}
       <span className="flex items-center gap-4">
-        {monologue.word_count > 0 && <span>{monologue.word_count} words</span>}
+        {monologue.word_count > 0 && <span>{t("appMonologueRelated.words", { n: monologue.word_count })}</span>}
       </span>
       <span className="flex items-center gap-3">
         {onEdit && (
@@ -524,7 +531,7 @@ export function MonologueFooter({
             onClick={() => onEdit(monologue.id)}
             className="inline-flex items-center gap-1 hover:text-foreground"
           >
-            <IconEdit className="h-3.5 w-3.5" /> Edit
+            <IconEdit className="h-3.5 w-3.5" /> {t("appMonologueDetail.edit")}
           </button>
         )}
         {monologue.source_url && (
@@ -535,8 +542,8 @@ export function MonologueFooter({
             className="inline-flex items-center gap-1 text-primary hover:underline"
           >
             {monologue.source_type === "film" || monologue.source_type === "tv"
-              ? "View script"
-              : "View full play"}
+              ? t("appMonologueDetail.viewScript")
+              : t("appMonologueDetail.viewPlay")}
             <IconExternalLink className="h-3.5 w-3.5" />
           </a>
         )}

@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
+import { useT } from "@/lib/i18n";
 
 /**
  * The house lights, as a switch rather than an icon button.
@@ -20,6 +21,7 @@ const NEVER_CHANGES = () => () => {};
  *  are, what to call the other state, and how to throw them. */
 function useHouseLights() {
   const { setTheme, resolvedTheme } = useTheme();
+  const t = useT();
   /* Hydration guard without a setState in an effect: false on the server,
      true once the client has taken over. Before that the switch renders in its
      lights-up position, which is the server's assumption anyway. */
@@ -29,7 +31,7 @@ function useHouseLights() {
 
   return {
     dark,
-    label: dark ? "House lights up" : "Blackout",
+    label: dark ? t("appShellNav.lightsUp") : t("appShellNav.blackout"),
     toggle: () => {
       const next = dark ? "light" : "dark";
       /* The same view-transition wipe the shared toggle uses, where the

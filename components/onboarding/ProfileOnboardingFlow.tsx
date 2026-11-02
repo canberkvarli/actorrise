@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import api from "@/lib/api";
 import { trackEvent } from "@/lib/events";
 import { theatreFontVars } from "@/lib/fonts/theatre";
+import { useLocale, useT, type MessageKey } from "@/lib/i18n";
 import { markOnboardingDone } from "@/components/onboarding/useTourTrigger";
 import { fetchGuidedSceneId, startGuidedScene } from "@/lib/guided-start";
 import { GUIDED_ACTOR, GUIDED_LINE_COUNT, GUIDED_PARTNER, titleCase } from "@/lib/guided-scene";
@@ -15,6 +16,7 @@ import { noteOnboardingPicksKept } from "@/lib/onboardingPicks";
 import { Glyph } from "@/components/brand/glyphs";
 import LampSketch from "@/components/onboarding/LampSketch";
 import { clothFor, emblemFor } from "@/components/monologue/PlayCover";
+import { feedWord } from "@/components/community/eventRender";
 import type { Monologue } from "@/types/actor";
 import {
   AGE_RANGES,
@@ -27,7 +29,6 @@ import {
 import {
   buildProfileWrite,
   buildPayoffParams,
-  describeAnswers,
   shouldFetchPicks,
   type OnboardingAnswers,
 } from "@/lib/onboardingFilters";
@@ -55,9 +56,9 @@ type Variant = "new" | "backfill";
 // them, and their recall that far out is not worth much anyway.
 const REFERRAL_QUESTION = {
   key: "referral",
-  prompt: "How did you find me?",
-  hint: "One tap. It's the only way I know what's working.",
-} as const;
+  prompt: "appShellOnboarding.referralPrompt",
+  hint: "appShellOnboarding.referralHint",
+} as const satisfies { key: string; prompt: MessageKey; hint: MessageKey | null };
 
 // Also new-signups-only, and also written on tap rather than at the end. Every
 // account used to be assumed a working actor; the educator funnel needs the
@@ -65,24 +66,24 @@ const REFERRAL_QUESTION = {
 // most need counted. Fully optional — Continue is enabled with nothing picked.
 const ACCOUNT_TYPE_QUESTION = {
   key: "accountType",
-  prompt: "Actor, teacher, or student?",
+  prompt: "appShellOnboarding.accountTypePrompt",
   hint: null,
-} as const;
+} as const satisfies { key: string; prompt: MessageKey; hint: MessageKey | null };
 
 // Label is what the person calls themselves; id is the stored account_type.
 const ACCOUNT_TYPES = [
-  { id: "actor", label: "Actor" },
-  { id: "educator", label: "Teacher" },
-  { id: "student", label: "Student" },
-] as const;
+  { id: "actor", label: "appShellOnboarding.typeActor" },
+  { id: "educator", label: "appShellOnboarding.typeTeacher" },
+  { id: "student", label: "appShellOnboarding.typeStudent" },
+] as const satisfies readonly { id: string; label: MessageKey }[];
 
 const PROFILE_QUESTIONS = [
-  { key: "casting", prompt: "How are you usually cast?", hint: "So the roles I show you are ones you could actually book." },
-  { key: "ageRange", prompt: "What's your playing age?", hint: null },
-  { key: "workOn", prompt: "What do you want to work on?", hint: "Pick as many as you like." },
-  { key: "mediums", prompt: "Where do you want to work?", hint: "Theatre, film, TV. Pick any." },
-  { key: "stage", prompt: "Where are you in it?", hint: null },
-] as const;
+  { key: "casting", prompt: "appShellOnboarding.castingPrompt", hint: "appShellOnboarding.castingHint" },
+  { key: "ageRange", prompt: "appShellOnboarding.ageRangePrompt", hint: null },
+  { key: "workOn", prompt: "appShellOnboarding.workOnPrompt", hint: "appShellOnboarding.workOnHint" },
+  { key: "mediums", prompt: "appShellOnboarding.mediumsPrompt", hint: "appShellOnboarding.mediumsHint" },
+  { key: "stage", prompt: "appShellOnboarding.stagePrompt", hint: null },
+] as const satisfies readonly { key: string; prompt: MessageKey; hint: MessageKey | null }[];
 
 type QuestionKey =
   | typeof REFERRAL_QUESTION.key
@@ -102,14 +103,14 @@ const TWO_COLUMN_KEYS = new Set<QuestionKey>(["referral", "ageRange", "mediums",
  * screen the "(before anything.)" of a question it never asks and shift every
  * act numeral up by one. The two bookkeeping questions sit outside the acts —
  * the play starts when the questions start being about them. */
-const DIRECTION: Record<QuestionKey, string> = {
-  referral: "(before anything.)",
-  accountType: "(and who you are.)",
-  casting: "(act i. the type.)",
-  ageRange: "(act ii. the age.)",
-  workOn: "(act iii. the work.)",
-  mediums: "(act iv. the room.)",
-  stage: "(act v. where you are.)",
+const DIRECTION: Record<QuestionKey, MessageKey> = {
+  referral: "appShellOnboarding.dirReferral",
+  accountType: "appShellOnboarding.dirAccountType",
+  casting: "appShellOnboarding.dirCasting",
+  ageRange: "appShellOnboarding.dirAgeRange",
+  workOn: "appShellOnboarding.dirWorkOn",
+  mediums: "appShellOnboarding.dirMediums",
+  stage: "appShellOnboarding.dirStage",
 };
 
 const NUMERAL: Partial<Record<QuestionKey, string>> = {
@@ -122,14 +123,81 @@ const NUMERAL: Partial<Record<QuestionKey, string>> = {
 
 // Read while the profile is written and the first search runs. They advance on
 // a timer and hold on the last one, so a slow search never runs out of script.
-const BEATS = [
-  "(reading your answers.)",
-  "(pulling the pieces that fit.)",
-  "(putting the overdone ones back.)",
-  "(almost.)",
+const BEATS: MessageKey[] = [
+  "appShellOnboarding.beatReading",
+  "appShellOnboarding.beatPulling",
+  "appShellOnboarding.beatOverdone",
+  "appShellOnboarding.beatAlmost",
 ];
 
-const COUNT_WORD = ["No", "One", "Two", "Three", "Four", "Five", "Six"];
+const COUNT_WORD: MessageKey[] = [
+  "appShellOnboarding.count0",
+  "appShellOnboarding.count1",
+  "appShellOnboarding.count2",
+  "appShellOnboarding.count3",
+  "appShellOnboarding.count4",
+  "appShellOnboarding.count5",
+  "appShellOnboarding.count6",
+];
+
+/* The option labels, by the id lib/profileOptions stores. That file stays the
+   English record (the profile form reads it too); an id missing here prints
+   its English label rather than nothing. */
+const OPTION_LABEL: Record<string, MessageKey> = {
+  "casting:Male": "appShellOnboarding.castMale",
+  "casting:Female": "appShellOnboarding.castFemale",
+  "casting:Non-binary": "appShellOnboarding.castNonBinary",
+  "casting:Other": "appShellOnboarding.castOther",
+  "workOn:dramatic": "appShellOnboarding.workDramatic",
+  "workOn:comedic": "appShellOnboarding.workComedic",
+  "workOn:classical": "appShellOnboarding.workClassical",
+  "workOn:contemporary": "appShellOnboarding.workContemporary",
+  "workOn:defiant": "appShellOnboarding.workDefiant",
+  "workOn:dark": "appShellOnboarding.workDark",
+  "workOn:romantic": "appShellOnboarding.workRomantic",
+  "workOn:philosophical": "appShellOnboarding.workPhilosophical",
+  "mediums:theatre": "appShellOnboarding.mediumTheatre",
+  "mediums:film": "appShellOnboarding.mediumFilm",
+  "mediums:tv": "appShellOnboarding.mediumTv",
+  "stage:just_starting": "appShellOnboarding.stageJustStarting",
+  "stage:auditioning": "appShellOnboarding.stageAuditioning",
+  "stage:working_pro": "appShellOnboarding.stageWorkingPro",
+  "stageSub:just_starting": "appShellOnboarding.stageJustStartingSub",
+  "stageSub:auditioning": "appShellOnboarding.stageAuditioningSub",
+  "stageSub:working_pro": "appShellOnboarding.stageWorkingProSub",
+  "referral:chatgpt": "appShellOnboarding.refChatgpt",
+  "referral:instagram": "appShellOnboarding.refInstagram",
+  "referral:tiktok": "appShellOnboarding.refTiktok",
+  "referral:x": "appShellOnboarding.refX",
+  "referral:friend": "appShellOnboarding.refFriend",
+  "referral:search": "appShellOnboarding.refSearch",
+  "referral:other": "appShellOnboarding.refOther",
+};
+
+function useOptionLabel() {
+  const t = useT();
+  return (group: string, id: string, english: string) => {
+    const key = OPTION_LABEL[`${group}:${id}`];
+    return key ? t(key) : english;
+  };
+}
+
+/* lib/onboardingFilters' describeAnswers, in the reader's language: the same
+   three bits (casting unless "Other", the age, the stage), lowercased. */
+function useDescribeAnswers() {
+  const label = useOptionLabel();
+  const locale = useLocale();
+  const tag = locale === "tr" ? "tr-TR" : "en-US";
+  return (a: OnboardingAnswers) => {
+    const bits: string[] = [];
+    const cast = CASTING.find((c) => c.id === a.casting);
+    if (cast && cast.id !== "Other") bits.push(label("casting", cast.id, cast.label).toLocaleLowerCase(tag));
+    if (a.ageRange) bits.push(a.ageRange.replace("-", "–"));
+    const stage = CAREER_STAGES.find((s) => s.id === a.stage);
+    if (stage) bits.push(label("stage", stage.id, stage.label).toLocaleLowerCase(tag));
+    return bits.join(", ");
+  };
+}
 
 function Tile({
   selected,
@@ -258,6 +326,8 @@ export default function ProfileOnboardingFlow({
 }) {
   const { refreshUser } = useAuth();
   const router = useRouter();
+  const t = useT();
+  const optionLabel = useOptionLabel();
   const queryClient = useQueryClient();
   const reduce = useReducedMotion();
   /* The favourite POSTs, still in the air. Keeping fires them without awaiting
@@ -642,13 +712,13 @@ export default function ProfileOnboardingFlow({
         className="pointer-events-none fixed bottom-5 left-6 z-0 m-0 hidden text-xs italic tracking-[0.08em] sm:block"
         style={{ fontFamily: "var(--t-direction)", color: "oklch(0.45 0.03 55)" }}
       >
-        (first night. the house is dark. one light on.)
+        {t("appShellOnboarding.houseDark")}
       </p>
 
       <motion.div
         role="dialog"
         aria-modal="true"
-        aria-label={variant === "new" ? "Set up your profile" : "Finish your profile"}
+        aria-label={variant === "new" ? t("appShellOnboarding.dialogNew") : t("appShellOnboarding.dialogBackfill")}
         initial={reduce ? false : { opacity: 0, y: 28, scale: 0.97, rotate: -0.5 }}
         animate={{ opacity: 1, y: 0, scale: 1, rotate: -0.6 }}
         /* Out the way it came in, faster and upward: the card is struck before
@@ -729,7 +799,7 @@ export default function ProfileOnboardingFlow({
                 onMouseEnter={(e) => (e.currentTarget.style.color = "var(--t-text)")}
                 onMouseLeave={(e) => (e.currentTarget.style.color = "var(--t-faint)")}
               >
-                {step < totalSteps - 1 ? "skip this one" : "skip"}
+                {step < totalSteps - 1 ? t("appShellOnboarding.skipThisOne") : t("appShellOnboarding.skip")}
               </button>
             </div>
           )}
@@ -757,17 +827,17 @@ export default function ProfileOnboardingFlow({
                 className="m-0 text-[13px] italic tracking-[0.08em]"
                 style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}
               >
-                {DIRECTION[current.key]}
+                {t(DIRECTION[current.key])}
               </p>
               <h2
                 className="mt-2 text-balance font-normal leading-none tracking-[-0.02em]"
                 style={{ fontFamily: "var(--t-display)", fontSize: "clamp(1.9rem, 4.5vw, 2.6rem)" }}
               >
-                {current.prompt}
+                {t(current.prompt)}
               </h2>
               {current.hint ? (
                 <p className="mt-2.5 text-sm leading-normal" style={{ color: "var(--t-muted-dark)" }}>
-                  {current.hint}
+                  {t(current.hint)}
                 </p>
               ) : null}
 
@@ -776,15 +846,15 @@ export default function ProfileOnboardingFlow({
               >
                 {current.key === "referral" &&
                   REFERRAL_SOURCES.map((r, i) => (
-                    <Tile key={r.id} index={i} label={r.label} selected={referral === r.id} onClick={() => chooseReferral(r.id)} />
+                    <Tile key={r.id} index={i} label={optionLabel("referral", r.id, r.label)} selected={referral === r.id} onClick={() => chooseReferral(r.id)} />
                   ))}
                 {current.key === "accountType" &&
                   ACCOUNT_TYPES.map((a, i) => (
-                    <Tile key={a.id} index={i} label={a.label} selected={accountType === a.id} onClick={() => chooseAccountType(a.id)} />
+                    <Tile key={a.id} index={i} label={t(a.label)} selected={accountType === a.id} onClick={() => chooseAccountType(a.id)} />
                   ))}
                 {current.key === "casting" &&
                   CASTING.map((c, i) => (
-                    <Tile key={c.id} index={i} label={c.label} selected={casting === c.id} onClick={() => setCasting(c.id)} />
+                    <Tile key={c.id} index={i} label={optionLabel("casting", c.id, c.label)} selected={casting === c.id} onClick={() => setCasting(c.id)} />
                   ))}
                 {current.key === "ageRange" &&
                   AGE_RANGES.map((a, i) => (
@@ -792,15 +862,15 @@ export default function ProfileOnboardingFlow({
                   ))}
                 {current.key === "workOn" &&
                   WORK_ON.map((w, i) => (
-                    <Tile key={w.id} index={i} label={w.label} selected={workOn.includes(w.id)} onClick={() => setWorkOn((cur) => toggle(cur, w.id))} />
+                    <Tile key={w.id} index={i} label={optionLabel("workOn", w.id, w.label)} selected={workOn.includes(w.id)} onClick={() => setWorkOn((cur) => toggle(cur, w.id))} />
                   ))}
                 {current.key === "mediums" &&
                   MEDIUMS.map((m, i) => (
-                    <Tile key={m.id} index={i} label={m.label} selected={mediums.includes(m.id)} onClick={() => setMediums((cur) => toggle(cur, m.id))} />
+                    <Tile key={m.id} index={i} label={optionLabel("mediums", m.id, m.label)} selected={mediums.includes(m.id)} onClick={() => setMediums((cur) => toggle(cur, m.id))} />
                   ))}
                 {current.key === "stage" &&
                   CAREER_STAGES.map((s, i) => (
-                    <Tile key={s.id} index={i} label={s.label} sublabel={s.sublabel} selected={stage === s.id} onClick={() => setStage(s.id)} />
+                    <Tile key={s.id} index={i} label={optionLabel("stage", s.id, s.label)} sublabel={optionLabel("stageSub", s.id, s.sublabel)} selected={stage === s.id} onClick={() => setStage(s.id)} />
                   ))}
               </div>
 
@@ -815,7 +885,7 @@ export default function ProfileOnboardingFlow({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  placeholder="Where'd you hear about me? (optional)"
+                  placeholder={t("appShellOnboarding.referralDetail")}
                   className="mt-2 h-12 w-full rounded-[14px] border-[1.5px] px-4 text-sm outline-none transition-colors"
                   style={{ borderColor: "var(--t-line-light)", background: "var(--t-paper)", color: "var(--t-text)" }}
                   onFocus={(e) => (e.currentTarget.style.borderColor = "var(--t-text)")}
@@ -844,19 +914,15 @@ export default function ProfileOnboardingFlow({
                         name it. */}
                     {accountType === "educator" ? (
                       <>
-                        Then it&apos;s on me. The whole library, unlimited searches
-                        and the AI scene partner, free for you and for your
-                        students. That&apos;s the paid plan, Plus. Email me at{" "}
-                        <strong className="font-semibold" style={{ color: "var(--acc)" }}>canberk@actorrise.com</strong>{" "}
-                        with their addresses and I&apos;ll set the whole class up at once.
+                        {t("appShellOnboarding.educatorOfferBefore")}
+                        <strong className="font-semibold" style={{ color: "var(--acc)" }}>canberk@actorrise.com</strong>
+                        {t("appShellOnboarding.educatorOfferAfter")}
                       </>
                     ) : (
                       <>
-                        Students don&apos;t pay. The whole library, unlimited
-                        searches and the AI scene partner, which is the paid plan,
-                        Plus. Get your teacher to email me at{" "}
-                        <strong className="font-semibold" style={{ color: "var(--acc)" }}>canberk@actorrise.com</strong>{" "}
-                        and I&apos;ll do your whole class together.
+                        {t("appShellOnboarding.studentOfferBefore")}
+                        <strong className="font-semibold" style={{ color: "var(--acc)" }}>canberk@actorrise.com</strong>
+                        {t("appShellOnboarding.studentOfferAfter")}
                       </>
                     )}
                   </p>
@@ -867,7 +933,7 @@ export default function ProfileOnboardingFlow({
                     onBlur={saveOrganization}
                     maxLength={280}
                     autoFocus
-                    placeholder={accountType === "educator" ? "School or studio (optional)" : "Your school (optional)"}
+                    placeholder={accountType === "educator" ? t("appShellOnboarding.orgEducator") : t("appShellOnboarding.orgStudent")}
                     className="mt-2.5 h-11 w-full rounded-xl border-[1.5px] px-3.5 text-sm outline-none transition-colors"
                     style={{ borderColor: "var(--t-line-light)", background: "var(--t-paper)", color: "var(--t-text)" }}
                     onFocus={(e) => (e.currentTarget.style.borderColor = "var(--t-text)")}
@@ -882,7 +948,7 @@ export default function ProfileOnboardingFlow({
                     type="button"
                     onClick={() => goTo(-1)}
                     disabled={submitting}
-                    aria-label="Back"
+                    aria-label={t("appShellOnboarding.back")}
                     whileHover={{ x: -3 }}
                     transition={{ duration: 0.3, ease: SPRING }}
                     className="flex size-12 shrink-0 items-center justify-center rounded-full border-[1.5px] bg-transparent"
@@ -894,10 +960,10 @@ export default function ProfileOnboardingFlow({
                   </motion.button>
                 )}
                 {step < totalSteps - 1 ? (
-                  <CtaPill onClick={() => goTo(1)} disabled={!stepValid}>Continue</CtaPill>
+                  <CtaPill onClick={() => goTo(1)} disabled={!stepValid}>{t("appShellOnboarding.continue")}</CtaPill>
                 ) : (
                   <CtaPill onClick={handleFinishQuestions} disabled={!stepValid || submitting}>
-                    {variant === "new" ? "Set my stage" : "Show me my monologues"}
+                    {variant === "new" ? t("appShellOnboarding.setMyStage") : t("appShellOnboarding.showMyMonologues")}
                   </CtaPill>
                 )}
               </div>
@@ -950,6 +1016,7 @@ export default function ProfileOnboardingFlow({
  * again while the first search runs, so the two reads as one wait.
  */
 function SettingTheStage() {
+  const t = useT();
   const [beat, setBeat] = useState(0);
 
   useEffect(() => {
@@ -963,13 +1030,13 @@ function SettingTheStage() {
     <div className="relative px-5 pb-[48px] pt-12 text-center sm:px-7 sm:pb-[60px] sm:pt-14">
       <LampSketch size={96} draw className="mx-auto block" />
       <p className="mt-6 leading-none tracking-[-0.01em]" style={{ fontFamily: "var(--t-display)", fontSize: 32 }}>
-        Setting your stage.
+        {t("appShellOnboarding.settingStage")}
       </p>
       <p
         className="mt-2.5 text-[13px] italic tracking-[0.06em]"
         style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}
       >
-        {BEATS[beat]}
+        {t(BEATS[beat])}
       </p>
     </div>
   );
@@ -1043,6 +1110,7 @@ function OnboardingEnding({
   answering: boolean;
   failed: boolean;
 }) {
+  const t = useT();
   const partner = titleCase(GUIDED_PARTNER);
   const actor = titleCase(GUIDED_ACTOR);
   // The way out to the library stays, but it is not the first thing on the
@@ -1059,27 +1127,29 @@ function OnboardingEnding({
         className="text-[13px] italic tracking-[0.06em]"
         style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}
       >
-        (before anything.)
+        {t("appShellOnboarding.dirReferral")}
       </p>
       <h2
         className="mt-2 font-normal leading-none tracking-[-0.02em]"
         style={{ fontFamily: "var(--t-display)", fontSize: "clamp(1.9rem, 4.5vw, 2.6rem)" }}
       >
-        Say <em className="italic" style={{ color: "var(--acc)" }}>one line.</em>
+        {t("appShellOnboarding.sayA")}
+        <em className="italic" style={{ color: "var(--acc)" }}>{t("appShellOnboarding.sayB")}</em>
+        {t("appShellOnboarding.sayC")}
       </h2>
       <p className="mx-auto mt-4 max-w-[34ch] text-[15px] leading-relaxed" style={{ color: "var(--t-muted-dark)" }}>
         {answering
-          ? `${partner} is waiting.`
-          : `I'll read ${partner}. You're ${actor}. ${GUIDED_LINE_COUNT} lines, under a minute.`}
+          ? t("appShellOnboarding.partnerWaiting", { partner })
+          : t("appShellOnboarding.sceneInvite", { partner, actor, n: GUIDED_LINE_COUNT })}
       </p>
       <div className="mx-auto mt-7 flex max-w-[280px] justify-center">
         <CtaPill onClick={onAnswer} disabled={answering}>
-          {answering ? "One moment" : "Answer"}
+          {answering ? t("appShellOnboarding.oneMoment") : t("appShellOnboarding.answer")}
         </CtaPill>
       </div>
       {failed && (
         <p role="alert" className="mt-3 text-[13px]" style={{ color: "var(--t-muted-dark)" }}>
-          That didn&apos;t start. Try once more.
+          {t("appShellOnboarding.didntStart")}
         </p>
       )}
       <p
@@ -1092,7 +1162,7 @@ function OnboardingEnding({
         }}
         aria-hidden={!skipShown}
       >
-        <FootLink onClick={onSkip}>later, take me to the library</FootLink>
+        <FootLink onClick={onSkip}>{t("appShellOnboarding.laterLibrary")}</FootLink>
       </p>
     </div>
   );
@@ -1118,7 +1188,9 @@ function OnboardingPayoff({
   onAuditionSides: () => void;
   onCollection: () => void;
 }) {
-  const summary = describeAnswers(answers);
+  const t = useT();
+  const locale = useLocale();
+  const summary = useDescribeAnswers()(answers);
   /* Everything starts selected. These are the pieces the actor just described
      to me in five taps, so the question is which ones they DON'T want, not
      whether they want any — and an empty-by-default list makes the whole
@@ -1159,47 +1231,54 @@ function OnboardingPayoff({
     return (
       <div className="relative px-5 pb-[22px] pt-[18px] sm:px-7 sm:pb-[26px] sm:pt-[22px]">
         <p className="m-0 text-[13px] italic tracking-[0.08em]" style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}>
-          (the profile is set.)
+          {t("appShellOnboarding.profileSet")}
         </p>
         <h2 className="mt-2 font-normal leading-none tracking-[-0.02em]" style={{ fontFamily: "var(--t-display)", fontSize: "clamp(1.9rem, 4.5vw, 2.6rem)" }}>
-          Search leans <em className="italic" style={{ color: "var(--acc)" }}>your way</em> now.
+          {t("appShellOnboarding.leansA")}
+          <em className="italic" style={{ color: "var(--acc)" }}>{t("appShellOnboarding.leansB")}</em>
+          {t("appShellOnboarding.leansC")}
         </h2>
         <p className="mt-2.5 text-sm leading-normal" style={{ color: "var(--t-muted-dark)" }}>
-          Nothing in the library matched every filter at once. Bring in the sides you&apos;re actually working on, or go looking.
+          {t("appShellOnboarding.noMatch")}
         </p>
         <div className="mt-6">
-          <CtaPill onClick={onOwnSides}>Upload a script</CtaPill>
+          <CtaPill onClick={onOwnSides}>{t("appShellOnboarding.uploadScript")}</CtaPill>
         </div>
         <div className="mt-4 flex justify-between gap-3 text-xs italic tracking-[0.06em]" style={{ fontFamily: "var(--t-direction)", color: "var(--t-faint)" }}>
-          <FootLink onClick={onBrowse}>browse the library</FootLink>
-          <FootLink onClick={onClose}>i&apos;ll explore on my own</FootLink>
+          <FootLink onClick={onBrowse}>{t("appShellOnboarding.browseLibrary")}</FootLink>
+          <FootLink onClick={onClose}>{t("appShellOnboarding.exploreOwn")}</FootLink>
         </div>
       </div>
     );
   }
 
-  const count = COUNT_WORD[items.length] ?? String(items.length);
+  const countWord = COUNT_WORD[items.length];
+  const count = countWord ? t(countWord) : String(items.length);
 
   return (
     <div className="relative px-5 pb-[22px] pt-[18px] sm:px-7 sm:pb-[26px] sm:pt-[22px]">
       <p className="m-0 text-[13px] italic tracking-[0.08em]" style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}>
-        {kept ? "(on your shelf.)" : `(picked for ${summary || "you"}.)`}
+        {kept
+          ? t("appShellOnboarding.onShelf")
+          : summary
+            ? t("appShellOnboarding.pickedFor", { summary })
+            : t("appShellOnboarding.pickedForYou")}
       </p>
       {kept ? (
         <h2 className="mt-2 font-normal leading-none tracking-[-0.02em]" style={{ fontFamily: "var(--t-display)", fontSize: "clamp(1.9rem, 4.5vw, 2.6rem)" }}>
-          {keptCount} {keptCount === 1 ? "piece is" : "pieces are"}{" "}
-          <em className="italic" style={{ color: "var(--acc)" }}>waiting.</em>
+          {t(keptCount === 1 ? "appShellOnboarding.keptOne" : "appShellOnboarding.keptMany", { n: keptCount })}{" "}
+          <em className="italic" style={{ color: "var(--acc)" }}>{t("appShellOnboarding.waiting")}</em>
         </h2>
       ) : (
         <h2 className="mt-2 font-normal leading-none tracking-[-0.02em]" style={{ fontFamily: "var(--t-display)", fontSize: "clamp(1.9rem, 4.5vw, 2.6rem)" }}>
-          {count} {items.length === 1 ? "piece" : "pieces"}{" "}
-          <em className="italic" style={{ color: "var(--acc)" }}>for you.</em>
+          {t(items.length === 1 ? "appShellOnboarding.countOne" : "appShellOnboarding.countMany", { count })}{" "}
+          <em className="italic" style={{ color: "var(--acc)" }}>{t("appShellOnboarding.forYou")}</em>
         </h2>
       )}
       <p className="mt-2 text-sm leading-normal" style={{ color: "var(--t-muted-dark)" }}>
         {kept
-          ? "They're in your collection whenever you want them. Where do you want to start?"
-          : "Keeping them puts them in your collection. Nothing to read yet, they just wait for you there."}
+          ? t("appShellOnboarding.keptBody")
+          : t("appShellOnboarding.keepBody")}
       </p>
 
       {/* Banked: the six rows collapse to the spines themselves.
@@ -1231,7 +1310,9 @@ function OnboardingPayoff({
       <ul className="mt-5 flex list-none flex-col gap-2.5 p-0">
         {items.map((m, i) => {
           const mins = Math.max(1, Math.round((m.estimated_duration_seconds || 0) / 60));
-          const meta = [m.play_title, m.tone, `${mins} min`].filter(Boolean).join(" · ");
+          const meta = [m.play_title, m.tone && feedWord(m.tone, locale), t("appShellOnboarding.minutes", { n: mins })]
+            .filter(Boolean)
+            .join(" · ");
           return (
             <motion.li
               key={m.id}
@@ -1271,7 +1352,11 @@ function OnboardingPayoff({
                     type="button"
                     onClick={() => setKeep((cur) => toggle(cur, m.id))}
                     aria-pressed={on}
-                    aria-label={on ? `Keeping ${m.character_name || m.title}` : `Keep ${m.character_name || m.title}`}
+                    aria-label={
+                      on
+                        ? t("appShellOnboarding.keeping", { name: m.character_name || m.title })
+                        : t("appShellOnboarding.keep", { name: m.character_name || m.title })
+                    }
                     whileHover={{ scale: 1.08 }}
                     transition={{ duration: 0.3, ease: SPRING }}
                     className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-full border-[1.5px]"
@@ -1308,10 +1393,10 @@ function OnboardingPayoff({
             onClick={keep.length === 0 ? onBrowse : bank}
           >
             {keep.length === 0
-              ? "Take me to the library"
+              ? t("appShellOnboarding.takeToLibrary")
               : keep.length === items.length
-                ? "Keep them all"
-                : `Keep ${keep.length}`}
+                ? t("appShellOnboarding.keepAll")
+                : t("appShellOnboarding.keepN", { n: keep.length })}
           </CtaPill>
         </div>
       )}
@@ -1329,8 +1414,8 @@ function OnboardingPayoff({
             onClick={leave("collection", onCollection)}
             busy={going === "collection"}
             dimmed={!!going && going !== "collection"}
-            title="Open my collection"
-            note={`${keptCount === 1 ? "The piece you just kept" : "The pieces you just kept"}, on the shelf.`}
+            title={t("appShellOnboarding.openCollection")}
+            note={t(keptCount === 1 ? "appShellOnboarding.keptNoteOne" : "appShellOnboarding.keptNoteMany")}
             icon={
               <path d="M6 4h12a1 1 0 0 1 1 1v15l-7-4-7 4V5a1 1 0 0 1 1-1z" />
             }
@@ -1339,16 +1424,16 @@ function OnboardingPayoff({
             onClick={leave("library", onBrowse)}
             busy={going === "library"}
             dimmed={!!going && going !== "library"}
-            title="Browse the library"
-            note="Everything else, with search already leaning your way."
+            title={t("appShellOnboarding.browseTitle")}
+            note={t("appShellOnboarding.browseNote")}
             icon={<><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>}
           />
           <WayOn
             onClick={leave("sides", onAuditionSides)}
             busy={going === "sides"}
             dimmed={!!going && going !== "sides"}
-            title="Bring your own sides"
-            note="A real audition? Drop the sides and the date. I'll read the other roles and remind you."
+            title={t("appShellOnboarding.sidesTitle")}
+            note={t("appShellOnboarding.sidesNote")}
             icon={<path d="M12 16V4M6 10l6-6 6 6M4 20h16" />}
           />
         </div>
@@ -1360,7 +1445,7 @@ function OnboardingPayoff({
           className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 border-t-[1.5px] border-dashed pt-4"
           style={{ borderColor: "color-mix(in oklab, var(--t-text) 25%, transparent)" }}
         >
-          <p className="m-0 text-sm">Or bring sides you&apos;re already working on.</p>
+          <p className="m-0 text-sm">{t("appShellOnboarding.orBringSides")}</p>
           <motion.button
             type="button"
             onClick={onOwnSides}
@@ -1382,15 +1467,15 @@ function OnboardingPayoff({
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M12 16V4M6 10l6-6 6 6M4 20h16" />
             </svg>
-            Upload a script
+            {t("appShellOnboarding.uploadScript")}
           </motion.button>
         </div>
       )}
 
       <div className="mt-4 flex justify-between gap-3 text-xs italic tracking-[0.06em]" style={{ fontFamily: "var(--t-direction)", color: "var(--t-faint)" }}>
-        {kept ? <span /> : <FootLink onClick={onBrowse}>browse the library</FootLink>}
+        {kept ? <span /> : <FootLink onClick={onBrowse}>{t("appShellOnboarding.browseLibrary")}</FootLink>}
         <FootLink onClick={onClose}>
-          {kept ? "close this" : "i'll explore on my own"}
+          {kept ? t("appShellOnboarding.closeThis") : t("appShellOnboarding.exploreOwn")}
         </FootLink>
       </div>
     </div>

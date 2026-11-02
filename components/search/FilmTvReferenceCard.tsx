@@ -12,6 +12,7 @@ import type { MatchReason } from "@/lib/matchReasons";
 import { MatchIndicatorTag } from "@/components/search/MatchIndicatorTag";
 import { MatchReasonTooltip } from "@/components/search/MatchReasonTooltip";
 import { ScriptSourcePicker } from "@/components/search/ScriptSourcePicker";
+import { useT } from "@/lib/i18n";
 
 export interface FilmTvReferenceCardProps {
   ref_item: FilmTvReference;
@@ -35,17 +36,19 @@ export function FilmTvReferenceCard({
   onToggleFavorite,
   matchReasons,
 }: FilmTvReferenceCardProps) {
+  const t = useT();
   const [posterError, setPosterError] = useState(false);
-  const typeLabel = ref_item.type === "tvSeries" ? "TV Series" : ref_item.type === "movie" ? "Movie" : null;
+  const typeLabel =
+    ref_item.type === "tvSeries" ? t("appSearchFilmTv.tvSeries") : ref_item.type === "movie" ? t("appSearchFilmTv.movie") : null;
   const genres = ref_item.genre?.slice(0, 3) ?? [];
   const actorList = ref_item.actors?.slice(0, 3) ?? [];
 
   const cardEase = [0.25, 0.1, 0.25, 1] as const;
   const indicatorAbove =
     ref_item.is_best_match
-      ? "Best match"
+      ? t("appSearchMatch.bestMatch")
       : ref_item.confidence_score != null
-        ? `${Math.round(ref_item.confidence_score * 100)}% match`
+        ? t("appSearchMatch.percent", { n: Math.round(ref_item.confidence_score * 100) })
         : null;
 
   if (compact) {
@@ -91,7 +94,7 @@ export function FilmTvReferenceCard({
                         onToggleFavorite(e);
                       }}
                       className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors duration-200 ease-out"
-                      aria-label={isFavorited ? "Remove from saved" : "Add to saved"}
+                      aria-label={isFavorited ? t("appSearchFilmTv.removeSaved") : t("appSearchFilmTv.addSaved")}
                     >
                       <BookmarkIcon filled={isFavorited} size="sm" className={isFavorited ? "text-foreground" : ""} />
                     </button>
@@ -106,7 +109,7 @@ export function FilmTvReferenceCard({
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2 break-words w-full">
                 {ref_item.year ?? ""}
-                {ref_item.director ? ` · Directed by ${ref_item.director}` : ""}
+                {ref_item.director ? t("appSearchFilmTv.directedBy", { name: ref_item.director }) : ""}
               </p>
               <p className="text-xs text-muted-foreground/70 line-clamp-2">
                 {[typeLabel, ref_item.genre?.[0]].filter(Boolean).join(" · ") || "·"}
@@ -174,7 +177,7 @@ export function FilmTvReferenceCard({
                           onToggleFavorite(e);
                         }}
                         className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors duration-200 ease-out"
-                        aria-label={isFavorited ? "Remove from saved" : "Add to saved"}
+                        aria-label={isFavorited ? t("appSearchFilmTv.removeSaved") : t("appSearchFilmTv.addSaved")}
                       >
                         <BookmarkIcon filled={isFavorited} size="md" className={isFavorited ? "text-foreground" : ""} />
                       </button>
@@ -189,7 +192,7 @@ export function FilmTvReferenceCard({
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2 break-words w-full">
                   {ref_item.year ?? ""}
-                  {ref_item.director ? ` · Directed by ${ref_item.director}` : ""}
+                  {ref_item.director ? t("appSearchFilmTv.directedBy", { name: ref_item.director }) : ""}
                 </p>
               </div>
             </div>

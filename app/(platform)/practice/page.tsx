@@ -22,6 +22,7 @@ import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
 import { GuidedInvitation } from "@/components/practice/GuidedInvitation";
 import { shouldInvite } from "@/lib/guided-invite";
 import { isOnboardingDoneThisSession, subscribeFirstRun } from "@/lib/firstRun";
+import { useT } from "@/lib/i18n";
 
 /**
  * /practice — the page that opens after login.
@@ -35,6 +36,7 @@ export default function PracticePage() {
   // Hooks must run on every render — call before any feature-flag early return.
   const { user, loading: authLoading, isDemoUser, refreshUser } = useAuth();
   const { data: scripts, isLoading: scriptsLoading, isFetched: scriptsFetched } = useScripts();
+  const t = useT();
 
   /* Whether this browser has been shown the playbill. Read through
      useSyncExternalStore rather than an effect: it touches localStorage, which
@@ -186,7 +188,7 @@ export default function PracticePage() {
       ) : !user ? (
         // Should be handled by middleware/layout, but render a noop just in case.
         <div className="py-20 text-center text-muted-foreground text-sm">
-          Please sign in to practice scenes.
+          {t("appPracticePage.signInPrompt")}
         </div>
       ) : (
         <motion.div

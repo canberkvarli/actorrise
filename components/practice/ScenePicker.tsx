@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { isSolo, type ScannedScene } from "@/lib/scriptMap";
+import { useT } from "@/lib/i18n";
+
+type Translate = ReturnType<typeof useT>;
 
 /** One row of the map `/api/scripts/scan` returns. Lives in lib/scriptMap now,
  *  which the opened script's map shares. */
@@ -43,8 +46,8 @@ function byAct(scenes: ScannedScene[]): [string, ScannedScene[]][] {
  * back has no "Scene 2" to show. Numbering by position beats an empty row: you
  * cannot tick what you cannot name.
  */
-function sceneName(scene: ScannedScene, positionInAct: number): string {
-  return scene.scene_label ?? `Scene ${positionInAct + 1}`;
+function sceneName(t: Translate, scene: ScannedScene, positionInAct: number): string {
+  return scene.scene_label ?? t("appPracticeScenePicker.sceneN", { n: positionInAct + 1 });
 }
 
 /**
@@ -56,18 +59,20 @@ function sceneName(scene: ScannedScene, positionInAct: number): string {
  * than from parsing. Better to say one true thing than two things where you
  * cannot tell which is which.
  */
-function sceneSize(scene: ScannedScene): string | null {
+function sceneSize(t: Translate, scene: ScannedScene): string | null {
   if (scene.page_start == null) return null;
   const end = scene.page_end ?? scene.page_start;
   const pages = Math.max(1, end - scene.page_start + 1);
-  return `${pages} ${pages === 1 ? "page" : "pages"}`;
+  return t(pages === 1 ? "appPracticeScenePicker.pageOne" : "appPracticeScenePicker.pageMany", { n: pages });
 }
 
-function pageRange(scene: ScannedScene): string | null {
+function pageRange(t: Translate, scene: ScannedScene): string | null {
   if (scene.page_start == null) return null;
   const end = scene.page_end ?? scene.page_start;
   // Plain hyphen, not an en dash. Long dashes are out across this product.
-  return end === scene.page_start ? `p. ${scene.page_start}` : `pp. ${scene.page_start}-${end}`;
+  return end === scene.page_start
+    ? t("appPracticeScenePicker.pageAt", { n: scene.page_start })
+    : t("appPracticeScenePicker.pageSpan", { from: scene.page_start, to: end });
 }
 
 /* isSolo (lib/scriptMap): a one-voice scene (a series opening on a therapy
@@ -75,8 +80,8 @@ function pageRange(scene: ScannedScene): string | null {
    from the build, which read as Scene 1 going missing. */
 
 /** Strip the extension. The filename is the only title we have at this point. */
-function scriptName(fileName: string): string {
-  return fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "Your script";
+function scriptName(t: Translate, fileName: string): string {
+  return fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || t("appPracticeScenePicker.yourScript");
 }
 
 /**
@@ -104,6 +109,7 @@ export function ScenePicker({
   onUpgrade,
   built = [],
 }: ScenePickerProps) {
+  const t = useT();
   const [picked, setPicked] = useState<Set<number>>(() => new Set());
   const builtSet = useMemo(() => new Set(built), [built]);
   const isBuilt = (scene: ScannedScene) => builtSet.has(scene.index);
@@ -161,7 +167,7 @@ export function ScenePicker({
       {/* Title page. The script names itself before it lists itself. */}
       <header className="shrink-0 px-6 pb-4 pt-7 text-center sm:px-10">
         <h2 className="font-typewriter text-lg font-bold uppercase tracking-[0.2em] text-paper-ink sm:text-xl">
-          {scriptName(fileName)}
+          {scriptName(t, fileName)}
         </h2>
 
         {/* The two numbers that describe the file, set as a line of type rather
@@ -169,17 +175,17 @@ export function ScenePicker({
             be three times the furniture for the same two facts. */}
         <p className="mt-3 font-typewriter text-[15px] tracking-wide text-paper-ink/75">
           <span className="font-bold text-primary">{scenes.length}</span>{" "}
-          {scenes.length === 1 ? "scene" : "scenes"}
+          {scenes.length === 1 ? t("appPracticeScenePicker.sceneUnit") : t("appPracticeScenePicker.scenesUnit")}
           <span aria-hidden className="px-2 text-paper-rule">
             ·
           </span>
           <span className="font-bold text-primary">{pageCount}</span>{" "}
-          {pageCount === 1 ? "page" : "pages"}
+          {pageCount === 1 ? t("appPracticeScenePicker.pageUnit") : t("appPracticeScenePicker.pagesUnit")}
         </p>
         <p className="mx-auto mt-2.5 max-w-sm text-[14.5px] leading-relaxed text-paper-muted">
           {builtSet.size > 0
-            ? `${builtSet.size} built already. Tick the ones you want to add.`
-            : "Choose what to build now. The rest keep, and you can come back for them."}
+            ? t("appPracticeScenePicker.builtAlready", { n: builtSet.size })
+            : t("appPracticeScenePicker.chooseIntro")}
         </p>
 
         {/* Taking the whole play was a dotted-underline link at 12.5px in the
@@ -200,10 +206,10 @@ export function ScenePicker({
             )}
           >
             {hasAllowance
-              ? "Clear"
+              ? t("appPracticeScenePicker.clear")
               : allowance === pickable.length
-                ? `Build the whole thing · ${pickable.length} scenes`
-                : `Build the first ${allowance}`}
+                ? t("appPracticeScenePicker.buildWhole", { n: pickable.length })
+                : t("appPracticeScenePicker.buildFirst", { n: allowance })}
           </button>
         )}
 
@@ -230,8 +236,10 @@ export function ScenePicker({
                     className="shrink-0 font-typewriter text-[12.5px] tracking-wide text-paper-muted transition-colors hover:text-primary"
                   >
                     {actScenes.every((s) => isSolo(s) || isBuilt(s) || picked.has(s.index))
-                      ? "clear"
-                      : `all ${actScenes.filter((s) => !isSolo(s) && !isBuilt(s)).length}`}
+                      ? t("appPracticeScenePicker.clearAct")
+                      : t("appPracticeScenePicker.allAct", {
+                          n: actScenes.filter((s) => !isSolo(s) && !isBuilt(s)).length,
+                        })}
                   </button>
                 )}
               </div>
@@ -242,8 +250,8 @@ export function ScenePicker({
                 const solo = isSolo(scene);
                 const done = isBuilt(scene);
                 const blocked = solo || done || (!isPicked && atLimit);
-                const size = sceneSize(scene);
-                const pages = pageRange(scene);
+                const size = sceneSize(t, scene);
+                const pages = pageRange(t, scene);
                 return (
                   <li key={scene.index}>
                     <label
@@ -322,7 +330,7 @@ export function ScenePicker({
                               isPicked ? "font-bold text-primary" : "text-paper-ink",
                             )}
                           >
-                            {sceneName(scene, i)}
+                            {sceneName(t, scene, i)}
                           </span>
                           {scene.title && (
                             <span className="text-[15.5px] italic leading-7 text-paper-ink/70">
@@ -339,9 +347,9 @@ export function ScenePicker({
                               (scene.characters.length > 4
                                 ? ` · +${scene.characters.length - 4}`
                                 : "")
-                            : "No dialogue found"}
-                          {solo && " · solo, no partner part"}
-                          {done && " · built"}
+                            : t("appPracticeScenePicker.noDialogue")}
+                          {solo && t("appPracticeScenePicker.solo")}
+                          {done && t("appPracticeScenePicker.built")}
                         </span>
                       </span>
 
@@ -376,26 +384,36 @@ export function ScenePicker({
       <footer className="shrink-0 border-t border-paper-rule bg-paper px-5 py-4 sm:px-8">
         {overLimit && (
           <p className="mb-3 text-[14px] leading-relaxed text-paper-muted">
-            Your plan builds {limit} {limit === 1 ? "scene" : "scenes"} from a script.{" "}
+            {t(limit === 1 ? "appPracticeScenePicker.planLimitOne" : "appPracticeScenePicker.planLimitMany", {
+              n: limit ?? 0,
+            })}{" "}
             <button
               type="button"
               onClick={onUpgrade}
               className="font-medium text-primary underline decoration-primary/40 underline-offset-4 transition-colors hover:decoration-primary"
             >
-              Build the whole play
+              {t("appPracticeScenePicker.buildWholePlay")}
             </button>
-            , and you come straight back here.
+            {t("appPracticeScenePicker.comeBack")}
           </p>
         )}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="font-typewriter text-[12.5px] tabular-nums text-paper-muted">
             {picked.size === 0 ? (
-              <>Nothing chosen yet</>
+              <>{t("appPracticeScenePicker.nothingChosen")}</>
             ) : (
-              <>
-                <span className="font-bold text-primary">{picked.size}</span> of{" "}
-                {pickable.length} chosen
-              </>
+              (() => {
+                const [before, after = ""] = t("appPracticeScenePicker.chosen", {
+                  total: pickable.length,
+                }).split("{picked}");
+                return (
+                  <>
+                    {before}
+                    <span className="font-bold text-primary">{picked.size}</span>
+                    {after}
+                  </>
+                );
+              })()
             )}
           </span>
           <div className="flex items-center gap-1">
@@ -404,7 +422,7 @@ export function ScenePicker({
               onClick={onCancel}
               className="rounded-md px-3 py-2 text-sm text-paper-muted transition-colors hover:bg-paper-ink/[0.06] hover:text-paper-ink"
             >
-              Not now
+              {t("appPracticeScenePicker.notNow")}
             </button>
             <button
               type="button"
@@ -417,8 +435,10 @@ export function ScenePicker({
               )}
             >
               {picked.size === 0
-                ? "Choose a scene"
-                : `Build ${picked.size} ${picked.size === 1 ? "scene" : "scenes"}`}
+                ? t("appPracticeScenePicker.chooseScene")
+                : t(picked.size === 1 ? "appPracticeScenePicker.buildOne" : "appPracticeScenePicker.buildMany", {
+                    n: picked.size,
+                  })}
             </button>
           </div>
         </div>

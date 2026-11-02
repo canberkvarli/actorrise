@@ -7,6 +7,7 @@ import { GhostLightSketch } from "@/components/brand/sketches";
 import { isBibliographicText, stageDirectionPercentage } from "@/lib/monologueText";
 import { ReadGate } from "@/components/monologue/v2/ReadGate";
 import { ReadWallModal } from "@/components/monologue/ReadWallModal";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 /**
  * Read mode: the piece as written, at a size you choose.
@@ -17,9 +18,9 @@ import { ReadWallModal } from "@/components/monologue/ReadWallModal";
  */
 
 export const TEXT_SIZES = [
-  { px: "15px", title: "smaller", chip: "11px" },
-  { px: "17px", title: "default", chip: "13px" },
-  { px: "20px", title: "bigger, for the wings", chip: "15px" },
+  { px: "15px", title: "appMonologueRead.sizeSmaller" as MessageKey, chip: "11px" },
+  { px: "17px", title: "appMonologueRead.sizeDefault" as MessageKey, chip: "13px" },
+  { px: "20px", title: "appMonologueRead.sizeBigger" as MessageKey, chip: "15px" },
 ] as const;
 
 export function TextSizer({
@@ -29,6 +30,7 @@ export function TextSizer({
   size: number;
   onChange: (size: number) => void;
 }) {
+  const t = useT();
   return (
     <div
       className="inline-flex gap-0.5 rounded-full border-[1.5px] p-[3px]"
@@ -40,8 +42,8 @@ export function TextSizer({
           type="button"
           onClick={() => onChange(i)}
           aria-pressed={size === i}
-          title={s.title}
-          aria-label={`Text size: ${s.title}`}
+          title={t(s.title)}
+          aria-label={t("appMonologueRead.sizeAria", { size: t(s.title) })}
           className="t-m__mono h-7 rounded-full px-2.5 transition-colors"
           style={{
             fontSize: s.chip,
@@ -68,6 +70,7 @@ export function ReadView({
   /** The annotatable reader, when the actor has somewhere to put a note. */
   textSlot?: React.ReactNode;
 }) {
+  const t = useT();
   if (isBibliographicText(monologue.text)) {
     return (
       <div
@@ -79,9 +82,9 @@ export function ReadView({
         }}
       >
         <p className="mb-1 font-medium" style={{ color: "var(--t-text)" }}>
-          Text not available
+          {t("appMonologueRead.unavailableTitle")}
         </p>
-        <p>This entry appears to contain catalog data rather than the monologue itself.</p>
+        <p>{t("appMonologueRead.unavailableBody")}</p>
         {monologue.source_url && (
           <a
             href={monologue.source_url}
@@ -90,7 +93,7 @@ export function ReadView({
             className="mt-2 inline-flex text-xs underline underline-offset-4"
             style={{ color: "var(--t-orange-deep)" }}
           >
-            View source
+            {t("appMonologueRead.viewSource")}
           </a>
         )}
       </div>
@@ -114,7 +117,7 @@ export function ReadView({
               ? direction
               : `(${direction})`
             : stageDirectionPercentage(monologue.text) > 50
-              ? "(stage directions are dimmed; the spoken lines are in normal text.)"
+              ? t("appMonologueRead.dimmedDirections")
               : ""}
         </p>
         <TextSizer size={size} onChange={onSizeChange} />

@@ -9,6 +9,7 @@ import {
   type WhisperSurface,
 } from "@/lib/analytics";
 import type { FeedEvent } from "@/hooks/useCommunityFeed";
+import { useLocale, useT } from "@/lib/i18n";
 
 /**
  * A whisper: one line of type saying that other actors are here.
@@ -117,22 +118,23 @@ export function PieceWhisper({
   tone?: "default" | "dark";
   surface?: WhisperSurface;
 }) {
+  const t = useT();
+  const locale = useLocale();
   const verb =
     latest.event_type === "bookmarked"
-      ? "saved this"
+      ? t("appShellCallboard.whisperSaved")
       : latest.event_type === "shared"
-        ? "shared this"
-        : "read this";
+        ? t("appShellCallboard.whisperShared")
+        : t("appShellCallboard.whisperRead");
   const strong = tone === "dark" ? "text-white" : "text-foreground/90";
   const faint = tone === "dark" ? "text-white/55" : "text-muted-foreground/70";
   return (
     <Whisper tone={tone} surface={surface} meta={{ event_type: latest.event_type, others }}>
       <span className={`font-medium ${strong}`}>{latest.name}</span> {verb}
-      <span className={faint}> · {relativeTime(latest.created_at)}</span>
+      <span className={faint}> · {relativeTime(latest.created_at, locale)}</span>
       {others > 0 && (
         <span className={faint}>
-          {" "}
-          · {others} other{others === 1 ? "" : "s"} too
+          {t(others === 1 ? "appShellCallboard.whisperOther" : "appShellCallboard.whisperOthers", { n: others })}
         </span>
       )}
     </Whisper>

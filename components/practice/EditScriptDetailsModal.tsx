@@ -12,6 +12,8 @@ import { clothFor, emblemFor } from "@/components/monologue/PlayCover";
 import { Glyph } from "@/components/brand/glyphs";
 import api from "@/lib/api";
 import { SCRIPTS_QUERY_KEY, type UserScript } from "@/hooks/useScripts";
+import { useT } from "@/lib/i18n";
+import { genreLabel } from "@/components/practice/practiceLabels";
 
 interface EditScriptDetailsModalProps {
   open: boolean;
@@ -39,6 +41,7 @@ export function EditScriptDetailsModal({
   script,
 }: EditScriptDetailsModalProps) {
   const queryClient = useQueryClient();
+  const t = useT();
   const [title, setTitle] = useState(script.title ?? "");
   const [author, setAuthor] = useState(script.author ?? "");
   const [genres, setGenres] = useState<string[]>(
@@ -64,7 +67,7 @@ export function EditScriptDetailsModal({
       const res = await api.post<{ synopsis: string }>(`/api/scripts/${script.id}/synopsis`);
       setDescription(res.data.synopsis);
     } catch {
-      toast.error("Couldn't write one just now. Try again.");
+      toast.error(t("appPracticeEditDetails.synopsisFailed"));
     } finally {
       setWriting(false);
     }
@@ -75,7 +78,7 @@ export function EditScriptDetailsModal({
 
   /* The live binding. clothFor keys off the title and emblemFor off the genre,
      so both halves of the cover move while you type. */
-  const shownTitle = title.trim() || script.title || "Untitled";
+  const shownTitle = title.trim() || script.title || t("appPracticeEditDetails.untitled");
   const cloth = clothFor(shownTitle);
   const emblem = emblemFor({
     genre,
@@ -105,10 +108,10 @@ export function EditScriptDetailsModal({
         prev ? { ...prev, ...update } : prev,
       );
       queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
-      toast.success("Rebound");
+      toast.success(t("appPracticeEditDetails.saved"));
       onOpenChange(false);
     } catch {
-      toast.error("Couldn't save that. Try again.");
+      toast.error(t("appPracticeEditDetails.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -119,11 +122,11 @@ export function EditScriptDetailsModal({
       <DialogContent
         className={`t-formsheet theatre-tokens ${theatreFontVars} max-w-[560px] gap-0 border-0 p-0`}
       >
-        <DialogTitle className="sr-only">Edit script details</DialogTitle>
+        <DialogTitle className="sr-only">{t("appPracticeEditDetails.srTitle")}</DialogTitle>
 
         <div className="px-7 pb-6 pt-7 sm:px-8">
-          <p className="t-formsheet__slug">(the binding.)</p>
-          <h2 className="t-formsheet__title">Edit details</h2>
+          <p className="t-formsheet__slug">{t("appPracticeEditDetails.direction")}</p>
+          <h2 className="t-formsheet__title">{t("appPracticeEditDetails.title")}</h2>
 
           <div className="mt-6 flex gap-6">
             {/* The cover, restitching itself. Hidden on a phone, where the
@@ -155,14 +158,14 @@ export function EditScriptDetailsModal({
                 className="mt-2 text-center text-[11px] italic"
                 style={{ fontFamily: "var(--t-direction)", color: "var(--t-faint)" }}
               >
-                (on the shelf.)
+                {t("appPracticeEditDetails.onShelf")}
               </p>
             </div>
 
             <div className="min-w-0 flex-1 space-y-4">
               <div>
                 <label className="t-field__label" htmlFor="edit-script-title">
-                  Title
+                  {t("appPracticeEditDetails.titleLabel")}
                 </label>
                 <input
                   id="edit-script-title"
@@ -173,12 +176,12 @@ export function EditScriptDetailsModal({
                   onBlur={() => setTouchedTitle(true)}
                   placeholder="A Midsummer Night's Dream"
                 />
-                {titleMissing && <p className="t-field__error">A script needs a name.</p>}
+                {titleMissing && <p className="t-field__error">{t("appPracticeEditDetails.titleMissing")}</p>}
               </div>
 
               <div>
                 <label className="t-field__label" htmlFor="edit-script-author">
-                  Author <em>optional</em>
+                  {t("appPracticeEditDetails.author")} <em>{t("appPracticeEditDetails.optional")}</em>
                 </label>
                 <input
                   id="edit-script-author"
@@ -191,7 +194,7 @@ export function EditScriptDetailsModal({
 
               <div>
                 <label className="t-field__label">
-                  Genre <em>up to {MAX_GENRES}, the first sets the cloth</em>
+                  {t("appPracticeEditDetails.genre")} <em>{t("appPracticeEditDetails.genreHint", { n: MAX_GENRES })}</em>
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {genreChoices.map((g) => {
@@ -213,9 +216,9 @@ export function EditScriptDetailsModal({
                           full && "cursor-not-allowed opacity-35 hover:opacity-35",
                         )}
                       >
-                        {g}
+                        {genreLabel(t, g)}
                         {on && genres.length > 1 && rank === 0 && (
-                          <span className="ml-1 opacity-75">· main</span>
+                          <span className="ml-1 opacity-75">{t("appPracticeEditDetails.main")}</span>
                         )}
                       </button>
                     );
@@ -228,7 +231,7 @@ export function EditScriptDetailsModal({
           <div className="mt-4">
             <div className="flex items-baseline justify-between gap-3">
               <label className="t-field__label" htmlFor="edit-script-synopsis">
-                Synopsis <em>optional</em>
+                {t("appPracticeEditDetails.synopsis")} <em>{t("appPracticeEditDetails.optional")}</em>
               </label>
               <button
                 type="button"
@@ -236,7 +239,7 @@ export function EditScriptDetailsModal({
                 disabled={writing}
                 className="text-[12.5px] text-primary underline decoration-primary/40 underline-offset-4 transition-colors hover:decoration-primary disabled:opacity-50"
               >
-                {writing ? "Reading the script…" : description.trim() ? "Write it again" : "Write it for me"}
+                {writing ? t("appPracticeEditDetails.writing") : description.trim() ? t("appPracticeEditDetails.writeAgain") : t("appPracticeEditDetails.writeForMe")}
               </button>
             </div>
             <textarea
@@ -244,7 +247,7 @@ export function EditScriptDetailsModal({
               className="t-field__area"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What happens, in a sentence or two."
+              placeholder={t("appPracticeEditDetails.synopsisPlaceholder")}
               rows={3}
             />
           </div>
@@ -254,10 +257,10 @@ export function EditScriptDetailsModal({
 
         <div className="flex items-center justify-end gap-2.5 px-7 py-4 sm:px-8">
           <button type="button" className="t-mem__ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("appPracticeEditDetails.cancel")}
           </button>
           <button type="button" className="t-mem__go" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? t("appPracticeEditDetails.saving") : t("appPracticeEditDetails.save")}
           </button>
         </div>
       </DialogContent>

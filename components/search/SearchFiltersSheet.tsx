@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { IconX, IconChevronDown, IconUser, IconMoodSmile, IconSettings } from "@tabler/icons-react";
 import { FreshnessToggle } from "@/components/search/FreshnessToggle";
 import { motion, AnimatePresence } from "framer-motion";
+import { useT, type MessageKey, type Vars } from "@/lib/i18n";
+import { useValueLabel } from "@/components/search/searchI18n";
 
 export type SearchFiltersState = {
   gender: string;
@@ -31,29 +33,50 @@ export type SearchFiltersState = {
   source_type?: string;
 };
 
-const DURATION_OPTIONS = [
-  { value: "60", label: "1 min" },
-  { value: "90", label: "1.5 min" },
-  { value: "120", label: "2 min" },
-  { value: "180", label: "3 min" },
-  { value: "300", label: "5 min" },
+const DURATION_OPTIONS: { value: string; label: MessageKey }[] = [
+  { value: "60", label: "appSearchFilters.d60" },
+  { value: "90", label: "appSearchFilters.d90" },
+  { value: "120", label: "appSearchFilters.d120" },
+  { value: "180", label: "appSearchFilters.d180" },
+  { value: "300", label: "appSearchFilters.d300" },
 ];
 
-export const getDurationLabel = (seconds: string) =>
-  DURATION_OPTIONS.find((d) => d.value === seconds)?.label ?? `${seconds}s`;
+type Translate = (key: MessageKey, vars?: Vars) => string;
+
+/** "2 min" for a max_duration value. Pass the page's t() to get the reader's language. */
+export const getDurationLabel = (seconds: string, t?: Translate) => {
+  const key = DURATION_OPTIONS.find((d) => d.value === seconds)?.label;
+  if (t) return key ? t(key) : t("appSearchFilters.seconds", { n: seconds });
+  const en: Record<string, string> = { "60": "1 min", "90": "1.5 min", "120": "2 min", "180": "3 min", "300": "5 min" };
+  return en[seconds] ?? `${seconds}s`;
+};
 
 const CHARACTER_FILTERS = [
-  { key: "gender" as const, label: "Gender", options: ["male", "female", "any"] },
-  { key: "age_range" as const, label: "Age Range", options: ["child", "teens", "20s", "30s", "40s", "50s", "60+"] },
+  { key: "gender" as const, label: "appSearchFilters.gender" as MessageKey, options: ["male", "female", "any"] },
+  { key: "age_range" as const, label: "appSearchFilters.ageRange" as MessageKey, options: ["child", "teens", "20s", "30s", "40s", "50s", "60+"] },
 ];
 
 const MOOD_FILTERS = [
-  { key: "emotion" as const, label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
-  { key: "tone" as const, label: "Tone", options: ["dramatic", "defiant", "anguished", "comedic", "dark", "romantic", "philosophical", "contemplative"] },
-  { key: "theme" as const, label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
+  { key: "emotion" as const, label: "appSearchFilters.emotion" as MessageKey, options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
+  { key: "tone" as const, label: "appSearchFilters.tone" as MessageKey, options: ["dramatic", "defiant", "anguished", "comedic", "dark", "romantic", "philosophical", "contemplative"] },
+  { key: "theme" as const, label: "appSearchFilters.theme" as MessageKey, options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
 ];
 
 const PRACTICAL_KEYS = ["difficulty", "category", "author", "max_duration"] as const;
+
+/** The lowercase field name printed in the active-filter summary. */
+const FILTER_KEYS: Record<string, MessageKey> = {
+  gender: "appSearchFilterKeys.gender",
+  age_range: "appSearchFilterKeys.age_range",
+  emotion: "appSearchFilterKeys.emotion",
+  theme: "appSearchFilterKeys.theme",
+  category: "appSearchFilterKeys.category",
+  tone: "appSearchFilterKeys.tone",
+  difficulty: "appSearchFilterKeys.difficulty",
+  author: "appSearchFilterKeys.author",
+  max_duration: "appSearchFilterKeys.max_duration",
+  source_type: "appSearchFilterKeys.source_type",
+};
 
 export interface SearchFiltersSheetProps {
   open: boolean;
@@ -125,15 +148,20 @@ function CollapsibleSection({
 
 function FilterSelect({
   label,
+  field,
   value,
   onChange,
   options,
 }: {
   label: string;
+  /** The filter field, so string options can be shown in the reader's language. */
+  field: string;
   value: string;
   onChange: (v: string) => void;
   options: Array<string | { value: string; label: string }>;
 }) {
+  const t = useT();
+  const valueLabel = useValueLabel();
   return (
     <div className="space-y-1.5">
       <Label className="text-xs text-muted-foreground">{label}</Label>
@@ -142,13 +170,13 @@ function FilterSelect({
         onValueChange={(v) => onChange(v === "__none__" ? "" : v)}
       >
         <SelectTrigger className="min-h-[48px] px-4 py-3 text-base">
-          <SelectValue placeholder="Any" />
+          <SelectValue placeholder={t("appSearchFilters.any")} />
         </SelectTrigger>
         <SelectContent side="bottom" sideOffset={4}>
-          <SelectItem value="__none__">Any</SelectItem>
+          <SelectItem value="__none__">{t("appSearchFilters.any")}</SelectItem>
           {options.map((opt) =>
             typeof opt === "string" ? (
-              <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
+              <SelectItem key={opt} value={opt} className="capitalize">{valueLabel(field, opt)}</SelectItem>
             ) : (
               <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
             )
@@ -168,6 +196,8 @@ export function SearchFiltersSheet({
   setMaxOverdoneScore,
   hideCategory,
 }: SearchFiltersSheetProps) {
+  const t = useT();
+  const valueLabel = useValueLabel();
   const countActive = (keys: readonly string[]) =>
     keys.filter((k) => filters[k as keyof SearchFiltersState] !== "").length;
 
@@ -189,7 +219,7 @@ export function SearchFiltersSheet({
       >
         <DialogHeader className="p-4 pb-2 md:p-0 md:pb-4">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-semibold">Filters</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">{t("appSearchFilters.title")}</DialogTitle>
             {totalActive > 0 && (
               <span className="flex items-center justify-center h-6 min-w-[24px] px-2 rounded-full bg-primary/15 text-primary text-xs font-bold dark:text-orange-400">
                 {totalActive}
@@ -199,11 +229,12 @@ export function SearchFiltersSheet({
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 px-4 pb-4 md:px-0">
-          <CollapsibleSection title="Character" icon={IconUser} activeCount={characterCount} defaultOpen>
+          <CollapsibleSection title={t("appSearchFilters.character")} icon={IconUser} activeCount={characterCount} defaultOpen>
             {CHARACTER_FILTERS.map(({ key, label, options }) => (
               <FilterSelect
                 key={key}
-                label={label}
+                field={key}
+                label={t(label)}
                 value={filters[key]}
                 onChange={(v) => setFilters({ ...filters, [key]: v })}
                 options={options}
@@ -211,11 +242,12 @@ export function SearchFiltersSheet({
             ))}
           </CollapsibleSection>
 
-          <CollapsibleSection title="Mood & Style" icon={IconMoodSmile} activeCount={moodCount}>
+          <CollapsibleSection title={t("appSearchFilters.moodStyle")} icon={IconMoodSmile} activeCount={moodCount}>
             {MOOD_FILTERS.map(({ key, label, options }) => (
               <FilterSelect
                 key={key}
-                label={label}
+                field={key}
+                label={t(label)}
                 value={filters[key]}
                 onChange={(v) => setFilters({ ...filters, [key]: v })}
                 options={options}
@@ -223,23 +255,25 @@ export function SearchFiltersSheet({
             ))}
           </CollapsibleSection>
 
-          <CollapsibleSection title="Practical" icon={IconSettings} activeCount={practicalCount}>
+          <CollapsibleSection title={t("appSearchFilters.practical")} icon={IconSettings} activeCount={practicalCount}>
             {!hideCategory && (
               <FilterSelect
-                label="Category"
+                field="category"
+                label={t("appSearchFilters.category")}
                 value={filters.category}
                 onChange={(v) => setFilters({ ...filters, category: v })}
                 options={["classical", "contemporary"]}
               />
             )}
             <FilterSelect
-              label="Difficulty"
+              field="difficulty"
+              label={t("appSearchFilters.difficulty")}
               value={filters.difficulty}
               onChange={(v) => setFilters({ ...filters, difficulty: v })}
               options={["beginner", "intermediate", "advanced"]}
             />
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Author</Label>
+              <Label className="text-xs text-muted-foreground">{t("appSearchFilters.author")}</Label>
               <input
                 type="text"
                 placeholder="Shakespeare"
@@ -249,10 +283,11 @@ export function SearchFiltersSheet({
               />
             </div>
             <FilterSelect
-              label="Max Duration"
+              field="max_duration"
+              label={t("appSearchFilters.maxDuration")}
               value={filters.max_duration}
               onChange={(v) => setFilters({ ...filters, max_duration: v })}
-              options={DURATION_OPTIONS}
+              options={DURATION_OPTIONS.map((d) => ({ value: d.value, label: t(d.label) }))}
             />
             <div className="pt-2 mt-1 border-t border-border/30">
               <FreshnessToggle value={maxOverdoneScore} onChange={setMaxOverdoneScore} />
@@ -269,7 +304,10 @@ export function SearchFiltersSheet({
                     key={key}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted/80 text-foreground border border-border/40 capitalize"
                   >
-                    <span className="text-muted-foreground">{key.replace(/_/g, " ")}:</span> {key === "max_duration" ? getDurationLabel(value) : value}
+                    <span className="text-muted-foreground">
+                      {key in FILTER_KEYS ? t(FILTER_KEYS[key]) : key.replace(/_/g, " ")}:
+                    </span>{" "}
+                    {key === "max_duration" ? getDurationLabel(value, t) : valueLabel(key, value)}
                     <button
                       type="button"
                       onClick={() => setFilters({ ...filters, [key]: "" })}
@@ -281,7 +319,8 @@ export function SearchFiltersSheet({
                 ))}
               {maxOverdoneScore < 1 && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted/80 text-foreground border border-border/40">
-                  <span className="text-muted-foreground">originality:</span> {maxOverdoneScore <= 0.3 ? "Fresh picks" : "Popular too"}
+                  <span className="text-muted-foreground">{t("appSearchFilterKeys.originality")}:</span>{" "}
+                  {maxOverdoneScore <= 0.3 ? t("appSearchFreshness.freshPicks") : t("appSearchFreshness.popularToo")}
                   <button
                     type="button"
                     onClick={() => setMaxOverdoneScore(1)}
@@ -296,7 +335,7 @@ export function SearchFiltersSheet({
                 onClick={clearAll}
                 className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 min-h-[44px] px-2"
               >
-                Clear all
+                {t("appSearchFilters.clearAll")}
               </button>
             </div>
           )}
@@ -308,13 +347,13 @@ export function SearchFiltersSheet({
             className="flex-1 min-h-[48px]"
             onClick={clearAll}
           >
-            Clear
+            {t("appSearchFilters.clear")}
           </Button>
           <Button
             className="flex-1 min-h-[48px]"
             onClick={() => onOpenChange(false)}
           >
-            Apply
+            {t("appSearchFilters.apply")}
           </Button>
         </div>
       </DialogContent>

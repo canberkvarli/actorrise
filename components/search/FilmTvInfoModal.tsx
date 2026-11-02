@@ -7,6 +7,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n";
+import { withSlots } from "@/components/search/searchI18n";
 
 export interface FilmTvInfoModalProps {
   open: boolean;
@@ -14,29 +16,30 @@ export interface FilmTvInfoModalProps {
 }
 
 export function FilmTvInfoModal({ open, onOpenChange }: FilmTvInfoModalProps) {
+  const t = useT();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Film &amp; TV audition prep</DialogTitle>
+          <DialogTitle>{t("appSearchFilmTv.infoTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 text-sm text-muted-foreground">
           <p>
-            Search monologues from iconic films and TV series for your audition.
-            Use natural language: <em>&ldquo;dark psychological thriller&rdquo;</em>, <em>&ldquo;villain monologue&rdquo;</em>,
-            or just a title like <em>&ldquo;The Godfather&rdquo;</em>.
+            {withSlots(t("appSearchFilmTv.infoBody1"), {
+              a: <em>{t("appSearchFilmTv.infoExampleA")}</em>,
+              b: <em>{t("appSearchFilmTv.infoExampleB")}</em>,
+              c: <em>{t("appSearchFilmTv.infoExampleC")}</em>,
+            })}
           </p>
           <p>
-            Results include audition-ready monologue excerpts you can save, rehearse with ScenePartner, and
-            film/TV reference cards with script links and metadata.
+            {t("appSearchFilmTv.infoBody2")}
           </p>
           <p className="text-xs text-muted-foreground/70">
-            Monologue excerpts are provided under fair use for audition preparation.
-            All content is attributed to the original writers.
+            {t("appSearchFilmTv.infoFairUse")}
           </p>
         </div>
         <div className="flex justify-end pt-2">
-          <Button onClick={() => onOpenChange(false)}>Got it</Button>
+          <Button onClick={() => onOpenChange(false)}>{t("appSearchFilmTv.gotIt")}</Button>
         </div>
       </DialogContent>
     </Dialog>

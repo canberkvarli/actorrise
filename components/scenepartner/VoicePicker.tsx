@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { IconCheck, IconChevronDown, IconPlayerPlayFilled, IconPlayerStopFilled } from "@tabler/icons-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useT } from "@/lib/i18n";
 
 export interface PickerVoice {
   id: string;
@@ -47,6 +48,7 @@ export function VoicePicker({
       own token classes so the list wears them too. */
   scopeClassName?: string;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [playing, setPlaying] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -74,17 +76,17 @@ export function VoicePicker({
   };
 
   const current = voices.find((v) => v.id === value);
-  const { name, sound } = splitLabel(current?.label ?? value ?? "Choose a voice");
+  const { name, sound } = splitLabel(current?.label ?? value ?? t("appScenesPartner.chooseVoice"));
   const groups = [
-    { title: "Women", list: voices.filter((v) => v.gender === "female") },
-    { title: "Men", list: voices.filter((v) => v.gender === "male") },
-    { title: "Other", list: voices.filter((v) => v.gender !== "female" && v.gender !== "male") },
+    { id: "female", title: t("appScenesPartner.women"), list: voices.filter((v) => v.gender === "female") },
+    { id: "male", title: t("appScenesPartner.men"), list: voices.filter((v) => v.gender === "male") },
+    { id: "other", title: t("appScenesPartner.other"), list: voices.filter((v) => v.gender !== "female" && v.gender !== "male") },
   ].filter((g) => g.list.length);
 
   return (
     <Popover open={open} onOpenChange={toggle}>
       <PopoverTrigger asChild>
-        <button type="button" aria-label={`Voice for ${character}: ${current?.label ?? "none"}`} className="t-prev__voice t-prev__voicebtn">
+        <button type="button" aria-label={t("appScenesPartner.voiceForNow", { character, voice: current?.label ?? t("appScenesPartner.none") })} className="t-prev__voice t-prev__voicebtn">
           <span className="t-prev__voicename">{name}</span>
           {sound && <span className="t-prev__voicesound">{sound}</span>}
           <IconChevronDown className="t-prev__voicechev" aria-hidden />
@@ -95,10 +97,10 @@ export function VoicePicker({
         className={`t-voicelist ${scopeClassName} w-[min(320px,calc(100vw-2rem))] p-1.5`}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <p className="t-voicelist__head">Who reads {character}</p>
+        <p className="t-voicelist__head">{t("appScenesPartner.whoReads", { character })}</p>
         <div className="max-h-[min(420px,60vh)] overflow-y-auto">
           {groups.map((g) => (
-            <div key={g.title} role="group" aria-label={g.title}>
+            <div key={g.id} role="group" aria-label={g.title}>
               {groups.length > 1 && <p className="t-voicelist__group">{g.title}</p>}
               {g.list.map((voice) => {
                 const parts = splitLabel(voice.label);
@@ -124,7 +126,7 @@ export function VoicePicker({
                       type="button"
                       className="t-voicelist__play"
                       data-on={playing === voice.id}
-                      aria-label={playing === voice.id ? `Stop ${parts.name}` : `Hear ${parts.name}`}
+                      aria-label={playing === voice.id ? t("appScenesPartner.stop", { name: parts.name }) : t("appScenesPartner.hear", { name: parts.name })}
                       onClick={() => play(voice)}
                     >
                       {playing === voice.id ? (

@@ -19,6 +19,7 @@ import { ClassShelves } from "@/components/practice/ClassShelf";
 import { WhatsNext, NothingYet } from "@/components/practice/WhatsNext";
 import { useWhatsNext } from "@/hooks/useWhatsNext";
 import { useDeleteScript, useReorderScripts, type UserScript } from "@/hooks/useScripts";
+import { useT } from "@/lib/i18n";
 
 interface PracticeLibraryProps {
   /** All scripts (user + demo). */
@@ -57,6 +58,7 @@ export function PracticeLibrary({
   const reorderScripts = useReorderScripts();
   const { user } = useAuth();
   const router = useRouter();
+  const t = useT();
   const {
     data: whatsNext,
     isLoading: whatsNextLoading,
@@ -83,19 +85,19 @@ export function PracticeLibrary({
     if (!deleteTarget) return;
     try {
       await deleteScript.mutateAsync(deleteTarget.id);
-      toast.success("Script deleted");
+      toast.success(t("appPracticeLibrary.deleted"));
     } catch (err: unknown) {
       const message =
         err && typeof err === "object" && "response" in err
           ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
-          : "Failed to delete script";
-      toast.error(typeof message === "string" ? message : "Failed to delete script");
+          : t("appPracticeLibrary.deleteFailed");
+      toast.error(typeof message === "string" ? message : t("appPracticeLibrary.deleteFailed"));
     }
   };
 
   const handleReport = async (script: UserScript) => {
     if (!user?.email) {
-      toast.error("Couldn't flag this — please use Contact in the menu.");
+      toast.error(t("appPracticeLibrary.flagNoEmail"));
       return;
     }
     try {
@@ -105,15 +107,13 @@ export function PracticeLibrary({
         category: "bug",
         message: `Script extraction issue — "${script.title}" (#${script.id}). The scenes may not have extracted correctly; please take a look.`,
       });
-      toast.success(`Thanks for flagging "${script.title}". I'll take a look.`);
+      toast.success(t("appPracticeLibrary.flagThanks", { title: script.title }));
     } catch (err: unknown) {
       const message =
         err && typeof err === "object" && "response" in err
           ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
-          : "Couldn't flag this — try Contact in the menu.";
-      toast.error(
-        typeof message === "string" ? message : "Couldn't flag this — try Contact in the menu.",
-      );
+          : t("appPracticeLibrary.flagFailed");
+      toast.error(typeof message === "string" ? message : t("appPracticeLibrary.flagFailed"));
     }
   };
 
@@ -163,7 +163,7 @@ export function PracticeLibrary({
                   className="t-back-to-stage mb-5"
                 >
                   <IconArrowLeft className="h-3.5 w-3.5" />
-                  back to the stage
+                  {t("appPracticeLibrary.backToStage")}
                 </button>
                 <PracticeScenePanel script={selectedScript} />
               </motion.div>
@@ -195,11 +195,10 @@ export function PracticeLibrary({
                      scripts, so nobody is stranded. */
                   <div className="max-w-md">
                     <p className="font-typewriter text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-                      couldn&apos;t reach the prompt desk
+                      {t("appPracticeLibrary.failedSlug")}
                     </p>
                     <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                      I couldn&apos;t work out where you left off. Your scripts are
-                      all still here, on the right.
+                      {t("appPracticeLibrary.failedBody")}
                     </p>
                   </div>
                 ) : userScripts.length > 0 ? (
@@ -208,10 +207,10 @@ export function PracticeLibrary({
                      rather than asking for another upload. */
                   <div className="max-w-md">
                     <p className="font-typewriter text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-                      nothing on tonight
+                      {t("appPracticeLibrary.nothingSlug")}
                     </p>
                     <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                      Pick a script from the shelf to see what&apos;s in it.
+                      {t("appPracticeLibrary.nothingBody")}
                     </p>
                   </div>
                 ) : (
@@ -264,17 +263,17 @@ export function PracticeLibrary({
               it. */}
           <div className="mb-3 pb-3" style={{ borderBottom: "1.5px solid var(--t-line-dark-2)" }}>
             <div className="flex items-center justify-between gap-3">
-              <h2 className="t-shelf-heading">On the shelf</h2>
+              <h2 className="t-shelf-heading">{t("appPracticeLibrary.onTheShelf")}</h2>
               {onOpenWalkthrough && (
                 <button type="button" onClick={onOpenWalkthrough} className="t-how-link">
-                  how this room works
+                  {t("appPracticeLibrary.howItWorks")}
                 </button>
               )}
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <CommunityLibraryButton />
               <span id="scenepartner-bring-in">
-                <UploadScriptButton variant="compact" className="t-bring-in">Bring in a script</UploadScriptButton>
+                <UploadScriptButton variant="compact" className="t-bring-in">{t("appPracticeLibrary.bringIn")}</UploadScriptButton>
               </span>
             </div>
           </div>
@@ -293,7 +292,7 @@ export function PracticeLibrary({
                 // on every drag; the arrangement showing up where it was dropped
                 // is the confirmation. Only a failure needs saying.
                 reorderScripts.mutate(scriptIds, {
-                  onError: () => toast.error("Couldn't save the new order"),
+                  onError: () => toast.error(t("appPracticeLibrary.reorderFailed")),
                 });
               }}
             />
@@ -307,9 +306,9 @@ export function PracticeLibrary({
       <ConfirmDeleteDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete this script?"
-        description="This deletes the script and all its scenes. Cannot be undone."
-        confirmLabel="Delete script"
+        title={t("appPracticeLibrary.deleteTitle")}
+        description={t("appPracticeLibrary.deleteBody")}
+        confirmLabel={t("appPracticeLibrary.deleteConfirm")}
         onConfirm={handleConfirmDelete}
         isLoading={deleteScript.isPending}
       />

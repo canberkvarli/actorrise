@@ -5,12 +5,14 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import api from "@/lib/api";
+import { useT, useTList, type MessageKey } from "@/lib/i18n";
 
 export interface TourStep {
   /** The id of the element to light. A step whose target is absent is dropped. */
   targetId: string;
-  title: string;
-  body: string;
+  /** Dictionary keys, translated at render so a language switch mid-tour holds. */
+  title: MessageKey;
+  body: MessageKey;
   placement: "bottom" | "top";
 }
 
@@ -61,13 +63,17 @@ const TOP_SAFE = 108;
 const NEVER_CHANGES = () => () => {};
 
 /* "(one of three.)" rather than "1 OF 5". Same information, and it is the
-   only register the rest of the first-run flow speaks in. */
-const ORDINAL = ["one", "two", "three", "four", "five", "six"];
-const CARDINAL = ["", "one", "two", "three", "four", "five", "six"];
-function beat(i: number, total: number) {
-  const a = ORDINAL[i] ?? String(i + 1);
-  const b = CARDINAL[total] ?? String(total);
-  return total === 1 ? "(just this.)" : `(${a} of ${b}.)`;
+   only register the rest of the first-run flow speaks in. The words live in
+   the dictionary (appShellTours.ordinals / cardinals). */
+function beat(
+  i: number,
+  total: number,
+  t: ReturnType<typeof useT>,
+  tList: ReturnType<typeof useTList>,
+) {
+  const a = tList("appShellTours.ordinals")[i] ?? String(i + 1);
+  const b = tList("appShellTours.cardinals")[total] ?? String(total);
+  return total === 1 ? t("appShellTours.justThis") : t("appShellTours.beat", { a, b });
 }
 
 /**
@@ -93,6 +99,8 @@ export function TourSpotlight({
   onDismiss: () => void;
 }) {
   const mounted = useSyncExternalStore(NEVER_CHANGES, () => true, () => false);
+  const t = useT();
+  const tList = useTList();
   const [live, setLive] = useState<TourStep[] | null>(null);
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -241,7 +249,7 @@ export function TourSpotlight({
           key={step}
           role="dialog"
           aria-modal="true"
-          aria-label={current.title}
+          aria-label={t(current.title)}
           initial={{ opacity: 0, y: 14, rotate: -1.4 }}
           animate={{ opacity: 1, y: 0, rotate: -0.6 }}
           exit={{ opacity: 0, y: -10 }}
@@ -260,16 +268,16 @@ export function TourSpotlight({
             className="m-0 text-xs italic tracking-[0.08em]"
             style={{ fontFamily: "var(--t-direction)", color: "var(--t-muted-dark-2)" }}
           >
-            {beat(step, total)}
+            {beat(step, total, t, tList)}
           </p>
           <h3
             className="mt-1.5 font-normal leading-none tracking-[-0.02em]"
             style={{ fontFamily: "var(--t-display)", fontSize: 26 }}
           >
-            {current.title}
+            {t(current.title)}
           </h3>
           <p className="mt-2 text-sm leading-normal" style={{ color: "var(--t-muted-dark)" }}>
-            {current.body}
+            {t(current.body)}
           </p>
 
           <div className="mt-4 flex items-center justify-between gap-3">
@@ -281,7 +289,7 @@ export function TourSpotlight({
               onMouseEnter={(e) => (e.currentTarget.style.color = "var(--t-text)")}
               onMouseLeave={(e) => (e.currentTarget.style.color = "var(--t-faint)")}
             >
-              skip
+              {t("appShellTours.skip")}
             </button>
             <motion.button
               type="button"
@@ -291,7 +299,7 @@ export function TourSpotlight({
               className="inline-flex h-11 items-center gap-2.5 rounded-full pl-5 pr-1.5 text-sm font-bold"
               style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
             >
-              {isLast ? "Got it" : "Next"}
+              {isLast ? t("appShellTours.gotIt") : t("appShellTours.next")}
               <span
                 className="inline-flex size-8 items-center justify-center rounded-full"
                 style={{ background: "var(--t-cta-dot-bg)", color: "var(--t-cta-dot-fg)" }}

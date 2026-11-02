@@ -16,6 +16,7 @@ import {
 } from "@/lib/guided-scene";
 import { fetchGuidedSceneId, startGuidedScene } from "@/lib/guided-start";
 import { useUpload } from "@/components/practice/UploadProvider";
+import { useT } from "@/lib/i18n";
 
 /**
  * The hub, for an actor who has never rehearsed.
@@ -27,6 +28,7 @@ import { useUpload } from "@/components/practice/UploadProvider";
 export function GuidedInvitation() {
   const router = useRouter();
   const { refreshUser } = useAuth();
+  const t = useT();
   const { isUploading, openPicker } = useUpload();
   const [starting, setStarting] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -98,20 +100,24 @@ export function GuidedInvitation() {
       </h1>
       <p className="t-invite__house">
         {starting
-          ? `${titleCase(GUIDED_PARTNER)} is waiting.`
-          : `I'll read ${titleCase(GUIDED_PARTNER)}. You're ${titleCase(GUIDED_ACTOR)}. ${GUIDED_LINE_COUNT} lines, under a minute.`}
+          ? t("appPracticeGuided.waiting", { partner: titleCase(GUIDED_PARTNER) })
+          : t("appPracticeGuided.house", {
+              partner: titleCase(GUIDED_PARTNER),
+              actor: titleCase(GUIDED_ACTOR),
+              n: GUIDED_LINE_COUNT,
+            })}
       </p>
       <button type="button" className="t-invite__answer" onClick={answer} disabled={starting}>
-        {starting ? "One moment" : "Answer"}
+        {starting ? t("appPracticeGuided.oneMoment") : t("appPracticeGuided.answer")}
       </button>
       {failed && (
         <p className="t-invite__house" role="alert">
-          That didn&apos;t start. Try once more.
+          {t("appPracticeGuided.failed")}
         </p>
       )}
       <div className="t-invite__alt">
         <button type="button" className="t-how-link" onClick={openPicker} disabled={isUploading}>
-          {isUploading ? "bringing it in" : "bring in a script instead"}
+          {isUploading ? t("appPracticeGuided.bringingIn") : t("appPracticeGuided.bringInstead")}
         </button>
       </div>
     </section>

@@ -7,6 +7,7 @@ import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MemorizeView } from "@/components/memorize/MemorizeView";
+import { useLocale, useT } from "@/lib/i18n";
 
 interface SceneDetailLine {
   line_order: number;
@@ -29,16 +30,19 @@ const CONTAINER =
   "container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-3xl";
 
 function BackLink({ onClick }: { onClick: () => void }) {
+  const t = useT();
   return (
     <Button variant="ghost" onClick={onClick} className="mb-6 hover:text-primary">
       <IconArrowLeft className="h-4 w-4" />
-      Back
+      {t("appScenesMemorize.back")}
     </Button>
   );
 }
 
 export default function SceneMemorizePage() {
   const router = useRouter();
+  const t = useT();
+  const locale = useLocale();
   const sceneId = useParams().id as string;
   const character = useSearchParams().get("character");
 
@@ -76,9 +80,10 @@ export default function SceneMemorizePage() {
     return (
       <div className={CONTAINER}>
         <BackLink onClick={() => router.back()} />
-        <h1 className="text-xl font-semibold">Couldn&apos;t load this scene</h1>
+        <h1 className="text-xl font-semibold">{t("appScenesMemorize.loadFailed")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {error instanceof Error ? error.message : "Please try again."}
+          {/* The raw message is English plumbing; Turkish readers get the plain ask. */}
+          {error instanceof Error && locale === "en" ? error.message : t("appScenesMemorize.tryAgain")}
         </p>
       </div>
     );
@@ -106,14 +111,14 @@ export default function SceneMemorizePage() {
           {[scene.play_title, scene.play_author].filter(Boolean).join(" · ")}
         </p>
         <p className="mt-8 mb-4 text-sm font-medium text-muted-foreground">
-          Which role are you learning?
+          {t("appScenesMemorize.whichRole")}
         </p>
         <div className="flex flex-wrap gap-3">
           {[char1, char2]
             .filter((c): c is string => Boolean(c))
             .map((name) => (
               <Button key={name} size="lg" onClick={() => choose(name)}>
-                Play {name}
+                {t("appScenesMemorize.play", { name })}
               </Button>
             ))}
         </div>

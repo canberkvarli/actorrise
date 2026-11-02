@@ -13,14 +13,14 @@ import { TourSpotlight, type TourStep } from "@/components/onboarding/TourSpotli
 const STEPS: TourStep[] = [
   {
     targetId: "collection-bench",
-    title: "The one you're on.",
-    body: "Whatever you opened last sits here, lit, with the way back into rehearsing it.",
+    title: "appShellTours.collectionBenchTitle",
+    body: "appShellTours.collectionBenchBody",
     placement: "bottom",
   },
   {
     targetId: "collection-shelf",
-    title: "Everything else you kept.",
-    body: "Tap any spine to bring it to the bench. Saving more is a tap on any monologue in the library.",
+    title: "appShellTours.collectionShelfTitle",
+    body: "appShellTours.collectionShelfBody",
     placement: "top",
   },
 ];

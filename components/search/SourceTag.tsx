@@ -1,4 +1,5 @@
 import type { Monologue } from "@/types/actor";
+import { useT } from "@/lib/i18n";
 
 export type SourceTagKind = "classical" | "contemporary" | "film" | "tv";
 
@@ -37,9 +38,10 @@ export function SourceTag({
   kind: SourceTagKind | null;
   className?: string;
 }) {
+  const t = useT();
   if (!kind) return null;
   return (
-    <span className={`t-src t-src--${kind} ${className}`.trim()}>{kind}</span>
+    <span className={`t-src t-src--${kind} ${className}`.trim()}>{t(`appSearchSourceTag.${kind}`)}</span>
   );
 }
 
@@ -59,25 +61,26 @@ export function MonologueSourceTag({
  * inference, so the page says what they mean once.
  */
 export function SourceTagLegend({ className = "" }: { className?: string }) {
+  const t = useT();
   return (
     <p className={`t-src-legend ${className}`.trim()}>
-      (the shelves:){" "}
+      {t("appSearchSourceTag.legendLead")}{" "}
       <span style={{ color: "oklch(0.58 0.18 45)" }}>
         <b />
       </span>{" "}
-      play · classical{" "}
+      {t("appSearchSourceTag.legendClassical")}{" "}
       <span style={{ color: "oklch(0.58 0.18 45)" }}>
         <b style={{ background: "currentColor" }} />
       </span>{" "}
-      play · contemporary{" "}
+      {t("appSearchSourceTag.legendContemporary")}{" "}
       <span style={{ color: "oklch(0.62 0.15 300)" }}>
         <b style={{ background: "currentColor", borderRadius: 2 }} />
       </span>{" "}
-      film{" "}
+      {t("appSearchSourceTag.legendFilm")}{" "}
       <span style={{ color: "oklch(0.62 0.15 300)" }}>
         <b style={{ borderRadius: 2 }} />
       </span>{" "}
-      tv
+      {t("appSearchSourceTag.legendTv")}
     </p>
   );
 }

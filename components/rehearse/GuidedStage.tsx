@@ -6,6 +6,7 @@ import type { ReactNode, RefObject } from "react";
 import { cn } from "@/lib/utils";
 import { renderTextWithStageDirections } from "@/lib/stageDirections";
 import type { CoachState } from "@/lib/guided-coach";
+import { useT } from "@/lib/i18n";
 
 export interface GuidedLine {
   id: number;
@@ -63,6 +64,7 @@ export function GuidedStage({
   onLeave,
   currentLineRef,
 }: Props) {
+  const t = useT();
   return (
     <div className="g-stage">
       {lines.map((line, i) => {
@@ -87,7 +89,7 @@ export function GuidedStage({
           >
             <p className="g-cue">
               <span>{line.character_name}</span>
-              {isUser && <span className="g-cue__you">you</span>}
+              {isUser && <span className="g-cue__you">{t("appScenesGuided.you")}</span>}
             </p>
             <p className="g-text">
               {isCurrent && isUser
@@ -105,7 +107,7 @@ export function GuidedStage({
                   onSaidIt();
                 }}
               >
-                {tapMode ? "I said it" : "Move on"}
+                {tapMode ? t("appScenesGuided.saidIt") : t("appScenesGuided.moveOn")}
               </button>
             ) : (
               isCurrent &&
@@ -119,7 +121,7 @@ export function GuidedStage({
                     onSkip();
                   }}
                 >
-                  skip this line
+                  {t("appScenesGuided.skipLine")}
                 </button>
               )
             )}
@@ -127,7 +129,7 @@ export function GuidedStage({
         );
       })}
       <button type="button" className="g-leave" onClick={onLeave}>
-        leave the scene
+        {t("appScenesGuided.leave")}
       </button>
     </div>
   );

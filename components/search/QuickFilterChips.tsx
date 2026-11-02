@@ -5,9 +5,10 @@ import type React from "react";
 import { IconAdjustments } from "@tabler/icons-react";
 import type { SearchFiltersState } from "@/components/search/SearchFiltersSheet";
 import type { SourceTagKind } from "@/components/search/SourceTag";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 interface FilterOption {
-  label: string;
+  label: MessageKey;
   value: string;
   /** Category-ish chips wear their shelf's colour, so the chip and the pill
    *  on the row it produces are recognisably the same thing. */
@@ -22,25 +23,32 @@ interface FilterGroup {
 }
 
 const GROUPS: FilterGroup[] = [
-  { key: "tone", options: [{ label: "Comedic", value: "comedic" }, { label: "Dramatic", value: "dramatic" }] },
+  { key: "tone", options: [{ label: "appSearchQuick.comedic", value: "comedic" }, { label: "appSearchQuick.dramatic", value: "dramatic" }] },
   {
     key: "category",
     mode: "plays",
     options: [
-      { label: "Classical", value: "classical", tag: "classical" },
-      { label: "Contemporary", value: "contemporary", tag: "contemporary" },
+      { label: "appSearchQuick.classical", value: "classical", tag: "classical" },
+      { label: "appSearchQuick.contemporary", value: "contemporary", tag: "contemporary" },
     ],
   },
   {
     key: "source_type",
     mode: "film_tv",
     options: [
-      { label: "Film", value: "film", tag: "film" },
-      { label: "TV", value: "tv", tag: "tv" },
+      { label: "appSearchQuick.film", value: "film", tag: "film" },
+      { label: "appSearchQuick.tv", value: "tv", tag: "tv" },
     ],
   },
-  { key: "gender", options: [{ label: "Female", value: "female" }, { label: "Male", value: "male" }, { label: "Non-binary", value: "non-binary" }] },
-  { key: "max_duration", options: [{ label: "Under 2 min", value: "120" }] },
+  {
+    key: "gender",
+    options: [
+      { label: "appSearchQuick.female", value: "female" },
+      { label: "appSearchQuick.male", value: "male" },
+      { label: "appSearchQuick.nonBinary", value: "non-binary" },
+    ],
+  },
+  { key: "max_duration", options: [{ label: "appSearchQuick.under2", value: "120" }] },
 ];
 
 /** The two shelf colours, matching `.t-src--*`.
@@ -88,6 +96,7 @@ export function QuickFilterChips({
   onOpenFilters,
   activeFilterCount = 0,
 }: QuickFilterChipsProps) {
+  const t = useT();
   const groups = GROUPS.filter((g) => {
     if (g.key === "category" && hideCategory) return false;
     return !g.mode || g.mode === mode;
@@ -141,7 +150,7 @@ export function QuickFilterChips({
                       : "var(--t-muted-dark-2)",
                 }}
               >
-                {opt.label}
+                {t(opt.label)}
               </button>
             );
           })
@@ -154,7 +163,7 @@ export function QuickFilterChips({
             style={{ border: "none", background: "transparent", color: "var(--t-muted-dark-2)" }}
           >
             <IconAdjustments className="size-4" />
-            All filters
+            {t("appSearchQuick.allFilters")}
             {activeFilterCount > 0 && (
               <span className="tabular-nums" style={{ color: "var(--acc)" }}>
                 {activeFilterCount}

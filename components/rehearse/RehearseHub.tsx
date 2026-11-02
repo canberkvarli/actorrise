@@ -3,7 +3,7 @@
 import { CollectionTour } from "@/components/onboarding/CollectionTour";
 import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { Fragment, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,6 +22,17 @@ import { Bench } from "@/components/rehearse/Bench";
 import { Shelf } from "@/components/rehearse/Shelf";
 import { RecentlyRemoved } from "@/components/rehearse/RecentlyRemoved";
 import { AuditionStrip } from "@/components/auditions/AuditionStrip";
+import { useT } from "@/lib/i18n";
+
+/**
+ * A translated sentence with nodes dropped in where it says {name}, so the
+ * Turkish can put the name and the title wherever its word order wants them.
+ */
+function slotted(text: string, slots: Record<string, ReactNode>) {
+  return text.split(/\{(\w+)\}/).map((part, i) =>
+    i % 2 === 1 && part in slots ? <Fragment key={i}>{slots[part]}</Fragment> : part,
+  );
+}
 
 
 /**
@@ -41,6 +52,7 @@ import { AuditionStrip } from "@/components/auditions/AuditionStrip";
  */
 export function RehearseHub() {
   const { show: showTour, dismiss: dismissTour } = useTourTrigger("has_seen_collection_tour");
+  const t = useT();
   const queryClient = useQueryClient();
   // The collection is client-only data; render loading until mounted so SSR
   // and the first client pass agree. Read as an external store rather than
@@ -107,7 +119,7 @@ export function RehearseHub() {
         try {
           await api.post(`/api/monologues/${monologue.id}/favorite`);
         } catch {
-          toast.error("Couldn't restore. Try again.");
+          toast.error(t("appScenesHub.restoreFailed"));
         }
         queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
         queryClient.invalidateQueries({ queryKey: ["recently-removed"] });
@@ -131,16 +143,16 @@ export function RehearseHub() {
           {/* An empty slot on the shelf, drawn rather than described. */}
           <div aria-hidden className="t-bare__slot">?</div>
           <p className="t-dir mt-5 text-[var(--t-muted-dark-2)]">
-            (the shelf is bare.)
+            {t("appScenesHub.bare")}
           </p>
           <h2 className="t-bare__name">
-            Nothing here <em>yet.</em>
+            {t("appScenesHub.nothingA")}<em>{t("appScenesHub.nothingB")}</em>
           </h2>
           <p className="mt-4 max-w-[44ch] text-balance text-[17px] text-[var(--t-muted-dark)]">
-            Save a monologue and it&apos;ll show up here, ready to work.
+            {t("appScenesHub.saveOne")}
           </p>
           <Link href="/monologues" className="t-cta t-cta--bench t-cta--paper mt-8">
-            Find monologues
+            {t("appScenesHub.find")}
             <span aria-hidden className="t-cta__dot">
               <svg
                 width="14"
@@ -219,6 +231,7 @@ export function RehearseHub() {
  * sentence beginning "Save a monologue and…".
  */
 function EmptyShelfWhisper() {
+  const t = useT();
   const latest = useLatestSave();
   if (!latest?.payload.title) return null;
   return (
@@ -231,8 +244,10 @@ function EmptyShelfWhisper() {
       }
       className="mt-7"
     >
-      <span className="font-medium text-foreground/90">{latest.name}</span> just saved{" "}
-      <span className="font-typewriter">{latest.payload.title}</span>
+      {slotted(t("appScenesHub.justSaved"), {
+        name: <span className="font-medium text-foreground/90">{latest.name}</span>,
+        title: <span className="font-typewriter">{latest.payload.title}</span>,
+      })}
     </Whisper>
   );
 }
@@ -247,19 +262,22 @@ function EmptyShelfWhisper() {
  * is the only fact from the feed you have a stake in.
  */
 function ShelfOverlapWhisper({ items }: { items: Monologue[] }) {
+  const t = useT();
   const overlap = useShelfOverlap(items.map((m) => m.id));
   if (!overlap) return null;
 
   const { event, monologueId } = overlap;
   const piece = items.find((m) => m.id === monologueId);
-  const title = piece?.character_name || event.payload.title || "a piece you saved";
-  const verb = event.event_type === "bookmarked" ? "saved" : "is reading";
+  const title = piece?.character_name || event.payload.title || t("appScenesHub.aPiece");
+  const sentence = event.event_type === "bookmarked" ? "appScenesHub.overlapSaved" : "appScenesHub.overlapReading";
 
   return (
     <div className="t-coll-rule">
       <Whisper surface="collection" href={`/monologue/${monologueId}`}>
-        <span className="font-medium text-foreground/90">{event.name}</span> {verb}{" "}
-        <span className="font-typewriter">{title}</span> too
+        {slotted(t(sentence), {
+          name: <span className="font-medium text-foreground/90">{event.name}</span>,
+          title: <span className="font-typewriter">{title}</span>,
+        })}
       </Whisper>
     </div>
   );

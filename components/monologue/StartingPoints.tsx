@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 import {
   CrownSketch,
@@ -21,21 +22,22 @@ import {
  */
 
 const DOORS = [
-  { Sketch: MasksSketch, label: "Something funny", query: "comedic monologue", rot: "-1.5deg" },
-  { Sketch: SkullSketch, label: "Shakespeare", query: "shakespeare monologue", rot: "1deg", playsOnly: true },
-  { Sketch: TicketSketch, label: "Love", query: "monologue about love", rot: "-1deg" },
-  { Sketch: DaggerSketch, label: "Revenge", query: "monologue about revenge", rot: "1.5deg" },
-  { Sketch: CrownSketch, label: "Power", query: "monologue about power", rot: "-0.5deg" },
+  { Sketch: MasksSketch, label: "appMonologueStart.funny" as MessageKey, query: "comedic monologue", rot: "-1.5deg" },
+  { Sketch: SkullSketch, label: "appMonologueStart.shakespeare" as MessageKey, query: "shakespeare monologue", rot: "1deg", playsOnly: true },
+  { Sketch: TicketSketch, label: "appMonologueStart.love" as MessageKey, query: "monologue about love", rot: "-1deg" },
+  { Sketch: DaggerSketch, label: "appMonologueStart.revenge" as MessageKey, query: "monologue about revenge", rot: "1.5deg" },
+  { Sketch: CrownSketch, label: "appMonologueStart.power" as MessageKey, query: "monologue about power", rot: "-0.5deg" },
 ];
 
 /* Shakespeare wrote plays, so on the film/TV tab that door led nowhere useful;
    it is left out there. The other four are themes that hold for either tab. */
 
 export function StartingPoints({ mode = "plays" }: { mode?: "plays" | "film_tv" }) {
+  const t = useT();
   return (
-    <section aria-label="Ways to start" className="mt-8">
+    <section aria-label={t("appMonologueStart.ariaLabel")} className="mt-8">
       <p className="t-dir text-center" style={{ color: "var(--t-muted-dark-2)" }}>
-        (or start somewhere.)
+        {t("appMonologueStart.direction")}
       </p>
 
       <div className="t-doors mt-4">
@@ -48,7 +50,7 @@ export function StartingPoints({ mode = "plays" }: { mode?: "plays" | "film_tv" 
           >
             <Sketch size={28} delay={0.1 + i * 0.08} className="t-door__glyph" />
             <span className="t-door__label font-bold" style={{ color: "var(--t-text)" }}>
-              {label}
+              {t(label)}
             </span>
             <span
               className="t-door__query"

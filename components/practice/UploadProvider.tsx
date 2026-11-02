@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   createContext,
   useCallback,
   useContext,
@@ -29,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { BringInScriptDialog, SCRIPT_ACCEPT } from "@/components/practice/BringInScriptDialog";
-import { UploadStage } from "@/components/practice/UploadStage";
+import { UploadStage, phaseText } from "@/components/practice/UploadStage";
 import { ScenePicker, type ScannedScene } from "@/components/practice/ScenePicker";
 import { API_URL } from "@/lib/api";
 import { clearPending, loadPending, savePending } from "@/lib/pending-upload";
@@ -45,6 +46,7 @@ import {
 import { useSubscription, useUsageLimits } from "@/hooks/useSubscription";
 import { useMySharing, useShareWithClass } from "@/hooks/useClassShelf";
 import { useAuth } from "@/lib/auth";
+import { useLocale, useT } from "@/lib/i18n";
 
 // Known backend progress prefixes and their friendly group labels.
 const STEP_GROUPS: { match: string; label: string }[] = [
@@ -187,6 +189,8 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const { usage } = useUsageLimits();
   const { subscription } = useSubscription();
   const { user } = useAuth();
+  const t = useT();
+  const locale = useLocale();
 
   // Unknown tier reads as free: offering a picker that promises more than the
   // server will build is worse than offering less and being right.
@@ -235,7 +239,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const [doneInfo, setDoneInfo] = useState<{ id: number; scenes: number } | null>(null);
 
   const isBusy = scanning || uploadingFile || scanResult !== null;
-  const phaseLabel = scanning ? "Scanning…" : uploadingFile ? "Uploading…" : null;
+  const phaseLabel = scanning ? t("appPracticeUpload.scanning") : uploadingFile ? t("appPracticeUploadButton.uploading") : null;
 
   const mutateScripts = useCallback(
     () => invalidateShelf(queryClient),
@@ -342,7 +346,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       try {
         const token = await getToken();
         if (!token) {
-          toast.error("Please sign in again to upload.");
+          toast.error(t("appPracticeUpload.signInAgain"));
           return;
         }
 
@@ -365,12 +369,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             return;
           }
           throw new Error(
-            typeof detail === "string" ? detail : detail?.message || "Upload failed",
+            typeof detail === "string" ? detail : detail?.message || t("appPracticeUpload.failed"),
           );
         }
 
         const reader = response.body?.getReader();
-        if (!reader) throw new Error("No response body");
+        if (!reader) throw new Error(t("appPracticeUpload.failed"));
 
         const decoder = new TextDecoder();
         let buffer = "";
@@ -400,9 +404,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
               } else if (event.type === "done") {
                 setExtractionDone(true);
                 const result = event.data;
-                toast.success(
-                  `Script uploaded! Extracted ${result.num_scenes_extracted} scenes.`,
-                );
+                toast.success(t("appPracticeUpload.uploaded", { n: result.num_scenes_extracted }));
                 mutateScripts();
                 queryClient.setQueryData(["scripts", result.id], result);
                 reader.cancel();
@@ -419,7 +421,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                 }
                 return;
               } else if (event.type === "error") {
-                throw new Error(event.detail || "Extraction failed");
+                throw new Error(event.detail || t("appPracticeUpload.extractionFailed"));
               }
             } catch (parseErr) {
               const m = parseErr instanceof Error ? parseErr.message : "";
@@ -430,9 +432,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       } catch (err: unknown) {
         const name = err instanceof Error ? err.name : "";
         if (name === "AbortError") {
-          toast.info("Upload cancelled");
+          toast.info(t("appPracticeUpload.cancelled"));
         } else {
-          const message = err instanceof Error ? err.message : "Failed to upload script";
+          const message = err instanceof Error ? err.message : t("appPracticeUpload.uploadScriptFailed");
           console.error("Upload error:", err);
           toast.error(message);
         }
@@ -442,7 +444,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         setExpanded(false);
       }
     },
-    [getToken, mutateScripts, queryClient, router],
+    [getToken, mutateScripts, queryClient, router, t],
   );
 
   const startBackground = useCallback(
@@ -465,7 +467,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
       try {
         const token = await getToken();
-        if (!token) throw new Error("Please sign in again to upload.");
+        if (!token) throw new Error(t("appPracticeUpload.signInAgain"));
 
         const form = new FormData();
         form.append("file", file);
@@ -483,7 +485,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             setShowUpgradeModal(true);
             return;
           }
-          throw new Error(typeof err.detail === "string" ? err.detail : "Upload failed");
+          throw new Error(typeof err.detail === "string" ? err.detail : t("appPracticeUpload.failed"));
         }
 
         const script = await res.json();
@@ -493,26 +495,26 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         // connection nobody is holding.
         cancelBackgroundRef.current = async () => {
           try {
-            const t = await getToken();
+            const tok = await getToken();
             await fetch(`${API_URL}/api/scripts/${script.id}/cancel-extraction`, {
               method: "POST",
-              headers: { Authorization: `Bearer ${t}` },
+              headers: { Authorization: `Bearer ${tok}` },
             });
             await invalidateShelf(queryClient);
-            toast.info("Stopped reading it. Nothing was saved.");
+            toast.info(t("appPracticeUpload.stoppedReading"));
           } catch {
-            toast.error("Could not stop it. Delete the script from your shelf instead.");
+            toast.error(t("appPracticeUpload.couldNotStop"));
           }
         };
 
         await invalidateShelf(queryClient);
-        toast.success("Reading your script. Carry on, it'll be waiting on your shelf.");
+        toast.success(t("appPracticeUpload.readingInBackground"));
         router.push(`/practice?script=${script.id}`);
       } catch (e: unknown) {
         if (e instanceof Error && e.name === "AbortError") {
-          toast.info("Upload cancelled");
+          toast.info(t("appPracticeUpload.cancelled"));
         } else {
-          toast.error(e instanceof Error ? e.message : "Upload failed");
+          toast.error(e instanceof Error ? e.message : t("appPracticeUpload.failed"));
         }
       } finally {
         abortControllerRef.current = null;
@@ -520,7 +522,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         setProgressSteps([]);
       }
     },
-    [getToken, queryClient, router],
+    [getToken, queryClient, router, t],
   );
 
   /* A teacher who brought in a folder is asked once whether the class gets it,
@@ -532,25 +534,25 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       if (!sharing?.can_share) return;
       // Stays until answered: at 20 seconds it was gone under the room's own
       // tour before a teacher could reach it (live test, 2026-10-28).
-      toast(`Share these ${ids.length} with your class?`, {
+      toast(t("appPracticeUpload.shareFolderAsk", { n: ids.length }), {
         duration: Infinity,
         closeButton: true,
-        cancel: { label: "Not now", onClick: () => undefined },
+        cancel: { label: t("appPracticeShare.notNow"), onClick: () => undefined },
         action: {
-          label: "Share",
+          label: t("appPracticeShare.share"),
           onClick: () =>
             shareWithClass.mutate(
               { scriptIds: ids, on: true },
               {
                 onSuccess: (r) =>
-                  toast.success(`Shared ${r.changed} with your class. Students see each one once it's read.`),
-                onError: () => toast.error("Couldn't share them. Try the switch on each script."),
+                  toast.success(t("appPracticeUpload.sharedFolder", { n: r.changed })),
+                onError: () => toast.error(t("appPracticeUpload.shareFolderFailed")),
               },
             ),
         },
       });
     },
-    [sharing?.can_share, shareWithClass],
+    [sharing?.can_share, shareWithClass, t],
   );
 
   /**
@@ -573,13 +575,13 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       const failed: string[] = [];
       let sent = 0;
       let stopped = false;
-      const label = () => `${taken.length + failed.length} of ${files.length} files`;
+      const label = () => t("appPracticeUpload.filesProgress", { n: taken.length + failed.length, total: files.length });
       setFileName(label());
       setProgressSteps([{ group: "Taking your files", detail: label() }]);
 
       const send = async (file: File) => {
         const token = await getToken();
-        if (!token) throw new Error("Please sign in again to upload.");
+        if (!token) throw new Error(t("appPracticeUpload.signInAgain"));
         const form = new FormData();
         form.append("file", file);
         form.append("mode", "full");
@@ -595,7 +597,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             stopped = true;
             setShowUpgradeModal(true);
           }
-          throw new Error(typeof err.detail === "string" ? err.detail : "Upload failed");
+          throw new Error(typeof err.detail === "string" ? err.detail : t("appPracticeUpload.failed"));
         }
         return (await res.json()) as { id: number };
       };
@@ -618,15 +620,20 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         await Promise.all(Array.from({ length: Math.min(AT_ONCE, files.length) }, worker));
         await invalidateShelf(queryClient);
         if (controller.signal.aborted) {
-          toast.info(`Stopped. ${taken.length} of ${files.length} files were taken.`);
+          toast.info(t("appPracticeUpload.filesStopped", { n: taken.length, total: files.length }));
         } else if (taken.length > 0) {
           toast.success(
-            `Took ${taken.length} ${taken.length === 1 ? "file" : "files"}. They're being read now and will fill your shelf as they finish.`,
+            t(taken.length === 1 ? "appPracticeUpload.filesTakenOne" : "appPracticeUpload.filesTakenMany", {
+              n: taken.length,
+            }),
           );
         }
         if (failed.length > 0 && !stopped) {
           toast.error(
-            `${failed.length} couldn't be read: ${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""}`,
+            t("appPracticeUpload.filesFailed", {
+              n: failed.length,
+              names: `${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""}`,
+            }),
           );
         }
         if (taken.length > 0) onManyTaken?.(taken);
@@ -636,7 +643,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         setProgressSteps([]);
       }
     },
-    [getToken, queryClient, onManyTaken],
+    [getToken, queryClient, onManyTaken, t],
   );
 
   const start = useCallback(
@@ -646,7 +653,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       // Validation
       if (scripts.some((s) => s.original_filename === file.name)) {
         toast.error(
-          "You already have a script with this filename. Delete it from your scripts first, or upload with a different name.",
+          t("appPracticeUpload.duplicateName"),
         );
         return;
       }
@@ -654,14 +661,14 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       if (!ext || !["pdf", "docx", "txt", "text"].includes(ext)) {
         toast.error(
           ext === "doc"
-            ? "Older .doc files can't be read. Save it as .docx or PDF and try again."
-            : "Only PDF, Word (.docx) and TXT files are supported",
+            ? t("appPracticeUpload.oldDoc")
+            : t("appPracticeUpload.badType"),
         );
         return;
       }
       const MAX_SIZE_MB = 15;
       if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-        toast.error(`File too large (max ${MAX_SIZE_MB}MB)`);
+        toast.error(t("appPracticeUpload.tooLarge", { n: MAX_SIZE_MB }));
         return;
       }
 
@@ -675,7 +682,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       try {
         const token = await getToken();
         if (!token) {
-          toast.error("Please sign in again to upload.");
+          toast.error(t("appPracticeUpload.signInAgain"));
           setScanning(false);
           return;
         }
@@ -695,7 +702,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             setShowUpgradeModal(true);
             return;
           }
-          throw new Error(typeof err.detail === "string" ? err.detail : "Scan failed");
+          throw new Error(typeof err.detail === "string" ? err.detail : t("appPracticeUpload.scanFailed"));
         }
 
         const scan: ScanResult = await scanRes.json();
@@ -720,12 +727,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         await startExtraction(file, "full");
       } catch (err: unknown) {
         setScanning(false);
-        const message = err instanceof Error ? err.message : "Failed to scan script";
+        const message = err instanceof Error ? err.message : t("appPracticeUpload.scanScriptFailed");
         console.error("Scan error:", err);
         toast.error(message);
       }
     },
-    [isBusy, scripts, getToken, startExtraction, startBackground],
+    [isBusy, scripts, getToken, startExtraction, startBackground, t],
   );
 
   /**
@@ -793,10 +800,10 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         setMore({ script, map, file: kept, askFile: false });
       } catch (e) {
         setMore(null);
-        toast.error(e instanceof Error ? e.message : "Couldn't read the script");
+        toast.error(e instanceof Error ? e.message : t("appPracticeUpload.readScriptFailed"));
       }
     },
-    [isBusy],
+    [isBusy, t],
   );
 
   /** The opened script's map, for a script that needs its file once. */
@@ -812,7 +819,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setMore({ script, map: null, file, askFile: false, inline });
     try {
       const map = await fetchSceneMap(script.id, file);
-      if (map.needs_file) throw new Error("Couldn't read that file");
+      if (map.needs_file) throw new Error(t("appPracticeUpload.readFileFailed"));
       if (inline) {
         // Back to the page: the map draws itself from the cache, and the file
         // rides along with every read and build until the text is stored.
@@ -824,7 +831,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       setMore({ script, map, file, askFile: false });
     } catch (e) {
       setMore({ script, map: null, file: null, askFile: true, inline });
-      toast.error(e instanceof Error ? e.message : "Couldn't read that file");
+      toast.error(e instanceof Error ? e.message : t("appPracticeUpload.readFileFailed"));
     }
   };
 
@@ -851,7 +858,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   ): Promise<boolean> {
     try {
       const token = await getToken();
-      if (!token) throw new Error("Please sign in again.");
+      if (!token) throw new Error(t("appPracticeUpload.signInAgainShort"));
       const form = new FormData();
       form.append("scenes", JSON.stringify(picks));
       if (file) form.append("file", file);
@@ -870,7 +877,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           setMore({ script, map: null, file: null, askFile: true, inline });
           return false;
         }
-        throw new Error(typeof err.detail === "string" ? err.detail : "Couldn't add those scenes");
+        throw new Error(typeof err.detail === "string" ? err.detail : t("appPracticeUpload.addFailed"));
       }
       await queryClient.invalidateQueries({ queryKey: ["scripts", script.id] });
       await invalidateShelf(queryClient);
@@ -879,12 +886,14 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       // that is the page narrating itself.
       if (!inline) {
         toast.success(
-          `Building ${picks.length} more ${picks.length === 1 ? "scene" : "scenes"}. They'll appear here.`,
+          t(picks.length === 1 ? "appPracticeUpload.buildingMoreOne" : "appPracticeUpload.buildingMoreMany", {
+            n: picks.length,
+          }),
         );
       }
       return true;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't add those scenes");
+      toast.error(e instanceof Error ? e.message : t("appPracticeUpload.addFailed"));
       return false;
     }
   }
@@ -896,7 +905,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setResumable(null);
   };
 
-  const latestStep = progressSteps[progressSteps.length - 1]?.group ?? "Preparing…";
+  const latestStep = phaseText(t, locale, progressSteps[progressSteps.length - 1]?.group ?? "Preparing…");
   const showBanner = scanning || uploadingFile || doneInfo !== null;
 
   return (
@@ -987,7 +996,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                             <span
                               className={`text-[13px] leading-snug ${isCompleted ? "text-muted-foreground/70" : "text-foreground"}`}
                             >
-                              {step.group}
+                              {phaseText(t, locale, step.group)}
                               {isLatest && (
                                 <motion.span
                                   animate={{ opacity: [0.2, 1, 0.2] }}
@@ -1017,21 +1026,23 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={() => setMinimized(false)}
-                  aria-label="Back to the full view"
+                  aria-label={t("appPracticeUpload.backToFull")}
                   className="min-w-0 flex-1 text-left"
                 >
                   <p className="text-sm font-medium text-foreground truncate">
                     {doneInfo
-                      ? "Script ready"
+                      ? t("appPracticeUpload.ready")
                       : scanning
-                        ? "Scanning script…"
-                        : fileName || "Uploading…"}
+                        ? t("appPracticeUpload.scanningScript")
+                        : fileName || t("appPracticeUploadButton.uploading")}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {doneInfo
-                      ? `Extracted ${doneInfo.scenes} scene${doneInfo.scenes !== 1 ? "s" : ""}`
+                      ? t(doneInfo.scenes === 1 ? "appPracticeUpload.extractedOne" : "appPracticeUpload.extractedMany", {
+                          n: doneInfo.scenes,
+                        })
                       : scanning
-                        ? "Checking length and structure"
+                        ? t("appPracticeUpload.checking")
                         : latestStep}
                   </p>
                 </button>
@@ -1046,14 +1057,14 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                     }}
                     className="shrink-0 inline-flex items-center gap-1 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground px-3 h-8 text-xs font-medium transition-colors"
                   >
-                    View
+                    {t("appPracticeUpload.view")}
                     <IconArrowRight className="h-3.5 w-3.5" />
                   </button>
                 ) : uploadingFile ? (
                   <>
                     <button
                       type="button"
-                      aria-label={expanded ? "Hide details" : "Show details"}
+                      aria-label={expanded ? t("appPracticeUpload.hideDetails") : t("appPracticeUpload.showDetails")}
                       onClick={() => setExpanded((v) => !v)}
                       className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     >
@@ -1067,7 +1078,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                       className="shrink-0 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <IconX className="h-3.5 w-3.5" />
-                      Cancel
+                      {t("appPracticeEditDetails.cancel")}
                     </button>
                   </>
                 ) : null}
@@ -1095,7 +1106,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                   {resumable.file.name.replace(/\.[^.]+$/, "")}
                 </span>
                 <span className="block text-[12px] text-paper-muted">
-                  {resumable.scan.scenes?.length ?? 0} scenes, none built yet
+                  {t("appPracticeUpload.resumable", { n: resumable.scan.scenes?.length ?? 0 })}
                 </span>
               </span>
               <button
@@ -1103,12 +1114,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                 onClick={resumePicking}
                 className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-all hover:brightness-110"
               >
-                Choose scenes
+                {t("appPracticeUpload.chooseScenes")}
               </button>
               <button
                 type="button"
                 onClick={discardPending}
-                aria-label="Discard this script"
+                aria-label={t("appPracticeUpload.discard")}
                 className="shrink-0 rounded p-1 text-paper-muted transition-colors hover:text-paper-ink"
               >
                 <IconX className="h-4 w-4" />
@@ -1130,7 +1141,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       >
         <DialogContent className="w-full max-w-2xl gap-0 overflow-hidden p-0">
           <DialogHeader className="sr-only">
-            <DialogTitle>Choose which scenes to build</DialogTitle>
+            <DialogTitle>{t("appPracticeUpload.pickTitle")}</DialogTitle>
           </DialogHeader>
           {scanResult?.scenes && (
             <ScenePicker
@@ -1163,7 +1174,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       >
         <DialogContent className="w-full max-w-2xl gap-0 overflow-hidden p-0">
           <DialogHeader className="sr-only">
-            <DialogTitle>Choose more scenes</DialogTitle>
+            <DialogTitle>{t("appPracticeUpload.moreTitle")}</DialogTitle>
           </DialogHeader>
           {more?.map?.scan.scenes && (
             <ScenePicker
@@ -1192,14 +1203,23 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       >
         <DialogContent className="w-full max-w-md">
           <DialogHeader>
-            <DialogTitle>One more look at the file</DialogTitle>
+            <DialogTitle>{t("appPracticeUpload.askFileTitle")}</DialogTitle>
           </DialogHeader>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            I only kept the part of <span className="text-foreground">{more?.script.title}</span> you
-            built the first time. Choose {more?.script.original_filename ? (
-              <span className="text-foreground">{more.script.original_filename}</span>
-            ) : "the same file"}{" "}
-            again and I&apos;ll show you every scene. You only have to do this once.
+            {(() => {
+              /* Two names dropped into one sentence, wherever Turkish wants them. */
+              const slots: Record<string, React.ReactNode> = {
+                title: <span className="text-foreground">{more?.script.title}</span>,
+                file: more?.script.original_filename ? (
+                  <span className="text-foreground">{more.script.original_filename}</span>
+                ) : (
+                  t("appPracticeUpload.sameFile")
+                ),
+              };
+              return t("appPracticeUpload.askFileBody")
+                .split(/\{(\w+)\}/)
+                .map((part, i) => (i % 2 === 1 ? <Fragment key={i}>{slots[part]}</Fragment> : part));
+            })()}
           </p>
           <input
             ref={moreFileRef}
@@ -1213,7 +1233,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             onClick={() => moreFileRef.current?.click()}
             className="h-11 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground transition-all hover:brightness-110"
           >
-            Choose the file
+            {t("appPracticeUpload.chooseFile")}
           </button>
         </DialogContent>
       </Dialog>
@@ -1230,7 +1250,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           }
         }}
         feature="Script uploads"
-        message="Upload and manage scripts with a Plus or Pro plan. Upgrade to get started."
+        message={t("appPracticeUpload.upgradeMessage")}
       />
     </UploadContext.Provider>
   );

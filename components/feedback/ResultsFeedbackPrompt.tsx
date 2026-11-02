@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { IconThumbUp, IconThumbDown } from "@tabler/icons-react";
 import api from "@/lib/api";
+import { useT } from "@/lib/i18n";
 
 const VOTE_STORAGE_PREFIX = "feedback_voted_";
 const IMPRESSION_STORAGE_PREFIX = "feedback_impression_";
@@ -47,6 +48,7 @@ export function ResultsFeedbackPrompt({
   const [reasonForCount, setReasonForCount] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const t = useT();
 
   // Record that the prompt was shown, once per result set. Pairs with the
   // vote below so the response rate is computable: without the denominator,
@@ -102,7 +104,7 @@ export function ResultsFeedbackPrompt({
 
   const handled = handledCounts[resultsViewCount] ?? hasStoredVote(context, resultsViewCount);
   if (handled) {
-    return <p className="py-1 text-center text-xs text-muted-foreground/50">Thanks</p>;
+    return <p className="py-1 text-center text-xs text-muted-foreground/50">{t("appShellFeedback.thanks")}</p>;
   }
 
   // After a thumbs-down: ask what they were hoping to find before recording.
@@ -110,7 +112,7 @@ export function ResultsFeedbackPrompt({
     return (
       <div className="mx-auto flex max-w-md flex-col gap-2 py-2">
         <label htmlFor="feedback-reason" className="text-center text-xs text-muted-foreground/80">
-          What were you hoping to find?
+          {t("appShellFeedback.hoping")}
         </label>
         <textarea
           id="feedback-reason"
@@ -121,7 +123,7 @@ export function ResultsFeedbackPrompt({
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submitNegative();
           }}
-          placeholder="e.g. a contemporary comedic piece under 2 minutes"
+          placeholder={t("appShellFeedback.hopingPlaceholder")}
           className="w-full resize-none rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40"
         />
         <div className="flex items-center justify-center gap-2">
@@ -130,7 +132,7 @@ export function ResultsFeedbackPrompt({
             onClick={cancelReason}
             className="rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
-            Cancel
+            {t("appShellFeedback.cancel")}
           </button>
           <button
             type="button"
@@ -138,7 +140,7 @@ export function ResultsFeedbackPrompt({
             disabled={!reason.trim() || submitting}
             className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
           >
-            {submitting ? "Sending…" : "Send"}
+            {submitting ? t("appShellFeedback.sending") : t("appShellFeedback.send")}
           </button>
         </div>
       </div>
@@ -155,11 +157,11 @@ export function ResultsFeedbackPrompt({
   // targets are big enough to hit on a phone.
   return (
     <div className="flex items-center justify-center gap-3 py-1 text-sm text-muted-foreground">
-      <span>Did this find what you needed?</span>
+      <span>{t("appShellFeedback.question")}</span>
       <button
         type="button"
         onClick={submitPositive}
-        aria-label="Yes, helpful"
+        aria-label={t("appShellFeedback.yes")}
         className="rounded-md p-2 transition-colors hover:bg-muted hover:text-foreground"
       >
         <IconThumbUp className="h-4 w-4" />
@@ -170,7 +172,7 @@ export function ResultsFeedbackPrompt({
           setReason("");
           setReasonForCount(resultsViewCount);
         }}
-        aria-label="No, not helpful"
+        aria-label={t("appShellFeedback.no")}
         className="rounded-md p-2 transition-colors hover:bg-muted hover:text-foreground"
       >
         <IconThumbDown className="h-4 w-4" />

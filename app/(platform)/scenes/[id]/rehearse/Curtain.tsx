@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { MonologuePaywallModal } from '@/components/monologue-work/MonologuePaywallModal';
 import { sameCharacter, type ScenePayload } from '@/lib/rehearsal/contract';
 import { autoCommits, initialVoices, savedPart } from '@/lib/rehearsal/prefs';
+import { useT } from '@/lib/i18n';
 import { getCharacterNotes, getCharacterVoices, getMyRoles, setCharacterNote, setCharacterVoices } from '@/lib/scenePrefs';
 
 interface Props {
@@ -34,6 +35,7 @@ interface Props {
  * through the ordinary cache when the run opens.
  */
 export function Curtain({ payload, guided, chosen, canBegin, error, upgradeUrl, onChoose, onBegin }: Props) {
+  const t = useT();
   const [voices, setVoices] = useState<Record<string, string>>(
     () => initialVoices(payload, getCharacterVoices(payload.scene.id)));
   const [notes, setNotes] = useState<Record<string, string>>(() => getCharacterNotes(payload.scene.id));
@@ -83,12 +85,12 @@ export function Curtain({ payload, guided, chosen, canBegin, error, upgradeUrl, 
                   className="flex min-h-11 w-full items-center text-left text-xl" aria-pressed={isMine || preselected}>
                   {c}
                 </button>
-                {isMine ? <p className="r-soft text-sm">You</p> : !preselected && payload.voices.length > 0 && (
+                {isMine ? <p className="r-soft text-sm">{t('appScenesRehearse.youCapital')}</p> : !preselected && payload.voices.length > 0 && (
                   <>
                     <div className="flex items-center gap-1">
                       <label className="r-soft flex min-h-11 items-center gap-1 text-sm">
-                        read by
-                        <select value={voices[c] ?? ''} disabled={locked} aria-label={`Voice for ${c}`}
+                        {t('appScenesRehearse.readBy')}
+                        <select value={voices[c] ?? ''} disabled={locked} aria-label={t('appScenesRehearse.voiceFor', { character: c })}
                           onChange={e => chooseVoice(c, e.target.value)}
                           className="min-h-11 bg-transparent underline underline-offset-4">
                           {payload.voices.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
@@ -98,14 +100,14 @@ export function Curtain({ payload, guided, chosen, canBegin, error, upgradeUrl, 
                     </div>
                     {canDirect ? (
                       <input type="text" value={notes[c] ?? ''} disabled={locked} maxLength={payload.note_max ?? 120}
-                        onChange={e => writeNote(c, e.target.value)} aria-label={`A note for ${c}`}
-                        placeholder={`A note for ${c}, like "meaner"`}
+                        onChange={e => writeNote(c, e.target.value)} aria-label={t('appScenesRehearse.noteFor', { character: c })}
+                        placeholder={t('appScenesRehearse.notePlaceholder', { character: c })}
                         className="r-soft min-h-11 w-full border-0 border-b border-current/30 bg-transparent text-sm outline-none placeholder:opacity-60" />
                     ) : (
                       <button type="button" disabled={locked} onClick={() => setAsking(true)}
                         className="r-soft flex min-h-11 items-center text-left text-sm" aria-disabled>
-                        A note for {c}, like &quot;meaner&quot;
-                        <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-primary">Plus</span>
+                        {t('appScenesRehearse.notePlaceholder', { character: c })}
+                        <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-primary">{t('appScenesRehearse.plus')}</span>
                       </button>
                     )}
                   </>
@@ -119,26 +121,26 @@ export function Curtain({ payload, guided, chosen, canBegin, error, upgradeUrl, 
       {resume && starting && !locked && (
         <div className="mt-8 flex flex-col items-start">
           <button type="button" className="min-h-11 text-lg" onClick={() => commit(starting, { runId: resume.run_id, lineIndex: resume.line_index })}>
-            Pick up at line {resume.line_index + 1}
+            {t('appScenesRehearse.pickUp', { n: resume.line_index + 1 })}
           </button>
-          <button type="button" className="min-h-11 text-lg" onClick={() => commit(starting)}>From the top</button>
+          <button type="button" className="min-h-11 text-lg" onClick={() => commit(starting)}>{t('appScenesRehearse.fromTop')}</button>
         </div>
       )}
 
       {error && <p className="mt-8 text-sm">{error}</p>}
       {error && upgradeUrl && (
-        <Link href={upgradeUrl} className="inline-flex min-h-11 items-center self-start text-sm underline underline-offset-4">See plans</Link>
+        <Link href={upgradeUrl} className="inline-flex min-h-11 items-center self-start text-sm underline underline-offset-4">{t('appScenesRehearse.seePlans')}</Link>
       )}
 
       <button type="button" className="r-begin mt-12 min-h-11 self-start text-2xl" data-ready={canBegin}
-        disabled={!canBegin} onClick={onBegin}>Begin</button>
+        disabled={!canBegin} onClick={onBegin}>{t('appScenesRehearse.begin')}</button>
 
       <MonologuePaywallModal
         open={asking}
         onOpenChange={setAsking}
         feature="partner_direction"
-        title="Directing your partner is a Plus thing."
-        description="With Plus you can give each part a note, like meaner, slower or drunker, and the partner reads it that way. Free to start, card on file, cancel before it renews."
+        title={t('appScenesRehearse.directTitle')}
+        description={t('appScenesRehearse.directBody')}
       />
     </section>
   );
@@ -147,6 +149,7 @@ export function Curtain({ payload, guided, chosen, canBegin, error, upgradeUrl, 
 /** ▶ a few seconds of a voice. One element at a time: a second tap, or another voice, stops the first. */
 let playing: HTMLAudioElement | null = null;
 function VoiceSample({ src, name }: { src: string | null; name: string }) {
+  const t = useT();
   const [on, setOn] = useState(false);
   if (!src) return null;
   const toggle = () => {
@@ -159,7 +162,7 @@ function VoiceSample({ src, name }: { src: string | null; name: string }) {
     a.play().catch(() => setOn(false));
   };
   return (
-    <button type="button" onClick={toggle} aria-label={on ? `Stop the voice for ${name}` : `Hear the voice for ${name}`}
+    <button type="button" onClick={toggle} aria-label={on ? t('appScenesRehearse.stopVoice', { character: name }) : t('appScenesRehearse.hearVoice', { character: name })}
       className="r-soft inline-flex min-h-11 min-w-11 items-center justify-center text-sm">
       {on ? '■' : '▶'}
     </button>

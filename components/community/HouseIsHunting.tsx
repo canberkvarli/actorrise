@@ -5,6 +5,8 @@ import { useCallboardPulse, useHouseIsHunting } from "@/hooks/useCallboardPulse"
 import { LiveDot } from "@/components/community/Whisper";
 import { trackWhisperClicked, trackWhisperShown, type WhisperSurface } from "@/lib/analytics";
 import { useEffect, useRef } from "react";
+import { useLocale, useT } from "@/lib/i18n";
+import { feedAge, feedWord } from "@/components/community/eventRender";
 
 /**
  * What the house is hunting for, on the blank search page.
@@ -35,6 +37,8 @@ export function HouseIsHunting({
 } = {}) {
   const { actorCount, window: feedWindow, ready } = useCallboardPulse();
   const tags = useHouseIsHunting(8);
+  const t = useT();
+  const locale = useLocale();
 
   /* Hooks before the early return, and the impression only counts once the
      line is actually on screen — `ready` gates the render, so firing on mount
@@ -72,13 +76,16 @@ export function HouseIsHunting({
       >
         <LiveDot />
         <span>
-          {lead ?? `${actorCount} in the house ${feedWindow === "today" ? "today" : "this week"}`}
+          {lead ??
+            t(feedWindow === "today" ? "appShellCallboard.inTheHouseToday" : "appShellCallboard.inTheHouseWeek", {
+              n: actorCount,
+            })}
         </span>
       </Link>
       <span aria-hidden className="text-muted-foreground/40">
         ·
       </span>
-      <span className="text-muted-foreground/80">hunting for</span>
+      <span className="text-muted-foreground/80">{t("appShellCallboard.huntingFor")}</span>
       {shown.map(([tag], i) => (
         <span key={tag} className="inline-flex items-center gap-1.5">
           {i > 0 && (
@@ -92,7 +99,7 @@ export function HouseIsHunting({
             className="capitalize underline underline-offset-4 transition-colors hover:!text-[var(--acc)]"
             style={{ color: "var(--t-text)" }}
           >
-            {tag}
+            {feedAge(feedWord(tag, locale), locale)}
           </Link>
         </span>
       ))}

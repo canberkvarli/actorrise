@@ -4,6 +4,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { IconBookmark, IconBookmarkOff, IconX } from "@tabler/icons-react";
 import api from "@/lib/api";
+import { translate, useT } from "@/lib/i18n";
+import { detectLocale, type Locale } from "@/lib/i18n/locale";
 
 const BOOKMARK_TOAST_CLASS = "actorrise-toast-bookmark";
 const DEFAULT_DURATION_MS = 5000;
@@ -21,12 +23,31 @@ export interface ToastBookmarkOptions {
  * Show the redesigned collection toast (added to / removed from collection).
  * Optionally show Undo, longer duration, and a content label (Monologue, Movie, TV show).
  */
+/* toastBookmark is a plain function, called from event handlers, so it cannot
+   ask useLocale(). It reads the same signals the i18n store does: the explicit
+   choice in the cookie first, then the browser. */
+function browserLocale(): Locale {
+  if (typeof document === "undefined") return "en";
+  let timeZone: string | null = null;
+  try {
+    timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    /* no timezone signal */
+  }
+  return detectLocale({
+    cookie: document.cookie,
+    languages: navigator.languages?.length ? navigator.languages : [navigator.language],
+    timeZone,
+  });
+}
+
 export function toastBookmark(added: boolean, options?: ToastBookmarkOptions) {
   const { duration = options?.onUndo ? DEFAULT_DURATION_MS : undefined, onUndo, label } = options ?? {};
+  const locale = browserLocale();
   const title = label
-    ? (added ? `${label} added to collection` : `${label} removed from collection`)
-    : (added ? "Added to collection" : "Removed from collection");
-  const description = added ? "Find it in your collection" : undefined;
+    ? translate(locale, added ? "appShellToast.labelAdded" : "appShellToast.labelRemoved", { label })
+    : translate(locale, added ? "appShellToast.added" : "appShellToast.removed");
+  const description = added ? translate(locale, "appShellToast.findIt") : undefined;
   const icon = added ? (
     <IconBookmark className="h-4 w-4 fill-current" />
   ) : (
@@ -39,7 +60,7 @@ export function toastBookmark(added: boolean, options?: ToastBookmarkOptions) {
     ...(onUndo !== undefined && {
       duration: duration ?? DEFAULT_DURATION_MS,
       action: {
-        label: "Undo",
+        label: translate(locale, "appShellToast.undo"),
         onClick: () => onUndo(),
       },
     }),
@@ -54,6 +75,7 @@ function ScriptFeedbackToast({ toastId, source, title }: { toastId: string | num
   const [showComment, setShowComment] = useState(false);
   const [comment, setComment] = useState("");
   const [sent, setSent] = useState(false);
+  const t = useT();
 
   const submit = (rating: "positive" | "negative", text?: string) => {
     api
@@ -70,7 +92,7 @@ function ScriptFeedbackToast({ toastId, source, title }: { toastId: string | num
   if (sent) {
     return (
       <div className="w-[340px] rounded-lg border border-border bg-background p-4 shadow-lg text-sm text-foreground">
-        Thanks for the feedback!
+        {t("appShellToast.scriptThanks")}
       </div>
     );
   }
@@ -85,7 +107,9 @@ function ScriptFeedbackToast({ toastId, source, title }: { toastId: string | num
         <IconX className="h-3.5 w-3.5" />
       </button>
       <p className="font-medium pr-6 mb-3">
-        Did you find the script for <span className="text-primary">{title}</span>?
+        {t("appShellToast.scriptQuestionBefore")}
+        <span className="text-primary">{title}</span>
+        {t("appShellToast.scriptQuestionAfter")}
       </p>
       {!showComment ? (
         <div className="flex items-center gap-2">
@@ -94,14 +118,14 @@ function ScriptFeedbackToast({ toastId, source, title }: { toastId: string | num
             onClick={() => submit("positive")}
             className="px-3 py-1.5 rounded-md text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
           >
-            Yes
+            {t("appShellToast.yes")}
           </button>
           <button
             type="button"
             onClick={() => setShowComment(true)}
             className="px-3 py-1.5 rounded-md text-xs font-medium border border-border hover:bg-muted transition-colors"
           >
-            No
+            {t("appShellToast.no")}
           </button>
         </div>
       ) : (
@@ -109,7 +133,7 @@ function ScriptFeedbackToast({ toastId, source, title }: { toastId: string | num
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="What went wrong? (optional)"
+            placeholder={t("appShellToast.whatWentWrong")}
             rows={2}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
           />
@@ -118,7 +142,7 @@ function ScriptFeedbackToast({ toastId, source, title }: { toastId: string | num
             onClick={() => submit("negative", comment || undefined)}
             className="px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            Send
+            {t("appShellToast.send")}
           </button>
         </div>
       )}

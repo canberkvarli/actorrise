@@ -7,7 +7,9 @@ import { IconArrowRight, IconChevronDown, IconFileSearch, IconLoader2, IconX } f
 
 import { cn } from "@/lib/utils";
 import { entrance } from "@/lib/motion";
-import { formatSceneDuration, type Scene } from "@/lib/scenes";
+import type { Scene } from "@/lib/scenes";
+import { useT } from "@/lib/i18n";
+import { sceneDurationLabel } from "@/components/practice/practiceLabels";
 import {
   tickRoom,
   tickableRows,
@@ -68,6 +70,7 @@ export function ScriptMap({
   onUpgrade,
   shareFor,
 }: ScriptMapProps) {
+  const t = useT();
   const ready = map && !map.needs_file ? map : null;
   const needsFile = canManage && map?.needs_file === true;
 
@@ -120,11 +123,11 @@ export function ScriptMap({
   let firstOpenMarked = false;
 
   return (
-    <section className="t-map" aria-label="Scenes in this script">
+    <section className="t-map" aria-label={t("appPracticeMap.label")}>
       {isProcessing && scenes.length > 0 && (
         <p className="t-map__note">
           <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
-          Adding the scenes you picked. They&apos;ll appear here.
+          {t("appPracticeMap.adding")}
         </p>
       )}
 
@@ -132,7 +135,7 @@ export function ScriptMap({
           more script than is built. */}
       {!showHeadings && ready && totalRows > totalBuilt && (
         <p className="t-map__count">
-          {totalBuilt} of {totalRows} built
+          {t("appPracticeMap.builtOf", { n: totalBuilt, total: totalRows })}
         </p>
       )}
 
@@ -159,10 +162,10 @@ export function ScriptMap({
                   data-open={open}
                   aria-hidden
                 />
-                <span className="t-map__act-name">{group.act ?? "Scenes"}</span>
+                <span className="t-map__act-name">{group.act ?? t("appPracticeMap.scenes")}</span>
                 {ready && (
                   <span className="t-map__act-count">
-                    {group.builtCount} of {group.rows.length} built
+                    {t("appPracticeMap.builtOf", { n: group.builtCount, total: group.rows.length })}
                   </span>
                 )}
               </button>
@@ -218,7 +221,7 @@ export function ScriptMap({
       {needsFile && (
         <button type="button" onClick={onShowWholeScript} className="t-map__whole">
           <IconFileSearch className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 flex-1 text-left">Show the whole script</span>
+          <span className="min-w-0 flex-1 text-left">{t("appPracticeMap.showWhole")}</span>
           <IconArrowRight className="h-4 w-4 shrink-0" />
         </button>
       )}
@@ -241,16 +244,16 @@ export function ScriptMap({
 }
 
 /** "Scene 4 · ANNA & BEN · 3 min · 40 lines", from whatever the scene has. */
-function builtDetail(scene: Scene): string[] {
+function builtDetail(t: ReturnType<typeof useT>, scene: Scene): string[] {
   const parts: string[] = [];
   const characters = [scene.character_1_name, scene.character_2_name].filter(Boolean);
   // The script's own label rides in the facts. The numeral counts rows: a
   // series that skips its one-voice openers would otherwise number 2, 3, 4.
   if (scene.scene_number) parts.push(scene.scene_number);
   if (characters.length > 0) parts.push(characters.join(" & "));
-  const duration = formatSceneDuration(scene.estimated_duration_seconds);
+  const duration = sceneDurationLabel(t, scene.estimated_duration_seconds);
   if (duration) parts.push(duration);
-  if (scene.line_count > 0) parts.push(`${scene.line_count} lines`);
+  if (scene.line_count > 0) parts.push(t("appPracticeMap.lines", { n: scene.line_count }));
   return parts;
 }
 
@@ -285,7 +288,8 @@ function BuiltRow({
 }) {
   const reduce = useReducedMotion();
   const ent = entrance(index, { reduce, y: 6, duration: 0.36 });
-  const detail = builtDetail(scene);
+  const t = useT();
+  const detail = builtDetail(t, scene);
 
   return (
     <motion.div
@@ -322,7 +326,7 @@ function BuiltRow({
               <span className="t-maprow__title truncate">{scene.title}</span>
               {/* The line check's mark, when that lands (Scene.flagged). Quiet:
                   a note in the margin, not an alarm. */}
-              {scene.flagged && <span className="t-maprow__flag">check lines</span>}
+              {scene.flagged && <span className="t-maprow__flag">{t("appPracticeMap.checkLines")}</span>}
             </span>
             {detail.length > 0 && (
               <span className="t-maprow__detail block truncate">{detail.join(" · ")}</span>
@@ -335,7 +339,7 @@ function BuiltRow({
           disabled={opening}
           className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {opening ? "Curtain up…" : "Open"}
+          {opening ? t("appPracticeMap.curtainUp") : t("appPracticeMap.open")}
           {!opening && <IconArrowRight className="hidden h-3.5 w-3.5 sm:block" />}
         </button>
       </div>
@@ -350,7 +354,7 @@ function BuiltRow({
             className="overflow-hidden"
           >
             <p className="t-maprow__synopsis">
-              {scene.description?.trim() || "No synopsis for this scene yet."}
+              {scene.description?.trim() || t("appPracticeMap.noSynopsis")}
             </p>
             {share && <div className="pb-3.5 pl-[50px] pr-4">{share}</div>}
           </motion.div>
@@ -388,14 +392,15 @@ function OpenRow({
 }) {
   const reduce = useReducedMotion();
   const ent = entrance(index, { reduce, y: 6, duration: 0.36 });
+  const t = useT();
   const { scan, locked } = row;
-  const name = scan.scene_label ?? `Scene ${position}`;
+  const name = scan.scene_label ?? t("appPracticeMap.sceneN", { n: position });
   const cast =
     scan.characters.length > 0
       ? scan.characters.slice(0, 3).join(", ") +
         (scan.characters.length > 3 ? ` +${scan.characters.length - 3}` : "")
       : null;
-  const detail = [cast, scan.line_count > 0 ? `${scan.line_count} lines` : null].filter(
+  const detail = [cast, scan.line_count > 0 ? t("appPracticeMap.lines", { n: scan.line_count }) : null].filter(
     Boolean,
   ) as string[];
   const tickable = locked === null && !building;
@@ -426,12 +431,12 @@ function OpenRow({
             {building ? (
               <>
                 <IconLoader2 className="h-3 w-3 animate-spin" />
-                building
+                {t("appPracticeMap.building")}
               </>
             ) : locked === "solo" ? (
-              "solo"
+              t("appPracticeMap.solo")
             ) : (
-              "built"
+              t("appPracticeMap.built")
             )}
           </span>
         </div>
@@ -455,7 +460,7 @@ function OpenRow({
           disabled={disabled}
           onChange={onToggle}
           className="peer sr-only"
-          aria-label={`Build ${name}`}
+          aria-label={t("appPracticeMap.buildName", { name })}
         />
         <span aria-hidden className="t-maprow__box">
           {picked && (
@@ -520,6 +525,7 @@ function BuildBar({
   onUpgrade: () => void;
 }) {
   const reduce = useReducedMotion();
+  const t = useT();
   // The house pattern for a portal (CallboardDock): no body on the server.
   const mounted = useSyncExternalStore(NEVER_CHANGES, () => true, () => false);
   if (!mounted) return null;
@@ -538,40 +544,49 @@ function BuildBar({
           transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
           className="fixed left-1/2 z-[9980] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:bottom-6"
           role="region"
-          aria-label="Build the ticked scenes"
+          aria-label={t("appPracticeMap.buildBar")}
         >
           <div className="rounded-xl border border-border bg-card px-4 py-3 text-card-foreground shadow-lg shadow-black/20">
             {showLimit && (
               <p className="mb-2.5 text-[13.5px] leading-relaxed text-muted-foreground">
-                Your plan builds {limit} {limit === 1 ? "scene" : "scenes"} from a script.{" "}
+                {t(limit === 1 ? "appPracticeScenePicker.planLimitOne" : "appPracticeScenePicker.planLimitMany", {
+                  n: limit,
+                })}{" "}
                 <button
                   type="button"
                   onClick={onUpgrade}
                   className="font-medium text-primary underline decoration-primary/40 underline-offset-4 transition-colors hover:decoration-primary"
                 >
-                  Build the whole play
+                  {t("appPracticeScenePicker.buildWholePlay")}
                 </button>
-                , and you come straight back here.
+                {t("appPracticeScenePicker.comeBack")}
               </p>
             )}
             <div className="flex items-center justify-between gap-3">
               <span className="text-[13px] tabular-nums text-muted-foreground">
                 {count === 0 ? (
-                  "Nothing ticked"
+                  t("appPracticeMap.nothingTicked")
                 ) : (
-                  <>
-                    <span className="font-semibold text-foreground">{count}</span> of {pickable} ticked
-                  </>
+                  (() => {
+                    const [before, after = ""] = t("appPracticeMap.ticked", { total: pickable }).split("{count}");
+                    return (
+                      <>
+                        {before}
+                        <span className="font-semibold text-foreground">{count}</span>
+                        {after}
+                      </>
+                    );
+                  })()
                 )}
               </span>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={onClear}
-                  aria-label={count === 0 ? "Close" : undefined}
+                  aria-label={count === 0 ? t("appPracticeMap.close") : undefined}
                   className="inline-flex h-9 items-center rounded-full px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
-                  {count === 0 ? <IconX className="h-4 w-4" /> : "Clear"}
+                  {count === 0 ? <IconX className="h-4 w-4" /> : t("appPracticeMap.clear")}
                 </button>
                 {count > 0 && (
                   <button
@@ -581,7 +596,7 @@ function BuildBar({
                     className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
                   >
                     {submitting && <IconLoader2 className="h-4 w-4 animate-spin" />}
-                    Build {count} {count === 1 ? "scene" : "scenes"}
+                    {t(count === 1 ? "appPracticeScenePicker.buildOne" : "appPracticeScenePicker.buildMany", { n: count })}
                   </button>
                 )}
               </div>

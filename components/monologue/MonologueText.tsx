@@ -2,6 +2,7 @@
 
 import { parseMonologueText } from "@/lib/monologueText";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 export interface MonologueTextProps {
   text: string;
@@ -29,6 +30,7 @@ export function MonologueText({
   stageClassName = defaultStageClassName,
   dialogueClassName = defaultDialogueClassName,
 }: MonologueTextProps) {
+  const t = useT();
   const segments = parseMonologueText(text);
 
   return (
@@ -39,13 +41,13 @@ export function MonologueText({
         }
         if (seg.type === "stage") {
           return (
-            <span key={i} className={cn(stageClassName)} title="Stage direction">
+            <span key={i} className={cn(stageClassName)} title={t("appMonologueText.stage")}>
               {seg.content}
             </span>
           );
         }
         return (
-          <span key={i} className={cn(dialogueClassName)} title="Dialogue">
+          <span key={i} className={cn(dialogueClassName)} title={t("appMonologueText.dialogue")}>
             {seg.content}
           </span>
         );

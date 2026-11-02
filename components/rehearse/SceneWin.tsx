@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
 import type { TrialWords } from "@/lib/trial";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 interface SceneWinProps {
   /** A stage direction for the eyebrow, parentheses included. */
@@ -27,10 +28,10 @@ interface SceneWinProps {
  * unlimited runs, five scripts and every monologue. If the tiers change, this
  * list changes with them.
  */
-const PLUS_GETS: Array<[label: string, value: string]> = [
-  ["Runs", "as many as it takes"],
-  ["Your scripts", "five on the shelf"],
-  ["Monologues", "every one, out loud"],
+const PLUS_GETS: Array<[label: MessageKey, value: MessageKey]> = [
+  ["appScenesWin.runsLabel", "appScenesWin.runsValue"],
+  ["appScenesWin.scriptsLabel", "appScenesWin.scriptsValue"],
+  ["appScenesWin.monologuesLabel", "appScenesWin.monologuesValue"],
 ];
 
 /**
@@ -52,8 +53,8 @@ const PLUS_GETS: Array<[label: string, value: string]> = [
  * It carries no theatre surface of its own: the rehearse page already is one.
  */
 export function SceneWin({
-  direction = "(lights down.)",
-  title = "That was your first scene.",
+  direction,
+  title,
   offer,
   trial,
   onAgain,
@@ -62,31 +63,32 @@ export function SceneWin({
   leaveLabel,
   kept = 0,
 }: SceneWinProps) {
+  const t = useT();
   const asking = !!offer?.visible;
 
   return (
     <section className="t-win" aria-labelledby="scene-win-title" data-asking={asking ? "true" : undefined}>
-      <p className="t-win__dir">{direction}</p>
+      <p className="t-win__dir">{direction ?? t("appScenesWin.direction")}</p>
       <h1 id="scene-win-title" className="t-win__title">
-        {title}
+        {title ?? t("appScenesWin.title")}
       </h1>
-      <p className="t-win__house">That one was mine. The next is yours.</p>
+      <p className="t-win__house">{t("appScenesWin.house")}</p>
 
       {asking && offer && (
-        <div className="t-win__ticket" role="group" aria-label="Plus">
+        <div className="t-win__ticket" role="group" aria-label={t("appScenesWin.plus")}>
           <div className="t-win__ticket-head">
-            <p className="t-win__plan">Plus</p>
+            <p className="t-win__plan">{t("appScenesWin.plus")}</p>
             <span className="t-win__tag">{trial.short}</span>
           </div>
           {trial.earned && (
-            <p className="t-win__earned-note">Finishing that scene earned you the second week.</p>
+            <p className="t-win__earned-note">{t("appScenesWin.earned")}</p>
           )}
           <ul className="t-win__gets">
             {PLUS_GETS.map(([label, value]) => (
               <li key={label}>
-                <span className="t-win__get-label">{label}</span>
+                <span className="t-win__get-label">{t(label)}</span>
                 <span className="t-win__get-lead" aria-hidden />
-                <span className="t-win__get-val">{value}</span>
+                <span className="t-win__get-val">{t(value)}</span>
               </li>
             ))}
           </ul>
@@ -94,27 +96,27 @@ export function SceneWin({
           <a href={offer.href} onClick={offer.accept} className="t-win__cta t-win__cta--ticket">
             {trial.cta}
           </a>
-          <p className="t-win__fine">$0 today. Cancel any time.</p>
+          <p className="t-win__fine">{t("appScenesWin.fine")}</p>
         </div>
       )}
 
       <div className="t-win__doors" data-beside={asking ? "true" : undefined}>
         <UploadScriptButton variant="primary" className={asking ? "t-win__alt" : "t-win__cta"}>
-          Bring in your sides
+          {t("appScenesWin.sides")}
         </UploadScriptButton>
         <Link href="/monologues" className="t-win__alt">
-          Find a monologue
+          {t("appScenesWin.findMonologue")}
         </Link>
         {kept > 0 && (
           <Link href="/rehearse" className="t-win__alt">
-            {kept} {kept === 1 ? "piece is" : "pieces are"} on your shelf
+            {t(kept === 1 ? "appScenesWin.keptOne" : "appScenesWin.keptMany", { n: kept })}
           </Link>
         )}
       </div>
 
       <div className="t-win__foot">
         <button type="button" className="t-win__quiet" onClick={onAgain} disabled={restarting}>
-          {restarting ? "one moment" : "run it again"}
+          {restarting ? t("appScenesWin.oneMoment") : t("appScenesWin.runAgain")}
         </button>
         <button type="button" className="t-win__quiet" onClick={onLeave}>
           {leaveLabel}

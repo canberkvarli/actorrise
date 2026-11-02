@@ -9,6 +9,7 @@ import { trackEvent } from "@/lib/events";
 import { Segmented } from "./Segmented";
 import { SettingsPopover } from "./SettingsPopover";
 import { SelfRecorder } from "./SelfRecorder";
+import { useT, type MessageKey } from "@/lib/i18n";
 import {
   FONT_SIZE_CLASS,
   THEME_TOKENS,
@@ -73,15 +74,15 @@ function fmtTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-const LEVELS: { value: Level; label: string }[] = [
-  { value: "full", label: "Full" },
-  { value: "hints", label: "Hints" },
-  { value: "blank", label: "Blank" },
+const LEVELS: { value: Level; label: MessageKey }[] = [
+  { value: "full", label: "appScenesMemorize.levelFull" },
+  { value: "hints", label: "appScenesMemorize.levelHints" },
+  { value: "blank", label: "appScenesMemorize.levelBlank" },
 ];
 
-const MODES: { value: Mode; label: string }[] = [
-  { value: "read", label: "Read" },
-  { value: "buildup", label: "Build up" },
+const MODES: { value: Mode; label: MessageKey }[] = [
+  { value: "read", label: "appScenesMemorize.modeRead" },
+  { value: "buildup", label: "appScenesMemorize.modeBuildup" },
 ];
 
 /** A subtle blank bar sized to the (hidden) line length, themed. */
@@ -141,6 +142,8 @@ export function MemorizeView({
   chrome = "app",
 }: MemorizeViewProps) {
   const c = CHROME[chrome];
+  // `t` is the reading theme's tokens below; the dictionary is `tx`.
+  const tx = useT();
   const { prefs, update } = useMemorizePrefs();
   const [mode, setMode] = useState<Mode>("read");
   const [level, setLevel] = useState<Level>("full");
@@ -395,7 +398,7 @@ export function MemorizeView({
           <button
             type="button"
             onClick={() => toggleReveal(i)}
-            aria-label={isPeeked ? "Hide this line" : "Peek at this line"}
+            aria-label={isPeeked ? tx("appScenesMemorize.hide") : tx("appScenesMemorize.peek")}
             className={cn(
               "-mx-2 block w-full cursor-pointer rounded-lg px-2 py-1 text-left transition-colors",
               t.hover,
@@ -470,10 +473,10 @@ export function MemorizeView({
           />
           <p className={c.trimHint} aria-live="polite">
             {selStart == null
-              ? "Tap where your cut starts."
+              ? tx("appScenesMemorize.tapStart")
               : selEnd == null
-                ? "Now tap where it ends."
-                : "Tap any line to start a new cut."}
+                ? tx("appScenesMemorize.tapEnd")
+                : tx("appScenesMemorize.tapNew")}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {cut && (
@@ -483,7 +486,7 @@ export function MemorizeView({
                 disabled={savingCut}
                 className={c.ghost}
               >
-                Clear cut
+                {tx("appScenesMemorize.clearCut")}
               </button>
             )}
             <button
@@ -492,7 +495,7 @@ export function MemorizeView({
               disabled={savingCut}
               className={c.ghost}
             >
-              Cancel
+              {tx("appScenesMemorize.cancel")}
             </button>
             <button
               type="button"
@@ -500,15 +503,15 @@ export function MemorizeView({
               disabled={!hasFullSelection || savingCut}
               className={c.go}
             >
-              {savingCut ? "Saving…" : "Save cut"}
+              {savingCut ? tx("appScenesMemorize.saving") : tx("appScenesMemorize.saveCut")}
             </button>
           </div>
         </div>
       ) : (
         <div className={c.bar}>
           <Segmented
-            ariaLabel="Learning mode"
-            options={MODES}
+            ariaLabel={tx("appScenesMemorize.learningMode")}
+            options={MODES.map((o) => ({ value: o.value, label: tx(o.label) }))}
             value={mode}
             onChange={switchMode}
             tone={chrome}
@@ -516,8 +519,8 @@ export function MemorizeView({
 
           {mode === "read" && (
             <Segmented
-              ariaLabel="Reveal level"
-              options={LEVELS}
+              ariaLabel={tx("appScenesMemorize.revealLevel")}
+              options={LEVELS.map((o) => ({ value: o.value, label: tx(o.label) }))}
               value={level}
               onChange={setLevel}
               tone={chrome}
@@ -533,7 +536,7 @@ export function MemorizeView({
           <div className="ml-auto flex items-center gap-2">
             {canTrim && (
               <button type="button" onClick={enterTrim} className={c.ghost}>
-                {cut ? "Edit cut" : "Trim"}
+                {cut ? tx("appScenesMemorize.editCut") : tx("appScenesMemorize.trim")}
               </button>
             )}
             <SettingsPopover prefs={prefs} update={update} tone={chrome} />
@@ -543,10 +546,10 @@ export function MemorizeView({
 
       <p className={c.hint}>
         {trimming
-          ? "Tap your first line, then your last line."
+          ? tx("appScenesMemorize.hintTrim")
           : mode === "read"
-            ? "Tap a hidden line to peek."
-            : "Recall each line from the top, then add the next. Tap a blank to peek."}
+            ? tx("appScenesMemorize.hintRead")
+            : tx("appScenesMemorize.hintBuild")}
       </p>
 
       {/* Applied-cut banner */}
@@ -561,15 +564,15 @@ export function MemorizeView({
         >
           <span className={chrome === "app" ? t.inkMuted : undefined}>
             {showFull
-              ? "Showing the full piece"
-              : `Showing your cut · ~${fmtTime(cutSeconds)}`}
+              ? tx("appScenesMemorize.showingFull")
+              : tx("appScenesMemorize.showingCut", { time: fmtTime(cutSeconds) })}
           </span>
           <button
             type="button"
             onClick={toggleShowFull}
             className={c.bannerAction}
           >
-            {showFull ? "Show cut" : "Show full"}
+            {showFull ? tx("appScenesMemorize.showCut") : tx("appScenesMemorize.showFull")}
           </button>
         </div>
       )}
@@ -605,7 +608,7 @@ export function MemorizeView({
           <div className={cn("mt-8 flex flex-wrap items-center gap-3 border-t pt-6", t.hair)}>
             {atEnd ? (
               <p className={cn("text-sm", t.inkMuted)}>
-                You&apos;ve built the whole piece — run it from the top.
+                {tx("appScenesMemorize.built")}
               </p>
             ) : (
               <button
@@ -619,7 +622,7 @@ export function MemorizeView({
                   t.ink,
                 )}
               >
-                Add next line
+                {tx("appScenesMemorize.addNext")}
               </button>
             )}
             {builtUpTo > 1 && (
@@ -632,7 +635,7 @@ export function MemorizeView({
                   t.inkMuted,
                 )}
               >
-                Start over
+                {tx("appScenesMemorize.startOver")}
               </button>
             )}
           </div>

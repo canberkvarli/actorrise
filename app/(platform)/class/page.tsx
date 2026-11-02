@@ -6,6 +6,7 @@ import Link from "next/link";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { theatreFontVars } from "@/lib/fonts/theatre";
+import { useT } from "@/lib/i18n";
 import { ClassRoster, type ClassStudent } from "@/components/educator/ClassRoster";
 
 /**
@@ -16,6 +17,7 @@ import { ClassRoster, type ClassStudent } from "@/components/educator/ClassRoste
  */
 export default function ClassPage() {
   const { user, loading } = useAuth();
+  const t = useT();
   const [students, setStudents] = useState<ClassStudent[] | null>(null);
   const [failed, setFailed] = useState(false);
   // The moment the class loaded; "3 days ago" is read against it, not the clock
@@ -46,24 +48,23 @@ export default function ClassPage() {
       className={`theatre-tokens ${theatreFontVars} relative mx-auto w-full max-w-[1160px] px-4 pb-32 pt-8 sm:px-5 sm:pt-14`}
       style={{ color: "var(--t-text)" }}
     >
-      <h1 className="text-[28px] font-semibold leading-tight sm:text-[34px]">Your class</h1>
+      <h1 className="text-[28px] font-semibold leading-tight sm:text-[34px]">{t("appShellClass.title")}</h1>
 
       {loading || (isTeacher && students === null && !failed) ? null : !isTeacher ? (
         <p className="mt-3 max-w-[56ch] text-[15px] leading-normal" style={muted}>
-          This page is for teacher accounts. If you teach and want your class on ActorRise, email
-          canberk@actorrise.com and I&apos;ll set you up.
+          {t("appShellClass.notTeacher")}
         </p>
       ) : failed ? (
         <p className="mt-3 text-[15px]" style={muted}>
-          That didn&apos;t load. Refresh, or email canberk@actorrise.com and I&apos;ll look.
+          {t("appShellClass.failed")}
         </p>
       ) : (students ?? []).length === 0 ? (
         <p className="mt-3 max-w-[56ch] text-[15px] leading-normal" style={muted}>
-          Nobody has joined through your link yet. It&apos;s in the{" "}
+          {t("appShellClass.emptyBefore")}
           <Link href="/monologues" className="font-semibold text-primary underline-offset-4 hover:underline">
-            library
+            {t("appShellClass.emptyLink")}
           </Link>
-          . It works best when the whole class signs up together, in one class period.
+          {t("appShellClass.emptyAfter")}
         </p>
       ) : (
         <ClassRoster students={students ?? []} now={now} />

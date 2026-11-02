@@ -5,6 +5,7 @@ import { IconClockHour4 } from "@tabler/icons-react";
 
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n";
 
 const PREP_SECONDS = 45;
 
@@ -37,6 +38,7 @@ export function ColdReadPrep({
   userCharacter?: string | null;
   onReady: () => void;
 }) {
+  const t = useT();
   const [scene, setScene] = useState<SceneDetail | null>(null);
   const [seconds, setSeconds] = useState(PREP_SECONDS);
 
@@ -61,8 +63,8 @@ export function ColdReadPrep({
       onReady();
       return;
     }
-    const t = setTimeout(() => setSeconds((s) => s - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setSeconds((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
   }, [seconds, onReady]);
 
   return (
@@ -70,12 +72,12 @@ export function ColdReadPrep({
       <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-hidden px-5 py-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-wider text-primary">Cold read</p>
+            <p className="text-xs uppercase tracking-wider text-primary">{t("appScenesColdRead.eyebrow")}</p>
             <h1 className="text-xl font-bold leading-tight">
-              {scene?.title ?? "Loading scene…"}
+              {scene?.title ?? t("appScenesColdRead.loading")}
             </h1>
             <p className="mt-0.5 text-xs text-neutral-400">
-              Read it through. One take, no restarts.
+              {t("appScenesColdRead.sub")}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2 border border-neutral-700 px-3 py-1.5 tabular-nums">
@@ -116,7 +118,7 @@ export function ColdReadPrep({
             className="w-full border border-neutral-600 bg-primary text-white hover:bg-primary/90"
             onClick={onReady}
           >
-            Start performance
+            {t("appScenesColdRead.start")}
           </Button>
         </div>
       </div>

@@ -13,6 +13,8 @@ import {
 import { useTrending } from "@/hooks/useTrending";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { theatreFontVars } from "@/lib/fonts/theatre";
+import { translate, useLocale, useT, type Locale } from "@/lib/i18n";
+import { feedAge, feedWord } from "@/components/community/eventRender";
 
 /**
  * The Callboard — a stage manager's call sheet.
@@ -48,22 +50,25 @@ import { theatreFontVars } from "@/lib/fonts/theatre";
  * ones. See `.callsheet` in globals.css.
  */
 
-const SHEET_DATE = new Intl.DateTimeFormat("en-GB", {
+const SHEET_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
   weekday: "long",
   day: "numeric",
   month: "long",
-});
+};
+function sheetDate(locale: Locale): string {
+  return new Intl.DateTimeFormat(locale === "tr" ? "tr-TR" : "en-GB", SHEET_DATE_OPTIONS).format(new Date());
+}
 
 /** Column-width time. "2m", "7h", "1d" — the word "ago" is a whole column of
     nothing repeated fourteen times. */
-function compactTime(iso: string, now: number): string {
+function compactTime(iso: string, now: number, locale: Locale): string {
   const secs = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 1000));
-  if (secs < 45) return "now";
+  if (secs < 45) return translate(locale, "appShellCallboard.timeNow");
   const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m`;
+  if (mins < 60) return translate(locale, "appShellCallboard.timeM", { n: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  return `${Math.floor(hrs / 24)}d`;
+  if (hrs < 24) return translate(locale, "appShellCallboard.timeH", { n: hrs });
+  return translate(locale, "appShellCallboard.timeD", { n: Math.floor(hrs / 24) });
 }
 
 /* Faces for the roster, picked off the actor's name so one actor keeps one
@@ -104,70 +109,83 @@ type Row = {
   detail: string;
   href: string;
   at: string;
+  /** No name set. Kept as a flag because the printed "Someone" is translated. */
+  anon: boolean;
 };
 
-function genderNoun(g?: string): string {
+function genderNoun(g: string | undefined, locale: Locale): string {
   const s = (g || "").toLowerCase();
-  if (s.startsWith("f") || s === "woman") return "woman";
-  if (s.startsWith("m") || s === "man") return "man";
+  if (s.startsWith("f") || s === "woman") return translate(locale, "appShellCallboard.genderWoman");
+  if (s.startsWith("m") || s === "man") return translate(locale, "appShellCallboard.genderMan");
   return s || "";
 }
 
 /** One event, flattened into columns. The verb column is a closed vocabulary
     on purpose: four or five repeated words down a column scan as a category,
     whereas five different phrasings of the same idea scan as noise. */
-function toRow(e: FeedEvent): Row | null {
+function toRow(e: FeedEvent, locale: Locale): Row | null {
   const p = e.payload;
+  const tr = (key: Parameters<typeof translate>[1], vars?: Parameters<typeof translate>[2]) =>
+    translate(locale, key, vars);
   /* "Someone", not an em-dash. A dash in a name column reads as missing data
      and makes the row look broken; the anonymity is a real fact about a real
      actor who has not set a name, so say it. */
-  const name = e.name && e.name !== "Someone" ? e.name : "Someone";
+  const name = e.name && e.name !== "Someone" ? e.name : tr("appShellCallboard.someone");
+  const anon = !(e.name && e.name !== "Someone");
   const at = e.created_at;
   const piece = p.monologue_id ? `/monologue/${p.monologue_id}` : "/monologues";
 
   switch (e.event_type) {
     case "joined":
-      return { id: e.id, name, verb: "signed in", detail: e.city || "", href: "/monologues", at };
+      return { id: e.id, name, verb: tr("appShellCallboard.verbSignedIn"), detail: e.city || "", href: "/monologues", at, anon };
     case "searched": {
-      const bits = [p.tone, genderNoun(p.gender), p.age_range, p.emotion].filter(Boolean);
+      const bits = [
+        p.tone && feedWord(p.tone, locale),
+        genderNoun(p.gender, locale),
+        p.age_range && feedAge(p.age_range, locale),
+        p.emotion && feedWord(p.emotion, locale),
+      ].filter(Boolean);
       return {
         id: e.id,
         name,
-        verb: "wants",
-        detail: bits.join(" · ") || "a monologue",
+        verb: tr("appShellCallboard.verbWants"),
+        detail: bits.join(" · ") || tr("appShellCallboard.detailMonologue"),
         href: "/monologues",
         at,
+        anon,
       };
     }
     case "viewed":
-      return { id: e.id, name, verb: "reading", detail: p.title || "a monologue", href: piece, at };
+      return { id: e.id, name, verb: tr("appShellCallboard.verbReading"), detail: p.title || tr("appShellCallboard.detailMonologue"), href: piece, at, anon };
     case "bookmarked":
-      return { id: e.id, name, verb: "saved", detail: p.title || "a monologue", href: piece, at };
+      return { id: e.id, name, verb: tr("appShellCallboard.verbSaved"), detail: p.title || tr("appShellCallboard.detailMonologue"), href: piece, at, anon };
     case "worked":
-      return { id: e.id, name, verb: "worked", detail: "out loud", href: "/rehearse", at };
+      return { id: e.id, name, verb: tr("appShellCallboard.verbWorked"), detail: tr("appShellCallboard.detailOutLoud"), href: "/rehearse", at, anon };
     case "rehearsed":
     case "rehearsing":
       return {
         id: e.id,
         name,
-        verb: "rehearsing",
-        detail: p.title || "a scene",
+        verb: tr("appShellCallboard.verbRehearsing"),
+        detail: p.title || tr("appShellCallboard.detailScene"),
         href: "/rehearse",
         at,
+        anon,
       };
     case "shared":
-      return { id: e.id, name, verb: "shared", detail: p.title || "a script", href: piece, at };
+      return { id: e.id, name, verb: tr("appShellCallboard.verbShared"), detail: p.title || tr("appShellCallboard.detailScript"), href: piece, at, anon };
     case "milestone":
       return {
         id: e.id,
         name,
-        verb: "hit",
-        detail: `${p.milestone_n} rehearsals`,
+        verb: tr("appShellCallboard.verbHit"),
+        detail: tr("appShellCallboard.detailRehearsals", { n: String(p.milestone_n) }),
         href: "/rehearse",
         at,
+        anon,
       };
     case "trending":
-      return { id: e.id, name, verb: "trending", detail: p.title || "", href: piece, at };
+      return { id: e.id, name, verb: tr("appShellCallboard.verbTrending"), detail: p.title || "", href: piece, at, anon };
     default:
       // went_plus is retired: it published billing status beside a real name.
       return null;
@@ -191,6 +209,8 @@ export function CallboardFeed() {
   const { data } = useCommunityFeed(100);
   const { data: trending } = useTrending(7);
   const now = useNow();
+  const t = useT();
+  const locale = useLocale();
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -236,12 +256,12 @@ export function CallboardFeed() {
       const who = named ? (e.name as string) : "someone";
       if (seen.has(who)) continue;
       seen.add(who);
-      const row = toRow(e);
+      const row = toRow(e, locale);
       if (row) out.push(row);
       if (out.length === 14) break;
     }
     return [out, anon] as const;
-  }, [events]);
+  }, [events, locale]);
 
   const searchTags = useMemo(() => {
     const counts = new Map<string, number>();
@@ -282,7 +302,8 @@ export function CallboardFeed() {
     }
     return out.slice(1, 6);
   })();
-  const windowLabel = data.window === "today" ? "today" : "this week";
+  const windowLabel =
+    data.window === "today" ? t("appShellCallboard.hdrInHouseToday") : t("appShellCallboard.hdrInHouseWeek");
 
   return (
     <div className={`callsheet theatre-tokens ${theatreFontVars} min-h-screen px-4 pb-24 pt-8 sm:px-8 sm:pt-12`}>
@@ -298,10 +319,10 @@ export function CallboardFeed() {
               <span className="sheet-breathe absolute inset-0 rounded-full bg-[var(--sheet-acc)]" />
               <span className="absolute inset-[1.5px] rounded-full bg-[var(--sheet-acc)]" />
             </span>
-            The house, before curtain
+            {t("appShellCallboard.eyebrow")}
           </p>
           <h1 className="sheet-display mt-2 text-[clamp(3rem,11vw,6.5rem)] leading-[0.85] tracking-[-0.01em] text-[var(--sheet-ink)]">
-            The Callboard
+            {t("appShellCallboard.callboard")}
           </h1>
 
           {/* The numbers sit on one ruled line, tabular, like a call sheet's
@@ -315,12 +336,12 @@ export function CallboardFeed() {
               in the DOM. */}
           <div className="mt-6 border-b border-t-2 border-b-[var(--sheet-rule)] border-t-[var(--sheet-ink)] py-2.5">
             <p className="flex flex-wrap items-baseline gap-x-8 gap-y-1.5 font-typewriter text-[13px]">
-              <span className="text-[var(--sheet-dim)]">{SHEET_DATE.format(new Date())}</span>
-              <Stat n={data.actor_count} label={`in the house ${windowLabel}`} />
-              {counts.searched > 0 && <Stat n={counts.searched} label="searches" />}
-              {counts.joined > 0 && <Stat n={counts.joined} label="new faces" />}
+              <span className="text-[var(--sheet-dim)]">{sheetDate(locale)}</span>
+              <Stat n={data.actor_count} label={windowLabel} />
+              {counts.searched > 0 && <Stat n={counts.searched} label={t("appShellCallboard.searches")} />}
+              {counts.joined > 0 && <Stat n={counts.joined} label={t("appShellCallboard.newFaces")} />}
               <span className="ml-auto inline-flex items-center gap-2 italic text-[var(--sheet-faint)]">
-                (clock&rsquo;s running.)
+                {t("appShellCallboard.clockRunning")}
                 <span aria-hidden className="sheet-caret text-[var(--sheet-acc)]">
                   &#9646;
                 </span>
@@ -349,7 +370,7 @@ export function CallboardFeed() {
             the three heights and buys back the space. */}
         <div className="mt-10 grid gap-x-10 gap-y-10 border-b border-[var(--sheet-rule)] pb-10 sm:grid-cols-2 lg:grid-cols-[1.15fr_1fr_1fr]">
           <section>
-            <SectionRule>Tonight&rsquo;s bill</SectionRule>
+            <SectionRule>{t("appShellCallboard.tonightsBill")}</SectionRule>
             {headline && (
               <Link href={`/monologue/${headline.id}`} className="group mt-4 block">
                 <p className="sheet-display text-[clamp(2rem,5.5vw,3.25rem)] leading-[0.95] text-[var(--sheet-ink)] transition-colors group-hover:text-primary">
@@ -363,7 +384,7 @@ export function CallboardFeed() {
                     sheet where every other row is also clickable, nothing marks
                     this as the one thing the page is actually recommending. */}
                 <span className="mt-4 inline-flex items-center gap-1.5 border-b border-primary/50 pb-0.5 font-typewriter text-[13px] font-semibold uppercase tracking-[0.12em] text-primary">
-                  Read it
+                  {t("appShellCallboard.readIt")}
                   <span aria-hidden className="transition-transform group-hover:translate-x-1">
                     →
                   </span>
@@ -374,7 +395,7 @@ export function CallboardFeed() {
           </section>
 
           <section>
-            <SectionRule>Also billed</SectionRule>
+            <SectionRule>{t("appShellCallboard.alsoBilled")}</SectionRule>
             {alsoBilled.length > 0 && (
               <ul className="mt-4 border-t border-[var(--sheet-rule)]">
                 {alsoBilled.map((m, i) => (
@@ -401,7 +422,7 @@ export function CallboardFeed() {
           </section>
 
           <section className="sm:col-span-2 lg:col-span-1">
-            <SectionRule>The house is hunting for</SectionRule>
+            <SectionRule>{t("appShellCallboard.houseHunting")}</SectionRule>
             {/* Every tag runs that search. The previous version rendered the
                 same list as inert spans, which put twelve dead ends on the one
                 panel that describes live demand. */}
@@ -414,7 +435,7 @@ export function CallboardFeed() {
                   className="sheet-row sheet-tag font-typewriter text-[13px] capitalize"
                   data-strong={n > 2}
                 >
-                  {tag}
+                  {feedAge(feedWord(tag, locale), locale)}
                   {/* The count is the panel. "Comedic" is a category anyone
                       could have guessed; "comedic ×14" is a fact about
                       tonight, and it was already being computed and thrown
@@ -422,7 +443,7 @@ export function CallboardFeed() {
                   <span aria-hidden className="sheet-tag__n">
                     &times;{n}
                   </span>
-                  <span className="sr-only">, {n} asked for this</span>
+                  <span className="sr-only">{t("appShellCallboard.askedFor", { n })}</span>
                 </Link>
               ))}
             </div>
@@ -434,7 +455,7 @@ export function CallboardFeed() {
             nobody appears twice on one sheet. */}
         <section className="mt-10">
           <SectionRule>
-            In the house
+            {t("appShellCallboard.roster")}
             <span aria-hidden className="sheet-caret ml-2 text-primary">
               ▮
             </span>
@@ -467,7 +488,7 @@ export function CallboardFeed() {
                               nothing in its place, so the one genuinely live
                               thing on the page existed for sighted users
                               only. */}
-                          <span className="sr-only">Just now: </span>
+                          <span className="sr-only">{t("appShellCallboard.justNow")}</span>
                         </>
                       )}
                     </span>
@@ -479,9 +500,9 @@ export function CallboardFeed() {
                       <span
                         aria-hidden
                         className="sheet-display sheet-avatar italic"
-                        style={{ "--face": r.name === "Someone" ? "oklch(0.60 0.02 60)" : pick(FACES, r.name) } as React.CSSProperties}
+                        style={{ "--face": r.anon ? "oklch(0.60 0.02 60)" : pick(FACES, r.name) } as React.CSSProperties}
                       >
-                        {r.name === "Someone" ? "?" : r.name[0]}
+                        {r.anon ? "?" : r.name[0]}
                       </span>
                       <span className="truncate text-[15px] font-semibold text-[var(--sheet-ink)] sm:text-[13px]">
                         {r.name}
@@ -497,7 +518,7 @@ export function CallboardFeed() {
                       {r.detail}
                     </span>
                     <span className="ml-auto shrink-0 tabular-nums text-[var(--sheet-faint)] sm:ml-0 sm:text-right">
-                      {compactTime(r.at, now)}
+                      {compactTime(r.at, now, locale)}
                     </span>
                     <span
                       aria-hidden
@@ -513,7 +534,7 @@ export function CallboardFeed() {
 
           {anonCount > 0 && (
             <p className="mt-3 font-typewriter text-[13px] text-[var(--sheet-faint)]">
-              + {anonCount} who haven&rsquo;t signed their name yet
+              {t("appShellCallboard.unsigned", { n: anonCount })}
             </p>
           )}
         </section>
@@ -537,6 +558,7 @@ export function CallboardFeed() {
  * reaching the roster that states the same facts once, in order, as links.
  */
 function Ticker({ rows }: { rows: Row[] }) {
+  const t = useT();
   /* Four names is the floor. Below that the strip loops visibly every few
      seconds, which reads as a broken animation rather than as a busy house —
      and a quiet house is better said by nothing than by three names on a
@@ -611,7 +633,7 @@ function Ticker({ rows }: { rows: Row[] }) {
           second time, which the roster below already states once, in order. */}
       {tip && (
         <Link href="/monologues" className="sheet-ticker__tip" onClick={(e) => e.stopPropagation()}>
-          find your piece
+          {t("appShellCallboard.findYourPiece")}
           <span aria-hidden>&rarr;</span>
         </Link>
       )}
@@ -676,6 +698,7 @@ function SectionRule({ children }: { children: React.ReactNode }) {
     sheet the way a real call sheet carries its notices. */
 function VisibilityStamp() {
   const { shareActivity, isLoading, setShareActivity } = useShareActivity();
+  const t = useT();
   if (isLoading || shareActivity === undefined) return null;
   return (
     <div className="mt-14 flex flex-wrap items-center justify-between gap-2.5 border-t border-[var(--sheet-rule)] pt-4">
@@ -684,13 +707,11 @@ function VisibilityStamp() {
         onClick={() => setShareActivity(!shareActivity)}
         className="font-typewriter text-[11px] uppercase tracking-[0.2em] text-[var(--sheet-faint)] underline-offset-4 transition-colors hover:text-[var(--sheet-ink)] hover:underline"
       >
-        {shareActivity
-          ? "You are on this sheet · take me off"
-          : "You are off this sheet · put me back"}
+        {shareActivity ? t("appShellCallboard.onSheet") : t("appShellCallboard.offSheet")}
       </button>
       {/* Says why the control above is worth leaving on, without arguing. */}
       <span className="font-typewriter text-xs italic tracking-[0.06em] text-[var(--sheet-faint)]">
-        (a real callboard carries the whole company&rsquo;s names. and yours.)
+        {t("appShellCallboard.realCallboard")}
       </span>
     </div>
   );
@@ -735,6 +756,7 @@ function SheetSkeleton() {
  */
 function YourCall() {
   const { data } = useBookmarks();
+  const t = useT();
   const mine = Array.isArray(data) ? data : [];
   if (mine.length === 0) return null;
 
@@ -750,7 +772,7 @@ function YourCall() {
 
   return (
     <section className="mt-11">
-      <SectionRule>Your call</SectionRule>
+      <SectionRule>{t("appShellCallboard.yourCall")}</SectionRule>
       {/* The one lit object on a paper board.
 
           It used to be a hairline row identical to the twelve rows of other
@@ -803,7 +825,7 @@ function YourCall() {
           {playLine && <span className="sheet-call__play block">{playLine}</span>}
         </span>
         <span className="sheet-call__go">
-          Rehearse
+          {t("appShellCallboard.rehearse")}
           <span aria-hidden>
             <svg
               width="14"
@@ -823,7 +845,7 @@ function YourCall() {
       {rest > 0 && (
         <p className="mt-2.5 font-typewriter text-[13px] text-[var(--sheet-faint)]">
           <Link href="/rehearse" className="underline-offset-4 hover:text-[var(--sheet-ink)] hover:underline">
-            + {rest} more on your shelf
+            {t("appShellCallboard.moreOnShelf", { n: rest })}
           </Link>
         </p>
       )}

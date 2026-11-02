@@ -27,8 +27,6 @@ import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { useAddToShelf, useMyShares, useSetStatus, useShelfAll } from "@/hooks/useShelf";
 import {
   AGES,
-  contributorLine,
-  describeCharacter,
   filterShelf,
   formatLength,
   groupByWork,
@@ -37,6 +35,8 @@ import {
   type ShelfScene,
   type ShelfWork,
 } from "@/lib/shelf";
+import { useT, type MessageKey } from "@/lib/i18n";
+import { ageLabel, characterLabel, contributorLabel, toneLabel } from "@/components/practice/practiceLabels";
 
 /*
  * The Community library: two-person scenes to put on your own shelf.
@@ -59,19 +59,19 @@ const PAGE =
   "bg-[#faf7f1] text-neutral-900 shadow-[0_18px_50px_-24px_color-mix(in_oklch,var(--primary)_70%,transparent),0_6px_20px_-10px_rgb(0_0_0/0.6)]";
 
 const PAIRINGS = [
-  { value: "mf", label: "Man & woman" },
-  { value: "ff", label: "Two women" },
-  { value: "mm", label: "Two men" },
-] as const;
+  { value: "mf", label: "appPracticeCommunity.pairMf" },
+  { value: "ff", label: "appPracticeCommunity.pairFf" },
+  { value: "mm", label: "appPracticeCommunity.pairMm" },
+] as const satisfies readonly { value: string; label: MessageKey }[];
 const LENGTHS = [
-  { value: "short", label: "Under 2 min" },
-  { value: "medium", label: "2 to 3½ min" },
-  { value: "long", label: "Over 3½ min" },
-] as const;
+  { value: "short", label: "appPracticeCommunity.lengthShort" },
+  { value: "medium", label: "appPracticeCommunity.lengthMedium" },
+  { value: "long", label: "appPracticeCommunity.lengthLong" },
+] as const satisfies readonly { value: string; label: MessageKey }[];
 const ERAS = [
-  { value: "classical", label: "Classical" },
-  { value: "modern", label: "Modern" },
-] as const;
+  { value: "classical", label: "appPracticeCommunity.eraClassical" },
+  { value: "modern", label: "appPracticeCommunity.eraModern" },
+] as const satisfies readonly { value: string; label: MessageKey }[];
 
 /** The library as a way onto the shelf, beside "Bring in a script" at the top
  *  of it. It sat at the foot of the shelf, under every script the actor had,
@@ -80,6 +80,7 @@ export function CommunityLibraryButton() {
   const [open, setOpen] = useState(false);
   const [warm, setWarm] = useState(false);
   useShelfAll(warm || open);
+  const t = useT();
 
   return (
     <>
@@ -92,7 +93,7 @@ export function CommunityLibraryButton() {
         className="t-library-pill"
       >
         <IconBooks className="h-3.5 w-3.5" aria-hidden />
-        Community library
+        {t("appPracticeCommunity.title")}
       </button>
       <CommunityLibraryDialog open={open} onOpenChange={setOpen} />
     </>
@@ -123,6 +124,7 @@ export function CommunityLibraryDialog({ open, onOpenChange }: { open: boolean; 
 function LibraryRoom({ onClose }: { onClose: () => void }) {
   const all = useShelfAll(true);
   const mine = useMyShares();
+  const t = useT();
   const [filters, setFilters] = useState<ShelfFilters>({});
   const [search, setSearch] = useState("");
   // Typing stays instant; the list catches up a frame behind it.
@@ -148,7 +150,7 @@ function LibraryRoom({ onClose }: { onClose: () => void }) {
   const set = <K extends keyof ShelfFilters>(k: K, v: ShelfFilters[K] | undefined) =>
     setFilters((f) => ({ ...f, [k]: v }));
   const anyFilter = Object.values(filters).some(Boolean) || !!search.trim();
-  const badge = contributorLine(mine.data);
+  const badge = contributorLabel(t, mine.data);
 
   return (
     <>
@@ -164,13 +166,13 @@ function LibraryRoom({ onClose }: { onClose: () => void }) {
         <div className="relative flex items-start justify-between gap-4 pr-10 sm:pr-12">
           <div>
             <p className="font-[family-name:var(--t-direction)] text-xs italic tracking-wide text-muted-foreground">
-              (two parts, one scene.)
+              {t("appPracticeCommunity.direction")}
             </p>
             <DialogTitle className="mt-1 font-brand text-3xl font-semibold leading-none tracking-tight sm:text-4xl">
-              Community library
+              {t("appPracticeCommunity.title")}
             </DialogTitle>
             <DialogDescription className="sr-only">
-              Two-person scenes to add to your shelf, and scenes other actors shared.
+              {t("appPracticeCommunity.description")}
             </DialogDescription>
           </div>
           {badge && (
@@ -188,8 +190,8 @@ function LibraryRoom({ onClose }: { onClose: () => void }) {
           <input
             type="search"
             autoFocus
-            aria-label="Search scenes"
-            placeholder="Play, character, moment"
+            aria-label={t("appPracticeCommunity.searchLabel")}
+            placeholder={t("appPracticeCommunity.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-12 w-full rounded-full border border-border bg-card pl-11 pr-11 text-[15px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none [&::-webkit-search-cancel-button]:hidden"
@@ -197,7 +199,7 @@ function LibraryRoom({ onClose }: { onClose: () => void }) {
           {search && (
             <button
               type="button"
-              aria-label="Clear search"
+              aria-label={t("search.clearSearch")}
               onClick={() => setSearch("")}
               className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
             >
@@ -208,23 +210,44 @@ function LibraryRoom({ onClose }: { onClose: () => void }) {
 
         {/* One line. On a phone it scrolls sideways rather than stacking. */}
         <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
-          <FilterPill label="Pairing" any="Any two" value={filters.pairing} options={PAIRINGS} onChange={(v) => set("pairing", v)} />
           <FilterPill
-            label="Age"
-            any="Any age"
+            label={t("appPracticeCommunity.pairing")}
+            any={t("appPracticeCommunity.pairingAny")}
+            value={filters.pairing}
+            options={PAIRINGS.map((o) => ({ value: o.value, label: t(o.label) }))}
+            onChange={(v) => set("pairing", v)}
+          />
+          <FilterPill
+            label={t("appPracticeCommunity.age")}
+            any={t("appPracticeCommunity.ageAny")}
             value={filters.age}
-            options={AGES.map((a) => ({ value: a, label: a }))}
+            options={AGES.map((a) => ({ value: a, label: ageLabel(t, a) }))}
             onChange={(v) => set("age", v)}
           />
-          <FilterPill label="Length" any="Any length" value={filters.length} options={LENGTHS} onChange={(v) => set("length", v)} />
           <FilterPill
-            label="Tone"
-            any="Any tone"
+            label={t("appPracticeCommunity.length")}
+            any={t("appPracticeCommunity.lengthAny")}
+            value={filters.length}
+            options={LENGTHS.map((o) => ({ value: o.value, label: t(o.label) }))}
+            onChange={(v) => set("length", v)}
+          />
+          <FilterPill
+            label={t("appPracticeCommunity.tone")}
+            any={t("appPracticeCommunity.toneAny")}
             value={filters.tone}
-            options={TONES.map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) }))}
+            options={TONES.map((tone) => {
+              const word = toneLabel(t, tone);
+              return { value: tone, label: word[0].toLocaleUpperCase() + word.slice(1) };
+            })}
             onChange={(v) => set("tone", v)}
           />
-          <FilterPill label="Era" any="Any era" value={filters.era} options={ERAS} onChange={(v) => set("era", v)} />
+          <FilterPill
+            label={t("appPracticeCommunity.era")}
+            any={t("appPracticeCommunity.eraAny")}
+            value={filters.era}
+            options={ERAS.map((o) => ({ value: o.value, label: t(o.label) }))}
+            onChange={(v) => set("era", v)}
+          />
           {anyFilter && (
             <button
               type="button"
@@ -234,7 +257,7 @@ function LibraryRoom({ onClose }: { onClose: () => void }) {
               }}
               className="h-9 shrink-0 rounded-full px-3 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
             >
-              Clear all
+              {t("appPracticeCommunity.clearAll")}
             </button>
           )}
         </div>
@@ -253,7 +276,7 @@ function LibraryRoom({ onClose }: { onClose: () => void }) {
       >
         {all.isLoading || !scenes ? (
           all.isError ? (
-            <p className="text-sm text-muted-foreground">The library didn&apos;t load. Close it and try again.</p>
+            <p className="text-sm text-muted-foreground">{t("appPracticeCommunity.loadFailed")}</p>
           ) : (
             <Grid>
               {Array.from({ length: 6 }).map((_, i) => (
@@ -267,10 +290,15 @@ function LibraryRoom({ onClose }: { onClose: () => void }) {
           <>
             <p className="mb-4 text-[13px] tabular-nums text-muted-foreground">
               {results.length === scenes.length
-                ? `${scenes.length} scenes from ${allWorks} plays`
-                : `${results.length} ${results.length === 1 ? "scene" : "scenes"} in ${works.length} ${works.length === 1 ? "play" : "plays"}`}
-              {all.data?.adds_left === 1 && " · your first one is free"}
-              {all.data?.adds_left === 0 && " · Plus puts the rest on your shelf"}
+                ? t("appPracticeCommunity.countAll", { n: scenes.length, plays: allWorks })
+                : t("appPracticeCommunity.countSome", {
+                    n: results.length,
+                    scenes: results.length === 1 ? t("appPracticeCommunity.sceneOne") : t("appPracticeCommunity.sceneMany"),
+                    plays: works.length,
+                    playWord: works.length === 1 ? t("appPracticeCommunity.playOne") : t("appPracticeCommunity.playMany"),
+                  })}
+              {all.data?.adds_left === 1 && t("appPracticeCommunity.firstFree")}
+              {all.data?.adds_left === 0 && t("appPracticeCommunity.plusRest")}
             </p>
             <Grid>
               <AnimatePresence mode="popLayout" initial={false}>
@@ -354,7 +382,13 @@ function FilterPill<V extends string>({
  */
 function WorkCard({ work, index, onClose }: { work: ShelfWork; index: number; onClose: () => void }) {
   const reduce = useReducedMotion();
-  const kind = work.work_kind === "tv" ? "TV" : work.work_kind === "film" ? "Film" : null;
+  const t = useT();
+  const kind =
+    work.work_kind === "tv"
+      ? t("appPracticeCommunity.kindTv")
+      : work.work_kind === "film"
+        ? t("appPracticeCommunity.kindFilm")
+        : null;
   const byline = [work.author, work.year && work.year > 0 ? String(work.year) : null, kind].filter(Boolean).join(" · ");
   return (
     <motion.article
@@ -384,23 +418,26 @@ function WorkCard({ work, index, onClose }: { work: ShelfWork; index: number; on
 function SceneRow({ scene, onClose }: { scene: ShelfScene; onClose: () => void }) {
   const router = useRouter();
   const add = useAddToShelf();
+  const t = useT();
   // The same cached page the room drew from: no second request.
   const shelfFull = useShelfAll(true).data?.adds_left === 0;
   const [open, setOpen] = useState(false);
   const [bringOwn, setBringOwn] = useState(false);
   const [upgrade, setUpgrade] = useState(false);
   const shared = scene.kind === "shared";
-  const facts = [formatLength(scene.duration_seconds), scene.tone].filter(Boolean).join(" · ");
+  const facts = [formatLength(scene.duration_seconds), scene.tone ? toneLabel(t, scene.tone) : null]
+    .filter(Boolean)
+    .join(" · ");
 
   const putOnShelf = () =>
     add.mutate(scene.id, {
       onSuccess: (r) => {
-        if (r.added) toast.success(`${scene.title} is on your shelf`);
+        if (r.added) toast.success(t("appPracticeCommunity.added", { title: scene.title }));
       },
       onError: (e) => {
         const detail = (e as { response?: { data?: { detail?: { error?: string } } } }).response?.data?.detail;
         if (detail?.error === "library_upgrade_required") setUpgrade(true);
-        else toast.error((e as Error).message || "That didn't go on your shelf. Try again.");
+        else toast.error((e as Error).message || t("appPracticeCommunity.addFailed"));
       },
     });
 
@@ -415,38 +452,38 @@ function SceneRow({ scene, onClose }: { scene: ShelfScene; onClose: () => void }
       onClick={() => setBringOwn((b) => !b)}
       className="inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-900 px-3 text-[12.5px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-900 hover:text-[#faf7f1]"
     >
-      Bring your copy
+      {t("appPracticeCommunity.bringYourCopy")}
     </button>
   ) : scene.on_my_shelf ? (
     <button
       type="button"
       onClick={() => openMine(scene.on_my_shelf!)}
-      aria-label={`${scene.title} is on your shelf. Open it`}
+      aria-label={t("appPracticeCommunity.onShelfOpen", { title: scene.title })}
       className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-neutral-300 px-3 text-[12.5px] font-semibold text-neutral-800 transition-colors hover:border-neutral-900"
     >
       <IconCheck className="h-3.5 w-3.5 text-primary" />
-      On your shelf
+      {t("appPracticeCommunity.onYourShelf")}
     </button>
   ) : shelfFull ? (
     <button
       type="button"
       onClick={() => setUpgrade(true)}
-      aria-label={`Add ${scene.title} to my shelf, with Plus`}
+      aria-label={t("appPracticeCommunity.addWithPlus", { title: scene.title })}
       className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-neutral-900 px-3 text-[12.5px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-900 hover:text-[#faf7f1]"
     >
       <IconLock className="h-3.5 w-3.5" />
-      Add
+      {t("appPracticeCommunity.add")}
     </button>
   ) : (
     <button
       type="button"
       onClick={putOnShelf}
       disabled={add.isPending}
-      aria-label={`Add ${scene.title} to my shelf`}
+      aria-label={t("appPracticeCommunity.addToShelf", { title: scene.title })}
       className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-primary px-3 text-[12.5px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
     >
       {add.isPending ? <IconLoader2 className="h-3.5 w-3.5 animate-spin" /> : <IconPlus className="h-3.5 w-3.5" />}
-      Add
+      {t("appPracticeCommunity.add")}
     </button>
   );
 
@@ -456,7 +493,7 @@ function SceneRow({ scene, onClose }: { scene: ShelfScene; onClose: () => void }
         open={upgrade}
         onOpenChange={setUpgrade}
         feature="Community library"
-        message="Your free shelf holds one classic. Plus puts the whole library on your shelf, every scene ready to rehearse."
+        message={t("appPracticeCommunity.upgradeMessage")}
       />
       <div className="flex items-start gap-3">
         {/* The title opens what happens in the scene; the button does the rest. */}
@@ -470,12 +507,16 @@ function SceneRow({ scene, onClose }: { scene: ShelfScene; onClose: () => void }
             <span className="text-[14.5px] font-semibold leading-snug text-neutral-900">{scene.title}</span>
             {shared && (
               <span className="shrink-0 border border-neutral-300 px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-[0.1em] text-neutral-600">
-                {scene.is_mine ? "yours" : scene.shared_by ? `shared · ${scene.shared_by}` : "shared"}
+                {scene.is_mine
+                  ? t("appPracticeCommunity.yours")
+                  : scene.shared_by
+                    ? t("appPracticeCommunity.sharedBy", { name: scene.shared_by })
+                    : t("appPracticeCommunity.shared")}
               </span>
             )}
           </span>
           <span className="mt-0.5 block text-[12.5px] leading-snug text-neutral-700">
-            {scene.characters.map(describeCharacter).join(" & ")}
+            {scene.characters.map((c) => characterLabel(t, c)).join(" & ")}
           </span>
           {(facts || (shared && scene.where)) && (
             <span className="block text-[12px] text-neutral-500">
@@ -504,14 +545,16 @@ function SceneRow({ scene, onClose }: { scene: ShelfScene; onClose: () => void }
             {bringOwn && (
               <div className="space-y-2.5 pt-2.5 text-[13px] text-neutral-700">
                 <p>
-                  It&apos;s in <span className="font-semibold text-neutral-900">{scene.work_title}</span>
-                  {scene.where ? `, ${scene.where}` : ""}. Bring in your copy and pick this scene.
+                  {t("appPracticeCommunity.itsInA")}
+                  <span className="font-semibold text-neutral-900">{scene.work_title}</span>
+                  {scene.where ? `, ${scene.where}` : ""}
+                  {t("appPracticeCommunity.itsInB")}
                 </p>
                 <UploadScriptButton
                   variant="compact"
                   className="h-8 rounded-full border border-neutral-900 bg-transparent px-3 text-[12.5px] font-semibold text-neutral-900 shadow-none hover:bg-neutral-900 hover:text-[#faf7f1]"
                 >
-                  Bring in your copy
+                  {t("appPracticeCommunity.bringInYourCopy")}
                 </UploadScriptButton>
               </div>
             )}
@@ -526,13 +569,14 @@ function SceneRow({ scene, onClose }: { scene: ShelfScene; onClose: () => void }
 function ModeratorMenu({ scene }: { scene: ShelfScene }) {
   const { user } = useAuth();
   const hide = useSetStatus();
+  const t = useT();
   if (!user?.is_moderator) return null;
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label="Moderator options"
+          aria-label={t("appPracticeCommunity.moderator")}
           className="flex h-8 w-7 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700"
         >
           <IconDots className="h-4 w-4" />
@@ -544,7 +588,7 @@ function ModeratorMenu({ scene }: { scene: ShelfScene }) {
           onClick={() => hide.mutate({ id: scene.id, status: "hidden" })}
           className="w-full rounded-md px-2.5 py-2 text-left text-sm hover:bg-muted"
         >
-          Hide from the library
+          {t("appPracticeCommunity.hide")}
         </button>
       </PopoverContent>
     </Popover>
@@ -552,17 +596,18 @@ function ModeratorMenu({ scene }: { scene: ShelfScene }) {
 }
 
 function NothingLikeIt() {
+  const t = useT();
   return (
     <div className="mx-auto max-w-md border border-dashed border-border px-6 py-14 text-center">
-      <p className="font-brand text-2xl text-foreground">Nobody&apos;s shared one like this yet.</p>
+      <p className="font-brand text-2xl text-foreground">{t("appPracticeCommunity.nothingTitle")}</p>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        Got it in a script? Upload it and share where it is.
+        {t("appPracticeCommunity.nothingBody")}
       </p>
       <UploadScriptButton
         variant="compact"
         className="mt-5 h-10 rounded-full border border-border bg-transparent px-5 text-sm font-semibold text-foreground shadow-none hover:border-primary hover:bg-primary hover:text-primary-foreground"
       >
-        Bring in a script
+        {t("appPracticeCommunity.bringInScript")}
       </UploadScriptButton>
     </div>
   );

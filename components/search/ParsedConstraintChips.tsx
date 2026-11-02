@@ -1,6 +1,8 @@
 "use client";
 
 import { IconX } from "@tabler/icons-react";
+import { useLocale, useT, type MessageKey, type Vars } from "@/lib/i18n";
+import { useValueLabel } from "@/components/search/searchI18n";
 
 /**
  * Echoes back the constraints the search understood from the free-text query
@@ -12,19 +14,29 @@ import { IconX } from "@tabler/icons-react";
  * are what the user picked in the UI; these are what the sentence was read to mean.
  */
 
-const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+const cap = (s: string, locale: string) => (s ? s.charAt(0).toLocaleUpperCase(locale) + s.slice(1) : s);
 
-function durationLabel(prefix: string, seconds: number): string {
+type Translate = (key: MessageKey, vars?: Vars) => string;
+
+function durationLabel(t: Translate, locale: string, prefix: string, seconds: number): string {
   if (seconds >= 60) {
     const mins = seconds / 60;
-    const rounded = Number.isInteger(mins) ? String(mins) : mins.toFixed(1);
-    return `${prefix} ${rounded} min`;
+    const rounded = Number.isInteger(mins)
+      ? String(mins)
+      : mins.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    return `${prefix} ${t("appSearchChips.minutes", { n: rounded })}`;
   }
-  return `${prefix} ${Math.round(seconds)}s`;
+  return `${prefix} ${t("appSearchChips.seconds", { n: Math.round(seconds) })}`;
 }
 
 /** Human label for one parsed constraint, or null to hide it. */
-function chipLabel(key: string, value: unknown): string | null {
+function chipLabel(
+  t: Translate,
+  valueLabel: (field: string, value: string) => string,
+  locale: string,
+  key: string,
+  value: unknown,
+): string | null {
   switch (key) {
     case "category":
     case "gender":
@@ -33,14 +45,15 @@ function chipLabel(key: string, value: unknown): string | null {
     case "theme":
     case "difficulty":
     case "source_type":
-      return cap(String(value));
+      return cap(valueLabel(key, String(value)), locale);
     case "age_range":
+      return valueLabel(key, String(value));
     case "author":
       return String(value);
     case "min_duration":
-      return durationLabel("≥", Number(value));
+      return durationLabel(t, locale, "≥", Number(value));
     case "max_duration":
-      return durationLabel("≤", Number(value));
+      return durationLabel(t, locale, "≤", Number(value));
     default:
       return null;
   }
@@ -53,9 +66,12 @@ export function ParsedConstraintChips({
   constraints: Record<string, unknown> | null | undefined;
   onRemove: (key: string) => void;
 }) {
+  const t = useT();
+  const valueLabel = useValueLabel();
+  const locale = useLocale() === "tr" ? "tr-TR" : "en-US";
   if (!constraints) return null;
   const chips = Object.entries(constraints)
-    .map(([key, value]) => ({ key, label: chipLabel(key, value) }))
+    .map(([key, value]) => ({ key, label: chipLabel(t, valueLabel, locale, key, value) }))
     .filter((c): c is { key: string; label: string } => Boolean(c.label));
   if (chips.length === 0) return null;
 
@@ -68,7 +84,7 @@ export function ParsedConstraintChips({
           {label}
           <button
             type="button"
-            aria-label={`Remove ${label}`}
+            aria-label={t("appSearchChips.remove", { label })}
             onClick={() => onRemove(key)}
             className="t-understood__x"
           >

@@ -10,7 +10,8 @@ import { ReadWallModal } from "@/components/monologue/ReadWallModal";
 import { TasteNote } from "@/components/billing/TasteNote";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
-import { useT, useTList } from "@/lib/i18n";
+import { useT, useTList, type MessageKey } from "@/lib/i18n";
+import { withSlots, useJoinList, useValueLabel } from "@/components/search/searchI18n";
 import { trackEvent } from "@/lib/events";
 import { AuditionStrip } from "@/components/auditions/AuditionStrip";
 import { TeacherClassCard } from "@/components/educator/TeacherClassCard";
@@ -90,8 +91,8 @@ import {
  *  with — Film & TV's violet used to be the literal rgb(167,139,250) in three
  *  places, which silently opted every one of them out of dark mode. */
 const MODE_TABS = [
-  { mode: "plays" as const, label: "Plays", accent: "--primary" },
-  { mode: "film_tv" as const, label: "Film & TV", accent: "--accent-screen" },
+  { mode: "plays" as const, label: "appSearchPage.modePlays" as MessageKey, accent: "--primary" },
+  { mode: "film_tv" as const, label: "appSearchPage.modeFilmTv" as MessageKey, accent: "--accent-screen" },
 ];
 
 /**
@@ -108,6 +109,20 @@ const MODE_TABS = [
    the accent — the page stayed cream in dark mode. As an attribute, mode and
    theme compose the way every other pair of variants in this file does. */
 type SearchMode = "plays" | "film_tv";
+
+/** The lowercase field names in "age range: 20s" summaries. */
+const FILTER_KEY_LABELS: Record<string, MessageKey> = {
+  gender: "appSearchFilterKeys.gender",
+  age_range: "appSearchFilterKeys.age_range",
+  emotion: "appSearchFilterKeys.emotion",
+  theme: "appSearchFilterKeys.theme",
+  category: "appSearchFilterKeys.category",
+  tone: "appSearchFilterKeys.tone",
+  difficulty: "appSearchFilterKeys.difficulty",
+  author: "appSearchFilterKeys.author",
+  max_duration: "appSearchFilterKeys.max_duration",
+  source_type: "appSearchFilterKeys.source_type",
+};
 
 export default function MonologuesPage() {
   return (
@@ -131,12 +146,13 @@ export default function MonologuesPage() {
  * the part that does not.
  */
 function SharedFactsLine({ label }: { label: string | null }) {
+  const t = useT();
   if (!label) return null;
   /* It used to share a line with a query echo. The echo is gone — it repeated
      the search box verbatim — so this stands on its own. */
   return (
     <p className="t-dir mt-4" style={{ color: "var(--t-muted-dark-2)" }}>
-      (all {label}.)
+      {t("appSearchPage.sharedFacts", { label })}
     </p>
   );
 }
@@ -154,6 +170,8 @@ function SearchContent() {
   const { user, isDemoUser } = useAuth();
   const t = useT();
   const tList = useTList();
+  const joinList = useJoinList();
+  const valueLabel = useValueLabel();
   const { show: showSearchTour, dismiss: dismissSearchTour } =
     useTourTrigger("has_seen_search_tour", { delay: 800 });
   const trialWords = useTrialWords();
@@ -1197,18 +1215,21 @@ function SearchContent() {
   };
 
   const downloadMonologue = (mono: Monologue, format: 'text' | 'pdf' = 'text') => {
+    // The words of the play stay as written; only the labels around them move.
+    const d = (key: string) => t(`appSearchDownload.${key}` as MessageKey);
+    const playBy = t("appSearchDownload.playBy", { play: mono.play_title, author: mono.author });
     if (format === 'text') {
-      const content = `MONOLOGUE: ${mono.character_name}
-From: ${mono.play_title} by ${mono.author}
+      const content = `${d("monologueCaps")}: ${mono.character_name}
+${d("from")}: ${playBy}
 
-${mono.scene_description ? `SCENE DESCRIPTION:\n${mono.scene_description}\n\n` : ''}MONOLOGUE TEXT:\n${mono.text}${mono.stage_directions ? `\n\nSTAGE DIRECTIONS:\n${mono.stage_directions}` : ''}
+${mono.scene_description ? `${d("sceneDescriptionCaps")}:\n${mono.scene_description}\n\n` : ''}${d("monologueTextCaps")}:\n${mono.text}${mono.stage_directions ? `\n\n${d("stageDirectionsCaps")}:\n${mono.stage_directions}` : ''}
 
 ---
-Duration: ${Math.floor(mono.estimated_duration_seconds / 60)}:${(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')}
-Word Count: ${mono.word_count}
-${mono.primary_emotion ? `Primary Emotion: ${mono.primary_emotion}` : ''}
-${mono.character_gender ? `Character Gender: ${mono.character_gender}` : ''}
-${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
+${d("duration")}: ${Math.floor(mono.estimated_duration_seconds / 60)}:${(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')}
+${d("wordCount")}: ${mono.word_count}
+${mono.primary_emotion ? `${d("primaryEmotion")}: ${mono.primary_emotion}` : ''}
+${mono.character_gender ? `${d("characterGender")}: ${mono.character_gender}` : ''}
+${mono.character_age_range ? `${d("ageRange")}: ${mono.character_age_range}` : ''}
 `;
 
       const blob = new Blob([content], { type: 'text/plain' });
@@ -1292,23 +1313,23 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 <body>
   <h1>${mono.character_name}</h1>
   <div class="metadata">
-    <strong>From:</strong> ${mono.play_title} by ${mono.author}<br>
-    ${mono.character_gender ? `<strong>Character Gender:</strong> ${mono.character_gender}<br>` : ''}
-    ${mono.character_age_range ? `<strong>Age Range:</strong> ${mono.character_age_range}<br>` : ''}
-    ${mono.primary_emotion ? `<strong>Primary Emotion:</strong> ${mono.primary_emotion}<br>` : ''}
-    <strong>Duration:</strong> ${Math.floor(mono.estimated_duration_seconds / 60)}:${(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')}<br>
-    <strong>Word Count:</strong> ${mono.word_count}
+    <strong>${d("from")}:</strong> ${playBy}<br>
+    ${mono.character_gender ? `<strong>${d("characterGender")}:</strong> ${mono.character_gender}<br>` : ''}
+    ${mono.character_age_range ? `<strong>${d("ageRange")}:</strong> ${mono.character_age_range}<br>` : ''}
+    ${mono.primary_emotion ? `<strong>${d("primaryEmotion")}:</strong> ${mono.primary_emotion}<br>` : ''}
+    <strong>${d("duration")}:</strong> ${Math.floor(mono.estimated_duration_seconds / 60)}:${(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')}<br>
+    <strong>${d("wordCount")}:</strong> ${mono.word_count}
   </div>
   
-  ${mono.scene_description ? `<h2>Scene Description</h2><p class="stage-directions">${mono.scene_description}</p>` : ''}
+  ${mono.scene_description ? `<h2>${d("sceneDescription")}</h2><p class="stage-directions">${mono.scene_description}</p>` : ''}
   
-  <h2>Monologue</h2>
+  <h2>${d("monologue")}</h2>
   <div class="monologue-text">${mono.text.replace(/\n/g, '<br>')}</div>
   
-  ${mono.stage_directions ? `<div class="stage-directions"><strong>Stage Directions:</strong> ${mono.stage_directions}</div>` : ''}
+  ${mono.stage_directions ? `<div class="stage-directions"><strong>${d("stageDirections")}:</strong> ${mono.stage_directions}</div>` : ''}
   
   <div class="footer">
-    <p>Downloaded from ActorRise</p>
+    <p>${d("downloadedFrom")}</p>
   </div>
   
   <script>
@@ -1358,7 +1379,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               setSelectedMonologue(prev => prev?.id === monologueId ? { ...prev, is_favorited: true, favorite_count: (prev.favorite_count ?? 0) + 1 } : prev);
               queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
             } catch {
-              toast.error("Couldn't restore bookmark.");
+              toast.error(t("appSearchPage.bookmarkRestoreFailed"));
             }
           },
         });
@@ -1388,7 +1409,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               setSelectedMonologue(prev => prev?.id === monologueId ? { ...prev, is_favorited: false, favorite_count: Math.max(0, (prev.favorite_count ?? 1) - 1) } : prev);
               queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
             } catch {
-              toast.error("Couldn't remove bookmark.");
+              toast.error(t("appSearchPage.bookmarkRemoveFailed"));
             }
           },
         });
@@ -1397,7 +1418,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       setResults(previousResults);
       setFilmTvResults(previousFilmTvResults);
       setSelectedMonologue(previousSelected);
-      toast.error("Couldn't update bookmark. Please try again.");
+      toast.error(t("appSearchPage.bookmarkUpdateFailed"));
       console.error("Error toggling favorite:", error);
     }
   };
@@ -1405,24 +1426,23 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   // Human-readable list of the constraints graceful relaxation loosened
   // ("age and duration"), deduped so max/min duration read as one word.
   const formatRelaxed = (keys: string[]): string => {
-    const labels: Record<string, string> = {
-      age_range: "age",
-      category: "category",
-      era: "era",
-      max_duration: "duration",
-      min_duration: "duration",
+    const labels: Record<string, MessageKey> = {
+      age_range: "appSearchRelaxed.age_range",
+      category: "appSearchRelaxed.category",
+      era: "appSearchRelaxed.era",
+      max_duration: "appSearchRelaxed.max_duration",
+      min_duration: "appSearchRelaxed.min_duration",
     };
     const seen = new Set<string>();
     const words: string[] = [];
     for (const k of keys) {
-      const label = labels[k] ?? k.replace(/_/g, " ");
+      const label = labels[k] ? t(labels[k]) : k.replace(/_/g, " ");
       if (!seen.has(label)) {
         seen.add(label);
         words.push(label);
       }
     }
-    if (words.length <= 1) return words[0] ?? "";
-    return words.slice(0, -1).join(", ") + " and " + words[words.length - 1];
+    return joinList(words);
   };
 
   // Dismiss a parsed-constraint chip: remember to ignore it and re-run the same
@@ -1443,7 +1463,21 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
   const hasFreshnessFilter = maxOverdoneScore < 1;
-  const getFilterDisplay = (key: string, value: string) => `${key.replace(/_/g, " ")}: ${key === "max_duration" ? getDurationLabel(value) : value}`;
+  const filterKeyLabel = (key: string) =>
+    key in FILTER_KEY_LABELS ? t(FILTER_KEY_LABELS[key]) : key.replace(/_/g, " ");
+  const getFilterDisplay = (key: string, value: string) =>
+    `${filterKeyLabel(key)}: ${key === "max_duration" ? getDurationLabel(value, t) : valueLabel(key, value)}`;
+  const activeFilterLabels = {
+    gender: t("appSearchFilterLabels.gender"),
+    age_range: t("appSearchFilterLabels.age_range"),
+    emotion: t("appSearchFilterLabels.emotion"),
+    theme: t("appSearchFilterLabels.theme"),
+    category: t("appSearchFilterLabels.category"),
+    tone: t("appSearchFilterLabels.tone"),
+    difficulty: t("appSearchFilterLabels.difficulty"),
+    author: t("appSearchFilterLabels.author"),
+    max_duration: t("appSearchFilterLabels.max_duration"),
+  };
 
   // Sort by confidence score (desc). Best match = only actual quote matches (exact_quote/fuzzy_quote); rest are related.
   const HIGH_SCORE_CAP_FOR_CONFIDENCE = 10; // If more than this many have score >= 0.80, treat as broad query and hide confidence
@@ -1910,7 +1944,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           <path d="M12 6.5v13" />
                         </svg>
                       )}
-                      {tab.label}
+                      {t(tab.label)}
                     </span>
                   </button>
                 );
@@ -1939,8 +1973,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     long versions wrapped to two ragged right-aligned lines
                     under the toggle. */}
                 {searchMode === "film_tv"
-                  ? "(film and tv.)"
-                  : "(19,000 pieces.)"}
+                  ? t("appSearchPage.captionFilmTv")
+                  : t("appSearchPage.captionPlays")}
               </motion.p>
             </AnimatePresence>
             )}
@@ -2158,7 +2192,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <DialogHeader className="border-b border-border/60 px-6 py-4">
                 <DialogTitle className="font-brand text-2xl font-medium">{t("search.narrowItDown")}</DialogTitle>
                 <DialogDescription className="stage-direction text-xs text-muted-foreground/70">
-                  (who you are, what it feels like, how long you have.)
+                  {t("appSearchPage.filtersDirection")}
                 </DialogDescription>
               </DialogHeader>
               <div className="max-h-[70vh] overflow-y-auto px-6 pb-6">
@@ -2175,7 +2209,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
               <div className="flex items-center justify-end gap-2 border-t border-border/60 px-6 py-3">
                 <Button size="sm" onClick={() => setShowFilters(false)}>
-                  Show results
+                  {t("appSearchPage.showResults")}
                 </Button>
               </div>
             </DialogContent>
@@ -2199,10 +2233,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         {searchError && !searchUpgradeUrl && (
           <div className="t-fault">
             <p className="t-dir" style={{ color: "var(--t-muted-dark-2)" }}>
-              (the search went dark.)
+              {t("appSearchPage.faultDirection")}
             </p>
             <p className="t-fault__line">
-              That one didn&apos;t come back. Nothing is lost — run it again.
+              {t("appSearchPage.faultLine")}
             </p>
             <button
               type="button"
@@ -2213,7 +2247,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 searchMode === "film_tv" ? handleSearch() : performSearch(playsQuery, filters);
               }}
             >
-              Try it again
+              {t("appSearchPage.faultRetry")}
             </button>
           </div>
         )}
@@ -2222,12 +2256,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           onOpenChange={(o) => { if (!o) { setSearchUpgradeUrl(null); setSearchError(null); } }}
           feature="monologue_search"
           lead="search"
-          dir="(the house lights come up.)"
-          title={trialWords.tasted ? trialWords.overTitle : "That's your free searches for the month."}
+          dir={t("appSearchPage.paywallDir")}
+          title={trialWords.tasted ? trialWords.overTitle : t("appSearchPage.paywallTitle")}
           description={
             trialWords.tasted
               ? trialWords.overBody
-              : "Plus keeps the search open, as many as it takes to find the piece."
+              : t("appSearchPage.paywallBody")
           }
         />
 
@@ -2255,17 +2289,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 {queryInvalidReason === "gibberish" ? (
                   <>
                     <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                    <h3 className="text-2xl font-semibold mb-2">We couldn&apos;t understand that search</h3>
+                    <h3 className="text-2xl font-semibold mb-2">{t("appSearchPage.gibberishTitle")}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Try searching for a movie title, character, or genre like &quot;drama&quot; or &quot;courtroom&quot;
+                      {t("appSearchPage.gibberishBody")}
                     </p>
                   </>
                 ) : queryInvalidReason ? (
                   <>
                     <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                    <h3 className="text-2xl font-semibold mb-2">That search is too short</h3>
+                    <h3 className="text-2xl font-semibold mb-2">{t("appSearchPage.shortTitle")}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Try adding more detail, like a movie title or genre
+                      {t("appSearchPage.shortBody")}
                     </p>
                   </>
                 ) : (
@@ -2273,7 +2307,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     <CardContent className="flex flex-col items-center pt-12 pb-12 text-center">
                       <TicketSketch size={56} className="text-muted-foreground/50" />
                       <p className="stage-direction mt-5 text-sm text-muted-foreground">
-                        (nothing on this bill.)
+                        {t("appSearchPage.nothingOnBill")}
                       </p>
                     </CardContent>
                   </Card>
@@ -2296,7 +2330,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 <div className="mt-5 sm:pl-[9.5rem]">
                 <ActiveFilterChips
                   filters={filters}
-                  labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
+                  labels={activeFilterLabels}
                   onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
                   onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" })}
                 />
@@ -2312,11 +2346,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     type="button"
                     onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
                     aria-pressed={showBookmarkedOnly}
-                    title={showBookmarkedOnly ? "Showing your collection" : "Show only your collection"}
+                    title={showBookmarkedOnly ? t("appSearchPage.showingCollection") : t("appSearchPage.showOnlyCollection")}
                     className="t-only-saved shrink-0"
                   >
                     <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} aria-hidden />
-                    your collection
+                    {t("appSearchPage.yourCollection")}
                   </button>
                 </div>
                 {/* Monologue cards grid */}
@@ -2329,8 +2363,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           <TicketSketch size={56} className="text-muted-foreground/50" />
                           <p className="stage-direction mt-5 text-sm text-muted-foreground">
                             {showBookmarkedOnly
-                              ? "(nothing saved here yet.)"
-                              : "(nothing on this bill.)"}
+                              ? t("appSearchPage.nothingSaved")
+                              : t("appSearchPage.nothingOnBill")}
                           </p>
                         </CardContent>
                       </Card>
@@ -2429,7 +2463,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <div className="mt-8 flex justify-center">
                     <HouseIsHunting
                       surface="search_empty"
-                      lead="Nobody else has found that today either"
+                      lead={t("appSearchPage.houseEmptyLead")}
                     />
                   </div>
                 </NoResultsState>
@@ -2449,13 +2483,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 <div className="flex items-center gap-2 p-4 bg-secondary/10 border border-secondary/30 rounded-lg">
                   <IconSparkles className="h-5 w-5 text-foreground flex-shrink-0" />
                   <p className="text-sm font-medium text-secondary-foreground">
-                    AI-powered recommendations based on your profile
+                    {t("appSearchPage.aiRecommendations")}
                   </p>
                 </div>
               )}
               {correctedQuery && (
                 <p className="text-sm text-muted-foreground">
-                  Showing results for <span className="font-medium text-foreground">{correctedQuery}</span>
+                  {withSlots(t("appSearchPage.showingResultsFor"), {
+                    query: <span className="font-medium text-foreground">{correctedQuery}</span>,
+                  })}
                 </p>
               )}
               {contentGap && (
@@ -2472,8 +2508,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {broadened && broadened.relaxed.length > 0 && (
                 <div className="border border-border border-l-2 border-l-primary bg-muted/40 px-4 py-3">
                   <p className="text-sm text-foreground">
-                    Only a few exact matches, so I broadened the{" "}
-                    <span className="font-medium">{formatRelaxed(broadened.relaxed)}</span>.
+                    {withSlots(t("appSearchPage.broadened"), {
+                      fields: <span className="font-medium">{formatRelaxed(broadened.relaxed)}</span>,
+                    })}
                   </p>
                 </div>
               )}
@@ -2487,12 +2524,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 <div className="mb-6 flex flex-col items-center border border-dashed border-border bg-muted/20 px-4 py-7 text-center">
                   <SpotlightSketch size={44} className="text-muted-foreground/45" />
                   <p className="stage-direction mt-4 text-xs text-muted-foreground/70">
-                    (nothing landed square.)
+                    {t("appSearchPage.weakDirection")}
                   </p>
                   <p className="mt-2 max-w-sm text-sm text-foreground">
-                    No strong match for{" "}
-                    <span className="font-semibold">{queryUsedForResults}</span>. These are the
-                    closest I have.
+                    {withSlots(t("appSearchPage.weakLine"), {
+                      query: <span className="font-semibold">{queryUsedForResults}</span>,
+                    })}
                   </p>
                   <RequestQueryButton
                     query={queryUsedForResults}
@@ -2518,7 +2555,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     <ParsedConstraintChips constraints={parsedConstraints} onRemove={handleRemoveConstraint} />
                     <ActiveFilterChips
                       filters={filters}
-                      labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
+                      labels={activeFilterLabels}
                       onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
                       onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "", source_type: "" })}
                     />
@@ -2532,11 +2569,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     type="button"
                     onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
                     aria-pressed={showBookmarkedOnly}
-                    title={showBookmarkedOnly ? "Showing your collection" : "Show only your collection"}
+                    title={showBookmarkedOnly ? t("appSearchPage.showingCollection") : t("appSearchPage.showOnlyCollection")}
                     className="t-only-saved shrink-0"
                   >
                     <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} aria-hidden />
-                    your collection
+                    {t("appSearchPage.yourCollection")}
                   </button>
                 </div>
 
@@ -2573,14 +2610,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       <CardContent className="flex flex-col items-center pt-12 pb-12 text-center">
                         <ScriptPagesSketch size={56} className="text-muted-foreground/50" />
                         <p className="stage-direction mt-5 text-sm text-muted-foreground">
-                          {showBookmarkedOnly ? "(nothing saved here yet.)" : "(nothing to show.)"}
+                          {showBookmarkedOnly ? t("appSearchPage.nothingSaved") : t("appSearchPage.nothingToShow")}
                         </p>
                         {showBookmarkedOnly && (
                           <button
                             onClick={() => setShowBookmarkedOnly(false)}
                             className="mt-4 text-sm text-primary underline-offset-4 hover:underline"
                           >
-                            Show all results
+                            {t("appSearchPage.showAllResults")}
                           </button>
                         )}
                       </CardContent>
@@ -2641,7 +2678,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     {!showBookmarkedOnly && showConfidence && bestMatches.length > 0 && (
                       <p className="mb-6 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
                         <span aria-hidden className="inline-block h-3 w-0.5 bg-primary" />
-                        Best match
+                        {t("appSearchPage.bestMatch")}
                       </p>
                     )}
                     <div>
@@ -2670,7 +2707,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                                 actor's taste. Same meaning, said as a stage
                                 direction. */}
                             <span className="stage-direction text-sm text-muted-foreground/70">
-                              (further afield.)
+                              {t("appSearchPage.furtherAfield")}
                             </span>
                           </div>
                         )}
@@ -2693,7 +2730,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     className="t-show-more"
                   >
                     {isLoadingMore ? <IconLoader2 className="size-4 animate-spin" /> : null}
-                    Show {PAGE_SIZE} more
+                    {t("appSearchPage.showMore", { n: PAGE_SIZE })}
                   </button>
                 </div>
               )}
@@ -2714,9 +2751,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {hasSearched && results.length > 0 && profileData && !isPersonalized &&
                 !profileData.preferred_genres?.length && !profileData.experience_level && !isDemoUser && (
                 <p className="pb-2 text-center text-xs text-muted-foreground">
-                  Add your type and I&apos;ll tailor these.{" "}
+                  {t("appSearchPage.profileNudge")}{" "}
                   <Link href="/profile" className="text-primary underline underline-offset-2">
-                    Set it up →
+                    {t("appSearchPage.profileNudgeLink")}
                   </Link>
                 </p>
               )}
@@ -2772,7 +2809,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               >
                 <div className="flex items-center justify-between gap-3 px-5 py-3">
                   <p className="t-dir" style={{ fontSize: 13, color: "var(--t-muted-dark-2)" }}>
-                    (the sides.)
+                    {t("appSearchPage.sides")}
                   </p>
                   <div className="flex items-center gap-1 shrink-0">
                     {/* Download button - show in both modes; 44px touch target on mobile */}
@@ -2785,7 +2822,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           setShowDownloadMenu(!showDownloadMenu);
                         }}
                         className="hover:bg-muted relative z-[10002] h-9 w-9"
-                        title="Download monologue"
+                        title={t("appSearchPage.downloadTitle")}
                       >
                         <IconDownload className="h-4 w-4" />
                       </Button>
@@ -2818,7 +2855,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                                 }}
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
                               >
-                                Download as TXT
+                                {t("appSearchPage.downloadTxt")}
                               </button>
                               <button
                                 onClick={(e) => {
@@ -2828,7 +2865,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                                 }}
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
                               >
-                                Download as PDF
+                                {t("appSearchPage.downloadPdf")}
                               </button>
                             </motion.div>
                           </>
@@ -2849,7 +2886,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                             ? `${accentTeal.bg} ${accentTeal.bgHover} ${accentTeal.text}`
                             : `${accentTeal.hoverBg} ${accentTeal.textHover} text-muted-foreground`
                         }`}
-                        aria-label={selectedMonologue.is_favorited ? "Remove from collection" : "Add to collection"}
+                        aria-label={selectedMonologue.is_favorited ? t("appSearchPage.removeFromCollection") : t("appSearchPage.addToCollection")}
                       >
                         <BookmarkIcon filled={!!selectedMonologue.is_favorited} size="md" />
                       </Button>
@@ -2863,8 +2900,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           setReportOpen(true);
                         }}
                         className="hover:bg-muted relative z-[10002] h-9 w-9 text-muted-foreground hover:text-foreground"
-                        title="Report an issue"
-                        aria-label="Report an issue with this monologue"
+                        title={t("appSearchPage.reportTitle")}
+                        aria-label={t("appSearchPage.reportAria")}
                       >
                         <IconFlag className="h-4 w-4" />
                       </Button>
@@ -2976,7 +3013,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         onClick={() => router.push(`/monologue/${selectedMonologue.id}/work`)}
                         className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                       >
-                        Rehearse
+                        {t("appSearchPage.rehearse")}
                       </button>
                     }
                   />
@@ -3023,9 +3060,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <Dialog open={showProfileCompleteModal} onOpenChange={setShowProfileCompleteModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl sm:text-2xl">Complete your profile</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl">{t("appSearchPage.profileModalTitle")}</DialogTitle>
             <DialogDescription>
-              Add your actor details so we can give you AI-powered recommendations tailored to your type and casting.
+              {t("appSearchPage.profileModalBody")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -3033,7 +3070,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               variant="outline"
               onClick={() => setShowProfileCompleteModal(false)}
             >
-              Cancel
+              {t("appSearchPage.cancel")}
             </Button>
             <Button
               onClick={() => {
@@ -3041,7 +3078,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 router.push("/profile");
               }}
             >
-              Go to Profile
+              {t("appSearchPage.goToProfile")}
             </Button>
           </DialogFooter>
         </DialogContent>

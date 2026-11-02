@@ -13,6 +13,7 @@ import {
   ScriptPagesSketch,
   StageDoorSketch,
 } from "@/components/brand/sketches";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 /**
  * "How it works" for ScenePartner — a playbill you flip through, in the
@@ -23,41 +24,47 @@ import {
 
 const SEEN_KEY = "sp_walkthrough_seen_v1";
 
-const ACTS = [
+const ACTS: {
+  numeral: string;
+  Sketch: typeof StageDoorSketch;
+  direction: MessageKey;
+  title: MessageKey;
+  body: MessageKey;
+}[] = [
   {
     numeral: "I",
     Sketch: StageDoorSketch,
-    direction: "(first: bring your sides.)",
-    title: "Upload any script",
-    body: "PDF, Word or pasted text. The scenes pull themselves out, characters and all.",
+    direction: "appPracticeWalkthrough.oneDirection",
+    title: "appPracticeWalkthrough.oneTitle",
+    body: "appPracticeWalkthrough.oneBody",
   },
   {
     numeral: "II",
     Sketch: ScriptPagesSketch,
-    direction: "(or: borrow one.)",
-    title: "The Community library",
-    body: "Two-person scenes, classics and ones other actors shared. Put one on your shelf in a tap, or share where yours is.",
+    direction: "appPracticeWalkthrough.twoDirection",
+    title: "appPracticeWalkthrough.twoTitle",
+    body: "appPracticeWalkthrough.twoBody",
   },
   {
     numeral: "III",
     Sketch: MasksSketch,
-    direction: "(then: take your role.)",
-    title: "Choose who you are",
-    body: "Every scene knows its characters. Say which one is yours.",
+    direction: "appPracticeWalkthrough.threeDirection",
+    title: "appPracticeWalkthrough.threeTitle",
+    body: "appPracticeWalkthrough.threeBody",
   },
   {
     numeral: "IV",
     Sketch: MicSketch,
-    direction: "(now: run it.)",
-    title: "Rehearse out loud",
-    body: "Your partner reads every other role, holds your lines, and never misses a cue.",
+    direction: "appPracticeWalkthrough.fourDirection",
+    title: "appPracticeWalkthrough.fourTitle",
+    body: "appPracticeWalkthrough.fourBody",
   },
   {
     numeral: "V",
     Sketch: GhostLightSketch,
-    direction: "(and again, from the top.)",
-    title: "Break a leg",
-    body: "Run it until it lives in your body. I'll leave the light on.",
+    direction: "appPracticeWalkthrough.fiveDirection",
+    title: "appPracticeWalkthrough.fiveTitle",
+    body: "appPracticeWalkthrough.fiveBody",
   },
 ];
 
@@ -105,6 +112,7 @@ export function HowItWorksWalkthrough({
   useEffect(() => {
     if (open) markWalkthroughSeen();
   }, [open]);
+  const t = useT();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,7 +126,7 @@ export function HowItWorksWalkthrough({
       <DialogContent
         className={`t-playbill theatre-tokens ${theatreFontVars} max-w-[460px] overflow-hidden border-0 p-0`}
       >
-        <DialogTitle className="sr-only">How ScenePartner works</DialogTitle>
+        <DialogTitle className="sr-only">{t("appPracticeWalkthrough.srTitle")}</DialogTitle>
         <PlaybillPages onDone={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
@@ -135,6 +143,7 @@ export function HowItWorksWalkthrough({
  * cascading render the repo's React rules reject.
  */
 function PlaybillPages({ onDone }: { onDone: () => void }) {
+  const t = useT();
   const [page, setPage] = useState(0);
   const [dir, setDir] = useState(1);
   const last = ACTS.length - 1;
@@ -188,9 +197,9 @@ function PlaybillPages({ onDone }: { onDone: () => void }) {
                 className="flex flex-col items-center"
               >
                 <act.Sketch size={64} delay={0.15} className="t-playbill__glyph" />
-                <p className="t-playbill__direction">{act.direction}</p>
-                <h2 className="t-playbill__title">{act.title}</h2>
-                <p className="t-playbill__body">{act.body}</p>
+                <p className="t-playbill__direction">{t(act.direction)}</p>
+                <h2 className="t-playbill__title">{t(act.title)}</h2>
+                <p className="t-playbill__body">{t(act.body)}</p>
 
                 {page === last && (
                   <button
@@ -198,7 +207,7 @@ function PlaybillPages({ onDone }: { onDone: () => void }) {
                     onClick={onDone}
                     className="t-playbill__cta"
                   >
-                    Start rehearsing
+                    {t("cta.startRehearsing")}
                     <span className="t-playbill__cta-dot" aria-hidden>
                       <IconArrowRight className="size-3.5" />
                     </span>
@@ -214,7 +223,7 @@ function PlaybillPages({ onDone }: { onDone: () => void }) {
               type="button"
               onClick={() => go(page - 1)}
               disabled={page === 0}
-              aria-label="Previous"
+              aria-label={t("appPracticeWalkthrough.previous")}
               className="t-playbill__arrow"
             >
               <IconArrowLeft className="h-4 w-4" />
@@ -226,7 +235,7 @@ function PlaybillPages({ onDone }: { onDone: () => void }) {
                   key={a.numeral}
                   type="button"
                   onClick={() => go(i)}
-                  aria-label={`Act ${a.numeral}`}
+                  aria-label={t("appPracticeWalkthrough.act", { n: a.numeral })}
                   aria-current={i === page ? "true" : undefined}
                   className="t-playbill__dot"
                   data-active={i === page}
@@ -238,7 +247,7 @@ function PlaybillPages({ onDone }: { onDone: () => void }) {
               type="button"
               onClick={() => go(page + 1)}
               disabled={page === last}
-              aria-label="Next"
+              aria-label={t("appPracticeWalkthrough.next")}
               className="t-playbill__arrow"
             >
               <IconArrowRight className="h-4 w-4" />

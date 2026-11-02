@@ -4,28 +4,13 @@ import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { setScenePartnerTutorialSeen } from "@/lib/scenepartnerStorage";
+import { useT, type MessageKey } from "@/lib/i18n";
 
-const slides = [
-  {
-    id: 0,
-    headline: "Rehearse with AI, line by line.",
-    body: "Pick a scene. The AI reads its lines. You say yours. Simple.",
-  },
-  {
-    id: 1,
-    headline: "We’ll need your microphone.",
-    body: "Next we’ll ask for mic access so you can speak your lines.",
-  },
-  {
-    id: 2,
-    headline: "Example scenes or your own script.",
-    body: "Try a sample scene or upload a script. We extract characters and scenes for you.",
-  },
-  {
-    id: 3,
-    headline: "Focus mode.",
-    body: "Dark view. AI says its line, then it’s your turn. No clutter.",
-  },
+const slides: { id: number; headline: MessageKey; body: MessageKey }[] = [
+  { id: 0, headline: "appScenesTutorial.h1", body: "appScenesTutorial.b1" },
+  { id: 1, headline: "appScenesTutorial.h2", body: "appScenesTutorial.b2" },
+  { id: 2, headline: "appScenesTutorial.h3", body: "appScenesTutorial.b3" },
+  { id: 3, headline: "appScenesTutorial.h4", body: "appScenesTutorial.b4" },
 ];
 
 const slideVariants = {
@@ -50,6 +35,7 @@ interface ScenePartnerTutorialProps {
 }
 
 export function ScenePartnerTutorial({ onComplete }: ScenePartnerTutorialProps) {
+  const t = useT();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [direction, setDirection] = useState(1);
 
@@ -87,7 +73,7 @@ export function ScenePartnerTutorial({ onComplete }: ScenePartnerTutorialProps) 
       className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden"
       role="dialog"
       aria-modal="true"
-      aria-label="ScenePartner intro"
+      aria-label={t("appScenesTutorial.label")}
     >
       {/* Backdrop: header and page visible but blurred */}
       <div
@@ -107,10 +93,10 @@ export function ScenePartnerTutorial({ onComplete }: ScenePartnerTutorialProps) 
           <button
             type="button"
             onClick={dismiss}
-            aria-label="Skip"
+            aria-label={t("appScenesTutorial.skip")}
             className="absolute top-4 right-4 text-xs text-muted-foreground hover:text-foreground transition-colors py-2 px-3"
           >
-            Skip
+            {t("appScenesTutorial.skip")}
           </button>
 
           <div className="min-h-[220px] w-full flex flex-col justify-center pt-8 pb-4">
@@ -125,10 +111,10 @@ export function ScenePartnerTutorial({ onComplete }: ScenePartnerTutorialProps) 
                 className="text-center"
               >
                 <h2 className="font-semibold text-xl sm:text-2xl text-foreground leading-tight mb-3">
-                  {slide.headline}
+                  {t(slide.headline)}
                 </h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {slide.body}
+                  {t(slide.body)}
                 </p>
               </motion.div>
             </AnimatePresence>
@@ -157,7 +143,7 @@ export function ScenePartnerTutorial({ onComplete }: ScenePartnerTutorialProps) 
           </div>
 
           <Button onClick={next} className="rounded-full h-11 px-8">
-            {isLast ? "Get started" : "Next"}
+            {isLast ? t("appScenesTutorial.start") : t("appScenesTutorial.next")}
           </Button>
         </div>
       </motion.div>

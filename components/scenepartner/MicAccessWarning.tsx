@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Mic, RefreshCw, X } from 'lucide-react';
 import { useMicPermission } from '@/hooks/useMicPermission';
 import { useState } from 'react';
+import { useT } from '@/lib/i18n';
 
 /**
  * Compact inline warning when the microphone is not accessible.
  * Non-intrusive banner that can be dismissed.
  */
 export function MicAccessWarning() {
+  const t = useT();
   const { status, isBlocked, requestMic } = useMicPermission({ recheckOnVisible: true });
   const [dismissed, setDismissed] = useState(false);
 
@@ -31,7 +33,7 @@ export function MicAccessWarning() {
           <div className="inline-flex items-center gap-2 rounded-full border border-neutral-700 bg-neutral-800/80 px-3 py-1.5 text-xs">
             <Mic className="w-3 h-3 text-orange-400 shrink-0" />
             <span className="text-neutral-300">
-              {isUnavailable ? 'Mic not available' : 'Mic access needed'}
+              {isUnavailable ? t('appScenesPartner.micUnavailable') : t('appScenesPartner.micNeeded')}
             </span>
             {!isUnavailable && (
               <Button
@@ -41,7 +43,7 @@ export function MicAccessWarning() {
                 onClick={requestMic}
               >
                 <RefreshCw className="w-2.5 h-2.5 mr-1" />
-                Allow
+                {t('appScenesPartner.allow')}
               </Button>
             )}
             <button

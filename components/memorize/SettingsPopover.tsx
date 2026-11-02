@@ -8,6 +8,14 @@ import {
   THEME_OPTIONS,
   type MemorizePrefs,
 } from "./prefs";
+import { useT, type MessageKey } from "@/lib/i18n";
+
+/** THEME_OPTIONS' labels, by value, in the active language. */
+const THEME_LABEL: Record<MemorizePrefs["theme"], MessageKey> = {
+  default: "appScenesMemorize.themeDefault",
+  sepia: "appScenesMemorize.themeSepia",
+  dark: "appScenesMemorize.themeDark",
+};
 
 interface SettingsPopoverProps {
   prefs: MemorizePrefs;
@@ -42,6 +50,7 @@ function GearIcon() {
 
 /** Gear button that opens a calm reading-settings panel. */
 export function SettingsPopover({ prefs, update, tone = "app" }: SettingsPopoverProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -70,7 +79,7 @@ export function SettingsPopover({ prefs, update, tone = "app" }: SettingsPopover
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label="Reading settings"
+        aria-label={t("appScenesMemorize.readingSettings")}
         onClick={() => setOpen((o) => !o)}
         className={cn(
           "inline-flex items-center justify-center rounded-full transition-colors cursor-pointer",
@@ -89,15 +98,15 @@ export function SettingsPopover({ prefs, update, tone = "app" }: SettingsPopover
       {open && (
         <div
           role="dialog"
-          aria-label="Reading settings"
+          aria-label={t("appScenesMemorize.readingSettings")}
           className="absolute right-0 z-20 mt-2 w-72 space-y-4 rounded-xl border border-border bg-popover p-4 shadow-lg"
         >
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Text size
+              {t("appScenesMemorize.textSize")}
             </p>
             <Segmented
-              ariaLabel="Text size"
+              ariaLabel={t("appScenesMemorize.textSize")}
               size="sm"
               fullWidth
               options={FONT_SIZE_OPTIONS}
@@ -108,20 +117,20 @@ export function SettingsPopover({ prefs, update, tone = "app" }: SettingsPopover
 
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Reading theme
+              {t("appScenesMemorize.readingTheme")}
             </p>
             <Segmented
-              ariaLabel="Reading theme"
+              ariaLabel={t("appScenesMemorize.readingTheme")}
               size="sm"
               fullWidth
-              options={THEME_OPTIONS}
+              options={THEME_OPTIONS.map((o) => ({ ...o, label: t(THEME_LABEL[o.value]) }))}
               value={prefs.theme}
               onChange={(v) => update({ theme: v })}
             />
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-sm text-foreground">Serif type</span>
+            <span className="text-sm text-foreground">{t("appScenesMemorize.serif")}</span>
             <button
               type="button"
               role="switch"
@@ -142,7 +151,7 @@ export function SettingsPopover({ prefs, update, tone = "app" }: SettingsPopover
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-sm text-foreground">Relaxed spacing</span>
+            <span className="text-sm text-foreground">{t("appScenesMemorize.spacing")}</span>
             <button
               type="button"
               role="switch"

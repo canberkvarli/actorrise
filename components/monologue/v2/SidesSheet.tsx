@@ -7,6 +7,7 @@ import { Monologue } from "@/types/actor";
 import { displayableAuthor } from "@/lib/utils";
 import { estimateDurationSeconds, formatClock } from "@/lib/estimateDuration";
 import { applyCut } from "@/lib/monologueSegments";
+import { useT } from "@/lib/i18n";
 
 /**
  * Copy mode: your sides, as a sheet you could hand someone.
@@ -22,6 +23,7 @@ import { applyCut } from "@/lib/monologueSegments";
 export function SidesSheet({ monologue }: { monologue: Monologue }) {
   const [copied, setCopied] = useState(false);
   const [linked, setLinked] = useState(false);
+  const t = useT();
 
   const author = displayableAuthor(monologue.author);
   const source = [monologue.play_title, author].filter(Boolean).join(" · ");
@@ -43,7 +45,7 @@ export function SidesSheet({ monologue }: { monologue: Monologue }) {
      the URL is an unselectable duplicate of the Copy link button below, so
      only the translator credit shows there. */
   const translatorCredit = monologue.translator
-    ? `${monologue.translator} translation`
+    ? t("appMonologueSides.translation", { translator: monologue.translator })
     : "";
   const slug = [`actorrise.com/monologue/${monologue.id}`, translatorCredit]
     .filter(Boolean)
@@ -56,20 +58,20 @@ export function SidesSheet({ monologue }: { monologue: Monologue }) {
   );
 
   const plainText = useMemo(() => {
-    const header = [monologue.character_name, source ? `from ${source}` : ""]
-      .filter(Boolean)
-      .join(" ");
+    const header = source
+      ? t("appMonologueSides.copyHeader", { character: monologue.character_name ?? "", source }).trim()
+      : monologue.character_name ?? "";
     return `${header}\n\n${cutText.trim()}\n`;
-  }, [monologue.character_name, source, cutText]);
+  }, [monologue.character_name, source, cutText, t]);
 
   async function copyText() {
     try {
       await navigator.clipboard.writeText(plainText);
       setCopied(true);
-      toast.success("Copied to clipboard");
+      toast.success(t("appMonologueSides.copied"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Couldn't copy. Select and copy manually.");
+      toast.error(t("appMonologueSides.copyFailed"));
     }
   }
 
@@ -79,23 +81,23 @@ export function SidesSheet({ monologue }: { monologue: Monologue }) {
         `${window.location.origin}/monologue/${monologue.id}`,
       );
       setLinked(true);
-      toast.success("Link copied");
+      toast.success(t("appMonologueSides.linkCopied"));
       setTimeout(() => setLinked(false), 2000);
     } catch {
-      toast.error("Couldn't copy the link.");
+      toast.error(t("appMonologueSides.linkFailed"));
     }
   }
 
   function print() {
     const w = window.open("", "_blank", "width=680,height=800");
     if (!w) {
-      toast.error("Allow pop-ups to print.");
+      toast.error(t("appMonologueSides.allowPopups"));
       return;
     }
     const esc = (s: string) =>
       s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     w.document.write(`<!doctype html><html><head><title>${esc(
-      monologue.character_name || "Monologue",
+      monologue.character_name || t("appMonologueSides.printTitle"),
     )}</title><style>
       body{font-family:"Courier Prime",ui-monospace,monospace;margin:1in;color:#111;line-height:1.6;font-size:13pt}
       h1{font-size:15pt;margin:0 0 2pt}
@@ -114,9 +116,9 @@ export function SidesSheet({ monologue }: { monologue: Monologue }) {
   }
 
   const exports: { label: string; sub: string; onClick: () => void; primary?: boolean }[] = [
-    { label: "Print", sub: "letter · 13pt", onClick: print, primary: true },
-    { label: copied ? "Copied" : "Copy text", sub: "for notes", onClick: copyText },
-    { label: linked ? "Copied" : "Copy link", sub: `/monologue/${monologue.id}`, onClick: copyLink },
+    { label: t("appMonologueSides.print"), sub: t("appMonologueSides.printSub"), onClick: print, primary: true },
+    { label: copied ? t("appMonologueSides.copiedLabel") : t("appMonologueSides.copyText"), sub: t("appMonologueSides.copyTextSub"), onClick: copyText },
+    { label: linked ? t("appMonologueSides.copiedLabel") : t("appMonologueSides.copyLink"), sub: `/monologue/${monologue.id}`, onClick: copyLink },
   ];
 
   return (
@@ -125,7 +127,10 @@ export function SidesSheet({ monologue }: { monologue: Monologue }) {
         className="t-m__dir m-0 text-[13px]"
         style={{ color: "var(--t-muted-dark-2)" }}
       >
-        (your sides. {isCut ? "your cut" : "the full piece"}, {formatClock(seconds)}.)
+        {t("appMonologueSides.direction", {
+          what: isCut ? t("appMonologueSides.yourCut") : t("appMonologueSides.fullPiece"),
+          clock: formatClock(seconds),
+        })}
       </p>
 
       <div

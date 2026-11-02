@@ -16,6 +16,7 @@ import { ArrowLeft, Plus, Trash2, User } from "lucide-react";
 import { AI_VOICES } from "@/lib/scenePrefs";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 export interface NewSceneCharacter {
   id: string;
@@ -36,6 +37,7 @@ interface NewSceneModalProps {
 
 export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalProps) {
   const router = useRouter();
+  const t = useT();
 
   const [title, setTitle] = useState("");
   const [myCharacter, setMyCharacter] = useState("");
@@ -84,16 +86,16 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
   const handleSubmit = useCallback(async () => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      toast.error("Title is required.");
+      toast.error(t("appScenesNew.titleRequired"));
       return;
     }
     if (lines.length === 0) {
-      toast.error("Add at least one line.");
+      toast.error(t("appScenesNew.needLine"));
       return;
     }
     const distinctCharacters = new Set(lines.map((l) => l.characterName.trim()).filter(Boolean));
     if (distinctCharacters.size < 2) {
-      toast.error("A scene needs at least two characters. Add lines for at least two different character names.");
+      toast.error(t("appScenesNew.needTwo"));
       return;
     }
     const body = lines.map((l) => `${l.characterName}: ${l.text}`).join("\n");
@@ -108,7 +110,7 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
           description: description.trim() || undefined,
         }
       );
-      toast.success("Scene created.");
+      toast.success(t("appScenesNew.created"));
       onOpenChange(false);
       setTitle("");
       setMyCharacter("");
@@ -121,52 +123,52 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
       const msg =
         err && typeof err === "object" && "response" in err
           ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
-          : "Failed to create script";
-      toast.error(typeof msg === "string" ? msg : "Failed to create script");
+          : t("appScenesNew.failed");
+      toast.error(typeof msg === "string" ? msg : t("appScenesNew.failed"));
     } finally {
       setSubmitting(false);
     }
-  }, [title, description, lines, onOpenChange, onSuccess, router]);
+  }, [title, description, lines, onOpenChange, onSuccess, router, t]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-sans">New Script</DialogTitle>
+          <DialogTitle className="font-sans">{t("appScenesNew.heading")}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Create a script from scratch. Add a title, characters, and lines below. No file needed.
+          {t("appScenesNew.intro")}
         </p>
 
         <div className="space-y-6">
           <div>
-            <Label htmlFor="new-scene-title">Title</Label>
+            <Label htmlFor="new-scene-title">{t("appScenesNew.title")}</Label>
             <Input
               id="new-scene-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Scene or script title"
+              placeholder={t("appScenesNew.titlePlaceholder")}
               className="mt-2"
             />
           </div>
 
           <div>
-            <Label htmlFor="new-scene-my-char">Who are you playing? (optional)</Label>
+            <Label htmlFor="new-scene-my-char">{t("appScenesNew.playing")}</Label>
             <Input
               id="new-scene-my-char"
               value={myCharacter}
               onChange={(e) => setMyCharacter(e.target.value)}
-              placeholder="Your character's name"
+              placeholder={t("appScenesNew.playingPlaceholder")}
               className="mt-2"
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <Label>Who else is in the scene?</Label>
+              <Label>{t("appScenesNew.others")}</Label>
               <Button type="button" variant="outline" size="sm" onClick={addCharacter} className="gap-1">
                 <Plus className="w-4 h-4" />
-                Add character
+                {t("appScenesNew.addCharacter")}
               </Button>
             </div>
             {characters.map((c) => (
@@ -174,7 +176,7 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
                 <Input
                   value={c.name}
                   onChange={(e) => updateCharacter(c.id, { name: e.target.value })}
-                  placeholder="Character name"
+                  placeholder={t("appScenesNew.characterName")}
                   className="flex-1"
                 />
                 <select
@@ -182,14 +184,14 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
                   value={c.voiceURI}
                   onChange={(e) => updateCharacter(c.id, { voiceURI: e.target.value })}
                 >
-                  <option value="">Select voice</option>
+                  <option value="">{t("appScenesNew.selectVoice")}</option>
                   {/* The partner's real voices. This listed the BROWSER's
                       system voices, which the rehearsal has never used and
                       cannot use — the partner is OpenAI TTS. Offering them
                       here advertised a voice the scene would never speak in. */}
                   {AI_VOICES.map((v) => (
                     <option key={v.id} value={v.id}>
-                      {v.label} — {v.desc.toLowerCase()}
+                      {v.label} — {t(`appScenesNew.voiceDesc.${v.id}` as MessageKey)}
                     </option>
                   ))}
                 </select>
@@ -207,21 +209,21 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
           </div>
 
           <div>
-            <Label htmlFor="new-scene-desc">Description (optional)</Label>
+            <Label htmlFor="new-scene-desc">{t("appScenesNew.description")}</Label>
             <Textarea
               id="new-scene-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of the scene"
+              placeholder={t("appScenesNew.descriptionPlaceholder")}
               rows={2}
               className="mt-2"
             />
           </div>
 
           <div>
-            <Label className="mb-2 block">Lines</Label>
+            <Label className="mb-2 block">{t("appScenesNew.lines")}</Label>
             <p className="text-xs text-muted-foreground mb-2">
-              Add dialogue. Select the character for each line.
+              {t("appScenesNew.linesHint")}
             </p>
             {lines.length > 0 && (
               <ul className="space-y-2 mb-3 rounded-lg border border-border p-3 bg-muted/30">
@@ -248,7 +250,7 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
                 value={draftLineCharacter}
                 onChange={(e) => setDraftLineCharacter(e.target.value)}
               >
-                <option value="">Select character</option>
+                <option value="">{t("appScenesNew.selectCharacter")}</option>
                 {characterNames.map((name) => (
                   <option key={name} value={name}>
                     {name}
@@ -258,27 +260,27 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
               <Input
                 value={draftLineText}
                 onChange={(e) => setDraftLineText(e.target.value)}
-                placeholder="Type line here..."
+                placeholder={t("appScenesNew.linePlaceholder")}
                 className="flex-1 min-w-[160px]"
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), saveLine())}
               />
               <Button type="button" variant="outline" size="sm" onClick={saveLine}>
-                Save line
+                {t("appScenesNew.saveLine")}
               </Button>
             </div>
             {characterNames.length === 0 && (
               <p className="text-xs text-muted-foreground mt-1">
-                Add &quot;Who are you playing&quot; or another character above first.
+                {t("appScenesNew.addFirst")}
               </p>
             )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)}>
-              Back
+              {t("appScenesNew.back")}
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "Creating..." : "Create script"}
+              {submitting ? t("appScenesNew.creating") : t("appScenesNew.create")}
             </Button>
           </div>
         </div>

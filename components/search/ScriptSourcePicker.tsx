@@ -6,6 +6,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import type { FilmTvReference } from "@/types/filmTv";
 import { getFilmTvScriptUrl, getScriptSlugUrl, getScriptSearchUrl } from "@/lib/utils";
 import { toastScriptFeedback } from "@/lib/toast";
+import { useT } from "@/lib/i18n";
 
 interface ScriptSourcePickerProps {
   ref_item: FilmTvReference;
@@ -16,10 +17,11 @@ interface ScriptSourcePickerProps {
 const sources = [
   { key: "imsdb", label: "IMSDb", icon: IconExternalLink },
   { key: "scriptslug", label: "Script Slug", icon: IconExternalLink },
-  { key: "google", label: "Google Search", icon: IconSearch },
+  { key: "google", label: null, icon: IconSearch },
 ] as const;
 
 export function ScriptSourcePicker({ ref_item, compact }: ScriptSourcePickerProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [clickedSource, setClickedSource] = useState<string | null>(null);
   const feedbackShownRef = useRef(false);
@@ -65,7 +67,7 @@ export function ScriptSourcePicker({ ref_item, compact }: ScriptSourcePickerProp
           className={btnClass}
         >
           <IconExternalLink className="h-3 w-3" />
-          Script
+          {t("appSearchScript.script")}
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-48 p-1">
@@ -80,7 +82,7 @@ export function ScriptSourcePicker({ ref_item, compact }: ScriptSourcePickerProp
             className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors text-left"
           >
             <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            {label}
+            {label ?? t("appSearchScript.googleSearch")}
           </button>
         ))}
       </PopoverContent>

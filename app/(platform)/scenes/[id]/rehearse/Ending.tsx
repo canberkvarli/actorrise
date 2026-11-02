@@ -9,6 +9,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useTrialWords } from '@/hooks/useTrialWords';
 import { GATE_COPY } from '@/lib/paywall/copy';
 import type { ScenePayload } from '@/lib/rehearsal/contract';
+import { useT } from '@/lib/i18n';
 
 interface Props { scene: ScenePayload['scene']; guided: boolean; onAgain: () => void; onLeave: () => void }
 
@@ -26,13 +27,20 @@ const RECOUNT_EVERY_MS = 500;
 /** ...and never longer than this: past it the page shows what it has. */
 const RECOUNT_CAP_MS = 3000;
 
-/** "Act 2, Scene 1": the data has "2" or "Act 2" for an act, "1" for a scene. */
-export function whereInPlay(scene: ScenePayload['scene']): string {
+/**
+ * "Act 2, Scene 1": the data has "2" or "Act 2" for an act, "1" for a scene.
+ * A bare number is worded by `label` (the active language); text the data
+ * spelled out itself is shown as it is.
+ */
+export function whereInPlay(
+  scene: ScenePayload['scene'],
+  label: { act: (n: string) => string; scene: (n: string) => string } = { act: n => `Act ${n}`, scene: n => `Scene ${n}` },
+): string {
   const act = scene.act?.trim();
   const sc = scene.scene_number?.trim();
   return [
-    act ? (/^\d+$|^[IVXLC]+$/i.test(act) ? `Act ${act}` : act) : null,
-    sc ? (/^\d+$|^[IVXLC]+$/i.test(sc) ? `Scene ${sc}` : sc) : null,
+    act ? (/^\d+$|^[IVXLC]+$/i.test(act) ? label.act(act) : act) : null,
+    sc ? (/^\d+$|^[IVXLC]+$/i.test(sc) ? label.scene(sc) : sc) : null,
   ].filter(Boolean).join(', ');
 }
 
@@ -88,6 +96,7 @@ export function Ending({ scene, guided, onAgain, onLeave }: Props) {
 
 /** Mounted only once it shows, so the offer records a show the actor saw. */
 function GuidedEnd({ onAgain, onLeave }: { onAgain: () => void; onLeave: () => void }) {
+  const t = useT();
   const offer = useTrialOffer('scene_completed', true, GATE_COPY.scene_completed.variant);
   const trial = useTrialWords();
   /* Read once: the flag is about this sitting, and a second run of the
@@ -106,21 +115,25 @@ function GuidedEnd({ onAgain, onLeave }: { onAgain: () => void; onLeave: () => v
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
       <SceneWin offer={offer} trial={trial} onAgain={onAgain} restarting={false}
-        onLeave={onLeave} leaveLabel="back to the room" kept={kept} />
+        onLeave={onLeave} leaveLabel={t('appScenesRehearse.backToRoom')} kept={kept} />
     </motion.div>
   );
 }
 
 function RunEnd({ scene, onAgain, onLeave }: { scene: ScenePayload['scene']; onAgain: () => void; onLeave: () => void }) {
-  const where = whereInPlay(scene);
+  const t = useT();
+  const where = whereInPlay(scene, {
+    act: n => t('appScenesRehearse.act', { n }),
+    scene: n => t('appScenesRehearse.scene', { n }),
+  });
   return (
     <motion.div role="status" className="r-end"
       initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.35, ease: 'easeOut' }}>
-      <p className="r-end__dir">(lights down.)</p>
-      <p className="r-end__title">{where ? `${where}. ` : ''}Full run.</p>
+      <p className="r-end__dir">{t('appScenesRehearse.lightsDown')}</p>
+      <p className="r-end__title">{where ? `${where}. ` : ''}{t('appScenesRehearse.fullRun')}</p>
       <div className="r-end__row">
-        <button type="button" className="r-play r-play--wide" onClick={onAgain}>Again</button>
-        <button type="button" className="r-end__leave" onClick={onLeave}>Leave</button>
+        <button type="button" className="r-play r-play--wide" onClick={onAgain}>{t('appScenesRehearse.again')}</button>
+        <button type="button" className="r-end__leave" onClick={onLeave}>{t('appScenesRehearse.leave')}</button>
       </div>
     </motion.div>
   );

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { T } from "@/lib/i18n";
 
 /** 404 for platform routes (keeps nav/sidebar). */
 export default function NotFound() {
@@ -7,16 +8,16 @@ export default function NotFound() {
     <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
       <div className="text-center max-w-md space-y-4">
         <h1 className="text-6xl font-bold text-foreground">404</h1>
-        <h2 className="text-xl font-semibold text-foreground">Page not found</h2>
+        <h2 className="text-xl font-semibold text-foreground"><T k="appShellErrors.notFoundTitle" /></h2>
         <p className="text-muted-foreground">
-          The page you’re looking for doesn’t exist or has been moved.
+          <T k="appShellErrors.notFoundBody" />
         </p>
         <div className="pt-4 flex flex-wrap gap-3 justify-center">
           <Button asChild>
-            <Link href="/practice">Practice</Link>
+            <Link href="/practice"><T k="appShellErrors.practice" /></Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/monologues">Browse monologues</Link>
+            <Link href="/monologues"><T k="appShellErrors.browseMonologues" /></Link>
           </Button>
         </div>
       </div>

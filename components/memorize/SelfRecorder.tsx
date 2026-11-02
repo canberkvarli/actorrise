@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /** Optional, fully-local self-recorder. No upload, no AI — record yourself
  *  reading the piece and play it back. Degrades gracefully when the browser
  *  has no MediaRecorder or mic access is denied. */
 export function SelfRecorder() {
+  const t = useT();
   const [recording, setRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
@@ -22,7 +24,7 @@ export function SelfRecorder() {
   // Stop tracks + revoke any object URL on unmount.
   useEffect(() => {
     return () => {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current?.getTracks().forEach((track) => track.stop());
       if (urlRef.current) URL.revokeObjectURL(urlRef.current);
     };
   }, []);
@@ -55,7 +57,7 @@ export function SelfRecorder() {
         urlRef.current = url;
         fixedDurationRef.current = false;
         setAudioUrl(url);
-        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current?.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       };
 
@@ -112,7 +114,7 @@ export function SelfRecorder() {
     <div className="flex flex-wrap items-center gap-3">
       {unavailable ? (
         <p className="text-sm text-muted-foreground">
-          Mic unavailable on this device.
+          {t("appScenesMemorize.micUnavailable")}
         </p>
       ) : (
         <>
@@ -125,7 +127,7 @@ export function SelfRecorder() {
                 "border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50",
               )}
             >
-              Record yourself
+              {t("appScenesMemorize.record")}
             </button>
           )}
 
@@ -139,7 +141,7 @@ export function SelfRecorder() {
               )}
             >
               <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-              Stop
+              {t("appScenesMemorize.stop")}
             </button>
           )}
 
@@ -162,7 +164,7 @@ export function SelfRecorder() {
                   "border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50",
                 )}
               >
-                Re-record
+                {t("appScenesMemorize.reRecord")}
               </button>
             </>
           )}

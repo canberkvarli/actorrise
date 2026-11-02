@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import { useT } from "@/lib/i18n";
 
 export default function Error({
   error,
@@ -12,6 +13,7 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useT();
   useEffect(() => {
     console.error("Route error:", error);
   }, [error]);
@@ -20,17 +22,17 @@ export default function Error({
     <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-destructive">Something went wrong</CardTitle>
+          <CardTitle className="text-destructive">{t("appShellErrors.wrongTitle")}</CardTitle>
           <CardDescription>
-            An unexpected error occurred. You can try again or go back to the home page.
+            {t("appShellErrors.wrongBody")}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-2">
           <Button onClick={reset} className="flex-1 sm:flex-none">
-            Try again
+            {t("appShellErrors.tryAgain")}
           </Button>
           <Button asChild variant="outline" className="flex-1 sm:flex-none">
-            <Link href="/">Go home</Link>
+            <Link href="/">{t("appShellErrors.goHome")}</Link>
           </Button>
         </CardContent>
       </Card>

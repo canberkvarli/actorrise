@@ -10,6 +10,7 @@ import { IconExternalLink, IconSparkles, IconPlus, IconCheck, IconArrowRight } f
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { useToggleFavorite } from "@/hooks/useBookmarks";
+import { useT } from "@/lib/i18n";
 
 interface MonologueCardProps {
   monologue: Monologue;
@@ -21,6 +22,7 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
     triggerOnce: true,
     threshold: 0.1,
   });
+  const t = useT();
   const toggleFavorite = useToggleFavorite();
   const isInCollection = !!monologue.is_favorited;
 
@@ -52,8 +54,8 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
               </CardTitle>
                 {displayableAuthor(monologue.author) && (
                   <CardDescription className="text-base">
-                    by {displayableAuthor(monologue.author)}
-                    {monologue.translator ? `, translated by ${monologue.translator}` : ""}
+                    {t("appSearchCard.by", { author: displayableAuthor(monologue.author) ?? "" })}
+                    {monologue.translator ? t("appSearchCard.translatedBy", { name: monologue.translator }) : ""}
                   </CardDescription>
                 )}
               </div>
@@ -62,22 +64,22 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
                   type="button"
                   onClick={handleCollection}
                   disabled={toggleFavorite.isPending}
-                  aria-label="In your collection. Tap to remove."
+                  aria-label={t("appSearchCard.inCollectionAria")}
                   className="shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-emerald-700 bg-emerald-500/10 border border-emerald-500/30 dark:text-emerald-400 cursor-pointer transition-colors hover:bg-emerald-500/20"
                 >
                   <IconCheck className="h-3.5 w-3.5" />
-                  In collection
+                  {t("appSearchCard.inCollection")}
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={handleCollection}
                   disabled={toggleFavorite.isPending}
-                  aria-label="Add to collection"
+                  aria-label={t("appSearchCard.addToCollection")}
                   className="shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground border border-border cursor-pointer transition-colors hover:text-primary hover:border-primary/40 hover:bg-primary/5"
                 >
                   <IconPlus className="h-3.5 w-3.5" />
-                  Add to collection
+                  {t("appSearchCard.addToCollection")}
                 </button>
               )}
               {monologue.relevance_score !== undefined && (
@@ -95,7 +97,7 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
                       <IconSparkles className="h-4 w-4" />
                     </motion.div>
                     <span className="text-sm font-medium tabular-nums">
-                      {Math.round(monologue.relevance_score * 100)}% match
+                      {t("appSearchCard.percent", { n: Math.round(monologue.relevance_score * 100) })}
                     </span>
                   </div>
                   <div className="w-20">
@@ -124,7 +126,7 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
                 onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                Rehearse
+                {t("appSearchCard.rehearse")}
                 <IconArrowRight className="h-3.5 w-3.5" />
               </PrefetchLink>
             </div>
@@ -139,7 +141,7 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
                   transition={{ duration: 0.2 }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  Source
+                  {t("appSearchCard.source")}
                   <IconExternalLink className="h-3 w-3" />
                 </motion.a>
               )}
@@ -153,7 +155,7 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
                   transition={{ duration: 0.2 }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  Full Text
+                  {t("appSearchCard.fullText")}
                   <IconExternalLink className="h-3 w-3" />
                 </motion.a>
               )}

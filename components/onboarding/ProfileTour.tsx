@@ -10,26 +10,26 @@ import { TourSpotlight, type TourStep } from "@/components/onboarding/TourSpotli
 const STEPS: TourStep[] = [
   {
     targetId: "profile-progress",
-    title: "Your casting line.",
-    body: "How you read on paper. Tap any blank in it and you land on the field that fills it.",
+    title: "appShellTours.profileProgressTitle",
+    body: "appShellTours.profileProgressBody",
     placement: "bottom",
   },
   {
     targetId: "profile-headshot",
-    title: "The headshot.",
-    body: "JPG or PNG, up to 5MB. It's the first thing anyone looks at, here too.",
+    title: "appShellTours.profileHeadshotTitle",
+    body: "appShellTours.profileHeadshotBody",
     placement: "bottom",
   },
   {
     targetId: "profile-tabs",
-    title: "Who you are, how you work.",
-    body: "Age range, location, training, what you're usually cast as. This is what search leans on.",
+    title: "appShellTours.profileTabsTitle",
+    body: "appShellTours.profileTabsBody",
     placement: "bottom",
   },
   {
     targetId: "profile-preferences",
-    title: "What you see.",
-    body: "Tune what search and recommendations put in front of you. Everything saves as you go.",
+    title: "appShellTours.profilePrefsTitle",
+    body: "appShellTours.profilePrefsBody",
     placement: "top",
   },
 ];

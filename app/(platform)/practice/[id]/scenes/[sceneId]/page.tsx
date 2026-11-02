@@ -18,7 +18,8 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { entrance } from "@/lib/motion";
-import { formatSceneDuration } from "@/lib/scenes";
+import { useT } from "@/lib/i18n";
+import { sceneDurationLabel } from "@/components/practice/practiceLabels";
 import {
   REHEARSAL_VOICES,
   defaultRehearsalVoices,
@@ -103,9 +104,9 @@ interface SceneVoices {
 const FALLBACK_VOICES: SceneVoices["voices"] = [...REHEARSAL_VOICES];
 
 /** "act one, scene two." — the slug line, lowercase, in the direction face. */
-function slugFor(scene: SceneDetail): string {
+function slugFor(scene: SceneDetail, fallback: string): string {
   const bits = [scene.act, scene.scene_number].filter(Boolean).join(", ");
-  return bits ? `(${bits.toLowerCase()}.)` : "(the scene.)";
+  return bits ? `(${bits.toLowerCase()}.)` : fallback;
 }
 
 export default function ScenePreviewPage() {
@@ -114,6 +115,7 @@ export default function ScenePreviewPage() {
   const scriptId = params.id as string;
   const sceneId = Number(params.sceneId);
   const reduce = useReducedMotion();
+  const t = useT();
 
   const { data: scene, isLoading, mutate } = useSWR<SceneDetail>(
     Number.isFinite(sceneId) ? `/api/scenes/${sceneId}` : null,
@@ -281,11 +283,11 @@ export default function ScenePreviewPage() {
       await mutate();
       setEditingId(null);
     } catch {
-      toast.error("Could not save that line.");
+      toast.error(t("appPracticeScene.saveLineFailed"));
     } finally {
       setSavingLine(false);
     }
-  }, [editingId, savingLine, scriptId, sceneId, draft, mutate]);
+  }, [editingId, savingLine, scriptId, sceneId, draft, mutate, t]);
 
   /* Cast here, so straight in: `?go=1` tells the rehearse screen to skip the
      Curtain and open the run on the saved part and voices. It still holds the
@@ -329,13 +331,13 @@ export default function ScenePreviewPage() {
           className="t-mem__back"
         >
           <IconArrowLeft className="h-3.5 w-3.5" />
-          {scene.can_edit === false ? "back to the shelf" : "back to the script"}
+          {scene.can_edit === false ? t("appPracticeScene.backToShelf") : t("appPracticeScene.backToScript")}
         </button>
 
         {/* The head. */}
         <motion.header {...entrance(0, { reduce })} className="mt-7">
           <p className="t-m__dir m-0 text-[12px]" style={{ color: "var(--t-faint)" }}>
-            {slugFor(scene)}
+            {slugFor(scene, t("appPracticeScene.slugFallback"))}
           </p>
           <h1 className="t-m__display m-0 mt-2 text-[34px] leading-[1.03] sm:text-[44px]">
             {scene.title}
@@ -346,8 +348,10 @@ export default function ScenePreviewPage() {
           >
             {[
               cast.slice(0, 2).join(" & "),
-              `${scene.line_count} line${scene.line_count === 1 ? "" : "s"}`,
-              formatSceneDuration(scene.estimated_duration_seconds),
+              t(scene.line_count === 1 ? "appPracticeScene.lineOne" : "appPracticeScene.lineMany", {
+                n: scene.line_count,
+              }),
+              sceneDurationLabel(t, scene.estimated_duration_seconds),
             ]
               .filter(Boolean)
               .join("  ·  ")}
@@ -366,7 +370,7 @@ export default function ScenePreviewPage() {
         <motion.section {...entrance(1, { reduce })} className="mt-7">
           <div className="t-prev__casting">
             <div>
-              <p className="t-prev__label">You play</p>
+              <p className="t-prev__label">{t("appPracticeScene.youPlay")}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {cast.map((name) => {
                   const on = roles.includes(name);
@@ -389,15 +393,15 @@ export default function ScenePreviewPage() {
             <div className="t-prev__casting-rule" aria-hidden />
 
             <div>
-              <p className="t-prev__label">I read</p>
+              <p className="t-prev__label">{t("appPracticeScene.iRead")}</p>
               <div className="t-prev__castlist mt-2">
                 {!mine ? (
                   <p className="m-0 text-[13px]" style={{ color: "var(--t-faint)" }}>
-                    Pick your part and I read the rest.
+                    {t("appPracticeScene.pickPartHint")}
                   </p>
                 ) : theirs.length === 0 ? (
                   <p className="m-0 text-[13px]" style={{ color: "var(--t-faint)" }}>
-                    Everyone in this scene is yours.
+                    {t("appPracticeScene.allYours")}
                   </p>
                 ) : (
                   theirs.map((name) => {
@@ -428,14 +432,14 @@ export default function ScenePreviewPage() {
                           onClick={() => audition(name)}
                           className="t-prev__hear"
                           data-on={busy}
-                          aria-label={busy ? `Stop ${name}` : `Hear ${name}`}
+                          aria-label={busy ? t("appPracticeScene.stopName", { name }) : t("appPracticeScene.hearName", { name })}
                         >
                           {busy ? (
                             <IconPlayerStopFilled className="h-3.5 w-3.5" />
                           ) : (
                             <IconVolume className="h-3.5 w-3.5" />
                           )}
-                          {busy ? "stop" : "hear"}
+                          {busy ? t("appPracticeScene.stop") : t("appPracticeScene.hear")}
                         </button>
                         {/* A note for the part, across the whole row. Plus:
                             a free account sees it locked, and a tap opens the
@@ -446,8 +450,8 @@ export default function ScenePreviewPage() {
                             value={notes[name] ?? ""}
                             maxLength={castInfo.note_max}
                             onChange={(e) => writeNote(name, e.target.value)}
-                            aria-label={`A note for ${name}`}
-                            placeholder={`A note for ${name}, like "meaner"`}
+                            aria-label={t("appPracticeScene.noteFor", { name })}
+                            placeholder={t("appPracticeScene.notePlaceholder", { name })}
                             className="col-span-full -mt-1 min-h-9 w-full border-0 border-b border-dashed bg-transparent text-[13px] outline-none"
                             style={{ borderColor: "var(--t-line-light)", color: "var(--t-text)" }}
                           />
@@ -459,7 +463,7 @@ export default function ScenePreviewPage() {
                             className="col-span-full -mt-1 flex min-h-9 items-center text-left text-[13px]"
                             style={{ color: "var(--t-faint)" }}
                           >
-                            A note for {name}, like &quot;meaner&quot;
+                            {t("appPracticeScene.notePlaceholder", { name })}
                             <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-primary">Plus</span>
                           </button>
                         ) : null}
@@ -474,8 +478,8 @@ export default function ScenePreviewPage() {
             open={asking}
             onOpenChange={setAsking}
             feature="partner_direction"
-            title="Directing your partner is a Plus thing."
-            description="With Plus you can give each part a note, like meaner, slower or drunker, and the partner reads it that way. Free to start, card on file, cancel before it renews."
+            title={t("appPracticeScene.paywallTitle")}
+            description={t("appPracticeScene.paywallBody")}
           />
         </motion.section>
 
@@ -502,13 +506,13 @@ export default function ScenePreviewPage() {
                       <input
                         value={draft.who}
                         onChange={(e) => setDraft((d) => ({ ...d, who: e.target.value }))}
-                        aria-label="Character name"
+                        aria-label={t("appPracticeScene.characterName")}
                         className="w-full max-w-[22ch] rounded border border-border bg-background px-2 py-1 text-xs uppercase tracking-[0.14em]"
                       />
                       <textarea
                         value={draft.text}
                         onChange={(e) => setDraft((d) => ({ ...d, text: e.target.value }))}
-                        aria-label="Line"
+                        aria-label={t("appPracticeScene.line")}
                         rows={Math.min(18, Math.max(2, Math.ceil(draft.text.length / 60)))}
                         className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm leading-relaxed"
                       />
@@ -519,14 +523,14 @@ export default function ScenePreviewPage() {
                           disabled={savingLine || !draft.text.trim()}
                           className="rounded-md bg-primary px-3 h-8 text-xs font-medium text-primary-foreground disabled:opacity-60"
                         >
-                          {savingLine ? "saving…" : "save"}
+                          {savingLine ? t("appPracticeScene.saving") : t("appPracticeScene.save")}
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingId(null)}
                           className="text-xs text-muted-foreground underline-offset-2 hover:underline"
                         >
-                          cancel
+                          {t("appPracticeScene.cancel")}
                         </button>
                       </div>
                     </div>
@@ -545,17 +549,17 @@ export default function ScenePreviewPage() {
                           </span>
                         )}
                         <span className="t-prev__name">{line.character_name}</span>
-                        {isMine && <span className="t-prev__yours">you</span>}
+                        {isMine && <span className="t-prev__yours">{t("appPracticeScene.you")}</span>}
                         {/* Fix it where you read it. The editor was the only
                             way to correct a typo and it cost a full page. */}
                         {scene.can_edit !== false && (
                           <button
                             type="button"
                             onClick={() => beginEdit(line)}
-                            aria-label={`Edit ${line.character_name}'s line`}
+                            aria-label={t("appPracticeScene.editLine", { name: line.character_name })}
                             className="t-prev__lineedit"
                           >
-                            edit
+                            {t("appPracticeScene.edit")}
                           </button>
                         )}
                       </p>
@@ -569,7 +573,7 @@ export default function ScenePreviewPage() {
               );
             })}
             <p className="t-prev__more">
-              (end of the scene.)
+              {t("appPracticeScene.end")}
             </p>
           </div>
         </motion.section>
@@ -585,7 +589,7 @@ export default function ScenePreviewPage() {
             disabled={!mine || starting}
             className="t-prev__go"
           >
-            {starting ? "Curtain up…" : mine ? "Rehearse this scene" : "Pick your part"}
+            {starting ? t("appPracticeMap.curtainUp") : mine ? t("appPracticeScene.rehearse") : t("appPracticeScene.pickPart")}
             <span aria-hidden className="t-prev__godot">
               <IconPlayerPlay className="h-4 w-4 fill-current" />
             </span>

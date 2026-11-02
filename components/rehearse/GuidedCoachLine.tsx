@@ -2,7 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { COACH_TEXT, coachState, type CoachState } from "@/lib/guided-coach";
+import { coachState, type CoachState } from "@/lib/guided-coach";
+import { useT, type MessageKey } from "@/lib/i18n";
+
+/** lib/guided-coach's COACH_TEXT, by state, in the active language. "quiet" says nothing. */
+const COACH_KEY: Record<CoachState, MessageKey | null> = {
+  listen: "appScenesGuided.listen",
+  your_line: "appScenesGuided.yourLine",
+  heard_first: "appScenesGuided.heardFirst",
+  quiet: null,
+  nudge: "appScenesGuided.nudge",
+  tap_mode: "appScenesGuided.tapMode",
+};
 
 interface Props {
   partnerSpeaking: boolean;
@@ -32,6 +43,7 @@ interface Props {
  * event for "six seconds passed").
  */
 export function GuidedCoachLine({ partnerSpeaking, micOpen, linesHeard, voicedThisTake, tapMode, onState, dotClass, hearingYou }: Props) {
+  const t = useT();
   const [state, setState] = useState<CoachState>("listen");
   const stateRef = useRef<CoachState>("listen");
   const micOpenedAtRef = useRef<number | null>(null);
@@ -67,7 +79,8 @@ export function GuidedCoachLine({ partnerSpeaking, micOpen, linesHeard, voicedTh
     return () => clearInterval(id);
   }, [partnerSpeaking, micOpen, linesHeard, tapMode, voicedThisTake]);
 
-  const text = COACH_TEXT[state];
+  const key = COACH_KEY[state];
+  const text = key ? t(key) : "";
   return (
     <p className="t-coach" aria-live="polite" data-state={state}>
       {dotClass && <span aria-hidden className={`t-coach__dot ${dotClass}`} />}

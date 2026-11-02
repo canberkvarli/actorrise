@@ -9,14 +9,48 @@ import { PlayCover } from "@/components/monologue/PlayCover";
 import { posterAt } from "@/lib/poster";
 import {
   benchState,
-  formatDuration,
-  lastWorkedLabel,
   leadName,
-  sourceLabel,
   sourceLine,
   titleCase,
+  type BenchStateKey,
 } from "@/lib/collectionMeta";
 import type { Monologue } from "@/types/actor";
+import { useT, type MessageKey } from "@/lib/i18n";
+
+type Translate = ReturnType<typeof useT>;
+
+/** lib/collectionMeta's bench words, by state, in the active language. */
+const STATE_WORDS: Record<BenchStateKey, { direction: MessageKey; cta: MessageKey }> = {
+  cold: { direction: "appScenesBench.dirCold", cta: "appScenesBench.ctaCold" },
+  "off-book": { direction: "appScenesBench.dirOffBook", cta: "appScenesBench.ctaOffBook" },
+  "in-progress": { direction: "appScenesBench.dirInProgress", cta: "appScenesBench.ctaInProgress" },
+  fresh: { direction: "appScenesBench.dirFresh", cta: "appScenesBench.ctaFresh" },
+};
+
+/* The facts row. Same arithmetic as formatDuration, sourceLabel and
+   lastWorkedLabel in lib/collectionMeta, said through the dictionary. */
+function duration(t: Translate, seconds?: number): string | null {
+  if (!seconds || seconds <= 0) return null;
+  return t("appScenesBench.minutes", { n: Math.max(1, Math.round(seconds / 60)) });
+}
+
+function source(t: Translate, sourceType?: string | null): string | null {
+  if (sourceType === "film" || sourceType === "tv") return t("appScenesBench.filmTv");
+  if (sourceType === "play") return t("appScenesBench.play");
+  return null;
+}
+
+function lastWorked(t: Translate, iso?: string | null): string | null {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  const days = Math.floor((Date.now() - then) / 86_400_000);
+  if (days <= 0) return t("appScenesBench.workedToday");
+  if (days === 1) return t("appScenesBench.workedYesterday");
+  if (days < 30) return t("appScenesBench.workedDays", { n: days });
+  const months = Math.floor(days / 30);
+  return months === 1 ? t("appScenesBench.workedMonth") : t("appScenesBench.workedMonths", { n: months });
+}
 
 /**
  * The piece you are working on, at working size, on a lit panel.
@@ -45,17 +79,20 @@ export function Bench({
   onToggleMemorized: () => void;
   onRemove: () => void;
 }) {
+  const t = useT();
   const state = benchState(monologue);
+  const words = STATE_WORDS[state.key];
   const memorized = Boolean(monologue.memorized);
   const poster = posterAt(monologue.poster_url, 600);
   const lead = leadName(monologue);
-  const source = sourceLine(monologue);
+  const playLine = sourceLine(monologue);
 
   const facts = [
-    formatDuration(monologue.estimated_duration_seconds),
-    sourceLabel(monologue.source_type),
+    duration(t, monologue.estimated_duration_seconds),
+    source(t, monologue.source_type),
+    // The tone is the database's word; it stays as the library says it.
     titleCase(monologue.tone),
-    lastWorkedLabel(monologue.last_studied_at),
+    lastWorked(t, monologue.last_studied_at),
   ].filter((f): f is string => Boolean(f));
 
   const excerpt = monologue.text?.replace(/\s+/g, " ").trim() ?? "";
@@ -93,7 +130,7 @@ export function Bench({
               <div className="relative aspect-[2/3]">
                 <Image
                   src={poster}
-                  alt={`${monologue.play_title} poster`}
+                  alt={t("appScenesBench.poster", { title: monologue.play_title })}
                   fill
                   unoptimized
                   sizes="(max-width: 640px) 132px, 180px"
@@ -122,7 +159,7 @@ export function Bench({
             className="t-dir t-bench__dir"
             data-bench-state={state.key}
           >
-            {state.direction}
+            {t(words.direction)}
           </motion.p>
 
           <motion.h2
@@ -134,14 +171,14 @@ export function Bench({
             <Link href={`/monologue/${monologue.id}`}>{lead}</Link>
           </motion.h2>
 
-          {source && (
+          {playLine && (
             <motion.p
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
               className="t-bench__source"
             >
-              {source}
+              {playLine}
             </motion.p>
           )}
 
@@ -182,7 +219,7 @@ export function Bench({
               href={state.primary.href(monologue.id)}
               className="t-cta t-cta--bench"
             >
-              {state.primary.label}
+              {t(words.cta)}
               <span aria-hidden className="t-cta__dot">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M7 4v16l13-8z" />
@@ -191,14 +228,14 @@ export function Bench({
             </Link>
 
             <Link href={`/monologue/${monologue.id}`} className="t-bench__quiet">
-              Read it
+              {t("appScenesBench.readIt")}
             </Link>
             {state.offerDrill && (
               <Link
                 href={`/monologue/${monologue.id}/memorize`}
                 className="t-bench__quiet"
               >
-                {memorized ? "Drill it" : "Get it off book"}
+                {memorized ? t("appScenesBench.drillIt") : t("appScenesBench.getOffBook")}
               </Link>
             )}
 
@@ -211,7 +248,7 @@ export function Bench({
                 type="button"
                 onClick={onToggleMemorized}
                 aria-pressed={memorized}
-                title={memorized ? "Off book. Tap to unmark." : "Mark as off book"}
+                title={memorized ? t("appScenesBench.unmarkTitle") : t("appScenesBench.markTitle")}
                 className="t-memo"
               >
                 {memorized ? (
@@ -219,13 +256,13 @@ export function Bench({
                 ) : (
                   <IconBulb className="h-4 w-4" aria-hidden />
                 )}
-                {memorized ? "off book" : "mark off book"}
+                {memorized ? t("appScenesBench.offBook") : t("appScenesBench.markOffBook")}
               </button>
               <button
                 type="button"
                 onClick={onRemove}
-                aria-label="Remove from collection"
-                title="Remove from collection"
+                aria-label={t("appScenesBench.remove")}
+                title={t("appScenesBench.remove")}
                 className="t-drop"
               >
                 <svg

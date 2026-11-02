@@ -67,6 +67,7 @@ import { SaveAsk } from "@/components/billing/SaveAsk";
 import { EmailClickBeacon } from "@/components/analytics/EmailClickBeacon";
 import { ClassLinkRedeemer } from "@/components/billing/ClassLinkRedeemer";
 import { Cue } from "@/components/cue/Cue";
+import { useLocale, useT } from "@/lib/i18n";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -79,6 +80,8 @@ export default function PlatformLayout({
 }) {
   const { user, loading, isLoggingOut, isDemoUser, logout, refreshUser } = useAuth();
   const pathname = usePathname();
+  const t = useT();
+  const locale = useLocale();
   // Screens someone opened in order to work: rehearsing a scene, running a
   // monologue, taping. Nothing volunteers itself over the top of these.
   const IS_A_WORKING_SCREEN = /\/(rehearse|memorize|work|tape)(\/|$)/;
@@ -94,7 +97,7 @@ export default function PlatformLayout({
   const { data: profile } = useProfile(isDemoUser);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const displayName = (mounted ? profile?.name?.trim() : null) || user?.name?.trim() || "";
-  const profileLabel = displayName || "Account";
+  const profileLabel = displayName || t("appShellNav.account");
   const profileInitial = displayName
     ? displayName.trim().split(/\s+/).length >= 2
       ? `${displayName.trim().split(/\s+/)[0][0]}${displayName.trim().split(/\s+/)[1][0]}`.toUpperCase()
@@ -106,6 +109,9 @@ export default function PlatformLayout({
   // Use SWR hook for cached subscription data - MUST be called before any early returns
   const { subscription } = useSubscription();
   const userTier = subscription?.tier_name || "free";
+  /* The tier as printed. "plus" and "pro" are brand names and stay; only the
+     free tier is a word. The raw value still drives every comparison. */
+  const tierLabel = userTier === "free" ? t("appShellNav.tierFree") : userTier;
   /* The two notes in the playbill's margin. Both are real subscription data or
      they are not rendered at all — an invented price in the account menu is a
      support email, and this is the one screen where the number has to be the
@@ -115,13 +121,23 @@ export default function PlatformLayout({
     : null;
   const renewalNote =
     renewalDate && !Number.isNaN(renewalDate.getTime())
-      ? `${subscription?.cancel_at_period_end ? "ends" : "renews"} ${renewalDate
-          .toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-          .toLowerCase()}`
+      ? t(subscription?.cancel_at_period_end ? "appShellNav.ends" : "appShellNav.renews", {
+          date: renewalDate
+            .toLocaleDateString(locale === "tr" ? "tr-TR" : "en-GB", { day: "numeric", month: "short" })
+            .toLocaleLowerCase(locale === "tr" ? "tr-TR" : "en-GB"),
+        })
       : null;
+  const periodLabel = (period: string) =>
+    period === "monthly"
+      ? t("appShellNav.periodMonthly")
+      : period === "annual"
+        ? t("appShellNav.periodAnnual")
+        : period === "yearly"
+          ? t("appShellNav.periodYearly")
+          : period;
   const billingHint =
     userTier !== "free" && subscription?.billing_period
-      ? `${userTier} · ${subscription.billing_period}`
+      ? `${tierLabel} · ${periodLabel(subscription.billing_period)}`
       : null;
 
   useEffect(() => setMounted(true), []);
@@ -186,7 +202,7 @@ export default function PlatformLayout({
   // hand-written trees, which is how Collection ended up a phone-only tab and
   // Monologues ended up rendered three times on a phone.
   const navItems = [
-    { href: "/monologues", label: "Monologues", icon: IconSearch, match: "exact" as const },
+    { href: "/monologues", label: t("appShellNav.monologues"), icon: IconSearch, match: "exact" as const },
     // ScenePartner, not "My Scripts": the pricing page meters "ScenePartner
     // sessions" and /scene-partner-ai is the SEO surface, so the app was the one
     // place the product had no name. It also names the value (someone reads the
@@ -195,9 +211,9 @@ export default function PlatformLayout({
     // Collection was a bottom-bar-only tab. Mobile reached /rehearse at ~1.9x the
     // desktop rate over the 28 days to 2026-08-15 (20/113 vs 8/86 users), so the
     // fix was to give desktop the tab, not to take the tab off the phone.
-    { href: "/rehearse", label: "Collection", icon: IconBookmark, match: "exact" as const },
+    { href: "/rehearse", label: t("appShellNav.collection"), icon: IconBookmark, match: "exact" as const },
     // The tracker. Prefix match so the prep room (/auditions/12) lights the tab.
-    { href: "/auditions", label: "Auditions", icon: IconTicket, match: "prefix" as const },
+    { href: "/auditions", label: t("appShellNav.auditions"), icon: IconTicket, match: "prefix" as const },
   ];
   /* Which room the phone bar names. Derived from the same nav config, with the
      rooms that are not tabs spelled out, so it never says nothing. */
@@ -206,17 +222,17 @@ export default function PlatformLayout({
       n.match === "exact" ? pathname === n.href : pathname.startsWith(n.href),
     )?.label ??
     (pathname.startsWith("/profile")
-      ? "Profile"
+      ? t("appShellNav.roomProfile")
       : pathname.startsWith("/settings")
-        ? "Settings"
+        ? t("appShellNav.roomSettings")
         : pathname.startsWith("/billing")
-          ? "Billing"
+          ? t("appShellNav.roomBilling")
           : pathname.startsWith("/callboard")
-            ? "Callboard"
+            ? t("appShellNav.roomCallboard")
             : pathname.startsWith("/monologue")
-              ? "The piece"
+              ? t("appShellNav.roomPiece")
               : pathname.startsWith("/help")
-                ? "Help"
+                ? t("appShellNav.roomHelp")
                 : "");
 
   /* The followspot behind the nav, and whether the bar has been scrolled past.
@@ -276,7 +292,7 @@ export default function PlatformLayout({
           <div
             className={`t-curtain-out theatre-tokens ${theatreFontVars}`}
             aria-live="polite"
-            aria-label="Logging out"
+            aria-label={t("appShellNav.loggingOutLabel")}
           >
             {/* Leaving is the one moment the product gets to say goodbye in
                 its own voice, and the gesture IS the goodbye — two travelers
@@ -287,9 +303,9 @@ export default function PlatformLayout({
             <span aria-hidden className="t-curtain-out__panel t-curtain-out__panel--r" />
             <div className="t-curtain-out__say">
               <p className="t-dir" style={{ color: "oklch(0.72 0.03 62)" }}>
-                (curtain.)
+                {t("appShellNav.curtainDirection")}
               </p>
-              <p className="t-curtain-out__line">See you at the next call.</p>
+              <p className="t-curtain-out__line">{t("appShellNav.curtainLine")}</p>
             </div>
           </div>
       )}
@@ -325,7 +341,7 @@ export default function PlatformLayout({
             <Link
               href="/practice"
               className="flex min-w-0 shrink-0 items-center transition-opacity hover:opacity-80"
-              aria-label="ActorRise Home"
+              aria-label={t("appShellNav.home")}
             >
               {/* Not onDark any more. The bar is paper in light and ink in dark, so the
                   wordmark has to follow it — hardcoding the light-on-dark asset
@@ -368,7 +384,7 @@ export default function PlatformLayout({
                 and inside the group it re-centred every tab when it did. */}
             <nav
               ref={navRef}
-              aria-label="Primary"
+              aria-label={t("appShellNav.primary")}
               className="hidden min-w-0 flex-1 items-center justify-center md:flex"
             >
               <div className="relative flex items-center gap-0.5">
@@ -418,7 +434,7 @@ export default function PlatformLayout({
                   everything around it was icon + word. This cluster is
                   icon-only, so the identical control is legible here. */}
               <CallboardLamp active={pathname === "/callboard"} />
-              <Link href="/help" aria-label="Help" title="Help" className="t-help">
+              <Link href="/help" aria-label={t("appShellNav.help")} title={t("appShellNav.help")} className="t-help">
                 ?
               </Link>
               <HouseLightsSwitch />
@@ -449,10 +465,10 @@ export default function PlatformLayout({
                     )}
                   </span>
                   <span className="t-account__name hidden truncate text-[13px] font-semibold xl:inline">
-                    {displayName || "Account"}
+                    {displayName || t("appShellNav.account")}
                   </span>
                   {userTier && userTier !== "free" && (
-                    <span className="t-account__tier hidden xl:inline">{userTier}</span>
+                    <span className="t-account__tier hidden xl:inline">{tierLabel}</span>
                   )}
                   <IconChevronDown
                     className={`size-3 shrink-0 transition-transform ${
@@ -486,7 +502,7 @@ export default function PlatformLayout({
                         )}
                         <div className="min-w-0 flex flex-col gap-1.5">
                           <p className="t-playbill-menu__name truncate">
-                            {displayName ? profileLabel : "Your account"}
+                            {displayName ? profileLabel : t("appShellNav.yourAccount")}
                           </p>
                           {!displayName && (
                             <Link
@@ -494,7 +510,7 @@ export default function PlatformLayout({
                               onClick={() => setProfileDropdownOpen(false)}
                               className="t-playbill-menu__link"
                             >
-                              Add your name & photo →
+                              {t("appShellNav.addNamePhoto")}
                             </Link>
                           )}
                           {/* The plan and the date it turns over, on one
@@ -503,20 +519,20 @@ export default function PlatformLayout({
                               page — which is the question people actually open
                               this menu with. */}
                           <p className="t-playbill-menu__meta">
-                            <span className="t-playbill-menu__plan">{userTier}</span>
+                            <span className="t-playbill-menu__plan">{tierLabel}</span>
                             {renewalNote}
                           </p>
                         </div>
                       </div>
 
-                      <p className="t-playbill-menu__dir">(you.)</p>
+                      <p className="t-playbill-menu__dir">{t("appShellNav.dirYou")}</p>
                       <Link
                         href="/profile"
                         onClick={() => setProfileDropdownOpen(false)}
                         className="t-playbill-menu__row"
                       >
                         <IconUser className="h-4 w-4 opacity-60" />
-                        <span>Edit profile</span>
+                        <span>{t("settings.editProfile")}</span>
                       </Link>
                       <Link
                         href="/resume"
@@ -524,21 +540,21 @@ export default function PlatformLayout({
                         className="t-playbill-menu__row"
                       >
                         <IconFileText className="h-4 w-4 opacity-60" />
-                        <span>Résumé</span>
+                        <span>{t("appShellNav.resume")}</span>
                       </Link>
                       {/* Collection is a tab in the bar this menu hangs from,
                           and a tab in the phone sheet. A third way in, one row
                           under the account name, was the same door listed twice
                           on one screen. */}
 
-                      <p className="t-playbill-menu__dir">(the box office.)</p>
+                      <p className="t-playbill-menu__dir">{t("appShellNav.dirBoxOffice")}</p>
                       <Link
                         href="/billing"
                         onClick={() => setProfileDropdownOpen(false)}
                         className="t-playbill-menu__row"
                       >
                         <IconCreditCard className="h-4 w-4 opacity-60" />
-                        <span>Billing</span>
+                        <span>{t("settings.billing")}</span>
                         {billingHint && (
                           <span className="t-playbill-menu__hint">{billingHint}</span>
                         )}
@@ -549,7 +565,7 @@ export default function PlatformLayout({
                         className="t-playbill-menu__row"
                       >
                         <IconSettings className="h-4 w-4 opacity-60" />
-                        <span>Account settings</span>
+                        <span>{t("settings.title")}</span>
                       </Link>
 
                       {user?.is_moderator && (
@@ -571,7 +587,7 @@ export default function PlatformLayout({
                     </div>
 
                     <div className="t-playbill-menu__foot">
-                      <span className="t-playbill-menu__dir m-0 p-0">(curtain call.)</span>
+                      <span className="t-playbill-menu__dir m-0 p-0">{t("appShellNav.dirCurtainCall")}</span>
                       <button
                         /* The menu stays open: the curtain closes over it.
                            Shutting it first made the click land as a flash. */
@@ -582,7 +598,7 @@ export default function PlatformLayout({
                         {isLoggingOut ? (
                           <IconLoader2 className="size-3.5 animate-spin shrink-0" />
                         ) : null}
-                        {isLoggingOut ? "Logging out…" : "Log out"}
+                        {isLoggingOut ? t("appShellNav.loggingOut") : t("appShellNav.logOut")}
                       </button>
                     </div>
                   </div>
@@ -611,7 +627,7 @@ export default function PlatformLayout({
                 data-open={mobileMenuOpen}
                 aria-expanded={mobileMenuOpen}
                 aria-haspopup="menu"
-                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                aria-label={mobileMenuOpen ? t("appShellNav.closeMenu") : t("appShellNav.openMenu")}
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 <IconMenu className="size-4" />
@@ -682,7 +698,7 @@ export default function PlatformLayout({
                 {profileInitial}
               </span>
             )}
-            Account
+            {t("appShellNav.account")}
           </Link>
         </div>
       </nav>
@@ -705,7 +721,7 @@ export default function PlatformLayout({
             className="t-sheet-scrim md:hidden"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div role="menu" aria-label="Menu" className="t-sheet md:hidden">
+          <div role="menu" aria-label={t("appShellNav.menu")} className="t-sheet md:hidden">
             <span aria-hidden className="t-sheet__handle" />
 
             {/* The same playbill the desktop menu prints, at thumb height.
@@ -732,12 +748,12 @@ export default function PlatformLayout({
                 )}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="t-sheet__name">{displayName || "Your account"}</span>
-                {userTier && <span className="t-sheet__plan">{userTier}</span>}
+                <span className="t-sheet__name">{displayName || t("appShellNav.yourAccount")}</span>
+                {userTier && <span className="t-sheet__plan">{tierLabel}</span>}
               </span>
             </div>
 
-            <p className="t-sheet__dir">(you.)</p>
+            <p className="t-sheet__dir">{t("appShellNav.dirYou")}</p>
 
             <Link
               href="/profile"
@@ -746,7 +762,7 @@ export default function PlatformLayout({
               data-active={pathname.startsWith("/profile")}
             >
               <IconUser className="size-[18px] shrink-0" />
-              Edit profile
+              {t("settings.editProfile")}
             </Link>
 
             <Link
@@ -756,10 +772,10 @@ export default function PlatformLayout({
               data-active={pathname.startsWith("/resume")}
             >
               <IconFileText className="size-[18px] shrink-0" />
-              Résumé
+              {t("appShellNav.resume")}
             </Link>
 
-            <p className="t-sheet__dir">(the box office.)</p>
+            <p className="t-sheet__dir">{t("appShellNav.dirBoxOffice")}</p>
 
             {user?.is_moderator && (
               <Link
@@ -780,7 +796,7 @@ export default function PlatformLayout({
               data-active={pathname === "/billing"}
             >
               <IconCreditCard className="size-[18px] shrink-0" />
-              Billing
+              {t("settings.billing")}
               {billingHint && <span className="t-sheet__count">{billingHint}</span>}
             </Link>
 
@@ -791,10 +807,10 @@ export default function PlatformLayout({
               data-active={pathname === "/settings"}
             >
               <IconSettings className="size-[18px] shrink-0" />
-              Account settings
+              {t("settings.title")}
             </Link>
 
-            <p className="t-sheet__dir">(the house.)</p>
+            <p className="t-sheet__dir">{t("appShellNav.dirHouse")}</p>
 
             {/* Help stays, unlike the rows above it: the desktop bar carries a
                 "?" of its own and the phone bar has no room for one, so this
@@ -806,7 +822,7 @@ export default function PlatformLayout({
               data-active={pathname === "/help"}
             >
               <IconHelpCircle className="size-[18px] shrink-0" />
-              Help
+              {t("appShellNav.help")}
             </Link>
 
             {/* The house lights live here on a phone rather than in the header
@@ -814,7 +830,7 @@ export default function PlatformLayout({
                 switch. */}
             <HouseLightsRow onToggle={() => setMobileMenuOpen(false)} />
 
-            <p className="t-sheet__dir">(curtain call.)</p>
+            <p className="t-sheet__dir">{t("appShellNav.dirCurtainCall")}</p>
 
             <button
               type="button"
@@ -829,7 +845,7 @@ export default function PlatformLayout({
               ) : (
                 <IconLogout className="size-[18px] shrink-0" />
               )}
-              {isLoggingOut ? "Logging out…" : "Log out"}
+              {isLoggingOut ? t("appShellNav.loggingOut") : t("appShellNav.logOut")}
             </button>
 
             <button
@@ -837,7 +853,7 @@ export default function PlatformLayout({
               className="t-sheet__close"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Close
+              {t("appShellNav.close")}
             </button>
           </div>
         </>

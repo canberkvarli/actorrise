@@ -18,6 +18,7 @@ import {
   setSelectedMicId,
   type RehearsalSettings,
 } from "@/lib/scenepartnerStorage";
+import { useLocale, useT } from "@/lib/i18n";
 
 interface SceneSettingsModalProps {
   open: boolean;
@@ -26,6 +27,8 @@ interface SceneSettingsModalProps {
 }
 
 export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSettingsModalProps) {
+  const t = useT();
+  const tag = useLocale() === "tr" ? "tr-TR" : "en-US";
   const [settings, setSettings] = useState<RehearsalSettings>(() =>
     typeof window !== "undefined" ? getRehearsalSettings() : {
       pauseBetweenLinesSeconds: 0.3,
@@ -61,21 +64,21 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl">Rehearsal Preferences</DialogTitle>
+          <DialogTitle className="text-xl">{t("appScenesSettings.title")}</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Adjust how your rehearsals run. Changes apply to all future sessions.
+            {t("appScenesSettings.sub")}
           </p>
         </DialogHeader>
 
         <div className="space-y-6 pt-2">
           {/* Pre-scene countdown */}
           <div className="space-y-3">
-            <h3 className="text-base font-semibold">Pre-Scene Countdown</h3>
+            <h3 className="text-base font-semibold">{t("appScenesSettings.countdown")}</h3>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <Label className="text-sm font-normal">Begin with a countdown</Label>
+                <Label className="text-sm font-normal">{t("appScenesSettings.countdownLabel")}</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Gives you a moment to get into character before the first cue.
+                  {t("appScenesSettings.countdownHint")}
                 </p>
               </div>
               <Switch
@@ -85,7 +88,7 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
             </div>
             {settings.countdownSeconds > 0 && (
               <div className="space-y-2 pl-1">
-                <Label className="text-xs text-muted-foreground">Duration</Label>
+                <Label className="text-xs text-muted-foreground">{t("appScenesSettings.duration")}</Label>
                 <div className="flex items-center gap-2">
                   <Slider
                     value={settings.countdownSeconds}
@@ -95,7 +98,7 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
                     step={1}
                     className="flex-1"
                   />
-                  <span className="text-sm tabular-nums w-8">{settings.countdownSeconds}s</span>
+                  <span className="text-sm tabular-nums w-8">{t("appScenesSettings.seconds", { n: settings.countdownSeconds.toLocaleString(tag) })}</span>
                 </div>
               </div>
             )}
@@ -105,12 +108,12 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
 
           {/* Line delivery */}
           <div className="space-y-3">
-            <h3 className="text-base font-semibold">Line Delivery</h3>
+            <h3 className="text-base font-semibold">{t("appScenesSettings.delivery")}</h3>
 
             <div className="space-y-2">
-              <Label className="text-sm font-normal">Breathing room between lines</Label>
+              <Label className="text-sm font-normal">{t("appScenesSettings.breathing")}</Label>
               <p className="text-xs text-muted-foreground">
-                A brief pause after each line before the next one plays.
+                {t("appScenesSettings.breathingHint")}
               </p>
               <div className="flex items-center gap-2">
                 <Slider
@@ -121,7 +124,7 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
                   step={0.5}
                   className="flex-1"
                 />
-                <span className="text-sm tabular-nums w-8">{settings.pauseBetweenLinesSeconds}s</span>
+                <span className="text-sm tabular-nums w-8">{t("appScenesSettings.seconds", { n: settings.pauseBetweenLinesSeconds.toLocaleString(tag) })}</span>
               </div>
             </div>
 
@@ -131,12 +134,12 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
 
           {/* Display */}
           <div className="space-y-3">
-            <h3 className="text-base font-semibold">Display</h3>
+            <h3 className="text-base font-semibold">{t("appScenesSettings.display")}</h3>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <Label className="text-sm font-normal">Highlight my lines</Label>
+                <Label className="text-sm font-normal">{t("appScenesSettings.highlight")}</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Adds a subtle background to your lines so they stand out in the script.
+                  {t("appScenesSettings.highlightHint")}
                 </p>
               </div>
               <Switch
@@ -150,9 +153,9 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
 
           {/* Microphone */}
           <div className="space-y-3">
-            <h3 className="text-base font-semibold">Microphone</h3>
+            <h3 className="text-base font-semibold">{t("appScenesSettings.mic")}</h3>
             {micDevices.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No microphones found. Grant mic access to see devices.</p>
+              <p className="text-xs text-muted-foreground">{t("appScenesSettings.noMics")}</p>
             ) : (
               <div className="space-y-1">
                 {micDevices.map((device, i) => {
@@ -171,7 +174,7 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
                       }}
                       className="w-full flex items-center justify-between px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors text-left"
                     >
-                      <span className="truncate">{device.label || `Microphone ${i + 1}`}</span>
+                      <span className="truncate">{device.label || t("appScenesSettings.micN", { n: i + 1 })}</span>
                       {isSelected && <Check className="w-3.5 h-3.5 text-primary shrink-0 ml-2" />}
                     </button>
                   );

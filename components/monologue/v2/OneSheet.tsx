@@ -10,6 +10,7 @@ import { PlayCover, clothFor } from "@/components/monologue/PlayCover";
 import { PieceWhisper } from "@/components/community/Whisper";
 import { usePieceActivity } from "@/hooks/useCallboardPulse";
 import { runClock } from "@/lib/runClock";
+import { useT } from "@/lib/i18n";
 
 /**
  * The one-sheet.
@@ -48,6 +49,7 @@ function castingFacts(monologue: Monologue): string[] {
 /** The overdone ticks, over the sheet's fixed dark ground. */
 function OverdoneTicks({ score }: { score: number | null | undefined }) {
   const band = overdoneBand(score);
+  const t = useT();
   if (!band) return null;
   return (
     <span className="flex items-center gap-2.5">
@@ -55,8 +57,8 @@ function OverdoneTicks({ score }: { score: number | null | undefined }) {
       <span
         title={
           band.level >= 2
-            ? "You will not be the only one bringing this today."
-            : "How often a casting room hears this piece."
+            ? t("appMonologueSheet.ticksHigh")
+            : t("appMonologueSheet.ticksLow")
         }
         className="t-m__mono inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.16em]"
         style={{
@@ -95,6 +97,7 @@ export function OneSheet({
   onRun?: () => void;
   runSeconds?: number;
 }) {
+  const t = useT();
   const author = displayableAuthor(monologue.author);
   const facts = castingFacts(monologue);
   const poster = posterAt(monologue.poster_url, 600);
@@ -136,7 +139,7 @@ export function OneSheet({
           onMouseLeave={(e) => (e.currentTarget.style.color = "var(--t-muted-light)")}
         >
           <IconArrowLeft className="h-3.5 w-3.5" />
-          (back to the results.)
+          {t("appMonologueSheet.back")}
         </button>
 
         <div className="t-m-rise mt-7 flex items-end gap-[clamp(20px,4vw,40px)]">
@@ -182,18 +185,18 @@ export function OneSheet({
               )}
               {inLane && (
                 <span
-                  title={laneReason ?? "Matches your type"}
+                  title={laneReason ?? t("appMonologueSheet.laneTitle")}
                   className="t-m__mono whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] uppercase tracking-[0.12em]"
                   style={{ background: "var(--t-gel)", color: "var(--t-ink)" }}
                 >
-                  your lane
+                  {t("appMonologueSheet.lane")}
                 </span>
               )}
               <span
                 className="t-m__dir text-[13px]"
                 style={{ color: "var(--t-faint)" }}
               >
-                from {monologue.play_title}
+                {t("appMonologueSheet.from", { play: monologue.play_title })}
               </span>
             </div>
 
@@ -260,7 +263,7 @@ export function OneSheet({
                 className="mt-6 hidden h-12 items-center gap-2.5 rounded-full bg-primary pl-5 pr-6 font-sans text-[15px] font-bold text-primary-foreground transition-colors hover:bg-primary/90 lg:inline-flex"
               >
                 <IconPlayerPlayFilled className="h-4 w-4" />
-                Run it
+                {t("appMonologuePage.runIt")}
                 {runSeconds ? (
                   <span className="font-medium opacity-75">{runClock(runSeconds)}</span>
                 ) : null}

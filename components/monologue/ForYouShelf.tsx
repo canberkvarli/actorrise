@@ -8,6 +8,7 @@ import type { Monologue } from "@/types/actor";
 import { ShelfCard } from "@/components/monologue/ShelfCard";
 import { useProfileFormData } from "@/hooks/useDashboardData";
 import ProfileOnboardingFlow from "@/components/onboarding/ProfileOnboardingFlow";
+import { useT } from "@/lib/i18n";
 
 /**
  * Pre-search "Picked for your type" shelf on /monologues.
@@ -21,6 +22,7 @@ import ProfileOnboardingFlow from "@/components/onboarding/ProfileOnboardingFlow
  */
 export function ForYouShelf() {
   const queryClient = useQueryClient();
+  const t = useT();
   /* The aside says what the shelf is picking on, in the actor's own profile
      terms. Nothing invented: whatever of the three is actually set is shown,
      and if none are, the aside is left off rather than filled with guesses. */
@@ -89,7 +91,7 @@ export function ForYouShelf() {
           headings with subtitles. */}
       <div className="mb-5">
         <h2 className="t-shelf-title">
-          Picked for <em>your type.</em>
+          {t("appMonologueForYou.titleA")}<em>{t("appMonologueForYou.titleB")}</em>
         </h2>
         {profileFacts && (
           <p className="t-dir mt-1.5" style={{ fontSize: 12, color: "var(--t-muted-dark-2)" }}>
@@ -130,14 +132,15 @@ export function ForYouShelf() {
  * be filled rather than an ad sitting where results should be.
  */
 function ProfileNudge({ onOpen }: { onOpen: () => void }) {
+  const t = useT();
   return (
     <div>
       <div className="mb-5">
         <h2 className="t-shelf-title">
-          Picked for <em>your type.</em>
+          {t("appMonologueForYou.titleA")}<em>{t("appMonologueForYou.titleB")}</em>
         </h2>
         <p className="t-dir mt-1.5" style={{ fontSize: 12, color: "var(--t-muted-dark-2)" }}>
-          (we haven&apos;t met properly.)
+          {t("appMonologueForYou.nudgeDirection")}
         </p>
       </div>
 
@@ -157,18 +160,17 @@ function ProfileNudge({ onOpen }: { onOpen: () => void }) {
       >
         <span className="min-w-0">
           <span className="block text-[15px] font-semibold leading-snug">
-            Tell me how you&apos;re cast, and this shelf fills up.
+            {t("appMonologueForYou.nudgeTitle")}
           </span>
           <span className="mt-1 block text-sm leading-relaxed" style={{ color: "var(--t-muted-dark)" }}>
-            Your playing age, your type, what you want to work on. Five taps, and
-            every search after this one leans your way.
+            {t("appMonologueForYou.nudgeBody")}
           </span>
         </span>
         <span
           className="inline-flex h-11 shrink-0 items-center gap-2.5 rounded-full pl-5 pr-1.5 text-sm font-bold"
           style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
         >
-          Set my type
+          {t("appMonologueForYou.nudgeCta")}
           <span
             className="inline-flex size-8 items-center justify-center rounded-full"
             style={{ background: "var(--t-cta-dot-bg)", color: "var(--t-cta-dot-fg)" }}

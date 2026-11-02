@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { useTrialWords } from "@/hooks/useTrialWords";
+import { useT } from "@/lib/i18n";
 
 const KEY = (id: number | string) => `arc.readModal.${id}`;
 
@@ -31,21 +32,22 @@ function firstTimeThisSession(id: number | string): boolean {
 export function ReadWallModal({ monologueId }: { monologueId: number | string }) {
   const [open, setOpen] = useState(() => firstTimeThisSession(monologueId));
   const words = useTrialWords();
+  const t = useT();
 
   return (
     <MonologuePaywallModal
       open={open}
       onOpenChange={setOpen}
       feature="monologue_read_modal"
-      dir="(the rest is behind the curtain.)"
+      dir={t("appMonologueWall.direction")}
       lead="read"
-      title={words.tasted ? words.overTitle : "That's your free reads for the month."}
+      title={words.tasted ? words.overTitle : t("appMonologueWall.title")}
       description={
         words.tasted
           ? words.overBody
-          : "Plus opens this piece and every other, start to finish. Anything you've already read this month stays open."
+          : t("appMonologueWall.body")
       }
-      quietLabel="not now"
+      quietLabel={t("appMonologueWall.notNow")}
     />
   );
 }

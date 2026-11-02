@@ -5,6 +5,14 @@ import { ArrowLeft, Pause, Play, RotateCcw, SkipForward, X } from 'lucide-react'
 import type { RehearsalLine } from '@/lib/rehearsal/contract';
 import type { Snapshot } from '@/lib/rehearsal/engine';
 import { BOOKS, type Book } from '@/lib/rehearsal/book';
+import { useT, type MessageKey } from '@/lib/i18n';
+
+/** The switch's labels, by id; lib/rehearsal/book keeps the English ones. */
+const BOOK_LABEL: Record<Book, MessageKey> = {
+  script: 'appScenesRehearse.bookScript',
+  cues: 'appScenesRehearse.bookCues',
+  off: 'appScenesRehearse.bookOff',
+};
 
 /**
  * The bar across the top: leave, where in the scene, and the run sheet. One
@@ -17,22 +25,23 @@ export function TopBar({ title, lines, actor, current, started, onLeave, book, o
   /** How much of the actor's lines shows; switchable at any point in the run. Absent: no switch. */
   book: Book; onBook?: (book: Book) => void;
 }) {
+  const t = useT();
   return (
     <header className="r-top">
       <div className="r-top__row">
-        <button type="button" className="r-icon" onClick={onLeave} aria-label="Leave">
+        <button type="button" className="r-icon" onClick={onLeave} aria-label={t('appScenesRehearse.leave')}>
           <X size={20} strokeWidth={1.75} />
         </button>
         <p className="r-top__title">{title}</p>
-        <p className="r-top__count" aria-label={`Line ${current + 1} of ${lines.length}`}>
+        <p className="r-top__count" aria-label={t('appScenesRehearse.lineOf', { n: current + 1, total: lines.length })}>
           {started ? current + 1 : 0}<span>/{lines.length}</span>
         </p>
       </div>
-      {onBook && <div className="r-book" role="radiogroup" aria-label="Your lines">
+      {onBook && <div className="r-book" role="radiogroup" aria-label={t('appScenesRehearse.yourLines')}>
         {BOOKS.map(b => (
           <button key={b.id} type="button" role="radio" aria-checked={book === b.id}
             className="r-book__opt" onClick={() => onBook(b.id)}>
-            {b.label}
+            {t(BOOK_LABEL[b.id])}
           </button>
         ))}
       </div>}
@@ -63,40 +72,41 @@ interface DockProps {
  * an actor calls in rehearsal when the next word will not come.
  */
 export function Dock({ snapshot, partner, onToggle, onSkip, onBack, onRestart, onPrompt }: DockProps) {
+  const t = useT();
   const state = snapshot?.state ?? 'ready';
   const paused = state === 'paused';
   const running = state === 'actor' || state === 'partner';
   return (
     <div className="r-dock" data-state={state}>
       <div className="r-dock__status" aria-live="polite">
-        {state === 'actor' && <><span className="r-mic" aria-hidden />Your line</>}
+        {state === 'actor' && <><span className="r-mic" aria-hidden />{t('appScenesRehearse.yourLine')}</>}
         {state === 'actor' && onPrompt && (
           <>
             <span className="r-dock__sep" aria-hidden>·</span>
-            <button type="button" className="r-dock__link" onClick={onPrompt} aria-label="Line! Show the next words" title={`Or say "line"`}>
-              Line!
+            <button type="button" className="r-dock__link" onClick={onPrompt} aria-label={t('appScenesRehearse.lineCallLabel')} title={t('appScenesRehearse.lineCallTitle')}>
+              {t('appScenesRehearse.lineCall')}
             </button>
           </>
         )}
         {state === 'partner' && partner && <span className="r-dock__who" style={partner.style}>{partner.name}</span>}
         {paused && (
-          <>Paused<span className="r-dock__sep" aria-hidden>·</span>
+          <>{t('appScenesRehearse.paused')}<span className="r-dock__sep" aria-hidden>·</span>
             <button type="button" className="r-dock__link" onClick={onRestart}>
-              <RotateCcw size={13} strokeWidth={2} aria-hidden />Start over
+              <RotateCcw size={13} strokeWidth={2} aria-hidden />{t('appScenesRehearse.startOver')}
             </button>
           </>
         )}
       </div>
       <div className="r-dock__row">
         <button type="button" className="r-ctl" onClick={onBack} disabled={!running && !paused}>
-          <ArrowLeft size={22} strokeWidth={1.75} aria-hidden /><span>Back</span>
+          <ArrowLeft size={22} strokeWidth={1.75} aria-hidden /><span>{t('appScenesRehearse.back')}</span>
         </button>
         <button type="button" className="r-play" onClick={onToggle} disabled={!running && !paused}
-          aria-label={paused ? 'Resume' : 'Pause'}>
+          aria-label={paused ? t('appScenesRehearse.resume') : t('appScenesRehearse.pause')}>
           {paused ? <Play size={26} fill="currentColor" strokeWidth={0} /> : <Pause size={26} fill="currentColor" strokeWidth={0} />}
         </button>
         <button type="button" className="r-ctl" onClick={onSkip} disabled={!running}>
-          <SkipForward size={22} strokeWidth={1.75} aria-hidden /><span>Skip</span>
+          <SkipForward size={22} strokeWidth={1.75} aria-hidden /><span>{t('appScenesRehearse.skip')}</span>
         </button>
       </div>
     </div>

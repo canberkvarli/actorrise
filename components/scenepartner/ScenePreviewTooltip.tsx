@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
+import { useT } from "@/lib/i18n";
 
 interface SceneLine {
   id: number;
@@ -32,6 +33,7 @@ interface ScenePreviewTooltipProps {
 }
 
 export function ScenePreviewTooltip({ sceneId, children }: ScenePreviewTooltipProps) {
+  const t = useT();
   const [lines, setLines] = useState<SceneLine[] | null>(lineCache.get(sceneId) ?? null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -134,12 +136,12 @@ export function ScenePreviewTooltip({ sceneId, children }: ScenePreviewTooltipPr
               </div>
             ))}
             {lines.length === MAX_PREVIEW_LINES && (
-              <p className="text-[10px] text-neutral-500 italic">Scroll for more...</p>
+              <p className="text-[10px] text-neutral-500 italic">{t("appScenesPartner.scrollMore")}</p>
             )}
           </div>
         )}
         {lines && lines.length === 0 && (
-          <p className="text-xs text-neutral-500 italic">No lines</p>
+          <p className="text-xs text-neutral-500 italic">{t("appScenesPartner.noLines")}</p>
         )}
       </PopoverContent>
     </Popover>

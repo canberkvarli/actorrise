@@ -1,4 +1,7 @@
+"use client";
+
 import { voiceMark } from "@/lib/voiceMarks";
+import { useT } from "@/lib/i18n";
 
 /**
  * A voice, drawn as four bars.
@@ -23,6 +26,7 @@ export function VoiceMark({
   size?: number;
   className?: string;
 }) {
+  const t = useT();
   const mark = voiceMark(voiceId);
   const w = 4;
   const gap = 2.4;
@@ -35,7 +39,7 @@ export function VoiceMark({
       viewBox={`0 0 ${box} 20`}
       className={className}
       role={label ? "img" : undefined}
-      aria-label={label ? `${label} voice` : undefined}
+      aria-label={label ? t("appScenesPartner.voiceMark", { label }) : undefined}
       aria-hidden={label ? undefined : true}
       focusable="false"
     >

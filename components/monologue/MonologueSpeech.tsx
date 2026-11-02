@@ -12,6 +12,9 @@ import type { ProfileMatch } from "@/lib/profileMatch";
 import { resultPoster, isCrossShelf, shelfLabel } from "@/lib/resultPoster";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { MonologueSourceTag } from "@/components/search/SourceTag";
+import { useT, type MessageKey } from "@/lib/i18n";
+
+type Translate = ReturnType<typeof useT>;
 
 /**
  * A search result as a page of sides, not a card in a grid.
@@ -88,12 +91,12 @@ function roman(n: number): string {
  * otherwise look arbitrary, e.g. why "a woman confronting her mother" returns a
  * character called Mother.
  */
-const MATCH_LABELS: Record<string, string> = {
-  exact_quote: "quote match",
-  fuzzy_quote: "quote match",
-  title_match: "play match",
-  play_match: "play match",
-  character_match: "name match",
+const MATCH_LABELS: Record<string, MessageKey> = {
+  exact_quote: "appMonologueSpeech.quoteMatch",
+  fuzzy_quote: "appMonologueSpeech.quoteMatch",
+  title_match: "appMonologueSpeech.playMatch",
+  play_match: "appMonologueSpeech.playMatch",
+  character_match: "appMonologueSpeech.nameMatch",
 };
 
 /**
@@ -112,14 +115,14 @@ export function matchMarkIsUseful(list: Monologue[]): boolean {
   return marked > 0 && marked <= list.length * 0.7;
 }
 
-function matchMark(m: Monologue): Mark | null {
+function matchMark(m: Monologue, t: Translate): Mark | null {
   const label = MATCH_LABELS[m.match_type ?? ""];
   if (!label) return null;
   return {
     key: "match",
-    label,
+    label: t(label),
     tone: "match",
-    title: "This came back because it matched the words you typed, not a guess at what you meant.",
+    title: t("appMonologueSpeech.matchTitle"),
   };
 }
 
@@ -131,11 +134,12 @@ function matchMark(m: Monologue): Mark | null {
 function marksFor(
   mono: Monologue,
   index: number,
-  profileMatch?: ProfileMatch,
-  showMatchMark = true,
+  profileMatch: ProfileMatch | undefined,
+  showMatchMark: boolean,
+  t: Translate,
 ): Mark[] {
   const marks: Mark[] = [];
-  const match = showMatchMark ? matchMark(mono) : null;
+  const match = showMatchMark ? matchMark(mono, t) : null;
   if (match) marks.push(match);
 
   // A literal match already explains the row better than its rank does, so the
@@ -143,9 +147,9 @@ function marksFor(
   if (!match && index === 0) {
     marks.push({
       key: "best",
-      label: "best pick",
+      label: t("appMonologueSpeech.bestPick"),
       tone: "best",
-      title: "The closest thing to what you asked for.",
+      title: t("appMonologueSpeech.bestPickTitle"),
     });
   }
 
@@ -156,7 +160,7 @@ function marksFor(
   if (profileMatch && profileMatch.score >= 1.5 && profileMatch.reasons.length > 0) {
     marks.push({
       key: "lane",
-      label: "your lane",
+      label: t("appMonologueSheet.lane"),
       tone: "lane",
       title: profileMatch.reasons[0],
     });
@@ -167,9 +171,9 @@ function marksFor(
   if (mono.overdone_score > 0.7) {
     marks.push({
       key: "overdone",
-      label: "everyone brings this",
+      label: t("appMonologueSpeech.overdone"),
       tone: "overdone",
-      title: "Auditors see this one a lot. Worth knowing before you pick it.",
+      title: t("appMonologueSpeech.overdoneTitle"),
     });
   }
 
@@ -211,6 +215,7 @@ export function MonologueSpeech({
   showMatchMark = true,
   omit,
 }: MonologueSpeechProps) {
+  const t = useT();
   const author = omit?.author ? null : displayableAuthor(mono.author);
   const source = [mono.play_title, author].filter(Boolean).join(", ");
   const length = clock(mono.estimated_duration_seconds);
@@ -249,7 +254,7 @@ export function MonologueSpeech({
   const [posterOpen, setPosterOpen] = useState(false);
   const crossShelf = isCrossShelf(mono, mode);
 
-  const marks = marksFor(mono, index, profileMatch, showMatchMark);
+  const marks = marksFor(mono, index, profileMatch, showMatchMark, t);
   /* Cross-tab recovery was good behaviour that read as a bug because it was
      silent: asking the Plays shelf for "game of thrones" returns the TV rows
      and nothing on the row said they were television. One word fixes it, and
@@ -257,11 +262,21 @@ export function MonologueSpeech({
   if (crossShelf) {
     const label = shelfLabel(mono);
     if (label) {
+      const shown =
+        label === "tv"
+          ? t("appMonologueSpeech.shelfTv")
+          : label === "film"
+            ? t("appMonologueSpeech.shelfFilm")
+            : label === "play"
+              ? t("appMonologueSpeech.shelfPlay")
+              : label;
       marks.unshift({
         key: "shelf",
-        label,
+        label: shown,
         tone: "shelf",
-        title: `Not a play. This is from ${label === "tv" ? "television" : label}.`,
+        title: t("appMonologueSpeech.notAPlay", {
+          where: label === "tv" ? t("appMonologueSpeech.television") : shown,
+        }),
       });
     }
   }
@@ -325,7 +340,7 @@ export function MonologueSpeech({
               type="button"
               onClick={(e) => { e.stopPropagation(); setPosterOpen(true); }}
               className="shrink-0 leading-none"
-              aria-label={`See the poster for ${mono.play_title}`}
+              aria-label={t("appMonologueSpeech.seePoster", { play: mono.play_title })}
             >
               <Image
                 src={poster}
@@ -350,12 +365,12 @@ export function MonologueSpeech({
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-8 sm:hidden"
           role="dialog"
           aria-modal="true"
-          aria-label={`Poster for ${mono.play_title}`}
+          aria-label={t("appMonologueSpeech.posterFor", { play: mono.play_title })}
           onClick={(e) => { e.stopPropagation(); setPosterOpen(false); }}
         >
           <Image
             src={poster}
-            alt={`Poster for ${mono.play_title}`}
+            alt={t("appMonologueSpeech.posterFor", { play: mono.play_title })}
             width={600}
             height={900}
             className="max-h-full w-auto rounded-sm object-contain"
@@ -458,7 +473,7 @@ export function MonologueSpeech({
         </motion.p>
         {truncated && (
           <span className="mt-2 inline-block text-xs underline underline-offset-4" style={{ color: "var(--t-muted-dark-2)" }}>
-            {open ? "less" : "read it all"}
+            {open ? t("appMonologueSpeech.less") : t("appMonologueSpeech.readAll")}
           </span>
         )}
       </button>
@@ -473,7 +488,7 @@ export function MonologueSpeech({
           onClick={(e) => e.stopPropagation()}
           className="t-rehearse"
         >
-          Rehearse
+          {t("appMonologueSpeech.rehearse")}
           <span className="t-rehearse__dot" aria-hidden>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14M13 6l6 6-6 6" />
@@ -488,7 +503,7 @@ export function MonologueSpeech({
           aria-pressed={mono.is_favorited}
         >
           <BookmarkIcon filled={mono.is_favorited} className="h-4 w-4" />
-          {mono.is_favorited ? "Saved" : "Save"}
+          {mono.is_favorited ? t("appMonologueSpeech.saved") : t("appMonologueSpeech.save")}
         </button>
         {isModerator && onEdit && (
           <button
@@ -496,7 +511,7 @@ export function MonologueSpeech({
             onClick={() => onEdit(mono.id)}
             className="text-muted-foreground/60 underline-offset-4 hover:text-foreground hover:underline"
           >
-            Edit
+            {t("appMonologueDetail.edit")}
           </button>
         )}
       </div>

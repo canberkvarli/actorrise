@@ -8,6 +8,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
 import { trackUpgradeModalViewed } from "@/lib/analytics";
 import type { WallKind } from "@/lib/paywall/offer";
+import { useT } from "@/lib/i18n";
 
 interface MonologuePaywallModalProps {
   open: boolean;
@@ -31,9 +32,6 @@ interface MonologuePaywallModalProps {
 
 // No counts. The free cap moved three times in two months and copy that names
 // a number goes stale silently.
-const DEFAULT_TITLE = "Those were your free runs.";
-const DEFAULT_DESCRIPTION =
-  "Plus lets you run this piece, and every other, as many times as it takes.";
 
 /**
  * Shown when a free user hits a monologue-side wall. Leads with continuing
@@ -51,13 +49,14 @@ export function MonologuePaywallModal({
   title,
   description,
   feature = "monologue_rehearsal",
-  dir = "(the house is still open.)",
-  quietLabel = "not now",
+  dir,
+  quietLabel,
   lead = "rehearse",
 }: MonologuePaywallModalProps) {
   const { subscription } = useSubscription();
   const currentTier = subscription?.tier_name ?? "free";
   const words = useTrialWords();
+  const t = useT();
 
   useEffect(() => {
     if (!open) return;
@@ -67,8 +66,10 @@ export function MonologuePaywallModal({
   // After a taste (or the reverse trial) the first thing to say is what they
   // had. A caller's own title is about a feature; the taste outranks it only
   // on the default rehearsal wall and the walls that pass none.
-  const heading = title ?? (words.tasted ? words.overTitle : DEFAULT_TITLE);
-  const body = description ?? (words.tasted ? words.overBody : DEFAULT_DESCRIPTION);
+  const heading =
+    title ?? (words.tasted ? words.overTitle : t("appMonologuePaywall.title"));
+  const body =
+    description ?? (words.tasted ? words.overBody : t("appMonologuePaywall.body"));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,7 +79,7 @@ export function MonologuePaywallModal({
       <DialogContent
         className={`t-modal theatre-tokens ${theatreFontVars} max-h-[92dvh] max-w-[26rem] overflow-y-auto border-0 p-7`}
       >
-        <p className="t-modal__dir">{dir}</p>
+        <p className="t-modal__dir">{dir ?? t("appMonologuePaywall.direction")}</p>
         <DialogTitle className="t-modal__title">{heading}</DialogTitle>
         <DialogDescription className="t-modal__body">{body}</DialogDescription>
 
@@ -86,7 +87,7 @@ export function MonologuePaywallModal({
           feature={feature}
           lead={lead}
           onDismiss={() => onOpenChange(false)}
-          dismissLabel={quietLabel}
+          dismissLabel={quietLabel ?? t("appMonologueWall.notNow")}
         />
       </DialogContent>
     </Dialog>

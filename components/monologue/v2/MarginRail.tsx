@@ -7,6 +7,7 @@ import { overdoneBand } from "@/lib/poster";
 import { formatClock } from "@/lib/estimateDuration";
 import { usePieceHouse } from "@/hooks/useCallboardPulse";
 import { clothFor } from "@/components/monologue/PlayCover";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 /**
  * The margin.
@@ -46,18 +47,18 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 /** How often a room hears this. Ten cells filled to the score. */
 function OverdoneMeter({ score }: { score: number | null | undefined }) {
   const band = overdoneBand(score);
+  const t = useT();
   // An unscored 0 means "the scorer hasn't reached this piece", not "nobody
   // performs it". Twelve thousand rows sit at 0, and printing "Rarely." over
   // them would be a confident claim on no evidence.
   if (!band) return null;
 
-  const big = ["Rarely.", "Now and then.", "Often.", "Constantly."][band.level];
-  const note = [
-    "Auditors don't see this one much. You'll have the room to yourself.",
-    "Seen now and then. A strong choice still lands.",
-    "Auditors know this one. Walk in knowing that.",
-    "Everyone brings this. Walk in knowing that, or pick the one below it.",
-  ][band.level];
+  const big = t(
+    (["appMonologueRail.big0", "appMonologueRail.big1", "appMonologueRail.big2", "appMonologueRail.big3"] as MessageKey[])[band.level],
+  );
+  const note = t(
+    (["appMonologueRail.note0", "appMonologueRail.note1", "appMonologueRail.note2", "appMonologueRail.note3"] as MessageKey[])[band.level],
+  );
   const colour = [
     "var(--t-text)",
     "var(--t-text)",
@@ -71,7 +72,7 @@ function OverdoneMeter({ score }: { score: number | null | undefined }) {
     <div className="pt-[18px]">
       <Rule heavy />
       <div className="pt-[18px]">
-        <SectionLabel>how often a room hears this</SectionLabel>
+        <SectionLabel>{t("appMonologueRail.howOften")}</SectionLabel>
         <p
           className="t-m__display mt-1.5 text-[30px] leading-[1.05]"
           style={{ color: colour }}
@@ -110,16 +111,16 @@ function MarkRow({ label, value, tone }: { label: string; value: string; tone?: 
 }
 
 /** "3h", "yesterday", "3d" — the whisper's own scale. */
-function ago(iso: string): string {
+function ago(iso: string, t: ReturnType<typeof useT>): string {
   const then = new Date(iso).getTime();
   if (!Number.isFinite(then)) return "";
   const mins = Math.max(0, Math.round((Date.now() - then) / 60000));
-  if (mins < 60) return `${Math.max(1, mins)}m`;
+  if (mins < 60) return t("appMonologueRail.agoMins", { n: Math.max(1, mins) });
   const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24) return t("appMonologueRail.agoHours", { n: hours });
   const days = Math.round(hours / 24);
-  if (days === 1) return "yesterday";
-  return `${days}d`;
+  if (days === 1) return t("appMonologueRail.yesterday");
+  return t("appMonologueRail.agoDays", { n: days });
 }
 
 export function MarginRail({
@@ -146,6 +147,7 @@ export function MarginRail({
   outOfReads?: boolean;
 }) {
   const house = usePieceHouse(monologue.id);
+  const t = useT();
 
   return (
     <aside className="t-m-rise flex flex-col gap-[18px]">
@@ -159,7 +161,7 @@ export function MarginRail({
             className="inline-flex h-[60px] w-full items-center justify-between gap-3 rounded-full pl-6 pr-2 text-[17px] font-bold transition-transform duration-300 hover:scale-[1.03] hover:-rotate-1"
             style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
           >
-            Run it
+            {t("appMonologuePage.runIt")}
             <span
               className="inline-flex h-[42px] w-[42px] items-center justify-center rounded-full"
               style={{ background: "var(--t-cta-dot-bg)", color: "var(--t-cta-dot-fg)" }}
@@ -171,7 +173,7 @@ export function MarginRail({
             className="t-m__dir mt-2.5 text-center text-[12px]"
             style={{ color: "var(--t-faint)" }}
           >
-            (you read {monologue.character_name.toLowerCase()}. scenepartner reads the room.)
+            {t("appMonologueRail.youRead", { name: monologue.character_name.toLowerCase() })}
           </p>
         </div>
       )}
@@ -191,7 +193,7 @@ export function MarginRail({
           className="t-m-drill inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-full border-[1.5px] text-[14px] font-bold transition-all duration-300"
         >
           <IconRepeat className="h-[18px] w-[18px]" />
-          {memorized ? "Run the lines again" : "Learn it line by line"}
+          {memorized ? t("appMonologueRail.runLinesAgain") : t("appMonologueRail.learnLineByLine")}
         </button>
       )}
 
@@ -201,20 +203,20 @@ export function MarginRail({
       <div className="pt-[18px]">
         <Rule />
         <div className="pt-[18px]">
-          <SectionLabel>your marks</SectionLabel>
+          <SectionLabel>{t("appMonologueRail.yourMarks")}</SectionLabel>
           <div className="mt-2.5 flex flex-col gap-1.5 text-[13px]">
-            <MarkRow label="beats noted" value={String(beatCount)} />
+            <MarkRow label={t("appMonologueRail.beatsNoted")} value={String(beatCount)} />
             <MarkRow
-              label="cut"
+              label={t("appMonologueRail.cut")}
               value={
                 hasCut
-                  ? `${formatClock(cutSeconds)} of ${formatClock(fullSeconds)}`
-                  : "full piece"
+                  ? t("appMonologueRail.cutOf", { cut: formatClock(cutSeconds), full: formatClock(fullSeconds) })
+                  : t("appMonologueRail.fullPiece")
               }
             />
             <MarkRow
-              label="off book"
-              value={memorized ? "yes" : "not yet"}
+              label={t("appMonologueRail.offBook")}
+              value={memorized ? t("appMonologueRail.yes") : t("appMonologueRail.notYet")}
               tone={memorized ? "var(--t-orange-deep)" : undefined}
             />
             {!memorized && !outOfReads && (
@@ -227,7 +229,7 @@ export function MarginRail({
                 className="t-m__dir m-0 self-start text-[12px] underline underline-offset-4 transition-colors"
                 style={{ color: "var(--t-faint)" }}
               >
-                (learn it line by line.)
+                {t("appMonologueRail.learnDirection")}
               </button>
             )}
           </div>
@@ -236,7 +238,7 @@ export function MarginRail({
               className="t-m__dir mt-3 text-[12px]"
               style={{ color: "var(--t-faint)" }}
             >
-              (no free reads left this month. plus is unlimited.)
+              {t("appMonologueRail.noReads")}
             </p>
           )}
         </div>
@@ -258,17 +260,17 @@ export function MarginRail({
                 className="t-m-breathe h-[7px] w-[7px] rounded-full"
                 style={{ background: "var(--t-orange-deep)" }}
               />
-              in the house with this
+              {t("appMonologueRail.inTheHouse")}
             </p>
             <div className="mt-3 flex flex-col gap-2.5">
               {house.map((e) => {
                 const did =
                   e.event_type === "bookmarked"
-                    ? "saved"
+                    ? t("appMonologueRail.didSaved")
                     : e.event_type === "shared"
-                      ? "shared"
-                      : "read";
-                const name = e.name || "Someone";
+                      ? t("appMonologueRail.didShared")
+                      : t("appMonologueRail.didRead");
+                const name = e.name || t("appMonologueRail.someone");
                 return (
                   <div key={e.id} className="flex items-center gap-2.5 text-[13px]">
                     <span
@@ -294,7 +296,7 @@ export function MarginRail({
                       className="t-m__mono ml-auto flex-shrink-0 text-[11px]"
                       style={{ color: "var(--t-faint)" }}
                     >
-                      {ago(e.created_at)}
+                      {ago(e.created_at, t)}
                     </span>
                   </div>
                 );

@@ -7,6 +7,7 @@ import { useSaveCut } from "@/hooks/useCollectionMeta";
 import { estimateDurationSeconds, formatClock } from "@/lib/estimateDuration";
 import { monologueSegments } from "@/lib/monologueSegments";
 import { CutMeter, CutLine, type CutLineState } from "@/components/monologue/CutRail";
+import { useT } from "@/lib/i18n";
 
 /**
  * Audition cut editor: pick the first and last unit of your cut and the live
@@ -33,6 +34,7 @@ export function CutEditor({
    *  it and keep the parts that carry information: the instruction and clock. */
   embedded?: boolean;
 }) {
+  const t = useT();
   const lines = useMemo(() => monologueSegments(monologue.text), [monologue.text]);
   // Indices of the lines that actually carry words — only these are selectable.
   const spokenIdx = useMemo(
@@ -82,10 +84,14 @@ export function CutEditor({
     const e = hi;
     try {
       await saveCut.mutateAsync({ monologueId: monologue.id, start: s, end: e });
-      toast.success(s === null ? "Cut cleared" : `Cut saved · ${formatClock(cutSeconds)}`);
+      toast.success(
+        s === null
+          ? t("appMonologueCut.cleared")
+          : t("appMonologueCut.saved", { clock: formatClock(cutSeconds) }),
+      );
       onSaved?.(s, e);
     } catch {
-      toast.error("Couldn't save the cut. Try again.");
+      toast.error(t("appMonologueCut.saveFailed"));
     }
   }
 
@@ -96,9 +102,9 @@ export function CutEditor({
     start === null ? "idle" : end === null ? "picking-end" : "done";
 
   const instruction = {
-    idle: "Tap where your cut starts.",
-    "picking-end": "Now tap where it ends.",
-    done: "Tap any line to start a new cut.",
+    idle: t("appMonologueCut.idle"),
+    "picking-end": t("appMonologueCut.pickingEnd"),
+    done: t("appMonologueCut.done"),
   }[phase];
 
   /* Live length of the cut you would get by ending on the hovered line, so the
@@ -125,7 +131,7 @@ export function CutEditor({
 
   return (
     <div className="t-m-rise space-y-5" onMouseLeave={() => setHovered(null)}>
-      {!embedded && <h2 className="text-base font-semibold">Your cut</h2>}
+      {!embedded && <h2 className="text-base font-semibold">{t("appMonologueCut.heading")}</h2>}
 
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
         <p
@@ -133,7 +139,7 @@ export function CutEditor({
           style={{ color: "var(--t-muted-dark-2)" }}
           aria-live="polite"
         >
-          ({instruction.toLowerCase().replace(/\.$/, "")}.)
+          {instruction}
         </p>
         <p
           className="t-m__display m-0 flex-shrink-0 whitespace-nowrap text-[34px] leading-none tabular-nums"
@@ -144,7 +150,7 @@ export function CutEditor({
             className="t-m__mono ml-2 text-[12px] tracking-[0.06em]"
             style={{ color: "var(--t-faint)" }}
           >
-            of {formatClock(fullSeconds)}
+            {t("appMonologueCut.of", { clock: formatClock(fullSeconds) })}
           </span>
         </p>
       </div>
@@ -200,7 +206,7 @@ export function CutEditor({
           className="h-12 rounded-full px-6 text-[15px] font-bold transition-transform duration-300 hover:scale-[1.04] hover:-rotate-1 disabled:pointer-events-none disabled:opacity-45"
           style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
         >
-          {saveCut.isPending ? "Saving…" : "Save cut"}
+          {saveCut.isPending ? t("appMonologueCut.saving") : t("appMonologueCut.save")}
         </button>
         {hasCut && (
           <button
@@ -212,12 +218,12 @@ export function CutEditor({
               color: "var(--t-muted-dark-2)",
             }}
           >
-            (clear the cut.)
+            {t("appMonologueCut.clear")}
           </button>
         )}
         {spokenIdx.length === 0 && (
           <span className="text-sm" style={{ color: "var(--t-muted-dark-2)" }}>
-            No text to cut.
+            {t("appMonologueCut.noText")}
           </span>
         )}
       </div>

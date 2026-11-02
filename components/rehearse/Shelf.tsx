@@ -8,6 +8,7 @@ import { PlayCover } from "@/components/monologue/PlayCover";
 import { posterAt } from "@/lib/poster";
 import { leadName } from "@/lib/collectionMeta";
 import type { Monologue } from "@/types/actor";
+import { useLocale, useT } from "@/lib/i18n";
 
 /**
  * Everything else you have saved, stood up as a run of spines.
@@ -29,6 +30,8 @@ export function Shelf({
   selectedId: number;
   onSelect: (m: Monologue) => void;
 }) {
+  const t = useT();
+  const locale = useLocale();
   const rest = items.filter((m) => m.id !== selectedId);
   if (rest.length === 0) return null;
 
@@ -42,9 +45,11 @@ export function Shelf({
     >
       <div className="t-shelf__head">
         <h2 className="t-shelf__label">
-          {rest.length === 1 ? "(one more on the shelf.)" : "(also on the shelf.)"}
+          {rest.length === 1 ? t("appScenesHub.oneMore") : t("appScenesHub.alsoOn")}
         </h2>
-        <span className="t-shelf__count">{items.length} saved</span>
+        <span className="t-shelf__count">
+          {t("appScenesHub.saved", { n: items.length.toLocaleString(locale === "tr" ? "tr-TR" : "en-US") })}
+        </span>
       </div>
 
       <div className="t-shelf__rail">
@@ -78,7 +83,7 @@ export function Shelf({
           <li className="t-spine-item">
             <Link href="/monologues" className="t-shelf__more">
               <span aria-hidden>+</span>
-              find another
+              {t("appScenesHub.findAnother")}
             </Link>
           </li>
         </ul>

@@ -21,7 +21,9 @@ import {
 import { getGenreBorderClassName, getGenreInkColor, getGenreSpineColor } from "@/lib/genreColors";
 import { invalidateShelf, useScript, type UserScript } from "@/hooks/useScripts";
 import { invalidateSceneMap, useSceneMap } from "@/hooks/useSceneMap";
-import { formatSceneDuration, type Scene } from "@/lib/scenes";
+import type { Scene } from "@/lib/scenes";
+import { useT } from "@/lib/i18n";
+import { sceneDurationLabel } from "@/components/practice/practiceLabels";
 import { mergeSceneMap, tickableRows } from "@/lib/scriptMap";
 import { EditScriptDetailsModal } from "@/components/practice/EditScriptDetailsModal";
 import { AddSceneToScriptModal } from "@/components/scenepartner/AddSceneToScriptModal";
@@ -51,6 +53,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
   const router = useRouter();
   const reduce = useReducedMotion();
   const queryClient = useQueryClient();
+  const t = useT();
   const { data, isLoading } = useScript(script.id) as {
     data: ScriptWithScenes | undefined;
     isLoading: boolean;
@@ -165,10 +168,10 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
         timeoutMs: 5 * 60 * 1000,
       });
       await refreshScenes();
-      toast.success("Fresh cut of the scenes");
+      toast.success(t("appPracticePanel.recutDone"));
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : "That pass didn't work. Your scenes are untouched.",
+        e instanceof Error ? e.message : t("appPracticePanel.recutFailed"),
       );
     } finally {
       setRedoing(false);
@@ -222,9 +225,12 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
 
   const builtCount = ready ? Math.max(ready.built_count, scenes.length) : scenes.length;
   const sceneSummary = ready && totalRows > 0
-    ? `${totalRows} ${totalRows === 1 ? "scene" : "scenes"} · ${builtCount} built`
+    ? t(totalRows === 1 ? "appPracticePanel.summaryBuiltOne" : "appPracticePanel.summaryBuiltMany", {
+        n: totalRows,
+        built: builtCount,
+      })
     : scenes.length > 0
-      ? `${scenes.length} ${scenes.length === 1 ? "scene" : "scenes"}`
+      ? t(scenes.length === 1 ? "appPracticePanel.sceneOne" : "appPracticePanel.sceneMany", { n: scenes.length })
       : null;
 
   const accentClass = getGenreBorderClassName(script.genre ?? "");
@@ -358,11 +364,12 @@ function SoloScene({
   opening?: boolean;
   share?: React.ReactNode;
 }) {
+  const t = useT();
   const characters = [scene.character_1_name, scene.character_2_name].filter(Boolean) as string[];
   const facts = [
     characters.join(" & ") || null,
-    scene.line_count > 0 ? `${scene.line_count} lines` : null,
-    formatSceneDuration(scene.estimated_duration_seconds),
+    scene.line_count > 0 ? t("appPracticePanel.lines", { n: scene.line_count }) : null,
+    sceneDurationLabel(t, scene.estimated_duration_seconds),
   ].filter(Boolean) as string[];
 
   return (
@@ -380,7 +387,7 @@ function SoloScene({
       {/* Open, not folded. There is nothing to compare it against, so hiding it
           behind a chevron only adds a tap between the actor and the thing. */}
       <p className="mt-4 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
-        {scene.description?.trim() || "No synopsis for this scene yet."}
+        {scene.description?.trim() || t("appPracticeMap.noSynopsis")}
       </p>
 
       <button
@@ -389,7 +396,7 @@ function SoloScene({
         disabled={opening}
         className="mt-5 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 h-10 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
       >
-        {opening ? "Curtain up…" : "Open the scene"}
+        {opening ? t("appPracticeMap.curtainUp") : t("appPracticePanel.openScene")}
       </button>
       {share && <div className="mt-4">{share}</div>}
     </div>
@@ -420,28 +427,34 @@ function ConfirmRecutDialog({
 }) {
   const sessions = cost?.sessions ?? 0;
   const sceneCount = cost?.scenes ?? 0;
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const t = useT();
+  const scenesWord = t(sceneCount === 1 ? "appPracticePanel.sceneOne" : "appPracticePanel.sceneMany", {
+    n: sceneCount,
+  });
+  const sessionsWord = t(sessions === 1 ? "appPracticePanel.sessionOne" : "appPracticePanel.sessionMany", {
+    n: sessions,
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-brand text-xl font-medium tracking-tight">
-            Cut this script again?
+            {t("appPracticePanel.recutTitle")}
           </DialogTitle>
           <DialogDescription className="pt-1 leading-relaxed">
             {cost === null
-              ? "Checking what this would replace…"
+              ? t("appPracticePanel.recutChecking")
               : sessions > 0
-                ? `This reads the script again and replaces ${plural(sceneCount, "scene")}. The ${plural(sessions, "rehearsal session")} recorded on them go too, and that history can't be brought back.`
+                ? t("appPracticePanel.recutWithSessions", { scenes: scenesWord, sessions: sessionsWord })
                 : sessions < 0
-                  ? `This reads the script again and replaces ${plural(sceneCount, "scene")}, along with any rehearsal history on them.`
-                  : `This reads the script again and replaces ${plural(sceneCount, "scene")}. Nothing has been rehearsed on them yet, so there is no history to lose.`}
+                  ? t("appPracticePanel.recutUnknown", { scenes: scenesWord })
+                  : t("appPracticePanel.recutClean", { scenes: scenesWord })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Keep what I have
+            {t("appPracticePanel.keep")}
           </Button>
           <Button
             type="button"
@@ -451,7 +464,7 @@ function ConfirmRecutDialog({
             className="gap-2"
           >
             <IconRefresh className="h-4 w-4" />
-            Cut again
+            {t("appPracticePanel.cutAgain")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -483,6 +496,7 @@ function NothingCameBack({
   onRedo: () => void;
   onAdd: () => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center border border-dashed border-border/60 px-6 py-12 text-center">
       <IconScissorsOff
@@ -491,13 +505,13 @@ function NothingCameBack({
         stroke={1.5}
       />
       <h3 className="mt-4 font-brand text-xl font-medium tracking-tight text-foreground text-balance">
-        {failed ? "That pass came back empty" : "No scenes on this one yet"}
+        {failed ? t("appPracticePanel.emptyFailedTitle") : t("appPracticePanel.emptyTitle")}
       </h3>
       <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground text-balance">
         {reason ||
           (failed
-            ? "I couldn't find dialogue to cut into scenes."
-            : "Nothing has been cut from this script yet.")}
+            ? t("appPracticePanel.emptyFailedBody")
+            : t("appPracticePanel.emptyBody"))}
       </p>
 
       {canManage && (
@@ -513,7 +527,7 @@ function NothingCameBack({
             ) : (
               <IconRefresh className="h-4 w-4" />
             )}
-            {redoing ? "Cutting again…" : "Cut the scenes again"}
+            {redoing ? t("appPracticeScriptHeader.redoing") : t("appPracticePanel.cutScenesAgain")}
           </button>
           <button
             type="button"
@@ -521,14 +535,14 @@ function NothingCameBack({
             className="inline-flex items-center gap-1.5 rounded-md border border-border/70 px-3.5 h-9 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
           >
             <IconPlus className="h-4 w-4" />
-            Write one myself
+            {t("appPracticePanel.writeMyself")}
           </button>
         </div>
       )}
 
       {canManage && (
         <p className="mt-4 text-xs text-muted-foreground/70">
-          Your script is saved. Cutting it again is free and doesn&apos;t use an upload.
+          {t("appPracticePanel.savedNote")}
         </p>
       )}
     </div>
@@ -551,6 +565,7 @@ function NothingCameBack({
  */
 function ScenesComingIn() {
   const reduce = useReducedMotion();
+  const t = useT();
   const ghosts = [0, 1, 2, 3, 4];
 
   return (
@@ -568,7 +583,7 @@ function ScenesComingIn() {
             transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
           />
         )}
-        (cutting it into scenes.)
+        {t("appPracticePanel.cuttingDirection")}
       </p>
 
       <div className="mt-4 space-y-1.5" aria-hidden>
@@ -647,8 +662,7 @@ function ScenesComingIn() {
         className="m-0 mt-4 text-[13px]"
         style={{ color: "var(--t-muted-dark)" }}
       >
-        This can take a few minutes on a full play. You can leave this page —
-        it keeps going without you.
+        {t("appPracticePanel.cuttingNote")}
       </p>
     </div>
   );

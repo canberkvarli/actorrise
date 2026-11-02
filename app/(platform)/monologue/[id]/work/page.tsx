@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
 import { MonologueCueing } from "@/components/monologue-work/MonologueCueing";
+import { useT } from "@/lib/i18n";
 
 /**
  * The stage fills what is LEFT of the viewport, not all of it.
@@ -48,6 +49,7 @@ function useRemainingViewportHeight() {
 export default function MonologueWorkPage() {
   const id = useParams().id as string;
   const router = useRouter();
+  const t = useT();
   // "Run it" on the piece page sends go=run: start on arrival. go=hear is the
   // same door from the first build (2026-10-21), kept so a link already out works.
   const go = useSearchParams().get("go");
@@ -101,11 +103,11 @@ export default function MonologueWorkPage() {
         <div className="flex h-full flex-col items-center justify-center gap-4">
           <p className="font-sans text-[var(--stage-fg)]/60">
             {status === "notfound"
-              ? "This piece has left the stage."
-              : "Something went dark loading this piece."}
+              ? t("appMonologueWork.notFound")
+              : t("appMonologueWork.error")}
           </p>
           <button onClick={() => router.back()} className="text-sm text-primary hover:underline">
-            Go back
+            {t("appMonologueWork.goBack")}
           </button>
         </div>
       )}

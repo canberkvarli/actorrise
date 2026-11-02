@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Glyph } from "@/components/brand/glyphs";
+import { NotFoundBear } from "@/components/system/NotFoundBear";
+import { T } from "@/lib/i18n";
 
 export default function NotFound() {
   return (
@@ -12,24 +13,24 @@ export default function NotFound() {
             hurry. It replaces the 6xl "404" rather than joining it — the house
             rule is one mark per view, and a number that large is a mark. */}
         <div className="flex justify-center text-muted-foreground/50">
-          <Glyph name="bear" size={88} title="Exit, pursued by a bear" />
+          <NotFoundBear />
         </div>
 
         <p className="stage-direction text-sm text-muted-foreground/70">
-          (exit, pursued by a bear.)
+          <T k="appShellErrors.bearDirection" />
         </p>
         <h1 className="font-brand text-3xl font-medium text-foreground sm:text-4xl">
-          This page has left the stage.
+          <T k="appShellErrors.leftStage" />
         </h1>
         <p className="text-muted-foreground">
-          It doesn&rsquo;t exist, or it moved. Nothing you did.
+          <T k="appShellErrors.leftStageBody" />
         </p>
         <div className="flex flex-wrap justify-center gap-3 pt-4">
           <Button asChild>
-            <Link href="/monologues">Find a monologue</Link>
+            <Link href="/monologues"><T k="appShellErrors.findMonologue" /></Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/">Go home</Link>
+            <Link href="/"><T k="appShellErrors.goHome" /></Link>
           </Button>
         </div>
       </div>

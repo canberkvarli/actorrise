@@ -15,6 +15,8 @@ import {
   type ShelfEntry,
   type ShelfSort,
 } from "@/lib/shelfOrganize";
+import { useT, type MessageKey } from "@/lib/i18n";
+import { genreLabel } from "@/components/practice/practiceLabels";
 
 interface ShelfSectionsProps {
   /** Everything on the shelf, in the actor's order (house copies last). */
@@ -26,10 +28,10 @@ interface ShelfSectionsProps {
   onReorder: (scriptIds: number[]) => void;
 }
 
-const SORTS: { key: ShelfSort; label: string }[] = [
-  { key: "mine", label: "your order" },
-  { key: "recent", label: "newest" },
-  { key: "az", label: "a to z" },
+const SORTS: { key: ShelfSort; label: MessageKey }[] = [
+  { key: "mine", label: "appPracticeShelf.sortMine" },
+  { key: "recent", label: "appPracticeShelf.sortRecent" },
+  { key: "az", label: "appPracticeShelf.sortAz" },
 ];
 
 /**
@@ -50,6 +52,7 @@ export function ShelfSections({
   onReport,
   onReorder,
 }: ShelfSectionsProps) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ShelfSort>("mine");
   const { own, community, house } = useMemo(() => splitShelf(scripts), [scripts]);
@@ -80,12 +83,12 @@ export function ShelfSections({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find a script, a scene or a character"
-              aria-label="Find on your shelf"
+              placeholder={t("appPracticeShelf.findPlaceholder")}
+              aria-label={t("appPracticeShelf.findLabel")}
               className="w-full bg-transparent text-[14px] text-[color:var(--t-text)] placeholder:text-[color:var(--t-muted-light)] focus:outline-none"
             />
           </label>
-          <div className="flex items-center gap-3 px-1" role="group" aria-label="Sort the shelf">
+          <div className="flex items-center gap-3 px-1" role="group" aria-label={t("appPracticeShelf.sortLabel")}>
             {SORTS.map((s) => (
               <button
                 key={s.key}
@@ -94,7 +97,7 @@ export function ShelfSections({
                 aria-pressed={sort === s.key}
                 className={`t-shelf-link ${sort === s.key ? "underline underline-offset-4" : ""}`}
               >
-                {s.label}
+                {t(s.label)}
               </button>
             ))}
           </div>
@@ -102,7 +105,7 @@ export function ShelfSections({
       )}
 
       {ownShown.length > 0 && (
-        <Section label={labelled ? "Yours" : null}>
+        <Section label={labelled ? t("appPracticeShelf.yours") : null}>
           {arrangeable ? (
             <PracticeLibraryRail
               scripts={ownShown}
@@ -118,7 +121,7 @@ export function ShelfSections({
       )}
 
       {communityShown.length > 0 && (
-        <Section label="From the Community library">
+        <Section label={t("appPracticeShelf.fromCommunity")}>
           <Entries scripts={communityShown} expandAll={searching} {...card} />
         </Section>
       )}
@@ -130,7 +133,7 @@ export function ShelfSections({
       )}
 
       {nothing && (
-        <p className="px-1 text-[13px] text-[color:var(--t-muted-light)]">Nothing on your shelf matches.</p>
+        <p className="px-1 text-[13px] text-[color:var(--t-muted-light)]">{t("appPracticeShelf.nothingMatches")}</p>
       )}
     </div>
   );
@@ -153,6 +156,7 @@ type CardProps = Pick<ShelfSectionsProps, "selectedId" | "onSelect" | "onRequest
 
 /** A section's scripts, same-title files folded together, the first few shown. */
 function Entries({ scripts, expandAll, ...card }: { scripts: UserScript[]; expandAll: boolean } & CardProps) {
+  const t = useT();
   const [all, setAll] = useState(false);
   const entries = groupShelf(scripts);
   const shown = all || expandAll ? entries : entries.slice(0, SHELF_PAGE);
@@ -167,7 +171,7 @@ function Entries({ scripts, expandAll, ...card }: { scripts: UserScript[]; expan
       )}
       {!all && !expandAll && entries.length > SHELF_PAGE && (
         <button type="button" onClick={() => setAll(true)} className="t-shelf-link mt-1 self-start px-1">
-          show all {entries.length}
+          {t("appPracticeShelf.showAll", { n: entries.length })}
         </button>
       )}
     </div>
@@ -203,6 +207,7 @@ function Group({
   open: forced,
   ...card
 }: { entry: Extract<ShelfEntry<UserScript>, { kind: "group" }>; open: boolean } & CardProps) {
+  const t = useT();
   const holdsSelected = entry.scripts.some((s) => s.id === card.selectedId);
   const [open, setOpen] = useState(holdsSelected);
   const isOpen = forced || open;
@@ -225,10 +230,10 @@ function Group({
           <span className="t-script__title">{entry.title}</span>
           <span className="t-script__foot">
             <span className="t-script__byline">
-              {first.genre && <span className="t-script__stamp">{first.genre}</span>}
+              {first.genre && <span className="t-script__stamp">{genreLabel(t, first.genre)}</span>}
             </span>
             <span className="t-script__count inline-flex items-center gap-1.5">
-              {scenes === files ? `${scenes} scenes` : `${files} files · ${scenes} scenes`}
+              {scenes === files ? t("appPracticeShelf.scenes", { n: scenes }) : t("appPracticeShelf.filesScenes", { files, n: scenes })}
               <IconChevronDown className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden />
             </span>
           </span>

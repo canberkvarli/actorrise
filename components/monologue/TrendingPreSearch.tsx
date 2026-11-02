@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useTrending } from "@/hooks/useTrending";
 import { ShelfCard } from "@/components/monologue/ShelfCard";
+import { useT } from "@/lib/i18n";
 
 /**
  * Pre-search filler for /monologues that actually helps: the pieces other
@@ -11,6 +12,7 @@ import { ShelfCard } from "@/components/monologue/ShelfCard";
  */
 export function TrendingPreSearch() {
   const { data, isLoading } = useTrending(6);
+  const t = useT();
 
   if (isLoading) return <TrendingSkeleton />;
   // Array.isArray, not ?? : this shelf sits on the app's busiest page, and a
@@ -27,10 +29,10 @@ export function TrendingPreSearch() {
           headings with subtitles. */}
       <div className="mb-5">
         <h2 className="t-shelf-title">
-          Trending <em>this week.</em>
+          {t("appMonologueTrending.titleA")}<em>{t("appMonologueTrending.titleB")}</em>
         </h2>
         <p className="t-dir mt-1.5" style={{ fontSize: 12, color: "var(--t-muted-dark-2)" }}>
-          (what the house is working on.)
+          {t("appMonologueTrending.direction")}
         </p>
       </div>
 

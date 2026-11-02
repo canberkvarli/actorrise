@@ -6,6 +6,7 @@ import { PlusOffer } from "@/components/billing/PlusOffer";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
 import { trackUpgradeModalViewed } from "@/lib/analytics";
+import { useT } from "@/lib/i18n";
 
 /**
  * The end of the free reads, laid over the text that stops early.
@@ -23,6 +24,7 @@ export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
   const { subscription } = useSubscription();
   const currentTier = subscription?.tier_name ?? "free";
   const words = useTrialWords();
+  const t = useT();
 
   useEffect(() => {
     trackUpgradeModalViewed({ feature, tier_current: currentTier });
@@ -42,12 +44,12 @@ export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
           className="t-m__dir m-0 text-[12px]"
           style={{ color: "var(--t-muted-dark-2)" }}
         >
-          (the rest is behind the curtain.)
+          {t("appMonologueWall.direction")}
         </p>
         {/* No number. The cap has moved once already and copy that names it
             goes stale silently. */}
         <p className="t-m__display m-0 mt-2 text-[28px] leading-[1.05]">
-          {words.tasted ? words.overTitle : <>That&rsquo;s your free reads for the month.</>}
+          {words.tasted ? words.overTitle : t("appMonologueWall.titleCurly")}
         </p>
         <p
           className="m-0 mt-2.5 text-[14px]"
@@ -55,7 +57,7 @@ export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
         >
           {words.tasted
             ? words.overBody
-            : "Plus opens this piece and every other, start to finish. Anything you've already read this month stays open."}
+            : t("appMonologueWall.body")}
         </p>
         <PlusOffer feature={feature} lead="read" />
       </div>

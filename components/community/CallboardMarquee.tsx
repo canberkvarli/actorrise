@@ -8,6 +8,7 @@ const NEVER_CHANGES = () => () => {};
 import Link from "next/link";
 import { useCommunityFeed } from "@/hooks/useCommunityFeed";
 import { EventLine } from "./eventRender";
+import { useT } from "@/lib/i18n";
 
 /**
  * The Callboard as a lit marquee — a slim full-width strip of activity that
@@ -17,6 +18,7 @@ import { EventLine } from "./eventRender";
 export function CallboardMarquee() {
   const { data, isLoading } = useCommunityFeed(16);
   const mounted = useSyncExternalStore(NEVER_CHANGES, () => true, () => false);
+  const t = useT();
 
   const events = data?.events ?? [];
 
@@ -63,7 +65,7 @@ export function CallboardMarquee() {
             color: "var(--bar-muted)",
           }}
         >
-          callboard
+          {t("appShellCallboard.marqueeLabel")}
         </span>
       </div>
 
@@ -115,7 +117,7 @@ export function CallboardMarquee() {
           color: "var(--bar-muted)",
         }}
       >
-        <span className="hidden sm:inline">the board</span>
+        <span className="hidden sm:inline">{t("appShellCallboard.theBoard")}</span>
         <span aria-hidden>→</span>
       </div>
     </Link>

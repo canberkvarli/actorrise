@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Glyph, glyphFor } from "@/components/brand/glyphs";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 /**
  * The empty stage. Three ways a search comes back with nothing, each said
@@ -15,22 +16,22 @@ export type NoResultsReason = "none" | "gibberish" | "short";
 
 const COPY: Record<
   NoResultsReason,
-  { direction: string; title: string; body: string }
+  { direction: MessageKey; title: MessageKey; body: MessageKey }
 > = {
   none: {
-    direction: "(an empty stage.)",
-    title: "Nothing matched that.",
-    body: "Try fewer words, or drop a filter. If a piece should be here and isn't, tell me and I'll go find it.",
+    direction: "appMonologueNoResults.noneDirection",
+    title: "appMonologueNoResults.noneTitle",
+    body: "appMonologueNoResults.noneBody",
   },
   gibberish: {
-    direction: "(line?)",
-    title: "I couldn't read that one.",
-    body: "Describe what you're after, like “funny monologue for a woman in her 20s”, or just name the play.",
+    direction: "appMonologueNoResults.gibberishDirection",
+    title: "appMonologueNoResults.gibberishTitle",
+    body: "appMonologueNoResults.gibberishBody",
   },
   short: {
-    direction: "(go on.)",
-    title: "Give me a little more.",
-    body: "A few more words and I can place it. Something like “sad monologue about losing someone”.",
+    direction: "appMonologueNoResults.shortDirection",
+    title: "appMonologueNoResults.shortTitle",
+    body: "appMonologueNoResults.shortBody",
   },
 };
 
@@ -52,16 +53,19 @@ export function NoResultsState({
   onClearFilters,
   children,
 }: NoResultsStateProps) {
+  const t = useT();
   const copy = COPY[reason];
   // "Nothing matched that" left the actor to guess which "that". Naming the
   // search is what makes the three exits below read as answers to it.
   const title =
     reason === "none" && query?.trim() ? (
       <>
-        No close matches for <span className="italic">{query.trim()}</span>.
+        {t("appMonologueNoResults.forA")}
+        <span className="italic">{query.trim()}</span>
+        {t("appMonologueNoResults.forB")}
       </>
     ) : (
-      copy.title
+      t(copy.title)
     );
   /* The catalogue maps state:no-results to the script and pen, which is also
      feature:request — the same mark for "nothing here" and "ask me to add it",
@@ -81,7 +85,7 @@ export function NoResultsState({
       <Glyph name={glyph} size={88} className="t-empty-glyph" />
 
       <p className="t-dir mt-6" style={{ color: "var(--t-muted-dark-2)" }}>
-        {copy.direction}
+        {t(copy.direction)}
       </p>
       <h3
         className="mt-3"
@@ -97,14 +101,16 @@ export function NoResultsState({
         {title}
       </h3>
       <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--t-muted-dark)" }}>
-        {copy.body}
+        {t(copy.body)}
       </p>
 
       <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row">
         {/* Filters are the usual culprit, so make undoing them one tap */}
         {activeFilterCount > 0 && onClearFilters && (
           <button type="button" onClick={onClearFilters} className="t-show-more">
-            Clear {activeFilterCount} filter{activeFilterCount === 1 ? "" : "s"}
+            {activeFilterCount === 1
+              ? t("appMonologueNoResults.clearOne")
+              : t("appMonologueNoResults.clearMany", { n: activeFilterCount })}
           </button>
         )}
         {children}

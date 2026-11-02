@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import api from "@/lib/api";
+import { useT } from "@/lib/i18n";
+import { withSlots } from "@/components/search/searchI18n";
 
 /**
  * "Request this" for a raw search string — no named play/author required.
@@ -26,6 +28,7 @@ export function RequestQueryButton({
   query: string;
   className?: string;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [isTitle, setIsTitle] = useState(false);
   const [author, setAuthor] = useState("");
@@ -61,7 +64,7 @@ export function RequestQueryButton({
   if (requested) {
     return (
       <div className={className}>
-        <span className="text-xs text-muted-foreground">Noted, thanks. I&apos;ll look for it.</span>
+        <span className="text-xs text-muted-foreground">{t("appSearchRequest.noted")}</span>
       </div>
     );
   }
@@ -70,7 +73,7 @@ export function RequestQueryButton({
     return (
       <div className={className}>
         <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-          Request this
+          {t("appSearchRequest.requestThis")}
         </Button>
       </div>
     );
@@ -87,7 +90,7 @@ export function RequestQueryButton({
             onChange={(e) => setIsTitle(e.target.checked)}
           />
           <span>
-            <span className="font-medium">{q}</span> is the name of a play, film or show
+            {withSlots(t("appSearchRequest.isTitle"), { query: <span className="font-medium">{q}</span> })}
           </span>
         </label>
         {isTitle ? (
@@ -95,21 +98,20 @@ export function RequestQueryButton({
             <Input
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
-              placeholder="Who wrote it? (optional, but it helps me find it)"
+              placeholder={t("appSearchRequest.authorPlaceholder")}
               className="h-9 text-sm"
               maxLength={120}
             />
             <div className="flex items-center gap-3">
               <Button size="sm" onClick={handleRequest} disabled={loading}>
-                {loading ? "Requesting..." : failed ? "Try again" : "Request it"}
+                {loading ? t("appSearchRequest.requesting") : failed ? t("appSearchRequest.tryAgain") : t("appSearchRequest.requestIt")}
               </Button>
-              {failed && <span className="text-xs text-muted-foreground">That didn&apos;t go through.</span>}
+              {failed && <span className="text-xs text-muted-foreground">{t("appSearchRequest.failed")}</span>}
             </div>
           </>
         ) : (
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Not a title? Then it&apos;s a description, and the search is the place for it.
-            Say who the character is and what the moment feels like, or pick a feeling below.
+            {t("appSearchRequest.notTitle")}
           </p>
         )}
       </div>

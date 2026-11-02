@@ -17,6 +17,7 @@ import { splitMonologue } from "@/lib/memorize";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { useToggleMemorized } from "@/hooks/useMemorized";
 import { useMarkStudied } from "@/hooks/useCollectionMeta";
+import { useT } from "@/lib/i18n";
 
 /**
  * The memorize room.
@@ -38,10 +39,11 @@ const SHELL =
 const COLUMN = "mx-auto w-full max-w-[860px] px-5 pt-8 sm:px-6 sm:pt-12";
 
 function BackToPiece({ onClick }: { onClick: () => void }) {
+  const t = useT();
   return (
     <button type="button" onClick={onClick} className="t-mem__back">
       <IconArrowLeft className="h-3.5 w-3.5" />
-      back to the piece
+      {t("appMonologueMemorize.back")}
     </button>
   );
 }
@@ -61,6 +63,7 @@ function OffBookButton({
   memorized: boolean;
 }) {
   const toggle = useToggleMemorized();
+  const t = useT();
   const done = memorized || (toggle.isSuccess && toggle.variables?.memorized);
 
   return (
@@ -78,12 +81,12 @@ function OffBookButton({
       {done ? (
         <>
           <IconBulbFilled className="h-[18px] w-[18px]" />
-          Off book
+          {t("appMonologueMemorize.offBook")}
         </>
       ) : (
         <>
           <IconBulb className="h-[18px] w-[18px]" />
-          Mark it off book
+          {t("appMonologueMemorize.markOffBook")}
         </>
       )}
     </button>
@@ -93,6 +96,7 @@ function OffBookButton({
 export default function MonologueMemorizePage() {
   const router = useRouter();
   const id = useParams().id as string;
+  const t = useT();
 
   const markStudied = useMarkStudied();
   const queryClient = useQueryClient();
@@ -154,22 +158,22 @@ export default function MonologueMemorizePage() {
         <div className={COLUMN}>
           <BackToPiece onClick={() => router.back()} />
           <p className="t-m__dir mt-8 text-[12px]" style={{ color: "var(--t-faint)" }}>
-            (nothing came back.)
+            {t("appMonologueMemorize.errorDirection")}
           </p>
           <h1 className="t-m__display m-0 mt-2 text-[34px] leading-[1.05]">
-            I couldn&apos;t open this one.
+            {t("appMonologueMemorize.errorTitle")}
           </h1>
           <p className="mt-3 text-[15px]" style={{ color: "var(--t-muted-dark)" }}>
-            {error instanceof Error ? error.message : "Try it again in a moment."}
+            {error instanceof Error ? error.message : t("appMonologueMemorize.errorBody")}
           </p>
         </div>
       </div>
     );
   }
 
-  const lines = splitMonologue(monologue.text).map((t) => ({
+  const lines = splitMonologue(monologue.text).map((line) => ({
     speaker: null,
-    text: t,
+    text: line,
     mine: true,
   }));
 
@@ -187,7 +191,7 @@ export default function MonologueMemorizePage() {
             wall. A slug, the title, who says it, and then the work. */}
         <header className="t-m-rise mt-7">
           <p className="t-m__dir m-0 text-[12px]" style={{ color: "var(--t-faint)" }}>
-            (line by line.)
+            {t("appMonologueMemorize.direction")}
           </p>
           <h1 className="t-m__display m-0 mt-2 text-[34px] leading-[1.05] sm:text-[44px]">
             {monologue.title}
@@ -213,7 +217,7 @@ export default function MonologueMemorizePage() {
             className="inline-flex h-12 items-center justify-between gap-3 rounded-full pl-6 pr-2 text-[15px] font-bold transition-transform duration-300 hover:scale-[1.03] hover:-rotate-1"
             style={{ background: "var(--t-cta-bg)", color: "var(--t-cta-fg)" }}
           >
-            Rehearse this
+            {t("appMonologueMemorize.rehearse")}
             <span
               className="inline-flex h-9 w-9 items-center justify-center rounded-full"
               style={{

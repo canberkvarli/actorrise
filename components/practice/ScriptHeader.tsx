@@ -14,6 +14,8 @@ import { PlayCover } from "@/components/monologue/PlayCover";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getGenreInkColor, getGenreSpineColor } from "@/lib/genreColors";
 import type { UserScript } from "@/hooks/useScripts";
+import { useT } from "@/lib/i18n";
+import { genreLabel } from "@/components/practice/practiceLabels";
 
 interface ScriptHeaderProps {
   script: UserScript;
@@ -56,11 +58,12 @@ export function ScriptHeader({
   onAddByHand,
   onRedo,
 }: ScriptHeaderProps) {
+  const t = useT();
   const genres = script.genres?.length ? script.genres : script.genre ? [script.genre] : [];
   const author = script.author && script.author.toLowerCase() !== "unknown" ? script.author : null;
   const meta = [
     author,
-    script.estimated_length_minutes ? `~${script.estimated_length_minutes} min` : null,
+    script.estimated_length_minutes ? t("appPracticeScriptHeader.length", { n: script.estimated_length_minutes }) : null,
     sceneSummary,
   ].filter(Boolean) as string[];
 
@@ -90,7 +93,7 @@ export function ScriptHeader({
           <p className="t-scripthead__stamps">
             {genres.map((g) => (
               <span key={g} className="t-scripthead__stamp">
-                {g}
+                {genreLabel(t, g)}
               </span>
             ))}
           </p>
@@ -111,18 +114,18 @@ export function ScriptHeader({
                 className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
               >
                 <IconListCheck className="h-4 w-4" />
-                Build scenes
+                {t("appPracticeScriptHeader.build")}
               </button>
             )}
             <button type="button" onClick={onEdit} className="t-script-action">
               <IconPencil className="h-3.5 w-3.5" />
-              Edit details
+              {t("appPracticeScriptHeader.edit")}
             </button>
             <Popover>
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  aria-label="More for this script"
+                  aria-label={t("appPracticeScriptHeader.more")}
                   className="t-script-action t-script-action--icon"
                 >
                   {redoing ? (
@@ -139,7 +142,7 @@ export function ScriptHeader({
                   className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
                 >
                   <IconPlus className="h-3.5 w-3.5" />
-                  Add scene by hand
+                  {t("appPracticeScriptHeader.addByHand")}
                 </button>
                 {/* Redo was gated on having scenes once, which hid it from the
                     script that needed it most: one that came back with
@@ -153,7 +156,7 @@ export function ScriptHeader({
                     className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-60"
                   >
                     <IconRefresh className="h-3.5 w-3.5" />
-                    {redoing ? "Cutting again…" : "Redo scenes"}
+                    {redoing ? t("appPracticeScriptHeader.redoing") : t("appPracticeScriptHeader.redo")}
                   </button>
                 )}
               </PopoverContent>
@@ -173,6 +176,7 @@ export function ScriptHeader({
  * offers "more" when the clamp actually cut something.
  */
 function Synopsis({ text }: { text: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [clamped, setClamped] = useState(false);
   const ref = useRef<HTMLParagraphElement | null>(null);
@@ -199,7 +203,7 @@ function Synopsis({ text }: { text: string }) {
           aria-expanded={open}
           className="t-scripthead__more"
         >
-          {open ? "less" : "more"}
+          {open ? t("appPracticeScriptHeader.less") : t("appPracticeScriptHeader.moreText")}
         </button>
       )}
     </div>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { IconUsers } from "@tabler/icons-react";
 import { useHouseIsAwake } from "@/hooks/useCallboardPulse";
 import { trackWhisperClicked } from "@/lib/analytics";
+import { useT } from "@/lib/i18n";
 
 /**
  * The Callboard's place in the chrome: an icon in the utility cluster, beside
@@ -27,13 +28,14 @@ import { trackWhisperClicked } from "@/lib/analytics";
  */
 export function CallboardLamp({ active }: { active: boolean }) {
   const { awake, actorCount } = useHouseIsAwake();
+  const t = useT();
 
   return (
     <Link
       href="/callboard"
       onClick={() => trackWhisperClicked("nav_lamp", { awake })}
-      aria-label={awake ? `The Callboard — ${actorCount} in the house` : "The Callboard"}
-      title={awake ? `The Callboard — ${actorCount} in the house` : "The Callboard"}
+      aria-label={awake ? t("appShellCallboard.callboardInHouse", { n: actorCount }) : t("appShellCallboard.callboard")}
+      title={awake ? t("appShellCallboard.callboardInHouse", { n: actorCount }) : t("appShellCallboard.callboard")}
       className="t-lamp"
       data-active={active}
       data-awake={awake}
@@ -60,6 +62,7 @@ export function CallboardMenuRow({
   onNavigate: () => void;
 }) {
   const { awake, actorCount } = useHouseIsAwake();
+  const t = useT();
 
   return (
     <Button
@@ -78,7 +81,7 @@ export function CallboardMenuRow({
       >
         <div className="flex items-center gap-2">
           <IconUsers className="h-4 w-4" />
-          The Callboard
+          {t("appShellCallboard.callboard")}
         </div>
         {/* The count IS the reason to tap, so on mobile it is spelled out
             rather than reduced to a dot — there is room for it here, and a
@@ -118,6 +121,7 @@ export function CallboardSheetRow({
   onNavigate: () => void;
 }) {
   const { awake, actorCount } = useHouseIsAwake();
+  const t = useT();
 
   return (
     <Link
@@ -130,11 +134,11 @@ export function CallboardSheetRow({
       }}
     >
       <IconUsers className="size-[18px] shrink-0" />
-      The Callboard
+      {t("appShellCallboard.callboard")}
       {/* Only when the house is actually awake: "0 in the house" is a worse
           thing to say than nothing. */}
       {awake && actorCount > 0 && (
-        <span className="t-sheet__count">{actorCount} in the house</span>
+        <span className="t-sheet__count">{t("appShellCallboard.inTheHouse", { n: actorCount })}</span>
       )}
     </Link>
   );

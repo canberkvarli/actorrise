@@ -13,15 +13,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { IconCheck } from "@tabler/icons-react";
+import { useT, type MessageKey } from "@/lib/i18n";
 
 const ISSUE_TYPES = [
-  { value: "format_wrong", label: "Format looks wrong" },
-  { value: "wrong_language", label: "Wrong language" },
-  { value: "text_incomplete", label: "Text is incomplete" },
-  { value: "wrong_info", label: "Wrong title or author" },
-  { value: "copyright_issue", label: "Copyright issue" },
-  { value: "other", label: "Something else" },
-] as const;
+  { value: "format_wrong", label: "appMonologueReport.formatWrong" },
+  { value: "wrong_language", label: "appMonologueReport.wrongLanguage" },
+  { value: "text_incomplete", label: "appMonologueReport.textIncomplete" },
+  { value: "wrong_info", label: "appMonologueReport.wrongInfo" },
+  { value: "copyright_issue", label: "appMonologueReport.copyright" },
+  { value: "other", label: "appMonologueReport.other" },
+] as const satisfies readonly { value: string; label: MessageKey }[];
 
 export interface ReportMonologueModalProps {
   open: boolean;
@@ -42,6 +43,7 @@ export function ReportMonologueModal({
   const [notes, setNotes] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const t = useT();
 
   const reset = () => {
     setIssueType(null);
@@ -68,7 +70,7 @@ export function ReportMonologueModal({
         handleOpenChange(false);
       }, 2000);
     } catch {
-      toast.error("Could not send report. Try again.");
+      toast.error(t("appMonologueReport.sendFailed"));
     } finally {
       setSending(false);
     }
@@ -85,15 +87,15 @@ export function ReportMonologueModal({
               <IconCheck className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="font-semibold text-lg">Got it, thanks!</p>
-              <p className="text-sm text-muted-foreground mt-1">We will take a look and fix it.</p>
+              <p className="font-semibold text-lg">{t("appMonologueReport.thanksTitle")}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t("appMonologueReport.thanksBody")}</p>
             </div>
           </div>
         ) : (
           <>
             <DialogHeader>
-              <p className="t-modal__dir">(a note about this piece.)</p>
-          <DialogTitle className="t-modal__title">Report an issue</DialogTitle>
+              <p className="t-modal__dir">{t("appMonologueReport.direction")}</p>
+          <DialogTitle className="t-modal__title">{t("appMonologueReport.title")}</DialogTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 {characterName} &middot; {playTitle}
               </p>
@@ -112,13 +114,13 @@ export function ReportMonologueModal({
                         : "border-border text-foreground hover:border-primary/60 hover:bg-primary/5"
                     }`}
                   >
-                    {type.label}
+                    {t(type.label)}
                   </button>
                 ))}
               </div>
 
               <Textarea
-                placeholder="Anything else? (optional)"
+                placeholder={t("appMonologueReport.placeholder")}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 maxLength={1000}
@@ -131,7 +133,7 @@ export function ReportMonologueModal({
                 disabled={!issueType || sending}
                 className="w-full"
               >
-                {sending ? "Sending..." : "Send report"}
+                {sending ? t("appMonologueReport.sending") : t("appMonologueReport.send")}
               </Button>
             </div>
           </>
