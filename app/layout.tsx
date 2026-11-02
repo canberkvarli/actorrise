@@ -21,7 +21,7 @@ import { HtmlLang } from "@/lib/i18n";
 const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 /*
- * Every face is served from `lib/fonts/files` (latin subset, one variable
+ * Every face is served from `lib/fonts/files` (Latin-1 plus Turkish, one variable
  * file per family). They used to come from `next/font/google`, which fetches
  * the files from Google while the build runs; the Vercel build box could not
  * reach it on 2026-10-03 and again on 2026-10-06, and the deploy failed both

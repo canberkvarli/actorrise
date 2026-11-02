@@ -9,7 +9,7 @@ import localFont from "next/font/local";
  * wrapper on the landing page. Nothing else in the product restyles, and
  * `preload: false` keeps the files off every route that never names them.
  *
- * The files are in `./files`, latin subset, taken from Google Fonts on
+ * The files are in `./files`, Latin-1 plus Turkish (see the README there); first taken from Google Fonts on
  * 2026-10-06 (see `lib/fonts/files/README.md`). They used to come from
  * `next/font/google`, which downloads from Google at build time; the build
  * box could not reach it on 2026-10-03 and again on 2026-10-06 and the deploy
