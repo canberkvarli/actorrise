@@ -54,11 +54,15 @@ type Props = {
   inward: boolean;
   onInward: () => void;
   onKeep: () => void;
+  /** Open the camera: do it yourself and have it read. */
+  onCamera: () => void;
   onClose: () => void;
 };
 
 export default function GesturePanel(p: Props) {
-  const { wide, width, role, spec, onSpec, size, onSize, sculpt, onSculpt, inward, onInward, onKeep, onClose } = p;
+  const { wide, width, role, spec, onSpec, size, onSize, sculpt, onSculpt, inward, onInward, onKeep, onCamera, onClose } = p;
+  const take = role.gestureTake;
+  const yours = take ? read(take.point) : null;
   const v = verbOf(spec.verb);
   const reading = read(effortOf(spec));
   const kept = same(spec, role.gesture);
@@ -218,6 +222,22 @@ export default function GesturePanel(p: Props) {
           <p style={{ ...quiet, marginTop: 8 }}>
             Full out, then smaller, then only the glow at the centre. Say your first line with it there.
           </p>
+        </div>
+
+        <div style={{ borderTop: "1px solid rgba(243,217,191,0.08)", paddingTop: 14 }}>
+          <div className="uppercase tracking-[0.2em]" style={label}>
+            Your body
+          </div>
+          <p style={quiet}>Do it yourself into the camera, full out, and see how it reads and the shape your hands make.</p>
+          <button type="button" onClick={onCamera} style={{ ...chip(true), marginTop: 10, padding: "8px 14px" }}>
+            Do it yourself
+          </button>
+          {yours && (
+            <p style={{ fontSize: 12.5, color: "#cfe0ff", marginTop: 10, lineHeight: 1.5 }}>
+              Yours read as {yours.main.name.toLowerCase()} · {yours.factors.toLowerCase()}
+              {yours.main.id !== reading.main.id ? `. The figure's reads as ${reading.main.name.toLowerCase()}: which is the character?` : "."}
+            </p>
+          )}
         </div>
 
         <label style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }}>

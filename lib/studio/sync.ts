@@ -11,7 +11,7 @@ import { cleanTakes } from "./after";
 import { cleanGesture } from "./gesture";
 import { AIRS } from "./air";
 import { clampPoint } from "./effort";
-import { newRole, type Notebook, type Piece, type Role } from "./notebook";
+import { newRole, type GestureTake, type Notebook, type Piece, type Role } from "./notebook";
 
 export type ServerRole = { id: string; updated_at: number; deleted: boolean; data: unknown };
 
@@ -64,6 +64,7 @@ export function roleFromServer(s: ServerRole): Role | null {
     piece,
     takes: cleanTakes(d.takes),
     gesture: cleanGesture(d.gesture),
+    gestureTake: cleanTake(d.gestureTake),
     ...(num(d.ranAt) ? { ranAt: num(d.ranAt) } : {}),
     ...(num(d.afterDismissedAt) ? { afterDismissedAt: num(d.afterDismissedAt) } : {}),
     name: typeof d.name === "string" ? d.name : "",
@@ -72,6 +73,18 @@ export function roleFromServer(s: ServerRole): Role | null {
     moments,
     updatedAt: s.updated_at,
   };
+}
+
+/** The camera take: two short paths of finite numbers in a sane range, or nothing. */
+function cleanTake(raw: unknown): GestureTake | null {
+  const t = raw as Partial<GestureTake> | null;
+  if (!t || typeof t !== "object" || typeof t.at !== "number" || !t.point || !Array.isArray(t.paths)) return null;
+  const ok = (n: unknown) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) < 5;
+  const paths = t.paths
+    .slice(0, 2)
+    .map((p) => (Array.isArray(p) ? p.slice(0, 80).filter((v) => Array.isArray(v) && v.length === 3 && v.every(ok)) : []))
+    .map((p) => p as [number, number, number][]);
+  return { at: t.at, point: clampPoint(t.point), paths };
 }
 
 export type Merge = {

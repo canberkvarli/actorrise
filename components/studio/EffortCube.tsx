@@ -38,6 +38,8 @@ import { when } from "./After";
 import { airOf, type AirId } from "@/lib/studio/air";
 import { AirSound } from "./airSound";
 import GesturePanel from "./GesturePanel";
+import GestureCamera from "./GestureCamera";
+import type { MotionReading } from "@/lib/studio/motion";
 import { DEFAULT_GESTURE, effortOf, type GestureSpec } from "@/lib/studio/gesture";
 import { display, EASE, mono } from "./style";
 import { useStudioSync } from "./useStudioSync";
@@ -76,7 +78,15 @@ export default function EffortCube() {
   const apiRef = useRef<SceneApi | null>(null);
   const arcRef = useRef<ArcState>({ version: 0, points: [], active: null });
   const airRef = useRef<AirId>("still");
-  const gestureRef = useRef<GestureState>({ active: false, spec: null, size: 1, sculpt: false, inward: null, version: 0 });
+  const gestureRef = useRef<GestureState>({
+    active: false,
+    spec: null,
+    size: 1,
+    sculpt: false,
+    inward: null,
+    mine: null,
+    version: 0,
+  });
   const soundRef = useRef<AirSound | null>(null);
   const [soundOn, setSoundOn] = useState(false);
   const [labels, setLabels] = useState<CornerLabel[]>([]);
@@ -138,6 +148,8 @@ export default function EffortCube() {
   const [gSize, setGSize] = useState(1);
   const [gSculpt, setGSculpt] = useState(false);
   const [gInward, setGInward] = useState<{ start: number; dur: number } | null>(null);
+  const [camera, setCamera] = useState(false);
+  const [mine, setMine] = useState<[number, number, number][][] | null>(null);
   const [placesGesture, setPlacesGesture] = useState<{ spec: GestureSpec; start: number; dur: number } | null>(null);
   // The clock the "how did it go?" card reads, a minute at a time.
   const [now, setNow] = useState(0);
@@ -214,9 +226,10 @@ export default function EffortCube() {
       size: gSize,
       sculpt: gesture && gSculpt,
       inward: pg ? { start: pg.start, dur: pg.dur } : gInward,
+      mine: gesture ? mine : null,
       version: g.version + 1,
     };
-  }, [gesture, gSpec, gSize, gSculpt, gInward, placesGesture]);
+  }, [gesture, gSpec, gSize, gSculpt, gInward, placesGesture, mine]);
   useEffect(() => {
     apiRef.current?.setInset(inset);
     const t = window.setTimeout(() => apiRef.current?.setInset(inset), 400); // the stage may still be starting
@@ -352,6 +365,7 @@ export default function EffortCube() {
     setGSpec(role.gesture ?? DEFAULT_GESTURE);
     setGSize(1);
     setGInward(null);
+    setMine(role.gestureTake?.paths ?? null);
     setOpen(false);
     setPrep(false);
     setPlaying(false);
@@ -359,6 +373,7 @@ export default function EffortCube() {
     apiRef.current?.focusPerformer();
   };
   const closeGesture = () => {
+    setCamera(false);
     setGesture(false);
     setGInward(null);
     apiRef.current?.home();
@@ -950,7 +965,26 @@ export default function EffortCube() {
           inward={!!gInward}
           onInward={takeInside}
           onKeep={() => editRole((r) => ({ ...r, gesture: gSpec }))}
+          onCamera={() => setCamera(true)}
           onClose={closeGesture}
+        />
+      )}
+
+      {gesture && camera && shown && (
+        <GestureCamera
+          wide={wide}
+          onReading={(r: MotionReading) => move(r.point)}
+          onKeepShape={(r: MotionReading) => {
+            // Keep it small: 32 points a hand, millimetres are plenty.
+            const paths = r.paths.map((pts) =>
+              pts
+                .filter((_, i) => i % 2 === 0)
+                .map((v) => v.map((n) => Math.round(n * 1000) / 1000) as [number, number, number]),
+            );
+            setMine(paths);
+            editRole((x) => ({ ...x, gestureTake: { at: Date.now(), point: r.point, paths } }));
+          }}
+          onClose={() => setCamera(false)}
         />
       )}
 

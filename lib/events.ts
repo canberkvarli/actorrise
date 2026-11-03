@@ -66,7 +66,10 @@ export type UserEventName =
   | "studio_after_saved"
   | "studio_gesture_opened"
   | "studio_gesture_kept"
-  | "studio_gesture_inward";
+  | "studio_gesture_inward"
+  | "studio_camera_opened"
+  | "studio_camera_reading"
+  | "studio_camera_shape_kept";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

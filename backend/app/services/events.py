@@ -179,6 +179,9 @@ CLIENT_EVENT_NAMES = frozenset(
         "studio_gesture_opened",  # {has_gesture}
         "studio_gesture_kept",  # {verb, quality, tempo, staccato}
         "studio_gesture_inward",  # {verb, quality}: "take it inside" run
+        "studio_camera_opened",  # the camera was turned on for the gesture (frames stay on the device)
+        "studio_camera_reading",  # {main, confidence}: how the movement read; no video, no positions
+        "studio_camera_shape_kept",  # the actor put their own shape on the stage
     }
 )
 

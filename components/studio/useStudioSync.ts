@@ -30,6 +30,7 @@ const roleBody = (r: Role) => ({
     moments: r.moments,
     takes: r.takes ?? [],
     gesture: r.gesture ?? null,
+    gestureTake: r.gestureTake ?? null,
     ranAt: r.ranAt ?? null,
     afterDismissedAt: r.afterDismissedAt ?? null,
   },

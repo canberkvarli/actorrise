@@ -24,6 +24,13 @@ export type Moment = {
   air?: AirId;
 };
 
+export type GestureTake = {
+  at: number;
+  point: EffortPoint;
+  /** Two hands, ~32 points each, body-centred metres, y up. */
+  paths: [number, number, number][][];
+};
+
 /** The monologue a role is working on. Only who and what: the text is read live from the library. */
 export type Piece = {
   id: number;
@@ -44,6 +51,8 @@ export type Role = {
   piece?: Piece | null;
   /** The psychological gesture for the whole role (lib/studio/gesture.ts). */
   gesture?: GestureSpec | null;
+  /** The actor's own go at it, from the camera: how it read, and the hands' shape. */
+  gestureTake?: GestureTake | null;
   /** Notes after doing it, newest first (lib/studio/after.ts). */
   takes?: Take[];
   /** When the role was last worked: Places finished, or Run it. */

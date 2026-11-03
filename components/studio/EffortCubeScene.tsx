@@ -86,6 +86,8 @@ export type GestureState = {
   size: number;
   sculpt: boolean;
   inward: { start: number; dur: number } | null;
+  /** The actor's own hand paths from the camera (body-centred metres, y up), shown beside the figure's. */
+  mine: [number, number, number][][] | null;
   version: number;
 };
 
@@ -407,12 +409,30 @@ export default function EffortCubeScene({
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
+      const mineMat = new THREE.MeshBasicNodeMaterial({
+        color: new THREE.Color("#cfe0ff").multiplyScalar(1.6),
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
       let gestureVersion = -1;
       const rebuildSculpture = () => {
         const g = gestureRef.current;
         gestureVersion = g.version;
         sculpture.children.forEach((o) => (o as THREE.Mesh).geometry?.dispose());
         sculpture.clear();
+        // Yours, from the camera: paler and cooler than the figure's, so the two read apart.
+        if (g.mine)
+          g.mine.forEach((pts) => {
+            if (pts.length < 4) return;
+            const curve = new THREE.CatmullRomCurve3(
+              pts.map(([x, y, z]) => new THREE.Vector3(x, y + 0.95, z)),
+              false,
+              "centripetal",
+            );
+            sculpture.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 160, 0.014, 6, false), mineMat));
+          });
         if (!g.spec || !g.sculpt) return;
         const T = period(g.spec);
         const paths: THREE.Vector3[][] = [[], []];
