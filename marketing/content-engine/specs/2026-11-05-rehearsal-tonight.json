@@ -1,0 +1,168 @@
+{
+  "id": "2026-11-05-rehearsal-tonight",
+  "look": "cinema",
+  "cut": "hard",
+  "voice": {
+    "lines": [
+      {
+        "text": "Your scene partner just cancelled.",
+        "at": 0.7,
+        "audio": "voice/2026-11-05-rehearsal-tonight/00.mp3",
+        "words": [
+          {
+            "w": "Your",
+            "s": 0.058,
+            "e": 0.232
+          },
+          {
+            "w": "scene",
+            "s": 0.29,
+            "e": 0.534
+          },
+          {
+            "w": "partner",
+            "s": 0.569,
+            "e": 0.859
+          },
+          {
+            "w": "just",
+            "s": 0.917,
+            "e": 1.08
+          },
+          {
+            "w": "cancelled.",
+            "s": 1.115,
+            "e": 1.672
+          }
+        ],
+        "dur": 1.822
+      },
+      {
+        "text": "Rehearsal is still tonight.",
+        "at": 3.9,
+        "audio": "voice/2026-11-05-rehearsal-tonight/01.mp3",
+        "words": [
+          {
+            "w": "Rehearsal",
+            "s": 0.046,
+            "e": 0.488
+          },
+          {
+            "w": "is",
+            "s": 0.546,
+            "e": 0.615
+          },
+          {
+            "w": "still",
+            "s": 0.65,
+            "e": 0.871
+          },
+          {
+            "w": "tonight.",
+            "s": 0.929,
+            "e": 1.382
+          }
+        ],
+        "dur": 1.532
+      },
+      {
+        "text": "Someone will read the other part.",
+        "at": 6.8,
+        "audio": "voice/2026-11-05-rehearsal-tonight/02.mp3",
+        "words": [
+          {
+            "w": "Someone",
+            "s": 0.046,
+            "e": 0.372
+          },
+          {
+            "w": "will",
+            "s": 0.395,
+            "e": 0.522
+          },
+          {
+            "w": "read",
+            "s": 0.58,
+            "e": 0.743
+          },
+          {
+            "w": "the",
+            "s": 0.778,
+            "e": 0.848
+          },
+          {
+            "w": "other",
+            "s": 0.894,
+            "e": 1.057
+          },
+          {
+            "w": "part.",
+            "s": 1.103,
+            "e": 1.474
+          }
+        ],
+        "dur": 1.624
+      }
+    ],
+    "subtitles": true
+  },
+  "music": {
+    "style": "sunny",
+    "volume": 0.24,
+    "drop": "end"
+  },
+  "beats": [
+    {
+      "kind": "broll",
+      "seconds": 10.5,
+      "src": "reel/2026-11-05-rehearsal-tonight/couch.mp4",
+      "start": 4,
+      "push": 0.04,
+      "dim": 0.4,
+      "at": "top",
+      "credit": "Thirdman on Pexels",
+      "lines": [],
+      "sfx": [
+        {
+          "name": "room",
+          "at": 0,
+          "vol": 0.2
+        }
+      ]
+    },
+    {
+      "kind": "end",
+      "seconds": 3.0,
+      "brand": "Ghost Light",
+      "line": "built by a working actor",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "footage": {
+      "pexels_id": 7227054,
+      "credit": "Thirdman on Pexels",
+      "page": "https://www.pexels.com/video/a-woman-using-her-phone-while-lying-on-the-couch-7227054/",
+      "note": "one continuous wide shot at home, no cuts (ffmpeg scene detect at 0.3 found none), no audio track"
+    },
+    "board": "Callboard plan 2026-11-05: format real, series empty-chair (Everyday Rehearsal), look cinema. Home version: someone on a couch with their phone, rehearsal tonight, alone. No clip on Pexels shows the phone being put face down, so the lines do not claim it.",
+    "feature": "scene-partner",
+    "why": "Ghost Light reads the other part, so rehearsal happens at home when the partner cancels. No monologue text on screen, so no database rows needed. Narration speaks as the brand, never as the woman in the footage."
+  },
+  "captions": {
+    "tiktok": "POV: your scene partner cancels at six and rehearsal is still tonight #actorslife #actortok #scenework #rehearsal #actors",
+    "youtube_title": "Partner cancelled. Rehearse anyway. #shorts",
+    "youtube_description": "Your scene partner cancelled. Rehearsal is still tonight.\nGhost Light reads the other part, free on the App Store. Built by a working actor.\n#actorslife #acting #rehearsal #actors",
+    "instagram": "The text comes in at six: can't make it tonight, sorry.\nThe scene still needs running. Ghost Light reads the other part, you take your cues from the couch.\nBuilt by a working actor. Link in bio.\n#actorslife #scenework #audition #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 5600
+}
