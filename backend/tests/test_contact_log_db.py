@@ -43,3 +43,8 @@ def test_a_check_finds_a_colleague_by_domain(monkeypatch):
 def test_dates_come_from_free_text():
     assert str(cl._date("2026-11-02 SENT hello")) == "2026-11-02"
     assert cl._date("DRAFTED, not sent") is None
+
+
+def test_due_is_reachable_through_the_bridge():
+    from app.api import loop_bridge
+    assert "due" in loop_bridge.ALLOWED["contact_log"]

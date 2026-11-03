@@ -177,6 +177,34 @@ def add(address: str, kind: str, subject: str, org: str | None) -> None:
                        "subject": subject, "source": "contact_log"})
 
 
+DUE_SQL = """
+with first as (
+  select lower(address) a, domain d, min(contacted_on) f, max(organization) org,
+         max(subject) subj
+  from contact_log
+  where kind in ('educator', 'outreach') and address like '%@%'
+  group by 1, 2)
+select a, org, f, subj from first
+where f between current_date - :max_days and current_date - :min_days
+  and not exists (
+    select 1 from contact_log l
+    where (lower(l.address) = first.a or (l.domain = first.d and l.domain <> ''))
+      and l.kind in ('chase', 'reply', 'checkin', 'partner'))
+order by f
+"""
+
+
+def due(min_days: int = 7, max_days: int = 30) -> list[dict]:
+    """Organisations written to first 7 or more days ago that have had no chase,
+    reply or check-in logged since: the teachers owed their one chase. Gmail sent
+    and the inbox still decide (a reply that was never logged, a bounce)."""
+    from sqlalchemy import text
+    from app.core.database import engine
+    with engine.connect().execution_options(postgresql_readonly=True) as conn:
+        rows = conn.execute(text(DUE_SQL), {"min_days": min_days, "max_days": max_days})
+        return [{"address": r[0], "organization": r[1], "date": str(r[2]), "subject": r[3]} for r in rows]
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -188,10 +216,20 @@ def main() -> None:
     a.add_argument("--kind", required=True, help="note | educator | checkin | outreach | chase | reply")
     a.add_argument("--subject", required=True)
     a.add_argument("--org")
+    du = sub.add_parser("due", help="organisations owed their one chase")
+    du.add_argument("--min-days", type=int, default=7)
+    du.add_argument("--max-days", type=int, default=30)
     sub.add_parser("import", help="copy contacts.csv, written.txt, tracker-append.csv and the tracker in")
     args = p.parse_args()
     if args.cmd == "import":
         print(f"imported {import_files()} rows")
+        return
+    if args.cmd == "due":
+        rows = due(args.min_days, args.max_days)
+        if not rows:
+            print("nobody is due a chase")
+        for r in rows:
+            print(f"{r['date']}  {r['address']}  [{r['organization']}]  '{(r['subject'] or '')[:60]}'")
         return
     if args.cmd == "check":
         hits = check(args.address, args.org)

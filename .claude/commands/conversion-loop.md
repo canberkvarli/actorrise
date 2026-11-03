@@ -25,6 +25,7 @@ cd backend && uv run python scripts/remote.py conversion_brief --save
 cd backend && uv run python scripts/remote.py contact_log check <address> --org "<org>"
 cd backend && uv run python scripts/remote.py contact_log add <address> --kind note --subject "SENT <subject>"
 cd backend && uv run python scripts/remote.py opt_out <address> "<reason>" [--bounce]
+cd backend && uv run python scripts/remote.py contact_log due
 cd backend && uv run python scripts/remote.py class_link list
 cd backend && uv run python scripts/remote.py cue_report
 ```
@@ -215,6 +216,11 @@ hit means: do not open a new thread. Either it is the one chase (below), or it i
 After every draft or send: `scripts/contact_log.py add <address> --kind <note|educator|
 checkin|chase|reply> --subject "<DRAFT or SENT> <subject>" --org "<org>"`. When Canberk
 sends a draft, the next run sees it in Gmail sent and the log row stays as written.
+
+**Who is owed a chase:** `scripts/contact_log.py due` lists every organisation first written to 7 to 30
+days ago with no chase, reply or check-in logged since. Start there, then confirm each in Gmail
+(a reply that was never logged, a bounce) before drafting. Do not page through Gmail sent to
+work it out.
 
 **Teachers get followed up** (Canberk, 2026-10-14: "teachers tell their students, please
 follow up with them for sure"). Each run: every educator written to 7 or more days ago with

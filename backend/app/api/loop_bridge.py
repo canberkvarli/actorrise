@@ -31,7 +31,7 @@ MAX_OUT = 1_000_000
 # script -> subcommands allowed as the first argument (None: any arguments).
 ALLOWED: dict[str, set[str] | None] = {
     "conversion_brief": set(),           # no arguments: the brief comes back on stdout
-    "contact_log": {"check", "add"},
+    "contact_log": {"check", "add", "due"},
     "opt_out": None,
     "class_link": {"make", "invite", "list", "off", "on"},
     "grant_comp": None,
