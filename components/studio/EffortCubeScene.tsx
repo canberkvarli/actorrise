@@ -69,6 +69,10 @@ function performerColor(p: EffortPoint, out: THREE.Color) {
 }
 
 export type CornerLabel = { id: ActionId; x: number; y: number; share: number; visible: boolean };
+export type PinLabel = { index: number; x: number; y: number; visible: boolean };
+
+/** The role's pinned moments, as the scene needs them. Bump `version` on any change. */
+export type ArcState = { version: number; points: EffortPoint[]; active: number | null };
 
 /** What the page can ask of the stage. */
 export type SceneApi = {
@@ -76,6 +80,8 @@ export type SceneApi = {
   close: () => Promise<void>;
   /** Fly the camera back to where it started. */
   home: () => void;
+  /** Keep the stage centred in the part of the screen not covered on the left. */
+  setInset: (px: number) => void;
 };
 
 const easeOutExpo = (t: number) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
@@ -86,7 +92,8 @@ type Props = {
   pointRef: React.MutableRefObject<EffortPoint>;
   onDrag: (p: EffortPoint) => void;
   onCorner: (id: ActionId) => void;
-  onLabels: (labels: CornerLabel[]) => void;
+  onLabels: (corners: CornerLabel[], pins: PinLabel[]) => void;
+  arcRef: React.MutableRefObject<ArcState>;
   onFail: (why: string) => void;
   /** WebGPU died (or never really started): the parent remounts us on WebGL2. */
   onGpuLost: () => void;
@@ -101,6 +108,7 @@ export default function EffortCubeScene({
   onDrag,
   onCorner,
   onLabels,
+  arcRef,
   onFail,
   onGpuLost,
   onHover,
@@ -248,6 +256,55 @@ export default function EffortCubeScene({
       );
       cube.add(threads);
 
+      // The arc: each pinned moment is a small diamond; a glowing path joins them in order,
+      // and a spark runs along it so you can watch the journey.
+      const arc = new THREE.Group();
+      cube.add(arc);
+      const pinGeo = new THREE.OctahedronGeometry(0.065, 0);
+      const pinMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ffe2b8") });
+      const pinActiveMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ffb070").multiplyScalar(2.2) });
+      const pathMat = new THREE.MeshBasicNodeMaterial({
+        color: new THREE.Color("#CB4B00").multiplyScalar(1.6),
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const spark = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04, 16, 12),
+        new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ffd9b0").multiplyScalar(3) }),
+      );
+      spark.visible = false;
+      cube.add(spark);
+      let pins: THREE.Mesh[] = [];
+      let curve: THREE.CatmullRomCurve3 | null = null;
+      let arcVersion = -1;
+      const rebuildArc = () => {
+        const a = arcRef.current;
+        arcVersion = a.version;
+        arc.children.forEach((o) => {
+          if (o instanceof THREE.Mesh && o.geometry !== pinGeo) o.geometry.dispose();
+        });
+        arc.clear();
+        pins = a.points.map((p, i) => {
+          const m = new THREE.Mesh(pinGeo, i === a.active ? pinActiveMat : pinMat);
+          m.position.copy(toLocal(p));
+          m.scale.setScalar(i === a.active ? 1.5 : 1);
+          arc.add(m);
+          return m;
+        });
+        curve = null;
+        if (pins.length >= 2) {
+          curve = new THREE.CatmullRomCurve3(
+            pins.map((m) => m.position.clone()),
+            false,
+            "centripetal",
+          );
+          arc.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 40 * pins.length, 0.011, 6, false), pathMat));
+        }
+        spark.visible = !!curve;
+      };
+
       // ---------- The performer ----------
       const performer = new THREE.Group();
       scene.add(performer);
@@ -285,7 +342,7 @@ export default function EffortCubeScene({
       performer.add(ring);
 
       // ---------- Dust: a GPU compute particle field ----------
-      const DUST = 4000;
+      const DUST = 1100;
       const SIZE = new THREE.Vector3(16, 6.5, 10);
       const ORIGIN = new THREE.Vector3(0, 3.1, 0);
       const dust = instancedArray(DUST, "vec3");
@@ -326,11 +383,11 @@ export default function EffortCubeScene({
       });
       dustMat.positionNode = dust.toAttribute();
       const seed = hash(instanceIndex.add(311));
-      dustMat.scaleNode = float(0.022).add(seed.mul(0.03));
+      dustMat.scaleNode = float(0.012).add(seed.mul(0.016));
       const disc = smoothstep(float(0.5), float(0.0), length(uv().sub(0.5)));
       const twinkle = mix(float(1), sin(time.mul(14).add(seed.mul(40))).mul(0.5).add(0.5), uFlicker);
       dustMat.colorNode = uDustColor;
-      dustMat.opacityNode = disc.mul(seed.mul(0.45).add(0.15)).mul(twinkle).mul(uDustFade);
+      dustMat.opacityNode = disc.mul(seed.mul(0.22).add(0.04)).mul(twinkle).mul(uDustFade);
       const dustSprites = new THREE.Sprite(dustMat);
       dustSprites.count = DUST;
       dustSprites.frustumCulled = false;
@@ -391,6 +448,14 @@ export default function EffortCubeScene({
         controls.enabled = false;
       };
       let introStarted = false;
+      let inset = 0;
+      const applyInset = () => {
+        const w = el.clientWidth;
+        const h = el.clientHeight;
+        if (inset > 0 && w - inset > 320) camera.setViewOffset(w + inset, h, 0, 0, w, h);
+        else camera.clearViewOffset();
+        camera.updateProjectionMatrix();
+      };
 
       const layout = () => {
         const w = el.clientWidth;
@@ -427,7 +492,7 @@ export default function EffortCubeScene({
         }
         poolA.value.set(cube.position.x, cube.position.z);
         poolB.value.set(performer.position.x, performer.position.z);
-        camera.updateProjectionMatrix();
+        applyInset();
         renderer.setSize(w, h);
         camera.lookAt(controls.target);
       };
@@ -516,6 +581,10 @@ export default function EffortCubeScene({
       let closeResolve: (() => void) | null = null;
       apiRef.current = {
         home,
+        setInset: (px: number) => {
+          inset = px;
+          applyInset();
+        },
         close: () =>
           new Promise<void>((resolve) => {
             if (closing) return resolve();
@@ -577,6 +646,13 @@ export default function EffortCubeScene({
         shown.weight += (target.weight - shown.weight) * ease;
         shown.space += (target.space - shown.space) * ease;
         shown.time += (target.time - shown.time) * ease;
+
+        if (arcRef.current.version !== arcVersion) rebuildArc();
+        if (curve) {
+          const period = 1.4 * pins.length;
+          spark.position.copy(curve.getPointAt(((performance.now() / 1000) % period) / period));
+        }
+        pins.forEach((m, i) => (m.rotation.y += dt * (i === arcRef.current.active ? 1.6 : 0.6)));
 
         const q = qualities(shown);
         const b = blend(shown);
@@ -662,6 +738,16 @@ export default function EffortCubeScene({
           proj.project(camera);
           const cx = (proj.x * 0.5 + 0.5) * w;
           const cy = (-proj.y * 0.5 + 0.5) * h;
+          const pinLabels: PinLabel[] = pins.map((m, index) => {
+            m.getWorldPosition(proj);
+            proj.project(camera);
+            return {
+              index,
+              x: (proj.x * 0.5 + 0.5) * w,
+              y: (-proj.y * 0.5 + 0.5) * h,
+              visible: proj.z < 1,
+            };
+          });
           cb.current.onLabels(
             corners.map(({ action, mesh }) => {
               mesh.getWorldPosition(proj);
@@ -677,6 +763,7 @@ export default function EffortCubeScene({
                 visible: proj.z < 1,
               };
             }),
+            pinLabels,
           );
         }
       });
