@@ -6205,6 +6205,11 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
 .dark .theatre-search .t-row__numeral { color: oklch(0.45 0.02 70); }
 .dark .theatre-search .t-row__name:hover { color: var(--acc); }
 .dark .theatre-search .t-mark--best { color: oklch(0.15 0.03 45); }
+/* `your lane` sits on the gel, a lamp yellow that stays light in dark. Its text
+   took --t-text, which goes cream in dark: cream on yellow, 1.1:1, a blank
+   pill ("senin alanın", 2026-11-03). Ink on the lamp, as the gel's own token
+   pair says (--t-on-gel-ink). */
+.dark .theatre-search .t-mark--lane { color: var(--t-on-gel-ink); }
 .dark .theatre-search .t-mark--overdone {
   background: oklch(0.96 0.02 85);
   color: oklch(0.15 0.03 45);
