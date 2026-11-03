@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import EffortCube from "@/components/studio/EffortCube";
+import StudioGate from "@/components/studio/StudioGate";
 
-// CAN-17. A hidden first instrument of the Studio: Laban's effort cube.
-// Not linked from anywhere yet, and kept out of search.
+// CAN-17. The Studio: for Canberk only for now (the API decides, see
+// backend/app/api/studio.py). Not linked from anywhere, and kept out of search.
 export const metadata: Metadata = {
-  title: "The effort cube · Studio",
+  title: "Studio",
   robots: { index: false, follow: false },
 };
 
 export default function StudioCubePage() {
-  return <EffortCube />;
+  return <StudioGate />;
 }

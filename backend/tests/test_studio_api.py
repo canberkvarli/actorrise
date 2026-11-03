@@ -8,6 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.api.admin.users import require_sensitive_admin
 from app.api.auth import get_current_user
 from app.api.studio import MAX_ROLE_BYTES, router
 from app.core.database import get_db
@@ -26,9 +27,11 @@ class StudioSyncTests(unittest.TestCase):
         for model in TABLES:
             model.__table__.create(engine)
         self.db = sessionmaker(bind=engine)()
-        self.alice = User(email="a@x.com", supabase_id="a")
-        self.bob = User(email="b@x.com", supabase_id="b")
-        self.db.add_all([self.alice, self.bob])
+        # The Studio is staff-only: both test users hold the sensitive-admin level.
+        self.alice = User(email="a@x.com", supabase_id="a", is_moderator=True, can_approve_submissions=True)
+        self.bob = User(email="b@x.com", supabase_id="b", is_moderator=True, can_approve_submissions=True)
+        self.actor = User(email="c@x.com", supabase_id="c")
+        self.db.add_all([self.alice, self.bob, self.actor])
         self.db.commit()
         self.me = self.alice
         app = FastAPI()
@@ -85,6 +88,12 @@ class StudioSyncTests(unittest.TestCase):
         self.put("shared-id", 999, "Bob's")
         self.me = self.alice
         self.assertEqual(self.client.get("/api/studio/roles").json()[0]["data"]["name"], "Alice's")
+
+    def test_closed_to_everyone_but_staff(self):
+        self.me = self.actor
+        self.assertEqual(self.client.get("/api/studio/roles").status_code, 403)
+        self.assertEqual(self.put("r1", 1).status_code, 403)
+        self.assertEqual(self.client.delete("/api/studio/roles/r1", params={"updated_at": 1}).status_code, 403)
 
     def test_bad_id_and_oversize_are_refused(self):
         self.assertEqual(self.put("not ok!", 1).status_code, 422)

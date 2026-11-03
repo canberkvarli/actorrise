@@ -8,6 +8,11 @@ are tombstones, returned by GET, so the other devices drop the role too.
 Only the owner ever reads or writes a role: every query is scoped by user_id,
 and the primary key is (user_id, role_id), so a role id guessed from elsewhere
 cannot reach another actor's row.
+
+Closed to everyone but Canberk for now (2026-11-03: "make it available for me
+only"): every route needs the sensitive-admin level, and the /studio page asks
+this API before it shows anything, so opening it to actors later is one change
+here.
 """
 
 import json
@@ -17,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.api.auth import get_current_user
+from app.api.admin.users import require_sensitive_admin
 from app.core.database import get_db
 from app.models.studio import StudioRole
 from app.models.user import User
@@ -62,7 +67,7 @@ def _get(db: Session, user_id: int, role_id: str) -> Optional[StudioRole]:
 
 
 @router.get("/roles", response_model=List[RoleOut])
-def list_roles(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_roles(db: Session = Depends(get_db), current_user: User = Depends(require_sensitive_admin)):
     """Every role, tombstones included, so a device can drop what was deleted elsewhere."""
     rows = (
         db.query(StudioRole)
@@ -78,7 +83,7 @@ def put_role(
     body: RoleIn,
     role_id: str = Path(..., pattern=ROLE_ID),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_sensitive_admin),
 ):
     """Save a role if this write is newer than what is stored; otherwise hand back the stored one."""
     if len(json.dumps(body.data, separators=(",", ":"))) > MAX_ROLE_BYTES:
@@ -110,7 +115,7 @@ def delete_role(
     role_id: str = Path(..., pattern=ROLE_ID),
     updated_at: int = Query(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_sensitive_admin),
 ):
     """Tombstone a role. A newer edit from another device wins over an older delete."""
     row = _get(db, current_user.id, role_id)
