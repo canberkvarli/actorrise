@@ -375,6 +375,7 @@ export const appAccount = {
     oneMonth: "1 month",
     onClassPlan: "On your class plan, to {date}",
     eachFromJoin: "Each, from the day they join, on me",
+    everyStudent: "Every student who joins gets a month of Plus from that day, on me.",
     bringTitle: "Bring your class in",
     bringBody:
       "Make a link for your students. Everyone who signs up through it gets Plus for a month, on me.",

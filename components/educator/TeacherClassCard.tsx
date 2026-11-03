@@ -64,6 +64,9 @@ export function ClassLinkPanel({
     : students === 0
       ? t("appAccountClass.nextSend")
       : null;
+  // Until someone joins, three boxes of zeros say nothing. The card is the
+  // link, the one thing to do next, and what the class gets.
+  const empty = students === 0 && shared === 0;
 
   return (
     <div className="min-w-0">
@@ -72,41 +75,71 @@ export function ClassLinkPanel({
           {t("appAccountClass.yourClass")}
         </h2>
         <span
-          className="inline-flex items-center gap-2 border px-2.5 py-1 text-[12px] font-semibold uppercase tracking-[0.08em]"
+          className={`inline-flex items-center gap-2 px-2.5 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] ${
+            link.active ? "bg-primary/10 text-primary" : "border"
+          }`}
           style={link.active ? undefined : { ...line, ...muted }}
         >
           <span
             aria-hidden
-            className={`size-1.5 rounded-full ${link.active ? "bg-primary" : ""}`}
+            className={`size-1.5 rounded-full ${link.active ? "bg-primary" : "animate-pulse"}`}
             style={link.active ? undefined : { background: "var(--t-muted-dark)" }}
           />
-          {link.active ? (
-            <span className="text-primary">{t("appAccountClass.live")}</span>
-          ) : (
-            t("appAccountClass.switchingOn")
-          )}
+          {link.active ? t("appAccountClass.live") : t("appAccountClass.switchingOn")}
         </span>
       </div>
 
-      <div className="mt-3 flex min-w-0 items-stretch border" style={line}>
-        <code className="min-w-0 flex-1 break-all px-3 py-3 text-[14px] sm:text-[15px]">
-          {SITE}/join/{link.code}
-        </code>
+      <div
+        className={`mt-3 flex min-w-0 items-stretch border-2 ${link.active ? "border-primary" : ""}`}
+        style={link.active ? undefined : line}
+      >
+        <p className="min-w-0 flex-1 break-all px-4 py-3.5 text-[16px] font-semibold tracking-tight sm:text-[18px]">
+          <span style={muted}>{SITE}/join/</span>
+          {link.code}
+        </p>
         <button
           type="button"
           onClick={onCopy}
-          className="shrink-0 border-l px-4 text-[14px] font-semibold transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-current"
-          style={line}
+          className={`m-1.5 shrink-0 rounded-full px-5 text-[14px] font-semibold transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current ${
+            link.active ? "bg-primary text-primary-foreground" : "border"
+          }`}
+          style={link.active ? undefined : line}
         >
           {copied ? t("appAccountClass.copied") : t("appAccountClass.copy")}
         </button>
       </div>
       {next && (
-        <p className="mt-2 max-w-[62ch] text-[14px] leading-normal" style={muted}>
+        <p
+          className="mt-3 max-w-[62ch] border-l-2 border-primary pl-3 text-[15px] leading-normal"
+          style={{ color: "var(--t-text)" }}
+        >
           {next}
         </p>
       )}
 
+      {empty ? (
+        <div
+          className="mt-5 flex flex-col gap-3 border-t pt-4 text-[14px] leading-snug sm:flex-row sm:items-center sm:justify-between sm:gap-8"
+          style={{ ...line, ...muted }}
+        >
+          <div className="flex max-w-[52ch] flex-col gap-2">
+            <p>
+              {link.plan_ends_at
+                ? t("appAccountClass.onClassPlan", { date: planDate(link.plan_ends_at, locale) })
+                : t("appAccountClass.everyStudent")}
+            </p>
+            {unlockAt && (
+              <span className="flex flex-col gap-1.5">
+                <Meter of={unlockAt} filled={0} />
+                <span>{t("appAccountClass.moreToUnlock", { n: unlockAt })}</span>
+              </span>
+            )}
+          </div>
+          <Link href="/practice" className={`shrink-0 ${textLink}`}>
+            {t("appAccountClass.shareScene")}
+          </Link>
+        </div>
+      ) : (
       <dl className="mt-5 grid grid-cols-1 border sm:grid-cols-3" style={line}>
         <Stat label={t("appAccountClass.studentsIn")} value={String(students)}>
           {unlockAt && students < unlockAt ? (
@@ -138,6 +171,7 @@ export function ClassLinkPanel({
             : t("appAccountClass.eachFromJoin")}
         </Stat>
       </dl>
+      )}
     </div>
   );
 }
