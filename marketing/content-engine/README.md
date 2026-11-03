@@ -30,7 +30,11 @@ scripts/publish.sh out/<id>.mp4                # approved videos only: public UR
 | `phone` mode `search` | ink phone, camera pushes in, query types, finger taps, chips light, results slide in | `query`, `chips`, `tap`, `results[]` |
 | `phone` mode `read` | the chosen page lifts out of the phone, highlighted, margin note | `read{title,titleItalic,meta,text,mark,note}` |
 | `stage` | audition room: actor under a spotlight, casting table from behind, speech bubble | `time`, `cue`, `quote`, `accent` |
+| `lobby` | an audition lobby: a row of identical actors, same page, same line in a bubble | `line`, `accent`, `cue`, `page`, `bubble`, `sign`, `count` |
+| `panel` | three tired casting faces behind a table; a quote lands and they wake up, a pen flies | `line`, `accent`, `cue`, `quote`, `wakeAt` |
 | `end` | theater ticket with the real app icon and a FREE stamp | `brand`, `tagline`, `action`, `kicker` |
+
+Look: `"look": "paper"|"marker"` (marker: off white, black sans, a yellow highlighter behind the key word). Narration: `"voice": {"lines": [{"text": "...", "at": 0.5}]}` (seconds from the start; `scripts/voice.py` voices it with George).
 
 Music: `"music": {"style": "sunny|pizzicato|build|festive", "drop": "stage", "volume": 0.42}`. The tempo bends so the drop lands on the drop scene; the intro is filtered and opens on the first camera move.
 

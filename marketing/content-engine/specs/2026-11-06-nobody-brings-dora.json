@@ -1,0 +1,332 @@
+{
+  "id": "2026-11-06-nobody-brings-dora",
+  "look": "marker",
+  "voice": {
+    "lines": [
+      {
+        "text": "Everyone in that lobby brought Juliet.",
+        "at": 0.5,
+        "audio": "voice/2026-11-06-nobody-brings-dora/00.mp3",
+        "words": [
+          {
+            "w": "Everyone",
+            "s": 0.035,
+            "e": 0.441
+          },
+          {
+            "w": "in",
+            "s": 0.476,
+            "e": 0.534
+          },
+          {
+            "w": "that",
+            "s": 0.58,
+            "e": 0.708
+          },
+          {
+            "w": "lobby",
+            "s": 0.778,
+            "e": 1.057
+          },
+          {
+            "w": "brought",
+            "s": 1.115,
+            "e": 1.393
+          },
+          {
+            "w": "Juliet.",
+            "s": 1.451,
+            "e": 2.043
+          }
+        ],
+        "dur": 2.193
+      },
+      {
+        "text": "So type the piece nobody brings.",
+        "at": 4.5,
+        "audio": "voice/2026-11-06-nobody-brings-dora/01.mp3",
+        "words": [
+          {
+            "w": "So",
+            "s": 0.07,
+            "e": 0.174
+          },
+          {
+            "w": "type",
+            "s": 0.232,
+            "e": 0.441
+          },
+          {
+            "w": "the",
+            "s": 0.464,
+            "e": 0.534
+          },
+          {
+            "w": "piece",
+            "s": 0.569,
+            "e": 0.813
+          },
+          {
+            "w": "nobody",
+            "s": 0.871,
+            "e": 1.173
+          },
+          {
+            "w": "brings.",
+            "s": 1.231,
+            "e": 1.707
+          }
+        ],
+        "dur": 1.857
+      },
+      {
+        "text": "Bernard Shaw. Funny. And nobody's doing it.",
+        "at": 8.6,
+        "audio": "voice/2026-11-06-nobody-brings-dora/02.mp3",
+        "words": [
+          {
+            "w": "Bernard",
+            "s": 0.058,
+            "e": 0.395
+          },
+          {
+            "w": "Shaw.",
+            "s": 0.453,
+            "e": 0.859
+          },
+          {
+            "w": "Funny.",
+            "s": 0.94,
+            "e": 1.358
+          },
+          {
+            "w": "And",
+            "s": 1.382,
+            "e": 1.533
+          },
+          {
+            "w": "nobody's",
+            "s": 1.591,
+            "e": 1.904
+          },
+          {
+            "w": "doing",
+            "s": 1.939,
+            "e": 2.159
+          },
+          {
+            "w": "it.",
+            "s": 2.218,
+            "e": 2.403
+          }
+        ],
+        "dur": 2.553
+      },
+      {
+        "text": "Now watch the panel.",
+        "at": 12.7,
+        "audio": "voice/2026-11-06-nobody-brings-dora/03.mp3",
+        "words": [
+          {
+            "w": "Now",
+            "s": 0.07,
+            "e": 0.221
+          },
+          {
+            "w": "watch",
+            "s": 0.29,
+            "e": 0.511
+          },
+          {
+            "w": "the",
+            "s": 0.569,
+            "e": 0.639
+          },
+          {
+            "w": "panel.",
+            "s": 0.685,
+            "e": 1.126
+          }
+        ],
+        "dur": 1.276
+      },
+      {
+        "text": "Ghost Light. Free on the App Store.",
+        "at": 17.0,
+        "audio": "voice/2026-11-06-nobody-brings-dora/04.mp3",
+        "words": [
+          {
+            "w": "Ghost",
+            "s": 0.058,
+            "e": 0.337
+          },
+          {
+            "w": "Light.",
+            "s": 0.406,
+            "e": 0.708
+          },
+          {
+            "w": "Free",
+            "s": 0.824,
+            "e": 1.045
+          },
+          {
+            "w": "on",
+            "s": 1.08,
+            "e": 1.149
+          },
+          {
+            "w": "the",
+            "s": 1.173,
+            "e": 1.242
+          },
+          {
+            "w": "App",
+            "s": 1.3,
+            "e": 1.428
+          },
+          {
+            "w": "Store.",
+            "s": 1.486,
+            "e": 1.869
+          }
+        ],
+        "dur": 2.019
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "type": "lobby",
+      "seconds": 4.4,
+      "line": "Everyone brought Juliet.",
+      "accent": "Juliet.",
+      "cue": "(same page. same balcony.)",
+      "page": "JULIET",
+      "bubble": "o romeo...",
+      "sign": "AUDITIONS",
+      "count": 5
+    },
+    {
+      "type": "phone",
+      "mode": "search",
+      "seconds": 4.0,
+      "line": "Type the other kind.",
+      "accent": "other",
+      "cue": "(the one nobody brings.)",
+      "query": "funny, a woman, nobody does it",
+      "chips": [
+        "comedic",
+        "woman",
+        "not overdone"
+      ],
+      "tap": {
+        "at": 44,
+        "x": 749,
+        "y": 1113
+      },
+      "resultsCue": "(overdone: none)",
+      "results": [
+        {
+          "character": "Dora",
+          "source": "Fanny's First Play · Shaw",
+          "meta": "0:59 · comedic",
+          "quote": "\"Oh, everybody calls me Darling.\""
+        },
+        {
+          "character": "Lucy",
+          "source": "The Rivals · Sheridan",
+          "meta": "1:08 · comedic",
+          "quote": "\"Poor Acres is dismissed!\""
+        },
+        {
+          "character": "Charlotte",
+          "source": "The Contrast · Tyler",
+          "meta": "1:08 · comedic",
+          "quote": "\"Well said heroics.\""
+        }
+      ]
+    },
+    {
+      "type": "phone",
+      "mode": "read",
+      "seconds": 4.2,
+      "line": "Funny. And fresh.",
+      "accent": "fresh.",
+      "read": {
+        "tag": "DORA",
+        "title": "Fanny's",
+        "titleItalic": "First Play",
+        "meta": "Bernard Shaw · 1911 · 0:59",
+        "text": "Oh, of course you wouldnt\nknow. How silly of me!\nIt's a rather go-ahead\nsort of music hall in\nStepney. We call it\nthe old cowshed.",
+        "mark": 5,
+        "note": "deadpan."
+      }
+    },
+    {
+      "type": "panel",
+      "seconds": 4.2,
+      "line": "Nobody brings Dora.",
+      "accent": "Dora.",
+      "cue": "(fanny's first play. shaw.)",
+      "quote": "“Everybody calls me Darling.”",
+      "wakeAt": 46
+    },
+    {
+      "type": "end",
+      "seconds": 3.8,
+      "brand": "Ghost Light",
+      "tagline": "(nobody brings that one.)",
+      "action": "Free on the App Store",
+      "kicker": "(your turn.)"
+    }
+  ],
+  "source": {
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "sql": "select m.id, m.character_name, m.character_gender, p.title, p.author, p.year_written, m.estimated_duration_seconds secs, m.overdone_score, m.tone, m.primary_emotion from monologues m join plays p on p.id=m.play_id where p.source_type='play' and p.year_written < 1929 and m.tone ilike '%comed%' and m.overdone_score <= 0.1 and m.estimated_duration_seconds between 30 and 75 and coalesce(p.language,'en')='en' and m.character_gender ilike 'f%' order by m.favorite_count desc, m.view_count desc limit 15",
+    "contrast": "Juliet, Romeo and Juliet: id 36 ('Tis but thy name) overdone 0.85, id 38 overdone 0.85",
+    "rows": [
+      {
+        "id": 29663,
+        "character": "Dora",
+        "play": "Fanny's First Play",
+        "author": "Bernard Shaw",
+        "year": 1911,
+        "secs": 59,
+        "overdone": 0,
+        "tone": "comedic"
+      },
+      {
+        "id": 18337,
+        "character": "Lucy",
+        "play": "The Rivals",
+        "author": "Richard Brinsley Sheridan",
+        "year": 1775,
+        "secs": 68,
+        "overdone": 0,
+        "tone": "comedic"
+      },
+      {
+        "id": 33424,
+        "character": "Charlotte",
+        "play": "The Contrast",
+        "author": "Royall Tyler",
+        "year": 1787,
+        "secs": 68,
+        "overdone": 0,
+        "tone": "comedic"
+      }
+    ],
+    "rejected": "Hay Fever (Coward d. 1973) and The Play's the Thing (Wodehouse adaptation) are not public domain, so not on screen.",
+    "public_domain": "Shaw d. 1950, published 1914; Sheridan d. 1816; Tyler d. 1826. Quotes verbatim from rows 29663, 18337, 33424 (interjections of other characters left out of the read page).",
+    "feature": "overdone",
+    "motifs": "lobby-juliets,panel-wakes,pen-flies"
+  },
+  "captions": {
+    "tiktok": "Five Juliets in the lobby. Be the one who brought Dora. #actorslife #monologue #audition #actortok #actors",
+    "youtube_title": "Everyone brought Juliet. Bring Dora. #shorts",
+    "youtube_description": "A comedic monologue almost nobody brings, found by describing what you need.\nGhost Light, built by a working actor. Free on the App Store.\n#monologue #audition #actorslife #comedicmonologue",
+    "instagram": "Everyone brought Juliet.\n\nYou brought Dora, from Shaw's Fanny's First Play. Funny, under a minute, and almost nobody does it.\nFound by typing what you need in Ghost Light, built by a working actor. Link in bio.\n\n#actorslife #monologue #audition #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 15600
+}

@@ -21,7 +21,7 @@ const T = 22; // frames per camera move
 const PREROLL = 62;
 
 // Anthropic-style warm paper + ink, Ghost Light orange as the only accent.
-const C = {
+const C_PAPER = {
   paper: "#f2ece0",
   ink: "#211a15",
   inkSoft: "rgba(33,26,21,0.55)",
@@ -29,7 +29,20 @@ const C = {
   stage: "#120b07",
   stageInk: "#efe6d8",
 };
-const F = { serif: "Playfair", serifI: "PlayfairItalic", type: "CourierPrime", sans: "Montserrat" };
+// The palette is mutable so a spec's look can restyle the whole sheet (set in StoryVideo).
+const C = { ...C_PAPER };
+/** Drawn looks. paper: warm paper, serif, orange italic key word. marker: off white, black sans,
+ * a yellow highlighter swipe behind the key word (same idea as the reel's marker look). */
+export type StoryLook = "paper" | "marker";
+const HL = "#ffe15a";
+let LOOK: StoryLook = "paper";
+const F_PAPER = { serif: "Playfair", serifI: "PlayfairItalic", type: "CourierPrime", sans: "Montserrat" };
+const F = { ...F_PAPER };
+const applyLook = (look: StoryLook) => {
+  LOOK = look;
+  Object.assign(C, C_PAPER, look === "marker" ? { paper: "#f7f5f0", ink: "#141414", inkSoft: "rgba(20,20,20,0.55)" } : {});
+  Object.assign(F, F_PAPER, look === "marker" ? { serif: "Montserrat", serifI: "Montserrat" } : {});
+};
 loadFont({ family: F.serif, url: staticFile("fonts/playfair.woff2"), weight: "600" });
 loadFont({ family: F.serifI, url: staticFile("fonts/playfair-italic.woff2"), weight: "400", style: "italic" });
 loadFont({ family: F.type, url: staticFile("fonts/courier-italic.woff2"), weight: "400", style: "italic" });
@@ -67,10 +80,16 @@ type Email = {
   mark?: string; // phrase in the body to underline in orange
   cue?: string;
 };
-export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Stage | End;
+/** A waiting room full of identical Juliets, all holding the same page, all mouthing the same line. */
+type Lobby = { type: "lobby"; seconds: number; line: string; accent: string; cue?: string; page: string; bubble: string; sign?: string; count?: number };
+/** The panel from the actor's side: three tired faces, then one line lands and they wake up. */
+type Panel = { type: "panel"; seconds: number; line: string; accent: string; cue?: string; quote: string; wakeAt?: number };
+export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive"; drop?: string | number; volume?: number; seed?: string };
-export type StorySpec = { id: string; scenes: StoryScene[]; music?: StoryMusic };
+/** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
+export type StoryVoice = { lines: { text: string; at: number; audio?: string; dur?: number }[]; volume?: number };
+export type StorySpec = { id: string; scenes: StoryScene[]; music?: StoryMusic; look?: StoryLook; voice?: StoryVoice };
 export const storyFrames = (s: StorySpec) =>
   s.scenes.reduce((n, sc) => n + Math.round(sc.seconds * FPS), 0);
 
@@ -149,7 +168,13 @@ const Headline: React.FC<{ text: string; accent: string; color: string; size?: n
   return (
     <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: size, lineHeight: 1.06, color, textAlign: "center" }}>
       {before}
-      {i >= 0 && (
+      {i >= 0 && LOOK === "marker" && (
+        <span style={{ position: "relative", display: "inline-block", color: C.ink, padding: "0 0.08em" }}>
+          <span style={{ position: "absolute", left: "-0.04em", right: "-0.04em", top: "0.22em", bottom: "0.06em", background: HL, transform: "rotate(-1.6deg) skewX(-8deg)", borderRadius: 6, zIndex: 0 }} />
+          <span style={{ position: "relative" }}>{accent}</span>
+        </span>
+      )}
+      {i >= 0 && LOOK !== "marker" && (
         <span style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400, color: C.orange }}>{accent}</span>
       )}
       {after}
@@ -170,7 +195,9 @@ const Cue: React.FC<{ text: string; color: string; at?: number }> = ({ text, col
 const Paper: React.FC = () => (
   <AbsoluteFill
     style={{
-      background: `radial-gradient(ellipse 90% 70% at 50% 40%, #f7f2e8 0%, ${C.paper} 60%, #e9e1d2 100%)`,
+      background: LOOK === "marker"
+        ? `radial-gradient(ellipse 90% 70% at 50% 40%, #fbfaf6 0%, ${C.paper} 65%, #ecebe6 100%)`
+        : `radial-gradient(ellipse 90% 70% at 50% 40%, #f7f2e8 0%, ${C.paper} 60%, #e9e1d2 100%)`,
     }}
   />
 );
@@ -1260,6 +1287,171 @@ const EndScene: React.FC<{ s: End }> = ({ s }) => {
   );
 };
 
+// ---------- lobby: a row of identical Juliets ----------
+const Juliet: React.FC<{ x: number; start: number; page: string; bubble: string; k: number }> = ({ x, start, page, bubble, k }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const pop = spring({ frame: f - start, fps, config: { damping: 11, mass: 0.6 } });
+  if (f < start) return null;
+  // every Juliet mouths the same line at the same time
+  const talk = Math.sin((f - 30) / 3.2) > 0.1 && f > 36;
+  const bob = Math.sin((f + k * 7) / 9) * 3;
+  const y0 = 690;
+  const bubbleP = prog(f, 40 + k * 3, 52 + k * 3);
+  return (
+    <g transform={`translate(${x} ${y0 + bob}) scale(${pop}) translate(${-x} ${-y0})`}>
+      {/* hair: a bun and two curls, the same on every one */}
+      <circle cx={x + 26} cy={y0 - 52} r={22} fill={C.ink} />
+      <path d={`M${x - 44} ${y0 + 6} C ${x - 58} ${y0 - 60}, ${x + 58} ${y0 - 60}, ${x + 44} ${y0 + 6} C ${x + 30} ${y0 - 30}, ${x - 30} ${y0 - 30}, ${x - 44} ${y0 + 6} Z`} fill={C.ink} />
+      <circle cx={x} cy={y0} r={42} fill={PAPER_FILL} stroke={C.ink} strokeWidth={5} />
+      <circle cx={x - 14} cy={y0 - 2} r={4.5} fill={C.ink} />
+      <circle cx={x + 14} cy={y0 - 2} r={4.5} fill={C.ink} />
+      {talk ? <ellipse cx={x} cy={y0 + 20} rx={8} ry={9} fill={C.ink} /> : <path d={`M${x - 8} ${y0 + 20} L ${x + 8} ${y0 + 20}`} stroke={C.ink} strokeWidth={4} strokeLinecap="round" />}
+      {/* the same dress */}
+      <path d={`M${x - 26} ${y0 + 44} L ${x + 26} ${y0 + 44} L ${x + 58} ${y0 + 250} L ${x - 58} ${y0 + 250} Z`} fill="rgba(20,20,20,0.06)" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+      {/* the same page */}
+      <g transform={`rotate(${k % 2 ? 4 : -4} ${x} ${y0 + 150})`}>
+        <rect x={x - 46} y={y0 + 100} width={92} height={112} rx={4} fill="#ffffff" stroke={C.ink} strokeWidth={4} />
+        <text x={x} y={y0 + 140} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={17} letterSpacing={1.5} fill={C.ink}>{page}</text>
+        <path d={`M${x - 30} ${y0 + 160} L ${x + 30} ${y0 + 160} M${x - 30} ${y0 + 176} L ${x + 22} ${y0 + 176} M${x - 30} ${y0 + 192} L ${x + 28} ${y0 + 192}`} stroke={C.inkSoft} strokeWidth={3} strokeLinecap="round" />
+      </g>
+      {/* the same line, in a little bubble */}
+      <g opacity={bubbleP} transform={`translate(0 ${(1 - bubbleP) * 14})`}>
+        <path d={`M${x - 80} ${y0 - 160} C ${x - 82} ${y0 - 198}, ${x + 82} ${y0 - 198}, ${x + 80} ${y0 - 160} C ${x + 80} ${y0 - 128}, ${x + 20} ${y0 - 124}, ${x + 6} ${y0 - 124} L ${x - 6} ${y0 - 100} L ${x - 14} ${y0 - 124} C ${x - 40} ${y0 - 124}, ${x - 80} ${y0 - 132}, ${x - 80} ${y0 - 160} Z`} fill="#ffffff" stroke={C.ink} strokeWidth={4} strokeLinejoin="round" />
+        <text x={x} y={y0 - 152} textAnchor="middle" fontFamily={F.type} fontStyle="italic" fontSize={21} fill={C.ink}>{bubble}</text>
+      </g>
+    </g>
+  );
+};
+
+const LobbyScene: React.FC<{ s: Lobby }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const n = s.count ?? 5;
+  const xs = Array.from({ length: n }, (_, k) => 150 + (k * 710) / (n - 1)); // keep clear of the right 140px (platform UI)
+  return (
+    <AbsoluteFill>
+      {xs.map((_, k) => (
+        <Sfx key={k} name={k % 2 ? "boop_hi" : "pop"} at={8 + k * 5} vol={0.55} />
+      ))}
+      <Sfx name="cine/plink" at={42} vol={0.45} />
+      <Sfx name="cine/plink" at={48} vol={0.4} />
+      <Sfx name="cine/pong" at={58} vol={0.45} />
+      {s.cue && <Sfx name="typing" at={70} frames={typeFrames(s.cue)} vol={0.45} />}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the wall, the sign, the bench */}
+        <Ink d="M40 470 C 300 466, 780 474, 1040 468" start={0} dur={16} w={4} color={C.inkSoft} />
+        <Ink d="M380 330 L 700 330 L 700 410 L 380 410 Z" start={2} dur={16} w={5} fill="#ffffff" />
+        <Ink d="M60 952 C 380 946, 700 956, 1020 950 M90 952 L 90 1040 M990 950 L 990 1040" start={4} dur={20} w={6} />
+        {xs.map((x, k) => (
+          <Juliet key={k} x={x} start={8 + k * 5} page={s.page} bubble={s.bubble} k={k} />
+        ))}
+      </svg>
+      <div style={{ position: "absolute", left: 380, top: 330, width: 320, height: 80, display: "flex", alignItems: "center", justifyContent: "center", opacity: prog(f, 10, 18), fontFamily: F_PAPER.sans, fontWeight: 600, fontSize: 30, letterSpacing: 6, color: C.ink }}>
+        {s.sign ?? "AUDITIONS"}
+      </div>
+      <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", paddingTop: 1110 }}>
+        <Rise at={58}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={104} />
+        </Rise>
+        <div style={{ height: 18 }} />
+        {s.cue && <Cue text={s.cue} color={C.orange} at={70} />}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+// ---------- panel: three tired faces wake up ----------
+const PanelHead: React.FC<{ x: number; start: number; awake: number; k: number }> = ({ x, start, awake, k }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const pop = spring({ frame: f - start, fps, config: { damping: 14 } });
+  if (f < start) return null;
+  const y = 860 - awake * 18; // they sit up
+  const tilt = (1 - awake) * (k === 1 ? -12 : k === 0 ? 8 : 5);
+  const brow = awake * 16;
+  return (
+    <g transform={`translate(0 ${(1 - pop) * 80}) rotate(${tilt} ${x} ${y + 60})`} opacity={pop}>
+      <path d={`M${x - 80} ${y + 210} C ${x - 84} ${y + 40}, ${x + 84} ${y + 40}, ${x + 80} ${y + 210}`} fill="rgba(20,20,20,0.06)" stroke={C.ink} strokeWidth={5} />
+      <circle cx={x} cy={y} r={60} fill={PAPER_FILL} stroke={C.ink} strokeWidth={5} />
+      {k === 0 && <path d={`M${x - 58} ${y - 18} C ${x - 40} ${y - 74}, ${x + 40} ${y - 74}, ${x + 58} ${y - 18} C ${x + 30} ${y - 44}, ${x - 30} ${y - 44}, ${x - 58} ${y - 18} Z`} fill={C.ink} />}
+      {k === 1 && <path d={`M${x - 44} ${y - 40} l 0 -10 M${x - 22} ${y - 52} l 0 -12 M${x} ${y - 58} l 0 -12 M${x + 22} ${y - 52} l 0 -12 M${x + 44} ${y - 40} l 0 -10`} stroke={C.ink} strokeWidth={5} strokeLinecap="round" />}
+      {k === 2 && <g><circle cx={x - 22} cy={y - 2} r={20} fill="none" stroke={C.ink} strokeWidth={4} /><circle cx={x + 22} cy={y - 2} r={20} fill="none" stroke={C.ink} strokeWidth={4} /><path d={`M${x - 2} ${y - 2} L ${x + 2} ${y - 2}`} stroke={C.ink} strokeWidth={4} /></g>}
+      {/* brows lift */}
+      <path d={`M${x - 34} ${y - 26 - brow} L ${x - 12} ${y - 30 - brow} M${x + 12} ${y - 30 - brow} L ${x + 34} ${y - 26 - brow}`} stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+      {/* eyes: tired lines, then wide open */}
+      {awake < 0.5 ? (
+        <path d={`M${x - 30} ${y} L ${x - 14} ${y} M${x + 14} ${y} L ${x + 30} ${y}`} stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+      ) : (
+        <g><circle cx={x - 22} cy={y - 2} r={7 + awake * 3} fill={C.ink} /><circle cx={x + 22} cy={y - 2} r={7 + awake * 3} fill={C.ink} /></g>
+      )}
+      {awake < 0.5 ? (
+        <path d={`M${x - 14} ${y + 30} C ${x - 4} ${y + 24}, ${x + 4} ${y + 24}, ${x + 14} ${y + 30}`} fill="none" stroke={C.ink} strokeWidth={4} strokeLinecap="round" />
+      ) : (
+        <path d={`M${x - 20} ${y + 24} C ${x - 8} ${y + 44}, ${x + 8} ${y + 44}, ${x + 20} ${y + 24}`} fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+      )}
+    </g>
+  );
+};
+
+const PanelScene: React.FC<{ s: Panel }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const wakeAt = s.wakeAt ?? 46;
+  const bubble = prog(f, wakeAt - 14, wakeAt - 2);
+  const awake = spring({ frame: f - wakeAt, fps, config: { damping: 9, mass: 0.6 } });
+  const zz = f < wakeAt ? 1 : 1 - prog(f, wakeAt, wakeAt + 6);
+  // a pen springs out of a hand when they wake
+  const pen = spring({ frame: f - wakeAt - 2, fps, config: { damping: 12 } });
+  return (
+    <AbsoluteFill>
+      <Sfx name="pop" at={wakeAt - 14} vol={0.6} />
+      <Sfx name="cine/ping" at={wakeAt} vol={0.5} />
+      <Sfx name="cine/toing" at={wakeAt + 4} vol={0.45} />
+      <Sfx name="cine/tap" at={wakeAt + 18} vol={0.4} />
+      {s.cue && <Sfx name="typing" at={wakeAt + 24} frames={typeFrames(s.cue)} vol={0.45} />}
+      {/* the quote, from the actor (off frame, in front of the table) */}
+      <div style={{ position: "absolute", left: 110, top: 250, width: 860, opacity: bubble, transform: `scale(${0.7 + 0.3 * bubble})`, transformOrigin: "50% 100%" }}>
+        <svg viewBox="0 0 860 250" style={{ position: "absolute", inset: 0, width: 860, height: 250, overflow: "visible" }}>
+          <path d="M40 30 C 200 14, 660 14, 820 30 C 852 34, 860 60, 858 120 C 856 180, 848 200, 820 206 C 660 220, 520 220, 470 214 L 430 262 L 420 214 C 300 216, 120 214, 40 206 C 12 200, 4 180, 2 120 C 0 60, 8 34, 40 30 Z" fill="#ffffff" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+        </svg>
+        <div style={{ position: "relative", height: 220, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.type, fontStyle: "italic", fontSize: 54, color: C.ink, textAlign: "center", padding: "0 40px" }}>
+          {s.quote}
+        </div>
+      </div>
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {[260, 540, 820].map((x, k) => (
+          <PanelHead key={k} x={x} start={2 + k * 4} awake={awake} k={k} />
+        ))}
+        {/* zzz over the middle one */}
+        <g opacity={zz * prog(f, 12, 20)}>
+          <text x={600} y={700 - (f % 40) * 0.6} fontFamily={F_PAPER.sans} fontWeight={600} fontSize={40} fill={C.inkSoft}>z</text>
+          <text x={636} y={660 - (f % 40) * 0.6} fontFamily={F_PAPER.sans} fontWeight={600} fontSize={30} fill={C.inkSoft}>z</text>
+        </g>
+        {/* the pen flies up */}
+        {f > wakeAt && (
+          <g transform={`translate(${880 + pen * 40} ${1010 - Math.sin(pen * Math.PI) * 220}) rotate(${pen * 300})`}>
+            <path d="M-40 0 L 40 0" stroke={C.ink} strokeWidth={9} strokeLinecap="round" />
+            <path d="M40 0 L 52 0" stroke={C.orange} strokeWidth={9} strokeLinecap="round" />
+          </g>
+        )}
+        {/* the table, seen from the actor's side */}
+        <Ink d="M70 1050 C 380 1044, 700 1054, 1010 1046 L 1000 1086 C 700 1092, 380 1088, 80 1090 Z" start={0} dur={18} w={6} fill={PAPER_FILL} />
+        <Ink d="M130 1090 L 130 1180 M950 1088 L 950 1180" start={10} dur={10} w={6} />
+        {/* coffee cups and paper on the table */}
+        <Ink d="M330 1048 L 334 1006 L 376 1006 L 380 1048" start={14} dur={10} w={4} />
+        <Ink d="M600 1046 L 700 1040 L 704 1048" start={16} dur={8} w={4} />
+      </svg>
+      <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", paddingTop: 1210 }}>
+        <Rise at={wakeAt + 10}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={104} />
+        </Rise>
+        <div style={{ height: 18 }} />
+        {s.cue && <Cue text={s.cue} color={C.orange} at={wakeAt + 24} />}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 /** Pencil speed streaks that sweep across while the camera moves. */
 const Streaks: React.FC<{ seed: number }> = ({ seed }) => {
   const f = useCurrentFrame();
@@ -1343,6 +1535,7 @@ const Thread: React.FC<{ slots: number; cam: number }> = ({ slots, cam }) => {
 };
 
 export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
+  applyLook(spec.look ?? "paper");
   const frame = useCurrentFrame();
   const starts: number[] = [];
   let acc = 0;
@@ -1372,6 +1565,8 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "phone" ? <PhoneScene s={sc} first={firstPhone} /> :
       sc.type === "notify" ? <NotifyScene s={sc} /> :
       sc.type === "stage" ? <StageScene s={sc} /> :
+      sc.type === "lobby" ? <LobbyScene s={sc} /> :
+      sc.type === "panel" ? <PanelScene s={sc} /> :
       <EndScene s={sc} />;
   };
 
@@ -1379,6 +1574,11 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
     <AbsoluteFill style={{ background: C.paper, overflow: "hidden" }}>
       <Paper />
       {spec.music && <Audio src={staticFile(`music/${spec.id}.wav`)} volume={spec.music.volume ?? 0.42} />}
+      {(spec.voice?.lines ?? []).filter((l) => l.audio).map((l, i) => (
+        <Sequence key={`vo${i}`} from={Math.round(l.at * FPS)} layout="none">
+          <Audio src={staticFile(l.audio!)} volume={spec.voice?.volume ?? 1} />
+        </Sequence>
+      ))}
       <Thread slots={slots} cam={camEase} />
       {spec.scenes.map((sc, i) => {
         const frames = Math.round(sc.seconds * FPS);
