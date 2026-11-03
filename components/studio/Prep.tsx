@@ -98,7 +98,7 @@ export default function Prep(props: Props) {
       {/* Where you are in it. */}
       <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(243,217,191,0.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div className="uppercase tracking-[0.28em] text-[#CB4B00]" style={{ fontSize: 10.5 }}>
+          <div className="uppercase tracking-[0.28em] text-[#C9444A]" style={{ fontSize: 10.5 }}>
             Prep{role.name ? ` · ${role.name}` : ""}
           </div>
           <button
@@ -126,7 +126,7 @@ export default function Prep(props: Props) {
               style={{
                 flex: 1,
                 height: 2,
-                background: n <= i ? "#ffd2a6" : "rgba(243,217,191,0.15)",
+                background: n <= i ? "#E9C3BC" : "rgba(243,217,191,0.15)",
                 transition: `background 300ms ${EASE}`,
               }}
             />
@@ -186,9 +186,9 @@ const navBtn = (primary: boolean) =>
     fontSize: 12,
     padding: "9px 16px",
     borderRadius: 999,
-    border: `1px solid ${primary ? "#CB4B00" : "rgba(243,217,191,0.2)"}`,
-    background: primary ? "#CB4B00" : "transparent",
-    color: primary ? "#fff6ee" : "#e9d6c4",
+    border: `1px solid ${primary ? "#9B1C22" : "rgba(243,217,191,0.2)"}`,
+    background: primary ? "#9B1C22" : "transparent",
+    color: primary ? "#F7EFE6" : "#e9d6c4",
     cursor: "pointer",
   }) as const;
 
@@ -202,9 +202,6 @@ function PieceStep({ role, signedIn, onEdit, onDone, onSkip }: Props & { onDone:
   return (
     <div style={{ display: "grid", gap: 14 }}>
       <H>What are you working on?</H>
-      <p style={quiet}>
-        Bring in the piece from the library. The prep reads it with you and marks where it turns.
-      </p>
       <PieceChooser
         signedIn={signedIn}
         autoFocus
@@ -224,7 +221,7 @@ function PieceStep({ role, signedIn, onEdit, onDone, onSkip }: Props & { onDone:
       {role.piece && (
         <p style={quiet}>
           Working on {role.piece.character}, {role.piece.play}.{" "}
-          <button type="button" onClick={onDone} style={{ color: "#ffd2a6", background: "none", border: 0, padding: 0, cursor: "pointer", textDecoration: "underline" }}>
+          <button type="button" onClick={onDone} style={{ color: "#E9C3BC", background: "none", border: 0, padding: 0, cursor: "pointer", textDecoration: "underline" }}>
             Keep it
           </button>
         </p>
@@ -252,7 +249,7 @@ function ReadStep({ piece }: { piece: PieceState }) {
       {piece.full?.paywalled && (
         <p style={{ ...quiet, opacity: 0.85 }}>
           That&apos;s the opening; your free reads this month are used.{" "}
-          <a href="/pricing" style={{ color: "#ffd2a6", textDecoration: "underline" }}>
+          <a href="/pricing" style={{ color: "#E9C3BC", textDecoration: "underline" }}>
             Plus opens the whole piece.
           </a>
         </p>
@@ -283,7 +280,7 @@ function AskStep({ id, role, onEdit }: { id: QuestionId; role: Role; onEdit: Pro
       <H>{q.ask}</H>
       <p style={quiet}>{q.why}</p>
       {nudge >= 0 && (
-        <p key={nudge} style={{ fontSize: 14, color: "#ffd2a6", lineHeight: 1.5, animation: `studio-in 380ms ${EASE}` }}>
+        <p key={nudge} style={{ fontSize: 14, color: "#E9C3BC", lineHeight: 1.5, animation: `studio-in 380ms ${EASE}` }}>
           {q.nudges[nudge]}
         </p>
       )}
@@ -344,11 +341,7 @@ function BeatsStep({ role, piece, activeMoment, onEdit, onPoint, onLine, onGoTo,
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <H>Where does it turn?</H>
-      <p style={quiet}>
-        {lines.length
-          ? "Tap the lines where something changes for you. Three to five is plenty. For each, choose how you move and the air you're in; the stage shows you."
-          : "Name the moments where something changes for you. Three to five is plenty. For each, choose how you move and the air you're in."}
-      </p>
+      <p style={quiet}>{lines.length ? "Tap the lines where something changes." : "Name the moments where something changes."}</p>
       <div className="uppercase tracking-[0.2em] text-[#e9d6c4]" style={{ fontSize: 10, opacity: 0.55 }}>
         {count} {count === 1 ? "beat" : "beats"}
       </div>
@@ -362,8 +355,8 @@ function BeatsStep({ role, piece, activeMoment, onEdit, onPoint, onLine, onGoTo,
                 key={n}
                 style={{
                   borderRadius: 12,
-                  border: `1px solid ${m ? "rgba(203,75,0,0.55)" : "transparent"}`,
-                  background: m ? "rgba(203,75,0,0.07)" : "transparent",
+                  border: `1px solid ${m ? "rgba(155,28,34,0.55)" : "transparent"}`,
+                  background: m ? "rgba(155,28,34,0.07)" : "transparent",
                   padding: "6px 8px",
                 }}
               >
@@ -377,7 +370,7 @@ function BeatsStep({ role, piece, activeMoment, onEdit, onPoint, onLine, onGoTo,
                     textAlign: "left",
                     fontSize: 14,
                     lineHeight: 1.6,
-                    color: m ? "#fff1e4" : "#ead8c6",
+                    color: m ? "#F5ECE2" : "#ead8c6",
                     background: "none",
                     border: 0,
                     padding: 0,
@@ -394,7 +387,7 @@ function BeatsStep({ role, piece, activeMoment, onEdit, onPoint, onLine, onGoTo,
       ) : (
         <div style={{ display: "grid", gap: 8 }}>
           {role.moments.map((m) => (
-            <div key={m.id} style={{ borderRadius: 12, border: "1px solid rgba(203,75,0,0.45)", padding: "8px 10px" }}>
+            <div key={m.id} style={{ borderRadius: 12, border: "1px solid rgba(155,28,34,0.45)", padding: "8px 10px" }}>
               <div style={{ ...display, fontSize: 16 }}>{m.label || "A beat"}</div>
               <BeatEditor m={m} on={m.id === activeMoment} set={set} remove={remove} onPoint={onPoint} onGoTo={onGoTo} />
             </div>
@@ -452,9 +445,9 @@ function BeatEditor({
       fontSize: 11,
       padding: "3px 9px",
       borderRadius: 999,
-      border: `1px solid ${sel ? "#CB4B00" : "rgba(243,217,191,0.14)"}`,
-      background: sel ? "rgba(203,75,0,0.25)" : "transparent",
-      color: sel ? "#fff1e4" : "#e9d6c4",
+      border: `1px solid ${sel ? "#9B1C22" : "rgba(243,217,191,0.14)"}`,
+      background: sel ? "rgba(155,28,34,0.25)" : "transparent",
+      color: sel ? "#F5ECE2" : "#e9d6c4",
       cursor: "pointer",
     }) as const;
 
@@ -533,7 +526,7 @@ function DoneStep(props: Props) {
         {role.moments.length === 1 ? "beat" : "beats"}. Now put it in your body.
       </p>
       {change && (
-        <div style={{ borderLeft: "2px solid #CB4B00", padding: "4px 0 4px 12px" }}>
+        <div style={{ borderLeft: "2px solid #9B1C22", padding: "4px 0 4px 12px" }}>
           <div className="uppercase tracking-[0.2em] text-[#e9d6c4]" style={{ fontSize: 10, opacity: 0.6 }}>
             Last time you said you&apos;d change
           </div>
@@ -564,9 +557,6 @@ function DoneStep(props: Props) {
           Back to the stage
         </button>
       </div>
-      <p style={{ ...quiet, fontSize: 12 }}>
-        Everything you wrote is in the notebook, with seven more questions for when you want to go deeper.
-      </p>
     </div>
   );
 }

@@ -31,9 +31,9 @@ const chip = (on: boolean) =>
     fontSize: 11.5,
     padding: "5px 11px",
     borderRadius: 999,
-    border: `1px solid ${on ? "#CB4B00" : "rgba(243,217,191,0.15)"}`,
-    background: on ? "rgba(203,75,0,0.24)" : "transparent",
-    color: on ? "#ffe2c4" : "#e9d6c4",
+    border: `1px solid ${on ? "#9B1C22" : "rgba(243,217,191,0.15)"}`,
+    background: on ? "rgba(155,28,34,0.24)" : "transparent",
+    color: on ? "#F3DDD6" : "#e9d6c4",
     cursor: "pointer",
     transition: `background 200ms ${EASE}, border-color 200ms ${EASE}`,
   }) as const;
@@ -102,7 +102,7 @@ export default function GesturePanel(p: Props) {
     >
       <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(243,217,191,0.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div className="uppercase tracking-[0.28em] text-[#CB4B00]" style={{ fontSize: 10.5 }}>
+          <div className="uppercase tracking-[0.28em] text-[#C9444A]" style={{ fontSize: 10.5 }}>
             Gesture{role.name ? ` · ${role.name}` : ""}
           </div>
           <button type="button" onClick={onClose} aria-label="Close gesture" style={{ ...chip(false), fontSize: 10, padding: "5px 9px" }}>
@@ -110,16 +110,12 @@ export default function GesturePanel(p: Props) {
           </button>
         </div>
         <div style={{ ...display, fontSize: 24, lineHeight: 1.2, marginTop: 10 }}>{describe(spec)}</div>
-        <div style={{ fontSize: 12.5, color: "#ffd2a6", marginTop: 4 }}>
+        <div style={{ fontSize: 12.5, color: "#E9C3BC", marginTop: 4 }}>
           Reads as {reading.main.name.toLowerCase()} · {reading.factors.toLowerCase()}
         </div>
       </div>
 
       <div className="studio-scroll" style={{ flex: 1, overflowY: "auto", padding: "14px 18px 14px", display: "grid", gap: 16, alignContent: "start" }}>
-        <p style={quiet}>
-          What {role.name || "your character"} wants, as one big movement of the whole body. Choose the verb, then how.
-          Do it with the figure, full out, a few times.
-        </p>
 
         <div>
           <div className="uppercase tracking-[0.2em]" style={label}>
@@ -132,7 +128,7 @@ export default function GesturePanel(p: Props) {
               </button>
             ))}
           </div>
-          <p style={{ ...quiet, marginTop: 8, color: "#ffd2a6", opacity: 0.85 }}>{v.feel}</p>
+          <p style={{ ...quiet, marginTop: 8, color: "#E9C3BC", opacity: 0.85 }}>{v.feel}</p>
         </div>
 
         <div>
@@ -204,7 +200,7 @@ export default function GesturePanel(p: Props) {
               disabled={inward}
               onChange={(e) => onSize(Number(e.target.value))}
               aria-label="Size of the gesture, from inside to full out"
-              style={{ width: "100%", accentColor: "#CB4B00" }}
+              style={{ width: "100%", accentColor: "#9B1C22" }}
             />
             <span style={{ fontSize: 11, opacity: 0.7, color: "#e9d6c4", textAlign: "right" }}>Full out</span>
           </label>
@@ -219,16 +215,12 @@ export default function GesturePanel(p: Props) {
           >
             {inward ? "Going inside…" : "Take it inside"}
           </button>
-          <p style={{ ...quiet, marginTop: 8 }}>
-            Full out, then smaller, then only the glow at the centre. Say your first line with it there.
-          </p>
         </div>
 
         <div style={{ borderTop: "1px solid rgba(243,217,191,0.08)", paddingTop: 14 }}>
           <div className="uppercase tracking-[0.2em]" style={label}>
             Your body
           </div>
-          <p style={quiet}>Do it yourself into the camera, full out, and see how it reads and the shape your hands make.</p>
           <button type="button" onClick={onCamera} style={{ ...chip(true), marginTop: 10, padding: "8px 14px" }}>
             Do it yourself
           </button>
@@ -241,7 +233,7 @@ export default function GesturePanel(p: Props) {
         </div>
 
         <label style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }}>
-          <input type="checkbox" checked={sculpt} onChange={(e) => onSculpt(e.target.checked)} style={{ accentColor: "#CB4B00" }} />
+          <input type="checkbox" checked={sculpt} onChange={(e) => onSculpt(e.target.checked)} style={{ accentColor: "#9B1C22" }} />
           <span style={{ fontSize: 13, color: "#e9d6c4" }}>Keep the shape the hands make</span>
         </label>
       </div>
@@ -261,9 +253,9 @@ export default function GesturePanel(p: Props) {
             fontSize: 12,
             padding: "9px 16px",
             borderRadius: 999,
-            border: "1px solid #CB4B00",
-            background: kept ? "transparent" : "#CB4B00",
-            color: kept ? "#ffd2a6" : "#fff6ee",
+            border: "1px solid #9B1C22",
+            background: kept ? "transparent" : "#9B1C22",
+            color: kept ? "#E9C3BC" : "#F7EFE6",
             cursor: kept ? "default" : "pointer",
             flex: "none",
           }}

@@ -17,17 +17,10 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three/webgpu";
 import {
-  Fn,
-  instancedArray,
-  instanceIndex,
   uniform,
   vec2,
   vec3,
   float,
-  hash,
-  time,
-  sin,
-  floor,
   uv,
   length,
   smoothstep,
@@ -51,10 +44,10 @@ import { airOf, type AirId } from "@/lib/studio/air";
 import { period, poseAt, progressAt, type GestureSpec } from "@/lib/studio/gesture";
 import { buildFigure } from "./figure";
 
-const BG = "#130b08"; // warm near-black, never flat black
-const EMBER = new THREE.Color("#CB4B00");
-const PALE = new THREE.Color("#ffe2b8");
-const COOL = new THREE.Color("#9fb7ff");
+const BG = "#120d0d"; // warm ink, never flat black
+const EMBER = new THREE.Color("#B3262B");
+const PALE = new THREE.Color("#F1E6DA");
+const COOL = new THREE.Color("#b9c4e4");
 
 /** Cube axes: x = space (direct +), y = weight (light up, strong down), z = time (sudden toward you). */
 function toLocal(p: EffortPoint): THREE.Vector3 {
@@ -227,7 +220,7 @@ export default function EffortCubeScene({
       cube.add(edges);
 
       const glassMat = new THREE.MeshBasicNodeMaterial({
-        color: new THREE.Color("#ffb27a"),
+        color: new THREE.Color("#C9444A"),
         transparent: true,
         opacity: 0.035,
         side: THREE.BackSide,
@@ -238,7 +231,7 @@ export default function EffortCubeScene({
       // Corner nodes, one per working action.
       const cornerGeo = new THREE.SphereGeometry(0.055, 20, 14);
       const corners = ACTIONS.map((a) => {
-        const mat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ffd2a6") });
+        const mat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#E9C3BC") });
         const m = new THREE.Mesh(cornerGeo, mat);
         m.position.copy(toLocal(a.corner));
         m.userData.action = a.id;
@@ -264,7 +257,7 @@ export default function EffortCubeScene({
       const pointHalo = new THREE.Mesh(
         new THREE.SphereGeometry(0.16, 32, 20),
         new THREE.MeshBasicNodeMaterial({
-          color: new THREE.Color("#CB4B00"),
+          color: new THREE.Color("#9B1C22"),
           transparent: true,
           opacity: 0.35,
           blending: THREE.AdditiveBlending,
@@ -272,6 +265,8 @@ export default function EffortCubeScene({
         }),
       );
       pointMesh.add(pointHalo);
+      pointMat.visible = false;
+      pointHalo.visible = false;
       const pointHit = new THREE.Mesh(
         new THREE.SphereGeometry(0.32, 10, 8),
         new THREE.MeshBasicNodeMaterial({ visible: false }),
@@ -301,9 +296,9 @@ export default function EffortCubeScene({
       cube.add(arc);
       const pinGeo = new THREE.OctahedronGeometry(0.065, 0);
       const pinMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ffe2b8") });
-      const pinActiveMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ffb070").multiplyScalar(2.2) });
+      const pinActiveMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#D9575C").multiplyScalar(2.2) });
       const pathMat = new THREE.MeshBasicNodeMaterial({
-        color: new THREE.Color("#CB4B00").multiplyScalar(1.6),
+        color: new THREE.Color("#9B1C22").multiplyScalar(1.6),
         transparent: true,
         opacity: 0.9,
         blending: THREE.AdditiveBlending,
@@ -345,8 +340,10 @@ export default function EffortCubeScene({
       };
 
       // ---------- The performer ----------
+      // The light lives in the cube: it rides the point and moves the way the point says.
       const performer = new THREE.Group();
-      scene.add(performer);
+      performer.scale.setScalar(0.34);
+      cube.add(performer);
       const coreColor = new THREE.Color();
       const coreMat = new THREE.MeshBasicNodeMaterial({ color: coreColor });
       const core = new THREE.Mesh(new THREE.SphereGeometry(0.1, 32, 20), coreMat);
@@ -366,24 +363,11 @@ export default function EffortCubeScene({
       performer.add(trail);
       const history: THREE.Vector3[] = [];
 
-      // A faint stage mark under the performer.
-      const ring = new THREE.Mesh(
-        new THREE.RingGeometry(1.15, 1.17, 96),
-        new THREE.MeshBasicNodeMaterial({
-          color: new THREE.Color("#f3d9bf"),
-          transparent: true,
-          opacity: 0.18,
-          depthWrite: false,
-        }),
-      );
-      ring.rotation.x = -Math.PI / 2;
-      ring.position.y = 0.01;
-      performer.add(ring);
-
       // ---------- The gesture figure ----------
       const figure = buildFigure();
       figure.group.visible = false;
-      scene.add(figure.group);
+      figure.group.position.set(0, -1, 0); // feet on the cube's floor
+      cube.add(figure.group);
       const HAND_TRAIL = 110;
       const handTrailMat = new THREE.MeshBasicNodeMaterial({
         transparent: true,
@@ -401,9 +385,9 @@ export default function EffortCubeScene({
       });
       // The shape the hands leave over one full cycle, kept standing on the stage.
       const sculpture = new THREE.Group();
-      scene.add(sculpture);
+      cube.add(sculpture);
       const sculptMat = new THREE.MeshBasicNodeMaterial({
-        color: new THREE.Color("#CB4B00").multiplyScalar(1.4),
+        color: new THREE.Color("#9B1C22").multiplyScalar(1.4),
         transparent: true,
         opacity: 0.85,
         blending: THREE.AdditiveBlending,
@@ -427,7 +411,7 @@ export default function EffortCubeScene({
           g.mine.forEach((pts) => {
             if (pts.length < 4) return;
             const curve = new THREE.CatmullRomCurve3(
-              pts.map(([x, y, z]) => new THREE.Vector3(x, y + 0.95, z)),
+              pts.map(([x, y, z]) => new THREE.Vector3(x, y - 0.05, z)), // hips 0.95 above the cube's floor
               false,
               "centripetal",
             );
@@ -436,72 +420,15 @@ export default function EffortCubeScene({
         if (!g.spec || !g.sculpt) return;
         const T = period(g.spec);
         const paths: THREE.Vector3[][] = [[], []];
-        const at = figure.group.position.clone();
-        figure.group.position.set(0, 0, 0);
         for (let n = 0; n <= 90; n++) {
           figure.apply(poseAt(g.spec, (n / 90) * T, 1));
-          figure.hands().forEach((h, i) => paths[i].push(h));
+          figure.hands().forEach((h, i) => paths[i].push(cube.worldToLocal(h)));
         }
-        figure.group.position.copy(at);
         paths.forEach((pts) => {
           const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
           sculpture.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 160, 0.012, 6, false), sculptMat));
         });
       };
-
-      // ---------- Dust: a GPU compute particle field ----------
-      const DUST = 1100;
-      const SIZE = new THREE.Vector3(16, 6.5, 10);
-      const ORIGIN = new THREE.Vector3(0, 3.1, 0);
-      const dust = instancedArray(DUST, "vec3");
-      const uSpeed = uniform(0.3);
-      const uGravity = uniform(0);
-      const uSwirl = uniform(1);
-      const uDirect = uniform(0);
-      const uDelta = uniform(1 / 60);
-      const uFlicker = uniform(0);
-      const uDustColor = uniform(new THREE.Color("#ffcf9e"));
-      const uDustFade = uniform(0);
-      const size = vec3(SIZE.x, SIZE.y, SIZE.z);
-      const origin = vec3(ORIGIN.x, ORIGIN.y, ORIGIN.z);
-
-      const initDust = Fn(() => {
-        const p = dust.element(instanceIndex);
-        const r = vec3(hash(instanceIndex), hash(instanceIndex.add(7919)), hash(instanceIndex.add(15485)));
-        p.assign(r.sub(0.5).mul(size).add(origin));
-      })().compute(DUST);
-
-      const stepDust = Fn(() => {
-        const p = dust.element(instanceIndex);
-        const s = p.mul(0.42);
-        const t = time.mul(0.25);
-        const swirl = vec3(sin(s.y.add(t)), sin(s.z.add(t.mul(1.3))), sin(s.x.add(t.mul(0.8)))).mul(uSwirl);
-        const flow = vec3(uDirect.mul(1.4), uGravity.negate(), 0);
-        const np = p.add(swirl.add(flow).mul(uSpeed).mul(uDelta));
-        // Wrap inside the box (no negative modulo surprises across backends).
-        const rel = np.sub(origin).div(size).add(0.5);
-        const wrapped = rel.sub(floor(rel)).sub(0.5).mul(size).add(origin);
-        p.assign(wrapped);
-      })().compute(DUST);
-
-      const dustMat = new THREE.SpriteNodeMaterial({
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-      });
-      dustMat.positionNode = dust.toAttribute();
-      const seed = hash(instanceIndex.add(311));
-      dustMat.scaleNode = float(0.012).add(seed.mul(0.016));
-      const disc = smoothstep(float(0.5), float(0.0), length(uv().sub(0.5)));
-      const twinkle = mix(float(1), sin(time.mul(14).add(seed.mul(40))).mul(0.5).add(0.5), uFlicker);
-      dustMat.colorNode = uDustColor;
-      dustMat.opacityNode = disc.mul(seed.mul(0.22).add(0.04)).mul(twinkle).mul(uDustFade);
-      const dustSprites = new THREE.Sprite(dustMat);
-      dustSprites.count = DUST;
-      dustSprites.frustumCulled = false;
-      scene.add(dustSprites);
-
-      renderer.compute(initDust);
 
       // ---------- Post: bloom ----------
       const pipeline = new THREE.RenderPipeline(renderer);
@@ -571,21 +498,17 @@ export default function EffortCubeScene({
         const portrait = h > w;
         camera.aspect = w / h;
         if (portrait) {
-          cube.position.set(0, 4.15, 0);
-          cubeScale = 0.8;
-          performer.position.set(0, 0.55, 0.4);
-          performer.scale.setScalar(0.85);
+          cube.position.set(0, 2.35, 0);
+          cubeScale = 0.95;
           camera.fov = 52;
-          rest.pos.set(3.4, 3.6, 9.2);
-          rest.target.set(0, 2.15, 0);
+          rest.pos.set(2.6, 3.3, 9.8);
+          rest.target.set(0, 2.2, 0);
         } else {
-          cube.position.set(-1.8, 1.7, 0);
-          cubeScale = 1;
-          performer.position.set(1.8, 0.2, 0);
-          performer.scale.setScalar(1);
+          cube.position.set(0, 1.75, 0);
+          cubeScale = 1.3;
           camera.fov = 38;
-          rest.pos.set(2.6, 3.0, 8.4);
-          rest.target.set(0, 0.95, 0);
+          rest.pos.set(2.5, 3.0, 8.8);
+          rest.target.set(0, 1.6, 0);
         }
         if (!introStarted) {
           // Arrive from high and far, then settle: about a second.
@@ -599,7 +522,7 @@ export default function EffortCubeScene({
           controls.target.copy(rest.target);
         }
         poolA.value.set(cube.position.x, cube.position.z);
-        poolB.value.set(performer.position.x, performer.position.z);
+        poolB.value.set(100, 100); // one pool of light now, under the cube
         applyInset();
         renderer.setSize(w, h);
         camera.lookAt(controls.target);
@@ -691,11 +614,11 @@ export default function EffortCubeScene({
         home,
         focusPerformer: () => {
           if (closing) return;
-          const p = performer.getWorldPosition(new THREE.Vector3());
-          const s = performer.scale.x;
+          const c = cube.getWorldPosition(new THREE.Vector3());
+          const k = cube.scale.x;
           flyTo(
-            p.clone().add(new THREE.Vector3(0.9 * s, 1.75 * s, 4.1 * s)),
-            p.clone().add(new THREE.Vector3(0, 1.2 * s, 0)),
+            c.clone().add(new THREE.Vector3(0.7 * k, 0.35 * k, 3.7 * k)),
+            c.clone().add(new THREE.Vector3(0, 0.05 * k, 0)),
             1.6,
             easeInOutCubic,
           );
@@ -725,7 +648,7 @@ export default function EffortCubeScene({
       // The air the stage is in, eased toward airRef so a change of atmosphere is felt, not cut.
       const sky = new THREE.Color(BG);
       const air = { near: 10, far: 24, drift: 0, unrest: 0.15, light: 1 };
-      const airDust = new THREE.Color("#ffcf9e");
+      const airDust = new THREE.Color("#EAD9CF");
       const tmpAir = new THREE.Color();
 
       // ---------- Frame ----------
@@ -764,7 +687,6 @@ export default function EffortCubeScene({
         uAirGlowStrength.value += ((A.id === "still" ? 0.28 : 0.62) * lit - uAirGlowStrength.value) * k;
         airDust.lerp(tmpAir.set(A.dust), k);
         uFade.value = lit * air.light;
-        uDustFade.value = lit;
         if (closing && fade === 0 && closeResolve) {
           const r = closeResolve;
           closeResolve = null;
@@ -801,6 +723,7 @@ export default function EffortCubeScene({
 
         // Point and threads.
         pointMesh.position.copy(toLocal(shown));
+        performer.position.copy(pointMesh.position);
         performerColor(shown, tmpC);
         (pointHalo.material as THREE.MeshBasicNodeMaterial).color.copy(tmpC);
         ACTIONS.forEach((a, i) => {
@@ -820,9 +743,8 @@ export default function EffortCubeScene({
         // Performer.
         gestureT += dt * motionScale;
         const [gx, gy, gz] = gestureAt(gestureT, q);
-        const lift = 1.25;
-        core.position.set(gx * 1.05, gy + lift, gz * 0.9);
-        core.scale.setScalar(0.7 + q.mass * 0.9);
+        core.position.set(gx * 1.05, gy, gz * 0.9);
+        core.scale.setScalar((0.7 + q.mass * 0.9) * 1.5);
         performerColor(shown, coreColor);
         coreMat.color.copy(coreColor).multiplyScalar(1.6 + q.mass * 1.4);
 
@@ -846,14 +768,14 @@ export default function EffortCubeScene({
         const G = gestureRef.current;
         const gOn = G.active && !!G.spec;
         figure.group.visible = gOn;
-        cube.visible = !gOn;
         performer.visible = !gOn;
+        threads.visible = !gOn;
+        arc.visible = !gOn;
+        corners.forEach((c) => (c.mesh.visible = !gOn));
         sculpture.visible = gOn;
         handTrails.forEach((h) => (h.mesh.visible = gOn));
         if (G.version !== gestureVersion) rebuildSculpture();
         if (gOn && G.spec) {
-          figure.group.position.copy(performer.position);
-          sculpture.position.copy(performer.position);
           let size = G.size;
           if (G.inward) {
             const e = (performance.now() - G.inward.start) / G.inward.dur;
@@ -874,7 +796,7 @@ export default function EffortCubeScene({
               tmpS.setScalar(life > 0 ? (0.006 + 0.022 * life) * (0.3 + 0.7 * size) : 0);
               tmpM.compose(pos ?? hs[i], tmpQ, tmpS);
               h.mesh.setMatrixAt(n, tmpM);
-              tmpC.set("#ffb070").multiplyScalar(life * life * 1.6 * (0.25 + 0.75 * size));
+              tmpC.set("#D9575C").multiplyScalar(life * life * 1.6 * (0.25 + 0.75 * size));
               h.mesh.setColorAt(n, tmpC);
             }
             h.mesh.instanceMatrix.needsUpdate = true;
@@ -885,13 +807,7 @@ export default function EffortCubeScene({
         }
 
         // Air.
-        uDelta.value = dt;
-        uSpeed.value = (0.12 + q.suddenness * 0.9) * (0.7 + air.unrest * 0.9) * motionScale;
-        uGravity.value = (q.mass - 0.5) * 0.9 - air.drift * 0.7;
-        uSwirl.value = 1.2 - q.directness;
-        uDirect.value = q.directness;
-        uFlicker.value = reducedMotion ? 0 : Math.max(q.suddenness * 0.8, air.unrest * 0.6);
-        performerColor(shown, uDustColor.value as THREE.Color).lerp(airDust, 0.85);
+
         poolHeat.value = q.mass;
 
         if (flight) {
@@ -909,7 +825,6 @@ export default function EffortCubeScene({
         } else {
           controls.update();
         }
-        renderer.compute(stepDust);
         pipeline.render();
 
         // Corner labels for the HTML overlay, ~20 times a second.

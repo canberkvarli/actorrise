@@ -63,7 +63,6 @@ function subscribeResize(fn: () => void) {
 /** The notebook's width on a wide screen. */
 const DRAWER = 400;
 
-const signed = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}`;
 const typing = (t: EventTarget | null) => {
   const el = t as HTMLElement | null;
   if (!el) return false;
@@ -108,7 +107,6 @@ export default function EffortCube() {
   const [entered, setEntered] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [hud, setHud] = useState(true);
-  const [hint, setHint] = useState(true);
 
   // The role's notebook, kept in this browser for now.
   const [nb, setNb] = useState<NotebookData | null>(null);
@@ -121,11 +119,9 @@ export default function EffortCube() {
 
   useEffect(() => {
     const a = window.setTimeout(() => setEntered(true), 120);
-    const b = window.setTimeout(() => setHint(false), 9000);
     const c = window.requestAnimationFrame(() => setNb(loadNotebook()));
     return () => {
       window.clearTimeout(a);
-      window.clearTimeout(b);
       window.cancelAnimationFrame(c);
     };
   }, []);
@@ -240,7 +236,6 @@ export default function EffortCube() {
     const c = clampPoint(p);
     pointRef.current = c;
     setPoint(c);
-    setHint(false);
   }, []);
 
   const jump = useCallback((id: ActionId) => move(actionPoint(id)), [move]);
@@ -483,9 +478,9 @@ export default function EffortCube() {
                 fontSize: 11,
                 lineHeight: 1,
                 padding: "4px 7px",
-                background: hot ? "rgba(203,75,0,0.28)" : "rgba(19,11,8,0.62)",
-                border: `1px solid ${hot ? "rgba(255,178,122,0.45)" : "rgba(243,217,191,0.1)"}`,
-                color: hot ? "#ffe2c4" : "#ead8c6",
+                background: hot ? "rgba(155,28,34,0.28)" : "rgba(19,11,8,0.62)",
+                border: `1px solid ${hot ? "rgba(233,195,188,0.45)" : "rgba(243,217,191,0.1)"}`,
+                color: hot ? "#F3DDD6" : "#ead8c6",
                 opacity: hot ? 1 : 0.82,
                 whiteSpace: "nowrap",
               }}
@@ -513,9 +508,9 @@ export default function EffortCube() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: on ? "#CB4B00" : "rgba(19,11,8,0.75)",
-                border: "1px solid rgba(255,178,122,0.5)",
-                color: "#fff1e4",
+                background: on ? "#9B1C22" : "rgba(19,11,8,0.75)",
+                border: "1px solid rgba(233,195,188,0.5)",
+                color: "#F5ECE2",
               }}
             >
               {p.index + 1}
@@ -524,7 +519,7 @@ export default function EffortCube() {
         })}
       </div>
 
-      {/* Top: a way out, the notebook, the instrument, and the live numbers. */}
+      {/* Top: the role and what you can do with it; sound on the right. */}
       <div
         style={{
           position: "absolute",
@@ -540,35 +535,23 @@ export default function EffortCube() {
           transition: `${enter(250).transition}, left 450ms ${EASE}`,
         }}
       >
-        <div style={{ display: "flex", gap: 16, alignItems: "center", pointerEvents: "auto" }}>
-          {!((open || prep || gesture) && wide) && (
-            <button
-              type="button"
-              onClick={leave}
-              className="uppercase tracking-[0.22em] text-[#e9d6c4] hover:text-white"
-              style={{ fontSize: 11, opacity: 0.7, background: "none", border: 0, cursor: "pointer" }}
-            >
-              ← {wide ? "ActorRise" : ""}
-              {fine && wide && <span style={{ ...mono, opacity: 0.5, marginLeft: 8, letterSpacing: 0 }}>esc</span>}
-            </button>
-          )}
+        <div style={{ display: "flex", gap: wide ? 10 : 6, flexWrap: "wrap", alignItems: "center", pointerEvents: "auto" }}>
           {!open && !prep && !gesture && (
             <button
               type="button"
               onClick={() => setOpen(true)}
               className="uppercase tracking-[0.18em]"
               style={{
-                fontSize: 11,
-                padding: "7px 12px",
+                fontSize: wide ? 11 : 10,
+                padding: wide ? "7px 12px" : "6px 10px",
                 borderRadius: 999,
-                background: "rgba(203,75,0,0.18)",
-                border: "1px solid rgba(203,75,0,0.55)",
-                color: "#ffd2a6",
+                background: "rgba(155,28,34,0.18)",
+                border: "1px solid rgba(155,28,34,0.55)",
+                color: "#E9C3BC",
                 cursor: "pointer",
               }}
             >
               {role?.name ? role.name : "Notebook"}
-              {fine && wide && <span style={{ ...mono, opacity: 0.6, marginLeft: 8, letterSpacing: 0 }}>N</span>}
             </button>
           )}
           {!open && !prep && !gesture && role && (
@@ -578,8 +561,8 @@ export default function EffortCube() {
               className="uppercase tracking-[0.18em]"
               title="The psychological gesture for this role"
               style={{
-                fontSize: 11,
-                padding: "7px 12px",
+                fontSize: wide ? 11 : 10,
+                padding: wide ? "7px 12px" : "6px 10px",
                 borderRadius: 999,
                 background: "transparent",
                 border: "1px solid rgba(243,217,191,0.3)",
@@ -597,27 +580,27 @@ export default function EffortCube() {
               className="uppercase tracking-[0.18em]"
               title="The guided path through this role"
               style={{
-                fontSize: 11,
-                padding: "7px 12px",
+                fontSize: wide ? 11 : 10,
+                padding: wide ? "7px 12px" : "6px 10px",
                 borderRadius: 999,
-                background: "#CB4B00",
-                border: "1px solid #CB4B00",
-                color: "#fff6ee",
+                background: "#9B1C22",
+                border: "1px solid #9B1C22",
+                color: "#F7EFE6",
                 cursor: "pointer",
               }}
             >
               Prep
             </button>
           )}
-          {!open && !prep && !gesture && canPlaces && (
+          {!open && !prep && !gesture && canPlaces && wide && (
             <button
               type="button"
               onClick={startPlaces}
               className="uppercase tracking-[0.18em]"
               title="The minute before you go on"
               style={{
-                fontSize: 11,
-                padding: "7px 12px",
+                fontSize: wide ? 11 : 10,
+                padding: wide ? "7px 12px" : "6px 10px",
                 borderRadius: 999,
                 background: "transparent",
                 border: "1px solid rgba(243,217,191,0.3)",
@@ -630,19 +613,7 @@ export default function EffortCube() {
           )}
         </div>
         <div style={{ textAlign: "right" }}>
-          <div className="uppercase tracking-[0.3em] text-[#CB4B00]" style={{ fontSize: 10.5 }}>
-            Studio
-          </div>
-          <div style={{ ...display, fontSize: wide ? 20 : 17, lineHeight: 1.1 }}>The effort cube</div>
-          {wide && (
-            <div
-              className="text-[#e9d6c4]"
-              style={{ ...mono, fontSize: 10.5, marginTop: 6, opacity: 0.55, fontVariantNumeric: "tabular-nums" }}
-            >
-              W {signed(point.weight)} · S {signed(point.space)} · T {signed(point.time)}
-            </div>
-          )}
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 8 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8 }}>
             {air !== "still" && (
               <span className="uppercase tracking-[0.18em] text-[#e9d6c4]" style={{ fontSize: 10, opacity: 0.6 }}>
                 {airOf(air).name}
@@ -658,41 +629,17 @@ export default function EffortCube() {
                 fontSize: 10,
                 padding: "5px 9px",
                 borderRadius: 999,
-                background: soundOn ? "rgba(203,75,0,0.22)" : "transparent",
-                border: `1px solid ${soundOn ? "#CB4B00" : "rgba(243,217,191,0.2)"}`,
-                color: soundOn ? "#ffd2a6" : "#e9d6c4",
+                background: soundOn ? "rgba(155,28,34,0.22)" : "transparent",
+                border: `1px solid ${soundOn ? "#9B1C22" : "rgba(243,217,191,0.2)"}`,
+                color: soundOn ? "#E9C3BC" : "#e9d6c4",
                 cursor: "pointer",
               }}
             >
-              Sound {soundOn ? "on" : "off"}
+              Sound
             </button>
           </div>
         </div>
       </div>
-
-      {hint && !failed && !open && (
-        <div
-          className="text-center text-[#e9d6c4]"
-          style={{
-            position: "absolute",
-            top: 96,
-            left: "50%",
-            translate: "-50% 0",
-            fontSize: 13,
-            pointerEvents: "none",
-            width: "min(92vw, 470px)",
-            ...enter(900),
-            opacity: shown ? 0.75 : 0,
-          }}
-        >
-          Drag the light inside the cube. Tap a corner to go there. Drag anywhere else to look around.
-          {fine && (
-            <div style={{ ...mono, fontSize: 10.5, marginTop: 8, opacity: 0.6 }}>
-              1–8 corners · arrows, Q/E move · P pin · N notebook · H hide · F home · esc leave
-            </div>
-          )}
-        </div>
-      )}
 
       {failed && (
         <div
@@ -715,7 +662,7 @@ export default function EffortCube() {
         </div>
       )}
 
-      {/* Bottom: the reading, the three factors, and the pin. */}
+      {/* Bottom: where you are, the three factors, and the pin. */}
       <section
         aria-hidden={!panelVisible}
         style={{
@@ -751,10 +698,6 @@ export default function EffortCube() {
             >
               {reading.sentence}
             </div>
-            <div className="text-[#e9d6c4]" style={{ fontSize: 13, marginTop: 4, opacity: 0.8 }}>
-              {reading.factors}.{" "}
-              {reading.mainShare >= 0.2 && <span style={{ opacity: 0.75 }}>{reading.main.feel}</span>}
-            </div>
           </div>
           <div style={{ display: "flex", gap: 6, alignSelf: "flex-start", flex: "none" }}>
             <button
@@ -766,31 +709,13 @@ export default function EffortCube() {
                 fontSize: 10.5,
                 padding: "7px 12px",
                 borderRadius: 999,
-                background: "#CB4B00",
-                border: "1px solid #CB4B00",
-                color: "#fff6ee",
+                background: "#9B1C22",
+                border: "1px solid #9B1C22",
+                color: "#F7EFE6",
                 cursor: "pointer",
               }}
             >
               Pin moment
-            </button>
-            <button
-              type="button"
-              onClick={() => setHud(false)}
-              aria-label="Hide the panel (H)"
-              className="text-[#e9d6c4]"
-              style={{
-                ...mono,
-                fontSize: 10.5,
-                opacity: 0.5,
-                background: "none",
-                border: "1px solid rgba(243,217,191,0.18)",
-                borderRadius: 6,
-                padding: "2px 6px",
-                cursor: "pointer",
-              }}
-            >
-              H
             </button>
           </div>
         </div>
@@ -801,53 +726,6 @@ export default function EffortCube() {
           ))}
         </div>
 
-        <div style={{ marginTop: 12, display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 2 }}>
-          {ACTIONS.map((a, i) => {
-            const on = reading.mainShare >= 0.2 && reading.main.id === a.id;
-            return (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => jump(a.id)}
-                onPointerEnter={() => setHovered(a.id)}
-                onPointerLeave={() => setHovered(null)}
-                className="uppercase tracking-[0.14em]"
-                title={fine ? `${a.name} (${i + 1})` : a.name}
-                style={{
-                  fontSize: 10.5,
-                  padding: "6px 10px",
-                  borderRadius: 999,
-                  border: `1px solid ${on ? "#CB4B00" : "rgba(243,217,191,0.18)"}`,
-                  background: on ? "rgba(203,75,0,0.22)" : "transparent",
-                  color: on ? "#ffd2a6" : "#e9d6c4",
-                  cursor: "pointer",
-                  flex: "none",
-                  transition: `background 250ms ${EASE}, border-color 250ms ${EASE}, color 250ms`,
-                }}
-              >
-                {a.name}
-              </button>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() => move(CENTRE)}
-            className="uppercase tracking-[0.14em]"
-            style={{
-              fontSize: 10.5,
-              padding: "6px 10px",
-              borderRadius: 999,
-              border: "1px dashed rgba(243,217,191,0.18)",
-              background: "transparent",
-              color: "#e9d6c4",
-              opacity: 0.7,
-              cursor: "pointer",
-              flex: "none",
-            }}
-          >
-            Centre
-          </button>
-        </div>
       </section>
 
       {/* With the panel hidden: one small way to bring it back. */}
@@ -1025,7 +903,7 @@ export default function EffortCube() {
         @keyframes studio-in { from { opacity: 0; transform: translateY(6px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
         .studio-scroll { scrollbar-width: thin; scrollbar-color: rgba(243,217,191,0.18) transparent; }
         .studio-field { width: 100%; background: rgba(243,217,191,0.04); border: 1px solid rgba(243,217,191,0.12); border-radius: 10px; color: #f3e6da; padding: 9px 11px; font-size: 14px; line-height: 1.45; outline: none; resize: none; transition: border-color 200ms, background 200ms; user-select: text; }
-        .studio-field:focus { border-color: rgba(203,75,0,0.7); background: rgba(243,217,191,0.07); }
+        .studio-field:focus { border-color: rgba(155,28,34,0.7); background: rgba(243,217,191,0.07); }
         .studio-field::placeholder { color: rgba(233,214,196,0.38); }
         .studio-bare { width: 100%; background: transparent; border: 0; outline: none; color: #f3e6da; padding: 0; user-select: text; }
         .studio-bare::placeholder { color: rgba(233,214,196,0.38); }
@@ -1068,7 +946,7 @@ function AfterCard({
         padding: "14px 16px",
         borderRadius: 16,
         background: "rgba(26,15,11,0.82)",
-        border: "1px solid rgba(203,75,0,0.55)",
+        border: "1px solid rgba(155,28,34,0.55)",
         backdropFilter: "blur(14px)",
         WebkitBackdropFilter: "blur(14px)",
         boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
@@ -1088,9 +966,9 @@ function AfterCard({
             fontSize: 12,
             padding: "8px 14px",
             borderRadius: 999,
-            border: "1px solid #CB4B00",
-            background: "#CB4B00",
-            color: "#fff6ee",
+            border: "1px solid #9B1C22",
+            background: "#9B1C22",
+            color: "#F7EFE6",
             cursor: "pointer",
           }}
         >
@@ -1131,7 +1009,7 @@ function FactorSlider({ k, value, onChange }: { k: FactorKey; value: number; onC
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         aria-label={`${f.name}: ${f.neg} to ${f.pos}`}
-        style={{ width: "100%", accentColor: "#CB4B00" }}
+        style={{ width: "100%", accentColor: "#9B1C22" }}
       />
       <span
         className="uppercase tracking-[0.14em] text-[#e9d6c4]"

@@ -119,14 +119,14 @@ export default function GestureCamera({
         ctx.clearRect(0, 0, c.width, c.height);
         if (lm) {
           ctx.lineWidth = 4;
-          ctx.strokeStyle = recording.current ? "#ff7a3a" : "rgba(255,226,196,0.85)";
+          ctx.strokeStyle = recording.current ? "#C9444A" : "rgba(255,226,196,0.85)";
           for (const [a, b] of BONES) {
             ctx.beginPath();
             ctx.moveTo(lm[a].x * c.width, lm[a].y * c.height);
             ctx.lineTo(lm[b].x * c.width, lm[b].y * c.height);
             ctx.stroke();
           }
-          ctx.fillStyle = "#ffd2a6";
+          ctx.fillStyle = "#E9C3BC";
           for (const i of [L_WRIST, R_WRIST]) {
             ctx.beginPath();
             ctx.arc(lm[i].x * c.width, lm[i].y * c.height, 9, 0, Math.PI * 2);
@@ -222,9 +222,9 @@ export default function GestureCamera({
       fontSize: 12,
       padding: "9px 16px",
       borderRadius: 999,
-      border: `1px solid ${primary ? "#CB4B00" : "rgba(243,217,191,0.22)"}`,
-      background: primary ? "#CB4B00" : "transparent",
-      color: primary ? "#fff6ee" : "#e9d6c4",
+      border: `1px solid ${primary ? "#9B1C22" : "rgba(243,217,191,0.22)"}`,
+      background: primary ? "#9B1C22" : "transparent",
+      color: primary ? "#F7EFE6" : "#e9d6c4",
       cursor: "pointer",
     }) as const;
 
@@ -271,7 +271,7 @@ export default function GestureCamera({
               justifyContent: "center",
               ...display,
               fontSize: phase === "countdown" ? 88 : 22,
-              color: "#fff1e4",
+              color: "#F5ECE2",
               textShadow: "0 2px 20px rgba(0,0,0,0.6)",
             }}
           >
@@ -286,7 +286,7 @@ export default function GestureCamera({
               left: 0,
               bottom: 0,
               height: 3,
-              background: "#ff7a3a",
+              background: "#C9444A",
               animation: `cam-fill ${RECORD_MS}ms linear forwards`,
             }}
           />
@@ -357,7 +357,7 @@ export default function GestureCamera({
                   That read as
                 </div>
                 <div style={{ ...display, fontSize: 26, lineHeight: 1.15 }}>{r.sentence}</div>
-                <p style={{ fontSize: 13, color: "#ffd2a6" }}>{r.factors}.</p>
+                <p style={{ fontSize: 13, color: "#E9C3BC" }}>{r.factors}.</p>
                 {reading.confidence < 0.4 && (
                   <p style={{ fontSize: 12, color: "#e9d6c4", opacity: 0.65 }}>
                     Not much movement to read. Go bigger for a clearer reading.

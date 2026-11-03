@@ -118,7 +118,7 @@ export default function Places({ role, lines, reducedMotion, onPoint, onLine, on
               key={n === i ? `on-${i}` : "off"}
               style={{
                 height: "100%",
-                background: "#ffd2a6",
+                background: "#E9C3BC",
                 width: n < i ? "100%" : n > i ? "0%" : undefined,
                 animation: n === i ? `places-fill ${c.ms}ms linear forwards` : undefined,
               }}
@@ -170,8 +170,8 @@ export default function Places({ role, lines, reducedMotion, onPoint, onLine, on
                   height: 88,
                   margin: "0 auto 22px",
                   borderRadius: 44,
-                  border: "1px solid rgba(255,210,166,0.55)",
-                  boxShadow: "0 0 40px rgba(203,75,0,0.35) inset, 0 0 30px rgba(203,75,0,0.25)",
+                  border: "1px solid rgba(233,195,188,0.55)",
+                  boxShadow: "0 0 40px rgba(155,28,34,0.35) inset, 0 0 30px rgba(155,28,34,0.25)",
                   animation: reducedMotion ? undefined : "places-breath 7s ease-in-out forwards",
                 }}
               />
@@ -184,7 +184,7 @@ export default function Places({ role, lines, reducedMotion, onPoint, onLine, on
 
           {cue.kind === "answer" && (
             <>
-              <div className="uppercase tracking-[0.26em] text-[#CB4B00]" style={{ fontSize: 10.5 }}>
+              <div className="uppercase tracking-[0.26em] text-[#C9444A]" style={{ fontSize: 10.5 }}>
                 {cue.ask}
               </div>
               <p style={{ ...display, fontSize: 28, lineHeight: 1.3, marginTop: 12 }}>{cue.text}</p>
@@ -200,7 +200,7 @@ export default function Places({ role, lines, reducedMotion, onPoint, onLine, on
               </div>
               {cue.label && <div style={{ ...display, fontSize: 30, lineHeight: 1.2, marginTop: 10 }}>{cue.label}</div>}
               {cue.line && (
-                <p className="font-typewriter" style={{ fontSize: 17, lineHeight: 1.6, marginTop: 12, color: "#fff1e4" }}>
+                <p className="font-typewriter" style={{ fontSize: 17, lineHeight: 1.6, marginTop: 12, color: "#F5ECE2" }}>
                   {cue.line}
                 </p>
               )}
@@ -217,7 +217,7 @@ export default function Places({ role, lines, reducedMotion, onPoint, onLine, on
 
           {cue.kind === "gesture" && (
             <>
-              <div className="uppercase tracking-[0.26em] text-[#CB4B00]" style={{ fontSize: 10.5 }}>
+              <div className="uppercase tracking-[0.26em] text-[#C9444A]" style={{ fontSize: 10.5 }}>
                 Your gesture
               </div>
               <p style={{ ...display, fontSize: 30, lineHeight: 1.25, marginTop: 12 }}>{describe(cue.spec)}</p>
@@ -229,10 +229,10 @@ export default function Places({ role, lines, reducedMotion, onPoint, onLine, on
 
           {cue.kind === "first" && (
             <>
-              <div className="uppercase tracking-[0.26em] text-[#CB4B00]" style={{ fontSize: 10.5 }}>
+              <div className="uppercase tracking-[0.26em] text-[#C9444A]" style={{ fontSize: 10.5 }}>
                 Your first line
               </div>
-              <p className="font-typewriter" style={{ fontSize: 21, lineHeight: 1.55, marginTop: 14, color: "#fff1e4" }}>
+              <p className="font-typewriter" style={{ fontSize: 21, lineHeight: 1.55, marginTop: 14, color: "#F5ECE2" }}>
                 {cue.line}
               </p>
             </>

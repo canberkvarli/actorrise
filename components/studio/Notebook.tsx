@@ -57,9 +57,9 @@ const chip = (on = false) =>
     fontSize: 10.5,
     padding: "6px 11px",
     borderRadius: 999,
-    border: `1px solid ${on ? "#CB4B00" : "rgba(243,217,191,0.18)"}`,
-    background: on ? "rgba(203,75,0,0.22)" : "transparent",
-    color: on ? "#ffd2a6" : "#e9d6c4",
+    border: `1px solid ${on ? "#9B1C22" : "rgba(243,217,191,0.18)"}`,
+    background: on ? "rgba(155,28,34,0.22)" : "transparent",
+    color: on ? "#E9C3BC" : "#e9d6c4",
     cursor: "pointer",
     flex: "none",
     transition: `background 250ms ${EASE}, border-color 250ms ${EASE}, color 250ms`,
@@ -68,7 +68,7 @@ const chip = (on = false) =>
 const quiet = { fontSize: 12.5, color: "#e9d6c4", opacity: 0.62, lineHeight: 1.5 } as const;
 
 export default function Notebook(props: Props) {
-  const { open, wide, width, role, tab, onTab, onClose, onLeave, onEdit, fine } = props;
+  const { open, wide, width, role, tab, onTab, onClose, onEdit } = props;
   const done = answered(role);
 
   const frame = wide
@@ -113,14 +113,7 @@ export default function Notebook(props: Props) {
       {/* Head: the role. */}
       <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(243,217,191,0.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-          <button
-            type="button"
-            onClick={onLeave}
-            className="uppercase tracking-[0.22em] text-[#e9d6c4] hover:text-white"
-            style={{ fontSize: 10.5, opacity: 0.6, background: "none", border: 0, cursor: "pointer", padding: 0 }}
-          >
-            ← ActorRise
-          </button>
+          <span />
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <RoleSwitcher {...props} />
             <button
@@ -221,9 +214,9 @@ export default function Notebook(props: Props) {
               alignItems: "center",
               padding: "11px 14px",
               borderRadius: 14,
-              background: "rgba(203,75,0,0.16)",
-              border: "1px solid rgba(203,75,0,0.6)",
-              color: "#ffe2c4",
+              background: "rgba(155,28,34,0.16)",
+              border: "1px solid rgba(155,28,34,0.6)",
+              color: "#F3DDD6",
               cursor: "pointer",
             }}
           >
@@ -232,30 +225,16 @@ export default function Notebook(props: Props) {
           </button>
         </div>
       )}
-      {fine && (
-        <div
-          style={{
-            ...mono,
-            fontSize: 10,
-            opacity: 0.4,
-            padding: "8px 18px 12px",
-            borderTop: "1px solid rgba(243,217,191,0.06)",
-            color: "#e9d6c4",
-          }}
-        >
-          N close · P pin · esc stop typing
-        </div>
-      )}
     </aside>
   );
 }
 
 const SYNC_TEXT: Record<SyncStatus, string> = {
-  local: "On this device only.",
-  loading: "Opening your notebook…",
-  saving: "Saving…",
-  saved: "Saved to your account.",
-  offline: "Couldn't reach your account. Saved here, will try again.",
+  local: "This device",
+  loading: "Opening",
+  saving: "Saving",
+  saved: "Saved",
+  offline: "Offline, saved here",
 };
 
 function SyncLine({ sync }: { sync: SyncStatus }) {
@@ -278,7 +257,7 @@ function SyncLine({ sync }: { sync: SyncStatus }) {
       {sync === "local" && (
         <a
           href="/login?redirect=/studio"
-          style={{ color: "#ffd2a6", textDecoration: "underline", textUnderlineOffset: 3 }}
+          style={{ color: "#E9C3BC", textDecoration: "underline", textUnderlineOffset: 3 }}
         >
           Sign in to keep it everywhere
         </a>
@@ -295,10 +274,6 @@ function TextTab(props: Props) {
   if (!piece || choosing)
     return (
       <div style={{ display: "grid", gap: 12 }}>
-        <p style={quiet}>
-          Bring in the piece you&apos;re working on. You&apos;ll read it here line by line and pin moments to the
-          lines.
-        </p>
         <PieceChooser
           signedIn={signedIn}
           autoFocus={props.open}
@@ -393,13 +368,9 @@ function Questions(props: Props) {
 
   return (
     <div style={{ display: "grid", gap: 18 }}>
-      <p style={quiet}>
-        Answer in the first person, as them. Short is fine. There are no right answers here, only choices you can
-        play.
-      </p>
       {GROUPS.map((g) => (
         <div key={g}>
-          <div className="uppercase tracking-[0.24em] text-[#CB4B00]" style={{ fontSize: 10, marginBottom: 8 }}>
+          <div className="uppercase tracking-[0.24em] text-[#C9444A]" style={{ fontSize: 10, marginBottom: 8 }}>
             {g}
           </div>
           <div style={{ display: "grid", gap: 6 }}>
@@ -455,8 +426,8 @@ function QuestionCard({
     <div
       style={{
         borderRadius: 14,
-        border: `1px solid ${open ? "rgba(203,75,0,0.45)" : "rgba(243,217,191,0.09)"}`,
-        background: open ? "rgba(203,75,0,0.06)" : "rgba(243,217,191,0.025)",
+        border: `1px solid ${open ? "rgba(155,28,34,0.45)" : "rgba(243,217,191,0.09)"}`,
+        background: open ? "rgba(155,28,34,0.06)" : "rgba(243,217,191,0.025)",
         transition: `border-color 250ms ${EASE}, background 250ms ${EASE}`,
       }}
     >
@@ -484,8 +455,8 @@ function QuestionCard({
             height: 7,
             borderRadius: 4,
             flex: "none",
-            background: hasAnswer ? "#CB4B00" : "transparent",
-            border: `1px solid ${hasAnswer ? "#CB4B00" : "rgba(243,217,191,0.35)"}`,
+            background: hasAnswer ? "#9B1C22" : "transparent",
+            border: `1px solid ${hasAnswer ? "#9B1C22" : "rgba(243,217,191,0.35)"}`,
           }}
         />
         <span style={{ ...display, fontSize: 18, lineHeight: 1.2, flex: 1 }}>{q.ask}</span>
@@ -507,7 +478,7 @@ function QuestionCard({
                 key={nudge}
                 style={{
                   fontSize: 13.5,
-                  color: "#ffd2a6",
+                  color: "#E9C3BC",
                   lineHeight: 1.45,
                   animation: `studio-in 380ms ${EASE}`,
                 }}
@@ -583,10 +554,6 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      <p style={quiet}>
-        Walk through the scene. At each beat, move the light to where your character is, then pin it. The moments
-        join into an arc you can see and play.
-      </p>
 
       <button
         type="button"
@@ -598,9 +565,9 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
           gap: 10,
           padding: "12px 14px",
           borderRadius: 14,
-          background: "rgba(203,75,0,0.16)",
-          border: "1px solid rgba(203,75,0,0.6)",
-          color: "#ffe2c4",
+          background: "rgba(155,28,34,0.16)",
+          border: "1px solid rgba(155,28,34,0.6)",
+          color: "#F3DDD6",
           cursor: "pointer",
           textAlign: "left",
         }}
@@ -647,8 +614,8 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
               key={m.id}
               style={{
                 borderRadius: 14,
-                border: `1px solid ${on ? "rgba(203,75,0,0.6)" : "rgba(243,217,191,0.09)"}`,
-                background: on ? "rgba(203,75,0,0.08)" : "rgba(243,217,191,0.025)",
+                border: `1px solid ${on ? "rgba(155,28,34,0.6)" : "rgba(243,217,191,0.09)"}`,
+                background: on ? "rgba(155,28,34,0.08)" : "rgba(243,217,191,0.025)",
                 padding: "10px 12px 12px",
                 transition: `border-color 250ms ${EASE}, background 250ms ${EASE}`,
               }}
@@ -665,9 +632,9 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                     height: 24,
                     borderRadius: 12,
                     fontSize: 11,
-                    background: on ? "#CB4B00" : "rgba(243,217,191,0.06)",
-                    border: "1px solid rgba(255,178,122,0.5)",
-                    color: "#fff1e4",
+                    background: on ? "#9B1C22" : "rgba(243,217,191,0.06)",
+                    border: "1px solid rgba(233,195,188,0.5)",
+                    color: "#F5ECE2",
                     cursor: "pointer",
                   }}
                 >
@@ -691,7 +658,7 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                   marginTop: 4,
                   marginLeft: 34,
                   fontSize: 12,
-                  color: "#ffd2a6",
+                  color: "#E9C3BC",
                   opacity: 0.85,
                   background: "none",
                   border: 0,
@@ -726,7 +693,7 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                         borderRadius: 999,
                         border: `1px solid ${sel ? a.dust : "rgba(243,217,191,0.14)"}`,
                         background: sel ? `${a.floor}55` : "transparent",
-                        color: sel ? "#fff1e4" : "#e9d6c4",
+                        color: sel ? "#F5ECE2" : "#e9d6c4",
                         opacity: sel ? 1 : 0.75,
                         cursor: "pointer",
                       }}

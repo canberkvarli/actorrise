@@ -69,7 +69,7 @@ export function buildFigure(): Figure {
 
   // The centre: where the gesture lives once it is inside.
   const centreMat = new THREE.MeshBasicNodeMaterial({
-    color: new THREE.Color("#CB4B00"),
+    color: new THREE.Color("#9B1C22"),
     transparent: true,
     opacity: 0.9,
     blending: THREE.AdditiveBlending,
@@ -80,7 +80,7 @@ export function buildFigure(): Figure {
   chest.add(centre);
 
   // Arms: spread (around y), a little abduction (z), raise (x), then the elbow.
-  const handMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ffe6cc").multiplyScalar(2.2) });
+  const handMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#F3E6DA").multiplyScalar(2.2) });
   const arms = [-1, 1].map((side) => {
     const spread = new THREE.Group();
     spread.position.set(0.19 * side, -0.02, 0);
@@ -132,7 +132,7 @@ export function buildFigure(): Figure {
   const setCentre = (glow: number) => {
     const g = Math.max(0, glow);
     centre.scale.setScalar(0.6 + g * 1.4);
-    centreMat.color.set("#CB4B00").multiplyScalar(0.6 + g * 3.2);
+    centreMat.color.set("#9B1C22").multiplyScalar(0.6 + g * 3.2);
   };
 
   const setBody = (light: number) => {

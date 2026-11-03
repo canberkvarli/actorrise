@@ -19,9 +19,9 @@ const chip = (on: boolean) =>
     fontSize: 11.5,
     padding: "5px 11px",
     borderRadius: 999,
-    border: `1px solid ${on ? "#CB4B00" : "rgba(243,217,191,0.16)"}`,
-    background: on ? "rgba(203,75,0,0.22)" : "transparent",
-    color: on ? "#ffe2c4" : "#e9d6c4",
+    border: `1px solid ${on ? "#9B1C22" : "rgba(243,217,191,0.16)"}`,
+    background: on ? "rgba(155,28,34,0.22)" : "transparent",
+    color: on ? "#F3DDD6" : "#e9d6c4",
     cursor: "pointer",
     transition: `background 200ms ${EASE}, border-color 200ms ${EASE}`,
   }) as const;
@@ -132,9 +132,9 @@ export function AfterForm({
             fontSize: 12,
             padding: "8px 16px",
             borderRadius: 999,
-            border: "1px solid #CB4B00",
-            background: "#CB4B00",
-            color: "#fff6ee",
+            border: "1px solid #9B1C22",
+            background: "#9B1C22",
+            color: "#F7EFE6",
             cursor: empty ? "default" : "pointer",
             opacity: empty ? 0.45 : 1,
           }}
@@ -165,10 +165,6 @@ export function AfterTab({
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      <p style={quiet}>
-        After you do it, an audition, a tape, a class, write two lines while it&apos;s fresh. What you&apos;d change is
-        where the next run starts.
-      </p>
 
       {writing ? (
         <AfterForm onSave={save} onCancel={() => onWriting(false)} autoFocus />
@@ -180,9 +176,9 @@ export function AfterTab({
             textAlign: "left",
             padding: "12px 14px",
             borderRadius: 14,
-            background: "rgba(203,75,0,0.16)",
-            border: "1px solid rgba(203,75,0,0.6)",
-            color: "#ffe2c4",
+            background: "rgba(155,28,34,0.16)",
+            border: "1px solid rgba(155,28,34,0.6)",
+            color: "#F3DDD6",
             cursor: "pointer",
           }}
         >
@@ -207,7 +203,7 @@ export function AfterTab({
               </p>
             )}
             {t.change && (
-              <p style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 4, color: "#ffd2a6" }}>
+              <p style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 4, color: "#E9C3BC" }}>
                 <span style={{ opacity: 0.7 }}>Change: </span>
                 {t.change}
               </p>
