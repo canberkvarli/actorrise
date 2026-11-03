@@ -7,6 +7,7 @@
  * an edit made after it.
  */
 
+import { AIRS } from "./air";
 import { clampPoint } from "./effort";
 import { newRole, type Notebook, type Piece, type Role } from "./notebook";
 
@@ -36,6 +37,7 @@ export function roleFromServer(s: ServerRole): Role | null {
           note: typeof m.note === "string" ? m.note : "",
           point: clampPoint(m.point),
           ...(typeof m.line === "number" && m.line >= 0 ? { line: Math.floor(m.line) } : {}),
+          ...(AIRS.some((a) => a.id === m.air) ? { air: m.air } : {}),
         }))
     : [];
   const answers: Role["answers"] = {};

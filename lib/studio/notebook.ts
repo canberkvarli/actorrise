@@ -7,6 +7,7 @@
  */
 
 import { clampPoint, type EffortPoint } from "./effort";
+import type { AirId } from "./air";
 import type { QuestionId } from "./questions";
 
 export type Moment = {
@@ -17,6 +18,8 @@ export type Moment = {
   note: string;
   /** The line of the piece this moment belongs to, when the role has a piece. */
   line?: number;
+  /** The atmosphere of this moment (lib/studio/air.ts). */
+  air?: AirId;
 };
 
 /** The monologue a role is working on. Only who and what: the text is read live from the library. */

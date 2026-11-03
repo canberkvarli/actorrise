@@ -47,6 +47,7 @@ import {
   type ActionId,
   type EffortPoint,
 } from "@/lib/studio/effort";
+import { airOf, type AirId } from "@/lib/studio/air";
 
 const BG = "#130b08"; // warm near-black, never flat black
 const EMBER = new THREE.Color("#CB4B00");
@@ -96,6 +97,8 @@ type Props = {
   onCorner: (id: ActionId) => void;
   onLabels: (corners: CornerLabel[], pins: PinLabel[]) => void;
   arcRef: React.MutableRefObject<ArcState>;
+  /** The atmosphere the stage should be in; it eases there over a second or two. */
+  airRef: React.MutableRefObject<AirId>;
   onFail: (why: string) => void;
   /** WebGPU died (or never really started): the parent remounts us on WebGL2. */
   onGpuLost: () => void;
@@ -111,6 +114,7 @@ export default function EffortCubeScene({
   onCorner,
   onLabels,
   arcRef,
+  airRef,
   onFail,
   onGpuLost,
   onHover,
@@ -166,14 +170,26 @@ export default function EffortCubeScene({
       const poolA = uniform(new THREE.Vector2(-1.8, 0));
       const poolB = uniform(new THREE.Vector2(1.8, 0));
       const poolHeat = uniform(0.5);
+      const uPoolA = uniform(new THREE.Color("#6b3414"));
       const floorMat = new THREE.MeshBasicNodeMaterial();
       const xz = vec2(positionWorld.x, positionWorld.z);
       const base = vec3(0.075, 0.045, 0.032).mul(smoothstep(float(11), float(0), length(xz)));
       const pool = (c: typeof poolA, r: number) => smoothstep(float(r), float(0), distance(xz, c));
       floorMat.colorNode = base
-        .add(vec3(0.42, 0.2, 0.08).mul(pool(poolA, 2.4)).mul(0.3))
+        .add(uPoolA.mul(pool(poolA, 2.6)).mul(0.95))
         .add(mix(vec3(0.22, 0.24, 0.36), vec3(0.6, 0.22, 0.05), poolHeat).mul(pool(poolB, 1.9)).mul(0.4));
       const floorMesh = new THREE.Mesh(new THREE.CircleGeometry(12, 96), floorMat);
+
+      // The air you can see: a wide glow behind the stage in the atmosphere's colour.
+      const uAirGlow = uniform(new THREE.Color("#6b3414"));
+      const uAirGlowStrength = uniform(0.35);
+      const glowMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, fog: false });
+      const g = smoothstep(float(0.62), float(0.0), length(uv().sub(vec2(0.5, 0.42)).mul(vec2(1.0, 1.6))));
+      glowMat.colorNode = uAirGlow;
+      glowMat.opacityNode = g.mul(g).mul(uAirGlowStrength);
+      const glow = new THREE.Mesh(new THREE.PlaneGeometry(44, 22), glowMat);
+      glow.position.set(0, 5, -12);
+      scene.add(glow);
       floorMesh.rotation.x = -Math.PI / 2;
       scene.add(floorMesh);
 
@@ -616,6 +632,12 @@ export default function EffortCubeScene({
       let pixelRatio = Math.min(window.devicePixelRatio, 2);
       let slowFor = 0;
 
+      // The air the stage is in, eased toward airRef so a change of atmosphere is felt, not cut.
+      const sky = new THREE.Color(BG);
+      const air = { near: 10, far: 24, drift: 0, unrest: 0.15, light: 1 };
+      const airDust = new THREE.Color("#ffcf9e");
+      const tmpAir = new THREE.Color();
+
       // ---------- Frame ----------
       const shown = { ...pointRef.current }; // eased toward pointRef
       const timer = new THREE.Timer();
@@ -634,7 +656,24 @@ export default function EffortCubeScene({
         // House lights: up in ~0.9s on arrival, down in ~0.35s on leaving.
         fade = closing ? Math.max(0, fade - dt / 0.35) : Math.min(1, fade + dt / (reducedMotion ? 0.3 : 0.9));
         const lit = closing ? fade * fade : 1 - Math.pow(1 - fade, 3);
-        uFade.value = lit;
+        const A = airOf(airRef.current);
+        const k = 1 - Math.exp(-dt * (reducedMotion ? 20 : 1.6));
+        sky.lerp(tmpAir.set(A.sky), k);
+        (scene.background as THREE.Color).copy(sky);
+        const fog = scene.fog as THREE.Fog;
+        fog.color.copy(sky);
+        air.near += (A.fogNear - air.near) * k;
+        air.far += (A.fogFar - air.far) * k;
+        fog.near = air.near;
+        fog.far = air.far;
+        air.drift += (A.drift - air.drift) * k;
+        air.unrest += (A.unrest - air.unrest) * k;
+        air.light += (A.light - air.light) * k;
+        (uPoolA.value as THREE.Color).lerp(tmpAir.set(A.floor), k);
+        (uAirGlow.value as THREE.Color).lerp(tmpAir.set(A.floor), k);
+        uAirGlowStrength.value += ((A.id === "still" ? 0.28 : 0.62) * lit - uAirGlowStrength.value) * k;
+        airDust.lerp(tmpAir.set(A.dust), k);
+        uFade.value = lit * air.light;
         uDustFade.value = lit;
         if (closing && fade === 0 && closeResolve) {
           const r = closeResolve;
@@ -715,12 +754,12 @@ export default function EffortCubeScene({
 
         // Air.
         uDelta.value = dt;
-        uSpeed.value = (0.12 + q.suddenness * 0.9) * motionScale;
-        uGravity.value = (q.mass - 0.5) * 0.9;
+        uSpeed.value = (0.12 + q.suddenness * 0.9) * (0.7 + air.unrest * 0.9) * motionScale;
+        uGravity.value = (q.mass - 0.5) * 0.9 - air.drift * 0.7;
         uSwirl.value = 1.2 - q.directness;
         uDirect.value = q.directness;
-        uFlicker.value = reducedMotion ? 0 : q.suddenness * 0.8;
-        performerColor(shown, uDustColor.value as THREE.Color);
+        uFlicker.value = reducedMotion ? 0 : Math.max(q.suddenness * 0.8, air.unrest * 0.6);
+        performerColor(shown, uDustColor.value as THREE.Color).lerp(airDust, 0.85);
         poolHeat.value = q.mass;
 
         if (flight) {

@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { read, type EffortPoint } from "@/lib/studio/effort";
 import type { Role } from "@/lib/studio/notebook";
+import { trackEvent } from "@/lib/events";
 import { buildCues } from "@/lib/studio/places";
 import { display, EASE, mono } from "./style";
 
@@ -20,10 +21,12 @@ type Props = {
   reducedMotion: boolean;
   onPoint: (p: EffortPoint) => void;
   onLine: (i: number | null) => void;
+  /** Which moment is playing (its air follows), or null between moments. */
+  onMoment: (i: number | null) => void;
   onClose: () => void;
 };
 
-export default function Places({ role, lines, reducedMotion, onPoint, onLine, onClose }: Props) {
+export default function Places({ role, lines, reducedMotion, onPoint, onLine, onMoment, onClose }: Props) {
   // Built once: the cues shouldn't shift under the actor while it plays.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const cues = useMemo(() => buildCues(role, lines, reducedMotion), []);
@@ -31,15 +34,16 @@ export default function Places({ role, lines, reducedMotion, onPoint, onLine, on
   const [leaving, setLeaving] = useState(false);
   const cue = cues[Math.min(i, cues.length - 1)];
   // The page re-renders many times a second; keep its callbacks out of the timers' deps.
-  const cb = useRef({ onPoint, onLine, onClose });
+  const cb = useRef({ onPoint, onLine, onMoment, onClose });
   useEffect(() => {
-    cb.current = { onPoint, onLine, onClose };
+    cb.current = { onPoint, onLine, onMoment, onClose };
   });
 
   const close = useCallback(() => {
+    trackEvent("studio_places_finished", { cues: cues.length, reached: i + 1, completed: i >= cues.length - 1 });
     setLeaving(true);
     window.setTimeout(() => cb.current.onClose(), reducedMotion ? 0 : 450);
-  }, [reducedMotion]);
+  }, [reducedMotion, cues.length, i]);
 
   const next = useCallback(() => {
     if (i >= cues.length - 1) close();
@@ -55,6 +59,7 @@ export default function Places({ role, lines, reducedMotion, onPoint, onLine, on
 
   // A moment puts the performer there and lights its line.
   useEffect(() => {
+    cb.current.onMoment(cue.kind === "moment" ? cue.index : null);
     if (cue.kind === "moment") {
       cb.current.onPoint(cue.point);
       const m = role.moments[cue.index];

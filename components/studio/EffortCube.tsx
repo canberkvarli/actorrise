@@ -26,10 +26,13 @@ import {
 } from "@/lib/studio/notebook";
 import type { ArcState, CornerLabel, PinLabel, SceneApi } from "./EffortCubeScene";
 import { useAuth } from "@/lib/auth";
+import { trackEvent } from "@/lib/events";
 import Notebook, { type Tab } from "./Notebook";
 import { usePiece } from "./PieceText";
 import Places from "./Places";
 import { hasPlaces } from "@/lib/studio/places";
+import { airOf, type AirId } from "@/lib/studio/air";
+import { AirSound } from "./airSound";
 import { display, EASE, mono } from "./style";
 import { useStudioSync } from "./useStudioSync";
 
@@ -66,6 +69,9 @@ export default function EffortCube() {
   const pointRef = useRef<EffortPoint>(CENTRE);
   const apiRef = useRef<SceneApi | null>(null);
   const arcRef = useRef<ArcState>({ version: 0, points: [], active: null });
+  const airRef = useRef<AirId>("still");
+  const soundRef = useRef<AirSound | null>(null);
+  const [soundOn, setSoundOn] = useState(false);
   const [labels, setLabels] = useState<CornerLabel[]>([]);
   const [pinLabels, setPinLabels] = useState<PinLabel[]>([]);
   const [hovered, setHovered] = useState<ActionId | null>(null);
@@ -118,6 +124,14 @@ export default function EffortCube() {
   const pieceState = usePiece(role?.piece?.id);
   const [places, setPlaces] = useState(false);
   const canPlaces = !!role && hasPlaces(role);
+
+  // Once a visit, when we know who's here (signed out, the API drops it anyway).
+  const openedSent = useRef(false);
+  useEffect(() => {
+    if (openedSent.current || !nb || !user) return;
+    openedSent.current = true;
+    trackEvent("studio_opened", { signed_in: true, roles: nb.roles.length });
+  }, [nb, user]);
   const moments = useMemo(() => role?.moments ?? [], [role]);
 
   // Hand the arc to the stage.
@@ -129,6 +143,26 @@ export default function EffortCube() {
       active: idx >= 0 ? idx : null,
     };
   }, [moments, activeMoment]);
+
+  // The stage takes the air of the moment you're on; with no moment, it is still.
+  const air: AirId = moments.find((m) => m.id === activeMoment)?.air ?? "still";
+  useEffect(() => {
+    airRef.current = air;
+    soundRef.current?.set(airOf(air));
+  }, [air]);
+  useEffect(() => () => soundRef.current?.stop(), []);
+  const toggleSound = () => {
+    if (soundRef.current) {
+      soundRef.current.stop();
+      soundRef.current = null;
+      setSoundOn(false);
+    } else {
+      const s = new AirSound();
+      s.start(airOf(airRef.current));
+      soundRef.current = s;
+      setSoundOn(true);
+    }
+  };
 
   // Keep the stage centred beside the drawer.
   const inset = open && wide ? DRAWER + 16 : 0;
@@ -162,10 +196,14 @@ export default function EffortCube() {
       ],
     }));
     setActiveMoment(id);
+    trackEvent("studio_moment_pinned", {
+      moments: (role?.moments.length ?? 0) + 1,
+      on_line: !!(role?.piece && line !== null),
+    });
     // Pinning from the text keeps you on the text; otherwise name the new moment.
     if (!(role?.piece && line !== null && tab === "text")) setTab("moments");
     setOpen(true);
-  }, [editRole, line, role?.piece, tab]);
+  }, [editRole, line, role?.piece, role?.moments.length, tab]);
 
   const goTo = useCallback(
     (id: string) => {
@@ -202,6 +240,8 @@ export default function EffortCube() {
   const leave = useCallback(async () => {
     if (leaving) return;
     setLeaving(true);
+    soundRef.current?.stop();
+    soundRef.current = null;
     router.prefetch("/");
     await Promise.race([apiRef.current?.close() ?? Promise.resolve(), new Promise((r) => setTimeout(r, 700))]);
     router.push("/");
@@ -256,6 +296,8 @@ export default function EffortCube() {
   }, []);
 
   const startPlaces = () => {
+    if (role)
+      trackEvent("studio_places_started", { moments: role.moments.length, has_piece: !!role.piece });
     setPlaying(false);
     setOpen(false);
     setPlaces(true);
@@ -287,6 +329,7 @@ export default function EffortCube() {
         pointRef={pointRef}
         apiRef={apiRef}
         arcRef={arcRef}
+        airRef={airRef}
         onDrag={move}
         onCorner={jump}
         onHover={setHovered}
@@ -436,6 +479,31 @@ export default function EffortCube() {
               W {signed(point.weight)} · S {signed(point.space)} · T {signed(point.time)}
             </div>
           )}
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 8 }}>
+            {air !== "still" && (
+              <span className="uppercase tracking-[0.18em] text-[#e9d6c4]" style={{ fontSize: 10, opacity: 0.6 }}>
+                {airOf(air).name}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={toggleSound}
+              aria-pressed={soundOn}
+              className="uppercase tracking-[0.16em]"
+              style={{
+                pointerEvents: "auto",
+                fontSize: 10,
+                padding: "5px 9px",
+                borderRadius: 999,
+                background: soundOn ? "rgba(203,75,0,0.22)" : "transparent",
+                border: `1px solid ${soundOn ? "#CB4B00" : "rgba(243,217,191,0.2)"}`,
+                color: soundOn ? "#ffd2a6" : "#e9d6c4",
+                cursor: "pointer",
+              }}
+            >
+              Sound {soundOn ? "on" : "off"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -689,7 +757,10 @@ export default function EffortCube() {
           onPin={pin}
           onGoTo={goTo}
           playing={playing}
-          onPlay={() => setPlaying((v) => !v)}
+          onPlay={() => {
+            if (!playing) trackEvent("studio_arc_played", { moments: moments.length });
+            setPlaying((v) => !v);
+          }}
           fine={fine}
           sync={sync}
           pieceState={pieceState}
@@ -707,6 +778,7 @@ export default function EffortCube() {
           reducedMotion={reducedMotion}
           onPoint={move}
           onLine={setLine}
+          onMoment={(i) => setActiveMoment(i === null ? null : (role.moments[i]?.id ?? null))}
           onClose={endPlaces}
         />
       )}

@@ -7,10 +7,12 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { AIRS } from "@/lib/studio/air";
 import { read, type EffortPoint } from "@/lib/studio/effort";
 import { answered, arcRange, type Moment, type Notebook as NotebookData, type Role } from "@/lib/studio/notebook";
 import { GROUPS, QUESTIONS, type Question } from "@/lib/studio/questions";
 import { PieceChooser, PieceText, type PieceState } from "./PieceText";
+import { trackEvent } from "@/lib/events";
 import { display, EASE, mono } from "./style";
 import type { SyncStatus } from "./useStudioSync";
 
@@ -281,6 +283,7 @@ function TextTab(props: Props) {
           signedIn={signedIn}
           onCancel={piece ? () => setChoosing(false) : undefined}
           onChoose={(p) => {
+            trackEvent("studio_piece_chosen", { monologue_id: p.id });
             onEdit((r) => ({
               ...r,
               piece: p,
@@ -506,6 +509,9 @@ function QuestionCard({
                 className="studio-field"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
+                onBlur={() =>
+                  value.trim() && trackEvent("studio_question_answered", { question: q.id, length: value.trim().length })
+                }
                 placeholder="I…"
                 aria-label={q.ask}
                 rows={3}
@@ -680,6 +686,35 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                   </span>
                 )}
               </button>
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }} role="group" aria-label="The air">
+                {AIRS.map((a) => {
+                  const sel = (m.air ?? "still") === a.id;
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      title={a.feel}
+                      aria-pressed={sel}
+                      onClick={() => {
+                        setMoment(m.id, (x) => ({ ...x, air: a.id }));
+                        onGoTo(m.id);
+                      }}
+                      style={{
+                        fontSize: 11,
+                        padding: "3px 9px",
+                        borderRadius: 999,
+                        border: `1px solid ${sel ? a.dust : "rgba(243,217,191,0.14)"}`,
+                        background: sel ? `${a.floor}55` : "transparent",
+                        color: sel ? "#fff1e4" : "#e9d6c4",
+                        opacity: sel ? 1 : 0.75,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {a.name}
+                    </button>
+                  );
+                })}
+              </div>
               <textarea
                 className="studio-field"
                 value={m.note}

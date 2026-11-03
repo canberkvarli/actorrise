@@ -51,7 +51,14 @@ export type UserEventName =
   | "calendar_feed_subscribed"
   | "class_link_self_made"
   | "class_link_copied"
-  | "language_switched";
+  | "language_switched"
+  | "studio_opened"
+  | "studio_piece_chosen"
+  | "studio_question_answered"
+  | "studio_moment_pinned"
+  | "studio_arc_played"
+  | "studio_places_started"
+  | "studio_places_finished";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

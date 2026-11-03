@@ -162,6 +162,15 @@ CLIENT_EVENT_NAMES = frozenset(
         "class_link_copied",  # the teacher copied their link
         # Turkish UI (CAN-18). Only an explicit tap on EN/TR; detection is silent.
         "language_switched",  # {from, to}
+        # The Studio (CAN-17), hidden at /studio. Enough to tell whether an actor
+        # who opens it does the work in it, which is what decides its future.
+        "studio_opened",  # {signed_in, roles}
+        "studio_piece_chosen",  # {monologue_id}
+        "studio_question_answered",  # {question, length}: on leaving a non-empty answer
+        "studio_moment_pinned",  # {moments, on_line}
+        "studio_arc_played",  # {moments}
+        "studio_places_started",  # {cues, moments, has_piece}
+        "studio_places_finished",  # {cues, reached, completed}
     }
 )
 

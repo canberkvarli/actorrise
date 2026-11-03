@@ -109,3 +109,22 @@ describe("roleFromServer: the piece and lines", () => {
     expect(r.moments.map((x) => x.line)).toEqual([3, undefined]);
   });
 });
+
+describe("roleFromServer: the air", () => {
+  it("keeps a known air and drops an unknown one", () => {
+    const s: ServerRole = {
+      id: "q",
+      updated_at: 3,
+      deleted: false,
+      data: {
+        name: "Q",
+        moments: [
+          { id: "a", point: { weight: 0, space: 0, time: 0 }, air: "dread" },
+          { id: "b", point: { weight: 0, space: 0, time: 0 }, air: "<script>" },
+        ],
+      },
+    };
+    const r = merge(nb([newRole()]), [s]).nb.roles.find((x) => x.id === "q")!;
+    expect(r.moments.map((m) => m.air)).toEqual(["dread", undefined]);
+  });
+});
