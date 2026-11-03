@@ -128,8 +128,32 @@ export function PieceChooser({
   );
 }
 
+export type PieceState = { full: Full | null; lines: string[]; failed: boolean };
+
+/** One read of the role's piece, shared by the Text tab and Places. */
+export function usePiece(id: number | null | undefined): PieceState {
+  const [got, setGot] = useState<{ id: number; full: Full | null; failed: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    api
+      .get<Full>(`/api/monologues/${id}`, { timeoutMs: 20000 })
+      .then(({ data }) => !cancelled && setGot({ id, full: data, failed: false }))
+      .catch(() => !cancelled && setGot({ id, full: null, failed: true }));
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const current = got && got.id === id ? got : null;
+  const full = current?.full ?? null;
+  const lines = useMemo(() => (full?.text ? splitLines(full.text) : []), [full]);
+  return { full, lines, failed: !!current?.failed };
+}
+
 export function PieceText({
-  piece,
+  state,
   moments,
   line,
   onLine,
@@ -137,7 +161,7 @@ export function PieceText({
   activeMoment,
   fine,
 }: {
-  piece: Piece;
+  state: PieceState;
   moments: Moment[];
   line: number | null;
   onLine: (i: number | null) => void;
@@ -145,26 +169,7 @@ export function PieceText({
   activeMoment: string | null;
   fine: boolean;
 }) {
-  const [full, setFull] = useState<Full | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .get<Full>(`/api/monologues/${piece.id}`, { timeoutMs: 20000 })
-      .then(({ data }) => {
-        if (!cancelled) {
-          setFull(data);
-          setFailed(false);
-        }
-      })
-      .catch(() => !cancelled && setFailed(true));
-    return () => {
-      cancelled = true;
-    };
-  }, [piece.id]);
-
-  const lines = useMemo(() => (full?.text ? splitLines(full.text) : []), [full]);
+  const { full, lines, failed } = state;
   const onLineOf = (i: number) => moments.map((m, n) => ({ m, n })).filter(({ m }) => m.line === i);
 
   if (failed) return <p style={quiet}>Couldn&apos;t open the piece. Check you&apos;re signed in and try again.</p>;

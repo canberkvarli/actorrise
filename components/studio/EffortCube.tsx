@@ -27,6 +27,9 @@ import {
 import type { ArcState, CornerLabel, PinLabel, SceneApi } from "./EffortCubeScene";
 import { useAuth } from "@/lib/auth";
 import Notebook, { type Tab } from "./Notebook";
+import { usePiece } from "./PieceText";
+import Places from "./Places";
+import { hasPlaces } from "@/lib/studio/places";
 import { display, EASE, mono } from "./style";
 import { useStudioSync } from "./useStudioSync";
 
@@ -112,6 +115,9 @@ export default function EffortCube() {
 
   const sync = useStudioSync(nb, setNb);
   const role: Role | null = nb ? activeRole(nb) : null;
+  const pieceState = usePiece(role?.piece?.id);
+  const [places, setPlaces] = useState(false);
+  const canPlaces = !!role && hasPlaces(role);
   const moments = useMemo(() => role?.moments ?? [], [role]);
 
   // Hand the arc to the stage.
@@ -205,6 +211,7 @@ export default function EffortCube() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (places) return; // Places has the keys while it runs
       if (typing(e.target)) {
         if (e.key === "Escape") (e.target as HTMLElement).blur();
         return;
@@ -241,15 +248,26 @@ export default function EffortCube() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [jump, leave, move, open, pin]);
+  }, [jump, leave, move, open, pin, places]);
 
   const onLabels = useCallback((c: CornerLabel[], p: PinLabel[]) => {
     setLabels(c);
     setPinLabels(p);
   }, []);
 
+  const startPlaces = () => {
+    setPlaying(false);
+    setOpen(false);
+    setPlaces(true);
+    apiRef.current?.focusPerformer();
+  };
+  const endPlaces = () => {
+    setPlaces(false);
+    apiRef.current?.home();
+  };
+
   const reading = useMemo(() => read(point), [point]);
-  const shown = entered && !leaving;
+  const shown = entered && !leaving && !places;
   const dur = reducedMotion ? 0 : 1;
   const enter = (delayMs: number, from = "translateY(10px)") => ({
     opacity: shown ? 1 : 0,
@@ -383,6 +401,25 @@ export default function EffortCube() {
             >
               {role?.name ? role.name : "Notebook"}
               {fine && wide && <span style={{ ...mono, opacity: 0.6, marginLeft: 8, letterSpacing: 0 }}>N</span>}
+            </button>
+          )}
+          {!open && canPlaces && (
+            <button
+              type="button"
+              onClick={startPlaces}
+              className="uppercase tracking-[0.18em]"
+              title="The minute before you go on"
+              style={{
+                fontSize: 11,
+                padding: "7px 12px",
+                borderRadius: 999,
+                background: "transparent",
+                border: "1px solid rgba(243,217,191,0.3)",
+                color: "#f3e6da",
+                cursor: "pointer",
+              }}
+            >
+              Places
             </button>
           )}
         </div>
@@ -655,9 +692,22 @@ export default function EffortCube() {
           onPlay={() => setPlaying((v) => !v)}
           fine={fine}
           sync={sync}
+          pieceState={pieceState}
+          onPlaces={canPlaces ? startPlaces : undefined}
           signedIn={!!user}
           line={line}
           onLine={setLine}
+        />
+      )}
+
+      {places && role && (
+        <Places
+          role={role}
+          lines={pieceState.lines}
+          reducedMotion={reducedMotion}
+          onPoint={move}
+          onLine={setLine}
+          onClose={endPlaces}
         />
       )}
 

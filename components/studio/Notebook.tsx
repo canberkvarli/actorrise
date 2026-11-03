@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { read, type EffortPoint } from "@/lib/studio/effort";
 import { answered, arcRange, type Moment, type Notebook as NotebookData, type Role } from "@/lib/studio/notebook";
 import { GROUPS, QUESTIONS, type Question } from "@/lib/studio/questions";
-import { PieceChooser, PieceText } from "./PieceText";
+import { PieceChooser, PieceText, type PieceState } from "./PieceText";
 import { display, EASE, mono } from "./style";
 import type { SyncStatus } from "./useStudioSync";
 
@@ -25,6 +25,9 @@ type Props = {
   tab: Tab;
   onTab: (t: Tab) => void;
   signedIn: boolean;
+  pieceState: PieceState;
+  /** Run Places; absent when the role has nothing to play yet. */
+  onPlaces?: () => void;
   line: number | null;
   onLine: (i: number | null) => void;
   onClose: () => void;
@@ -184,6 +187,29 @@ export default function Notebook(props: Props) {
         {tab === "text" ? <TextTab {...props} /> : tab === "questions" ? <Questions {...props} /> : <Moments {...props} />}
       </div>
 
+      {props.onPlaces && (
+        <div style={{ padding: "10px 18px 0" }}>
+          <button
+            type="button"
+            onClick={props.onPlaces}
+            style={{
+              width: "100%",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "11px 14px",
+              borderRadius: 14,
+              background: "rgba(203,75,0,0.16)",
+              border: "1px solid rgba(203,75,0,0.6)",
+              color: "#ffe2c4",
+              cursor: "pointer",
+            }}
+          >
+            <span style={{ ...display, fontSize: 18 }}>Places</span>
+            <span style={{ fontSize: 12, opacity: 0.75 }}>the minute before you go on</span>
+          </button>
+        </div>
+      )}
       {fine && (
         <div
           style={{
@@ -289,7 +315,7 @@ function TextTab(props: Props) {
         </button>
       </div>
       <PieceText
-        piece={piece}
+        state={props.pieceState}
         moments={role.moments}
         line={props.line}
         onLine={props.onLine}

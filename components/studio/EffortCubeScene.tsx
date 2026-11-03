@@ -82,6 +82,8 @@ export type SceneApi = {
   home: () => void;
   /** Keep the stage centred in the part of the screen not covered on the left. */
   setInset: (px: number) => void;
+  /** Move in close on the performer (Places). `home()` comes back out. */
+  focusPerformer: () => void;
 };
 
 const easeOutExpo = (t: number) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
@@ -581,6 +583,17 @@ export default function EffortCubeScene({
       let closeResolve: (() => void) | null = null;
       apiRef.current = {
         home,
+        focusPerformer: () => {
+          if (closing) return;
+          const p = performer.getWorldPosition(new THREE.Vector3());
+          const s = performer.scale.x;
+          flyTo(
+            p.clone().add(new THREE.Vector3(0.9 * s, 1.75 * s, 4.1 * s)),
+            p.clone().add(new THREE.Vector3(0, 1.2 * s, 0)),
+            1.6,
+            easeInOutCubic,
+          );
+        },
         setInset: (px: number) => {
           inset = px;
           applyInset();
