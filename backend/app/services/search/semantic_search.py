@@ -850,6 +850,48 @@ class SemanticSearch:
         """exclude_hidden with this request's languages."""
         return exclude_hidden(query, self.languages)
 
+    def closest_in_language(self, query: str, limit: int = 20) -> List[Monologue]:
+        """The nearest pieces in this request's library, with no floor and no filters.
+
+        For a small shelf (the Turkish one): the hard filters and the relevance
+        floor were tuned on 40,000 English pieces, and against a few dozen they
+        leave the page empty for most searches (smoke test, 2026-11-03). An
+        empty page tells the actor there is nothing; there is, it just isn't a
+        close match. Only gender is kept: casting is not a preference.
+
+        Uses the query vector the last search() made; embeds the query itself if
+        that search was served from the cache.
+        """
+        vec = getattr(self, "_last_query_embedding", None)
+        if not vec:
+            try:
+                from app.services.ai.langchain.embeddings import generate_embedding
+
+                vec = generate_embedding(
+                    text=query, model="text-embedding-3-large",
+                    dimensions=1536, api_key=self.analyzer.api_key,
+                )
+            except Exception as e:  # never turn an empty page into a 500
+                logger.warning("closest_in_language: embedding failed: %s", e)
+                vec = None
+        q = self._visible(
+            self.db.query(Monologue)
+            .join(Play)
+            .options(
+                joinedload(Monologue.play).defer(Play.full_text),
+                defer(Monologue.embedding_vector),
+            )
+            .filter(Monologue.embedding_vector.isnot(None))
+        )
+        gender = (getattr(self, "_last_gender", None) or "").lower()
+        if gender in ("male", "female"):
+            q = q.filter(func.lower(Monologue.character_gender).in_([gender, "any"]))
+        if vec:
+            q = q.order_by(Monologue.embedding_vector.cosine_distance(vec))
+        else:
+            q = q.order_by(Monologue.id)
+        return q.limit(limit).all()
+
     def search(
         self,
         query: str,
@@ -895,6 +937,8 @@ class SemanticSearch:
         # log results_count=0 with best_cosine NULL. Set at every exit that can
         # return nothing, read only by the search logger (monologues.py).
         self._empty_reason: Optional[str] = None
+        self._last_query_embedding: Optional[List[float]] = None
+        self._last_gender: Optional[str] = None
 
         # Normalize query for caching (conservative canonicalization)
         canonical_query = _canonicalize_query_for_cache(query)
@@ -1100,6 +1144,8 @@ class SemanticSearch:
                 if _k not in (explicit_filters or {}):
                     merged_filters.pop(_k, None)
         logger.debug("Merged filters (final): %s", merged_filters)
+        # Read by closest_in_language when the page would otherwise be empty.
+        self._last_gender = (merged_filters.get("gender") or None)
         # Constraints the parser understood from the free-text query (not the
         # explicit UI filters, which have their own chips). Surfaced so the UI can
         # echo "I understood: Contemporary, Female, 20s" with removable chips.
@@ -1275,6 +1321,7 @@ class SemanticSearch:
                 self.cache.set_embedding(_emb_cache_query_store, query_embedding)
                 _evict_if_needed(EMBEDDING_CACHE, _MAX_EMBEDDING_CACHE)
 
+        self._last_query_embedding = query_embedding
         if not query_embedding:
             logger.info("Failed to generate embedding, falling back to text search")
             fallback = self._fallback_text_search(

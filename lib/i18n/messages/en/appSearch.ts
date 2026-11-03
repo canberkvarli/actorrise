@@ -35,6 +35,9 @@ export const appSearch = {
     weakDirection: "(nothing landed square.)",
     /* {query} is a slot. */
     weakLine: "No strong match for {query}. These are the closest I have.",
+    /* Turkish UI only: the Turkish shelf is small. {query} is a slot. */
+    closestLine: "My Turkish shelf is still small and nothing matches {query} exactly. These are the closest Turkish pieces I have.",
+    englishShelf: "Search the English pieces",
     bestMatch: "Best match",
     furtherAfield: "(further afield.)",
     showMore: "Show {n} more",

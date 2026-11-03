@@ -36,7 +36,8 @@ from app.models.actor import (Monologue, MonologueBeat, MonologueFavorite,
                               Play)
 from app.models.user import User
 from app.services.search.grounding import query_is_unservable
-from app.services.library_language import current_languages, languages_for_locale
+from app.services.library_language import (TURKISH_LANGUAGES, current_languages,
+                                           languages_for_locale)
 from app.services.search.semantic_search import exclude_hidden, language_clause
 from app.services.search.originality import originality_cap
 from app.services.search.query_optimizer import (correct_query_typos,
@@ -156,6 +157,7 @@ class SearchResponse(BaseModel):
     debug_timing: Optional[dict] = None  # Timing data for dev/admin debug overlay
     search_log_id: Optional[int] = None  # search_logs row id; pass as ?slid= when opening a result (funnel analytics)
     from_screen: List[MonologueResponse] = []  # a few film/TV pieces under a Plays search the plays cannot serve (screen_strip.py)
+    closest_in_language: bool = False  # Turkish UI: nothing matched, so these are the nearest Turkish pieces (the page offers the English library)
 
 
 class LeadMagnetItem(BaseModel):
@@ -567,6 +569,7 @@ async def search_monologues(
         # Which retrieval branch answered this search. Logged, never read back.
         match_strategy = "vector"
         title_prepass = False
+        closest_in_language = False
 
         quote_match_types: dict[int, str] = {}
         actor_profile_for_search: dict | None = None
@@ -796,6 +799,17 @@ async def search_monologues(
                     existing = getattr(search_service, "_parsed_constraints", None) or {}
                     search_service._parsed_constraints = {**existing, **attribute_match}
 
+            # The Turkish shelf is a few dozen pieces, and the filters and floor
+            # tuned on the English library leave its page empty for most
+            # searches. Show the nearest Turkish pieces instead, flagged as
+            # closest matches; the page offers the English library alongside.
+            if not all_results_with_scores and search_q and current_languages() == TURKISH_LANGUAGES:
+                closest = search_service.closest_in_language(search_q, limit=fetch_limit)
+                if closest:
+                    all_results_with_scores = [(m, None) for m in closest]
+                    match_strategy = "closest_in_language"
+                    closest_in_language = True
+
             # A pre-pass hit means the actor got the show/character they asked
             # for, whatever the cosine of the backfill behind it says.
             title_prepass = bool(prepass_rows)
@@ -899,6 +913,9 @@ async def search_monologues(
         # must not trigger the "no strong matches" banner.
         if weak_match and q and is_filter_only_query(q.strip()):
             weak_match = False
+        # Nearest pieces on a small shelf, not matches: always the closest-matches banner.
+        if closest_in_language:
+            weak_match = True
 
         # H-13: a confident score is not the same as an answer. "Erin Gruwell"
         # cleared the weak bar and returned 20 monologues from a film we do not
@@ -1083,6 +1100,7 @@ async def search_monologues(
             debug_timing=debug_timing,
             search_log_id=search_log_id,
             from_screen=from_screen,
+            closest_in_language=closest_in_language,
         )
     except HTTPException:
         raise  # Re-raise HTTP exceptions (e.g. from auth/rate-limiting) as-is

@@ -10,7 +10,7 @@ import { ReadWallModal } from "@/components/monologue/ReadWallModal";
 import { TasteNote } from "@/components/billing/TasteNote";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
-import { useLocale, useT, useTList, type MessageKey } from "@/lib/i18n";
+import { currentLocale, setLocale, useLocale, useT, useTList, type MessageKey } from "@/lib/i18n";
 import { withSlots, useJoinList, useValueLabel } from "@/components/search/searchI18n";
 import { trackEvent } from "@/lib/events";
 import { AuditionStrip } from "@/components/auditions/AuditionStrip";
@@ -305,6 +305,8 @@ function SearchContent() {
   // True when results exist but none clear the strong-match bar; drives the
   // "no strong match, request it" affordance.
   const [weakMatch, setWeakMatch] = useState(false);
+  // Turkish UI: nothing matched, so these are the nearest Turkish pieces.
+  const [closestInLanguage, setClosestInLanguage] = useState(false);
   const [broadened, setBroadened] = useState<{ relaxed: string[] } | null>(null);
   // Film and TV pieces for a Plays search the plays could not serve.
   const [fromScreen, setFromScreen] = useState<Monologue[]>([]);
@@ -590,7 +592,7 @@ function SearchContent() {
       setFilters(urlFilters);
 
       // Try to restore results from sessionStorage (fast, no API call)
-      const storageKey = `search_results_${urlQuery}_${JSON.stringify(urlFilters)}_${initialMaxOverdone}`;
+      const storageKey = `search_results_${currentLocale()}_${urlQuery}_${JSON.stringify(urlFilters)}_${initialMaxOverdone}`;
       const cachedResults = sessionStorage.getItem(storageKey);
 
       if (cachedResults) {
@@ -607,6 +609,7 @@ function SearchContent() {
             setParsedConstraints(cached.parsed_constraints ?? null);
             setBroadened(cached.broadened ?? null);
             setWeakMatch(Boolean(cached.weak_match));
+            setClosestInLanguage(Boolean(cached.closest_in_language));
             setFromScreen(cached.from_screen ?? []);
           }
           // Restore typo correction banner from cache
@@ -777,6 +780,7 @@ function SearchContent() {
     scene_gap?: boolean;
     query_invalid_reason?: string | null;
     weak_match?: boolean;
+    closest_in_language?: boolean;
     broadened?: { relaxed: string[] } | null;
     parsed_constraints?: Record<string, unknown> | null;
     debug_timing?: DebugTiming | null;
@@ -867,6 +871,7 @@ function SearchContent() {
         setSceneGap(data.scene_gap ?? false);
         setQueryInvalidReason(data.query_invalid_reason ?? null);
         setWeakMatch(Boolean(data.weak_match));
+        setClosestInLanguage(Boolean(data.closest_in_language));
         setBroadened(data.broadened ?? null);
         setParsedConstraints(data.parsed_constraints ?? null);
         setFromScreen(data.from_screen ?? []);
@@ -883,7 +888,7 @@ function SearchContent() {
       // Cache results (first page only) in sessionStorage keyed by query+filters
       if (pageNum === 1) {
         playsActionAtRef.current = Date.now();
-        const storageKey = `search_results_${searchQuery}_${JSON.stringify(searchFilters)}_${effectiveMaxOverdone}`;
+        const storageKey = `search_results_${currentLocale()}_${searchQuery}_${JSON.stringify(searchFilters)}_${effectiveMaxOverdone}`;
         // Persist the response-level signals too, or a cache-restore drops the
         // constraint chips, the relaxation notice, and the weak-match banner.
         // (band is per-item, so it already survives inside items.)
@@ -893,6 +898,7 @@ function SearchContent() {
           parsed_constraints: data.parsed_constraints ?? null,
           broadened: data.broadened ?? null,
           weak_match: Boolean(data.weak_match),
+          closest_in_language: Boolean(data.closest_in_language),
           from_screen: data.from_screen ?? [],
         }));
         // Persist correction alongside the cached results so it survives URL-driven restores
@@ -2533,10 +2539,24 @@ ${mono.character_age_range ? `${d("ageRange")}: ${mono.character_age_range}` : '
                     {t("appSearchPage.weakDirection")}
                   </p>
                   <p className="mt-2 max-w-sm text-sm text-foreground">
-                    {withSlots(t("appSearchPage.weakLine"), {
+                    {withSlots(t(closestInLanguage ? "appSearchPage.closestLine" : "appSearchPage.weakLine"), {
                       query: <span className="font-semibold">{queryUsedForResults}</span>,
                     })}
                   </p>
+                  {closestInLanguage && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        trackEvent("language_switched", { from: "tr", to: "en", source: "closest_in_language" });
+                        setLocale("en");
+                        // The URL carries the query, so a reload re-runs it on the English shelf.
+                        window.location.reload();
+                      }}
+                      className="mt-3 rounded-full border border-border px-4 py-1.5 text-sm text-foreground hover:bg-muted"
+                    >
+                      {t("appSearchPage.englishShelf")}
+                    </button>
+                  )}
                   <RequestQueryButton
                     query={queryUsedForResults}
                     className="mt-3 flex items-center justify-center"

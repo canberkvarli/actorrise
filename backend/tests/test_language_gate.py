@@ -129,3 +129,58 @@ class TurkishQueryDetectionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ClosestInLanguageTests(unittest.TestCase):
+    """The Turkish page is never empty while the Turkish shelf has pieces (2026-11-03).
+
+    SQLite has no vector distance, so these run the no-vector branch (the
+    embedding call fails); the gates are the same either way.
+    """
+
+    def setUp(self):
+        from unittest import mock
+
+        from app.services.search.semantic_search import SemanticSearch
+
+        self.db, self.saved = memory_db([FilmTvReference, Play, Monologue])
+        en, tr = _play(self.db, "Hamlet", "en"), _play(self.db, "Antigone", "tr")
+        vec = [0.1] * 1536
+        self.en = _mono(self.db, en, "Hamlet")
+        self.tr_f = _mono(self.db, tr, "Antigone")
+        self.tr_m = _mono(self.db, tr, "Kreon")
+        self.tr_pending = _mono(self.db, tr, "İsmene", status="pending")
+        self.tr_no_vec = _mono(self.db, tr, "Koro")
+        for m in (self.en, self.tr_f, self.tr_m, self.tr_pending):
+            m.embedding_vector = vec
+        self.tr_f.character_gender = "female"
+        self.tr_m.character_gender = "male"
+        self.db.commit()
+        self.patch = mock.patch(
+            "app.services.ai.langchain.embeddings.generate_embedding",
+            side_effect=RuntimeError("no network in tests"),
+        )
+        self.patch.start()
+        self.svc = SemanticSearch(self.db, languages=TURKISH_LANGUAGES)
+
+    def tearDown(self):
+        self.patch.stop()
+        self.db.close()
+        restore(self.saved)
+
+    def test_turkish_shelf_only_released_and_embedded(self):
+        ids = {m.id for m in self.svc.closest_in_language("anything at all")}
+        self.assertEqual(ids, {self.tr_f.id, self.tr_m.id})
+
+    def test_gender_is_kept(self):
+        self.svc._last_gender = "female"
+        ids = {m.id for m in self.svc.closest_in_language("kadın monoloğu")}
+        self.assertEqual(ids, {self.tr_f.id})
+
+    def test_english_request_never_gets_turkish(self):
+        from app.services.search.semantic_search import SemanticSearch
+
+        svc = SemanticSearch(self.db, languages=DEFAULT_LANGUAGES)
+        ids = {m.id for m in svc.closest_in_language("anything")}
+        self.assertNotIn(self.tr_f.id, ids)
+        self.assertNotIn(self.tr_m.id, ids)

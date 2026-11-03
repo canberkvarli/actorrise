@@ -37,6 +37,8 @@ export const appSearch: Widen<typeof en> = {
     broadened: "Tam eşleşen çok az parça vardı, o yüzden {fields} kısmını biraz genişlettim.",
     weakDirection: "(hiçbiri tam oturmadı.)",
     weakLine: "{query} için güçlü bir eşleşme yok. Elimdeki en yakınları bunlar.",
+    closestLine: "Türkçe rafım henüz küçük ve {query} için tam bir eşleşme yok. Elimdeki en yakın Türkçe parçalar bunlar.",
+    englishShelf: "İngilizce parçalarda ara",
     bestMatch: "En iyi eşleşme",
     furtherAfield: "(biraz daha uzaktan.)",
     showMore: "{n} tane daha göster",
