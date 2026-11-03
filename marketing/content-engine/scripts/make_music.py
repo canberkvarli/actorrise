@@ -346,7 +346,7 @@ def compose(spec):
         out[:, : len(v)] += v
     out = reverb(out, 1.4 if style != "build" else 2.2, 0.16 if style == "sunny" else 0.24)
     out = out[:, : int(total * SR)]
-    f = int(0.7 * SR)
+    f = int(0.05 * SR)  # sharp finish, no fade out (Canberk, 2026-11-04)
     out[:, -f:] *= np.linspace(1, 0, f) ** 1.5
     out /= max(1e-6, np.abs(out).max()) / 0.89
     return out, dict(style=style, bpm=round(240 / bar, 1), open=round(t_open, 2), drop=round(t_drop, 2), total=round(total, 2))

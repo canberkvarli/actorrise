@@ -321,6 +321,9 @@ const sceneTimeline = (b: Scene) => {
   return b.lines.map((l) => { const at = t; t += estDur(l) + 0.45; return { ...l, at }; });
 };
 
+/** The actor's own colour in a scene: a cool tone beside the partner's warm key colour. */
+const youColor = (bg: Bg) => (bg === "ink" || CUR.light === CUR.dark ? "#8cc4c9" : "#2f6f75");
+
 const SceneBeat: React.FC<{ b: Scene }> = ({ b }) => {
   const f = useCurrentFrame();
   const L = React.useContext(LookCtx);
@@ -355,15 +358,13 @@ const SceneBeat: React.FC<{ b: Scene }> = ({ b }) => {
             const ws = wordTimes(l);
             return (
               <div key={i} style={{ marginBottom: 30, opacity: shown * (done ? 0.42 : 1), transform: `translateY(${(1 - shown) * 16}px)` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 14, fontFamily: F.sans, fontWeight: 600, fontSize: 24, letterSpacing: 3, color: partner ? key : fg, opacity: 0.85, marginBottom: 8 }}>
-                  <span>{partner ? (b.names?.PARTNER ?? "SCENE PARTNER") : (b.names?.YOU ?? "YOU")}</span>
-                  {partner && b.names?.PARTNER && (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 9px", border: `2px solid ${key}`, fontSize: 18, letterSpacing: 2 }}>
-                      <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 0 L9.6 6.4 L16 8 L9.6 9.6 L8 16 L6.4 9.6 L0 8 L6.4 6.4 Z" fill={key} /></svg>
-                      {i === tl.findIndex((x) => x.who.toUpperCase() === "PARTNER") ? "SCENE PARTNER" : "AI"}
-                    </span>
+                {/* Labels (Canberk, 2026-11-04): the partner is the character's name with a small AI mark,
+                    the actor is just YOU; two slightly different colours so they read apart at a glance. */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: F.sans, fontWeight: 600, fontSize: 24, letterSpacing: 3, color: partner ? key : youColor(b.bg ?? "paper"), marginBottom: 8 }}>
+                  <span>{partner ? (b.names?.PARTNER ?? "PARTNER").toUpperCase() : "YOU"}</span>
+                  {partner && (
+                    <svg width="20" height="20" viewBox="0 0 16 16" aria-label="AI"><path d="M8 0 L9.6 6.4 L16 8 L9.6 9.6 L8 16 L6.4 9.6 L0 8 L6.4 6.4 Z" fill={key} /></svg>
                   )}
-                  {!partner && b.names?.YOU && i === tl.findIndex((x) => x.who.toUpperCase() !== "PARTNER") && <span style={{ opacity: 0.6 }}>·  YOU</span>}
                 </div>
                 <div style={{ fontFamily: L.font === "sans" ? F.sans : F.serif, fontWeight: 600, fontSize: 50 * (L.scale ?? 1), lineHeight: 1.22, color: fg,
                   fontStyle: partner ? undefined : "normal" }}>

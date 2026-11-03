@@ -40,11 +40,11 @@
         },
         {
           "who": "YOU",
-          "text": "When one is in town one amuses oneself. When one is in the country one amuses other people."
+          "text": "When one is in town one amuses oneself."
         }
       ],
       "names": {
-        "PARTNER": "ALGERNON",
+        "PARTNER": "Algernon",
         "YOU": "JACK"
       }
     },
