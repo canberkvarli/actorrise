@@ -18,7 +18,8 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { entrance } from "@/lib/motion";
-import { useT } from "@/lib/i18n";
+import { useLocale, useT, type Locale } from "@/lib/i18n";
+import { localizeStructure } from "@/lib/structureLabels";
 import { sceneDurationLabel } from "@/components/practice/practiceLabels";
 import {
   REHEARSAL_VOICES,
@@ -104,8 +105,9 @@ interface SceneVoices {
 const FALLBACK_VOICES: SceneVoices["voices"] = [...REHEARSAL_VOICES];
 
 /** "act one, scene two." — the slug line, lowercase, in the direction face. */
-function slugFor(scene: SceneDetail, fallback: string): string {
-  const bits = [scene.act, scene.scene_number].filter(Boolean).join(", ");
+function slugFor(scene: SceneDetail, fallback: string, locale: Locale): string {
+  const bits = [localizeStructure(scene.act, "act", locale), localizeStructure(scene.scene_number, "scene", locale)]
+    .filter(Boolean).join(", ");
   return bits ? `(${bits.toLowerCase()}.)` : fallback;
 }
 
@@ -116,6 +118,7 @@ export default function ScenePreviewPage() {
   const sceneId = Number(params.sceneId);
   const reduce = useReducedMotion();
   const t = useT();
+  const locale = useLocale();
 
   const { data: scene, isLoading, mutate } = useSWR<SceneDetail>(
     Number.isFinite(sceneId) ? `/api/scenes/${sceneId}` : null,
@@ -337,7 +340,7 @@ export default function ScenePreviewPage() {
         {/* The head. */}
         <motion.header {...entrance(0, { reduce })} className="mt-7">
           <p className="t-m__dir m-0 text-[12px]" style={{ color: "var(--t-faint)" }}>
-            {slugFor(scene, t("appPracticeScene.slugFallback"))}
+            {slugFor(scene, t("appPracticeScene.slugFallback"), locale)}
           </p>
           <h1 className="t-m__display m-0 mt-2 text-[34px] leading-[1.03] sm:text-[44px]">
             {scene.title}

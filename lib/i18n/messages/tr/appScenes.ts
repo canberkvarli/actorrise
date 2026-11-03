@@ -2,6 +2,12 @@ import type { Widen } from "../types";
 import type { appScenes as en } from "../en/appScenes";
 
 export const appScenes: Widen<typeof en> = {
+  playStructure: {
+    act: "{n}. Perde",
+    scene: "{n}. Sahne",
+    prologue: "Prolog",
+    epilogue: "Epilog",
+  },
   appScenesRehearse: {
     startFrom: "{character} ile buradan başla: {text}",
     you: "sen",

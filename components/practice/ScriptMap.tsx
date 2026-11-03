@@ -8,7 +8,8 @@ import { IconArrowRight, IconChevronDown, IconFileSearch, IconLoader2, IconX } f
 import { cn } from "@/lib/utils";
 import { entrance } from "@/lib/motion";
 import type { Scene } from "@/lib/scenes";
-import { useT } from "@/lib/i18n";
+import { useLocale, useT, type Locale } from "@/lib/i18n";
+import { localizeStructure } from "@/lib/structureLabels";
 import { sceneDurationLabel } from "@/components/practice/practiceLabels";
 import {
   tickRoom,
@@ -71,6 +72,7 @@ export function ScriptMap({
   shareFor,
 }: ScriptMapProps) {
   const t = useT();
+  const locale = useLocale();
   const ready = map && !map.needs_file ? map : null;
   const needsFile = canManage && map?.needs_file === true;
 
@@ -162,7 +164,7 @@ export function ScriptMap({
                   data-open={open}
                   aria-hidden
                 />
-                <span className="t-map__act-name">{group.act ?? t("appPracticeMap.scenes")}</span>
+                <span className="t-map__act-name">{localizeStructure(group.act, "act", locale) ?? t("appPracticeMap.scenes")}</span>
                 {ready && (
                   <span className="t-map__act-count">
                     {t("appPracticeMap.builtOf", { n: group.builtCount, total: group.rows.length })}
@@ -244,12 +246,12 @@ export function ScriptMap({
 }
 
 /** "Scene 4 · ANNA & BEN · 3 min · 40 lines", from whatever the scene has. */
-function builtDetail(t: ReturnType<typeof useT>, scene: Scene): string[] {
+function builtDetail(t: ReturnType<typeof useT>, scene: Scene, locale: Locale): string[] {
   const parts: string[] = [];
   const characters = [scene.character_1_name, scene.character_2_name].filter(Boolean);
   // The script's own label rides in the facts. The numeral counts rows: a
   // series that skips its one-voice openers would otherwise number 2, 3, 4.
-  if (scene.scene_number) parts.push(scene.scene_number);
+  if (scene.scene_number) parts.push(localizeStructure(scene.scene_number, "scene", locale));
   if (characters.length > 0) parts.push(characters.join(" & "));
   const duration = sceneDurationLabel(t, scene.estimated_duration_seconds);
   if (duration) parts.push(duration);
@@ -289,7 +291,8 @@ function BuiltRow({
   const reduce = useReducedMotion();
   const ent = entrance(index, { reduce, y: 6, duration: 0.36 });
   const t = useT();
-  const detail = builtDetail(t, scene);
+  const locale = useLocale();
+  const detail = builtDetail(t, scene, locale);
 
   return (
     <motion.div

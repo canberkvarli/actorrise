@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { isSolo, type ScannedScene } from "@/lib/scriptMap";
-import { useT } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n";
+import { localizeStructure } from "@/lib/structureLabels";
 
 type Translate = ReturnType<typeof useT>;
 
@@ -110,6 +111,7 @@ export function ScenePicker({
   built = [],
 }: ScenePickerProps) {
   const t = useT();
+  const locale = useLocale();
   const [picked, setPicked] = useState<Set<number>>(() => new Set());
   const builtSet = useMemo(() => new Set(built), [built]);
   const isBuilt = (scene: ScannedScene) => builtSet.has(scene.index);
@@ -226,7 +228,7 @@ export function ScenePicker({
               <div className="mb-2.5 flex items-center gap-3 px-2">
                 <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary" />
                 <h3 className="font-typewriter text-[15px] font-bold uppercase tracking-[0.14em] text-paper-ink">
-                  {act}
+                  {localizeStructure(act, "act", locale)}
                 </h3>
                 <span aria-hidden className="h-px flex-1 bg-paper-rule" />
                 {actScenes.filter((s) => !isSolo(s) && !isBuilt(s)).length > 1 && (
@@ -330,7 +332,7 @@ export function ScenePicker({
                               isPicked ? "font-bold text-primary" : "text-paper-ink",
                             )}
                           >
-                            {sceneName(t, scene, i)}
+                            {localizeStructure(sceneName(t, scene, i), "scene", locale)}
                           </span>
                           {scene.title && (
                             <span className="text-[15.5px] italic leading-7 text-paper-ink/70">

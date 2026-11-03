@@ -1,5 +1,11 @@
 /** English copy for the "appScenes" area. Top-level keys are namespaces; prefix them with "appScenes" so they stay unique across files. */
 export const appScenes = {
+  playStructure: {
+    act: "Act {n}",
+    scene: "Scene {n}",
+    prologue: "Prologue",
+    epilogue: "Epilogue",
+  },
   appScenesRehearse: {
     startFrom: "Start from {character}: {text}",
     you: "you",

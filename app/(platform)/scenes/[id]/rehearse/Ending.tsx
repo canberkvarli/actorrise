@@ -9,7 +9,8 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useTrialWords } from '@/hooks/useTrialWords';
 import { GATE_COPY } from '@/lib/paywall/copy';
 import type { ScenePayload } from '@/lib/rehearsal/contract';
-import { useT } from '@/lib/i18n';
+import { useLocale, useT } from '@/lib/i18n';
+import { localizeStructure } from '@/lib/structureLabels';
 
 interface Props { scene: ScenePayload['scene']; guided: boolean; onAgain: () => void; onLeave: () => void }
 
@@ -122,7 +123,14 @@ function GuidedEnd({ onAgain, onLeave }: { onAgain: () => void; onLeave: () => v
 
 function RunEnd({ scene, onAgain, onLeave }: { scene: ScenePayload['scene']; onAgain: () => void; onLeave: () => void }) {
   const t = useT();
-  const where = whereInPlay(scene, {
+  const locale = useLocale();
+  // "Act 2" as the parser stores it reads "2. Perde" on the Turkish UI.
+  const named = {
+    ...scene,
+    act: localizeStructure(scene.act, 'act', locale),
+    scene_number: localizeStructure(scene.scene_number, 'scene', locale),
+  };
+  const where = whereInPlay(named, {
     act: n => t('appScenesRehearse.act', { n }),
     scene: n => t('appScenesRehearse.scene', { n }),
   });

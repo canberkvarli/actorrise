@@ -6,7 +6,8 @@ import { IconScissors, IconPlayerPlayFilled } from "@tabler/icons-react";
 
 import type { WhatsNext as WhatsNextData } from "@/hooks/useWhatsNext";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
-import { useT } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n";
+import { localizeStructure } from "@/lib/structureLabels";
 
 /**
  * The stage — what the rehearsal room puts in front of you when you walk in.
@@ -78,8 +79,10 @@ function ActionDot({ children }: { children: React.ReactNode }) {
 export function WhatsNext({ data }: { data: WhatsNextData }) {
   const { rung, script, scene, line, character, progress } = data;
   const t = useT();
+  const locale = useLocale();
 
-  const sceneSlug = [scene?.act, scene?.scene_number].filter(Boolean).join(" · ");
+  const sceneSlug = [localizeStructure(scene?.act, "act", locale), localizeStructure(scene?.scene_number, "scene", locale)]
+    .filter(Boolean).join(" · ");
 
   /* A run in progress goes straight to the stage, at the line where the
      journal says they stopped: `?go=1` skips the Curtain (lib/rehearsal/entry). Everything else goes to the scene preview, which is
