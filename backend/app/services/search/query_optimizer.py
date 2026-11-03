@@ -166,6 +166,16 @@ def _all_turkish_known(words: List[str]) -> bool:
     return hits > 0
 
 
+def _has_turkish_signal(query_lower: str, words: List[str]) -> bool:
+    """Turkish letters, or a Turkish vocabulary word that is not also English."""
+    if re.search(r"[çğış]", query_lower):
+        return True
+    english = _FILTER_WORDS | frozenset(
+        k for m in KeywordExtractor.KEYWORD_MAPPINGS.values() for k in m if " " not in k
+    )
+    return any(tr_stem(w) and w not in english for w in words)
+
+
 def is_filter_only_query(query) -> bool:
     """True when the query has no semantic content beyond filter vocabulary."""
     if not query or not str(query).strip():
@@ -729,6 +739,13 @@ class KeywordExtractor:
         # Add themes if found
         if themes_found:
             filters['themes'] = themes_found
+
+        # "modern" in a Turkish query means today's plays, not Ibsen to 1979:
+        # the Turkish UI says "modern" for contemporary (Canberk, 2026-11-03),
+        # and in everyday Turkish that is what the word means. An English
+        # "modern" keeps the period meaning.
+        if filters.get('category') == 'modern' and _has_turkish_signal(query_lower, words):
+            filters['category'] = 'contemporary'
 
         # Act/scene. Shared with the tier-3 path via extract_act_scene, because
         # "act 3" is a fact about the query, not an interpretation of it.

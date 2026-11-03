@@ -316,7 +316,7 @@ export const appMonologue: Widen<typeof en> = {
       power: "güç",
       revenge: "intikam",
       classical: "klasik",
-      contemporary: "çağdaş",
+      contemporary: "modern",
       beginner: "başlangıç",
       intermediate: "orta",
       advanced: "ileri",

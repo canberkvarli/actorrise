@@ -514,7 +514,7 @@ export const appAccount: Widen<typeof en> = {
     drama: "Dram",
     comedy: "Komedi",
     classical: "Klasik",
-    contemporary: "Çağdaş",
+    contemporary: "Modern",
     musical: "Müzikal",
     conservatory: "Konservatuvar",
     studioTraining: "Stüdyo eğitimi",

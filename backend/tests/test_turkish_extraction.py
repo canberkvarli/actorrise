@@ -130,3 +130,15 @@ class TurkishFilterOnlyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TurkishModernMeansContemporaryTests(unittest.TestCase):
+    """The Turkish UI says "modern" for contemporary (2026-11-03)."""
+
+    def test_turkish_modern_is_contemporary(self):
+        self.assertEqual(KeywordExtractor.extract("öfkeli erkek monoloğu, modern").get("category"), "contemporary")
+        self.assertEqual(KeywordExtractor.extract("modern komik kadın").get("category"), "contemporary")
+
+    def test_english_modern_keeps_its_period_meaning(self):
+        self.assertEqual(KeywordExtractor.extract("modern monologue for a woman").get("category"), "modern")
+        self.assertEqual(KeywordExtractor.extract("modern drama").get("category"), "modern")

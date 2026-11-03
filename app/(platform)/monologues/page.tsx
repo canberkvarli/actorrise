@@ -10,7 +10,7 @@ import { ReadWallModal } from "@/components/monologue/ReadWallModal";
 import { TasteNote } from "@/components/billing/TasteNote";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
-import { useT, useTList, type MessageKey } from "@/lib/i18n";
+import { useLocale, useT, useTList, type MessageKey } from "@/lib/i18n";
 import { withSlots, useJoinList, useValueLabel } from "@/components/search/searchI18n";
 import { trackEvent } from "@/lib/events";
 import { AuditionStrip } from "@/components/auditions/AuditionStrip";
@@ -170,6 +170,10 @@ function SearchContent() {
   const { user, isDemoUser } = useAuth();
   const t = useT();
   const tList = useTList();
+  // Plays / Film & TV tab width per language (see the toggle below).
+  const isTurkish = useLocale() === "tr";
+  const modeTabWidth = isTurkish ? 150 : 124;
+  const modeTabWidthPhone = isTurkish ? 132 : 108;
   const joinList = useJoinList();
   const valueLabel = useValueLabel();
   const { show: showSearchTour, dismiss: dismissSearchTour } =
@@ -1875,7 +1879,9 @@ ${mono.character_age_range ? `${d("ageRange")}: ${mono.character_age_range}` : '
               setting this column's width — which took 114px off the headline's
               measure on every switch and reflowed the whole head. It wraps
               inside a fixed box now instead of deciding one. */}
-          <div className={isPhone ? "shrink-0" : "w-[252px] shrink-0"}>
+          {/* Turkish needs wider tabs: "Film ve Dizi" with its icon does not
+              fit 124px. English keeps its measured 124 / 252 exactly. */}
+          <div className="shrink-0" style={isPhone ? undefined : { width: modeTabWidth * 2 + 4 }}>
             <div
               className="inline-flex gap-1 p-1"
               style={{
@@ -1893,7 +1899,7 @@ ${mono.character_age_range ? `${d("ageRange")}: ${mono.character_age_range}` : '
                     type="button"
                     aria-pressed={active}
                     onClick={() => switchMode(tab.mode)}
-                    className="relative inline-flex min-h-[38px] items-center justify-center gap-2 px-3 text-[13px] font-semibold transition-transform hover:scale-[1.04] sm:min-h-[44px] sm:px-4 sm:text-sm"
+                    className="relative inline-flex min-h-[38px] items-center justify-center gap-2 whitespace-nowrap px-3 text-[13px] font-semibold transition-transform hover:scale-[1.04] sm:min-h-[44px] sm:px-4 sm:text-sm"
                     style={{
                       borderRadius: 999,
                       transitionTimingFunction: "var(--t-spring)",
@@ -1904,7 +1910,7 @@ ${mono.character_age_range ? `${d("ageRange")}: ${mono.character_age_range}` : '
                          row. Nothing downstream was moving because of the
                          chips; it was all this. Equal boxes mean the fill
                          slides and not one other thing on the page reflows. */
-                      minWidth: isPhone ? 108 : 124,
+                      minWidth: isPhone ? modeTabWidthPhone : modeTabWidth,
                       color: active ? "var(--t-on-text)" : "var(--t-muted-dark-2)",
                     }}
                   >

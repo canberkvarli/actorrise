@@ -78,7 +78,7 @@ export const appPractice: Widen<typeof en> = {
     Tragedy: "Trajedi",
     Musical: "Müzikal",
     Classical: "Klasik",
-    Contemporary: "Çağdaş",
+    Contemporary: "Modern",
     Shakespeare: "Shakespeare",
     Historical: "Tarihi",
     Romance: "Romantik",

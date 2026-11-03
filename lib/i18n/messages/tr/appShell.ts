@@ -223,7 +223,7 @@ export const appShell: Widen<typeof en> = {
     workDramatic: "Dramatik",
     workComedic: "Komik",
     workClassical: "Klasik",
-    workContemporary: "Çağdaş",
+    workContemporary: "Modern",
     workDefiant: "Başkaldıran",
     workDark: "Karanlık",
     workRomantic: "Romantik",
@@ -363,7 +363,7 @@ export const appShell: Widen<typeof en> = {
   appShellFeedback: {
     thanks: "Teşekkürler",
     hoping: "Ne bulmayı umuyordun?",
-    hopingPlaceholder: "ör. 2 dakikanın altında çağdaş, komik bir parça",
+    hopingPlaceholder: "ör. 2 dakikanın altında modern, komik bir parça",
     cancel: "Vazgeç",
     sending: "Gönderiliyor…",
     send: "Gönder",

@@ -62,8 +62,8 @@ export const content: Widen<typeof en> = {
         "Kısa olmak bir beceridir. Bu parçalar söyleyeceğini söyleyip bir dakika içinde çekiliyor; bir dakikalık slotun senden istediği de tam olarak bu.",
     },
     "contemporary-monologues-for-teens": {
-      title: "Gençler için çağdaş monologlar",
-      em: "çağdaş",
+      title: "Gençler için modern monologlar",
+      em: "modern",
       h1: "Gençler için {em} monologlar",
       direction: "(senin yaşın, senin sesin.)",
       intro:
@@ -78,24 +78,24 @@ export const content: Widen<typeof en> = {
         "Shakespeare, Yunanlar, Restorasyon komedisi, Ibsen, Çehov ve çevrelerindeki yazarlar. Hepsi kamu malı, hepsi tam metin; karar vermeden önce konuşmanın tamamını okuyabilirsin.",
     },
     "contemporary-dramatic-monologues-for-women": {
-      title: "Kadınlar için çağdaş dramatik monologlar",
-      em: "çağdaş",
+      title: "Kadınlar için modern dramatik monologlar",
+      em: "modern",
       h1: "Kadınlar için {em} dramatik monologlar",
       direction: "(şimdi, ve ciddi.)",
       intro:
         "Son birkaç on yıldan kadınlar için ciddi parçalar. Kaynakların çoğu telifli; bu yüzden her kayıt sana karakteri, eseri ve süreyi söylüyor, gerisini arama açıyor.",
     },
     "contemporary-dramatic-monologues-for-men": {
-      title: "Erkekler için çağdaş dramatik monologlar",
-      em: "çağdaş",
+      title: "Erkekler için modern dramatik monologlar",
+      em: "modern",
       h1: "Erkekler için {em} dramatik monologlar",
       direction: "(şimdi, ve ciddi.)",
       intro:
         "Son birkaç on yıldan erkekler için ciddi parçalar; karaktere, esere ve süreye göre listelendi. Çoğu telifli, yani metin hak sahibinde duruyor, gerisini arama açıyor.",
     },
     "contemporary-comedic-monologues-for-women": {
-      title: "Kadınlar için çağdaş komik monologlar",
-      em: "çağdaş",
+      title: "Kadınlar için modern komik monologlar",
+      em: "modern",
       h1: "Kadınlar için {em} komik monologlar",
       direction: "(şimdi, ve komik.)",
       intro:
@@ -107,7 +107,7 @@ export const content: Widen<typeof en> = {
       h1: "40 yaş üstü kadınlar için {em}",
       direction: "(repliklerin ardında bir hayat.)",
       intro:
-        "Geçmişi olan karakterler. Klasik ve çağdaş kaynaklardan, kırklı yaşlarındaki ve daha büyük kadınlar için yazılmış; yani yaş yalnızca oyuncu seçme notunda değil, metnin kendisinde.",
+        "Geçmişi olan karakterler. Klasik ve modern kaynaklardan, kırklı yaşlarındaki ve daha büyük kadınlar için yazılmış; yani yaş yalnızca oyuncu seçme notunda değil, metnin kendisinde.",
     },
     "hamlet-monologues": {
       title: "Hamlet monologları: her konuşma, tam metin",
@@ -293,7 +293,7 @@ export const content: Widen<typeof en> = {
       h1: "Gençler için {em} monologlar",
       direction: "(komik, ve senin yaşında.)",
       intro:
-        "Genç karakterler için komik parçalar; her drama öğretmeninin ve cuma günü seçmesi olan her on beş yaşındakinin aradığı raf. Klasik de var çağdaş da; kamu malı olanlar eksiksiz basılı.",
+        "Genç karakterler için komik parçalar; her drama öğretmeninin ve cuma günü seçmesi olan her on beş yaşındakinin aradığı raf. Klasik de var modern da; kamu malı olanlar eksiksiz basılı.",
     },
     "dramatic-monologues-for-teens": {
       title: "Gençler için dramatik monologlar",
