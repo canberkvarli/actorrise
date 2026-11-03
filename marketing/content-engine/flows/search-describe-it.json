@@ -1,0 +1,16 @@
+{
+  "start": "/monologues",
+  "lead": 900,
+  "steps": [
+    {"click": "Dismiss announcement", "after": 500},
+    {"mark": "search"},
+    {"type": "comedic, a girl around sixteen, under two minutes", "into": {"css": "input[type=search], input:visible"}, "delay": 45},
+    {"press": "Enter"},
+    {"mark": "searching"},
+    {"wait": 6000},
+    {"mark": "results"},
+    {"scroll": 500, "after": 1200},
+    {"scroll": 500, "after": 1500}
+  ],
+  "tail": 800
+}

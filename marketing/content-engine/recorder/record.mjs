@@ -62,7 +62,13 @@ async function open() {
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
     storageState: fs.existsSync(AUTH) ? AUTH : undefined,
     colorScheme: "light",
+    // The site picks Turkish on the client from a tr language or a Europe/Istanbul clock
+    // (lib/i18n/locale.ts). This machine runs on Istanbul time, so pin English three ways.
+    locale: "en-US",
+    timezoneId: "America/New_York",
   });
+  const host = new URL(BASE).hostname;
+  await ctx.addCookies([{ name: "NEXT_LOCALE", value: "en", domain: host, path: "/" }]);
   // Log every <audio>/Audio() play with its source and time.
   await ctx.addInitScript(() => {
     window.__plays = [];
@@ -76,6 +82,8 @@ async function open() {
 }
 
 async function login(ctx) {
+  // ANON=1 records the public, signed out site (landing, public monologue pages) with no login.
+  if (process.env.ANON === "1") return;
   const page = await ctx.newPage();
   await page.goto(`${BASE}/monologues`, { waitUntil: "domcontentloaded" });
   await sleep(1500);
