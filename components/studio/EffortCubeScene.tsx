@@ -46,8 +46,8 @@ import { buildFigure } from "./figure";
 import { heatOf, heatRGB } from "@/lib/studio/heat";
 import { effortOf } from "@/lib/studio/gesture";
 
-const BG = "#0b0b0c"; // ink, never flat black
-const PALE = new THREE.Color("#f4f4f2");
+const BG = "#000000"; // ink, never flat black
+const PALE = new THREE.Color("#ededed");
 
 /** Cube axes: x = space (direct +), y = weight (light up, strong down), z = time (sudden toward you). */
 function toLocal(p: EffortPoint): THREE.Vector3 {
@@ -151,7 +151,8 @@ export default function EffortCubeScene({
       renderer.onDeviceLost = () => {
         if (!disposed && !forceWebGL) cb.current.onGpuLost();
       };
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      // 1.5x is sharp enough under bloom and much cheaper than 2x or 3x on a phone.
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
       renderer.setSize(el.clientWidth, el.clientHeight);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.05;
@@ -211,15 +212,15 @@ export default function EffortCubeScene({
       scene.add(cube);
 
       const edgesMat = new THREE.LineBasicNodeMaterial({
-        color: new THREE.Color("#e8e8e6"),
+        color: new THREE.Color("#dcdcdc"),
         transparent: true,
-        opacity: 0.55,
+        opacity: 0.26,
       });
       const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(2, 2, 2)), edgesMat);
       cube.add(edges);
 
       const glassMat = new THREE.MeshBasicNodeMaterial({
-        color: new THREE.Color("#f4f4f2"),
+        color: new THREE.Color("#ededed"),
         transparent: true,
         opacity: 0.035,
         side: THREE.BackSide,
@@ -228,9 +229,9 @@ export default function EffortCubeScene({
       cube.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), glassMat));
 
       // Corner nodes, one per working action.
-      const cornerGeo = new THREE.SphereGeometry(0.055, 20, 14);
+      const cornerGeo = new THREE.SphereGeometry(0.028, 12, 8); // minimal points: the light is what you look at
       const corners = ACTIONS.map((a) => {
-        const mat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#f4f4f2") });
+        const mat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ededed") });
         const m = new THREE.Mesh(cornerGeo, mat);
         m.position.copy(toLocal(a.corner));
         m.userData.action = a.id;
@@ -256,7 +257,7 @@ export default function EffortCubeScene({
       const pointHalo = new THREE.Mesh(
         new THREE.SphereGeometry(0.16, 32, 20),
         new THREE.MeshBasicNodeMaterial({
-          color: new THREE.Color("#f4f4f2"),
+          color: new THREE.Color("#ededed"),
           transparent: true,
           opacity: 0.35,
           blending: THREE.AdditiveBlending,
@@ -294,10 +295,10 @@ export default function EffortCubeScene({
       const arc = new THREE.Group();
       cube.add(arc);
       const pinGeo = new THREE.OctahedronGeometry(0.065, 0);
-      const pinMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#f4f4f2") });
-      const pinActiveMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#f4f4f2").multiplyScalar(2.2) });
+      const pinMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ededed") });
+      const pinActiveMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ededed").multiplyScalar(2.2) });
       const pathMat = new THREE.MeshBasicNodeMaterial({
-        color: new THREE.Color("#f4f4f2").multiplyScalar(1.6),
+        color: new THREE.Color("#ededed").multiplyScalar(1.6),
         transparent: true,
         opacity: 0.9,
         blending: THREE.AdditiveBlending,
@@ -305,7 +306,7 @@ export default function EffortCubeScene({
       });
       const spark = new THREE.Mesh(
         new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#f4f4f2").multiplyScalar(3) }),
+        new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ededed").multiplyScalar(3) }),
       );
       spark.visible = false;
       cube.add(spark);
@@ -348,7 +349,7 @@ export default function EffortCubeScene({
       const core = new THREE.Mesh(new THREE.SphereGeometry(0.1, 32, 20), coreMat);
       performer.add(core);
 
-      const TRAIL = 260;
+      const TRAIL = 170;
       const trailMat = new THREE.MeshBasicNodeMaterial({
         transparent: true,
         blending: THREE.AdditiveBlending,
@@ -386,7 +387,7 @@ export default function EffortCubeScene({
       const sculpture = new THREE.Group();
       cube.add(sculpture);
       const sculptMat = new THREE.MeshBasicNodeMaterial({
-        color: new THREE.Color("#f4f4f2").multiplyScalar(1.4),
+        color: new THREE.Color("#ededed").multiplyScalar(1.4),
         transparent: true,
         opacity: 0.85,
         blending: THREE.AdditiveBlending,
@@ -498,16 +499,16 @@ export default function EffortCubeScene({
         camera.aspect = w / h;
         if (portrait) {
           cube.position.set(0, 2.35, 0);
-          cubeScale = 0.95;
+          cubeScale = 1.15;
           camera.fov = 52;
-          rest.pos.set(2.6, 3.3, 9.8);
-          rest.target.set(0, 2.2, 0);
+          rest.pos.set(2.6, 3.3, 10.2);
+          rest.target.set(0, 2.25, 0);
         } else {
-          cube.position.set(0, 1.75, 0);
-          cubeScale = 1.3;
+          cube.position.set(0, 1.95, 0);
+          cubeScale = 1.7;
           camera.fov = 38;
-          rest.pos.set(2.5, 3.0, 8.8);
-          rest.target.set(0, 1.6, 0);
+          rest.pos.set(2.4, 3.1, 9.6);
+          rest.target.set(0, 1.85, 0);
         }
         if (!introStarted) {
           // Arrive from high and far, then settle: about a second.
@@ -641,13 +642,13 @@ export default function EffortCubeScene({
       });
 
       // Keep it smooth: if frames run long, render fewer pixels.
-      let pixelRatio = Math.min(window.devicePixelRatio, 2);
+      let pixelRatio = Math.min(window.devicePixelRatio, 1.5);
       let slowFor = 0;
 
       // The air the stage is in, eased toward airRef so a change of atmosphere is felt, not cut.
       const sky = new THREE.Color(BG);
       const air = { near: 10, far: 24, drift: 0, unrest: 0.15, light: 1 };
-      const airDust = new THREE.Color("#e8e8e6");
+      const airDust = new THREE.Color("#dcdcdc");
       const tmpAir = new THREE.Color();
 
       // ---------- Frame ----------
@@ -693,7 +694,7 @@ export default function EffortCubeScene({
         }
         // The cube draws itself in: scale up from 70%, edges brighten, corners pop in turn.
         cube.scale.setScalar(cubeScale * (0.7 + 0.3 * easeOutExpo(fade)));
-        edgesMat.opacity = 0.55 * fade;
+        edgesMat.opacity = 0.26 * fade;
 
         if (!reducedMotion && dt > 1 / 40) slowFor += dt;
         else slowFor = Math.max(0, slowFor - dt * 0.5);
@@ -729,12 +730,12 @@ export default function EffortCubeScene({
           const share = b[a.id];
           const cp = corners[i].mesh.position;
           threadPos.set([pointMesh.position.x, pointMesh.position.y, pointMesh.position.z, cp.x, cp.y, cp.z], i * 6);
-          const k = 0.05 + share * 1.9;
+          const k = 0.03 + share * 1.1; // threads: a faint pull toward each corner
           const col = tmpC.clone().multiplyScalar(k);
           threadCol.set([col.r, col.g, col.b, col.r * 0.25, col.g * 0.25, col.b * 0.25], i * 6);
           const pop = easeOutExpo(clamp01(fade * 1.8 - i * 0.07));
           corners[i].mesh.scale.setScalar((0.8 + share * 0.5) * pop); // the light, not the corner, is what you look at
-          corners[i].mat.color.copy(PALE).multiplyScalar(0.4 + share * 0.7);
+          corners[i].mat.color.copy(PALE).multiplyScalar(0.35 + share * 0.5);
         });
         threadGeo.attributes.position.needsUpdate = true;
         threadGeo.attributes.color.needsUpdate = true;
@@ -750,7 +751,7 @@ export default function EffortCubeScene({
 
         history.unshift(core.position.clone());
         if (history.length > TRAIL) history.pop();
-        const trailLen = Math.floor(80 + (1 - q.suddenness) * 160);
+        const trailLen = Math.floor(60 + (1 - q.suddenness) * 110);
         for (let i = 0; i < TRAIL; i++) {
           const h = history[i];
           const life = i < trailLen && h ? 1 - i / trailLen : 0;

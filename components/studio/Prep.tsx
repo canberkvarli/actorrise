@@ -20,9 +20,9 @@ import { lastChange } from "@/lib/studio/after";
 import { CORE, STEPS, resumeAt, type Step } from "@/lib/studio/prep";
 import { QUESTIONS, type QuestionId } from "@/lib/studio/questions";
 import { PieceChooser, type PieceState } from "./PieceText";
-import { display, EASE, mono } from "./style";
+import { action, display, EASE, mono, toggle } from "./style";
 
-const quiet = { fontSize: 13, color: "#cfcfcb", opacity: 0.66, lineHeight: 1.55 } as const;
+const quiet = { fontSize: 13, color: "#a1a1a1", opacity: 0.66, lineHeight: 1.55 } as const;
 
 type Props = {
   wide: boolean;
@@ -74,8 +74,8 @@ export default function Prep(props: Props) {
   }, [onClose]);
 
   const frame = wide
-    ? { top: 12, bottom: 12, left: 12, width, borderRadius: 20 }
-    : { left: 0, right: 0, bottom: 0, height: "86dvh", borderRadius: "20px 20px 0 0" };
+    ? { top: 12, bottom: 12, left: 12, width, borderRadius: 12 }
+    : { left: 0, right: 0, bottom: 0, height: "86dvh", borderRadius: "12px 12px 0 0" };
 
   return (
     <aside
@@ -85,8 +85,8 @@ export default function Prep(props: Props) {
         zIndex: 6,
         display: "flex",
         flexDirection: "column",
-        background: "rgba(16, 16, 17, 0.9)",
-        border: "1px solid rgba(244, 244, 242, 0.12)",
+        background: "rgba(15, 15, 16, 0.94)",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
         backdropFilter: "blur(18px)",
         WebkitBackdropFilter: "blur(18px)",
         boxShadow: "0 30px 80px rgba(0,0,0,0.55)",
@@ -96,22 +96,22 @@ export default function Prep(props: Props) {
       }}
     >
       {/* Where you are in it. */}
-      <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(244,244,242,0.08)" }}>
+      <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div className="uppercase tracking-[0.28em] text-[#8f8f8b]" style={{ fontSize: 10.5 }}>
+          <div className="text-[#8f8f8f]" style={{ fontSize: 10.5 }}>
             Prep{role.name ? ` · ${role.name}` : ""}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close prep"
-            className="uppercase tracking-[0.16em] text-[#cfcfcb]"
+            className="text-[#a1a1a1]"
             style={{
               fontSize: 10,
               padding: "5px 9px",
-              borderRadius: 999,
+              borderRadius: 6,
               background: "transparent",
-              border: "1px solid rgba(244,244,242,0.18)",
+              border: "1px solid rgba(255,255,255,0.18)",
               cursor: "pointer",
               opacity: 0.75,
             }}
@@ -126,7 +126,7 @@ export default function Prep(props: Props) {
               style={{
                 flex: 1,
                 height: 2,
-                background: n <= i ? "#f4f4f2" : "rgba(244,244,242,0.15)",
+                background: n <= i ? "#ededed" : "rgba(255,255,255,0.15)",
                 transition: `background 300ms ${EASE}`,
               }}
             />
@@ -157,7 +157,7 @@ export default function Prep(props: Props) {
             justifyContent: "space-between",
             gap: 10,
             padding: "12px 18px 16px",
-            borderTop: "1px solid rgba(244,244,242,0.08)",
+            borderTop: "1px solid rgba(255,255,255,0.08)",
           }}
         >
           <button type="button" onClick={() => go(i - 1)} style={navBtn(false)}>
@@ -181,16 +181,7 @@ function nextLabel(step: Step, role: Role): string {
   return "Next";
 }
 
-const navBtn = (primary: boolean) =>
-  ({
-    fontSize: 12,
-    padding: "9px 16px",
-    borderRadius: 999,
-    border: `1px solid ${primary ? "#f4f4f2" : "rgba(244,244,242,0.2)"}`,
-    background: primary ? "#f4f4f2" : "transparent",
-    color: primary ? "#0b0b0c" : "#cfcfcb",
-    cursor: "pointer",
-  }) as const;
+const navBtn = action;
 
 const H = ({ children }: { children: React.ReactNode }) => (
   <h2 style={{ ...display, fontSize: 26, lineHeight: 1.2, fontWeight: 400 }}>{children}</h2>
@@ -221,7 +212,7 @@ function PieceStep({ role, signedIn, onEdit, onDone, onSkip }: Props & { onDone:
       {role.piece && (
         <p style={quiet}>
           Working on {role.piece.character}, {role.piece.play}.{" "}
-          <button type="button" onClick={onDone} style={{ color: "#f4f4f2", background: "none", border: 0, padding: 0, cursor: "pointer", textDecoration: "underline" }}>
+          <button type="button" onClick={onDone} style={{ color: "#ededed", background: "none", border: 0, padding: 0, cursor: "pointer", textDecoration: "underline" }}>
             Keep it
           </button>
         </p>
@@ -240,7 +231,7 @@ function ReadStep({ piece }: { piece: PieceState }) {
       {!piece.full && !piece.failed && <p style={quiet}>Opening the piece…</p>}
       {piece.failed && <p style={quiet}>Couldn&apos;t open the piece. You can still go on.</p>}
       {piece.lines.length > 0 && (
-        <div className="font-typewriter" style={{ display: "grid", gap: 8, fontSize: 14.5, lineHeight: 1.65, color: "#e4e4e0" }}>
+        <div className="font-typewriter" style={{ display: "grid", gap: 8, fontSize: 14.5, lineHeight: 1.65, color: "#d4d4d4" }}>
           {piece.lines.map((l, n) => (
             <p key={n}>{l}</p>
           ))}
@@ -249,7 +240,7 @@ function ReadStep({ piece }: { piece: PieceState }) {
       {piece.full?.paywalled && (
         <p style={{ ...quiet, opacity: 0.85 }}>
           That&apos;s the opening; your free reads this month are used.{" "}
-          <a href="/pricing" style={{ color: "#f4f4f2", textDecoration: "underline" }}>
+          <a href="/pricing" style={{ color: "#ededed", textDecoration: "underline" }}>
             Plus opens the whole piece.
           </a>
         </p>
@@ -274,13 +265,13 @@ function AskStep({ id, role, onEdit }: { id: QuestionId; role: Role; onEdit: Pro
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <div className="uppercase tracking-[0.22em] text-[#cfcfcb]" style={{ fontSize: 10, opacity: 0.5 }}>
+      <div className="text-[#a1a1a1]" style={{ fontSize: 10, opacity: 0.5 }}>
         {CORE.indexOf(id) + 1} of {CORE.length} · {q.from}
       </div>
       <H>{q.ask}</H>
       <p style={quiet}>{q.why}</p>
       {nudge >= 0 && (
-        <p key={nudge} style={{ fontSize: 14, color: "#f4f4f2", lineHeight: 1.5, animation: `studio-in 380ms ${EASE}` }}>
+        <p key={nudge} style={{ fontSize: 14, color: "#ededed", lineHeight: 1.5, animation: `studio-in 380ms ${EASE}` }}>
           {q.nudges[nudge]}
         </p>
       )}
@@ -342,7 +333,7 @@ function BeatsStep({ role, piece, activeMoment, onEdit, onPoint, onLine, onGoTo,
     <div style={{ display: "grid", gap: 12 }}>
       <H>Where does it turn?</H>
       <p style={quiet}>{lines.length ? "Tap the lines where something changes." : "Name the moments where something changes."}</p>
-      <div className="uppercase tracking-[0.2em] text-[#cfcfcb]" style={{ fontSize: 10, opacity: 0.55 }}>
+      <div className="text-[#a1a1a1]" style={{ fontSize: 10, opacity: 0.55 }}>
         {count} {count === 1 ? "beat" : "beats"}
       </div>
 
@@ -354,9 +345,9 @@ function BeatsStep({ role, piece, activeMoment, onEdit, onPoint, onLine, onGoTo,
               <div
                 key={n}
                 style={{
-                  borderRadius: 12,
-                  border: `1px solid ${m ? "rgba(244,244,242,0.55)" : "transparent"}`,
-                  background: m ? "rgba(244,244,242,0.07)" : "transparent",
+                  borderRadius: 8,
+                  border: `1px solid ${m ? "rgba(255,255,255,0.55)" : "transparent"}`,
+                  background: m ? "rgba(255,255,255,0.07)" : "transparent",
                   padding: "6px 8px",
                 }}
               >
@@ -370,7 +361,7 @@ function BeatsStep({ role, piece, activeMoment, onEdit, onPoint, onLine, onGoTo,
                     textAlign: "left",
                     fontSize: 14,
                     lineHeight: 1.6,
-                    color: m ? "#f4f4f2" : "#e4e4e0",
+                    color: m ? "#ededed" : "#d4d4d4",
                     background: "none",
                     border: 0,
                     padding: 0,
@@ -387,7 +378,7 @@ function BeatsStep({ role, piece, activeMoment, onEdit, onPoint, onLine, onGoTo,
       ) : (
         <div style={{ display: "grid", gap: 8 }}>
           {role.moments.map((m) => (
-            <div key={m.id} style={{ borderRadius: 12, border: "1px solid rgba(244,244,242,0.45)", padding: "8px 10px" }}>
+            <div key={m.id} style={{ borderRadius: 8, border: "1px solid rgba(255,255,255,0.45)", padding: "8px 10px" }}>
               <div style={{ ...display, fontSize: 16 }}>{m.label || "A beat"}</div>
               <BeatEditor m={m} on={m.id === activeMoment} set={set} remove={remove} onPoint={onPoint} onGoTo={onGoTo} />
             </div>
@@ -440,20 +431,11 @@ function BeatEditor({
     onGoTo(m.id);
     onPoint(p);
   };
-  const chip = (sel: boolean) =>
-    ({
-      fontSize: 11,
-      padding: "3px 9px",
-      borderRadius: 999,
-      border: `1px solid ${sel ? "#f4f4f2" : "rgba(244,244,242,0.14)"}`,
-      background: sel ? "rgba(244,244,242,0.14)" : "transparent",
-      color: sel ? "#f4f4f2" : "#cfcfcb",
-      cursor: "pointer",
-    }) as const;
+  const chip = toggle;
 
   return (
     <div style={{ display: "grid", gap: 8, marginTop: 8, opacity: on ? 1 : 0.85 }}>
-      <div style={{ fontSize: 10, opacity: 0.55, color: "#cfcfcb" }} className="uppercase tracking-[0.18em]">
+      <div style={{ fontSize: 10, opacity: 0.55, color: "#a1a1a1" }} >
         How you move
       </div>
       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
@@ -470,7 +452,7 @@ function BeatEditor({
           </button>
         ))}
       </div>
-      <div style={{ fontSize: 10, opacity: 0.55, color: "#cfcfcb" }} className="uppercase tracking-[0.18em]">
+      <div style={{ fontSize: 10, opacity: 0.55, color: "#a1a1a1" }} >
         The air
       </div>
       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
@@ -494,11 +476,11 @@ function BeatEditor({
         })}
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ ...mono, fontSize: 10.5, opacity: 0.5, color: "#cfcfcb" }}>{current.sentence}</span>
+        <span style={{ ...mono, fontSize: 10.5, opacity: 0.5, color: "#a1a1a1" }}>{current.sentence}</span>
         <button
           type="button"
           onClick={() => remove(m.id)}
-          style={{ fontSize: 11, opacity: 0.55, color: "#cfcfcb", background: "none", border: 0, cursor: "pointer" }}
+          style={{ fontSize: 11, opacity: 0.55, color: "#a1a1a1", background: "none", border: 0, cursor: "pointer" }}
         >
           Remove
         </button>
@@ -526,8 +508,8 @@ function DoneStep(props: Props) {
         {role.moments.length === 1 ? "beat" : "beats"}. Now put it in your body.
       </p>
       {change && (
-        <div style={{ borderLeft: "2px solid #f4f4f2", padding: "4px 0 4px 12px" }}>
-          <div className="uppercase tracking-[0.2em] text-[#cfcfcb]" style={{ fontSize: 10, opacity: 0.6 }}>
+        <div style={{ borderLeft: "2px solid #ededed", padding: "4px 0 4px 12px" }}>
+          <div className="text-[#a1a1a1]" style={{ fontSize: 10, opacity: 0.6 }}>
             Last time you said you&apos;d change
           </div>
           <p style={{ ...display, fontSize: 18, lineHeight: 1.35, marginTop: 4 }}>{change}</p>
@@ -541,7 +523,7 @@ function DoneStep(props: Props) {
               trackEvent("studio_run_it", { monologue_id: role.piece!.id });
               props.onRunIt();
             }}
-            style={{ ...navBtn(true), display: "block", textAlign: "center", padding: "13px 16px", fontSize: 13 }}
+            style={{ ...navBtn(true), display: "block", textAlign: "center", fontSize: 13 }}
           >
             Run it
           </a>
@@ -549,11 +531,11 @@ function DoneStep(props: Props) {
         <button
           type="button"
           onClick={onPlaces}
-          style={{ ...navBtn(!role.piece), padding: "13px 16px", fontSize: 13 }}
+          style={{ ...navBtn(!role.piece), fontSize: 13 }}
         >
           Places, the minute before you go on
         </button>
-        <button type="button" onClick={onClose} style={{ ...navBtn(false), padding: "11px 16px" }}>
+        <button type="button" onClick={onClose} style={{ ...navBtn(false) }}>
           Back to the stage
         </button>
       </div>

@@ -22,21 +22,11 @@ import {
   type GestureSpec,
 } from "@/lib/studio/gesture";
 import type { Role } from "@/lib/studio/notebook";
-import { display, EASE } from "./style";
+import { display, EASE, toggle } from "./style";
 
-const quiet = { fontSize: 12.5, color: "#cfcfcb", opacity: 0.62, lineHeight: 1.5 } as const;
+const quiet = { fontSize: 12.5, color: "#a1a1a1", opacity: 0.62, lineHeight: 1.5 } as const;
 
-const chip = (on: boolean) =>
-  ({
-    fontSize: 11.5,
-    padding: "5px 11px",
-    borderRadius: 999,
-    border: `1px solid ${on ? "#f4f4f2" : "rgba(244,244,242,0.15)"}`,
-    background: on ? "rgba(244,244,242,0.14)" : "transparent",
-    color: on ? "#f4f4f2" : "#cfcfcb",
-    cursor: "pointer",
-    transition: `background 200ms ${EASE}, border-color 200ms ${EASE}`,
-  }) as const;
+const chip = toggle;
 
 const same = (a?: GestureSpec | null, b?: GestureSpec | null) =>
   !!a && !!b && a.verb === b.verb && a.direction === b.direction && a.quality === b.quality && a.tempo === b.tempo && a.staccato === b.staccato;
@@ -80,8 +70,8 @@ export default function GesturePanel(p: Props) {
   }, [onClose]);
 
   const frame = wide
-    ? { top: 12, bottom: 12, left: 12, width, borderRadius: 20 }
-    : { left: 0, right: 0, bottom: 0, height: "58dvh", borderRadius: "20px 20px 0 0" };
+    ? { top: 12, bottom: 12, left: 12, width, borderRadius: 12 }
+    : { left: 0, right: 0, bottom: 0, height: "58dvh", borderRadius: "12px 12px 0 0" };
 
   return (
     <aside
@@ -91,8 +81,8 @@ export default function GesturePanel(p: Props) {
         zIndex: 6,
         display: "flex",
         flexDirection: "column",
-        background: "rgba(16, 16, 17, 0.88)",
-        border: "1px solid rgba(244, 244, 242, 0.12)",
+        background: "rgba(15, 15, 16, 0.94)",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
         backdropFilter: "blur(18px)",
         WebkitBackdropFilter: "blur(18px)",
         boxShadow: "0 30px 80px rgba(0,0,0,0.55)",
@@ -100,15 +90,15 @@ export default function GesturePanel(p: Props) {
         ...frame,
       }}
     >
-      <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(244,244,242,0.08)" }}>
+      <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ ...display, fontSize: 24, lineHeight: 1.2, color: heatCSS(heatOf(effortOf(spec))), transition: "color 400ms" }}>
               {describe(spec)}
             </div>
-            <div style={{ fontSize: 12, color: "#8f8f8b", marginTop: 4 }}>reads as {reading.main.name.toLowerCase()}</div>
+            <div style={{ fontSize: 12, color: "#8f8f8f", marginTop: 4 }}>reads as {reading.main.name.toLowerCase()}</div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close gesture" style={{ ...chip(false), fontSize: 10, padding: "5px 9px", flex: "none" }}>
+          <button type="button" onClick={onClose} aria-label="Close gesture" style={{ ...chip(false), fontSize: 10, flex: "none" }}>
             Close
           </button>
         </div>
@@ -123,7 +113,7 @@ export default function GesturePanel(p: Props) {
               </button>
             ))}
           </div>
-          <p style={{ ...quiet, marginTop: 8, color: "#f4f4f2", opacity: 0.8 }}>{v.feel}</p>
+          <p style={{ ...quiet, marginTop: 8, color: "#ededed", opacity: 0.8 }}>{v.feel}</p>
         </div>
 
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -142,19 +132,19 @@ export default function GesturePanel(p: Props) {
               onInward();
             }}
             disabled={inward}
-            style={{ ...chip(inward || size < 0.05), padding: "8px 14px" }}
+            style={{ ...chip(inward || size < 0.05) }}
           >
             {inward ? "Going inside…" : "Take it inside"}
           </button>
           {(size < 0.95 || inward) && !inward && (
-            <button type="button" onClick={() => onSize(1)} style={{ ...chip(false), padding: "8px 14px" }}>
+            <button type="button" onClick={() => onSize(1)} style={{ ...chip(false) }}>
               Full out
             </button>
           )}
-          <button type="button" aria-pressed={sculpt} onClick={() => onSculpt(!sculpt)} style={{ ...chip(sculpt), padding: "8px 14px" }}>
+          <button type="button" aria-pressed={sculpt} onClick={() => onSculpt(!sculpt)} style={{ ...chip(sculpt) }}>
             Shape
           </button>
-          <button type="button" onClick={onCamera} style={{ ...chip(false), padding: "8px 14px" }}>
+          <button type="button" onClick={onCamera} style={{ ...chip(false) }}>
             Do it yourself
           </button>
         </div>
@@ -166,7 +156,7 @@ export default function GesturePanel(p: Props) {
         )}
 
         <details>
-          <summary style={{ fontSize: 12, color: "#8f8f8b", cursor: "pointer", listStyle: "none" }}>More</summary>
+          <summary style={{ fontSize: 12, color: "#8f8f8f", cursor: "pointer", listStyle: "none" }}>More</summary>
           <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {DIRECTIONS.map((d) => (
@@ -192,7 +182,7 @@ export default function GesturePanel(p: Props) {
         </details>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "12px 18px 16px", borderTop: "1px solid rgba(244,244,242,0.08)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "12px 18px 16px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
         <span style={{ ...quiet, fontSize: 12 }}>{kept ? "Places plays it." : ""}</span>
         <button
           type="button"
@@ -203,11 +193,10 @@ export default function GesturePanel(p: Props) {
           disabled={kept}
           style={{
             fontSize: 12,
-            padding: "9px 16px",
-            borderRadius: 999,
-            border: "1px solid #f4f4f2",
-            background: kept ? "transparent" : "#f4f4f2",
-            color: kept ? "#f4f4f2" : "#0b0b0c",
+                        borderRadius: 6,
+            border: "1px solid #ededed",
+            background: kept ? "transparent" : "#ededed",
+            color: kept ? "#ededed" : "#000000",
             cursor: kept ? "default" : "pointer",
             flex: "none",
           }}

@@ -14,7 +14,7 @@ import { GROUPS, QUESTIONS, type Question } from "@/lib/studio/questions";
 import { AfterTab } from "./After";
 import { PieceChooser, PieceText, type PieceState } from "./PieceText";
 import { trackEvent } from "@/lib/events";
-import { display, EASE, mono } from "./style";
+import { display, EASE, mono, toggle } from "./style";
 import type { SyncStatus } from "./useStudioSync";
 
 export type Tab = "text" | "questions" | "moments" | "after";
@@ -52,20 +52,9 @@ type Props = {
   sync: SyncStatus;
 };
 
-const chip = (on = false) =>
-  ({
-    fontSize: 10.5,
-    padding: "6px 11px",
-    borderRadius: 999,
-    border: `1px solid ${on ? "#f4f4f2" : "rgba(244,244,242,0.18)"}`,
-    background: on ? "rgba(244,244,242,0.14)" : "transparent",
-    color: on ? "#f4f4f2" : "#cfcfcb",
-    cursor: "pointer",
-    flex: "none",
-    transition: `background 250ms ${EASE}, border-color 250ms ${EASE}, color 250ms`,
-  }) as const;
+const chip = toggle;
 
-const quiet = { fontSize: 12.5, color: "#cfcfcb", opacity: 0.62, lineHeight: 1.5 } as const;
+const quiet = { fontSize: 12.5, color: "#a1a1a1", opacity: 0.62, lineHeight: 1.5 } as const;
 
 export default function Notebook(props: Props) {
   const { open, wide, width, role, tab, onTab, onClose, onEdit } = props;
@@ -77,7 +66,7 @@ export default function Notebook(props: Props) {
         bottom: 12,
         left: 12,
         width,
-        borderRadius: 20,
+        borderRadius: 12,
         transform: open ? "none" : `translateX(calc(-100% - 24px))`,
       }
     : {
@@ -85,7 +74,7 @@ export default function Notebook(props: Props) {
         right: 0,
         bottom: 0,
         height: "86dvh",
-        borderRadius: "20px 20px 0 0",
+        borderRadius: "12px 12px 0 0",
         transform: open ? "none" : "translateY(100%)",
       };
 
@@ -98,8 +87,8 @@ export default function Notebook(props: Props) {
         zIndex: 5,
         display: "flex",
         flexDirection: "column",
-        background: "rgba(16, 16, 17, 0.86)",
-        border: "1px solid rgba(244, 244, 242, 0.12)",
+        background: "rgba(15, 15, 16, 0.94)",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
         backdropFilter: "blur(18px)",
         WebkitBackdropFilter: "blur(18px)",
         boxShadow: "0 30px 80px rgba(0,0,0,0.55)",
@@ -111,7 +100,7 @@ export default function Notebook(props: Props) {
       }}
     >
       {/* Head: the role. */}
-      <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(244,244,242,0.08)" }}>
+      <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <span />
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -126,9 +115,9 @@ export default function Notebook(props: Props) {
                 width: 28,
                 height: 28,
                 borderRadius: 8,
-                background: "rgba(244,244,242,0.06)",
-                border: "1px solid rgba(244,244,242,0.14)",
-                color: "#cfcfcb",
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.14)",
+                color: "#a1a1a1",
                 cursor: "pointer",
               }}
             >
@@ -150,14 +139,14 @@ export default function Notebook(props: Props) {
           onChange={(e) => onEdit((r) => ({ ...r, scene: e.target.value }))}
           placeholder="The play and the scene, e.g. Hamlet, 5.1, the graveyard"
           aria-label="Play and scene"
-          style={{ fontSize: 13, marginTop: 4, color: "#cfcfcb" }}
+          style={{ fontSize: 13, marginTop: 4, color: "#a1a1a1" }}
         />
         <SyncLine sync={props.sync} />
         <div style={{ display: "flex", gap: 6, marginTop: 12, overflowX: "auto", scrollbarWidth: "none" }}>
           <button
             type="button"
             onClick={() => onTab("text")}
-            className="uppercase tracking-[0.14em]"
+            
             style={chip(tab === "text")}
           >
             Text
@@ -165,7 +154,7 @@ export default function Notebook(props: Props) {
           <button
             type="button"
             onClick={() => onTab("questions")}
-            className="uppercase tracking-[0.14em]"
+            
             style={chip(tab === "questions")}
           >
             Questions <span style={{ ...mono, opacity: 0.6, letterSpacing: 0 }}>{done}/{QUESTIONS.length}</span>
@@ -173,7 +162,7 @@ export default function Notebook(props: Props) {
           <button
             type="button"
             onClick={() => onTab("moments")}
-            className="uppercase tracking-[0.14em]"
+            
             style={chip(tab === "moments")}
           >
             Moments <span style={{ ...mono, opacity: 0.6, letterSpacing: 0 }}>{role.moments.length}</span>
@@ -181,7 +170,7 @@ export default function Notebook(props: Props) {
           <button
             type="button"
             onClick={() => onTab("after")}
-            className="uppercase tracking-[0.14em]"
+            
             style={chip(tab === "after")}
           >
             After{role.takes?.length ? <span style={{ ...mono, opacity: 0.6, letterSpacing: 0 }}> {role.takes.length}</span> : null}
@@ -213,10 +202,10 @@ export default function Notebook(props: Props) {
               justifyContent: "space-between",
               alignItems: "center",
               padding: "11px 14px",
-              borderRadius: 14,
-              background: "rgba(244,244,242,0.16)",
-              border: "1px solid rgba(244,244,242,0.6)",
-              color: "#f4f4f2",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.16)",
+              border: "1px solid rgba(255,255,255,0.6)",
+              color: "#ededed",
               cursor: "pointer",
             }}
           >
@@ -241,7 +230,7 @@ function SyncLine({ sync }: { sync: SyncStatus }) {
   return (
     <div
       aria-live="polite"
-      style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 10, fontSize: 11.5, color: "#cfcfcb" }}
+      style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 10, fontSize: 11.5, color: "#a1a1a1" }}
     >
       <span
         aria-hidden
@@ -249,7 +238,7 @@ function SyncLine({ sync }: { sync: SyncStatus }) {
           width: 6,
           height: 6,
           borderRadius: 3,
-          background: sync === "saved" ? "#7fbf8a" : sync === "offline" ? "#d9a441" : "rgba(216,216,212,0.45)",
+          background: sync === "saved" ? "#7fbf8a" : sync === "offline" ? "#d9a441" : "rgba(255,255,255,0.45)",
           transition: "background 300ms",
         }}
       />
@@ -257,7 +246,7 @@ function SyncLine({ sync }: { sync: SyncStatus }) {
       {sync === "local" && (
         <a
           href="/login?redirect=/studio"
-          style={{ color: "#f4f4f2", textDecoration: "underline", textUnderlineOffset: 3 }}
+          style={{ color: "#ededed", textDecoration: "underline", textUnderlineOffset: 3 }}
         >
           Sign in to keep it everywhere
         </a>
@@ -307,7 +296,7 @@ function TextTab(props: Props) {
         <button
           type="button"
           onClick={() => setChoosing(true)}
-          className="uppercase tracking-[0.12em]"
+          
           style={chip()}
         >
           Change
@@ -343,9 +332,9 @@ function RoleSwitcher({ nb, role, onSwitch, onNewRole, onDeleteRole }: Props) {
         fontSize: 12,
         padding: "5px 8px",
         borderRadius: 8,
-        background: "rgba(244,244,242,0.06)",
-        border: "1px solid rgba(244,244,242,0.14)",
-        color: "#cfcfcb",
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.14)",
+        color: "#a1a1a1",
         cursor: "pointer",
       }}
     >
@@ -370,7 +359,7 @@ function Questions(props: Props) {
     <div style={{ display: "grid", gap: 18 }}>
       {GROUPS.map((g) => (
         <div key={g}>
-          <div className="uppercase tracking-[0.24em] text-[#8f8f8b]" style={{ fontSize: 10, marginBottom: 8 }}>
+          <div className="text-[#8f8f8f]" style={{ fontSize: 10, marginBottom: 8 }}>
             {g}
           </div>
           <div style={{ display: "grid", gap: 6 }}>
@@ -425,9 +414,9 @@ function QuestionCard({
   return (
     <div
       style={{
-        borderRadius: 14,
-        border: `1px solid ${open ? "rgba(244,244,242,0.45)" : "rgba(244,244,242,0.09)"}`,
-        background: open ? "rgba(244,244,242,0.06)" : "rgba(244,244,242,0.025)",
+        borderRadius: 8,
+        border: `1px solid ${open ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.09)"}`,
+        background: open ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.025)",
         transition: `border-color 250ms ${EASE}, background 250ms ${EASE}`,
       }}
     >
@@ -443,7 +432,7 @@ function QuestionCard({
           padding: "11px 13px",
           background: "none",
           border: 0,
-          color: "#f4f4f2",
+          color: "#ededed",
           cursor: "pointer",
           textAlign: "left",
         }}
@@ -455,8 +444,8 @@ function QuestionCard({
             height: 7,
             borderRadius: 4,
             flex: "none",
-            background: hasAnswer ? "#f4f4f2" : "transparent",
-            border: `1px solid ${hasAnswer ? "#f4f4f2" : "rgba(244,244,242,0.35)"}`,
+            background: hasAnswer ? "#ededed" : "transparent",
+            border: `1px solid ${hasAnswer ? "#ededed" : "rgba(255,255,255,0.35)"}`,
           }}
         />
         <span style={{ ...display, fontSize: 18, lineHeight: 1.2, flex: 1 }}>{q.ask}</span>
@@ -478,7 +467,7 @@ function QuestionCard({
                 key={nudge}
                 style={{
                   fontSize: 13.5,
-                  color: "#f4f4f2",
+                  color: "#ededed",
                   lineHeight: 1.45,
                   animation: `studio-in 380ms ${EASE}`,
                 }}
@@ -490,7 +479,7 @@ function QuestionCard({
               <button
                 type="button"
                 onClick={onToCube}
-                className="uppercase tracking-[0.14em]"
+                
                 style={{ ...chip(true), justifySelf: "start" }}
               >
                 {moments ? `See your ${moments} moment${moments === 1 ? "" : "s"}` : "Pin moments in the cube"} →
@@ -515,7 +504,7 @@ function QuestionCard({
               style={{
                 justifySelf: "start",
                 fontSize: 12,
-                color: "#cfcfcb",
+                color: "#a1a1a1",
                 opacity: 0.7,
                 background: "none",
                 border: 0,
@@ -523,7 +512,7 @@ function QuestionCard({
                 cursor: "pointer",
                 textDecoration: "underline",
                 textUnderlineOffset: 3,
-                textDecorationColor: "rgba(216,216,212,0.3)",
+                textDecorationColor: "rgba(255,255,255,0.3)",
               }}
             >
               {nudge < 0 ? "Ask me something harder" : "Another one"}
@@ -564,16 +553,16 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
           alignItems: "center",
           gap: 10,
           padding: "12px 14px",
-          borderRadius: 14,
-          background: "rgba(244,244,242,0.16)",
-          border: "1px solid rgba(244,244,242,0.6)",
-          color: "#f4f4f2",
+          borderRadius: 8,
+          background: "rgba(255,255,255,0.16)",
+          border: "1px solid rgba(255,255,255,0.6)",
+          color: "#ededed",
           cursor: "pointer",
           textAlign: "left",
         }}
       >
         <span>
-          <span className="uppercase tracking-[0.16em]" style={{ fontSize: 10.5, display: "block", opacity: 0.8 }}>
+          <span  style={{ fontSize: 10.5, display: "block", opacity: 0.8 }}>
             Pin where the light is
           </span>
           <span style={{ ...display, fontSize: 17 }}>{here.sentence}</span>
@@ -589,8 +578,8 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
             justifyContent: "space-between",
             gap: 12,
             padding: "10px 12px",
-            borderRadius: 12,
-            border: "1px solid rgba(244,244,242,0.1)",
+            borderRadius: 8,
+            border: "1px solid rgba(255,255,255,0.1)",
           }}
         >
           <span style={{ ...quiet, opacity: 0.8 }}>
@@ -600,7 +589,7 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                 ? "A long journey through the cube. Where is the turn?"
                 : "The character travels. Play it and watch where it changes."}
           </span>
-          <button type="button" onClick={onPlay} className="uppercase tracking-[0.14em]" style={chip(playing)}>
+          <button type="button" onClick={onPlay}  style={chip(playing)}>
             {playing ? "Stop" : "Play the arc"}
           </button>
         </div>
@@ -613,9 +602,9 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
             <li
               key={m.id}
               style={{
-                borderRadius: 14,
-                border: `1px solid ${on ? "rgba(244,244,242,0.6)" : "rgba(244,244,242,0.09)"}`,
-                background: on ? "rgba(244,244,242,0.08)" : "rgba(244,244,242,0.025)",
+                borderRadius: 8,
+                border: `1px solid ${on ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.09)"}`,
+                background: on ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.025)",
                 padding: "10px 12px 12px",
                 transition: `border-color 250ms ${EASE}, background 250ms ${EASE}`,
               }}
@@ -630,11 +619,11 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                     flex: "none",
                     width: 24,
                     height: 24,
-                    borderRadius: 12,
+                    borderRadius: 8,
                     fontSize: 11,
-                    background: on ? "#f4f4f2" : "rgba(244,244,242,0.06)",
-                    border: "1px solid rgba(244,244,242,0.5)",
-                    color: "#f4f4f2",
+                    background: on ? "#ededed" : "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.5)",
+                    color: "#ededed",
                     cursor: "pointer",
                   }}
                 >
@@ -658,7 +647,7 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                   marginTop: 4,
                   marginLeft: 34,
                   fontSize: 12,
-                  color: "#f4f4f2",
+                  color: "#ededed",
                   opacity: 0.85,
                   background: "none",
                   border: 0,
@@ -669,7 +658,7 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
               >
                 {read(m.point).sentence}
                 {typeof m.line === "number" && (
-                  <span style={{ ...mono, marginLeft: 8, fontSize: 10.5, padding: "1px 5px", border: "1px solid rgba(244,244,242,0.2)", color: "#cfcfcb" }}>
+                  <span style={{ ...mono, marginLeft: 8, fontSize: 10.5, padding: "1px 5px", border: "1px solid rgba(255,255,255,0.2)", color: "#a1a1a1" }}>
                     line {m.line + 1}
                   </span>
                 )}
@@ -690,10 +679,10 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                       style={{
                         fontSize: 11,
                         padding: "3px 9px",
-                        borderRadius: 999,
-                        border: `1px solid ${sel ? a.dust : "rgba(244,244,242,0.14)"}`,
+                        borderRadius: 6,
+                        border: `1px solid ${sel ? a.dust : "rgba(255,255,255,0.14)"}`,
                         background: sel ? `${a.floor}55` : "transparent",
-                        color: sel ? "#f4f4f2" : "#cfcfcb",
+                        color: sel ? "#ededed" : "#a1a1a1",
                         opacity: sel ? 1 : 0.75,
                         cursor: "pointer",
                       }}
@@ -717,7 +706,7 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                 <button
                   type="button"
                   onClick={() => setMoment(m.id, (x) => ({ ...x, point: { ...point } }))}
-                  className="uppercase tracking-[0.12em]"
+                  
                   style={chip()}
                   title="Move this pin to where the light is now"
                 >
@@ -744,7 +733,7 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                 <button
                   type="button"
                   onClick={() => onEdit((r) => ({ ...r, moments: r.moments.filter((x) => x.id !== m.id) }))}
-                  className="uppercase tracking-[0.12em]"
+                  
                   style={{ ...chip(), marginLeft: "auto", opacity: 0.6 }}
                 >
                   Remove

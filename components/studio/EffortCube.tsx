@@ -36,12 +36,15 @@ import { afterDue } from "@/lib/studio/after";
 import { when } from "./After";
 import { airOf, type AirId } from "@/lib/studio/air";
 import { AirSound } from "./airSound";
+import { Button, StudioStyles } from "./ui";
+import CommandMenu, { type Command } from "./CommandMenu";
+import { IconChevronDown, IconHelp, IconPin, IconSearch, IconVolume, IconVolumeOff } from "@tabler/icons-react";
 import Tour, { tourSeen } from "./Tour";
 import GesturePanel from "./GesturePanel";
 import GestureCamera from "./GestureCamera";
 import type { MotionReading } from "@/lib/studio/motion";
 import { DEFAULT_GESTURE, effortOf, type GestureSpec } from "@/lib/studio/gesture";
-import { display, EASE, mono } from "./style";
+import { display, EASE } from "./style";
 import { useStudioSync } from "./useStudioSync";
 
 // three/webgpu touches `navigator` and `window`; keep it out of the server render.
@@ -88,9 +91,11 @@ export default function EffortCube() {
   });
   const soundRef = useRef<AirSound | null>(null);
   const [soundOn, setSoundOn] = useState(false);
-  const [labels, setLabels] = useState<CornerLabel[]>([]);
-  const [pinLabels, setPinLabels] = useState<PinLabel[]>([]);
-  const [hovered, setHovered] = useState<ActionId | null>(null);
+  // Corner names and pin numbers: DOM nodes the stage moves directly (see onLabels).
+  const cornerEls = useRef<Record<string, HTMLDivElement | null>>({});
+  const pinEls = useRef<(HTMLDivElement | null)[]>([]);
+  const hoveredRef = useRef<ActionId | null>(null);
+  const [cmd, setCmd] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
   // WebGPU first; if the device is lost or will not start, WebGL2. `?gl=webgl` forces it.
   const [forceWebGL, setForceWebGL] = useState(false);
@@ -314,11 +319,27 @@ export default function EffortCube() {
     router.push("/");
   }, [leaving, router]);
 
+  // ⌘K (or Ctrl-K, or /) opens the commands from anywhere on the stage.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if ((e.metaKey || e.ctrlKey) && k === "k") {
+        e.preventDefault();
+        setCmd((v) => !v);
+      } else if (k === "/" && !typing(e.target) && !places && !prep && !gesture) {
+        e.preventDefault();
+        setCmd(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [places, prep, gesture]);
+
   // Hands on the keys (not while writing).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (places || prep || gesture) return; // Places, Prep and Gesture have the keys while they run
+      if (places || prep || gesture || cmd || tour) return; // these have the keys while they're open
       if (typing(e.target)) {
         if (e.key === "Escape") (e.target as HTMLElement).blur();
         return;
@@ -355,11 +376,24 @@ export default function EffortCube() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [jump, leave, move, open, pin, places, prep, gesture]);
+  }, [jump, leave, move, open, pin, places, prep, gesture, cmd, tour]);
 
+  // Called ~20 times a second by the stage. Writes straight to the nodes: no state, no re-render.
+  // Only the corner the light is near (or the one under the pointer) names itself; the rest stay faint.
   const onLabels = useCallback((c: CornerLabel[], p: PinLabel[]) => {
-    setLabels(c);
-    setPinLabels(p);
+    for (const l of c) {
+      const el = cornerEls.current[l.id];
+      if (!el) continue;
+      const near = l.share > 0.3 || hoveredRef.current === l.id;
+      el.style.transform = `translate3d(${l.x}px, ${l.y}px, 0) translate(-50%, -50%)`;
+      el.style.opacity = !l.visible ? "0" : near ? "1" : "0.22";
+    }
+    p.forEach((pl, i) => {
+      const el = pinEls.current[i];
+      if (!el) return;
+      el.style.transform = `translate3d(${pl.x + 10}px, ${pl.y - 18}px, 0)`;
+      el.style.opacity = pl.visible ? "1" : "0";
+    });
   }, []);
 
   const openGesture = () => {
@@ -436,12 +470,11 @@ export default function EffortCube() {
   });
   // On a phone the notebook covers the stage; the reading panel steps aside.
   const panelVisible = hud && !gesture && !placesGesture && !((open || prep) && !wide);
-  const centreX = `calc(50% + ${inset / 2}px)`;
 
   return (
     <main
-      className="text-[#f4f4f2]"
-      style={{ position: "fixed", inset: 0, background: "#0b0b0c", overflow: "hidden", userSelect: "none" }}
+      className="text-[#ededed]"
+      style={{ position: "fixed", inset: 0, background: "#000000", overflow: "hidden", userSelect: "none" }}
     >
       <EffortCubeScene
         pointRef={pointRef}
@@ -451,7 +484,7 @@ export default function EffortCube() {
         gestureRef={gestureRef}
         onDrag={move}
         onCorner={jump}
-        onHover={setHovered}
+        onHover={(id) => (hoveredRef.current = id)}
         onLabels={onLabels}
         onFail={setFailed}
         onGpuLost={() => setForceWebGL(true)}
@@ -459,7 +492,7 @@ export default function EffortCube() {
         forceWebGL={forceWebGL || wantWebGL}
       />
 
-      {/* Corner names and moment numbers, pinned to the 3D points. */}
+      {/* Corner names and moment numbers: fixed nodes the stage moves directly, no re-render. */}
       <div
         aria-hidden
         style={{
@@ -470,118 +503,130 @@ export default function EffortCube() {
           ...(gesture || placesGesture ? { opacity: 0 } : {}),
         }}
       >
-        {labels.map((l) => {
-          if (!l.visible) return null;
-          const hot = hovered === l.id || l.share > 0.3;
-          return (
-            <div
-              key={l.id}
-              className="uppercase tracking-[0.16em] font-semibold"
-              style={{
-                position: "absolute",
-                left: l.x,
-                top: l.y,
-                transform: `translate(-50%, -50%) scale(${hovered === l.id ? 1.12 : 1})`,
-                transition: `transform 200ms ${EASE}, color 200ms, background 200ms`,
-                fontSize: 11,
-                lineHeight: 1,
-                padding: "4px 7px",
-                background: hot ? "rgba(244,244,242,0.16)" : "rgba(11,11,12,0.62)",
-                border: `1px solid ${hot ? "rgba(244,244,242,0.45)" : "rgba(244,244,242,0.1)"}`,
-                color: hot ? "#f4f4f2" : "#e4e4e0",
-                opacity: hot ? 1 : 0.82,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {ACTIONS.find((a) => a.id === l.id)?.name}
-            </div>
-          );
-        })}
-        {pinLabels.map((p) => {
-          if (!p.visible) return null;
-          const m = moments[p.index];
-          const on = m && m.id === activeMoment;
-          return (
-            <div
-              key={p.index}
-              style={{
-                ...mono,
-                position: "absolute",
-                left: p.x + 12,
-                top: p.y - 12,
-                fontSize: 10,
-                minWidth: 16,
-                height: 16,
-                padding: "0 4px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: on ? "#f4f4f2" : "rgba(11,11,12,0.75)",
-                border: "1px solid rgba(244,244,242,0.5)",
-                color: "#f4f4f2",
-              }}
-            >
-              {p.index + 1}
-            </div>
-          );
-        })}
+        {ACTIONS.map((a) => (
+          <div
+            key={a.id}
+            ref={(el) => {
+              cornerEls.current[a.id] = el;
+            }}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              fontSize: 12,
+              fontWeight: 500,
+              color: "#d4d4d4",
+              opacity: 0,
+              whiteSpace: "nowrap",
+              transition: "opacity 220ms",
+              willChange: "transform",
+            }}
+          >
+            {a.name}
+          </div>
+        ))}
+        {moments.map((m, i) => (
+          <div
+            key={m.id}
+            ref={(el) => {
+              pinEls.current[i] = el;
+            }}
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              fontSize: 10.5,
+              fontWeight: 500,
+              minWidth: 16,
+              height: 16,
+              padding: "0 4px",
+              borderRadius: 4,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: m.id === activeMoment ? "#ededed" : "rgba(0,0,0,0.6)",
+              border: "1px solid rgba(255,255,255,0.3)",
+              color: m.id === activeMoment ? "#000" : "#ededed",
+              opacity: 0,
+              willChange: "transform",
+            }}
+          >
+            {i + 1}
+          </div>
+        ))}
       </div>
 
-      {/* Top: the role on the left (opens its notebook); what you can do with it on the right. */}
-      <div
+      {/* Top: the role on the left (its notebook); what you can do with it on the right. */}
+      <header
         style={{
           position: "absolute",
           top: 0,
           left: (open || prep || gesture) && wide ? DRAWER + 16 : 0,
           right: 0,
-          padding: wide ? "18px 22px" : "14px 16px",
+          height: 48,
+          padding: wide ? "0 14px" : "0 10px",
           display: "flex",
+          alignItems: "center",
           justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 12,
+          gap: 8,
           pointerEvents: "none",
-          ...enter(250, "translateY(-8px)"),
+          ...enter(250, "translateY(-6px)"),
           transition: `${enter(250).transition}, left 450ms ${EASE}`,
         }}
       >
-        {!open && !prep && !gesture ? (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            title="This role's notebook"
-            style={{
-              pointerEvents: "auto",
-              background: "none",
-              border: 0,
-              padding: 0,
-              textAlign: "left",
-              cursor: "pointer",
-              color: "#f4f4f2",
-              minWidth: 0,
-            }}
-          >
-            <span style={{ ...display, fontSize: wide ? 22 : 19, lineHeight: 1.1, display: "block" }}>
-              {role?.name || "Untitled role"} <span style={{ fontSize: 13, opacity: 0.5 }}>▾</span>
-            </span>
-            <span style={{ fontSize: 11, color: "#8f8f8b", display: "block", marginTop: 3 }}>
-              {role?.scene || "Your notebook"}
-            </span>
-          </button>
-        ) : (
-          <span />
-        )}
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", pointerEvents: "auto", flex: "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, pointerEvents: "auto" }}>
           {!open && !prep && !gesture && (
             <>
-              <TopAction label="Prep" sub="work the role" primary wide={wide} onClick={openPrep} />
-              <TopAction label="Gesture" sub="find the body" wide={wide} onClick={openGesture} />
-              {canPlaces && wide && <TopAction label="Places" sub="before you go on" wide={wide} onClick={startPlaces} />}
+              <Button variant="ghost" onClick={() => setOpen(true)} title="This role's notebook" className="px-2 text-foreground">
+                <span style={{ maxWidth: wide ? 220 : 130, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {role?.name || "Untitled role"}
+                </span>
+                <IconChevronDown />
+              </Button>
+              {wide && role?.scene && (
+                <span style={{ fontSize: 13, color: "#5c5c5c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {role.scene}
+                </span>
+              )}
             </>
           )}
-          <TopAction label="?" wide={false} onClick={() => setTour(true)} title="How this works" round />
-          <TopAction label="Sound" wide={false} onClick={toggleSound} pressed={soundOn} title="The sound of the air" />
         </div>
-      </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, pointerEvents: "auto", flex: "none" }}>
+          {!open && !prep && !gesture && (
+            <>
+              <Button variant="default" onClick={openPrep} title="Work the role, about fifteen minutes">
+                Prep
+              </Button>
+              <Button onClick={openGesture} title="Find the body: one movement for what they want">
+                Gesture
+              </Button>
+              {canPlaces && wide && (
+                <Button onClick={startPlaces} title="The minute before you go on">
+                  Places
+                </Button>
+              )}
+            </>
+          )}
+          {wide && (
+            <Button variant="ghost" onClick={() => setCmd(true)} title="Commands" kbd="⌘K" className="px-1.5">
+              <IconSearch />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={() => setTour(true)} title="How this works" aria-label="How this works">
+            <IconHelp />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSound}
+            pressed={soundOn}
+            title={soundOn ? "Sound on" : "Sound off"}
+            aria-label="Sound"
+          >
+            {soundOn ? <IconVolume /> : <IconVolumeOff />}
+          </Button>
+        </div>
+      </header>
 
       {failed && (
         <div
@@ -604,103 +649,48 @@ export default function EffortCube() {
         </div>
       )}
 
-      {/* Bottom: where you are, the three factors, and the pin. */}
+      {/* Bottom left: where the light is, what it feels like, and the pin. No card. */}
       <section
         aria-hidden={!panelVisible}
+        aria-live="polite"
         style={{
           position: "absolute",
-          left: centreX,
-          bottom: "max(16px, env(safe-area-inset-bottom))",
-          translate: "-50% 0",
-          width: `min(calc(100vw - 32px - ${inset}px), 520px)`,
-          padding: "16px 18px 14px",
-          borderRadius: 18,
-          background: "rgba(16, 16, 17, 0.66)",
-          border: "1px solid rgba(244, 244, 242, 0.12)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
+          left: inset + (wide ? 26 : 16),
+          right: wide ? undefined : 16,
+          bottom: "max(22px, env(safe-area-inset-bottom))",
+          maxWidth: 460,
           pointerEvents: panelVisible ? "auto" : "none",
-          ...enter(550, "translateY(24px)"),
-          transition: `${enter(550).transition}, left 450ms ${EASE}, width 450ms ${EASE}`,
+          ...enter(550, "translateY(12px)"),
+          transition: `${enter(550).transition}, left 450ms ${EASE}`,
           ...(shown && !panelVisible
-            ? {
-                opacity: 0,
-                transform: "translateY(calc(100% + 24px))",
-                transition: `opacity ${300 * dur}ms ${EASE}, transform ${450 * dur}ms ${EASE}, left 450ms ${EASE}`,
-              }
+            ? { opacity: 0, transform: "translateY(16px)", transition: `opacity ${250 * dur}ms ${EASE}, transform ${350 * dur}ms ${EASE}` }
             : {}),
         }}
       >
-        <div aria-live="polite" style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ minWidth: 0 }}>
-            <div
-              key={reading.sentence}
-              style={{
-                ...display,
-                fontSize: 28,
-                lineHeight: 1.1,
-                color: heatCSS(heatOf(point)),
-                transition: "color 400ms",
-                animation: `studio-in 380ms ${EASE}`,
-              }}
-            >
-              {reading.sentence}
-            </div>
-            <div style={{ fontSize: 13, color: "#cfcfcb", opacity: 0.75, marginTop: 6, lineHeight: 1.4 }}>
-              {moved ? (reading.mainShare >= 0.2 ? reading.main.feel : "Move toward a corner.") : "Drag the light, or tap a corner."}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 6, alignSelf: "flex-start", flex: "none" }}>
-            <button
-              type="button"
-              onClick={pin}
-              className="uppercase tracking-[0.16em]"
-              title={fine ? "Pin this moment (P)" : "Pin this moment"}
-              style={{
-                fontSize: 10.5,
-                padding: "7px 12px",
-                borderRadius: 999,
-                background: "#f4f4f2",
-                border: "1px solid #f4f4f2",
-                color: "#0b0b0c",
-                cursor: "pointer",
-              }}
-            >
-              Pin
-            </button>
-          </div>
+        <div
+          key={reading.sentence}
+          style={{
+            ...display,
+            fontSize: reading.sentence.length > 16 ? (wide ? 30 : 26) : wide ? 44 : 34,
+            lineHeight: 1,
+            letterSpacing: "-0.035em",
+            color: heatCSS(heatOf(point)),
+            transition: "color 400ms",
+            animation: `studio-in 380ms ${EASE}`,
+          }}
+        >
+          {reading.sentence.replace(/\.$/, "")}
         </div>
-
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13, color: "#8f8f8f", lineHeight: 1.4 }}>
+            {moved ? (reading.mainShare >= 0.2 ? reading.main.feel : "Move toward a corner.") : "Drag the light, or tap a corner."}
+          </span>
+          <Button size="sm" onClick={pin} kbd={fine ? "P" : undefined} title="Pin this moment">
+            <IconPin />
+            Pin moment
+          </Button>
+        </div>
       </section>
-
-      {/* With the panel hidden: one small way to bring it back. */}
-      <button
-        type="button"
-        onClick={() => setHud(true)}
-        aria-label="Show the panel (H)"
-        className="uppercase tracking-[0.18em] text-[#cfcfcb]"
-        style={{
-          position: "absolute",
-          left: centreX,
-          bottom: "max(18px, env(safe-area-inset-bottom))",
-          translate: "-50% 0",
-          fontSize: 10.5,
-          padding: "8px 14px",
-          borderRadius: 999,
-          background: "rgba(16, 16, 17, 0.55)",
-          border: "1px solid rgba(244, 244, 242, 0.14)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          cursor: "pointer",
-          opacity: shown && !hud && !(open && !wide) ? 0.85 : 0,
-          transform: shown && !hud ? "none" : "translateY(12px)",
-          pointerEvents: shown && !hud && !(open && !wide) ? "auto" : "none",
-          transition: `opacity ${400 * dur}ms ${EASE} ${hud ? 0 : 150 * dur}ms, transform ${500 * dur}ms ${EASE}, left 450ms ${EASE}`,
-        }}
-      >
-        {reading.sentence}
-      </button>
 
       {nb && role && (
         <Notebook
@@ -833,6 +823,47 @@ export default function EffortCube() {
 
       {tour && <Tour onClose={() => setTour(false)} />}
 
+      {cmd && (
+        <CommandMenu
+          onClose={() => setCmd(false)}
+          commands={[
+            { id: "notebook", group: "Role", name: "Open the notebook", kbd: "N", keywords: "questions answers notes", run: () => setOpen(true) },
+            { id: "prep", group: "Role", name: "Prep this role", keywords: "guided piece questions beats", run: openPrep },
+            { id: "gesture", group: "Role", name: "Find the gesture", keywords: "psychological chekhov body camera", run: openGesture },
+            ...(canPlaces
+              ? [{ id: "places", group: "Role" as const, name: "Places, the minute before you go on", keywords: "warm up run", run: startPlaces }]
+              : []),
+            { id: "pin", group: "Role", name: "Pin this moment", kbd: "P", keywords: "beat", run: pin },
+            ...(moments.length >= 2
+              ? [{ id: "arc", group: "Role" as const, name: "Play the arc", keywords: "moments journey", run: () => setPlaying(true) }]
+              : []),
+            {
+              id: "new",
+              group: "Role",
+              name: "New role",
+              run: () => {
+                const r = newRole();
+                setNb((cur) => (cur ? { ...cur, roles: [...cur.roles, r], activeId: r.id } : cur));
+                setActiveMoment(null);
+              },
+            },
+            ...ACTIONS.map((a, i) => ({
+              id: `go-${a.id}`,
+              group: "Go to" as const,
+              name: a.name,
+              kbd: String(i + 1),
+              keywords: a.feel,
+              run: () => jump(a.id),
+            })),
+            { id: "go-centre", group: "Go to", name: "The middle", kbd: "0", keywords: "centre center neutral", run: () => move(CENTRE) },
+            { id: "home", group: "Stage", name: "Camera back home", kbd: "F", run: () => apiRef.current?.home() },
+            { id: "hud", group: "Stage", name: hud ? "Hide the reading" : "Show the reading", kbd: "H", run: () => setHud((v) => !v) },
+            { id: "sound", group: "Stage", name: soundOn ? "Sound off" : "Sound on", keywords: "audio air", run: toggleSound },
+            { id: "tour", group: "Stage", name: "How this works", keywords: "help tour onboarding", run: () => setTour(true) },
+          ] satisfies Command[]}
+        />
+      )}
+
       {places && role && (
         <Places
           role={role}
@@ -846,15 +877,10 @@ export default function EffortCube() {
         />
       )}
 
+      <StudioStyles />
       <style>{`
         @keyframes prep-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
         @keyframes studio-in { from { opacity: 0; transform: translateY(6px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
-        .studio-scroll { scrollbar-width: thin; scrollbar-color: rgba(244,244,242,0.18) transparent; }
-        .studio-field { width: 100%; background: rgba(244,244,242,0.04); border: 1px solid rgba(244,244,242,0.12); border-radius: 10px; color: #f4f4f2; padding: 9px 11px; font-size: 14px; line-height: 1.45; outline: none; resize: none; transition: border-color 200ms, background 200ms; user-select: text; }
-        .studio-field:focus { border-color: rgba(244,244,242,0.7); background: rgba(244,244,242,0.07); }
-        .studio-field::placeholder { color: rgba(216,216,212,0.38); }
-        .studio-bare { width: 100%; background: transparent; border: 0; outline: none; color: #f4f4f2; padding: 0; user-select: text; }
-        .studio-bare::placeholder { color: rgba(216,216,212,0.38); }
       `}</style>
     </main>
   );
@@ -892,9 +918,9 @@ function AfterCard({
         translate: "-50% 0",
         width: "min(calc(100vw - 32px), 420px)",
         padding: "14px 16px",
-        borderRadius: 16,
-        background: "rgba(16,16,17,0.82)",
-        border: "1px solid rgba(244,244,242,0.55)",
+        borderRadius: 10,
+        background: "rgba(15,15,16,0.94)",
+        border: "1px solid rgba(255,255,255,0.55)",
         backdropFilter: "blur(14px)",
         WebkitBackdropFilter: "blur(14px)",
         boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
@@ -902,7 +928,7 @@ function AfterCard({
       }}
     >
       <div style={{ ...display, fontSize: 20, lineHeight: 1.25 }}>How did it go?</div>
-      <p style={{ fontSize: 13, color: "#cfcfcb", opacity: 0.75, marginTop: 4, lineHeight: 1.45 }}>
+      <p style={{ fontSize: 13, color: "#a1a1a1", opacity: 0.75, marginTop: 4, lineHeight: 1.45 }}>
         You worked {name || "this role"} {when(ranAt, now)}. Two lines while it&apos;s fresh, and the next run starts
         from them.
       </p>
@@ -912,11 +938,10 @@ function AfterCard({
           onClick={onTell}
           style={{
             fontSize: 12,
-            padding: "8px 14px",
-            borderRadius: 999,
-            border: "1px solid #f4f4f2",
-            background: "#f4f4f2",
-            color: "#0b0b0c",
+                        borderRadius: 6,
+            border: "1px solid #ededed",
+            background: "#ededed",
+            color: "#000000",
             cursor: "pointer",
           }}
         >
@@ -927,11 +952,10 @@ function AfterCard({
           onClick={onLater}
           style={{
             fontSize: 12,
-            padding: "8px 14px",
-            borderRadius: 999,
-            border: "1px solid rgba(244,244,242,0.2)",
+                        borderRadius: 6,
+            border: "1px solid rgba(255,255,255,0.2)",
             background: "transparent",
-            color: "#cfcfcb",
+            color: "#a1a1a1",
             cursor: "pointer",
           }}
         >
@@ -939,56 +963,5 @@ function AfterCard({
         </button>
       </div>
     </div>
-  );
-}
-
-/** A top-bar action: a word, and on a wide screen a few words on what it's for. */
-function TopAction({
-  label,
-  sub,
-  wide,
-  primary = false,
-  pressed,
-  round = false,
-  title,
-  onClick,
-}: {
-  label: string;
-  sub?: string;
-  wide: boolean;
-  primary?: boolean;
-  pressed?: boolean;
-  round?: boolean;
-  title?: string;
-  onClick: () => void;
-}) {
-  const on = primary || pressed;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title ?? sub}
-      aria-pressed={pressed}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 2,
-        minWidth: round ? 30 : undefined,
-        padding: wide && sub ? "7px 14px 6px" : round ? "6px 0" : "6px 11px",
-        borderRadius: 999,
-        background: on ? "#f4f4f2" : "rgba(16,16,17,0.5)",
-        border: `1px solid ${on ? "#f4f4f2" : "rgba(244,244,242,0.22)"}`,
-        color: on ? "#0b0b0c" : "#f4f4f2",
-        cursor: "pointer",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
-      }}
-    >
-      <span className="uppercase tracking-[0.16em]" style={{ fontSize: wide ? 11 : 10, lineHeight: 1.1 }}>
-        {label}
-      </span>
-      {wide && sub && <span style={{ fontSize: 9.5, opacity: 0.6, lineHeight: 1.1 }}>{sub}</span>}
-    </button>
   );
 }

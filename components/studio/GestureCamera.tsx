@@ -14,7 +14,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/lib/events";
 import { read } from "@/lib/studio/effort";
 import { readMotion, type Frame, type MotionReading, type V3 } from "@/lib/studio/motion";
-import { display, EASE } from "./style";
+import { action, display, EASE } from "./style";
 
 // Pinned to the installed package (package.json) so the code and its wasm always agree.
 const VISION_VERSION = "1.1.1";
@@ -119,14 +119,14 @@ export default function GestureCamera({
         ctx.clearRect(0, 0, c.width, c.height);
         if (lm) {
           ctx.lineWidth = 4;
-          ctx.strokeStyle = recording.current ? "#f4f4f2" : "rgba(255,226,196,0.85)";
+          ctx.strokeStyle = recording.current ? "#ededed" : "rgba(255,226,196,0.85)";
           for (const [a, b] of BONES) {
             ctx.beginPath();
             ctx.moveTo(lm[a].x * c.width, lm[a].y * c.height);
             ctx.lineTo(lm[b].x * c.width, lm[b].y * c.height);
             ctx.stroke();
           }
-          ctx.fillStyle = "#f4f4f2";
+          ctx.fillStyle = "#ededed";
           for (const i of [L_WRIST, R_WRIST]) {
             ctx.beginPath();
             ctx.arc(lm[i].x * c.width, lm[i].y * c.height, 9, 0, Math.PI * 2);
@@ -217,16 +217,7 @@ export default function GestureCamera({
   };
 
   const r = reading ? read(reading.point) : null;
-  const btn = (primary: boolean) =>
-    ({
-      fontSize: 12,
-      padding: "9px 16px",
-      borderRadius: 999,
-      border: `1px solid ${primary ? "#f4f4f2" : "rgba(244,244,242,0.22)"}`,
-      background: primary ? "#f4f4f2" : "transparent",
-      color: primary ? "#0b0b0c" : "#cfcfcb",
-      cursor: "pointer",
-    }) as const;
+  const btn = action;
 
   const live = phase !== "consent" && phase !== "error";
 
@@ -240,8 +231,8 @@ export default function GestureCamera({
         ...(wide
           ? { right: 16, bottom: 16, width: 380 }
           : { left: 0, right: 0, top: 0, width: "100%" }),
-        background: "rgba(16, 16, 17, 0.92)",
-        border: "1px solid rgba(244, 244, 242, 0.14)",
+        background: "rgba(15, 15, 16, 0.96)",
+        border: "1px solid rgba(255, 255, 255, 0.14)",
         borderRadius: wide ? 18 : "0 0 18px 18px",
         boxShadow: "0 30px 80px rgba(0,0,0,0.55)",
         backdropFilter: "blur(16px)",
@@ -271,7 +262,7 @@ export default function GestureCamera({
               justifyContent: "center",
               ...display,
               fontSize: phase === "countdown" ? 88 : 22,
-              color: "#f4f4f2",
+              color: "#ededed",
               textShadow: "0 2px 20px rgba(0,0,0,0.6)",
             }}
           >
@@ -286,13 +277,13 @@ export default function GestureCamera({
               left: 0,
               bottom: 0,
               height: 3,
-              background: "#f4f4f2",
+              background: "#ededed",
               animation: `cam-fill ${RECORD_MS}ms linear forwards`,
             }}
           />
         )}
         {phase === "loading" && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#cfcfcb", fontSize: 13 }}>
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#a1a1a1", fontSize: 13 }}>
             Starting the tracker…
           </div>
         )}
@@ -302,11 +293,11 @@ export default function GestureCamera({
         {phase === "consent" && (
           <>
             <div style={{ ...display, fontSize: 21 }}>Do it yourself</div>
-            <p style={{ fontSize: 13, color: "#cfcfcb", opacity: 0.78, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: "#a1a1a1", opacity: 0.78, lineHeight: 1.5 }}>
               Do the gesture into the camera, full out, and the Studio reads how you moved. The camera stays on this
               device: nothing is recorded or sent, only your joints are tracked while you move.
             </p>
-            <p style={{ fontSize: 12, color: "#cfcfcb", opacity: 0.55, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 12, color: "#a1a1a1", opacity: 0.55, lineHeight: 1.5 }}>
               Prop the phone up and step back until your head, shoulders, arms and hips are in frame.
             </p>
             <div style={{ display: "flex", gap: 8 }}>
@@ -322,7 +313,7 @@ export default function GestureCamera({
 
         {phase === "error" && (
           <>
-            <p style={{ fontSize: 13, color: "#f4f4f2", lineHeight: 1.5 }}>{error}</p>
+            <p style={{ fontSize: 13, color: "#ededed", lineHeight: 1.5 }}>{error}</p>
             <button type="button" onClick={close} style={{ ...btn(false), justifySelf: "start" }}>
               Close
             </button>
@@ -331,7 +322,7 @@ export default function GestureCamera({
 
         {phase === "framing" && (
           <>
-            <p style={{ fontSize: 13, color: seen ? "#bfe3c4" : "#cfcfcb", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: seen ? "#bfe3c4" : "#a1a1a1", lineHeight: 1.5 }}>
               {seen ? "I can see you. Ready when you are." : "Step back until your shoulders, arms and hips are in frame."}
             </p>
             <div style={{ display: "flex", gap: 8 }}>
@@ -346,20 +337,20 @@ export default function GestureCamera({
         )}
 
         {(phase === "countdown" || phase === "recording") && (
-          <p style={{ fontSize: 13, color: "#cfcfcb", lineHeight: 1.5 }}>Do it once, the whole thing, full out.</p>
+          <p style={{ fontSize: 13, color: "#a1a1a1", lineHeight: 1.5 }}>Do it once, the whole thing, full out.</p>
         )}
 
         {phase === "result" && (
           <>
             {r && reading ? (
               <>
-                <div className="uppercase tracking-[0.22em] text-[#cfcfcb]" style={{ fontSize: 10, opacity: 0.6 }}>
+                <div className="text-[#a1a1a1]" style={{ fontSize: 10, opacity: 0.6 }}>
                   That read as
                 </div>
                 <div style={{ ...display, fontSize: 26, lineHeight: 1.15 }}>{r.sentence}</div>
-                <p style={{ fontSize: 13, color: "#f4f4f2" }}>{r.factors}.</p>
+                <p style={{ fontSize: 13, color: "#ededed" }}>{r.factors}.</p>
                 {reading.confidence < 0.4 && (
-                  <p style={{ fontSize: 12, color: "#cfcfcb", opacity: 0.65 }}>
+                  <p style={{ fontSize: 12, color: "#a1a1a1", opacity: 0.65 }}>
                     Not much movement to read. Go bigger for a clearer reading.
                   </p>
                 )}
@@ -384,7 +375,7 @@ export default function GestureCamera({
               </>
             ) : (
               <>
-                <p style={{ fontSize: 13, color: "#f4f4f2", lineHeight: 1.5 }}>
+                <p style={{ fontSize: 13, color: "#ededed", lineHeight: 1.5 }}>
                   I couldn&apos;t see enough movement to read. Step back so your arms stay in frame, and go full out.
                 </p>
                 <div style={{ display: "flex", gap: 8 }}>

@@ -19,7 +19,7 @@ import { display, EASE, mono } from "./style";
 type Hit = { id: number; title: string; character_name: string; play_title: string; author: string };
 type Full = Hit & { text: string; paywalled?: boolean };
 
-const quiet = { fontSize: 12.5, color: "#cfcfcb", opacity: 0.62, lineHeight: 1.5 } as const;
+const quiet = { fontSize: 12.5, color: "#a1a1a1", opacity: 0.62, lineHeight: 1.5 } as const;
 
 export function PieceChooser({
   signedIn,
@@ -66,7 +66,7 @@ export function PieceChooser({
       <p style={quiet}>
         <a
           href="/login?redirect=/studio"
-          style={{ color: "#f4f4f2", textDecoration: "underline", textUnderlineOffset: 3 }}
+          style={{ color: "#ededed", textDecoration: "underline", textUnderlineOffset: 3 }}
         >
           Sign in
         </a>{" "}
@@ -104,10 +104,10 @@ export function PieceChooser({
             style={{
               textAlign: "left",
               padding: "10px 12px",
-              borderRadius: 12,
-              background: "rgba(244,244,242,0.03)",
-              border: "1px solid rgba(244,244,242,0.1)",
-              color: "#f4f4f2",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              color: "#ededed",
               cursor: "pointer",
             }}
           >
@@ -196,7 +196,7 @@ export function PieceText({
               alignItems: "start",
               padding: "6px 8px",
               borderRadius: 10,
-              background: on ? "rgba(244,244,242,0.12)" : "transparent",
+              background: on ? "rgba(255,255,255,0.12)" : "transparent",
               transition: `background 200ms ${EASE}`,
             }}
           >
@@ -213,7 +213,7 @@ export function PieceText({
                   textAlign: "left",
                   fontSize: 14,
                   lineHeight: 1.6,
-                  color: on ? "#f4f4f2" : "#e4e4e0",
+                  color: on ? "#ededed" : "#d4d4d4",
                   background: "none",
                   border: 0,
                   padding: 0,
@@ -233,10 +233,10 @@ export function PieceText({
                       style={{
                         fontSize: 11,
                         padding: "2px 8px",
-                        borderRadius: 999,
-                        border: "1px solid rgba(244,244,242,0.5)",
-                        background: m.id === activeMoment ? "#f4f4f2" : "rgba(244,244,242,0.14)",
-                        color: "#f4f4f2",
+                        borderRadius: 6,
+                        border: "1px solid rgba(255,255,255,0.5)",
+                        background: m.id === activeMoment ? "#ededed" : "rgba(255,255,255,0.14)",
+                        color: "#ededed",
                         cursor: "pointer",
                       }}
                     >
@@ -250,21 +250,21 @@ export function PieceText({
         );
       })}
       {full.paywalled && (
-        <div style={{ marginTop: 12, padding: "12px 14px", border: "1px solid rgba(244,244,242,0.5)" }}>
-          <p style={{ fontSize: 13, color: "#f4f4f2", lineHeight: 1.5 }}>
+        <div style={{ marginTop: 12, padding: "12px 14px", border: "1px solid rgba(255,255,255,0.5)" }}>
+          <p style={{ fontSize: 13, color: "#ededed", lineHeight: 1.5 }}>
             That&apos;s the opening. Your free reads this month are used, and Plus opens the whole piece.
           </p>
           <a
             href="/pricing"
-            className="uppercase tracking-[0.14em]"
+            
             style={{
               display: "inline-block",
               marginTop: 10,
               fontSize: 10.5,
               padding: "7px 12px",
-              borderRadius: 999,
-              background: "#f4f4f2",
-              color: "#0b0b0c",
+              borderRadius: 6,
+              background: "#ededed",
+              color: "#000000",
             }}
           >
             See Plus

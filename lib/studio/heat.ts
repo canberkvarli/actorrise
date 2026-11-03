@@ -15,12 +15,12 @@ export function heatOf(p: EffortPoint): number {
 
 type RGB = [number, number, number];
 
-// White → warm white → amber → orange → red.
+// White until past the middle (neutral reads white), then amber, orange, red.
 const STOPS: [number, RGB][] = [
   [0.0, [0.96, 0.96, 0.95]],
-  [0.35, [1.0, 0.93, 0.84]],
-  [0.55, [1.0, 0.7, 0.32]],
-  [0.75, [1.0, 0.42, 0.12]],
+  [0.55, [0.98, 0.95, 0.9]],
+  [0.7, [1.0, 0.72, 0.34]],
+  [0.85, [1.0, 0.42, 0.12]],
   [1.0, [0.9, 0.15, 0.17]],
 ];
 

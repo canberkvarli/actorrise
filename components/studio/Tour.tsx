@@ -84,8 +84,8 @@ export default function Tour({ onClose }: { onClose: () => void }) {
     >
       <div style={{ width: "min(100%, 460px)", textAlign: "center" }}>
         <div key={i} style={{ animation: `studio-in 420ms ${EASE}` }}>
-          <div style={{ ...display, fontSize: 28, lineHeight: 1.2, color: "#f4f4f2" }}>{c.title}</div>
-          <p style={{ fontSize: 15, lineHeight: 1.55, color: "#cfcfcb", marginTop: 12 }}>{c.body}</p>
+          <div style={{ ...display, fontSize: 28, lineHeight: 1.2, color: "#ededed" }}>{c.title}</div>
+          <p style={{ fontSize: 15, lineHeight: 1.55, color: "#a1a1a1", marginTop: 12 }}>{c.body}</p>
         </div>
         <div aria-hidden style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 22 }}>
           {CARDS.map((_, n) => (
@@ -95,7 +95,7 @@ export default function Tour({ onClose }: { onClose: () => void }) {
                 width: n === i ? 18 : 6,
                 height: 6,
                 borderRadius: 3,
-                background: n === i ? "#f4f4f2" : "rgba(244,244,242,0.3)",
+                background: n === i ? "#ededed" : "rgba(255,255,255,0.3)",
                 transition: `width 300ms ${EASE}`,
               }}
             />
@@ -109,10 +109,10 @@ export default function Tour({ onClose }: { onClose: () => void }) {
               style={{
                 fontSize: 12,
                 padding: "10px 18px",
-                borderRadius: 999,
+                borderRadius: 6,
                 background: "transparent",
-                border: "1px solid rgba(244,244,242,0.25)",
-                color: "#cfcfcb",
+                border: "1px solid rgba(255,255,255,0.25)",
+                color: "#a1a1a1",
                 cursor: "pointer",
               }}
             >
@@ -125,10 +125,10 @@ export default function Tour({ onClose }: { onClose: () => void }) {
             style={{
               fontSize: 12,
               padding: "10px 22px",
-              borderRadius: 999,
-              background: "#f4f4f2",
-              border: "1px solid #f4f4f2",
-              color: "#0b0b0c",
+              borderRadius: 6,
+              background: "#ededed",
+              border: "1px solid #ededed",
+              color: "#000000",
               cursor: "pointer",
             }}
           >
