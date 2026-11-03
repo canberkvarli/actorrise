@@ -60,7 +60,7 @@ type Screen = {
  * the warm glow of a ghost light; paper is the light house style. `store` shows the App Store badge
  * style button (use it for Ghost Light), otherwise `action` is plain text like actorrise.com. */
 type End = { kind: "end"; seconds: number; brand: string; line: string; action: string; icon?: string; bg?: "ink" | "paper"; store?: boolean };
-/** Sound effects on a beat, from public/sfx/cine: impact, reveal, note, switch, tick, heartbeat, room, riser.
+/** Sound effects on a beat, from public/sfx/cine: impact, reveal, note, switch, tick, heartbeat, room, riser, chime (the happy close).
  * `at` is seconds into the beat (negative starts before the cut, e.g. a riser at -1.5). Few and heavy. */
 export type Cue = { name: string; at?: number; vol?: number };
 export type ReelBeat = (Title | Broll | Screen | End) & { sfx?: Cue[] };

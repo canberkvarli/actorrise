@@ -3,6 +3,19 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-03, evening (wins over everything below)
+
+Canberk, after the curtain film: "it's good, we need more like that."
+- **More real one-shot films.** Next idea to film: the empty chair story from the drawn films, as
+  live action. A wide shot from the house, someone alone on the stage, waiting for their partner
+  who has not come. Same rules as Real films below: one shot, wide, no closeups, lines over it.
+- **Endings are happy, not dark.** Close on one bright chime (sfx `chime`, a single bell ping
+  with a fifth after it, about 0.9s into the end beat), not the low piano and timpani `reveal`.
+  The end card can stay on the dark stage, but the sound lifts.
+- **Drawn films: sound effects, not music.** Little to no music bed. Ping, pong, toing, boing,
+  clicks, taps, pops on every move, so the drawing feels alive. Add those sounds to
+  `public/sfx` when a drawn film needs one that does not exist.
+
 ## 2026-11-03, looks (wins over everything below)
 
 Canberk: "like ElevenLabs or a startup: different styles, different captions, different colours,

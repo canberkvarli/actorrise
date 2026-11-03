@@ -151,10 +151,31 @@ def riser():
     return tone + air
 
 
+def chime():
+    """The happy close (Canberk, 2026-11-03: "a happy one ping chime, no need to be super dark").
+    One bright bell ping, a fifth above it a beat later, synthesized (inharmonic bell partials)."""
+    sec = 2.6
+    tt = t(sec)
+    def bell(f, at, amp):
+        y = np.zeros_like(tt)
+        n0 = int(at * SR)
+        u = tt[: len(tt) - n0]
+        for ratio, a, d in ((1.0, 1.0, 1.6), (2.0, 0.45, 0.9), (2.76, 0.25, 0.6), (5.4, 0.12, 0.25)):
+            y[n0:] += a * np.sin(2 * np.pi * f * ratio * u) * np.exp(-u / d)
+        y[n0:] *= np.minimum(1, u / 0.004)
+        return y * amp
+    x = bell(1046.5, 0.0, 1.0) + bell(1568.0, 0.11, 0.55)
+    return verb(x, 2.0, 0.3)[: int(sec * SR)]
+
+
 if __name__ == "__main__":
+    only = sys.argv[1:]  # e.g. `make_cine_sfx.py chime` builds just that one
+    if only == ["chime"]:
+        save("chime", chime(), 0.4)
+        sys.exit(0)
     if not os.path.isdir(mm.SAMPLES):
         import subprocess
         subprocess.run([os.path.join(mm.ROOT, "scripts", "get_samples.sh")], check=True)
     for name, fn, w in [("impact", impact, 0.5), ("reveal", reveal, 0.6), ("note", note, 0.5), ("switch", switch, 0.2),
-                        ("tick", tick, 0.0), ("heartbeat", heartbeat, 0.0), ("room", room, 0.8), ("riser", riser, 0.4)]:
+                        ("tick", tick, 0.0), ("heartbeat", heartbeat, 0.0), ("room", room, 0.8), ("riser", riser, 0.4), ("chime", chime, 0.4)]:
         save(name, fn(), w)
