@@ -29,8 +29,11 @@ export function TheatreFooter() {
         borderTop: "1px solid var(--t-line-dark)",
       }}
     >
-      <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-x-8 gap-y-4">
-        <div className="flex items-center gap-3.5">
+      {/* Phone: brand, then the links as a two-column grid with real tap
+          height, then a utility row (language + socials) under a rule.
+          From sm up it collapses back into the single flowing row. */}
+      <div className="mx-auto flex max-w-[1240px] flex-col gap-7 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-8 sm:gap-y-4">
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3.5">
           <Link prefetch={false} href="/" aria-label={t("nav.home")}>
             <Image
               src="/transparent_textlogo.png"
@@ -54,24 +57,31 @@ export function TheatreFooter() {
           </p>
         </div>
         <div
-          className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm"
+          className="flex flex-col gap-5 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-1.5"
           style={{ color: "var(--t-muted-light-2)" }}
         >
-          {LINKS.map((l) => (
-            <Link prefetch={false}
-              key={l.href}
-              href={l.href}
-              className="transition-colors hover:!text-[var(--t-gel)]"
-            >
-              {t(l.label)}
-            </Link>
-          ))}
-          <ContactModalTrigger className="!text-[var(--t-muted-light-2)] hover:!text-[var(--t-gel)]">
-            {t("landingFooter.contact")}
-          </ContactModalTrigger>
-          <LandingFooterAuthLink />
+          <div className="grid grid-cols-2 gap-x-6 text-left [&>*]:py-2 sm:flex sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-1.5 sm:[&>*]:py-0">
+            {LINKS.map((l) => (
+              <Link prefetch={false}
+                key={l.href}
+                href={l.href}
+                className="transition-colors hover:!text-[var(--t-gel)]"
+              >
+                {t(l.label)}
+              </Link>
+            ))}
+            <ContactModalTrigger className="text-left !text-[var(--t-muted-light-2)] hover:!text-[var(--t-gel)]">
+              {t("landingFooter.contact")}
+            </ContactModalTrigger>
+            <LandingFooterAuthLink />
+          </div>
+
+          <div
+            className="flex items-center gap-5 border-t pt-4 sm:border-0 sm:pt-0"
+            style={{ borderColor: "var(--t-line-dark)" }}
+          >
           {/* Footer and Settings only, never the nav (Canberk, 2026-11-02). */}
-          <LanguageSwitch tone="dark" />
+          <LanguageSwitch tone="dark" className="-ml-1.5 sm:ml-0" />
 
           {/* Icons only here. The founder note spells the handles out, because
               someone who has just read it wants something to type; this row is
@@ -96,12 +106,13 @@ export function TheatreFooter() {
               {...externalProps(href)}
               aria-label={label}
               title={label}
-              className="transition-colors hover:!text-[var(--t-gel)]"
+              className="-m-1.5 inline-flex p-1.5 transition-colors hover:!text-[var(--t-gel)]"
             >
               <Icon className="h-[18px] w-[18px]" aria-hidden />
             </a>
             );
           })}
+          </div>
         </div>
       </div>
     </footer>

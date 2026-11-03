@@ -8,7 +8,11 @@ import { ContactModal } from "./ContactModal";
 import { APPROVED_PARTNERS } from "@/data/partners";
 import { useT, type MessageKey } from "@/lib/i18n";
 
-const linkCls = "shrink-0 transition-colors hover:!text-[var(--t-gel)]";
+const linkCls = "transition-colors hover:!text-[var(--t-gel)] sm:shrink-0";
+
+/* Two columns with tap height on a phone, one flowing row from sm up. */
+const gridCls =
+  "grid min-w-0 grid-cols-2 gap-x-6 text-sm leading-snug [&>*]:py-2 sm:flex sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-2 sm:[&>*]:py-0";
 
 /* Labels are dictionary keys; play titles in BROWSE stay as written in every language. */
 const LINKS: { href: string; label: MessageKey }[] = [
@@ -66,8 +70,10 @@ export function MarketingFooter() {
         }}
       >
         <div className="mx-auto max-w-[1240px]">
-          <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
-            <div className="flex items-center gap-3.5">
+          {/* Phone: brand stacked, link lists as two-column grids with real
+              tap height. From sm up, the flowing rows come back. */}
+          <div className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-8 sm:gap-y-4">
+            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3.5">
               <Link prefetch={false} href="/" aria-label={t("nav.home")}>
                 <Image
                   src="/transparent_textlogo.png"
@@ -92,7 +98,7 @@ export function MarketingFooter() {
             </div>
 
             <nav
-              className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 text-sm"
+              className={gridCls}
               style={{ color: "var(--t-muted-light-2)" }}
               aria-label={t("marketingFooter.linksLabel")}
             >
@@ -119,11 +125,16 @@ export function MarketingFooter() {
           </div>
 
           <nav
-            className="mt-5 flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 text-sm"
-            style={{ color: "var(--t-muted-light-2)" }}
+            className={`mt-6 border-t pt-4 sm:mt-5 sm:border-0 sm:pt-0 ${gridCls}`}
+            style={{ color: "var(--t-muted-light-2)", borderColor: "var(--t-line-dark)" }}
             aria-label={t("marketingFooter.browseLabel")}
           >
-            <span style={{ color: "var(--t-faint)" }}>{t("marketingFooter.browse")}</span>
+            <span
+              className="col-span-2 text-xs uppercase tracking-wide sm:text-sm sm:normal-case sm:tracking-normal"
+              style={{ color: "var(--t-faint)" }}
+            >
+              {t("marketingFooter.browse")}
+            </span>
             {BROWSE.map((l) => (
               <Link prefetch={false} key={l.href} href={l.href} className={linkCls}>
                 {"key" in l ? t(l.key) : l.title}
