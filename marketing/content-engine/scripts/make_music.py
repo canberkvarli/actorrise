@@ -199,6 +199,11 @@ def compose(spec):
     S = STYLES[style]
     rng = np.random.default_rng(int(hashlib.md5((m.get("seed") or spec["id"]).encode()).hexdigest()[:8], 16))
 
+    if "beats" in spec:  # a reel: every beat is a cut, the drop lands on the first app screen
+        kinds = {"title": "title", "broll": "broll", "screen": "screen", "end": "end"}
+        spec = dict(spec, scenes=[{"type": kinds[b["kind"]], "seconds": b["seconds"]} for b in spec["beats"]])
+        if "drop" not in m:
+            m = dict(m, drop="screen" if any(b["kind"] == "screen" for b in spec["beats"]) else "end")
     frames, starts, acc = [], [], 0
     for sc in spec["scenes"]:
         starts.append(acc / FPS)

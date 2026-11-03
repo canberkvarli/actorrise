@@ -9,6 +9,7 @@ mkdir -p out
 # Cloud sessions ship their own Chromium; never run `remotion browser ensure` there.
 CHROME="${CHROME:-$(ls -d /opt/pw-browsers/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell 2>/dev/null | head -1 || true)}"
 BROWSER_FLAG=(); [ -n "$CHROME" ] && BROWSER_FLAG=(--browser-executable="$CHROME")
+COMP="$(python3 -c 'import json,sys; print("ReelVideo" if "beats" in json.load(open(sys.argv[1])) else "StoryVideo")' "$SPEC")"
 PROPS="$(python3 -c 'import json,sys; print(json.dumps({"spec": json.load(open(sys.argv[1]))}))' "$SPEC")"
 # Music bed, if the spec asks for one (public/music/<id>.wav).
 if python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get("music") else 1)' "$SPEC"; then
@@ -17,10 +18,10 @@ if python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get("
 fi
 CORES="$(nproc 2>/dev/null || echo 2)"
 if [ "${2:-}" = "still" ]; then
-  npx remotion still src/index.ts StoryVideo "out/${ID}_${3:-0}.png" --frame="${3:-0}" --props="$PROPS" "${BROWSER_FLAG[@]}" --scale=0.4
+  npx remotion still src/index.ts "$COMP" "out/${ID}_${3:-0}.png" --frame="${3:-0}" --props="$PROPS" "${BROWSER_FLAG[@]}" --scale=0.4
   exit 0
 fi
-npx remotion render src/index.ts StoryVideo "out/${ID}.raw.mp4" --props="$PROPS" "${BROWSER_FLAG[@]}" \
+npx remotion render src/index.ts "$COMP" "out/${ID}.raw.mp4" --props="$PROPS" "${BROWSER_FLAG[@]}" \
   --concurrency="$CORES" --crf=20 --x264-preset=veryfast
 # Loudness for phone speakers.
 ffmpeg -loglevel error -y -i "out/${ID}.raw.mp4" -c:v copy -af "loudnorm=I=-16:TP=-1.5:LRA=11" -ar 48000 -c:a aac -b:a 160k "out/${ID}.mp4"
