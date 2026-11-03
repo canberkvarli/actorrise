@@ -33,8 +33,13 @@ import urllib.request
 from pathlib import Path
 from types import SimpleNamespace
 
+from dotenv import load_dotenv
+
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
+# The laptop keeps the keys in backend/.env; a cloud session has them in its
+# environment already, and load_dotenv never overrides those.
+load_dotenv(backend_dir / ".env")
 
 from app.services.rehearsal.language import script_language  # noqa: E402
 
@@ -42,8 +47,11 @@ PAGE = 50
 
 
 def _rest():
-    base = os.environ["SUPABASE_URL"].rstrip("/") + "/rest/v1/"
-    key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not url or not key:
+        raise SystemExit("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set (backend/.env or the environment).")
+    base = url.rstrip("/") + "/rest/v1/"
     headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
     def call(method: str, path: str, body=None, prefer: str | None = None):
