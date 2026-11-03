@@ -80,6 +80,62 @@ Two rules hold there:
   written to is the `contact_log` table (`scripts/contact_log.py`), not a file, so the check
   before every email works the same in both places.
 
+# Working rules (Canberk's standing decisions, for every session, cloud or laptop)
+
+These lived only in the laptop's memory until 2026-11-03. A cloud session has no memory, so
+they are here. When he gives a new standing rule, add it here, not to a memory file.
+
+**Git and shipping**
+- Solo developer. Never open a pull request. Commit and push to `main` without asking; delete
+  merged branches. Work in a worktree off `origin/main`, never on someone else's branch.
+- A push touching `backend/**` deploys the API on Render by itself. **Migrate before you push**:
+  a model that names a column the database lacks makes every request 500 (a prod search outage,
+  2026-07-23). Migrations are `backend/scripts/add_*.py`, `CREATE ... IF NOT EXISTS`, RLS on.
+- Marketing pages (landing, pricing, for-teachers) need his go-ahead before they are pushed.
+- Run the full backend suite before pushing: `cd backend && .venv/bin/python -m pytest tests/ -q`.
+
+**The database**
+- Supabase sits near its 500 MB cap and most of it is the embedding column and its HNSW index.
+  No re-embed at a smaller size, no halfvec. A hidden row carries no embedding; un-hiding goes
+  through `unhide()` (`services/monologue_visibility.py`), which re-embeds it.
+- Prod reads: `engine.connect().execution_options(postgresql_readonly=True)`. The pooler ignores
+  the read-only startup option. Any other prod write: ask him first, except `class_link.py`,
+  `grant_comp.py`, `opt_out.py` and `contact_log.py add`, which are yours to run.
+- A second DB connection inside a request jams the pool: use `SideSessionLocal`.
+- `monologues.word_count` and `estimated_duration_seconds` are stored: after editing `text`,
+  run `scripts/resync_word_counts.py`.
+- New monologues come in through `services/data_ingestion/pipeline.py::ingest_play()` only.
+  A film or TV reference row goes in only if that film yields pieces, never just the metadata.
+  Never host film or TV scene text publicly.
+- "Not in the library" needs three places checked: `plays.title`, `monologues.title`,
+  `monologues.character_name`. A substring hit on a character name is not the title.
+
+**Money**
+- Stripe `active` is not paid. Paid is an `invoice.paid` with an amount. A comp is a
+  `user_subscriptions` row with no `stripe_subscription_id`. App money: `revenuecat_report.py`
+  is the truth, not the webhook rows.
+- Revenue is the goal (2026-10-29): every free thing gets an end and a paid next step.
+- No money for placement, ever: no ads, sponsorships, listings or affiliate fees.
+- Ghost Light pricing: change one thing at a time and read it before the next.
+
+**People and email** (on top of the marketing sections below)
+- Never write a name, email address, EIN, phone or street address into a committed file.
+  `docs/metrics/user-voice.md` gets quotes with no name and no address.
+- Never write to `ActorRise_Outreach_Tracker.xlsx`; reading it is fine.
+- Students are 13 and up. No middle-school outreach.
+- No social posts and no drafted X or Instagram copy unless he asks. Videos go through
+  TryPost, which he schedules himself: never post or schedule there. The daily video routine
+  is fed only through `CONTEXT.md` on the `content-engine` branch; do not edit the routine.
+
+**The product**
+- UI: only clickable things are rounded; tags and badges are sharp. Minimal cards, less text.
+  The typewriter font is for monologue text only; UI chrome is sans. Brand orange is
+  theme-dependent: use the `primary` tokens, never the hex. Fonts are local (`next/font/local`),
+  never Google.
+- A monologue run starts on the actor's first line: no "hear it read first" step.
+- Admin dashboards leave staff out (`services/admin_filters.test_user_filter`).
+- Keep ScenePartner, voice and `/practice` work in its own session; it is the riskiest code.
+
 # Answers go in the chat, not in report files
 
 Canberk, 2026-10-23: research, findings, designs and recommendations go straight
@@ -239,7 +295,7 @@ setting the fields by hand.
   - the note carries no offer, no price, no link, no CURTAIN, and is not a reply on an existing thread
 
   Everything else stays a draft: replies, organisations, educators, anything with Plus or a trial in it. Every note sent is listed in that run's summary with its subject, and the address
-  goes in outputs/conversion/written.txt. If a fact cannot be verified, the note stays a draft and the summary says so.
+  is logged with `scripts/contact_log.py add` (the `contact_log` table; written.txt is no longer written to). If a fact cannot be verified, the note stays a draft and the summary says so.
 - Post to social
 - Push marketing-page commits
 - Make up testimonials, user quotes, or stats
