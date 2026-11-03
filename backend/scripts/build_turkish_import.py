@@ -17,7 +17,12 @@ Input JSON (one play):
      "monologues": [{id, character, act, scene, text, scene_description_tr,
                      character_description_tr}]}
 
-    uv run python scripts/build_turkish_import.py <input.json> <out.sql>
+    uv run python scripts/build_turkish_import.py <input.json> <out.sql>            # SQL file only
+    uv run python scripts/build_turkish_import.py <input.json> <out.sql> --upload   # also insert, via Supabase REST
+
+--upload writes through PostgREST with SUPABASE_SERVICE_ROLE_KEY (web traffic,
+which a cloud session has), so ~450 KB of vectors never has to be pasted into a
+SQL tool. It inserts the play, then the monologues, all as 'pending'.
 
 Does not import app.main (no schedulers start).
 """
@@ -87,6 +92,7 @@ def main(src: str, out: str) -> None:
     )
 
     report = []
+    rows = []
     for m in mons:
         text = m["text"].strip()
         wc = len(re.sub(r"\([^)]*\)", "", text).split())
@@ -123,12 +129,53 @@ def main(src: str, out: str) -> None:
             ])
             + ");"
         )
+        rows.append({
+            "title": title, "character_name": m["character"], "text": text, "text_segments": segments(text),
+            "act": m.get("act"), "scene": m.get("scene"),
+            "character_gender": a.get("character_gender"), "character_age_range": a.get("character_age_range"),
+            "character_description": m.get("character_description_tr"), "word_count": wc,
+            "estimated_duration_seconds": round(wc / WPM * 60), "difficulty_level": a.get("difficulty_level"),
+            "primary_emotion": a.get("primary_emotion"), "emotion_scores": a.get("emotion_scores") or {},
+            "themes": themes or None, "tone": a.get("tone"), "scene_description": m.get("scene_description_tr"),
+            "embedding_vector": "[" + ",".join(f"{x:.6f}" for x in vec) + "]", "search_tags": tags or None,
+            "review_status": "pending",
+        })
         report.append((m["id"], wc, a.get("tone"), a.get("primary_emotion"), a.get("character_gender"), a.get("character_age_range")))
         print(f"  {m['id']:<28} {wc:>4}w  {a.get('tone')}/{a.get('primary_emotion')}  {a.get('character_gender')} {a.get('character_age_range')}")
 
     sql.append("COMMIT;")
     Path(out).write_text("\n".join(sql) + "\n")
     print(f"{len(mons)} monologues -> {out}")
+    if "--upload" in sys.argv:
+        upload(play, rows)
+
+
+def upload(play: dict, rows: list[dict]) -> None:
+    import os
+    import urllib.request
+
+    base = os.environ["SUPABASE_URL"].rstrip("/") + "/rest/v1/"
+    key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+
+    def post(table: str, body) -> list:
+        req = urllib.request.Request(
+            base + table, data=json.dumps(body, ensure_ascii=False).encode(), method="POST",
+            headers={"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json",
+                     "Prefer": "return=representation"})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return json.load(r)
+
+    p = post("plays", {
+        "title": play["title"], "author": play["author"], "year_written": play.get("year_written"),
+        "genre": play["genre"], "category": play["category"], "source_type": "play",
+        "copyright_status": "public_domain", "license_type": play.get("copyright_note"),
+        "source_url": play.get("source_url"), "publisher": play.get("publisher"),
+        "translator": play["translator"], "language": "tr"})[0]
+    print("play id", p["id"])
+    for r in rows:
+        r["play_id"] = p["id"]
+    ids = [m["id"] for m in post("monologues", rows)]
+    print("monologue ids", ids)
 
 
 if __name__ == "__main__":
