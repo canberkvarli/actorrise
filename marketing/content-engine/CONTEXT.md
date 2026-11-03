@@ -62,6 +62,11 @@ Pages Google sends people to most, 28 days: the monologue database, Lady Bird, B
 Character searches that now work (fixed 2026-11-01/02): Shiv Roy, Fleabag, Bing (Black
 Mirror), Lorelai Gilmore, Joker, Sherlock.
 
+New in the library (2026-11-02), teen screen pieces, the thinnest corner: Ferris Bueller's
+Day Off (3 Ferris), The Edge of Seventeen (3 Nadine), Mid90s (2), To All the Boys I've Loved
+Before (2 Lara Jean), Little Miss Sunshine (1 Frank). Harry Potter is in too (6: Tom Riddle,
+Harry, Draco, Lupin, Hagrid, Voldemort), on the Film tab. These are fair to show by name.
+
 Where the library is thin (searches that come back weak, 30 days): contemporary pieces for
 teens 44%, contemporary 34%, villains 53% (small numbers), against 24% overall. Do not make a
 video that promises these; they are where the library is weakest.
