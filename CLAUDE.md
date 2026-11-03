@@ -106,12 +106,18 @@ they are here. When he gives a new standing rule, add it here, not to a memory f
   use `halfvec_cosine_ops`. Do not re-embed at a smaller dimension. A hidden row usually carries
   no embedding; un-hiding goes through `unhide()` (`services/monologue_visibility.py`), which
   re-embeds it if the vector is missing.
-- **Language gate (CAN-19).** Every user-facing monologue list is English only by default:
-  `exclude_hidden()` applies `language_gate()`, and inline filters use `language_clause()` /
-  `language_hides()` (`services/search/semantic_search.py`). Only `/api/monologues/search`
-  widens it, and only for `X-ActorRise-Locale: tr` (sent by `lib/api.ts` from the Turkish UI).
-  New code that lists monologues must go through these; never widen a default.
-  Canberk, 2026-11-03: English speakers never see Turkish monologues.
+- **Language gate (CAN-19).** The UI language picks the library, everywhere: the Turkish UI
+  (`X-ActorRise-Locale: tr`, sent by `lib/api.ts`) is served **Turkish only**, everything else
+  **English only** (Canberk, 2026-11-03: "no Turkish actor can do English pieces; they have to
+  change the UI first", and "ScenePartner too, the community library too, everything").
+  The rule lives in `services/library_language.py`: a middleware sets the request's language,
+  and `exclude_hidden()` / `language_clause()` / `language_hides()` (`services/search/semantic_search.py`)
+  plus `play_id_clause()` / `script_clause()` follow it. No header or no request (iOS, crawlers,
+  emails, push, schedulers) is English. New code that lists monologues, scenes or scripts must
+  go through these; code that must stay English whatever the UI passes `DEFAULT_LANGUAGES`
+  (the public library count does). The actor's own things are never filtered (uploads, saves,
+  class shelf, anything opened by link). Uploads are marked Turkish from their text by a Play
+  `before_insert` hook. Any cache of library results must key on the language.
 - Prod reads: `engine.connect().execution_options(postgresql_readonly=True)`. The pooler ignores
   the read-only startup option. Any other prod write: ask him first, except `class_link.py`,
   `grant_comp.py`, `opt_out.py` and `contact_log.py add`, which are yours to run.
