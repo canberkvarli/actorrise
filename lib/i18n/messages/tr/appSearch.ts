@@ -11,7 +11,8 @@ export const appSearch: Widen<typeof en> = {
     modeFilmTv: "Film ve Dizi",
     sharedFacts: "(hepsi {label}.)",
     captionFilmTv: "(film ve dizi.)",
-    captionPlays: "(19.000 parça, İngilizce.)",
+    /* The Turkish UI is served the Turkish shelf only (CAN-19), so no English count here. */
+    captionPlays: "(Türkçe çeviriler.)",
     filtersDirection: "(kimsin, nasıl bir his, ne kadar vaktin var.)",
     showResults: "Sonuçları göster",
     faultDirection: "(arama karardı.)",
