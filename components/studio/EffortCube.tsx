@@ -25,7 +25,8 @@ import {
   type Role,
 } from "@/lib/studio/notebook";
 import type { ArcState, CornerLabel, PinLabel, SceneApi } from "./EffortCubeScene";
-import Notebook from "./Notebook";
+import { useAuth } from "@/lib/auth";
+import Notebook, { type Tab } from "./Notebook";
 import { display, EASE, mono } from "./style";
 import { useStudioSync } from "./useStudioSync";
 
@@ -86,7 +87,9 @@ export default function EffortCube() {
   // The role's notebook, kept in this browser for now.
   const [nb, setNb] = useState<NotebookData | null>(null);
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"questions" | "moments">("questions");
+  const [tab, setTab] = useState<Tab>("text");
+  const [line, setLine] = useState<number | null>(null);
+  const { user } = useAuth();
   const [activeMoment, setActiveMoment] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -147,18 +150,23 @@ export default function EffortCube() {
     const id = newId();
     editRole((r) => ({
       ...r,
-      moments: [...r.moments, { id, label: "", point: { ...pointRef.current }, note: "" }],
+      moments: [
+        ...r.moments,
+        { id, label: "", point: { ...pointRef.current }, note: "", ...(r.piece && line !== null ? { line } : {}) },
+      ],
     }));
     setActiveMoment(id);
-    setTab("moments");
+    // Pinning from the text keeps you on the text; otherwise name the new moment.
+    if (!(role?.piece && line !== null && tab === "text")) setTab("moments");
     setOpen(true);
-  }, [editRole]);
+  }, [editRole, line, role?.piece, tab]);
 
   const goTo = useCallback(
     (id: string) => {
       const m = moments.find((x) => x.id === id);
       if (!m) return;
       setActiveMoment(id);
+      if (typeof m.line === "number") setLine(m.line);
       move(m.point);
     },
     [moments, move],
@@ -176,6 +184,7 @@ export default function EffortCube() {
       const m = moments[i];
       if (!m) return setPlaying(false);
       setActiveMoment(m.id);
+      if (typeof m.line === "number") setLine(m.line);
       move(m.point);
       i += 1;
     };
@@ -288,7 +297,6 @@ export default function EffortCube() {
                 fontSize: 11,
                 lineHeight: 1,
                 padding: "4px 7px",
-                borderRadius: 6,
                 background: hot ? "rgba(203,75,0,0.28)" : "rgba(19,11,8,0.62)",
                 border: `1px solid ${hot ? "rgba(255,178,122,0.45)" : "rgba(243,217,191,0.1)"}`,
                 color: hot ? "#ffe2c4" : "#ead8c6",
@@ -316,7 +324,6 @@ export default function EffortCube() {
                 minWidth: 16,
                 height: 16,
                 padding: "0 4px",
-                borderRadius: 8,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -619,6 +626,7 @@ export default function EffortCube() {
             setNb((cur) => (cur ? { ...cur, activeId: id } : cur));
             setActiveMoment(null);
             setPlaying(false);
+            setLine(null);
           }}
           onNewRole={() => {
             const r = newRole();
@@ -647,6 +655,9 @@ export default function EffortCube() {
           onPlay={() => setPlaying((v) => !v)}
           fine={fine}
           sync={sync}
+          signedIn={!!user}
+          line={line}
+          onLine={setLine}
         />
       )}
 

@@ -15,6 +15,17 @@ export type Moment = {
   label: string;
   point: EffortPoint;
   note: string;
+  /** The line of the piece this moment belongs to, when the role has a piece. */
+  line?: number;
+};
+
+/** The monologue a role is working on. Only who and what: the text is read live from the library. */
+export type Piece = {
+  id: number;
+  title: string;
+  character: string;
+  play: string;
+  author: string;
 };
 
 export type Role = {
@@ -25,6 +36,7 @@ export type Role = {
   scene: string;
   answers: Partial<Record<QuestionId, string>>;
   moments: Moment[];
+  piece?: Piece | null;
   updatedAt: number;
 };
 

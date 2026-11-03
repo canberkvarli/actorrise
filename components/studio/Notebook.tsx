@@ -10,8 +10,11 @@ import { useEffect, useRef, useState } from "react";
 import { read, type EffortPoint } from "@/lib/studio/effort";
 import { answered, arcRange, type Moment, type Notebook as NotebookData, type Role } from "@/lib/studio/notebook";
 import { GROUPS, QUESTIONS, type Question } from "@/lib/studio/questions";
+import { PieceChooser, PieceText } from "./PieceText";
 import { display, EASE, mono } from "./style";
 import type { SyncStatus } from "./useStudioSync";
+
+export type Tab = "text" | "questions" | "moments";
 
 type Props = {
   open: boolean;
@@ -19,8 +22,11 @@ type Props = {
   width: number;
   nb: NotebookData;
   role: Role;
-  tab: "questions" | "moments";
-  onTab: (t: "questions" | "moments") => void;
+  tab: Tab;
+  onTab: (t: Tab) => void;
+  signedIn: boolean;
+  line: number | null;
+  onLine: (i: number | null) => void;
   onClose: () => void;
   onLeave: () => void;
   onEdit: (fn: (r: Role) => Role) => void;
@@ -148,6 +154,14 @@ export default function Notebook(props: Props) {
         <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
           <button
             type="button"
+            onClick={() => onTab("text")}
+            className="uppercase tracking-[0.14em]"
+            style={chip(tab === "text")}
+          >
+            Text
+          </button>
+          <button
+            type="button"
             onClick={() => onTab("questions")}
             className="uppercase tracking-[0.14em]"
             style={chip(tab === "questions")}
@@ -167,7 +181,7 @@ export default function Notebook(props: Props) {
 
       {/* Body. */}
       <div className="studio-scroll" style={{ flex: 1, overflowY: "auto", padding: "14px 18px 22px" }}>
-        {tab === "questions" ? <Questions {...props} /> : <Moments {...props} />}
+        {tab === "text" ? <TextTab {...props} /> : tab === "questions" ? <Questions {...props} /> : <Moments {...props} />}
       </div>
 
       {fine && (
@@ -221,6 +235,68 @@ function SyncLine({ sync }: { sync: SyncStatus }) {
           Sign in to keep it everywhere
         </a>
       )}
+    </div>
+  );
+}
+
+function TextTab(props: Props) {
+  const { role, onEdit, signedIn } = props;
+  const [choosing, setChoosing] = useState(false);
+  const piece = role.piece;
+
+  if (!piece || choosing)
+    return (
+      <div style={{ display: "grid", gap: 12 }}>
+        <p style={quiet}>
+          Bring in the piece you&apos;re working on. You&apos;ll read it here line by line and pin moments to the
+          lines.
+        </p>
+        <PieceChooser
+          signedIn={signedIn}
+          onCancel={piece ? () => setChoosing(false) : undefined}
+          onChoose={(p) => {
+            onEdit((r) => ({
+              ...r,
+              piece: p,
+              name: r.name || p.character,
+              scene: r.scene || p.play,
+              // Lines belong to the old piece; the moments stay, unpinned from lines.
+              moments: r.piece && r.piece.id !== p.id ? r.moments.map((m) => ({ ...m, line: undefined })) : r.moments,
+            }));
+            setChoosing(false);
+          }}
+        />
+      </div>
+    );
+
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ ...display, fontSize: 17 }}>{piece.character}</div>
+          <div style={{ fontSize: 12, opacity: 0.6 }}>
+            {piece.play}
+            {piece.author ? `, ${piece.author}` : ""}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setChoosing(true)}
+          className="uppercase tracking-[0.12em]"
+          style={chip()}
+        >
+          Change
+        </button>
+      </div>
+      <PieceText
+        piece={piece}
+        moments={role.moments}
+        line={props.line}
+        onLine={props.onLine}
+        onGoTo={props.onGoTo}
+        activeMoment={props.activeMoment}
+        fine={props.fine}
+      />
     </div>
   );
 }
@@ -572,6 +648,11 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                 }}
               >
                 {read(m.point).sentence}
+                {typeof m.line === "number" && (
+                  <span style={{ ...mono, marginLeft: 8, fontSize: 10.5, padding: "1px 5px", border: "1px solid rgba(243,217,191,0.2)", color: "#e9d6c4" }}>
+                    line {m.line + 1}
+                  </span>
+                )}
               </button>
               <textarea
                 className="studio-field"

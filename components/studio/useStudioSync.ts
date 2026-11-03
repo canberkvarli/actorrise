@@ -22,7 +22,7 @@ type PutResult = { applied: boolean; role: ServerRole };
 
 const roleBody = (r: Role) => ({
   updated_at: r.updatedAt,
-  data: { name: r.name, scene: r.scene, answers: r.answers, moments: r.moments },
+  data: { name: r.name, scene: r.scene, piece: r.piece ?? null, answers: r.answers, moments: r.moments },
 });
 
 export function useStudioSync(

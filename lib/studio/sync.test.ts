@@ -87,3 +87,25 @@ describe("dirty", () => {
     expect(dirty(n).map((r) => r.id)).toEqual(["b"]);
   });
 });
+
+describe("roleFromServer: the piece and lines", () => {
+  it("keeps the piece and each moment's line, and drops a bad line", () => {
+    const s: ServerRole = {
+      id: "p",
+      updated_at: 9,
+      deleted: false,
+      data: {
+        name: "Nina",
+        piece: { id: 42, title: "Nina", character: "Nina", play: "The Seagull", author: "Chekhov" },
+        moments: [
+          { id: "a", point: { weight: 0, space: 0, time: 0 }, line: 3 },
+          { id: "b", point: { weight: 0, space: 0, time: 0 }, line: -1 },
+        ],
+      },
+    };
+    const m = merge(nb([newRole()]), [s]);
+    const r = m.nb.roles.find((x) => x.id === "p")!;
+    expect(r.piece?.id).toBe(42);
+    expect(r.moments.map((x) => x.line)).toEqual([3, undefined]);
+  });
+});
