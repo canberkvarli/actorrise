@@ -377,6 +377,7 @@ export const appAccount: Widen<typeof en> = {
     oneMonth: "1 ay",
     onClassPlan: "Sınıf planında, {date} tarihine kadar",
     eachFromJoin: "Her biri katıldığı günden itibaren, benden",
+    everyStudent: "Katılan her öğrenci o günden itibaren bir ay Plus alır, benden.",
     bringTitle: "Sınıfını getir",
     bringBody:
       "Öğrencilerin için bir bağlantı oluştur. Onunla kaydolan herkes bir ay Plus alır, benden.",
