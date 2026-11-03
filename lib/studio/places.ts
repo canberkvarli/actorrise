@@ -9,6 +9,7 @@
 
 import type { EffortPoint } from "./effort";
 import { lastChange } from "./after";
+import type { GestureSpec } from "./gesture";
 import type { Role } from "./notebook";
 import type { QuestionId } from "./questions";
 
@@ -16,6 +17,7 @@ export type Cue =
   | { kind: "breath"; ms: number }
   | { kind: "answer"; ask: string; text: string; ms: number }
   | { kind: "moment"; index: number; label: string; line: string | null; note: string; point: EffortPoint; ms: number }
+  | { kind: "gesture"; spec: GestureSpec; ms: number }
   | { kind: "first"; line: string; ms: number }
   | { kind: "go"; ms: number };
 
@@ -46,6 +48,8 @@ export function buildCues(role: Role, lines: string[] = [], reducedMotion = fals
     const a = role.answers[id]?.trim();
     if (a) cues.push({ kind: "answer", ask, text: gist(a), ms: 5000 + Math.min(3000, a.length * 20) });
   }
+  // The gesture: full out, then smaller, then only inside, just before the arc.
+  if (role.gesture) cues.push({ kind: "gesture", spec: role.gesture, ms: reducedMotion ? 5000 : 11000 });
   role.moments.forEach((m, index) => {
     const line = typeof m.line === "number" ? (lines[m.line] ?? null) : null;
     cues.push({
@@ -65,5 +69,5 @@ export function buildCues(role: Role, lines: string[] = [], reducedMotion = fals
 
 /** Is there enough here to be worth running? A breath and "Go." alone isn't. */
 export function hasPlaces(role: Role): boolean {
-  return role.moments.length > 0 || ASK.some(({ id }) => role.answers[id]?.trim());
+  return !!role.gesture || role.moments.length > 0 || ASK.some(({ id }) => role.answers[id]?.trim());
 }

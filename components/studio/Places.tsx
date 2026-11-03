@@ -13,6 +13,7 @@ import { read, type EffortPoint } from "@/lib/studio/effort";
 import type { Role } from "@/lib/studio/notebook";
 import { trackEvent } from "@/lib/events";
 import { buildCues } from "@/lib/studio/places";
+import { describe, type GestureSpec } from "@/lib/studio/gesture";
 import { display, EASE, mono } from "./style";
 
 type Props = {
@@ -23,11 +24,13 @@ type Props = {
   onLine: (i: number | null) => void;
   /** Which moment is playing (its air follows), or null between moments. */
   onMoment: (i: number | null) => void;
+  /** The gesture cue: the figure takes the stage and goes inside over `ms`. */
+  onGesture: (spec: GestureSpec | null, ms: number) => void;
   /** `worked`: they got at least halfway, so it counts as having run the piece. */
   onClose: (worked: boolean) => void;
 };
 
-export default function Places({ role, lines, reducedMotion, onPoint, onLine, onMoment, onClose }: Props) {
+export default function Places({ role, lines, reducedMotion, onPoint, onLine, onMoment, onGesture, onClose }: Props) {
   // Built once: the cues shouldn't shift under the actor while it plays.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const cues = useMemo(() => buildCues(role, lines, reducedMotion), []);
@@ -35,9 +38,9 @@ export default function Places({ role, lines, reducedMotion, onPoint, onLine, on
   const [leaving, setLeaving] = useState(false);
   const cue = cues[Math.min(i, cues.length - 1)];
   // The page re-renders many times a second; keep its callbacks out of the timers' deps.
-  const cb = useRef({ onPoint, onLine, onMoment, onClose });
+  const cb = useRef({ onPoint, onLine, onMoment, onGesture, onClose });
   useEffect(() => {
-    cb.current = { onPoint, onLine, onMoment, onClose };
+    cb.current = { onPoint, onLine, onMoment, onGesture, onClose };
   });
 
   const close = useCallback(() => {
@@ -62,6 +65,7 @@ export default function Places({ role, lines, reducedMotion, onPoint, onLine, on
   // A moment puts the performer there and lights its line.
   useEffect(() => {
     cb.current.onMoment(cue.kind === "moment" ? cue.index : null);
+    cb.current.onGesture(cue.kind === "gesture" ? cue.spec : null, cue.ms);
     if (cue.kind === "moment") {
       cb.current.onPoint(cue.point);
       const m = role.moments[cue.index];
@@ -208,6 +212,18 @@ export default function Places({ role, lines, reducedMotion, onPoint, onLine, on
               {!cue.label && !cue.line && !cue.note && (
                 <div style={{ ...display, fontSize: 30, marginTop: 10 }}>{read(cue.point).sentence}</div>
               )}
+            </>
+          )}
+
+          {cue.kind === "gesture" && (
+            <>
+              <div className="uppercase tracking-[0.26em] text-[#CB4B00]" style={{ fontSize: 10.5 }}>
+                Your gesture
+              </div>
+              <p style={{ ...display, fontSize: 30, lineHeight: 1.25, marginTop: 12 }}>{describe(cue.spec)}</p>
+              <p style={{ fontSize: 14, marginTop: 10, color: "#e9d6c4", opacity: 0.75 }}>
+                Do it with the figure, full out. Then smaller. Then only inside.
+              </p>
             </>
           )}
 

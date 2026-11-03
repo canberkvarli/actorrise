@@ -176,6 +176,9 @@ CLIENT_EVENT_NAMES = frozenset(
         "studio_run_it",  # {monologue_id}: from prep into the rehearsal
         "studio_after_asked",  # the "how did it go?" card was shown, once a visit
         "studio_after_saved",  # {kind, feel, worked, change}: lengths, not the words
+        "studio_gesture_opened",  # {has_gesture}
+        "studio_gesture_kept",  # {verb, quality, tempo, staccato}
+        "studio_gesture_inward",  # {verb, quality}: "take it inside" run
     }
 )
 

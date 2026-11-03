@@ -24,7 +24,7 @@ import {
   type Notebook as NotebookData,
   type Role,
 } from "@/lib/studio/notebook";
-import type { ArcState, CornerLabel, PinLabel, SceneApi } from "./EffortCubeScene";
+import type { ArcState, CornerLabel, GestureState, PinLabel, SceneApi } from "./EffortCubeScene";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/events";
 import Notebook, { type Tab } from "./Notebook";
@@ -37,6 +37,8 @@ import { afterDue } from "@/lib/studio/after";
 import { when } from "./After";
 import { airOf, type AirId } from "@/lib/studio/air";
 import { AirSound } from "./airSound";
+import GesturePanel from "./GesturePanel";
+import { DEFAULT_GESTURE, effortOf, type GestureSpec } from "@/lib/studio/gesture";
 import { display, EASE, mono } from "./style";
 import { useStudioSync } from "./useStudioSync";
 
@@ -74,6 +76,7 @@ export default function EffortCube() {
   const apiRef = useRef<SceneApi | null>(null);
   const arcRef = useRef<ArcState>({ version: 0, points: [], active: null });
   const airRef = useRef<AirId>("still");
+  const gestureRef = useRef<GestureState>({ active: false, spec: null, size: 1, sculpt: false, inward: null, version: 0 });
   const soundRef = useRef<AirSound | null>(null);
   const [soundOn, setSoundOn] = useState(false);
   const [labels, setLabels] = useState<CornerLabel[]>([]);
@@ -129,6 +132,13 @@ export default function EffortCube() {
   const [places, setPlaces] = useState(false);
   const [prep, setPrep] = useState(false);
   const [writingAfter, setWritingAfter] = useState(false);
+  // The gesture tool: a draft spec the figure performs until it's kept on the role.
+  const [gesture, setGesture] = useState(false);
+  const [gSpec, setGSpec] = useState<GestureSpec>(DEFAULT_GESTURE);
+  const [gSize, setGSize] = useState(1);
+  const [gSculpt, setGSculpt] = useState(false);
+  const [gInward, setGInward] = useState<{ start: number; dur: number } | null>(null);
+  const [placesGesture, setPlacesGesture] = useState<{ spec: GestureSpec; start: number; dur: number } | null>(null);
   // The clock the "how did it go?" card reads, a minute at a time.
   const [now, setNow] = useState(0);
   useEffect(() => {
@@ -192,7 +202,21 @@ export default function EffortCube() {
   };
 
   // Keep the stage centred beside the drawer.
-  const inset = (open || prep) && wide ? DRAWER + 16 : 0;
+  const inset = (open || prep || gesture) && wide ? DRAWER + 16 : 0;
+
+  // Hand the gesture to the stage: the tool's draft, or Places' gesture cue.
+  useEffect(() => {
+    const g = gestureRef.current;
+    const pg = placesGesture;
+    gestureRef.current = {
+      active: gesture || !!pg,
+      spec: pg ? pg.spec : gSpec,
+      size: gSize,
+      sculpt: gesture && gSculpt,
+      inward: pg ? { start: pg.start, dur: pg.dur } : gInward,
+      version: g.version + 1,
+    };
+  }, [gesture, gSpec, gSize, gSculpt, gInward, placesGesture]);
   useEffect(() => {
     apiRef.current?.setInset(inset);
     const t = window.setTimeout(() => apiRef.current?.setInset(inset), 400); // the stage may still be starting
@@ -278,7 +302,7 @@ export default function EffortCube() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (places || prep) return; // Places and Prep have the keys while they run
+      if (places || prep || gesture) return; // Places, Prep and Gesture have the keys while they run
       if (typing(e.target)) {
         if (e.key === "Escape") (e.target as HTMLElement).blur();
         return;
@@ -315,12 +339,43 @@ export default function EffortCube() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [jump, leave, move, open, pin, places, prep]);
+  }, [jump, leave, move, open, pin, places, prep, gesture]);
 
   const onLabels = useCallback((c: CornerLabel[], p: PinLabel[]) => {
     setLabels(c);
     setPinLabels(p);
   }, []);
+
+  const openGesture = () => {
+    if (!role) return;
+    trackEvent("studio_gesture_opened", { has_gesture: !!role.gesture });
+    setGSpec(role.gesture ?? DEFAULT_GESTURE);
+    setGSize(1);
+    setGInward(null);
+    setOpen(false);
+    setPrep(false);
+    setPlaying(false);
+    setGesture(true);
+    apiRef.current?.focusPerformer();
+  };
+  const closeGesture = () => {
+    setGesture(false);
+    setGInward(null);
+    apiRef.current?.home();
+  };
+  const changeGesture = (s: GestureSpec) => {
+    setGSpec(s);
+    setGInward(null);
+    move(effortOf(s)); // the cube shows where it sits when you come back to it
+  };
+  const takeInside = () => {
+    const dur = reducedMotion ? 4000 : 14000;
+    setGInward({ start: performance.now(), dur });
+    window.setTimeout(() => {
+      setGInward(null);
+      setGSize(0);
+    }, dur);
+  };
 
   const openPrep = () => {
     setOpen(false);
@@ -348,6 +403,7 @@ export default function EffortCube() {
 
   const endPlaces = (worked: boolean) => {
     if (worked) markRan();
+    setPlacesGesture(null);
     setPlaces(false);
     apiRef.current?.home();
   };
@@ -361,7 +417,7 @@ export default function EffortCube() {
     transition: `opacity ${(leaving ? 220 : 700) * dur}ms ${EASE} ${(leaving ? 0 : delayMs) * dur}ms, transform ${(leaving ? 220 : 800) * dur}ms ${EASE} ${(leaving ? 0 : delayMs) * dur}ms`,
   });
   // On a phone the notebook covers the stage; the reading panel steps aside.
-  const panelVisible = hud && !((open || prep) && !wide);
+  const panelVisible = hud && !gesture && !placesGesture && !((open || prep) && !wide);
   const centreX = `calc(50% + ${inset / 2}px)`;
 
   return (
@@ -374,6 +430,7 @@ export default function EffortCube() {
         apiRef={apiRef}
         arcRef={arcRef}
         airRef={airRef}
+        gestureRef={gestureRef}
         onDrag={move}
         onCorner={jump}
         onHover={setHovered}
@@ -385,7 +442,16 @@ export default function EffortCube() {
       />
 
       {/* Corner names and moment numbers, pinned to the 3D points. */}
-      <div aria-hidden style={{ position: "absolute", inset: 0, pointerEvents: "none", ...enter(450, "none") }}>
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          ...enter(450, "none"),
+          ...(gesture || placesGesture ? { opacity: 0 } : {}),
+        }}
+      >
         {labels.map((l) => {
           if (!l.visible) return null;
           const hot = hovered === l.id || l.share > 0.3;
@@ -448,7 +514,7 @@ export default function EffortCube() {
         style={{
           position: "absolute",
           top: 0,
-          left: (open || prep) && wide ? DRAWER + 16 : 0,
+          left: (open || prep || gesture) && wide ? DRAWER + 16 : 0,
           right: 0,
           padding: "18px 20px",
           display: "flex",
@@ -460,7 +526,7 @@ export default function EffortCube() {
         }}
       >
         <div style={{ display: "flex", gap: 16, alignItems: "center", pointerEvents: "auto" }}>
-          {!((open || prep) && wide) && (
+          {!((open || prep || gesture) && wide) && (
             <button
               type="button"
               onClick={leave}
@@ -471,7 +537,7 @@ export default function EffortCube() {
               {fine && wide && <span style={{ ...mono, opacity: 0.5, marginLeft: 8, letterSpacing: 0 }}>esc</span>}
             </button>
           )}
-          {!open && !prep && (
+          {!open && !prep && !gesture && (
             <button
               type="button"
               onClick={() => setOpen(true)}
@@ -490,7 +556,26 @@ export default function EffortCube() {
               {fine && wide && <span style={{ ...mono, opacity: 0.6, marginLeft: 8, letterSpacing: 0 }}>N</span>}
             </button>
           )}
-          {!open && !prep && (
+          {!open && !prep && !gesture && role && (
+            <button
+              type="button"
+              onClick={openGesture}
+              className="uppercase tracking-[0.18em]"
+              title="The psychological gesture for this role"
+              style={{
+                fontSize: 11,
+                padding: "7px 12px",
+                borderRadius: 999,
+                background: "transparent",
+                border: "1px solid rgba(243,217,191,0.3)",
+                color: "#f3e6da",
+                cursor: "pointer",
+              }}
+            >
+              Gesture
+            </button>
+          )}
+          {!open && !prep && !gesture && (
             <button
               type="button"
               onClick={openPrep}
@@ -509,7 +594,7 @@ export default function EffortCube() {
               Prep
             </button>
           )}
-          {!open && !prep && canPlaces && (
+          {!open && !prep && !gesture && canPlaces && (
             <button
               type="button"
               onClick={startPlaces}
@@ -851,6 +936,24 @@ export default function EffortCube() {
         />
       )}
 
+      {gesture && role && shown && (
+        <GesturePanel
+          wide={wide}
+          width={DRAWER}
+          role={role}
+          spec={gSpec}
+          onSpec={changeGesture}
+          size={gSize}
+          onSize={setGSize}
+          sculpt={gSculpt}
+          onSculpt={setGSculpt}
+          inward={!!gInward}
+          onInward={takeInside}
+          onKeep={() => editRole((r) => ({ ...r, gesture: gSpec }))}
+          onClose={closeGesture}
+        />
+      )}
+
       {prep && role && shown && (
         <Prep
           wide={wide}
@@ -878,11 +981,13 @@ export default function EffortCube() {
           onPoint={move}
           onLine={setLine}
           onMoment={(i) => setActiveMoment(i === null ? null : (role.moments[i]?.id ?? null))}
+          onGesture={(spec, ms) => setPlacesGesture(spec ? { spec, start: performance.now(), dur: ms } : null)}
           onClose={endPlaces}
         />
       )}
 
       <style>{`
+        @keyframes prep-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
         @keyframes studio-in { from { opacity: 0; transform: translateY(6px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
         .studio-scroll { scrollbar-width: thin; scrollbar-color: rgba(243,217,191,0.18) transparent; }
         .studio-field { width: 100%; background: rgba(243,217,191,0.04); border: 1px solid rgba(243,217,191,0.12); border-radius: 10px; color: #f3e6da; padding: 9px 11px; font-size: 14px; line-height: 1.45; outline: none; resize: none; transition: border-color 200ms, background 200ms; user-select: text; }

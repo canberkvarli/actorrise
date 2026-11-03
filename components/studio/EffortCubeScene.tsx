@@ -48,6 +48,8 @@ import {
   type EffortPoint,
 } from "@/lib/studio/effort";
 import { airOf, type AirId } from "@/lib/studio/air";
+import { period, poseAt, progressAt, type GestureSpec } from "@/lib/studio/gesture";
+import { buildFigure } from "./figure";
 
 const BG = "#130b08"; // warm near-black, never flat black
 const EMBER = new THREE.Color("#CB4B00");
@@ -71,6 +73,21 @@ function performerColor(p: EffortPoint, out: THREE.Color) {
 
 export type CornerLabel = { id: ActionId; x: number; y: number; share: number; visible: boolean };
 export type PinLabel = { index: number; x: number; y: number; visible: boolean };
+
+/**
+ * The psychological gesture on stage. While `active`, the cube and performer
+ * step back and the figure performs `spec` at `size` (1 full out, 0 inside).
+ * `inward` runs Chekhov's progression by itself: full out, then smaller, then
+ * only the centre. Bump `version` when the spec or `sculpt` changes.
+ */
+export type GestureState = {
+  active: boolean;
+  spec: GestureSpec | null;
+  size: number;
+  sculpt: boolean;
+  inward: { start: number; dur: number } | null;
+  version: number;
+};
 
 /** The role's pinned moments, as the scene needs them. Bump `version` on any change. */
 export type ArcState = { version: number; points: EffortPoint[]; active: number | null };
@@ -99,6 +116,7 @@ type Props = {
   arcRef: React.MutableRefObject<ArcState>;
   /** The atmosphere the stage should be in; it eases there over a second or two. */
   airRef: React.MutableRefObject<AirId>;
+  gestureRef: React.MutableRefObject<GestureState>;
   onFail: (why: string) => void;
   /** WebGPU died (or never really started): the parent remounts us on WebGL2. */
   onGpuLost: () => void;
@@ -115,6 +133,7 @@ export default function EffortCubeScene({
   onLabels,
   arcRef,
   airRef,
+  gestureRef,
   onFail,
   onGpuLost,
   onHover,
@@ -358,6 +377,57 @@ export default function EffortCubeScene({
       ring.rotation.x = -Math.PI / 2;
       ring.position.y = 0.01;
       performer.add(ring);
+
+      // ---------- The gesture figure ----------
+      const figure = buildFigure();
+      figure.group.visible = false;
+      scene.add(figure.group);
+      const HAND_TRAIL = 110;
+      const handTrailMat = new THREE.MeshBasicNodeMaterial({
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const handTrails = [0, 1].map(() => {
+        const m = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), handTrailMat, HAND_TRAIL);
+        m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        m.frustumCulled = false;
+        for (let i = 0; i < HAND_TRAIL; i++) m.setColorAt(i, new THREE.Color(0, 0, 0));
+        m.visible = false;
+        scene.add(m);
+        return { mesh: m, history: [] as THREE.Vector3[] };
+      });
+      // The shape the hands leave over one full cycle, kept standing on the stage.
+      const sculpture = new THREE.Group();
+      scene.add(sculpture);
+      const sculptMat = new THREE.MeshBasicNodeMaterial({
+        color: new THREE.Color("#CB4B00").multiplyScalar(1.4),
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      let gestureVersion = -1;
+      const rebuildSculpture = () => {
+        const g = gestureRef.current;
+        gestureVersion = g.version;
+        sculpture.children.forEach((o) => (o as THREE.Mesh).geometry?.dispose());
+        sculpture.clear();
+        if (!g.spec || !g.sculpt) return;
+        const T = period(g.spec);
+        const paths: THREE.Vector3[][] = [[], []];
+        const at = figure.group.position.clone();
+        figure.group.position.set(0, 0, 0);
+        for (let n = 0; n <= 90; n++) {
+          figure.apply(poseAt(g.spec, (n / 90) * T, 1));
+          figure.hands().forEach((h, i) => paths[i].push(h));
+        }
+        figure.group.position.copy(at);
+        paths.forEach((pts) => {
+          const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
+          sculpture.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 160, 0.012, 6, false), sculptMat));
+        });
+      };
 
       // ---------- Dust: a GPU compute particle field ----------
       const DUST = 1100;
@@ -751,6 +821,48 @@ export default function EffortCubeScene({
         }
         trail.instanceMatrix.needsUpdate = true;
         if (trail.instanceColor) trail.instanceColor.needsUpdate = true;
+
+        // The gesture: the figure takes the stage while it is active.
+        const G = gestureRef.current;
+        const gOn = G.active && !!G.spec;
+        figure.group.visible = gOn;
+        cube.visible = !gOn;
+        performer.visible = !gOn;
+        sculpture.visible = gOn;
+        handTrails.forEach((h) => (h.mesh.visible = gOn));
+        if (G.version !== gestureVersion) rebuildSculpture();
+        if (gOn && G.spec) {
+          figure.group.position.copy(performer.position);
+          sculpture.position.copy(performer.position);
+          let size = G.size;
+          if (G.inward) {
+            const e = (performance.now() - G.inward.start) / G.inward.dur;
+            size = e < 0.38 ? 1 : 1 - easeInOutCubic(clamp01((e - 0.38) / 0.55));
+          }
+          const tSec = performance.now() / 1000;
+          figure.apply(poseAt(G.spec, tSec, size));
+          const { p, radiate } = progressAt(G.spec, tSec);
+          figure.setCentre((1 - size) * (0.35 + 0.65 * p) + radiate * 0.5 * size + 0.15);
+          figure.setBody(0.25 + 0.75 * size);
+          const hs = figure.hands();
+          handTrails.forEach((h, i) => {
+            h.history.unshift(hs[i]);
+            if (h.history.length > HAND_TRAIL) h.history.pop();
+            for (let n = 0; n < HAND_TRAIL; n++) {
+              const pos = h.history[n];
+              const life = pos ? 1 - n / HAND_TRAIL : 0;
+              tmpS.setScalar(life > 0 ? (0.006 + 0.022 * life) * (0.3 + 0.7 * size) : 0);
+              tmpM.compose(pos ?? hs[i], tmpQ, tmpS);
+              h.mesh.setMatrixAt(n, tmpM);
+              tmpC.set("#ffb070").multiplyScalar(life * life * 1.6 * (0.25 + 0.75 * size));
+              h.mesh.setColorAt(n, tmpC);
+            }
+            h.mesh.instanceMatrix.needsUpdate = true;
+            if (h.mesh.instanceColor) h.mesh.instanceColor.needsUpdate = true;
+          });
+        } else {
+          handTrails.forEach((h) => (h.history.length = 0));
+        }
 
         // Air.
         uDelta.value = dt;

@@ -8,6 +8,7 @@
  */
 
 import { cleanTakes } from "./after";
+import { cleanGesture } from "./gesture";
 import { AIRS } from "./air";
 import { clampPoint } from "./effort";
 import { newRole, type Notebook, type Piece, type Role } from "./notebook";
@@ -21,6 +22,7 @@ export function isBlank(r: Role): boolean {
     !r.scene.trim() &&
     !r.piece &&
     !r.takes?.length &&
+    !r.gesture &&
     !r.moments.length &&
     !Object.values(r.answers).some((v) => v?.trim())
   );
@@ -61,6 +63,7 @@ export function roleFromServer(s: ServerRole): Role | null {
     id: s.id,
     piece,
     takes: cleanTakes(d.takes),
+    gesture: cleanGesture(d.gesture),
     ...(num(d.ranAt) ? { ranAt: num(d.ranAt) } : {}),
     ...(num(d.afterDismissedAt) ? { afterDismissedAt: num(d.afterDismissedAt) } : {}),
     name: typeof d.name === "string" ? d.name : "",
