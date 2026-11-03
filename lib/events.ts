@@ -58,7 +58,10 @@ export type UserEventName =
   | "studio_moment_pinned"
   | "studio_arc_played"
   | "studio_places_started"
-  | "studio_places_finished";
+  | "studio_places_finished"
+  | "studio_prep_step"
+  | "studio_prep_done"
+  | "studio_run_it";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

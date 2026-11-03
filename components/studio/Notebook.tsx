@@ -281,6 +281,7 @@ function TextTab(props: Props) {
         </p>
         <PieceChooser
           signedIn={signedIn}
+          autoFocus={props.open}
           onCancel={piece ? () => setChoosing(false) : undefined}
           onChoose={(p) => {
             trackEvent("studio_piece_chosen", { monologue_id: p.id });

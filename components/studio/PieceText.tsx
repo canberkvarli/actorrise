@@ -25,10 +25,13 @@ export function PieceChooser({
   signedIn,
   onChoose,
   onCancel,
+  autoFocus = false,
 }: {
   signedIn: boolean;
   onChoose: (p: Piece) => void;
   onCancel?: () => void;
+  /** Only when it is on screen: a hidden field that takes focus swallows the stage's keys. */
+  autoFocus?: boolean;
 }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
@@ -79,7 +82,7 @@ export function PieceChooser({
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search the library: a play, a character, a feeling"
         aria-label="Search the library"
-        autoFocus
+        autoFocus={autoFocus}
       />
       {state === "searching" && <p style={quiet}>Looking…</p>}
       {state === "empty" && <p style={quiet}>Nothing for that yet. Try the play or the character&apos;s name.</p>}

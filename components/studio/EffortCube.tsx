@@ -30,6 +30,8 @@ import { trackEvent } from "@/lib/events";
 import Notebook, { type Tab } from "./Notebook";
 import { usePiece } from "./PieceText";
 import Places from "./Places";
+import Prep from "./Prep";
+import { isBlank } from "@/lib/studio/sync";
 import { hasPlaces } from "@/lib/studio/places";
 import { airOf, type AirId } from "@/lib/studio/air";
 import { AirSound } from "./airSound";
@@ -123,6 +125,17 @@ export default function EffortCube() {
   const role: Role | null = nb ? activeRole(nb) : null;
   const pieceState = usePiece(role?.piece?.id);
   const [places, setPlaces] = useState(false);
+  const [prep, setPrep] = useState(false);
+  // A new, empty role opens straight into the guided path, once a visit.
+  const prepOffered = useRef(false);
+  useEffect(() => {
+    if (prepOffered.current || !role) return;
+    prepOffered.current = true;
+    if (isBlank(role)) {
+      const t = window.setTimeout(() => setPrep(true), 900); // after the lights come up
+      return () => window.clearTimeout(t);
+    }
+  }, [role]);
   const canPlaces = !!role && hasPlaces(role);
 
   // Once a visit, when we know who's here (signed out, the API drops it anyway).
@@ -165,7 +178,7 @@ export default function EffortCube() {
   };
 
   // Keep the stage centred beside the drawer.
-  const inset = open && wide ? DRAWER + 16 : 0;
+  const inset = (open || prep) && wide ? DRAWER + 16 : 0;
   useEffect(() => {
     apiRef.current?.setInset(inset);
     const t = window.setTimeout(() => apiRef.current?.setInset(inset), 400); // the stage may still be starting
@@ -251,7 +264,7 @@ export default function EffortCube() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (places) return; // Places has the keys while it runs
+      if (places || prep) return; // Places and Prep have the keys while they run
       if (typing(e.target)) {
         if (e.key === "Escape") (e.target as HTMLElement).blur();
         return;
@@ -288,18 +301,25 @@ export default function EffortCube() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [jump, leave, move, open, pin, places]);
+  }, [jump, leave, move, open, pin, places, prep]);
 
   const onLabels = useCallback((c: CornerLabel[], p: PinLabel[]) => {
     setLabels(c);
     setPinLabels(p);
   }, []);
 
+  const openPrep = () => {
+    setOpen(false);
+    setPlaying(false);
+    setPrep(true);
+  };
+
   const startPlaces = () => {
     if (role)
       trackEvent("studio_places_started", { moments: role.moments.length, has_piece: !!role.piece });
     setPlaying(false);
     setOpen(false);
+    setPrep(false);
     setPlaces(true);
     apiRef.current?.focusPerformer();
   };
@@ -317,7 +337,7 @@ export default function EffortCube() {
     transition: `opacity ${(leaving ? 220 : 700) * dur}ms ${EASE} ${(leaving ? 0 : delayMs) * dur}ms, transform ${(leaving ? 220 : 800) * dur}ms ${EASE} ${(leaving ? 0 : delayMs) * dur}ms`,
   });
   // On a phone the notebook covers the stage; the reading panel steps aside.
-  const panelVisible = hud && !(open && !wide);
+  const panelVisible = hud && !((open || prep) && !wide);
   const centreX = `calc(50% + ${inset / 2}px)`;
 
   return (
@@ -404,7 +424,7 @@ export default function EffortCube() {
         style={{
           position: "absolute",
           top: 0,
-          left: open && wide ? DRAWER + 16 : 0,
+          left: (open || prep) && wide ? DRAWER + 16 : 0,
           right: 0,
           padding: "18px 20px",
           display: "flex",
@@ -416,7 +436,7 @@ export default function EffortCube() {
         }}
       >
         <div style={{ display: "flex", gap: 16, alignItems: "center", pointerEvents: "auto" }}>
-          {!(open && wide) && (
+          {!((open || prep) && wide) && (
             <button
               type="button"
               onClick={leave}
@@ -427,7 +447,7 @@ export default function EffortCube() {
               {fine && wide && <span style={{ ...mono, opacity: 0.5, marginLeft: 8, letterSpacing: 0 }}>esc</span>}
             </button>
           )}
-          {!open && (
+          {!open && !prep && (
             <button
               type="button"
               onClick={() => setOpen(true)}
@@ -446,7 +466,26 @@ export default function EffortCube() {
               {fine && wide && <span style={{ ...mono, opacity: 0.6, marginLeft: 8, letterSpacing: 0 }}>N</span>}
             </button>
           )}
-          {!open && canPlaces && (
+          {!open && !prep && (
+            <button
+              type="button"
+              onClick={openPrep}
+              className="uppercase tracking-[0.18em]"
+              title="The guided path through this role"
+              style={{
+                fontSize: 11,
+                padding: "7px 12px",
+                borderRadius: 999,
+                background: "#CB4B00",
+                border: "1px solid #CB4B00",
+                color: "#fff6ee",
+                cursor: "pointer",
+              }}
+            >
+              Prep
+            </button>
+          )}
+          {!open && !prep && canPlaces && (
             <button
               type="button"
               onClick={startPlaces}
@@ -768,6 +807,24 @@ export default function EffortCube() {
           signedIn={!!user}
           line={line}
           onLine={setLine}
+        />
+      )}
+
+      {prep && role && shown && (
+        <Prep
+          wide={wide}
+          width={DRAWER}
+          role={role}
+          piece={pieceState}
+          signedIn={!!user}
+          activeMoment={activeMoment}
+          onEdit={editRole}
+          onPoint={move}
+          onLine={setLine}
+          onGoTo={goTo}
+          onActive={setActiveMoment}
+          onPlaces={startPlaces}
+          onClose={() => setPrep(false)}
         />
       )}
 

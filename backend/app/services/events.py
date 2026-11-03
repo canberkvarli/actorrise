@@ -171,6 +171,9 @@ CLIENT_EVENT_NAMES = frozenset(
         "studio_arc_played",  # {moments}
         "studio_places_started",  # {cues, moments, has_piece}
         "studio_places_finished",  # {cues, reached, completed}
+        "studio_prep_step",  # {step, index}: the guided path, one a step reached
+        "studio_prep_done",  # {answers, beats, has_piece}
+        "studio_run_it",  # {monologue_id}: from prep into the rehearsal
     }
 )
 
