@@ -3,6 +3,14 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-04, it is never about the theatre (wins over everything below)
+
+Canberk: "it's never about the theatre or the stage." Real films show ordinary life, where the app
+is actually used: someone on the subway with earbuds in, listening to the scene partner and mouthing
+their lines; in the corner of a café with the phone propped on a cup; at the kitchen table; in bed at
+night in the phone's glow; on a park bench. Quietly rehearsing to memorize: that is the app. No
+stages, no empty theatres, no audience seats in new films. The series is now "Everyday Rehearsal".
+
 ## 2026-11-04, voices and scenes (wins over everything below)
 
 Canberk bought the ElevenLabs Starter plan (commercial use). Build every film to use it:
