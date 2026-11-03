@@ -6,13 +6,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import {
   ACTIONS,
   CENTRE,
-  FACTORS,
   actionPoint,
   clampPoint,
   read,
   type ActionId,
   type EffortPoint,
-  type FactorKey,
 } from "@/lib/studio/effort";
 import {
   activeRole,
@@ -27,6 +25,7 @@ import {
 import type { ArcState, CornerLabel, GestureState, PinLabel, SceneApi } from "./EffortCubeScene";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/events";
+import { heatCSS, heatOf } from "@/lib/studio/heat";
 import Notebook, { type Tab } from "./Notebook";
 import { usePiece } from "./PieceText";
 import Places from "./Places";
@@ -37,6 +36,7 @@ import { afterDue } from "@/lib/studio/after";
 import { when } from "./After";
 import { airOf, type AirId } from "@/lib/studio/air";
 import { AirSound } from "./airSound";
+import Tour, { tourSeen } from "./Tour";
 import GesturePanel from "./GesturePanel";
 import GestureCamera from "./GestureCamera";
 import type { MotionReading } from "@/lib/studio/motion";
@@ -163,7 +163,7 @@ export default function EffortCube() {
   useEffect(() => {
     if (prepOffered.current || !role) return;
     prepOffered.current = true;
-    if (isBlank(role)) {
+    if (isBlank(role) && tourSeen()) {
       const t = window.setTimeout(() => setPrep(true), 900); // after the lights come up
       return () => window.clearTimeout(t);
     }
@@ -232,7 +232,15 @@ export default function EffortCube() {
     return () => window.clearTimeout(t);
   }, [inset]);
 
+  const [moved, setMoved] = useState(false);
+  // What this is, the first time: four cards, then the ? brings them back.
+  const [tour, setTour] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => !tourSeen() && setTour(true), 1400); // after the lights come up
+    return () => window.clearTimeout(t);
+  }, []);
   const move = useCallback((p: EffortPoint) => {
+    setMoved(true);
     const c = clampPoint(p);
     pointRef.current = c;
     setPoint(c);
@@ -432,8 +440,8 @@ export default function EffortCube() {
 
   return (
     <main
-      className="text-[#f3e6da]"
-      style={{ position: "fixed", inset: 0, background: "#130b08", overflow: "hidden", userSelect: "none" }}
+      className="text-[#f4f4f2]"
+      style={{ position: "fixed", inset: 0, background: "#0b0b0c", overflow: "hidden", userSelect: "none" }}
     >
       <EffortCubeScene
         pointRef={pointRef}
@@ -478,9 +486,9 @@ export default function EffortCube() {
                 fontSize: 11,
                 lineHeight: 1,
                 padding: "4px 7px",
-                background: hot ? "rgba(155,28,34,0.28)" : "rgba(19,11,8,0.62)",
-                border: `1px solid ${hot ? "rgba(233,195,188,0.45)" : "rgba(243,217,191,0.1)"}`,
-                color: hot ? "#F3DDD6" : "#ead8c6",
+                background: hot ? "rgba(244,244,242,0.16)" : "rgba(11,11,12,0.62)",
+                border: `1px solid ${hot ? "rgba(244,244,242,0.45)" : "rgba(244,244,242,0.1)"}`,
+                color: hot ? "#f4f4f2" : "#e4e4e0",
                 opacity: hot ? 1 : 0.82,
                 whiteSpace: "nowrap",
               }}
@@ -508,9 +516,9 @@ export default function EffortCube() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: on ? "#9B1C22" : "rgba(19,11,8,0.75)",
-                border: "1px solid rgba(233,195,188,0.5)",
-                color: "#F5ECE2",
+                background: on ? "#f4f4f2" : "rgba(11,11,12,0.75)",
+                border: "1px solid rgba(244,244,242,0.5)",
+                color: "#f4f4f2",
               }}
             >
               {p.index + 1}
@@ -519,125 +527,59 @@ export default function EffortCube() {
         })}
       </div>
 
-      {/* Top: the role and what you can do with it; sound on the right. */}
+      {/* Top: the role on the left (opens its notebook); what you can do with it on the right. */}
       <div
         style={{
           position: "absolute",
           top: 0,
           left: (open || prep || gesture) && wide ? DRAWER + 16 : 0,
           right: 0,
-          padding: "18px 20px",
+          padding: wide ? "18px 22px" : "14px 16px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
+          gap: 12,
           pointerEvents: "none",
           ...enter(250, "translateY(-8px)"),
           transition: `${enter(250).transition}, left 450ms ${EASE}`,
         }}
       >
-        <div style={{ display: "flex", gap: wide ? 10 : 6, flexWrap: "wrap", alignItems: "center", pointerEvents: "auto" }}>
+        {!open && !prep && !gesture ? (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            title="This role's notebook"
+            style={{
+              pointerEvents: "auto",
+              background: "none",
+              border: 0,
+              padding: 0,
+              textAlign: "left",
+              cursor: "pointer",
+              color: "#f4f4f2",
+              minWidth: 0,
+            }}
+          >
+            <span style={{ ...display, fontSize: wide ? 22 : 19, lineHeight: 1.1, display: "block" }}>
+              {role?.name || "Untitled role"} <span style={{ fontSize: 13, opacity: 0.5 }}>▾</span>
+            </span>
+            <span style={{ fontSize: 11, color: "#8f8f8b", display: "block", marginTop: 3 }}>
+              {role?.scene || "Your notebook"}
+            </span>
+          </button>
+        ) : (
+          <span />
+        )}
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", pointerEvents: "auto", flex: "none" }}>
           {!open && !prep && !gesture && (
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              className="uppercase tracking-[0.18em]"
-              style={{
-                fontSize: wide ? 11 : 10,
-                padding: wide ? "7px 12px" : "6px 10px",
-                borderRadius: 999,
-                background: "rgba(155,28,34,0.18)",
-                border: "1px solid rgba(155,28,34,0.55)",
-                color: "#E9C3BC",
-                cursor: "pointer",
-              }}
-            >
-              {role?.name ? role.name : "Notebook"}
-            </button>
+            <>
+              <TopAction label="Prep" sub="work the role" primary wide={wide} onClick={openPrep} />
+              <TopAction label="Gesture" sub="find the body" wide={wide} onClick={openGesture} />
+              {canPlaces && wide && <TopAction label="Places" sub="before you go on" wide={wide} onClick={startPlaces} />}
+            </>
           )}
-          {!open && !prep && !gesture && role && (
-            <button
-              type="button"
-              onClick={openGesture}
-              className="uppercase tracking-[0.18em]"
-              title="The psychological gesture for this role"
-              style={{
-                fontSize: wide ? 11 : 10,
-                padding: wide ? "7px 12px" : "6px 10px",
-                borderRadius: 999,
-                background: "transparent",
-                border: "1px solid rgba(243,217,191,0.3)",
-                color: "#f3e6da",
-                cursor: "pointer",
-              }}
-            >
-              Gesture
-            </button>
-          )}
-          {!open && !prep && !gesture && (
-            <button
-              type="button"
-              onClick={openPrep}
-              className="uppercase tracking-[0.18em]"
-              title="The guided path through this role"
-              style={{
-                fontSize: wide ? 11 : 10,
-                padding: wide ? "7px 12px" : "6px 10px",
-                borderRadius: 999,
-                background: "#9B1C22",
-                border: "1px solid #9B1C22",
-                color: "#F7EFE6",
-                cursor: "pointer",
-              }}
-            >
-              Prep
-            </button>
-          )}
-          {!open && !prep && !gesture && canPlaces && wide && (
-            <button
-              type="button"
-              onClick={startPlaces}
-              className="uppercase tracking-[0.18em]"
-              title="The minute before you go on"
-              style={{
-                fontSize: wide ? 11 : 10,
-                padding: wide ? "7px 12px" : "6px 10px",
-                borderRadius: 999,
-                background: "transparent",
-                border: "1px solid rgba(243,217,191,0.3)",
-                color: "#f3e6da",
-                cursor: "pointer",
-              }}
-            >
-              Places
-            </button>
-          )}
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8 }}>
-            {air !== "still" && (
-              <span className="uppercase tracking-[0.18em] text-[#e9d6c4]" style={{ fontSize: 10, opacity: 0.6 }}>
-                {airOf(air).name}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={toggleSound}
-              aria-pressed={soundOn}
-              className="uppercase tracking-[0.16em]"
-              style={{
-                pointerEvents: "auto",
-                fontSize: 10,
-                padding: "5px 9px",
-                borderRadius: 999,
-                background: soundOn ? "rgba(155,28,34,0.22)" : "transparent",
-                border: `1px solid ${soundOn ? "#9B1C22" : "rgba(243,217,191,0.2)"}`,
-                color: soundOn ? "#E9C3BC" : "#e9d6c4",
-                cursor: "pointer",
-              }}
-            >
-              Sound
-            </button>
-          </div>
+          <TopAction label="?" wide={false} onClick={() => setTour(true)} title="How this works" round />
+          <TopAction label="Sound" wide={false} onClick={toggleSound} pressed={soundOn} title="The sound of the air" />
         </div>
       </div>
 
@@ -670,11 +612,11 @@ export default function EffortCube() {
           left: centreX,
           bottom: "max(16px, env(safe-area-inset-bottom))",
           translate: "-50% 0",
-          width: `min(calc(100vw - 32px - ${inset}px), 640px)`,
+          width: `min(calc(100vw - 32px - ${inset}px), 520px)`,
           padding: "16px 18px 14px",
           borderRadius: 18,
-          background: "rgba(26, 15, 11, 0.66)",
-          border: "1px solid rgba(243, 217, 191, 0.12)",
+          background: "rgba(16, 16, 17, 0.66)",
+          border: "1px solid rgba(244, 244, 242, 0.12)",
           backdropFilter: "blur(14px)",
           WebkitBackdropFilter: "blur(14px)",
           boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
@@ -694,9 +636,19 @@ export default function EffortCube() {
           <div style={{ minWidth: 0 }}>
             <div
               key={reading.sentence}
-              style={{ ...display, fontSize: 26, lineHeight: 1.15, animation: `studio-in 380ms ${EASE}` }}
+              style={{
+                ...display,
+                fontSize: 28,
+                lineHeight: 1.1,
+                color: heatCSS(heatOf(point)),
+                transition: "color 400ms",
+                animation: `studio-in 380ms ${EASE}`,
+              }}
             >
               {reading.sentence}
+            </div>
+            <div style={{ fontSize: 13, color: "#cfcfcb", opacity: 0.75, marginTop: 6, lineHeight: 1.4 }}>
+              {moved ? (reading.mainShare >= 0.2 ? reading.main.feel : "Move toward a corner.") : "Drag the light, or tap a corner."}
             </div>
           </div>
           <div style={{ display: "flex", gap: 6, alignSelf: "flex-start", flex: "none" }}>
@@ -709,21 +661,15 @@ export default function EffortCube() {
                 fontSize: 10.5,
                 padding: "7px 12px",
                 borderRadius: 999,
-                background: "#9B1C22",
-                border: "1px solid #9B1C22",
-                color: "#F7EFE6",
+                background: "#f4f4f2",
+                border: "1px solid #f4f4f2",
+                color: "#0b0b0c",
                 cursor: "pointer",
               }}
             >
-              Pin moment
+              Pin
             </button>
           </div>
-        </div>
-
-        <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
-          {(Object.keys(FACTORS) as FactorKey[]).map((k) => (
-            <FactorSlider key={k} k={k} value={point[k]} onChange={(v) => move({ ...point, [k]: v })} />
-          ))}
         </div>
 
       </section>
@@ -733,7 +679,7 @@ export default function EffortCube() {
         type="button"
         onClick={() => setHud(true)}
         aria-label="Show the panel (H)"
-        className="uppercase tracking-[0.18em] text-[#e9d6c4]"
+        className="uppercase tracking-[0.18em] text-[#cfcfcb]"
         style={{
           position: "absolute",
           left: centreX,
@@ -742,8 +688,8 @@ export default function EffortCube() {
           fontSize: 10.5,
           padding: "8px 14px",
           borderRadius: 999,
-          background: "rgba(26, 15, 11, 0.55)",
-          border: "1px solid rgba(243, 217, 191, 0.14)",
+          background: "rgba(16, 16, 17, 0.55)",
+          border: "1px solid rgba(244, 244, 242, 0.14)",
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
           cursor: "pointer",
@@ -885,6 +831,8 @@ export default function EffortCube() {
         />
       )}
 
+      {tour && <Tour onClose={() => setTour(false)} />}
+
       {places && role && (
         <Places
           role={role}
@@ -901,12 +849,12 @@ export default function EffortCube() {
       <style>{`
         @keyframes prep-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
         @keyframes studio-in { from { opacity: 0; transform: translateY(6px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
-        .studio-scroll { scrollbar-width: thin; scrollbar-color: rgba(243,217,191,0.18) transparent; }
-        .studio-field { width: 100%; background: rgba(243,217,191,0.04); border: 1px solid rgba(243,217,191,0.12); border-radius: 10px; color: #f3e6da; padding: 9px 11px; font-size: 14px; line-height: 1.45; outline: none; resize: none; transition: border-color 200ms, background 200ms; user-select: text; }
-        .studio-field:focus { border-color: rgba(155,28,34,0.7); background: rgba(243,217,191,0.07); }
-        .studio-field::placeholder { color: rgba(233,214,196,0.38); }
-        .studio-bare { width: 100%; background: transparent; border: 0; outline: none; color: #f3e6da; padding: 0; user-select: text; }
-        .studio-bare::placeholder { color: rgba(233,214,196,0.38); }
+        .studio-scroll { scrollbar-width: thin; scrollbar-color: rgba(244,244,242,0.18) transparent; }
+        .studio-field { width: 100%; background: rgba(244,244,242,0.04); border: 1px solid rgba(244,244,242,0.12); border-radius: 10px; color: #f4f4f2; padding: 9px 11px; font-size: 14px; line-height: 1.45; outline: none; resize: none; transition: border-color 200ms, background 200ms; user-select: text; }
+        .studio-field:focus { border-color: rgba(244,244,242,0.7); background: rgba(244,244,242,0.07); }
+        .studio-field::placeholder { color: rgba(216,216,212,0.38); }
+        .studio-bare { width: 100%; background: transparent; border: 0; outline: none; color: #f4f4f2; padding: 0; user-select: text; }
+        .studio-bare::placeholder { color: rgba(216,216,212,0.38); }
       `}</style>
     </main>
   );
@@ -945,8 +893,8 @@ function AfterCard({
         width: "min(calc(100vw - 32px), 420px)",
         padding: "14px 16px",
         borderRadius: 16,
-        background: "rgba(26,15,11,0.82)",
-        border: "1px solid rgba(155,28,34,0.55)",
+        background: "rgba(16,16,17,0.82)",
+        border: "1px solid rgba(244,244,242,0.55)",
         backdropFilter: "blur(14px)",
         WebkitBackdropFilter: "blur(14px)",
         boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
@@ -954,7 +902,7 @@ function AfterCard({
       }}
     >
       <div style={{ ...display, fontSize: 20, lineHeight: 1.25 }}>How did it go?</div>
-      <p style={{ fontSize: 13, color: "#e9d6c4", opacity: 0.75, marginTop: 4, lineHeight: 1.45 }}>
+      <p style={{ fontSize: 13, color: "#cfcfcb", opacity: 0.75, marginTop: 4, lineHeight: 1.45 }}>
         You worked {name || "this role"} {when(ranAt, now)}. Two lines while it&apos;s fresh, and the next run starts
         from them.
       </p>
@@ -966,9 +914,9 @@ function AfterCard({
             fontSize: 12,
             padding: "8px 14px",
             borderRadius: 999,
-            border: "1px solid #9B1C22",
-            background: "#9B1C22",
-            color: "#F7EFE6",
+            border: "1px solid #f4f4f2",
+            background: "#f4f4f2",
+            color: "#0b0b0c",
             cursor: "pointer",
           }}
         >
@@ -981,9 +929,9 @@ function AfterCard({
             fontSize: 12,
             padding: "8px 14px",
             borderRadius: 999,
-            border: "1px solid rgba(243,217,191,0.2)",
+            border: "1px solid rgba(244,244,242,0.2)",
             background: "transparent",
-            color: "#e9d6c4",
+            color: "#cfcfcb",
             cursor: "pointer",
           }}
         >
@@ -994,29 +942,53 @@ function AfterCard({
   );
 }
 
-function FactorSlider({ k, value, onChange }: { k: FactorKey; value: number; onChange: (v: number) => void }) {
-  const f = FACTORS[k];
+/** A top-bar action: a word, and on a wide screen a few words on what it's for. */
+function TopAction({
+  label,
+  sub,
+  wide,
+  primary = false,
+  pressed,
+  round = false,
+  title,
+  onClick,
+}: {
+  label: string;
+  sub?: string;
+  wide: boolean;
+  primary?: boolean;
+  pressed?: boolean;
+  round?: boolean;
+  title?: string;
+  onClick: () => void;
+}) {
+  const on = primary || pressed;
   return (
-    <label style={{ display: "grid", gridTemplateColumns: "68px 1fr 68px", alignItems: "center", gap: 10 }}>
-      <span className="uppercase tracking-[0.14em] text-[#e9d6c4]" style={{ fontSize: 10.5, opacity: 0.75 }}>
-        {f.neg}
+    <button
+      type="button"
+      onClick={onClick}
+      title={title ?? sub}
+      aria-pressed={pressed}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 2,
+        minWidth: round ? 30 : undefined,
+        padding: wide && sub ? "7px 14px 6px" : round ? "6px 0" : "6px 11px",
+        borderRadius: 999,
+        background: on ? "#f4f4f2" : "rgba(16,16,17,0.5)",
+        border: `1px solid ${on ? "#f4f4f2" : "rgba(244,244,242,0.22)"}`,
+        color: on ? "#0b0b0c" : "#f4f4f2",
+        cursor: "pointer",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+      }}
+    >
+      <span className="uppercase tracking-[0.16em]" style={{ fontSize: wide ? 11 : 10, lineHeight: 1.1 }}>
+        {label}
       </span>
-      <input
-        type="range"
-        min={-1}
-        max={1}
-        step={0.01}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        aria-label={`${f.name}: ${f.neg} to ${f.pos}`}
-        style={{ width: "100%", accentColor: "#9B1C22" }}
-      />
-      <span
-        className="uppercase tracking-[0.14em] text-[#e9d6c4]"
-        style={{ fontSize: 10.5, opacity: 0.75, textAlign: "right" }}
-      >
-        {f.pos}
-      </span>
-    </label>
+      {wide && sub && <span style={{ fontSize: 9.5, opacity: 0.6, lineHeight: 1.1 }}>{sub}</span>}
+    </button>
   );
 }

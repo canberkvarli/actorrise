@@ -43,11 +43,11 @@ import {
 import { airOf, type AirId } from "@/lib/studio/air";
 import { period, poseAt, progressAt, type GestureSpec } from "@/lib/studio/gesture";
 import { buildFigure } from "./figure";
+import { heatOf, heatRGB } from "@/lib/studio/heat";
+import { effortOf } from "@/lib/studio/gesture";
 
-const BG = "#120d0d"; // warm ink, never flat black
-const EMBER = new THREE.Color("#B3262B");
-const PALE = new THREE.Color("#F1E6DA");
-const COOL = new THREE.Color("#b9c4e4");
+const BG = "#0b0b0c"; // ink, never flat black
+const PALE = new THREE.Color("#f4f4f2");
 
 /** Cube axes: x = space (direct +), y = weight (light up, strong down), z = time (sudden toward you). */
 function toLocal(p: EffortPoint): THREE.Vector3 {
@@ -57,11 +57,10 @@ function fromLocal(v: THREE.Vector3): EffortPoint {
   return clampPoint({ space: v.x, weight: -v.y, time: v.z });
 }
 
-/** The performer's colour: light is pale and cool, strong is ember. */
+/** The light's colour is its heat: white when light and sustained, orange to red as it gets strong and sudden. */
 function performerColor(p: EffortPoint, out: THREE.Color) {
-  const m = (p.weight + 1) / 2;
-  out.copy(COOL).lerp(PALE, Math.min(1, m * 2)).lerp(EMBER, Math.max(0, m * 2 - 1));
-  return out;
+  const [r, g, b] = heatRGB(heatOf(p));
+  return out.setRGB(r, g, b);
 }
 
 export type CornerLabel = { id: ActionId; x: number; y: number; share: number; visible: boolean };
@@ -184,18 +183,18 @@ export default function EffortCubeScene({
       const poolA = uniform(new THREE.Vector2(-1.8, 0));
       const poolB = uniform(new THREE.Vector2(1.8, 0));
       const poolHeat = uniform(0.5);
-      const uPoolA = uniform(new THREE.Color("#6b3414"));
+      const uPoolA = uniform(new THREE.Color("#2a2a2c"));
       const floorMat = new THREE.MeshBasicNodeMaterial();
       const xz = vec2(positionWorld.x, positionWorld.z);
-      const base = vec3(0.075, 0.045, 0.032).mul(smoothstep(float(11), float(0), length(xz)));
+      const base = vec3(0.055, 0.055, 0.058).mul(smoothstep(float(11), float(0), length(xz)));
       const pool = (c: typeof poolA, r: number) => smoothstep(float(r), float(0), distance(xz, c));
       floorMat.colorNode = base
-        .add(uPoolA.mul(pool(poolA, 2.6)).mul(0.95))
+        .add(uPoolA.mul(pool(poolA, 2.6)).mul(0.6))
         .add(mix(vec3(0.22, 0.24, 0.36), vec3(0.6, 0.22, 0.05), poolHeat).mul(pool(poolB, 1.9)).mul(0.4));
       const floorMesh = new THREE.Mesh(new THREE.CircleGeometry(12, 96), floorMat);
 
       // The air you can see: a wide glow behind the stage in the atmosphere's colour.
-      const uAirGlow = uniform(new THREE.Color("#6b3414"));
+      const uAirGlow = uniform(new THREE.Color("#2a2a2c"));
       const uAirGlowStrength = uniform(0.35);
       const glowMat = new THREE.MeshBasicNodeMaterial({ transparent: true, depthWrite: false, fog: false });
       const g = smoothstep(float(0.62), float(0.0), length(uv().sub(vec2(0.5, 0.42)).mul(vec2(1.0, 1.6))));
@@ -212,7 +211,7 @@ export default function EffortCubeScene({
       scene.add(cube);
 
       const edgesMat = new THREE.LineBasicNodeMaterial({
-        color: new THREE.Color("#f3d9bf"),
+        color: new THREE.Color("#e8e8e6"),
         transparent: true,
         opacity: 0.55,
       });
@@ -220,7 +219,7 @@ export default function EffortCubeScene({
       cube.add(edges);
 
       const glassMat = new THREE.MeshBasicNodeMaterial({
-        color: new THREE.Color("#C9444A"),
+        color: new THREE.Color("#f4f4f2"),
         transparent: true,
         opacity: 0.035,
         side: THREE.BackSide,
@@ -231,7 +230,7 @@ export default function EffortCubeScene({
       // Corner nodes, one per working action.
       const cornerGeo = new THREE.SphereGeometry(0.055, 20, 14);
       const corners = ACTIONS.map((a) => {
-        const mat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#E9C3BC") });
+        const mat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#f4f4f2") });
         const m = new THREE.Mesh(cornerGeo, mat);
         m.position.copy(toLocal(a.corner));
         m.userData.action = a.id;
@@ -257,7 +256,7 @@ export default function EffortCubeScene({
       const pointHalo = new THREE.Mesh(
         new THREE.SphereGeometry(0.16, 32, 20),
         new THREE.MeshBasicNodeMaterial({
-          color: new THREE.Color("#9B1C22"),
+          color: new THREE.Color("#f4f4f2"),
           transparent: true,
           opacity: 0.35,
           blending: THREE.AdditiveBlending,
@@ -295,10 +294,10 @@ export default function EffortCubeScene({
       const arc = new THREE.Group();
       cube.add(arc);
       const pinGeo = new THREE.OctahedronGeometry(0.065, 0);
-      const pinMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ffe2b8") });
-      const pinActiveMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#D9575C").multiplyScalar(2.2) });
+      const pinMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#f4f4f2") });
+      const pinActiveMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#f4f4f2").multiplyScalar(2.2) });
       const pathMat = new THREE.MeshBasicNodeMaterial({
-        color: new THREE.Color("#9B1C22").multiplyScalar(1.6),
+        color: new THREE.Color("#f4f4f2").multiplyScalar(1.6),
         transparent: true,
         opacity: 0.9,
         blending: THREE.AdditiveBlending,
@@ -306,7 +305,7 @@ export default function EffortCubeScene({
       });
       const spark = new THREE.Mesh(
         new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ffd9b0").multiplyScalar(3) }),
+        new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#f4f4f2").multiplyScalar(3) }),
       );
       spark.visible = false;
       cube.add(spark);
@@ -387,7 +386,7 @@ export default function EffortCubeScene({
       const sculpture = new THREE.Group();
       cube.add(sculpture);
       const sculptMat = new THREE.MeshBasicNodeMaterial({
-        color: new THREE.Color("#9B1C22").multiplyScalar(1.4),
+        color: new THREE.Color("#f4f4f2").multiplyScalar(1.4),
         transparent: true,
         opacity: 0.85,
         blending: THREE.AdditiveBlending,
@@ -648,7 +647,7 @@ export default function EffortCubeScene({
       // The air the stage is in, eased toward airRef so a change of atmosphere is felt, not cut.
       const sky = new THREE.Color(BG);
       const air = { near: 10, far: 24, drift: 0, unrest: 0.15, light: 1 };
-      const airDust = new THREE.Color("#EAD9CF");
+      const airDust = new THREE.Color("#e8e8e6");
       const tmpAir = new THREE.Color();
 
       // ---------- Frame ----------
@@ -734,8 +733,8 @@ export default function EffortCubeScene({
           const col = tmpC.clone().multiplyScalar(k);
           threadCol.set([col.r, col.g, col.b, col.r * 0.25, col.g * 0.25, col.b * 0.25], i * 6);
           const pop = easeOutExpo(clamp01(fade * 1.8 - i * 0.07));
-          corners[i].mesh.scale.setScalar((0.8 + share * 1.8) * pop);
-          corners[i].mat.color.copy(PALE).multiplyScalar(0.45 + share * 2.2);
+          corners[i].mesh.scale.setScalar((0.8 + share * 0.5) * pop); // the light, not the corner, is what you look at
+          corners[i].mat.color.copy(PALE).multiplyScalar(0.4 + share * 0.7);
         });
         threadGeo.attributes.position.needsUpdate = true;
         threadGeo.attributes.color.needsUpdate = true;
@@ -744,9 +743,10 @@ export default function EffortCubeScene({
         gestureT += dt * motionScale;
         const [gx, gy, gz] = gestureAt(gestureT, q);
         core.position.set(gx * 1.05, gy, gz * 0.9);
-        core.scale.setScalar((0.7 + q.mass * 0.9) * 1.5);
+        core.scale.setScalar((0.9 + q.mass * 0.8) * 1.9);
         performerColor(shown, coreColor);
-        coreMat.color.copy(coreColor).multiplyScalar(1.6 + q.mass * 1.4);
+        // Bright enough to glow, not so bright that bloom burns its heat out to white.
+        coreMat.color.copy(coreColor).multiplyScalar(1.05 + (1 - heatOf(shown)) * 0.9);
 
         history.unshift(core.position.clone());
         if (history.length > TRAIL) history.pop();
@@ -784,7 +784,9 @@ export default function EffortCubeScene({
           const tSec = performance.now() / 1000;
           figure.apply(poseAt(G.spec, tSec, size));
           const { p, radiate } = progressAt(G.spec, tSec);
-          figure.setCentre((1 - size) * (0.35 + 0.65 * p) + radiate * 0.5 * size + 0.15);
+          const gHeat = heatOf(effortOf(G.spec));
+          const [hr, hg, hb] = heatRGB(gHeat);
+          figure.setCentre((1 - size) * (0.35 + 0.65 * p) + radiate * 0.5 * size + 0.15, hr, hg, hb);
           figure.setBody(0.25 + 0.75 * size);
           const hs = figure.hands();
           handTrails.forEach((h, i) => {
@@ -796,7 +798,7 @@ export default function EffortCubeScene({
               tmpS.setScalar(life > 0 ? (0.006 + 0.022 * life) * (0.3 + 0.7 * size) : 0);
               tmpM.compose(pos ?? hs[i], tmpQ, tmpS);
               h.mesh.setMatrixAt(n, tmpM);
-              tmpC.set("#D9575C").multiplyScalar(life * life * 1.6 * (0.25 + 0.75 * size));
+              tmpC.setRGB(hr, hg, hb).multiplyScalar(life * life * 1.6 * (0.25 + 0.75 * size));
               h.mesh.setColorAt(n, tmpC);
             }
             h.mesh.instanceMatrix.needsUpdate = true;

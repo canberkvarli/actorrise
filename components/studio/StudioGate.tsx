@@ -49,8 +49,8 @@ export default function StudioGate() {
       style={{
         position: "fixed",
         inset: 0,
-        background: "#130b08",
-        color: "#f3e6da",
+        background: "#0b0b0c",
+        color: "#f4f4f2",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -64,7 +64,7 @@ export default function StudioGate() {
           {access === "signed_out" && (
             <a
               href="/login?redirect=/studio"
-              style={{ display: "inline-block", marginTop: 14, fontSize: 13, color: "#E9C3BC", textDecoration: "underline" }}
+              style={{ display: "inline-block", marginTop: 14, fontSize: 13, color: "#f4f4f2", textDecoration: "underline" }}
             >
               Sign in
             </a>

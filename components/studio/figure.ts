@@ -12,7 +12,7 @@ import * as THREE from "three/webgpu";
 import type { Pose } from "@/lib/studio/gesture";
 
 // Dim enough that bloom keeps the shape of the body; the hands and centre carry the light.
-const BODY = new THREE.Color("#a8907c");
+const BODY = new THREE.Color("#9c9c9a");
 
 function limb(len: number, r: number, mat: THREE.Material): THREE.Mesh {
   const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len - 2 * r, 6, 14), mat);
@@ -27,7 +27,8 @@ export type Figure = {
   /** Hands in world space, after apply(). */
   hands: () => [THREE.Vector3, THREE.Vector3];
   /** 0 dark .. 1 burning: the centre, for a gesture taken inside. */
-  setCentre: (glow: number) => void;
+  /** The centre burns in the gesture's heat colour (0..1 channels). */
+  setCentre: (glow: number, r?: number, g?: number, b?: number) => void;
   /** The body's own light, 0..1 (fades when the gesture is inner). */
   setBody: (light: number) => void;
 };
@@ -69,7 +70,7 @@ export function buildFigure(): Figure {
 
   // The centre: where the gesture lives once it is inside.
   const centreMat = new THREE.MeshBasicNodeMaterial({
-    color: new THREE.Color("#9B1C22"),
+    color: new THREE.Color("#f4f4f2"),
     transparent: true,
     opacity: 0.9,
     blending: THREE.AdditiveBlending,
@@ -80,7 +81,7 @@ export function buildFigure(): Figure {
   chest.add(centre);
 
   // Arms: spread (around y), a little abduction (z), raise (x), then the elbow.
-  const handMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#F3E6DA").multiplyScalar(2.2) });
+  const handMat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#f4f4f2").multiplyScalar(2.2) });
   const arms = [-1, 1].map((side) => {
     const spread = new THREE.Group();
     spread.position.set(0.19 * side, -0.02, 0);
@@ -129,10 +130,10 @@ export function buildFigure(): Figure {
     arms[1].hand.getWorldPosition(new THREE.Vector3()),
   ];
 
-  const setCentre = (glow: number) => {
+  const setCentre = (glow: number, r = 0.96, gr = 0.96, b = 0.95) => {
     const g = Math.max(0, glow);
     centre.scale.setScalar(0.6 + g * 1.4);
-    centreMat.color.set("#9B1C22").multiplyScalar(0.6 + g * 3.2);
+    centreMat.color.setRGB(r, gr, b).multiplyScalar(0.6 + g * 3.2);
   };
 
   const setBody = (light: number) => {

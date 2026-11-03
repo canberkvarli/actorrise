@@ -57,15 +57,15 @@ const chip = (on = false) =>
     fontSize: 10.5,
     padding: "6px 11px",
     borderRadius: 999,
-    border: `1px solid ${on ? "#9B1C22" : "rgba(243,217,191,0.18)"}`,
-    background: on ? "rgba(155,28,34,0.22)" : "transparent",
-    color: on ? "#E9C3BC" : "#e9d6c4",
+    border: `1px solid ${on ? "#f4f4f2" : "rgba(244,244,242,0.18)"}`,
+    background: on ? "rgba(244,244,242,0.14)" : "transparent",
+    color: on ? "#f4f4f2" : "#cfcfcb",
     cursor: "pointer",
     flex: "none",
     transition: `background 250ms ${EASE}, border-color 250ms ${EASE}, color 250ms`,
   }) as const;
 
-const quiet = { fontSize: 12.5, color: "#e9d6c4", opacity: 0.62, lineHeight: 1.5 } as const;
+const quiet = { fontSize: 12.5, color: "#cfcfcb", opacity: 0.62, lineHeight: 1.5 } as const;
 
 export default function Notebook(props: Props) {
   const { open, wide, width, role, tab, onTab, onClose, onEdit } = props;
@@ -98,8 +98,8 @@ export default function Notebook(props: Props) {
         zIndex: 5,
         display: "flex",
         flexDirection: "column",
-        background: "rgba(22, 13, 10, 0.86)",
-        border: "1px solid rgba(243, 217, 191, 0.12)",
+        background: "rgba(16, 16, 17, 0.86)",
+        border: "1px solid rgba(244, 244, 242, 0.12)",
         backdropFilter: "blur(18px)",
         WebkitBackdropFilter: "blur(18px)",
         boxShadow: "0 30px 80px rgba(0,0,0,0.55)",
@@ -111,7 +111,7 @@ export default function Notebook(props: Props) {
       }}
     >
       {/* Head: the role. */}
-      <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(243,217,191,0.08)" }}>
+      <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(244,244,242,0.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <span />
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -126,9 +126,9 @@ export default function Notebook(props: Props) {
                 width: 28,
                 height: 28,
                 borderRadius: 8,
-                background: "rgba(243,217,191,0.06)",
-                border: "1px solid rgba(243,217,191,0.14)",
-                color: "#e9d6c4",
+                background: "rgba(244,244,242,0.06)",
+                border: "1px solid rgba(244,244,242,0.14)",
+                color: "#cfcfcb",
                 cursor: "pointer",
               }}
             >
@@ -150,7 +150,7 @@ export default function Notebook(props: Props) {
           onChange={(e) => onEdit((r) => ({ ...r, scene: e.target.value }))}
           placeholder="The play and the scene, e.g. Hamlet, 5.1, the graveyard"
           aria-label="Play and scene"
-          style={{ fontSize: 13, marginTop: 4, color: "#e9d6c4" }}
+          style={{ fontSize: 13, marginTop: 4, color: "#cfcfcb" }}
         />
         <SyncLine sync={props.sync} />
         <div style={{ display: "flex", gap: 6, marginTop: 12, overflowX: "auto", scrollbarWidth: "none" }}>
@@ -214,9 +214,9 @@ export default function Notebook(props: Props) {
               alignItems: "center",
               padding: "11px 14px",
               borderRadius: 14,
-              background: "rgba(155,28,34,0.16)",
-              border: "1px solid rgba(155,28,34,0.6)",
-              color: "#F3DDD6",
+              background: "rgba(244,244,242,0.16)",
+              border: "1px solid rgba(244,244,242,0.6)",
+              color: "#f4f4f2",
               cursor: "pointer",
             }}
           >
@@ -241,7 +241,7 @@ function SyncLine({ sync }: { sync: SyncStatus }) {
   return (
     <div
       aria-live="polite"
-      style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 10, fontSize: 11.5, color: "#e9d6c4" }}
+      style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 10, fontSize: 11.5, color: "#cfcfcb" }}
     >
       <span
         aria-hidden
@@ -249,7 +249,7 @@ function SyncLine({ sync }: { sync: SyncStatus }) {
           width: 6,
           height: 6,
           borderRadius: 3,
-          background: sync === "saved" ? "#7fbf8a" : sync === "offline" ? "#d9a441" : "rgba(233,214,196,0.45)",
+          background: sync === "saved" ? "#7fbf8a" : sync === "offline" ? "#d9a441" : "rgba(216,216,212,0.45)",
           transition: "background 300ms",
         }}
       />
@@ -257,7 +257,7 @@ function SyncLine({ sync }: { sync: SyncStatus }) {
       {sync === "local" && (
         <a
           href="/login?redirect=/studio"
-          style={{ color: "#E9C3BC", textDecoration: "underline", textUnderlineOffset: 3 }}
+          style={{ color: "#f4f4f2", textDecoration: "underline", textUnderlineOffset: 3 }}
         >
           Sign in to keep it everywhere
         </a>
@@ -343,9 +343,9 @@ function RoleSwitcher({ nb, role, onSwitch, onNewRole, onDeleteRole }: Props) {
         fontSize: 12,
         padding: "5px 8px",
         borderRadius: 8,
-        background: "rgba(243,217,191,0.06)",
-        border: "1px solid rgba(243,217,191,0.14)",
-        color: "#e9d6c4",
+        background: "rgba(244,244,242,0.06)",
+        border: "1px solid rgba(244,244,242,0.14)",
+        color: "#cfcfcb",
         cursor: "pointer",
       }}
     >
@@ -370,7 +370,7 @@ function Questions(props: Props) {
     <div style={{ display: "grid", gap: 18 }}>
       {GROUPS.map((g) => (
         <div key={g}>
-          <div className="uppercase tracking-[0.24em] text-[#C9444A]" style={{ fontSize: 10, marginBottom: 8 }}>
+          <div className="uppercase tracking-[0.24em] text-[#8f8f8b]" style={{ fontSize: 10, marginBottom: 8 }}>
             {g}
           </div>
           <div style={{ display: "grid", gap: 6 }}>
@@ -426,8 +426,8 @@ function QuestionCard({
     <div
       style={{
         borderRadius: 14,
-        border: `1px solid ${open ? "rgba(155,28,34,0.45)" : "rgba(243,217,191,0.09)"}`,
-        background: open ? "rgba(155,28,34,0.06)" : "rgba(243,217,191,0.025)",
+        border: `1px solid ${open ? "rgba(244,244,242,0.45)" : "rgba(244,244,242,0.09)"}`,
+        background: open ? "rgba(244,244,242,0.06)" : "rgba(244,244,242,0.025)",
         transition: `border-color 250ms ${EASE}, background 250ms ${EASE}`,
       }}
     >
@@ -443,7 +443,7 @@ function QuestionCard({
           padding: "11px 13px",
           background: "none",
           border: 0,
-          color: "#f3e6da",
+          color: "#f4f4f2",
           cursor: "pointer",
           textAlign: "left",
         }}
@@ -455,8 +455,8 @@ function QuestionCard({
             height: 7,
             borderRadius: 4,
             flex: "none",
-            background: hasAnswer ? "#9B1C22" : "transparent",
-            border: `1px solid ${hasAnswer ? "#9B1C22" : "rgba(243,217,191,0.35)"}`,
+            background: hasAnswer ? "#f4f4f2" : "transparent",
+            border: `1px solid ${hasAnswer ? "#f4f4f2" : "rgba(244,244,242,0.35)"}`,
           }}
         />
         <span style={{ ...display, fontSize: 18, lineHeight: 1.2, flex: 1 }}>{q.ask}</span>
@@ -478,7 +478,7 @@ function QuestionCard({
                 key={nudge}
                 style={{
                   fontSize: 13.5,
-                  color: "#E9C3BC",
+                  color: "#f4f4f2",
                   lineHeight: 1.45,
                   animation: `studio-in 380ms ${EASE}`,
                 }}
@@ -515,7 +515,7 @@ function QuestionCard({
               style={{
                 justifySelf: "start",
                 fontSize: 12,
-                color: "#e9d6c4",
+                color: "#cfcfcb",
                 opacity: 0.7,
                 background: "none",
                 border: 0,
@@ -523,7 +523,7 @@ function QuestionCard({
                 cursor: "pointer",
                 textDecoration: "underline",
                 textUnderlineOffset: 3,
-                textDecorationColor: "rgba(233,214,196,0.3)",
+                textDecorationColor: "rgba(216,216,212,0.3)",
               }}
             >
               {nudge < 0 ? "Ask me something harder" : "Another one"}
@@ -565,9 +565,9 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
           gap: 10,
           padding: "12px 14px",
           borderRadius: 14,
-          background: "rgba(155,28,34,0.16)",
-          border: "1px solid rgba(155,28,34,0.6)",
-          color: "#F3DDD6",
+          background: "rgba(244,244,242,0.16)",
+          border: "1px solid rgba(244,244,242,0.6)",
+          color: "#f4f4f2",
           cursor: "pointer",
           textAlign: "left",
         }}
@@ -590,7 +590,7 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
             gap: 12,
             padding: "10px 12px",
             borderRadius: 12,
-            border: "1px solid rgba(243,217,191,0.1)",
+            border: "1px solid rgba(244,244,242,0.1)",
           }}
         >
           <span style={{ ...quiet, opacity: 0.8 }}>
@@ -614,8 +614,8 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
               key={m.id}
               style={{
                 borderRadius: 14,
-                border: `1px solid ${on ? "rgba(155,28,34,0.6)" : "rgba(243,217,191,0.09)"}`,
-                background: on ? "rgba(155,28,34,0.08)" : "rgba(243,217,191,0.025)",
+                border: `1px solid ${on ? "rgba(244,244,242,0.6)" : "rgba(244,244,242,0.09)"}`,
+                background: on ? "rgba(244,244,242,0.08)" : "rgba(244,244,242,0.025)",
                 padding: "10px 12px 12px",
                 transition: `border-color 250ms ${EASE}, background 250ms ${EASE}`,
               }}
@@ -632,9 +632,9 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                     height: 24,
                     borderRadius: 12,
                     fontSize: 11,
-                    background: on ? "#9B1C22" : "rgba(243,217,191,0.06)",
-                    border: "1px solid rgba(233,195,188,0.5)",
-                    color: "#F5ECE2",
+                    background: on ? "#f4f4f2" : "rgba(244,244,242,0.06)",
+                    border: "1px solid rgba(244,244,242,0.5)",
+                    color: "#f4f4f2",
                     cursor: "pointer",
                   }}
                 >
@@ -658,7 +658,7 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                   marginTop: 4,
                   marginLeft: 34,
                   fontSize: 12,
-                  color: "#E9C3BC",
+                  color: "#f4f4f2",
                   opacity: 0.85,
                   background: "none",
                   border: 0,
@@ -669,7 +669,7 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
               >
                 {read(m.point).sentence}
                 {typeof m.line === "number" && (
-                  <span style={{ ...mono, marginLeft: 8, fontSize: 10.5, padding: "1px 5px", border: "1px solid rgba(243,217,191,0.2)", color: "#e9d6c4" }}>
+                  <span style={{ ...mono, marginLeft: 8, fontSize: 10.5, padding: "1px 5px", border: "1px solid rgba(244,244,242,0.2)", color: "#cfcfcb" }}>
                     line {m.line + 1}
                   </span>
                 )}
@@ -691,9 +691,9 @@ function Moments({ role, onEdit, point, activeMoment, onPin, onGoTo, playing, on
                         fontSize: 11,
                         padding: "3px 9px",
                         borderRadius: 999,
-                        border: `1px solid ${sel ? a.dust : "rgba(243,217,191,0.14)"}`,
+                        border: `1px solid ${sel ? a.dust : "rgba(244,244,242,0.14)"}`,
                         background: sel ? `${a.floor}55` : "transparent",
-                        color: sel ? "#F5ECE2" : "#e9d6c4",
+                        color: sel ? "#f4f4f2" : "#cfcfcb",
                         opacity: sel ? 1 : 0.75,
                         cursor: "pointer",
                       }}

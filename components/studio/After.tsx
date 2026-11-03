@@ -12,16 +12,16 @@ import { FEELS, KINDS, type Take, type TakeFeel, type TakeKind } from "@/lib/stu
 import { newId, type Role } from "@/lib/studio/notebook";
 import { display, EASE } from "./style";
 
-const quiet = { fontSize: 12.5, color: "#e9d6c4", opacity: 0.62, lineHeight: 1.5 } as const;
+const quiet = { fontSize: 12.5, color: "#cfcfcb", opacity: 0.62, lineHeight: 1.5 } as const;
 
 const chip = (on: boolean) =>
   ({
     fontSize: 11.5,
     padding: "5px 11px",
     borderRadius: 999,
-    border: `1px solid ${on ? "#9B1C22" : "rgba(243,217,191,0.16)"}`,
-    background: on ? "rgba(155,28,34,0.22)" : "transparent",
-    color: on ? "#F3DDD6" : "#e9d6c4",
+    border: `1px solid ${on ? "#f4f4f2" : "rgba(244,244,242,0.16)"}`,
+    background: on ? "rgba(244,244,242,0.14)" : "transparent",
+    color: on ? "#f4f4f2" : "#cfcfcb",
     cursor: "pointer",
     transition: `background 200ms ${EASE}, border-color 200ms ${EASE}`,
   }) as const;
@@ -68,7 +68,7 @@ export function AfterForm({
       style={{ display: "grid", gap: 12 }}
     >
       <div>
-        <div className="uppercase tracking-[0.2em] text-[#e9d6c4]" style={{ fontSize: 10, opacity: 0.55, marginBottom: 6 }}>
+        <div className="uppercase tracking-[0.2em] text-[#cfcfcb]" style={{ fontSize: 10, opacity: 0.55, marginBottom: 6 }}>
           What was it
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -80,7 +80,7 @@ export function AfterForm({
         </div>
       </div>
       <div>
-        <div className="uppercase tracking-[0.2em] text-[#e9d6c4]" style={{ fontSize: 10, opacity: 0.55, marginBottom: 6 }}>
+        <div className="uppercase tracking-[0.2em] text-[#cfcfcb]" style={{ fontSize: 10, opacity: 0.55, marginBottom: 6 }}>
           How did it feel
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -132,9 +132,9 @@ export function AfterForm({
             fontSize: 12,
             padding: "8px 16px",
             borderRadius: 999,
-            border: "1px solid #9B1C22",
-            background: "#9B1C22",
-            color: "#F7EFE6",
+            border: "1px solid #f4f4f2",
+            background: "#f4f4f2",
+            color: "#0b0b0c",
             cursor: empty ? "default" : "pointer",
             opacity: empty ? 0.45 : 1,
           }}
@@ -176,9 +176,9 @@ export function AfterTab({
             textAlign: "left",
             padding: "12px 14px",
             borderRadius: 14,
-            background: "rgba(155,28,34,0.16)",
-            border: "1px solid rgba(155,28,34,0.6)",
-            color: "#F3DDD6",
+            background: "rgba(244,244,242,0.16)",
+            border: "1px solid rgba(244,244,242,0.6)",
+            color: "#f4f4f2",
             cursor: "pointer",
           }}
         >
@@ -188,22 +188,22 @@ export function AfterTab({
 
       <ol style={{ display: "grid", gap: 8, listStyle: "none", padding: 0, margin: 0 }}>
         {takes.map((t) => (
-          <li key={t.id} style={{ border: "1px solid rgba(243,217,191,0.1)", padding: "10px 12px" }}>
+          <li key={t.id} style={{ border: "1px solid rgba(244,244,242,0.1)", padding: "10px 12px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-              <span className="uppercase tracking-[0.16em] text-[#e9d6c4]" style={{ fontSize: 10.5, opacity: 0.7 }}>
+              <span className="uppercase tracking-[0.16em] text-[#cfcfcb]" style={{ fontSize: 10.5, opacity: 0.7 }}>
                 {KINDS.find((k) => k.id === t.kind)?.name}
                 {t.feel ? ` · ${FEELS.find((f) => f.id === t.feel)?.name}` : ""}
               </span>
-              <span style={{ fontSize: 11, opacity: 0.45, color: "#e9d6c4" }}>{when(t.at)}</span>
+              <span style={{ fontSize: 11, opacity: 0.45, color: "#cfcfcb" }}>{when(t.at)}</span>
             </div>
             {t.worked && (
-              <p style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 6, color: "#f3e6da" }}>
+              <p style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 6, color: "#f4f4f2" }}>
                 <span style={{ opacity: 0.55 }}>Worked: </span>
                 {t.worked}
               </p>
             )}
             {t.change && (
-              <p style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 4, color: "#E9C3BC" }}>
+              <p style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 4, color: "#f4f4f2" }}>
                 <span style={{ opacity: 0.7 }}>Change: </span>
                 {t.change}
               </p>
@@ -211,7 +211,7 @@ export function AfterTab({
             <button
               type="button"
               onClick={() => onEdit((r) => ({ ...r, takes: (r.takes ?? []).filter((x) => x.id !== t.id) }))}
-              style={{ marginTop: 6, fontSize: 11, opacity: 0.45, color: "#e9d6c4", background: "none", border: 0, padding: 0, cursor: "pointer" }}
+              style={{ marginTop: 6, fontSize: 11, opacity: 0.45, color: "#cfcfcb", background: "none", border: 0, padding: 0, cursor: "pointer" }}
             >
               Remove
             </button>

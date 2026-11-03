@@ -10,6 +10,7 @@
 import { useEffect } from "react";
 import { trackEvent } from "@/lib/events";
 import { read } from "@/lib/studio/effort";
+import { heatCSS, heatOf } from "@/lib/studio/heat";
 import {
   DIRECTIONS,
   QUALITIES,
@@ -23,17 +24,16 @@ import {
 import type { Role } from "@/lib/studio/notebook";
 import { display, EASE } from "./style";
 
-const quiet = { fontSize: 12.5, color: "#e9d6c4", opacity: 0.62, lineHeight: 1.5 } as const;
-const label = { fontSize: 10, opacity: 0.55, color: "#e9d6c4", marginBottom: 6 } as const;
+const quiet = { fontSize: 12.5, color: "#cfcfcb", opacity: 0.62, lineHeight: 1.5 } as const;
 
 const chip = (on: boolean) =>
   ({
     fontSize: 11.5,
     padding: "5px 11px",
     borderRadius: 999,
-    border: `1px solid ${on ? "#9B1C22" : "rgba(243,217,191,0.15)"}`,
-    background: on ? "rgba(155,28,34,0.24)" : "transparent",
-    color: on ? "#F3DDD6" : "#e9d6c4",
+    border: `1px solid ${on ? "#f4f4f2" : "rgba(244,244,242,0.15)"}`,
+    background: on ? "rgba(244,244,242,0.14)" : "transparent",
+    color: on ? "#f4f4f2" : "#cfcfcb",
     cursor: "pointer",
     transition: `background 200ms ${EASE}, border-color 200ms ${EASE}`,
   }) as const;
@@ -91,8 +91,8 @@ export default function GesturePanel(p: Props) {
         zIndex: 6,
         display: "flex",
         flexDirection: "column",
-        background: "rgba(22, 13, 10, 0.88)",
-        border: "1px solid rgba(243, 217, 191, 0.12)",
+        background: "rgba(16, 16, 17, 0.88)",
+        border: "1px solid rgba(244, 244, 242, 0.12)",
         backdropFilter: "blur(18px)",
         WebkitBackdropFilter: "blur(18px)",
         boxShadow: "0 30px 80px rgba(0,0,0,0.55)",
@@ -100,27 +100,22 @@ export default function GesturePanel(p: Props) {
         ...frame,
       }}
     >
-      <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(243,217,191,0.08)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div className="uppercase tracking-[0.28em] text-[#C9444A]" style={{ fontSize: 10.5 }}>
-            Gesture{role.name ? ` · ${role.name}` : ""}
+      <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(244,244,242,0.08)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ ...display, fontSize: 24, lineHeight: 1.2, color: heatCSS(heatOf(effortOf(spec))), transition: "color 400ms" }}>
+              {describe(spec)}
+            </div>
+            <div style={{ fontSize: 12, color: "#8f8f8b", marginTop: 4 }}>reads as {reading.main.name.toLowerCase()}</div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close gesture" style={{ ...chip(false), fontSize: 10, padding: "5px 9px" }}>
+          <button type="button" onClick={onClose} aria-label="Close gesture" style={{ ...chip(false), fontSize: 10, padding: "5px 9px", flex: "none" }}>
             Close
           </button>
-        </div>
-        <div style={{ ...display, fontSize: 24, lineHeight: 1.2, marginTop: 10 }}>{describe(spec)}</div>
-        <div style={{ fontSize: 12.5, color: "#E9C3BC", marginTop: 4 }}>
-          Reads as {reading.main.name.toLowerCase()} · {reading.factors.toLowerCase()}
         </div>
       </div>
 
       <div className="studio-scroll" style={{ flex: 1, overflowY: "auto", padding: "14px 18px 14px", display: "grid", gap: 16, alignContent: "start" }}>
-
         <div>
-          <div className="uppercase tracking-[0.2em]" style={label}>
-            The verb
-          </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {VERBS.map((x) => (
               <button key={x.id} type="button" title={x.feel} aria-pressed={spec.verb === x.id} onClick={() => set({ verb: x.id })} style={chip(spec.verb === x.id)}>
@@ -128,53 +123,64 @@ export default function GesturePanel(p: Props) {
               </button>
             ))}
           </div>
-          <p style={{ ...quiet, marginTop: 8, color: "#E9C3BC", opacity: 0.85 }}>{v.feel}</p>
+          <p style={{ ...quiet, marginTop: 8, color: "#f4f4f2", opacity: 0.8 }}>{v.feel}</p>
         </div>
 
-        <div>
-          <div className="uppercase tracking-[0.2em]" style={label}>
-            How
-          </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {QUALITIES.map((q) => (
-              <button key={q.id} type="button" aria-pressed={spec.quality === q.id} onClick={() => set({ quality: q.id })} style={chip(spec.quality === q.id)}>
-                {q.name}
-              </button>
-            ))}
-          </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {QUALITIES.map((q) => (
+            <button key={q.id} type="button" aria-pressed={spec.quality === q.id} onClick={() => set({ quality: q.id })} style={chip(spec.quality === q.id)}>
+              {q.name}
+            </button>
+          ))}
         </div>
 
-        <div>
-          <div className="uppercase tracking-[0.2em]" style={label}>
-            Direction
-          </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {DIRECTIONS.map((d) => (
-              <button key={d.id} type="button" aria-pressed={spec.direction === d.id} onClick={() => set({ direction: d.id })} style={chip(spec.direction === d.id)}>
-                {d.name}
-              </button>
-            ))}
-          </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              trackEvent("studio_gesture_inward", { verb: spec.verb, quality: spec.quality });
+              onInward();
+            }}
+            disabled={inward}
+            style={{ ...chip(inward || size < 0.05), padding: "8px 14px" }}
+          >
+            {inward ? "Going inside…" : "Take it inside"}
+          </button>
+          {(size < 0.95 || inward) && !inward && (
+            <button type="button" onClick={() => onSize(1)} style={{ ...chip(false), padding: "8px 14px" }}>
+              Full out
+            </button>
+          )}
+          <button type="button" aria-pressed={sculpt} onClick={() => onSculpt(!sculpt)} style={{ ...chip(sculpt), padding: "8px 14px" }}>
+            Shape
+          </button>
+          <button type="button" onClick={onCamera} style={{ ...chip(false), padding: "8px 14px" }}>
+            Do it yourself
+          </button>
         </div>
+        {yours && (
+          <p style={{ fontSize: 12.5, color: "#cfe0ff", lineHeight: 1.5 }}>
+            Yours read as {yours.main.name.toLowerCase()}
+            {yours.main.id !== reading.main.id ? `, the figure's as ${reading.main.name.toLowerCase()}. Which is the character?` : "."}
+          </p>
+        )}
 
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          <div>
-            <div className="uppercase tracking-[0.2em]" style={label}>
-              Tempo
+        <details>
+          <summary style={{ fontSize: 12, color: "#8f8f8b", cursor: "pointer", listStyle: "none" }}>More</summary>
+          <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {DIRECTIONS.map((d) => (
+                <button key={d.id} type="button" aria-pressed={spec.direction === d.id} onClick={() => set({ direction: d.id })} style={chip(spec.direction === d.id)}>
+                  {d.name}
+                </button>
+              ))}
             </div>
-            <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {TEMPOS.map((t) => (
                 <button key={t.id} type="button" aria-pressed={spec.tempo === t.id} onClick={() => set({ tempo: t.id })} style={chip(spec.tempo === t.id)}>
                   {t.name}
                 </button>
               ))}
-            </div>
-          </div>
-          <div>
-            <div className="uppercase tracking-[0.2em]" style={label}>
-              Line
-            </div>
-            <div style={{ display: "flex", gap: 6 }}>
               <button type="button" aria-pressed={!spec.staccato} onClick={() => set({ staccato: false })} style={chip(!spec.staccato)}>
                 Legato
               </button>
@@ -183,65 +189,11 @@ export default function GesturePanel(p: Props) {
               </button>
             </div>
           </div>
-        </div>
-
-        <div>
-          <div className="uppercase tracking-[0.2em]" style={label}>
-            Size
-          </div>
-          <label style={{ display: "grid", gridTemplateColumns: "48px 1fr 48px", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 11, opacity: 0.7, color: "#e9d6c4" }}>Inside</span>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={size}
-              disabled={inward}
-              onChange={(e) => onSize(Number(e.target.value))}
-              aria-label="Size of the gesture, from inside to full out"
-              style={{ width: "100%", accentColor: "#9B1C22" }}
-            />
-            <span style={{ fontSize: 11, opacity: 0.7, color: "#e9d6c4", textAlign: "right" }}>Full out</span>
-          </label>
-          <button
-            type="button"
-            onClick={() => {
-              trackEvent("studio_gesture_inward", { verb: spec.verb, quality: spec.quality });
-              onInward();
-            }}
-            disabled={inward}
-            style={{ ...chip(inward), marginTop: 10, padding: "8px 14px" }}
-          >
-            {inward ? "Going inside…" : "Take it inside"}
-          </button>
-        </div>
-
-        <div style={{ borderTop: "1px solid rgba(243,217,191,0.08)", paddingTop: 14 }}>
-          <div className="uppercase tracking-[0.2em]" style={label}>
-            Your body
-          </div>
-          <button type="button" onClick={onCamera} style={{ ...chip(true), marginTop: 10, padding: "8px 14px" }}>
-            Do it yourself
-          </button>
-          {yours && (
-            <p style={{ fontSize: 12.5, color: "#cfe0ff", marginTop: 10, lineHeight: 1.5 }}>
-              Yours read as {yours.main.name.toLowerCase()} · {yours.factors.toLowerCase()}
-              {yours.main.id !== reading.main.id ? `. The figure's reads as ${reading.main.name.toLowerCase()}: which is the character?` : "."}
-            </p>
-          )}
-        </div>
-
-        <label style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }}>
-          <input type="checkbox" checked={sculpt} onChange={(e) => onSculpt(e.target.checked)} style={{ accentColor: "#9B1C22" }} />
-          <span style={{ fontSize: 13, color: "#e9d6c4" }}>Keep the shape the hands make</span>
-        </label>
+        </details>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "12px 18px 16px", borderTop: "1px solid rgba(243,217,191,0.08)" }}>
-        <span style={{ ...quiet, fontSize: 12 }}>
-          {kept ? "This is the role's gesture. Places plays it." : role.gesture ? `Kept: ${describe(role.gesture)}` : "Not kept yet."}
-        </span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "12px 18px 16px", borderTop: "1px solid rgba(244,244,242,0.08)" }}>
+        <span style={{ ...quiet, fontSize: 12 }}>{kept ? "Places plays it." : ""}</span>
         <button
           type="button"
           onClick={() => {
@@ -253,9 +205,9 @@ export default function GesturePanel(p: Props) {
             fontSize: 12,
             padding: "9px 16px",
             borderRadius: 999,
-            border: "1px solid #9B1C22",
-            background: kept ? "transparent" : "#9B1C22",
-            color: kept ? "#E9C3BC" : "#F7EFE6",
+            border: "1px solid #f4f4f2",
+            background: kept ? "transparent" : "#f4f4f2",
+            color: kept ? "#f4f4f2" : "#0b0b0c",
             cursor: kept ? "default" : "pointer",
             flex: "none",
           }}
