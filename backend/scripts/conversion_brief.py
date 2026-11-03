@@ -415,6 +415,15 @@ def written_to(conn=None) -> list[str]:
     return sorted(addrs) or ["nobody@nowhere"]
 
 
+def still_absent(conn, rows: list[tuple]) -> list[tuple]:
+    """ABSENT_TITLES replays what search said when it ran, so a title added since, or one
+    a search could not match back then (Harry Potter until 6923677d), would be listed as
+    missing for 30 days. Ask the library now and keep only what it still lacks."""
+    from app.services.search.title_lookup import find_catalogue_source_types
+
+    return [r for r in rows if not find_catalogue_source_types(conn, r[0])]
+
+
 def build(conn) -> str:
     from sqlalchemy import bindparam, text
 
@@ -526,7 +535,7 @@ def build(conn) -> str:
         gap_overall + " A kind well above that rate is where to add pieces.\n",
         table(("kind of piece", "weak", "searches", "weak rate", "people"), gap_kinds),
         "Titles searched that are in no tab (screen titles come in like the rest of the TV and film corpus):\n",
-        table(("title", "searches", "people", "last"), q(ABSENT_TITLES)),
+        table(("title", "searches", "people", "last"), still_absent(conn, q(ABSENT_TITLES))),
     ]
     return "\n".join(parts)
 

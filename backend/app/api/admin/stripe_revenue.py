@@ -116,6 +116,19 @@ def _real_monthly(sub) -> tuple[float, int | None]:
     return monthly, (min(ends) if ends else None)
 
 
+def _has_paid(sub) -> bool:
+    """Whether this subscription has ever paid real money. A yearly comp on a
+    100%-off coupon previews its renewal at full price once the coupon ends
+    before it, so the preview alone counted three comps that had never paid a
+    cent as $24.75 a month of earnings (2026-11-03: $84.75 shown, $60 real)."""
+    try:
+        invoices = stripe.Invoice.list(subscription=sub["id"], status="paid", limit=24)
+    except Exception as e:  # noqa: BLE001
+        logger.info("invoices unreadable for %s: %s", sub.get("id"), str(e)[:120])
+        return True  # unknown: leave it as the preview says
+    return any((i.get("amount_paid") or 0) > 0 for i in invoices.auto_paging_iter())
+
+
 def _compute() -> dict:
     key = os.getenv("STRIPE_SECRET_KEY")
     if not key:
@@ -145,6 +158,15 @@ def _compute() -> dict:
 
     for sub in active:
         m, discount_end = amount_of(sub)
+        if m > 0 and not estimated and not _has_paid(sub):
+            # Never paid: what the preview shows is a renewal that may come,
+            # not money earned. Deferred, with the renewal as its date.
+            free += 1
+            coupon_cents += m
+            end = sub.get("current_period_end") or (sub.get("items", {}).get("data") or [{}])[0].get("current_period_end")
+            if end:
+                coupon_ends.append(end)
+            continue
         now_cents += m
         interval, _count = _cadence(sub)
         if m > 0 and interval == "month":
