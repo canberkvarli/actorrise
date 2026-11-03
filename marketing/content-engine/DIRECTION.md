@@ -3,6 +3,18 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-04, night: who speaks, what you hear, who sees it first (wins over everything below)
+
+Canberk watched the voiced films: the voice did not work on a one-shot film. So:
+- **Voice-over belongs to the drawn films** (longer, story driven): a narrator (George) and, in
+  scene films, the partner (Lily) reading the other character. Drawn films get voice plus the
+  playful sounds (ping, tap, pop), no music bed.
+- **Real one-shot films are silent movies.** No voice-over, no narration, no room-tone hiss or
+  white noise. Under the shot: the `felt` music style, a soft solo piano like a silent film's
+  accompanist, resolving on the end card. `"music": {"style": "felt"}`.
+- **Nothing goes to Approvals until Canberk has watched it.** Runs upload to TryPost as DRAFTS
+  (status "draft"), send him the mp4, and stop. He says go in the Content Studio and it is queued.
+
 ## 2026-11-04, scene reads and the ending (wins over everything below)
 
 Canberk, after the Earnest scene read: "first scene is really good", the ending "can be much much better".

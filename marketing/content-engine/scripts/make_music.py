@@ -188,6 +188,10 @@ STYLES = {
                       bass=[38, 38, 43, 45]),
     "build": dict(bpm=78, swing=0.0, prog=[[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]],
                   bass=[45, 41, 48, 43]),
+    # felt: a soft solo piano, like the accompanist of a silent film. For real one-shot films:
+    # no drums, no riser, no hiss; warm, slow, a little hopeful, resolving on the end card.
+    "felt": dict(bpm=64, swing=0.0, prog=[[57, 60, 64], [53, 57, 60, 64], [48, 52, 55, 59], [55, 59, 62]],
+                 bass=[45, 41, 48, 43]),
     "festive": dict(bpm=118, swing=0.0, prog=[[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]],
                     bass=[48, 45, 41, 43]),
 }
@@ -299,6 +303,19 @@ def compose(spec):
                 for x, n in mel:
                     mx.note("lead", "acoustic_grand_piano", n, tb + x * beat, beat * 1.2, 0.3, 0.2)
 
+        elif style == "felt":
+            # left hand: a low root and a fifth, held; right hand: a few chord tones, then a small melody
+            mx.note("bass", "acoustic_grand_piano", bs - 12, tb, bar * 1.1, 0.30, -0.2)
+            mx.note("bass", "acoustic_grand_piano", bs - 5, tb + beat * 2, bar * 0.6, 0.18, -0.15)
+            for k, n in enumerate(sorted(ch)[:3]):
+                mx.note("keys", "acoustic_grand_piano", n, tb + beat * (0.5 + k * 0.5), beat * 3, 0.17, 0.1 * k)
+            if b >= 1:  # the melody enters in the second bar, whatever the cuts
+                mel, last = melody(rng, ch, 69, 81, last)
+                for x, n in mel[:3]:
+                    mx.note("lead", "acoustic_grand_piano", n, tb + x * beat, beat * 1.8, 0.22, 0.2)
+            if post:
+                mx.chord("pad", "string_ensemble_1", [n - 12 for n in ch], tb, bar, 0.07, strum=0)
+
         elif style == "festive":
             arp = [ch[0] + 12, ch[1] + 12, ch[2] + 12, ch[1] + 12] * 2
             for k, n in enumerate(arp):
@@ -317,10 +334,11 @@ def compose(spec):
                 for x, n in mel:
                     mx.note("lead", "music_box", n, tb + x * beat, beat * 1.1, 0.35, -0.25)
 
-    # The drop: a riser into it, a hit on it.
-    mx.add("fx", t_drop - bar, riser(bar), 0.4)
-    mx.add("fx", t_drop, crash(), 0.45)
-    mx.add("fx", t_drop, kick(1.3), 0.9)
+    # The drop: a riser into it, a hit on it (not for felt: the piano just resolves).
+    if style != "felt":
+        mx.add("fx", t_drop - bar, riser(bar), 0.4)
+        mx.add("fx", t_drop, crash(), 0.45)
+        mx.add("fx", t_drop, kick(1.3), 0.9)
     if style in ("build", "pizzicato"):
         mx.note("fx", "timpani", S["bass"][bars_pre % 4] - 12 if S["bass"][bars_pre % 4] > 40 else S["bass"][bars_pre % 4], t_drop, 1.5, 0.6)
     if style == "festive":
@@ -329,7 +347,7 @@ def compose(spec):
     # too much shoosh). The drop keeps its riser.
     # Last chord rings out under the end card.
     mx.chord("keys", {"sunny": "electric_piano_1", "pizzicato": "orchestral_harp", "build": "acoustic_grand_piano",
-                      "festive": "music_box"}[style], S["prog"][0], max(t_drop, total - 1.6), 1.8, 0.3)
+                      "festive": "music_box", "felt": "acoustic_grand_piano"}[style], [60, 64, 67, 72] if style == "felt" else S["prog"][0], max(t_drop, total - 1.6), 1.8, 0.3)
 
     # Bus processing: the intro is filtered and opens up on the drop.
     n = mx.n
