@@ -34,7 +34,9 @@ export function TheatreFooter() {
           From sm up it collapses back into the single flowing row. */}
       <div className="mx-auto flex max-w-[1240px] flex-col gap-7 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-8 sm:gap-y-4">
         <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3.5">
-          <Link prefetch={false} href="/" aria-label={t("nav.home")}>
+          {/* -ml-6: the PNG carries ~24px of transparent padding on its left
+              at h-9 (413 of 2000px), so pull it back onto the link column. */}
+          <Link prefetch={false} href="/" aria-label={t("nav.home")} className="-ml-6">
             <Image
               src="/transparent_textlogo.png"
               alt="ActorRise"

@@ -74,7 +74,9 @@ export function MarketingFooter() {
               tap height. From sm up, the flowing rows come back. */}
           <div className="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-8 sm:gap-y-4">
             <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3.5">
-              <Link prefetch={false} href="/" aria-label={t("nav.home")}>
+              {/* -ml-6: the PNG carries ~24px of transparent padding on its
+                  left at h-9 (413 of 2000px); this lines it up with the links. */}
+              <Link prefetch={false} href="/" aria-label={t("nav.home")} className="-ml-6">
                 <Image
                   src="/transparent_textlogo.png"
                   alt="ActorRise"
