@@ -12,7 +12,7 @@ export const appScenes = {
     yourLine: "Your line",
     lineCall: "Line!",
     lineCallLabel: "Line! Show the next words",
-    lineCallTitle: "Or say \"line\"",
+    lineCallTitle: "Or say \"{word}\"",
     paused: "Paused",
     startOver: "Start over",
     back: "Back",

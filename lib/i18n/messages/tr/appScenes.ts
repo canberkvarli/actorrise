@@ -14,7 +14,7 @@ export const appScenes: Widen<typeof en> = {
     yourLine: "Senin repliğin",
     lineCall: "Replik!",
     lineCallLabel: "Replik! Sonraki kelimeleri göster",
-    lineCallTitle: "Ya da yüksek sesle \"line\" de",
+    lineCallTitle: "Ya da yüksek sesle \"{word}\" de",
     paused: "Duraklatıldı",
     startOver: "Baştan al",
     back: "Geri",

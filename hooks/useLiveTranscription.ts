@@ -24,6 +24,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { TurnItems } from '@/lib/rehearsal/turn-items';
+import type { SpeechLang } from '@/lib/speech-language';
 
 /**
  * How long the transcript may gain no new words before the actor counts as
@@ -78,6 +79,8 @@ interface OpenOptions {
   prompt?: string;
   /** Proper nouns for the whole scene. Re-pointed per turn by `beginTurn`. */
   keywords?: string[];
+  /** What the script is spoken in ("en" or "tr"). English when absent. */
+  language?: SpeechLang;
   /**
    * The microphone to stream, supplied by the caller.
    *
@@ -233,7 +236,8 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
 
   const askSecret = useCallback(() => api.post<{ client_secret: string }>(
     '/api/speech/live-session',
-    { prompt: optionsRef.current.prompt ?? '', keywords: optionsRef.current.keywords ?? [] },
+    { prompt: optionsRef.current.prompt ?? '', keywords: optionsRef.current.keywords ?? [],
+      language: optionsRef.current.language ?? 'en' },
   ).then(r => r.data.client_secret), []);
 
   const warm = useCallback(() => {
@@ -334,7 +338,7 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
       session: {
         type: 'transcription',
         audio: { input: { transcription: {
-          model: 'gpt-live-transcribe', delay: 'low', languages: ['en'],
+          model: 'gpt-live-transcribe', delay: 'low', languages: [optionsRef.current.language ?? 'en'],
           keywords: keywords.filter(k => k && !/[<>\r\n]/.test(k)).slice(0, 100).map(k => k.slice(0, 80)),
         }, turn_detection: null } },
       },

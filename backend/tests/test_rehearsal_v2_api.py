@@ -94,6 +94,12 @@ class Api(unittest.TestCase):
         self.assertEqual(body["audio"]["0"], {"key": mock.ANY, "url": None})
         self.assertIsNone(body["resume"])
 
+    def test_scene_payload_is_english_unless_the_play_says_otherwise(self):
+        self.assertEqual(self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()["language"], "en")
+        self.scene.play.language = "tr"
+        self.db.commit()
+        self.assertEqual(self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()["language"], "tr")
+
     def test_scene_payload_says_whether_the_actor_may_direct(self):
         body = self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()
         self.assertFalse(body["can_direct"])

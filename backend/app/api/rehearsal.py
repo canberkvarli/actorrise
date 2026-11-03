@@ -28,6 +28,7 @@ from app.services.rehearsal import journal, partner_audio
 from app.services.rehearsal.access import assert_can_rehearse, can_direct_partner
 from app.services.rehearsal.contract import RehearsalLine, lines_for, same_character
 from app.services.rehearsal.delivery import MAX_DIRECTOR_NOTE, LineVoice, SceneVoicing, clean_note, scene_voicing
+from app.services.rehearsal.language import scene_language
 from app.services.rehearsal.voices import VOICES, default_voices, voice_by_id
 from app.utils.duration import estimate_duration_seconds
 
@@ -146,6 +147,13 @@ def get_rehearsal_scene(
         },
         "lines": [l.model_dump() for l in lines],
         "characters": characters,
+        # What the scene is spoken in, for the recogniser, the transcriber and
+        # the matcher ("en" or "tr"). From the script, never the UI locale.
+        "language": scene_language(
+            scene.play.language if scene.play else None,
+            scene.user_script_id is not None,
+            (l.text for l in lines),
+        ),
         "voices": _voice_list(),
         "defaults": defaults,
         "vendor": settings.partner_tts_vendor,

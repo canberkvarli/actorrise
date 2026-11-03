@@ -13,10 +13,22 @@
  * Pure, so line-call.test.ts pins it without a microphone.
  */
 import { wordsMatch } from '../word-match';
+import type { SpeechLang } from '../speech-language';
 
 /** "line", and what the transcriber makes of it. Not "lie": scripts say lie. */
 export const CALL_WORDS = new Set(['line', 'lines', 'lion', 'lyon']);
 const POLITE = 'please';
+
+/**
+ * Turkish: "replik!" is what a Turkish stage calls for, and "satır!" is heard
+ * too. Matched after tokenize(…, 'tr'), so lowercase with the Turkish letters,
+ * plus the spellings a transcriber that drops marks gives back.
+ */
+export const CALL_WORDS_TR = new Set(['replik', 'replikler', 'repliği', 'repligi', 'satır', 'satir', 'satırı', 'satiri']);
+const POLITE_TR = new Set(['lütfen', 'lutfen']);
+
+const callWords = (lang: SpeechLang) => (lang === 'tr' ? CALL_WORDS_TR : CALL_WORDS);
+const isPolite = (w: string, lang: SpeechLang) => (lang === 'tr' ? POLITE_TR.has(w) : w === POLITE);
 
 export interface Split {
   /** The transcript without the calls, for liveRead. */
@@ -33,15 +45,18 @@ export interface Split {
  * with, if any; `known` the calls found on earlier deltas. A call once found
  * stays one: the transcriber revising the word must not count it twice.
  */
-export function splitCalls(tokens: string[], next: string | undefined, quietAt: number, known: ReadonlySet<number>): Split {
+export function splitCalls(
+  tokens: string[], next: string | undefined, quietAt: number, known: ReadonlySet<number>, lang: SpeechLang = 'en',
+): Split {
+  const words = callWords(lang);
   const calls = new Set(known);
   const k = quietAt;
-  if (k < tokens.length && CALL_WORDS.has(tokens[k]) && !(next && wordsMatch(next, tokens[k]))) calls.add(k);
+  if (k < tokens.length && words.has(tokens[k]) && !(next && wordsMatch(next, tokens[k], lang))) calls.add(k);
   const out: string[] = [];
   let waiting = false;
   for (let i = 0; i < tokens.length; i++) {
-    if (calls.has(i) && CALL_WORDS.has(tokens[i])) { waiting = true; continue; }
-    if (tokens[i] === POLITE && calls.has(i - 1)) continue;
+    if (calls.has(i) && words.has(tokens[i])) { waiting = true; continue; }
+    if (isPolite(tokens[i], lang) && calls.has(i - 1)) continue;
     out.push(tokens[i]);
     waiting = false;
   }

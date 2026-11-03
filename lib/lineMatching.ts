@@ -7,8 +7,18 @@
  * without a browser. (Follow-up: dedupe the scene page to import from here.)
  */
 
-/** Lowercase, strip punctuation, split into words. */
-export function normWords(s: string): string[] {
+import type { SpeechLang } from "./speech-language";
+import { foldTurkish, tokenize } from "./word-match";
+
+/**
+ * Lowercase, strip punctuation, split into words.
+ *
+ * English keeps a-z, 0-9 and the apostrophe, as it always has. Turkish goes
+ * through word-match's Turkish fold (I → ı, İ → i, ç ğ ı ö ş ü kept), so
+ * "kadın" stays one word instead of "kad n".
+ */
+export function normWords(s: string, lang: SpeechLang = "en"): string[] {
+  if (lang === "tr") return tokenize(s, "tr");
   return s
     .toLowerCase()
     .replace(/[^a-z0-9\s']/g, " ")
@@ -41,7 +51,14 @@ export function soundex(word: string): string {
 }
 
 /** Two words "match" if identical or phonetically equivalent (length-gated). */
-export function wordsMatch(a: string, b: string): boolean {
+export function wordsMatch(a: string, b: string, lang: SpeechLang = "en"): boolean {
+  if (lang === "tr") {
+    // Marks folded first, both for a transcriber that drops them ("kadin")
+    // and because soundex only knows A-Z.
+    const fa = foldTurkish(a);
+    const fb = foldTurkish(b);
+    return a === b || fa === fb || (fa.length >= 3 && fb.length >= 3 && soundex(fa) === soundex(fb));
+  }
   return (
     a === b ||
     (a.length >= 3 && b.length >= 3 && soundex(a) === soundex(b))
@@ -53,15 +70,15 @@ export function wordsMatch(a: string, b: string): boolean {
  * Order-independent and fuzzy — good enough to tell "they said the line" from
  * "they're still stalling".
  */
-export function wordMatchScore(expected: string, transcript: string): number {
-  const exp = normWords(expected);
+export function wordMatchScore(expected: string, transcript: string, lang: SpeechLang = "en"): number {
+  const exp = normWords(expected, lang);
   if (exp.length === 0) return 1;
-  const tr = normWords(transcript);
+  const tr = normWords(transcript, lang);
   if (tr.length === 0) return 0;
   const trSet = new Set(tr);
   let hits = 0;
   for (const w of exp) {
-    if (trSet.has(w) || tr.some((t) => wordsMatch(w, t))) hits++;
+    if (trSet.has(w) || tr.some((t) => wordsMatch(w, t, lang))) hits++;
   }
   return hits / exp.length;
 }
@@ -72,9 +89,9 @@ export function wordMatchScore(expected: string, transcript: string): number {
  * matcher that advances a pointer through the line as matching spoken words
  * arrive, skipping filler/misheard words that don't match the next target.
  */
-export function spokenPrefixCount(line: string, transcript: string, lookahead = 3): number {
-  const target = normWords(line);
-  const spoken = normWords(transcript);
+export function spokenPrefixCount(line: string, transcript: string, lookahead = 3, lang: SpeechLang = "en"): number {
+  const target = normWords(line, lang);
+  const spoken = normWords(transcript, lang);
   if (target.length === 0 || spoken.length === 0) return 0;
   let p = 0;
   for (const w of spoken) {
@@ -82,7 +99,7 @@ export function spokenPrefixCount(line: string, transcript: string, lookahead = 
     // Look for this spoken word among the next few target words, so a dropped or
     // misheard word doesn't freeze the highlight — we jump past it and keep up.
     for (let k = 0; k < lookahead && p + k < target.length; k++) {
-      if (wordsMatch(w, target[p + k])) {
+      if (wordsMatch(w, target[p + k], lang)) {
         p = p + k + 1;
         break;
       }

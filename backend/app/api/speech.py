@@ -22,6 +22,7 @@ from app.core.database import get_db
 from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import FeatureGate
 from app.models.user import User
+from app.services.rehearsal import language as rehearsal_language
 from app.services.tts_service import VOICE_PROFILES, TTSService
 
 logger = logging.getLogger(__name__)
@@ -134,6 +135,7 @@ TRANSCRIBE_MODELS = ("gpt-4o-transcribe", "gpt-4o-mini-transcribe", "whisper-1")
 async def transcribe_speech(
     audio: UploadFile = File(...),
     prompt: Optional[str] = None,  # Expected line text — improves Whisper accuracy
+    language: Optional[str] = None,  # What the script is spoken in: "en" (default) or "tr"
     current_user: User = Depends(get_current_user),
     _gate: bool = Depends(FeatureGate("scene_partner", increment=False)),
     _burst: bool = Depends(BurstLimiter("speech_transcribe")),
@@ -165,12 +167,15 @@ async def transcribe_speech(
             tmp_path = f.name
 
         client = OpenAI(api_key=settings.openai_api_key)
+        # The script's language, not the UI's. Anything unknown is English,
+        # which is what this endpoint always sent.
+        spoken = rehearsal_language.normalise(language)
         text = ""
         last_error: Exception | None = None
         for model in TRANSCRIBE_MODELS:
             try:
                 with open(tmp_path, "rb") as f:
-                    kwargs: dict = dict(model=model, file=f, language="en")
+                    kwargs: dict = dict(model=model, file=f, language=spoken)
                     if prompt:
                         # The line the actor is MEANT to say, as a vocabulary
                         # hint. This is what turns "a nita" into "Anita" and
@@ -221,6 +226,10 @@ class LiveSessionRequest(BaseModel):
     # "a nita" and never has to be recovered by the matcher at all.
     keywords: list[str] = Field(default_factory=list, max_length=100)
 
+    # What the script is spoken in ("en" or "tr"); anything else is English.
+    # Without it a Turkish speech is transcribed as if it were English.
+    language: str = Field(default="en", max_length=16)
+
 
 @router.post("/live-session")
 async def create_live_session(
@@ -262,7 +271,7 @@ async def create_live_session(
                     "input": {
                         "transcription": {
                             "model": LIVE_TRANSCRIBE_MODEL,
-                            "languages": ["en"],
+                            "languages": [rehearsal_language.normalise(request.language)],
                             # Partial transcripts as early as the model will
                             # give them. The actor is watching their own words
                             # appear on the page, so a late-but-tidier delta is

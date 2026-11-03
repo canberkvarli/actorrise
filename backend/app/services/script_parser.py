@@ -47,10 +47,10 @@ PARSER_VERSION = 7
 # CHARACTER: dialogue or CHARACTER. dialogue (on same line)
 # Name allows spaces, apostrophes, hyphens (MRS PAGE, O'BRIEN, LADY ANNE)
 # but NOT periods in the name itself — the period is the separator
-_CHAR_WITH_DIALOGUE = re.compile(r"^([A-Z][A-Z\s'\-]{0,30})[:.]\s+(.+)$")
+_CHAR_WITH_DIALOGUE = re.compile(r"^([A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ\s'\-]{0,30})[:.]\s+(.+)$")
 
 # CHARACTER. or CHARACTER: (name only, dialogue on next lines)
-_CHAR_ONLY = re.compile(r"^([A-Z][A-Z\s'\-]{0,30})[:.]?\s*$")
+_CHAR_ONLY = re.compile(r"^([A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ\s'\-]{0,30})[:.]?\s*$")
 
 # CHARACTER, direction — Folger puts the direction on the cue line itself:
 # "OBERON, to Robin", "ROBIN, in Lysander's voice", "BOTTOM, waking up". In
@@ -58,7 +58,7 @@ _CHAR_ONLY = re.compile(r"^([A-Z][A-Z\s'\-]{0,30})[:.]?\s*$")
 # comes". The direction starts lowercase; that is what separates it from a
 # cast-list entry ("THESEUS, Duke of Athens").
 _CHAR_WITH_DIRECTION = re.compile(
-    r"^((?:A |THE )?[A-Z][A-Z'’\-]+(?: [A-Z][A-Z'’\-]+){0,2}), ([a-z][^\n]*)$"
+    r"^((?:A |THE )?[A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ'’\-]+(?: [A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ'’\-]+){0,2}), ([a-zçğıöşüâîû][^\n]*)$"
 )
 
 # CHARACTER (direction): speech. How a Word document or a set of sides puts a
@@ -66,7 +66,7 @@ _CHAR_WITH_DIRECTION = re.compile(
 # "JANE (beat): You kept it." The bracket sat between the name and the colon,
 # so no cue pattern matched and Mark's speech was read as the end of Esther's.
 _CHAR_PAREN_CUE = re.compile(
-    r"^((?:A |THE )?[A-Z][A-Z'’\-]+(?: [A-Z][A-Z'’\-]+){0,2})[ \t]*"
+    r"^((?:A |THE )?[A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ'’\-]+(?: [A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ'’\-]+){0,2})[ \t]*"
     r"\(([^()\n]{1,80})\)[ \t]*[:.](?:[ \t]+(.*))?$"
 )
 
@@ -90,7 +90,7 @@ _NARRATIVE_MAX_WORDS = 30
 # "MARK (continuing his act): “Then…”". Two of them make a script written
 # that way.
 _INLINE_CUE = re.compile(
-    r"^[ \t]*([A-Z][A-Z'’\-]+(?: [A-Z][A-Z'’\-]+){0,2})(?:[ \t]*\([^()\n]*\))?[ \t]*:[ \t]+\S",
+    r"^[ \t]*([A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ'’\-]+(?: [A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ'’\-]+){0,2})(?:[ \t]*\([^()\n]*\))?[ \t]*:[ \t]+\S",
     re.MULTILINE,
 )
 
@@ -116,7 +116,7 @@ def _is_narrative_direction(text: str, cast) -> bool:
         return False
     if "?" in s or "!" in s:
         return False
-    words = re.findall(r"[A-Za-z'’\-]+", s)
+    words = re.findall(r"[A-ZÇĞİÖŞÜÂÎÛa-zçğıöşüâîû'’\-]+", s)
     if not words or len(words) > _NARRATIVE_MAX_WORDS:
         return False
     if any(w.casefold() in _PERSONAL_WORDS for w in words):
@@ -194,7 +194,7 @@ def _split_direction(rest: str, cast=()):
 _DIALOGUE_INDENTED = re.compile(r'^\s{2,}(.+)')
 
 # Non-indented dialogue (sentence case — not all caps)
-_DIALOGUE_SENTENCE = re.compile(r'^([A-Z][a-z].+)$')
+_DIALOGUE_SENTENCE = re.compile(r'^([A-ZÇĞİÖŞÜÂÎÛ][a-zçğıöşüâîû].+)$')
 
 # Stage direction extraction
 _STAGE_DIR = re.compile(r'[\[\(]([^\]\)]+)[\]\)]')
@@ -231,7 +231,7 @@ _EXCLUDE_PATTERNS = [
         r'^THE\s+(FIRST|SECOND|THIRD|FOURTH|FIFTH|SIXTH)\s+ACT$',
         r'^(ACT|SCENE|CURTAIN|FINIS|THE\s+END)$',
         r'^[IVXLCDM]+$',                 # III, IV, V off a scene list
-        r'^[A-Z]$',                      # a lone initial from a footnote
+        r'^[A-ZÇĞİÖŞÜÂÎÛ]$',                      # a lone initial from a footnote
         # A title left stranded when a cast-list line was cut at its full stop.
         # LORD, LADY and SIR are deliberately absent: they are whole words and
         # whole parts. Hamlet Act 5 Scene 2 has a Lord who comes in with a
@@ -297,7 +297,7 @@ _PAGE_NUM_ONLY = re.compile(r'^\d{1,4}[.\s]*$')
 
 # A screenplay speaker cue carrying a continuation/more marker: "RACHEL (CONT'D)",
 # "RYAN (CONT’D)", "JANE (MORE)". Captures the bare character name.
-_CHAR_CONTD = re.compile(r"^([A-Z][A-Z\s'\-]{0,30})\s*\(\s*(?:CONT'?[D’]?D?|CONT[’']D|MORE)\s*\)\s*$", re.IGNORECASE)
+_CHAR_CONTD = re.compile(r"^([A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ\s'\-]{0,30})\s*\(\s*(?:CONT'?[D’]?D?|CONT[’']D|MORE)\s*\)\s*$", re.IGNORECASE)
 
 # A lone (MORE)/(CONT'D) marker on its own line, sometimes doubled/garbled by PDF
 # extraction ("((MMOORREE))"). Treated as noise.
@@ -325,7 +325,7 @@ def _is_screenplay_action(text: str, character_names: List[str]) -> bool:
     leads = [n.strip() for n in character_names if n.strip()]
     leads += ["They", "He", "She", "It"]
     for name in leads:
-        if re.match(rf"^{re.escape(name)}\b\s+[a-z]", s, re.IGNORECASE):
+        if re.match(rf"^{re.escape(name)}\b\s+[a-zçğıöşüâîû]", s, re.IGNORECASE):
             return True
     return False
 
@@ -338,7 +338,7 @@ def _has_direction_subject(s: str, names) -> bool:
     talking, however many direction verbs they carry: nobody in the cast is
     called Pyramus, and "This" is not a person. The subject is what decides.
     """
-    words = re.findall(r"[A-Za-z'’\-]+", s)
+    words = re.findall(r"[A-ZÇĞİÖŞÜÂÎÛa-zçğıöşüâîû'’\-]+", s)
     # "The fairies exit." is about the fairies. "The more I hate, the more he
     # follows me." is Hermia, and "the" must not be what makes it a direction.
     if words and words[0].lower() == "the":
@@ -454,7 +454,7 @@ _LEADING_LINE_NUM = re.compile(r'^\d{1,5}\s+', re.MULTILINE)
 # damaging one — it rides on the speaker cue ("HENRY *"), so the cue stops
 # reading as a cue and the whole speech is swallowed by the line above it.
 _REVISION_BANNER = re.compile(
-    r"^\d+\s+[A-Z]+\s+REVISED\s+PAGES?\s*\([^)]*\)\s*[\d.]*$", re.IGNORECASE
+    r"^\d+\s+[A-ZÇĞİÖŞÜÂÎÛ]+\s+REVISED\s+PAGES?\s*\([^)]*\)\s*[\d.]*$", re.IGNORECASE
 )
 _CONTINUED_HEADER = re.compile(
     r"^\(?\s*(?:\d+\s+)?CONTINUED\s*[:.]?\s*\)?\s*\d*$", re.IGNORECASE
@@ -478,7 +478,7 @@ _PLACEHOLDER_TITLES = {"untitled script", "untitled", "unknown", "n/a", "none"}
 
 # Slug lines, transitions and continuation cues: the shape of a screenplay.
 _SCREENPLAY_MARKERS = re.compile(
-    r"^(?:\d+\s+)?(?:INT|EXT)[\./ ]|^\s*[A-Z ]*CUT TO:|^\s*DISSOLVE TO:|\(CONT'?[’']?D\)",
+    r"^(?:\d+\s+)?(?:INT|EXT)[\./ ]|^\s*[A-ZÇĞİÖŞÜÂÎÛ ]*CUT TO:|^\s*DISSOLVE TO:|\(CONT'?[’']?D\)",
     re.IGNORECASE | re.MULTILINE,
 )
 # What a title page says under the title.
@@ -694,20 +694,20 @@ def _apply_italic_directions(text: str) -> str:
 
 # A cue standing alone on its line: "THESEUS", "FIRST FAIRY", "ROBIN GOODFELLOW".
 # Allows a trailing period or colon, which some editions print.
-_STANDALONE_CUE = re.compile(r"^\s*([A-Z][A-Z'’.\- ]{1,28}?)\s*[.:]?\s*$", re.MULTILINE)
+_STANDALONE_CUE = re.compile(r"^\s*([A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ'’.\- ]{1,28}?)\s*[.:]?\s*$", re.MULTILINE)
 
 # A cue at the head of a line with the speech running straight on, no
 # punctuation between — how Folger sets prose: "QUINCE Is all our company here?"
 # Each word of the name needs two letters, so "FLUTE O, sweet bully Bottom!"
 # yields FLUTE and leaves Flute his "O".
-_NAME_WORD = r"[A-Z][A-Z'’\-]+"
+_NAME_WORD = r"[A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ'’\-]+"
 _NAME = rf"(?:A |THE )?{_NAME_WORD}(?: {_NAME_WORD}){{0,2}}"
 # What follows has to be a word, not a number: "ACT 2" and "SCENE 1" lead as
 # many lines as any speaker does. And not another shouted word: "FIRST FAIRY"
 # is one name, not FIRST speaking the word "FAIRY". A capital is fine on its
 # own ("FLUTE O, sweet bully Bottom!") or starting a word ("QUINCE Is all").
 _LEADING_CUE = re.compile(
-    rf"^[ \t]*({_NAME})(?:,)?[ \t]+(?=[A-Z](?![A-Z])|[a-z\"“‘'(\[])", re.MULTILINE
+    rf"^[ \t]*({_NAME})(?:,)?[ \t]+(?=[A-ZÇĞİÖŞÜÂÎÛ](?![A-ZÇĞİÖŞÜÂÎÛ])|[a-zçğıöşüâîû\"“‘'(\[])", re.MULTILINE
 )
 
 # Never speakers, however often they head a line.
@@ -786,13 +786,13 @@ def _split_cue_lines(text: str) -> str:
 # 449 times over.
 _HONORIFIC = r"(?:Dr|Mr|Mrs|Ms|Miss|Rev|Sir|Lady|Lord|Capt|Col|Gen|Maj|Sgt|Lt|Prof|St|Fr)"
 _TITLECASE_CUE = re.compile(
-    rf"^([ \t]*)((?:{_HONORIFIC}\.[ \t]*)?[A-Z][a-z][A-Za-z'’\-]*"
-    rf"(?:[ \t]+[A-Z][A-Za-z'’\-]*){{0,2}})\.(?=[ \t]|$)",
+    rf"^([ \t]*)((?:{_HONORIFIC}\.[ \t]*)?[A-ZÇĞİÖŞÜÂÎÛ][a-zçğıöşüâîû][A-ZÇĞİÖŞÜÂÎÛa-zçğıöşüâîû'’\-]*"
+    rf"(?:[ \t]+[A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛa-zçğıöşüâîû'’\-]*){{0,2}})\.(?=[ \t]|$)",
     re.MULTILINE,
 )
 
 # A cue already shouting, which is what the parser has always read.
-_ALLCAPS_CUE = re.compile(r"^[ \t]*[A-Z][A-Z '\-\.]{1,28}[.:]?[ \t]*$", re.MULTILINE)
+_ALLCAPS_CUE = re.compile(r"^[ \t]*[A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ '\-\.]{1,28}[.:]?[ \t]*$", re.MULTILINE)
 
 # Words that lead a line and end with a period without being anybody's name.
 # A play is full of them, and every one would otherwise join the cast.
@@ -906,7 +906,7 @@ def _preprocess_text(text: str) -> str:
     # "New -bent in heaven" for "New-bent": the PDF put a space in front of a
     # hyphen inside a word. Only closed up between two letters, so a spaced
     # dash used as punctuation ("Demetrius - my noble lord") is left alone.
-    text = re.sub(r'(?<=[A-Za-z]) +-(?=[a-z])', '-', text)
+    text = re.sub(r'(?<=[A-ZÇĞİÖŞÜÂÎÛa-zçğıöşüâîû]) +-(?=[a-zçğıöşüâîû])', '-', text)
 
     # After the line numbers have gone, so a number is never mistaken for the
     # roman text that makes an italic run mid-line.
@@ -917,7 +917,7 @@ def _preprocess_text(text: str) -> str:
     # seven lines because of it. Only the cue position is touched; an
     # underscore inside a speech is left where it is.
     text = re.sub(
-        r"^([ \t]*)_([A-Za-z][A-Za-z'’\-. ]{0,28}?)_(\s*[.:])", r"\1\2\3", text,
+        r"^([ \t]*)_([A-ZÇĞİÖŞÜÂÎÛa-zçğıöşüâîû][A-ZÇĞİÖŞÜÂÎÛa-zçğıöşüâîû'’\-. ]{0,28}?)_(\s*[.:])", r"\1\2\3", text,
         flags=re.MULTILINE,
     )
 
@@ -929,7 +929,7 @@ def _preprocess_text(text: str) -> str:
     # Left apart, "FIRST" is a speaker with no lines and the lullaby is sung by
     # whichever fairy came last.
     text = re.sub(
-        r"^(FIRST|SECOND|THIRD|FOURTH|FIFTH)\n([A-Z][A-Z'’\-]+)$", r"\1 \2", text,
+        r"^(FIRST|SECOND|THIRD|FOURTH|FIFTH)\n([A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ'’\-]+)$", r"\1 \2", text,
         flags=re.MULTILINE,
     )
 
@@ -1576,7 +1576,7 @@ _PUBLICATION_DETAIL = re.compile(
     r"\b(?:author|adapted|translated|written|screenplay|teleplay|book|lyrics|music)\s*(?:by\b|:)"
     r"|^by\s+\S"
     r"|\bcopyright\b|©"
-    r"|^an?\s+[a-z\- ]{0,30}\b(?:play|scene|comedy|tragedy|drama|musical)\b",
+    r"|^an?\s+[a-zçğıöşüâîû\- ]{0,30}\b(?:play|scene|comedy|tragedy|drama|musical)\b",
     re.IGNORECASE,
 )
 
@@ -1893,7 +1893,7 @@ def _reseat_leads(scene: Dict) -> None:
 
 def _spoken_key(text: str) -> str:
     """A line's text reduced to what survives being re-typed by an LLM."""
-    return re.sub(r"[^a-z0-9]+", "", (text or "").casefold())
+    return re.sub(r"[^a-zçğıöşüâîû0-9]+", "", (text or "").casefold())
 
 
 def _locate_line(keys: List[str], needle: str, start: int) -> Optional[int]:

@@ -80,6 +80,9 @@ class MonologueResponse(BaseModel):
     play_id: int
     author: str
     translator: Optional[str] = None  # e.g. "Edwin Björkman" for translated classical work
+    # What the piece is spoken in (plays.language, "en" or "tr"), so a run of
+    # it listens in that language.
+    language: Optional[str] = None
     category: str
     character_gender: Optional[str]
     character_age_range: Optional[str]
@@ -306,6 +309,7 @@ def _monologue_to_response(
         play_id=cast(int, play.id),
         author=cast(str, play.author),
         translator=cast(Optional[str], getattr(play, "translator", None)),
+        language=cast(Optional[str], getattr(play, "language", None)),
         category=cast(str, play.category),
         character_gender=cast(Optional[str], m.character_gender),
         character_age_range=cast(Optional[str], m.character_age_range),

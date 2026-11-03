@@ -6,6 +6,7 @@ import { castColorVars, castPalette } from '@/lib/castColors';
 import { sameCharacter, type RehearsalLine } from '@/lib/rehearsal/contract';
 import type { Snapshot } from '@/lib/rehearsal/engine';
 import type { Book } from '@/lib/rehearsal/book';
+import type { SpeechLang } from '@/lib/speech-language';
 import { Line, type When } from './Line';
 
 interface Props {
@@ -17,6 +18,8 @@ interface Props {
   /** How much of the actor's lines shows, and the words they called for, by line. */
   book?: Book;
   given?: Map<number, Set<number>>;
+  /** What the scene is spoken in, for splitting the actor's words. */
+  lang?: SpeechLang;
 }
 
 /** Fraction of the viewport height where the live word is held: the middle of the pool of light. */
@@ -41,7 +44,7 @@ const NO_WORDS = new Set<number>();
  * Scrolling by hand to find a line is left alone for a few seconds, then the
  * script follows the run again on its next move.
  */
-export function Stage({ lines, actor, snapshot, paused, onJump, warming = false, book = 'script', given }: Props) {
+export function Stage({ lines, actor, snapshot, paused, onJump, warming = false, book = 'script', given, lang = 'en' }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const motion = useRef<AnimationPlaybackControls | null>(null);
   const placed = useRef(false);
@@ -115,7 +118,7 @@ export function Stage({ lines, actor, snapshot, paused, onJump, warming = false,
           const at = mine && live && (speaking === 'listening' || speaking === 'held') ? next : undefined;
           return <Line key={line.index} line={line} mine={mine} when={when} heard={heard} speaking={speaking}
             at={at} jumpable={Boolean(onJump) && !live} cueStyle={cues.get(line.character)}
-            book={book} given={mine ? given?.get(line.index) : undefined} />;
+            book={book} given={mine ? given?.get(line.index) : undefined} lang={lang} />;
         })}
       </ol>
       <div aria-hidden className="h-[60dvh]" />

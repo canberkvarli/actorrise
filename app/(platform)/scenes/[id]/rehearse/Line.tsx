@@ -3,6 +3,7 @@
 import { Fragment, memo, useMemo, type CSSProperties } from 'react';
 import type { RehearsalLine } from '@/lib/rehearsal/contract';
 import { displayRuns } from '@/lib/rehearsal/display-words';
+import type { SpeechLang } from '@/lib/speech-language';
 import { showWord, type Book } from '@/lib/rehearsal/book';
 import { useT } from '@/lib/i18n';
 
@@ -26,6 +27,8 @@ interface Props {
   book?: Book;
   /** Words of this line the actor called for. */
   given?: Set<number>;
+  /** What the scene is spoken in, so the words split as the matcher splits them. */
+  lang?: SpeechLang;
 }
 
 /**
@@ -42,9 +45,9 @@ interface Props {
  * bold widens a word, and a word widening mid-line re-wraps the paragraph,
  * which read as the words jumping.
  */
-function LineView({ line, mine, when, heard, speaking, at, jumpable, cueStyle, book = 'script', given = NONE }: Props) {
+function LineView({ line, mine, when, heard, speaking, at, jumpable, cueStyle, book = 'script', given = NONE, lang = 'en' }: Props) {
   const t = useT();
-  const words = useMemo(() => displayRuns(line.text), [line.text]);
+  const words = useMemo(() => displayRuns(line.text, lang), [line.text, lang]);
   const off = mine && book !== 'script';
   return (
     <li data-line={line.index} data-mine={mine} data-when={when} data-speaking={speaking}
@@ -92,5 +95,5 @@ function sameWords(a?: Set<number>, b?: Set<number>): boolean {
 /** The engine publishes a snapshot a frame; only a line whose place, position or heard words changed re-renders. */
 export const Line = memo(LineView, (p, n) =>
   p.line === n.line && p.mine === n.mine && p.when === n.when && p.speaking === n.speaking && p.at === n.at
-  && p.jumpable === n.jumpable && p.cueStyle === n.cueStyle && p.book === n.book
+  && p.jumpable === n.jumpable && p.cueStyle === n.cueStyle && p.book === n.book && p.lang === n.lang
   && sameWords(p.heard, n.heard) && sameWords(p.given, n.given));

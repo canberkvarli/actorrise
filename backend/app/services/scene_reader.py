@@ -226,7 +226,7 @@ def _is_title_line(raw: str, cast_keys: set) -> bool:
     return key not in cast_keys and not any(key.startswith(c + " ") for c in cast_keys)
 
 
-_SENTENCE_BREAK = re.compile(r"[.!?]\s+[A-Z]")
+_SENTENCE_BREAK = re.compile(r"[.!?]\s+[A-ZÇĞİÖŞÜÂÎÛ]")
 
 
 def _title_rows(raw_lines: Sequence[str], cast_keys: set) -> set:
@@ -271,7 +271,7 @@ def _normalised_source(source: str, cast: Sequence[str] = ()) -> Tuple[str, List
 
 
 def _name_key(name: str) -> str:
-    return re.sub(r"[^A-Z0-9]+", " ", (name or "").upper()).strip()
+    return re.sub(r"[^A-ZÇĞİÖŞÜÂÎÛ0-9]+", " ", (name or "").upper()).strip()
 
 
 def _name_pattern(names: Sequence[str]) -> Optional[re.Pattern]:
@@ -279,7 +279,7 @@ def _name_pattern(names: Sequence[str]) -> Optional[re.Pattern]:
     if not keys:
         return None
     alts = [r"[\s.'’\-]+".join(re.escape(w) for w in k.split()) for k in keys]
-    return re.compile(r"(?<![A-Za-z])(?:" + "|".join(alts) + r")(?![A-Za-z])", re.IGNORECASE)
+    return re.compile(r"(?<![A-ZÇĞİÖŞÜÂÎÛa-zçğıöşüâîû])(?:" + "|".join(alts) + r")(?![A-ZÇĞİÖŞÜÂÎÛa-zçğıöşüâîû])", re.IGNORECASE)
 
 
 def _note_key(note: str) -> str:
@@ -288,7 +288,7 @@ def _note_key(note: str) -> str:
 
 
 # A cue the reading never named: a shouted name at the head of a printed line.
-_SHOUTED_CUE = re.compile(r"[A-Z][A-Z'’\-]+(?:[ .]{1,2}[A-Z][A-Z'’\-]+){0,2}(?![a-z])")
+_SHOUTED_CUE = re.compile(r"[A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ'’\-]+(?:[ .]{1,2}[A-ZÇĞİÖŞÜÂÎÛ][A-ZÇĞİÖŞÜÂÎÛ'’\-]+){0,2}(?![a-zçğıöşüâîû])")
 _COLON_AFTER = re.compile(r"\s*(?:\([^()]*\))?\s*:")
 
 
@@ -341,7 +341,7 @@ def _residue(gap: str, cues: Sequence[Tuple[int, int, str]], delivery: str) -> s
     r = " ".join(
         t for t in r.split() if not _CUE_EXTENSIONS.match(re.sub(r"[()\[\]:.,]", "", t))
     )
-    return _SPACE.sub(" ", re.sub(r"[^A-Za-z]+", " ", r)).strip()
+    return _SPACE.sub(" ", re.sub(r"[^A-ZÇĞİÖŞÜÂÎÛa-zçğıöşüâîû]+", " ", r)).strip()
 
 
 # A bracket inside a spoken line that is a note to the actor, not words:

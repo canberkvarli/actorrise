@@ -39,6 +39,8 @@ export interface Monologue {
   play_id: number;
   author: string;
   translator?: string | null;
+  /** What the piece is spoken in ("en", "tr"), from its play. A run of it listens in that language. */
+  language?: string | null;
   category: string;
   character_gender?: string;
   character_age_range?: string;

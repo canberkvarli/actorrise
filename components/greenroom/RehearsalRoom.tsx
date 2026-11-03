@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -26,12 +26,17 @@ import { useRoomChannel } from "@/hooks/useRoomChannel";
 import { useRoomVoice } from "@/hooks/useRoomVoice";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { MicWaveform } from "@/components/scenepartner/MicWaveform";
+import { detectSpeechLang, recognitionLocale, type SpeechLang } from "@/lib/speech-language";
 
-const normWord = (w: string) => w.toLowerCase().replace(/[^a-z0-9']/g, "");
+const normWordEnglish = (w: string) => w.toLowerCase().replace(/[^a-z0-9']/g, "");
+/** Turkish keeps its letters (ç ğ ı ö ş ü) and lowercases I to ı, İ to i. */
+const normWordTurkish = (w: string) =>
+  w.normalize("NFC").toLocaleLowerCase("tr-TR").replace(/\p{M}/gu, "").replace(/[^\p{L}\p{N}']/gu, "");
 
 /** How many leading words of a line the spoken transcript has covered (sequential,
  *  lightly fuzzy) — drives the live word-highlight as you say your line. */
-function matchedWordCount(lineWords: string[], transcript: string): number {
+function matchedWordCount(lineWords: string[], transcript: string, lang: SpeechLang = "en"): number {
+  const normWord = lang === "tr" ? normWordTurkish : normWordEnglish;
   const spoken = transcript.split(/\s+/).map(normWord).filter(Boolean);
   let cursor = 0;
   let matched = 0;
@@ -74,7 +79,13 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
     setSceneLines,
   } = useRoomChannel(roomId, myName);
   const voice = useRoomVoice(roomId, myName);
-  const sr = useSpeechRecognition({ continuous: true, interimResults: true });
+  // What the script is spoken in, read off its words: a Turkish script is
+  // heard in Turkish whatever the UI is.
+  const roomLang = useMemo<SpeechLang>(
+    () => detectSpeechLang((script?.scenes ?? []).flatMap((s) => s.lines.map((l) => l.text)).join(" ")),
+    [script],
+  );
+  const sr = useSpeechRecognition({ continuous: true, interimResults: true, lang: recognitionLocale(roomLang) });
   const [editMode, setEditMode] = useState(false);
 
   // The stage door. Browsers only hand over a mic on a user gesture, so a tap
@@ -328,6 +339,7 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
           </button>
         </div>
         <ScriptView
+          lang={roomLang}
           lines={lines}
           at={at}
           myRole={myRole}
@@ -602,6 +614,7 @@ function ScriptView({
   editMode,
   roles,
   onChange,
+  lang,
 }: {
   lines: RoomLine[];
   at: number;
@@ -611,6 +624,8 @@ function ScriptView({
   editMode: boolean;
   roles: string[];
   onChange: (next: RoomLine[]) => void;
+  /** What the script is spoken in, for matching the actor's words. */
+  lang: SpeechLang;
 }) {
   const activeRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -645,7 +660,7 @@ function ScriptView({
                 }`}
               >
                 {active && mine && listening ? (
-                  <LiveLine text={ln.text} transcript={transcript} />
+                  <LiveLine text={ln.text} transcript={transcript} lang={lang} />
                 ) : (
                   ln.text
                 )}
@@ -737,9 +752,9 @@ function EditableScript({
 }
 
 /** The active line, with each word lighting up (orange) as it's spoken. */
-function LiveLine({ text, transcript }: { text: string; transcript: string }) {
+function LiveLine({ text, transcript, lang }: { text: string; transcript: string; lang: SpeechLang }) {
   const words = text.split(/\s+/).filter(Boolean);
-  const matched = matchedWordCount(words, transcript);
+  const matched = matchedWordCount(words, transcript, lang);
   const tokens = text.split(/(\s+)/); // keep whitespace tokens
   let wi = 0;
   return (

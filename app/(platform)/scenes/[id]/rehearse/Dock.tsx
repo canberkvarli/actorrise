@@ -62,6 +62,8 @@ interface DockProps {
   onToggle: () => void; onSkip: () => void; onBack: () => void; onRestart: () => void;
   /** Off the script, on the actor's line: give them the next word. Absent when there is nothing to give. */
   onPrompt?: () => void;
+  /** The word that calls for a line out loud, in the scene's language ("line", "replik"). */
+  callWord?: string;
 }
 
 /**
@@ -71,7 +73,7 @@ interface DockProps {
  * top of the scene. Off the script, their own line also offers "Line!", what
  * an actor calls in rehearsal when the next word will not come.
  */
-export function Dock({ snapshot, partner, onToggle, onSkip, onBack, onRestart, onPrompt }: DockProps) {
+export function Dock({ snapshot, partner, onToggle, onSkip, onBack, onRestart, onPrompt, callWord = 'line' }: DockProps) {
   const t = useT();
   const state = snapshot?.state ?? 'ready';
   const paused = state === 'paused';
@@ -83,7 +85,7 @@ export function Dock({ snapshot, partner, onToggle, onSkip, onBack, onRestart, o
         {state === 'actor' && onPrompt && (
           <>
             <span className="r-dock__sep" aria-hidden>·</span>
-            <button type="button" className="r-dock__link" onClick={onPrompt} aria-label={t('appScenesRehearse.lineCallLabel')} title={t('appScenesRehearse.lineCallTitle')}>
+            <button type="button" className="r-dock__link" onClick={onPrompt} aria-label={t('appScenesRehearse.lineCallLabel')} title={t('appScenesRehearse.lineCallTitle', { word: callWord })}>
               {t('appScenesRehearse.lineCall')}
             </button>
           </>

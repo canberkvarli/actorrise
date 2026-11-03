@@ -187,12 +187,13 @@ export class Engine {
     if (this.timeline.get('first_delta') === undefined) this.timeline.mark('first_delta', now);
     // The read carries on from the last delta of this turn, so the reading
     // position only moves forward; enter() and resume() reset it to EMPTY_READ.
-    const tokens = tokenize(transcript);
-    const split = splitCalls(tokens, turn.words[this.read.position], this.quietAt, this.calls);
+    const lang = this.script.lang ?? 'en';
+    const tokens = tokenize(transcript, lang);
+    const split = splitCalls(tokens, turn.words[this.read.position], this.quietAt, this.calls, lang);
     this.calls = split.calls;
     this.tokenCount = tokens.length;
     this.waitingOnPrompt = split.waiting;
-    this.read = liveRead(turn.words, split.spoken, this.read);
+    this.read = liveRead(turn.words, split.spoken, this.read, lang);
     if (shouldHandOver({ ...this.read, turnEnded: false })) {
       this.finishActorTurn('last_word');
       return;

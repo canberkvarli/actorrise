@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/events";
 import { appStoreUrl } from "@/lib/appStore";
 import { wordMatchScore, toDeliverableLines, spokenPrefixCount } from "@/lib/lineMatching";
+import { detectSpeechLang, recognitionLocale, speechLang } from "@/lib/speech-language";
 import {
   trackRehearsalStarted,
   trackRehearsalLineDelivered,
@@ -274,6 +275,14 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
     setActiveIndex(next);
   }, []);
 
+  // What the piece is spoken in: its play's language (a Turkish translation
+  // listens in Turkish whatever the UI is), read off the text when the server
+  // did not say.
+  const speechLanguage = useMemo(
+    () => (monologue.language ? speechLang(monologue.language) : detectSpeechLang(monologue.text ?? "")),
+    [monologue.language, monologue.text],
+  );
+
   const {
     transcript,
     isListening,
@@ -282,7 +291,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
     stopListening,
     resetTranscript,
     error: speechError,
-  } = useSpeechRecognition({ continuous: true, interimResults: true });
+  } = useSpeechRecognition({ continuous: true, interimResults: true, lang: recognitionLocale(speechLanguage) });
 
   /**
    * The support check is not enough on its own, and this was the whole mobile
@@ -414,8 +423,8 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
     if (!current) return;
     const wordCount = current.split(/\s+/).filter(Boolean).length;
     if (wordCount === 0) return;
-    const inOrder = spokenPrefixCount(current, transcript, 4);
-    if (inOrder >= wordCount * MATCH_THRESHOLD || wordMatchScore(current, transcript) >= 0.9) {
+    const inOrder = spokenPrefixCount(current, transcript, 4, speechLanguage);
+    if (inOrder >= wordCount * MATCH_THRESHOLD || wordMatchScore(current, transcript, speechLanguage) >= 0.9) {
       // Proof the mic is genuinely working on this device: the actor's own
       // words moved the piece on. "mode: voice" only says we committed to
       // voice; this says it was heard. Once per run.
@@ -437,6 +446,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
     lines,
     goToLineAndReset,
     monologue.id,
+    speechLanguage,
   ]);
 
   // Keep the active line centered as the spotlight moves down the piece.
@@ -657,7 +667,7 @@ export function MonologueCueing({ monologue, onExit, autoStart = false }: Monolo
   /** The stage itself is the tap target only while the actor is saying it. */
   const tapLive = sayLive && tapToAdvance;
   const currentWords = useMemo(() => currentLine.split(/\s+/).filter(Boolean), [currentLine]);
-  const spokenCount = spokenPrefixCount(currentLine, transcript);
+  const spokenCount = spokenPrefixCount(currentLine, transcript, 3, speechLanguage);
 
   if (lines.length === 0) {
     return <p className="font-sans text-[var(--stage-fg)]/50">{t("appMonologueRun.noText")}</p>;

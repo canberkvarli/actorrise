@@ -14,6 +14,7 @@ import { plainError } from '@/lib/rehearsal/prepare';
 import { getBook, getCharacterVoices, getMyRoles, setBook } from '@/lib/scenePrefs';
 import { nextPrompt, type Book } from '@/lib/rehearsal/book';
 import { lineWords } from '@/lib/live-read';
+import { lineCallWord, speechLang } from '@/lib/speech-language';
 import { Curtain } from './Curtain';
 import { Stage } from './Stage';
 import { Dock, TopBar } from './Dock';
@@ -47,6 +48,8 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
   const t = useT();
   const errorText = useErrorText();
   const { snapshot, readiness, canBegin, prepare, begin, tryUnlock, gated, pause, resume, skip, back, jumpTo, leave } = useRehearsal(payload);
+  // What the scene is spoken in (the script's language, not the UI's).
+  const lang = speechLang(payload.language);
   const [goPart] = useState(() => skipsCurtain(payload.characters, getMyRoles(payload.scene.id),
     { go, resume: Boolean(payload.resume), guided }));
   // Straight onto the Stage: cast on the preview, or the guided first scene.
@@ -135,7 +138,7 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
     }
   }
   const prompt = liveLine === null || !snapshot ? null : (() => {
-    const n = lineWords(payload.lines[liveLine]?.text ?? '').length;
+    const n = lineWords(payload.lines[liveLine]?.text ?? '', lang).length;
     const words = nextPrompt(book, n, snapshot.read.position, snapshot.read.matched, given.get(liveLine) ?? new Set());
     return words.length === 0 ? null
       : () => setGiven(g => new Map(g).set(liveLine, new Set([...(g.get(liveLine) ?? []), ...words])));
@@ -165,7 +168,7 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
     <div ref={rootRef} className="relative h-dvh overflow-hidden">
       <Stage lines={payload.lines} actor={actor} snapshot={snapshot}
         paused={state === 'paused'} onJump={running ? jumpTo : undefined} warming={straight && !error}
-        book={book} given={given} />
+        book={book} given={given} lang={lang} />
       <TopBar title={payload.scene.title} lines={payload.lines} actor={l => sameCharacter(l.character, actor)}
         current={current} started={state !== 'ready'} onLeave={onLeave} book={book} onBook={guided ? undefined : onBook} />
       {/* The controls fade with the house rather than vanish on the last word. */}
@@ -173,7 +176,7 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
         {!ended && (
           <motion.div key="dock" exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
             <Dock snapshot={snapshot} partner={partner} onToggle={toggle} onSkip={skip} onBack={back}
-              onRestart={() => jumpTo(0)} onPrompt={prompt ?? undefined} />
+              onRestart={() => jumpTo(0)} onPrompt={prompt ?? undefined} callWord={lineCallWord(lang)} />
           </motion.div>
         )}
       </AnimatePresence>

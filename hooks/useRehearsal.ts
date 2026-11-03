@@ -38,6 +38,7 @@ import { type AudioSlot, canBegin, firstNeededLine, limit, liveFailureKind, make
 import { AudioPlayer } from '@/lib/rehearsal/browser/audio-player';
 import { LineLoader, type LineSource } from '@/lib/rehearsal/browser/line-loader';
 import { getCharacterNotes } from '@/lib/scenePrefs';
+import { speechLang } from '@/lib/speech-language';
 
 export type { Readiness };
 
@@ -124,9 +125,11 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     if (streamRef.current) setBase(b => ({ ...b, mic: true }));
     return streamRef.current;
   }, [prewarmStream, streamRef]);
+  const lang = speechLang(payload.language);
   const { open, warm, prime, beginTurn, endTurn, status } = useLiveTranscription({
     getStream,
     keywords: payload.characters,
+    language: lang,
     onTranscript: t => { if (t) timed(() => engineRef.current?.delta(t)); },
     onQuiet: () => timed(() => engineRef.current?.quiet()),
   });
@@ -180,7 +183,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     const loader = (loaderRef.current ??= new LineLoader(player));
     const journal = (journalRef.current = new Journal(transportFor(run.run_id, tokenRef)));
     const flush = makeFlusher(() => journal.flush(), queueMicrotask);
-    const script = buildScript(payload.lines, run.character);
+    const script = buildScript(payload.lines, run.character, lang);
     const engine = new Engine(script, {
       clock: { now: () => player.now(), outputLatency: () => player.outputLatency() },
       player: { duration: l => player.duration(l), play: (l, at) => player.play(l, at), stopAll: () => player.stopAll() },
@@ -230,7 +233,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     const head = slots.find(s => s.lineIndex === first);
     if (head) await set(head);
     await Promise.all(slots.filter(s => s !== head).map(set));
-  }, [payload, open, warm, prime, beginTurn, endTurn, publish, fail]);
+  }, [payload, lang, open, warm, prime, beginTurn, endTurn, publish, fail]);
 
   const begin = useCallback(() => {
     const engine = engineRef.current, player = playerRef.current;
