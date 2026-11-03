@@ -14,6 +14,7 @@ from app.api.auth import get_current_user
 from app.core.config import settings
 from app.services.rehearsal.language import detect, normalise, scene_language
 from app.services.script_parser import _cue_names, parse_dialogue
+from app.services.script_structure import _match_act, _match_scene, detect_structure
 
 TURKISH = (
     "Olmak ya da olmamak, işte bütün mesele bu. Hangisi daha soylu: zalim "
@@ -77,6 +78,44 @@ class TurkishCues(unittest.TestCase):
         text = "ANNA: Where were you?\nBEN: Out.\nANNA: Out where?\nBEN: Just out.\n"
         lines = [(l["character"], l["text"]) for s in parse_dialogue(text) for l in s["lines"]]
         self.assertEqual(lines, [("ANNA", "Where were you?"), ("BEN", "Out."), ("ANNA", "Out where?"), ("BEN", "Just out.")])
+
+
+class TurkishHeadings(unittest.TestCase):
+    def test_perde_is_an_act(self):
+        for heading, act in [("PERDE I", "Act 1"), ("Perde 2", "Act 2"), ("I. PERDE", "Act 1"),
+                             ("BİRİNCİ PERDE", "Act 1"), ("Birinci Perde", "Act 1"),
+                             ("BIRINCI PERDE", "Act 1"), ("ÜÇÜNCÜ PERDE", "Act 3"), ("UCUNCU PERDE", "Act 3")]:
+            self.assertEqual(_match_act(heading), act, heading)
+            self.assertIsNone(_match_scene(heading), heading)
+
+    def test_sahne_is_a_scene(self):
+        for heading, scene in [("SAHNE 4", "Scene 4"), ("3. SAHNE", "Scene 3"),
+                               ("İkinci Sahne", "Scene 2"), ("Dördüncü Sahne: Saray", "Scene 4")]:
+            self.assertEqual(_match_scene(heading), scene, heading)
+
+    def test_prose_is_not_a_heading(self):
+        for line in ["Birinci perde açılırken herkes susar", "Sahne 2'de oyuncular yerini alır",
+                     "perde iner", "sahne ışıkları söner", "Perde indi."]:
+            self.assertIsNone(_match_act(line), line)
+            self.assertIsNone(_match_scene(line), line)
+
+    def test_english_headings_unchanged(self):
+        self.assertEqual(_match_act("ACT III"), "Act 3")
+        self.assertEqual(_match_scene("SCENE 2"), "Scene 2")
+        self.assertIsNone(_match_scene("Scene is perhaps marred to most modern readers"))
+
+    def test_a_turkish_play_splits_by_perde_and_sahne(self):
+        speech = "ŞİRİN: Nereye gidiyorsun bu saatte?\nÇAĞLA: Dışarı. Biraz hava almam lazım.\n" * 4
+        text = (
+            "BİRİNCİ PERDE\n\nBirinci Sahne\n\n" + speech
+            + "\nİkinci Sahne\n\n" + speech
+            + "\nİKİNCİ PERDE\n\nBirinci Sahne\n\n" + speech
+        )
+        # The same shape an English play gets: each act heading is a chunk of
+        # its own, then its scenes.
+        labels = [(c.act_label, c.scene_label) for c in detect_structure(text)]
+        self.assertEqual(labels, [("Act 1", None), ("Act 1", "Scene 1"), ("Act 1", "Scene 2"),
+                                  ("Act 2", None), ("Act 2", "Scene 1")])
 
 
 class SpeechLanguage(unittest.TestCase):

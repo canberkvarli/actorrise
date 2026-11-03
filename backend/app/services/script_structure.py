@@ -10,6 +10,7 @@ Supported formats:
 - Screenplays: INT. / EXT. slug lines (Godfather, modern screenplays)
 - TV scripts: COLD OPEN / ACT ONE / TAG
 - Special: PROLOGUE / EPILOGUE
+- Turkish: PERDE (act) / SAHNE (scene), "PERDE I", "I. PERDE", "BİRİNCİ PERDE"
 """
 
 import re
@@ -41,10 +42,46 @@ class StructuralChunk:
 # (?![A-Za-z]) guard on "SEVENTEEN" and the match backtracks into it.
 _WORD_NUMERALS = r'(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|ELEVEN|TWELVE|THIRTEEN|FOURTEEN|FIFTEEN|SIXTEEN|SEVENTEEN|EIGHTEEN|NINETEEN|TWENTY)'
 
+# Turkish headings (CAN-21): PERDE is the act, SAHNE the scene. A Turkish
+# edition prints them three ways: the word then the number ("PERDE I",
+# "SAHNE 2"), a numbered word ("I. PERDE", "2. SAHNE"), or an ordinal in
+# words ("BİRİNCİ PERDE", "İkinci Sahne"). The guards are wider than the
+# English ones: a Turkish suffix hangs off a number by an apostrophe ("Sahne
+# 2'de oyuncular..." is prose), and the letters include Turkish ones.
+_TR_LETTER = r"A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû"
+_TR_NUMBER_END = rf"(?![{_TR_LETTER}'’\d])"
+# A word form ends the line or a separator follows it ("BİRİNCİ PERDE: Saray"),
+# so "Birinci perde açılırken" stays prose.
+_TR_WORD_END = r"\s*(?:$|[:.\-\u2013\u2014(])"
+_TR_ORDINALS = ("birinci", "ikinci", "üçüncü", "dördüncü", "beşinci",
+                "altıncı", "yedinci", "sekizinci", "dokuzuncu", "onuncu")
+# Each letter with its unmarked twin: OCR and shouted headings drop the marks
+# ("UCUNCU PERDE"), and I/İ/ı are three letters in Turkish.
+_TR_TWINS = {"i": "iıİI", "ı": "ıiIİ", "ü": "üuÜU", "ç": "çcÇC", "ş": "şsŞS",
+             "ö": "öoÖO", "ğ": "ğgĞG"}
+
+
+def _turkish_word(word: str) -> str:
+    return "".join(f"[{_TR_TWINS[ch]}]" if ch in _TR_TWINS else ch for ch in word)
+
+
+_TR_ORDINAL = "(" + "|".join(_turkish_word(w) for w in _TR_ORDINALS) + ")"
+
+
+def _turkish_heading(word: str) -> List[str]:
+    w = _turkish_word(word)
+    return [
+        rf"^{w}\s+([IVX]+|\d+){_TR_NUMBER_END}",          # PERDE I, SAHNE 2
+        rf"^([IVX]+|\d+)\.\s*{w}{_TR_WORD_END}",           # I. PERDE, 2. SAHNE
+        rf"^{_TR_ORDINAL}\s+{w}{_TR_WORD_END}",             # BİRİNCİ PERDE
+    ]
+
+
 ACT_PATTERNS = [
     r'^ACT\s+([IVX]+)(?![A-Za-z])',                                          # ACT III
     r'^ACT\s+(\d+)(?![A-Za-z])',                                             # ACT 3
     r'^ACT\s+' + _WORD_NUMERALS + r'(?![A-Za-z])',    # ACT ONE
+    *_turkish_heading("perde"),
 ]
 
 # Episodes sit where acts do. A series script numbers its scenes from ONE again
@@ -65,6 +102,7 @@ SCENE_PATTERNS = [
     r'^SCENE\s+([IVX]+)(?![A-Za-z])',                                        # SCENE II
     r'^SCENE\s+(\d+)(?![A-Za-z])',                                           # SCENE 2
     r'^SCENE\s+' + _WORD_NUMERALS + r'(?![A-Za-z])',  # SCENE ONE
+    *_turkish_heading("sahne"),
 ]
 
 # A heading is a line of its own, not the opening of a paragraph. Anything
@@ -98,6 +136,15 @@ _WORD_MAP = {'ONE': 1, 'TWO': 2, 'THREE': 3, 'FOUR': 4, 'FIVE': 5,
 MAX_CHUNK_CHARS = 60000
 
 
+def _fold_turkish(word: str) -> str:
+    """Lowercase with the marks off: "BİRİNCİ", "Birinci" and "BIRINCI" agree."""
+    s = word.strip().replace("İ", "i").replace("I", "i").lower()
+    return s.translate(str.maketrans("ıüçşöğ", "iucsog"))
+
+
+_TR_ORDINAL_MAP = {_fold_turkish(w): n for n, w in enumerate(_TR_ORDINALS, start=1)}
+
+
 def _normalize_number(value: str) -> str:
     """Convert roman numerals or word numbers to arabic for display."""
     upper = value.upper().strip()
@@ -105,6 +152,9 @@ def _normalize_number(value: str) -> str:
         return str(_ROMAN_MAP[upper])
     if upper in _WORD_MAP:
         return str(_WORD_MAP[upper])
+    ordinal = _TR_ORDINAL_MAP.get(_fold_turkish(value))
+    if ordinal:
+        return str(ordinal)
     return value.strip()
 
 
