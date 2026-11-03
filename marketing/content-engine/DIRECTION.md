@@ -3,6 +3,26 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-04, voices and scenes (wins over everything below)
+
+Canberk bought the ElevenLabs Starter plan (commercial use). Build every film to use it:
+- **Voiceover with word by word subtitles.** Spec `"voice": {"lines": [{"text": "...", "at": 0.4}]}`;
+  `scripts/voice.py` (run by render.sh) voices each line with ElevenLabs (narrator George by default)
+  and fills in the word timings, and the subtitles light up word by word in the day's look, above
+  the bottom quarter. Short lines, spoken like an actor talking to an actor. Not every film needs a
+  narrator: a silent real film with one line can be stronger. Roughly half the films voiced.
+- **The scene partner, heard.** Beat `{"kind": "scene", "play": "...", "lines": [{"who": "PARTNER", "text": "..."}, {"who": "YOU", "text": "..."}]}`:
+  a script page where the partner's lines light up as the voice (Lily) reads them and YOUR line is
+  underlined as the cue. Public domain plays only (Earnest, Hamlet, Chekhov, Ibsen, Shaw...). Close on Ghost Light.
+- **Sound effects from ElevenLabs** when a film needs a sound we do not have: `scripts/eleven.py sfx`
+  (add the description to its list), then use it as a cue. Keep the ending light and short.
+- **Real films beyond theatres.** Pexels has far more home footage than stage footage: someone on a
+  couch checking their phone and putting it face down, pacing a kitchen with pages, at a window at
+  night waiting, on the floor of a small flat with a script on their knees, on a bus or train
+  reading. Same rules: one continuous shot, wide or medium wide, no closeups, the brand closes it.
+- No AI-generated people, ever. AI video only for shots with no people (a phone lighting up on a
+  table, two mugs, an empty chair), and only through an API we have.
+
 ## 2026-11-03, night: the ending sound (wins over everything below)
 
 Canberk, after the cinema re-render of curtain at seven: "quieter chime please, very like faster,

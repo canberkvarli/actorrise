@@ -11,6 +11,10 @@ CHROME="${CHROME:-$(ls -d /opt/pw-browsers/chromium_headless_shell-*/chrome-head
 BROWSER_FLAG=(); [ -n "$CHROME" ] && BROWSER_FLAG=(--browser-executable="$CHROME")
 COMP="$(python3 -c 'import json,sys; print("ReelVideo" if "beats" in json.load(open(sys.argv[1])) else "StoryVideo")' "$SPEC")"
 PROPS="$(python3 -c 'import json,sys; print(json.dumps({"spec": json.load(open(sys.argv[1]))}))' "$SPEC")"
+# Voices (narration and scene partner) from ElevenLabs, if the spec has any and the key is here.
+if python3 -c 'import json,sys; s=json.load(open(sys.argv[1])); sys.exit(0 if s.get("voice") or any(b.get("kind")=="scene" for b in s.get("beats",[])) else 1)' "$SPEC"; then
+  python3 scripts/voice.py "$SPEC" || echo "voices skipped (no ElevenLabs here); rendering without them"
+fi
 # Music bed, if the spec asks for one (public/music/<id>.wav).
 if python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get("music") else 1)' "$SPEC"; then
   # ElevenLabs Music when the key is here (licensed, sounds like a real track), else our sampled beds.

@@ -64,13 +64,23 @@ type End = { kind: "end"; seconds: number; brand: string; line: string; action: 
  * Bright ones too: chime (default on the end card), ping, pong, toing, plink, click, tap.
  * `at` is seconds into the beat (negative starts before the cut, e.g. a riser at -1.5). Few and heavy. */
 export type Cue = { name: string; at?: number; vol?: number };
-export type ReelBeat = (Title | Broll | Screen | End) & { sfx?: Cue[] };
+/** A spoken line with word timings (seconds from the line's start), filled in by scripts/voice.py. */
+type Spoken = { text: string; audio?: string; words?: { w: string; s: number; e: number }[]; dur?: number; voice?: string };
+/** The scene partner demo: a script page, lines lighting up as they are read. PARTNER lines are
+ * voiced (Lily by default); YOU lines are the actor's, shown as the cue to speak, silent unless voice_you. */
+type Scene = {
+  kind: "scene"; seconds: number; title?: string; play?: string; bg?: Bg; caption?: string; accent?: string;
+  lines: (Spoken & { who: string })[]; voice_you?: boolean; start?: number;
+};
+export type ReelBeat = (Title | Broll | Screen | End | Scene) & { sfx?: Cue[] };
 export type ReelSpec = {
   id: string;
   beats: ReelBeat[];
   music?: { style: string; volume?: number };
   cut?: "hard" | "flash" | "push"; // how beats change, default push (a fast slide, no fades)
   look?: LookName; // the visual identity of this video, rotate it (see LOOKS)
+  /** Narration across the film, with word by word subtitles (scripts/voice.py fills audio and words). */
+  voice?: { lines: (Spoken & { at: number })[]; subtitles?: boolean; volume?: number };
 };
 export const reelFrames = (s: ReelSpec) => s.beats.reduce((n, b) => n + Math.round(b.seconds * RFPS), 0);
 
@@ -268,6 +278,100 @@ const ScreenBeat: React.FC<{ b: Screen }> = ({ b }) => {
   );
 };
 
+const estDur = (l: Spoken) => l.dur ?? (l.words?.length ? l.words[l.words.length - 1].e + 0.15 : l.text.split(" ").length * 0.36 + 0.4);
+const wordTimes = (l: Spoken) => l.words?.length ? l.words : l.text.split(" ").map((w, i) => ({ w, s: i * 0.34, e: i * 0.34 + 0.3 }));
+
+/** Word by word subtitles: the line sits above the bottom quarter, the spoken word lights up. */
+const Subtitles: React.FC<{ lines: (Spoken & { at: number })[] }> = ({ lines }) => {
+  const f = useCurrentFrame();
+  const L = React.useContext(LookCtx);
+  const t = f / RFPS;
+  const line = lines.find((l) => t >= l.at - 0.1 && t <= l.at + estDur(l) + 0.35);
+  if (!line) return null;
+  const lt = t - line.at;
+  const ws = wordTimes(line);
+  const inP = interpolate(lt, [-0.1, 0.12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const outP = interpolate(lt, [estDur(line) + 0.1, estDur(line) + 0.35], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const caps = L.caps;
+  return (
+    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", padding: "0 90px 560px", opacity: inP * outP }}>
+      <div style={{ textAlign: "center", fontFamily: L.font === "sans" ? F.sans : F.serif, fontWeight: 600, fontSize: 64 * (L.scale ?? 1), lineHeight: 1.18,
+        color: "#fbf7f0", textShadow: "0 2px 18px rgba(0,0,0,0.55)", textTransform: caps ? "uppercase" : undefined }}>
+        {ws.map((w, i) => {
+          const on = lt >= w.s - 0.02;
+          const now = lt >= w.s - 0.02 && lt <= w.e + 0.08;
+          const key = L.mark === "marker" ? L.accent : ["#0a0a0a", "#141414", "#111111", "#000000"].includes(L.key) ? C.orange : L.key;
+          return (
+            <span key={i} style={{ opacity: on ? 1 : 0.38, color: now ? key : undefined, transition: "none", marginRight: 16,
+              display: "inline-block", transform: now ? "translateY(-3px)" : undefined }}>{w.w}</span>
+          );
+        })}
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+/** Lay out a scene's lines in time: each line starts after the previous one ends, with a breath. */
+const sceneTimeline = (b: Scene) => {
+  let t = b.start ?? 0.7;
+  return b.lines.map((l) => { const at = t; t += estDur(l) + 0.45; return { ...l, at }; });
+};
+
+const SceneBeat: React.FC<{ b: Scene }> = ({ b }) => {
+  const f = useCurrentFrame();
+  const L = React.useContext(LookCtx);
+  const t = f / RFPS;
+  const tl = sceneTimeline(b);
+  const bg = bgColor(b.bg ?? "paper");
+  const fg = fgColor(b.bg ?? "paper");
+  const key = accentColor(b.bg ?? "paper");
+  const page = prog(f, 0, 14);
+  return (
+    <AbsoluteFill style={{ background: bg }}>
+      {b.caption && (
+        <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", padding: `${L.letterbox ? 300 : 150}px 90px 0` }}>
+          <Words text={b.caption} accent={b.accent} color={fg} accentC={key} size={74} />
+        </AbsoluteFill>
+      )}
+      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", paddingTop: b.caption ? (L.letterbox ? 320 : 200) : 0, paddingBottom: 220 }}>
+        <div style={{ width: 880, padding: "56px 64px", borderRadius: 28, background: (b.bg ?? "paper") === "ink" ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.55)",
+          boxShadow: "0 30px 80px rgba(0,0,0,0.12)", opacity: page, transform: `translateY(${(1 - page) * 40}px)` }}>
+          {(b.title || b.play) && (
+            <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 24, letterSpacing: 3, color: fg, opacity: 0.55, marginBottom: 34, textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {[b.play, b.title].filter(Boolean).join("  ·  ")}
+            </div>
+          )}
+          {tl.map((l, i) => {
+            const lt = t - l.at;
+            const active = lt >= -0.05 && lt <= estDur(l) + 0.2;
+            const done = lt > estDur(l) + 0.2;
+            const shown = prog(f, Math.round((l.at - 0.35) * RFPS), Math.round((l.at - 0.05) * RFPS));
+            if (lt < -0.4) return null;
+            const partner = l.who.toUpperCase() === "PARTNER";
+            const ws = wordTimes(l);
+            return (
+              <div key={i} style={{ marginBottom: 30, opacity: shown * (done ? 0.42 : 1), transform: `translateY(${(1 - shown) * 16}px)` }}>
+                <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 24, letterSpacing: 3, color: partner ? key : fg, opacity: 0.85, marginBottom: 8 }}>
+                  {partner ? "SCENE PARTNER" : "YOU"}{active && !partner ? "  ·  your line" : ""}
+                </div>
+                <div style={{ fontFamily: L.font === "sans" ? F.sans : F.serif, fontWeight: 600, fontSize: 50 * (L.scale ?? 1), lineHeight: 1.22, color: fg,
+                  fontStyle: partner ? undefined : "normal" }}>
+                  {partner || b.voice_you
+                    ? ws.map((w, k) => <span key={k} style={{ opacity: active || done ? (lt >= w.s - 0.02 ? 1 : 0.3) : 0.3, color: active && lt >= w.s - 0.02 && lt <= w.e + 0.08 ? key : undefined, marginRight: 12 }}>{w.w}</span>)
+                    : <span style={{ borderBottom: active ? `4px solid ${key}` : "4px solid transparent", paddingBottom: 2 }}>{l.text}</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </AbsoluteFill>
+      {tl.filter((l) => l.audio).map((l, i) => (
+        <Sequence key={i} from={Math.round(l.at * RFPS)} layout="none"><Audio src={staticFile(l.audio!)} volume={1} /></Sequence>
+      ))}
+    </AbsoluteFill>
+  );
+};
+
 const EndBeat: React.FC<{ b: End }> = ({ b }) => {
   const f = useCurrentFrame();
   const dark = (b.bg ?? "ink") === "ink";
@@ -338,7 +442,7 @@ export const ReelVideo: React.FC<{ spec: ReelSpec }> = ({ spec }) => {
         return (
           <Sequence key={i} from={from} durationInFrames={len + (i < spec.beats.length - 1 ? (spec.beats[i + 1].kind === "end" ? 24 : cut === "push" ? P : 0) : 0)}>
             <AbsoluteFill style={{ transform: `translateY(${y}px)`, opacity: op }}>
-              {b.kind === "title" ? <TitleBeat b={b} /> : b.kind === "broll" ? <BrollBeat b={b} /> : b.kind === "screen" ? <ScreenBeat b={b} /> : <EndBeat b={b} />}
+              {b.kind === "title" ? <TitleBeat b={b} /> : b.kind === "broll" ? <BrollBeat b={b} /> : b.kind === "screen" ? <ScreenBeat b={b} /> : b.kind === "scene" ? <SceneBeat b={b} /> : <EndBeat b={b} />}
             </AbsoluteFill>
             {cut === "flash" && i > 0 && (
               <AbsoluteFill style={{ background: "#fff", opacity: interpolate(frame - from, [0, 4], [0.9, 0], { extrapolateRight: "clamp" }) }} />
@@ -346,6 +450,10 @@ export const ReelVideo: React.FC<{ spec: ReelSpec }> = ({ spec }) => {
           </Sequence>
         );
       })}
+      {(spec.voice?.lines ?? []).filter((l) => l.audio).map((l, i) => (
+        <Sequence key={`vo${i}`} from={Math.round(l.at * RFPS)} layout="none"><Audio src={staticFile(l.audio!)} volume={spec.voice?.volume ?? 1} /></Sequence>
+      ))}
+      {spec.voice && spec.voice.subtitles !== false && <Subtitles lines={spec.voice.lines} />}
       {look.letterbox && (<>
         <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 230, background: "#000" }} />
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 230, background: "#000" }} />
