@@ -139,7 +139,7 @@ def search_monologues(db: Session, user: User, query: str, gender: str | None = 
 
 def check_title(db: Session, text: str) -> dict[str, Any]:
     """The three-place check: plays.title, monologues.title, monologues.character_name."""
-    from app.services.search.semantic_search import review_hides_from_search
+    from app.services.search.semantic_search import language_hides, review_hides_from_search
 
     needle = f"%{text.strip()}%"
     plays = (
@@ -151,7 +151,8 @@ def check_title(db: Session, text: str) -> dict[str, Any]:
 
     def visible(q):
         rows = q.options(joinedload(Monologue.play), undefer(Monologue.review_status)).limit(25).all()
-        return [m for m in rows if not review_hides_from_search(m.review_status)][:5]
+        return [m for m in rows if not review_hides_from_search(m.review_status)
+                and not language_hides(m)][:5]
 
     by_title = visible(db.query(Monologue).filter(Monologue.title.ilike(needle)))
     by_character = visible(db.query(Monologue).filter(Monologue.character_name.ilike(needle)))

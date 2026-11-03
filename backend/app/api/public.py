@@ -8,13 +8,14 @@ Cached to limit DB load.
 import time
 from typing import Any
 
+from app.services.search.semantic_search import language_clause
 from app.core.database import get_db
 from app.models.actor import FilmTvReference, Monologue, Play
 from app.models.billing import UsageMetrics
 from app.models.tape import UserTape
 from app.models.user import User
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.functions import count as sql_count
 
@@ -77,7 +78,9 @@ def get_public_stats(db: Session = Depends(get_db)) -> dict[str, Any]:
     # row retired as too_short or not_monologue is not in any result set, and
     # counting it makes the headline a claim the product does not honour. An
     # unfiltered count() here would have advertised 15,016 against 8,597 real.
-    searchable = Monologue.review_status.is_(None)
+    # English only (CAN-19): the number is printed on English pages as the size
+    # of the library an English speaker can search.
+    searchable = and_(Monologue.review_status.is_(None), language_clause())
 
     monologue_count = db.query(sql_count(Monologue.id)).filter(searchable).scalar() or 0
     play_monologue_count = (

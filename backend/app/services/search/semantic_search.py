@@ -1,6 +1,7 @@
 """Semantic search for monologues using embeddings."""
 
 import concurrent.futures
+import functools
 import hashlib
 import json
 import logging
@@ -10,7 +11,7 @@ from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
-from sqlalchemy import func, or_, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session, joinedload, defer
 
 from app.models.actor import Monologue, Play
@@ -182,7 +183,79 @@ def review_hides_from_search(review_status) -> bool:
     return review_status in HIDDEN_REVIEW_STATUSES
 
 
-def exclude_hidden(query):
+#: Which library languages a request may be served (CAN-19).
+#:
+#: English only unless a request explicitly asks for more. That default is the
+#: whole safety: the iOS app, the SEO pages, emails, push, recommendations and
+#: anything written later never see a Turkish piece by accident, because they
+#: never pass anything. Only a request from the Turkish UI widens it, through
+#: request_languages() in app/api/monologues.py (the X-ActorRise-Locale header).
+#: Canberk, 2026-11-03: "if English speakers search something in English we
+#: don't show Turkish monologues."
+#:
+#: A play with no language is English; that is true of every NULL row today.
+DEFAULT_LANGUAGES: tuple = ("en",)
+TURKISH_LANGUAGES: tuple = ("en", "tr")
+
+
+def language_clause(languages=DEFAULT_LANGUAGES):
+    """SQL condition: the monologue's play is in one of `languages`.
+
+    A subquery on plays rather than a join, so it composes with queries that
+    already join Play and with ones that do not. For inline .filter() calls
+    that cannot go through exclude_hidden.
+    """
+    langs = tuple(languages or DEFAULT_LANGUAGES)
+    foreign = select(Play.id).where(func.coalesce(Play.language, "en").notin_(langs))
+    return ~Monologue.play_id.in_(foreign)
+
+
+def language_gate(query, languages=DEFAULT_LANGUAGES):
+    """Keep only monologues whose play's language is in `languages`."""
+    return query.filter(language_clause(languages))
+
+
+def play_language(monologue) -> str:
+    """The language of a loaded monologue's play; NULL or no play is English."""
+    play = getattr(monologue, "play", None)
+    return (getattr(play, "language", None) or "en") if play is not None else "en"
+
+
+def language_hides(monologue, languages=DEFAULT_LANGUAGES) -> bool:
+    """Row-level twin of language_gate, for code that filters loaded rows."""
+    return play_language(monologue) not in tuple(languages or DEFAULT_LANGUAGES)
+
+
+#: How much a Turkish piece is lifted for a Turkish query. Enough to put a
+#: reasonable Turkish match above a slightly better English one, not enough to
+#: float an irrelevant one: scores are cosine-based, roughly 0.3 to 0.7.
+TURKISH_SHELF_BOOST = 1.15
+
+
+def query_is_turkish(query: str) -> bool:
+    """Turkish letters, or any word the Turkish vocabulary knows."""
+    from app.services.search.turkish_vocab import tr_lower, tr_stem
+
+    q = tr_lower(query or "")
+    if re.search(r"[çğış]", q):  # not ö/ü alone: German and French have them too
+        return True
+    # A word counts only if it is not also English: "film" and "drama" (which
+    # stems to "dram") are in the Turkish vocabulary and in every English query.
+    english = _english_vocabulary()
+    return any(tr_stem(w) and w not in english for w in re.findall(r"\w+", q))
+
+
+@functools.lru_cache(maxsize=1)
+def _english_vocabulary() -> frozenset:
+    from app.services.search.query_optimizer import _FILTER_WORDS, KeywordExtractor
+
+    words = set(_FILTER_WORDS)
+    for mapping in KeywordExtractor.KEYWORD_MAPPINGS.values():
+        words.update(k for k in mapping if " " not in k)
+    return frozenset(words)
+
+
+def exclude_hidden(query, languages=DEFAULT_LANGUAGES):
     """Apply the review-status gate to a query selecting Monologue rows.
 
     A helper rather than an inline `.filter()`, because inline is exactly how
@@ -194,12 +267,18 @@ def exclude_hidden(query):
     retired as too_short days earlier.
 
     Anything selecting monologues for a user to see goes through here.
+
+    It also applies the language gate, English only by default (see
+    DEFAULT_LANGUAGES), so every caller is covered without changing it.
     """
-    return query.filter(
-        or_(
-            Monologue.review_status.is_(None),
-            Monologue.review_status.notin_(tuple(HIDDEN_REVIEW_STATUSES)),
-        )
+    return language_gate(
+        query.filter(
+            or_(
+                Monologue.review_status.is_(None),
+                Monologue.review_status.notin_(tuple(HIDDEN_REVIEW_STATUSES)),
+            )
+        ),
+        languages,
     )
 
 
@@ -756,8 +835,11 @@ def _fuzzy_quote_match(
 class SemanticSearch:
     """Semantic search using vector embeddings"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, languages=DEFAULT_LANGUAGES):
         self.db = db
+        # Library languages this request may see. English only unless the API
+        # passes TURKISH_LANGUAGES for a request from the Turkish UI (CAN-19).
+        self.languages = tuple(languages or DEFAULT_LANGUAGES)
         self.analyzer = ContentAnalyzer()
         self.query_optimizer = QueryOptimizer()
         # Global cache manager: Level 1 Redis if available, otherwise memory-only.
@@ -765,6 +847,10 @@ class SemanticSearch:
         self.last_content_gap: Optional[Dict] = None
         self._ai_is_valid_search: Optional[bool] = None
         self._ai_corrected_query: Optional[str] = None
+
+    def _visible(self, query):
+        """exclude_hidden with this request's languages."""
+        return exclude_hidden(query, self.languages)
 
     def search(
         self,
@@ -1064,6 +1150,11 @@ class SemanticSearch:
 
         # Optional: check cache for full search results for this (query, filters, user)
         cache_filters_for_results: Dict = dict(merged_filters)
+        # The languages are part of the answer, so they are part of the key: a
+        # Turkish request's cached results must never be served to an English
+        # one. Only added when widened, so every existing English key is kept.
+        if self.languages != DEFAULT_LANGUAGES:
+            cache_filters_for_results["_languages"] = list(self.languages)
         if user_id is not None:
             cache_filters_for_results["_user_id"] = user_id
 
@@ -1103,7 +1194,7 @@ class SemanticSearch:
                 cached_ids = list(rows)
                 cached_scores = {}
             mons = (
-                exclude_hidden(
+                self._visible(
                     self.db.query(Monologue)
                     .join(Play)
                     # A cached id list predates the retirement that hid these
@@ -1204,7 +1295,7 @@ class SemanticSearch:
 
         # Build base query (eager-load Play to avoid N+1 during scoring/response)
         # CRITICAL: Defer embedding_vector to avoid loading 1536 floats per row over network
-        base_query = exclude_hidden(
+        base_query = self._visible(
             self.db.query(Monologue)
             .join(Play)
             .options(joinedload(Monologue.play), defer(Monologue.embedding_vector))
@@ -1217,14 +1308,10 @@ class SemanticSearch:
             # lines in front) had been queued for review and was still turning
             # up in the library.
             #
-
-            # Only known-foreign work is excluded, never merely unlabelled.
-            # `language` defaults to 'en' and is right for all but three plays
-            # (a Dutch Ibsen volume that became Peer Gynt + Brand, and the Hindi
-            # film Aligarh) — but five plays carry NULL, and hiding those 89
-            # monologues for missing metadata would cost far more than the eight
-            # foreign ones it removes.
-            .filter(or_(Play.language.is_(None), Play.language == "en"))
+            # Language is gated by _visible (language_gate): known-foreign work
+            # out, NULL counts as English, and Turkish only when this request
+            # was widened to it. This used to be an inline en-or-NULL filter on
+            # this path alone, which is why the gate now lives in the helper.
         )
 
         # Apply ONLY hard filters as SQL WHERE clauses.
@@ -1576,7 +1663,7 @@ class SemanticSearch:
             if candidate_ids:
                 from sqlalchemy.orm import Load
                 semantic_candidates = (
-                    exclude_hidden(
+                    self._visible(
                         self.db.query(Monologue)
                         .join(Play)
                         .options(
@@ -1644,6 +1731,15 @@ class SemanticSearch:
             )
             for mono, score in results_with_scores
         ]
+
+        # A Turkish query from the Turkish UI puts the Turkish shelf first. An
+        # English query from the same UI is left alone: someone typing English
+        # wants the English library ranked on its merits.
+        if "tr" in self.languages and query_is_turkish(query):
+            results_with_scores = [
+                (m, s * TURKISH_SHELF_BOOST if play_language(m) == "tr" else s)
+                for m, s in results_with_scores
+            ]
 
         # Sort by similarity (descending), then cap pieces-per-play across the
         # FULL candidate pool before limiting — so lower-ranked pieces from other
@@ -1970,7 +2066,7 @@ class SemanticSearch:
         # Gender is always a hard filter — "for women" is unambiguous intent
         apply_gender_filter = filters and filters.get("gender")
 
-        base_query = exclude_hidden(self.db.query(Monologue).join(Play))
+        base_query = self._visible(self.db.query(Monologue).join(Play))
 
         # Apply filters (same as semantic search)
         if filters:
@@ -2240,7 +2336,7 @@ class SemanticSearch:
         fetching all IDs to Python and doing a second IN query.
         """
 
-        query = exclude_hidden(self.db.query(Monologue).join(Play))
+        query = self._visible(self.db.query(Monologue).join(Play))
 
         # Apply filters — same set as semantic search so UI toggles work in browse mode
         if filters:

@@ -132,6 +132,11 @@ export function setLocale(locale: Locale): void {
   listeners.forEach((l) => l());
 }
 
+/** The active locale outside React (the API client). English on the server. */
+export function currentLocale(): Locale {
+  return typeof window === "undefined" ? DEFAULT_LOCALE : getSnapshot();
+}
+
 export function useLocale(): Locale {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

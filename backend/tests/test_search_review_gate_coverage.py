@@ -27,7 +27,9 @@ from pathlib import Path
 
 from app.services.search import recommender, semantic_search
 
-GUARD = "exclude_hidden"
+# self._visible is SemanticSearch's own exclude_hidden, carrying the request's
+# languages (CAN-19); it calls exclude_hidden and nothing else.
+GUARDS = ("exclude_hidden", "self._visible")
 OPT_OUT = "# Not gated:"
 
 MODULES = [semantic_search, recommender]
@@ -56,7 +58,7 @@ class ReviewGateCoverageTests(unittest.TestCase):
             source = path.read_text()
             lines = source.splitlines()
             for lineno, segment in _statements_selecting_monologues(source):
-                if GUARD in segment:
+                if any(g in segment for g in GUARDS):
                     continue
                 # An explicit, commented opt-out in the few lines above.
                 preceding = "\n".join(lines[max(0, lineno - 5): lineno])
@@ -68,7 +70,7 @@ class ReviewGateCoverageTests(unittest.TestCase):
             ungated, [],
             "These queries select monologues without applying the review gate, "
             "so retired pieces will be served:\n  " + "\n  ".join(ungated)
-            + f"\n\nWrap them in {GUARD}(), or mark '{OPT_OUT} <reason>' above.",
+            + f"\n\nWrap them in exclude_hidden() (self._visible() inside SemanticSearch), or mark '{OPT_OUT} <reason>' above.",
         )
 
     def test_the_guard_is_importable_where_it_is_used(self):
@@ -81,11 +83,11 @@ class ReviewGateCoverageTests(unittest.TestCase):
         """
         for module in MODULES:
             source = Path(inspect.getfile(module)).read_text()
-            if GUARD + "(" in source:
+            if "exclude_hidden(" in source:
                 with self.subTest(module=module.__name__):
                     self.assertTrue(
-                        hasattr(module, GUARD),
-                        f"{module.__name__} calls {GUARD}() but does not import it",
+                        hasattr(module, "exclude_hidden"),
+                        f"{module.__name__} calls exclude_hidden() but does not import it",
                     )
 
     def test_the_gate_covers_all_four_retirement_statuses(self):

@@ -25,6 +25,7 @@ from typing import Optional
 
 from app.models.actor import Monologue, Play
 from app.models.content_request import ContentRequest
+from app.services.search.semantic_search import language_clause
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -60,7 +61,7 @@ def title_is_live(db: Session, title: str, author: Optional[str] = None) -> bool
     rows = (
         db.query(Play.title, Play.author)
         .join(Monologue, Monologue.play_id == Play.id)
-        .filter(Monologue.review_status.is_(None))
+        .filter(Monologue.review_status.is_(None), language_clause())  # English requests, English library
         .group_by(Play.title, Play.author)
         .all()
     )

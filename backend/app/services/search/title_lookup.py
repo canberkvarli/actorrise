@@ -431,7 +431,7 @@ def prepass_can_honour(filters: Optional[dict], title: str) -> bool:
 
 
 def find_title_monologues(db, title: str, filters: Optional[dict] = None,
-                          limit: int = 20) -> list:
+                          limit: int = 20, languages: tuple = ("en",)) -> list:
     """The monologues of `title`, best-first. Empty list when we carry none.
 
     This is the pre-pass behind ``match_strategy="title_exact"``. The 2026-08-20
@@ -464,11 +464,11 @@ def find_title_monologues(db, title: str, filters: Optional[dict] = None,
     filters = filters or {}
     if not prepass_can_honour(filters, title):
         return []
-    return _lookup_over_plays(db, title_norm=norm, filters=filters, limit=limit)
+    return _lookup_over_plays(db, title_norm=norm, filters=filters, limit=limit, languages=languages)
 
 
 def find_author_monologues(db, author: str, filters: Optional[dict] = None,
-                           limit: int = 20) -> list:
+                           limit: int = 20, languages: tuple = ("en",)) -> list:
     """The monologues of `author`, best-first. Empty when we carry none.
 
     Naming an author is a lookup, exactly as naming a show is, and for the
@@ -496,11 +496,11 @@ def find_author_monologues(db, author: str, filters: Optional[dict] = None,
     if not prepass_can_honour(merged, author):
         return []
     return _lookup_over_plays(db, title_norm=None, filters=merged, limit=limit,
-                              browsing=True)
+                              browsing=True, languages=languages)
 
 
 def _lookup_over_plays(db, title_norm: Optional[str], filters: dict,
-                       limit: int, browsing: bool = False) -> list:
+                       limit: int, browsing: bool = False, languages: tuple = ("en",)) -> list:
     """Shared body: resolve matching plays, then their shippable monologues.
 
     `title_norm` None means "every play the other filters allow" — which is
@@ -514,6 +514,7 @@ def _lookup_over_plays(db, title_norm: Optional[str], filters: dict,
     from app.models.actor import Monologue
     from app.services.search.semantic_search import (_age_hard_values,
                                                      era_year_clause,
+                                                     language_hides,
                                                      review_hides_from_search)
 
     params: Dict[str, object] = {}
@@ -652,7 +653,9 @@ def _lookup_over_plays(db, title_norm: Optional[str], filters: dict,
                        exc_info=True)
         return []
 
-    keep = [m for m in rows if not review_hides_from_search(m.review_status)]
+    # Language gate (CAN-19): English only unless the request was widened.
+    keep = [m for m in rows if not review_hides_from_search(m.review_status)
+            and not language_hides(m, languages)]
     keep.sort(
         key=lambda m: (
             -(m.quality_score if m.quality_score is not None else -1.0),
@@ -1087,7 +1090,7 @@ def _surname_in_play(db, names, surname: str) -> bool:
 
 
 def find_character_monologues(db, names: list, filters: Optional[dict] = None,
-                              limit: int = 20) -> list:
+                              limit: int = 20, languages: tuple = ("en",)) -> list:
     """Monologues whose character is `names` (the raw variants of one normalised
     name), best-first. The character sibling of find_title_monologues: same
     filter cascade, same review gate, same quality ordering. Empty on anything
@@ -1106,6 +1109,7 @@ def find_character_monologues(db, names: list, filters: Optional[dict] = None,
 
     from app.models.actor import Monologue, Play
     from app.services.search.semantic_search import (_age_hard_values,
+                                                     language_hides,
                                                      review_hides_from_search)
 
     try:
@@ -1154,7 +1158,9 @@ def find_character_monologues(db, names: list, filters: Optional[dict] = None,
     except Exception:
         return []
 
-    keep = [m for m in rows if not review_hides_from_search(m.review_status)]
+    # Language gate (CAN-19): English only unless the request was widened.
+    keep = [m for m in rows if not review_hides_from_search(m.review_status)
+            and not language_hides(m, languages)]
     keep.sort(
         key=lambda m: (-(m.quality_score if m.quality_score is not None else -1.0), m.id)
     )

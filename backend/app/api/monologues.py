@@ -36,7 +36,7 @@ from app.models.actor import (Monologue, MonologueBeat, MonologueFavorite,
                               Play)
 from app.models.user import User
 from app.services.search.grounding import query_is_unservable
-from app.services.search.semantic_search import exclude_hidden
+from app.services.search.semantic_search import exclude_hidden, language_clause, TURKISH_LANGUAGES, DEFAULT_LANGUAGES
 from app.services.search.originality import originality_cap
 from app.services.search.query_optimizer import (correct_query_typos,
                                                  is_filter_only_query,
@@ -395,6 +395,19 @@ async def get_lead_magnet_monologues(
     ]
 
 
+def request_languages(request: Request) -> tuple:
+    """Library languages this request may be served (CAN-19).
+
+    English only, unless the Turkish UI says so with `X-ActorRise-Locale: tr`
+    (lib/api.ts sets it from the active locale). Anything else, a missing
+    header included, is English: the iOS app, crawlers and older web builds
+    never see a Turkish piece. Only /search reads this; every other endpoint
+    stays on DEFAULT_LANGUAGES through exclude_hidden.
+    """
+    locale = (request.headers.get("x-actorrise-locale") or "").strip().lower()
+    return TURKISH_LANGUAGES if locale == "tr" else DEFAULT_LANGUAGES
+
+
 @router.get("/search", response_model=SearchResponse)
 async def search_monologues(
     request: Request,
@@ -538,7 +551,8 @@ async def search_monologues(
             )
 
     try:
-        search_service = SemanticSearch(db)
+        langs = request_languages(request)
+        search_service = SemanticSearch(db, languages=langs)
         fetch_limit = limit
 
         # Track whether we have relevance scores (semantic search vs random/discover)
@@ -592,7 +606,7 @@ async def search_monologues(
             crossed_tab = False
             if title_hit:
                 title_rows = find_title_monologues(
-                    db, title_hit["title"], filters=filters, limit=fetch_limit
+                    db, title_hit["title"], filters=filters, limit=fetch_limit, languages=langs
                 )
                 # The actor named a show we carry and got an empty screen,
                 # because they were standing on the Plays tab and the show is
@@ -610,7 +624,8 @@ async def search_monologues(
                         k: v for k, v in (filters or {}).items() if k != "source_type"
                     }
                     title_rows = find_title_monologues(
-                        db, title_hit["title"], filters=without_source, limit=fetch_limit
+                        db, title_hit["title"], filters=without_source, limit=fetch_limit,
+                        languages=langs,
                     )
                     crossed_tab = bool(title_rows)
 
@@ -624,7 +639,7 @@ async def search_monologues(
             char_rows: list[Monologue] = []
             if char_hit:
                 char_rows = find_character_monologues(
-                    db, char_hit["names"], filters=filters, limit=fetch_limit
+                    db, char_hit["names"], filters=filters, limit=fetch_limit, languages=langs
                 )
 
             # The query may name only an AUTHOR ("shakespeare monologue",
@@ -649,7 +664,7 @@ async def search_monologues(
                 and _query_is_only_author(search_q, author_filter)
             ):
                 author_rows = find_author_monologues(
-                    db, author_filter, filters=filters, limit=fetch_limit
+                    db, author_filter, filters=filters, limit=fetch_limit, languages=langs
                 )
 
             # Prefer whichever pre-pass better answers the lookup: more pieces
@@ -1365,6 +1380,7 @@ def get_first_rehearsal_monologue(
             .join(Play, Play.id == Monologue.play_id)
             .filter(
                 Monologue.review_status.is_(None),
+                language_clause(),  # English only: a first piece is never a Turkish one
                 Monologue.estimated_duration_seconds.between(*_FIRST_PIECE_SECONDS),
                 Monologue.word_count.between(*_FIRST_PIECE_WORDS),
                 or_(

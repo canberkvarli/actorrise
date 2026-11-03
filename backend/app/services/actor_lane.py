@@ -24,6 +24,7 @@ from app.core.config import settings
 from app.models.actor import ActorCredit, ActorLane, Monologue, Play
 from app.services.ai.langchain.embeddings import generate_embedding
 from app.services.search.cache_manager import cache_manager
+from app.services.search.semantic_search import language_clause
 
 LANE_MODEL = "gpt-4o-mini"
 
@@ -250,6 +251,7 @@ def pick_in_lane(
         .join(Play, Play.id == Monologue.play_id)
         .filter(
             Monologue.review_status.is_(None),
+            language_clause(),  # English library only (CAN-19)
             Monologue.character_name.isnot(None),
             Monologue.character_name != "",
             Play.title.isnot(None),

@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { attributionHeader } from "./attribution";
+import { currentLocale } from "./i18n";
 
 // Production API (Render). Use custom domain when verified; fallback to onrender.com.
 export const PRODUCTION_API_URL = "https://api.actorrise.com";
@@ -131,6 +132,12 @@ async function request<T = unknown>(
   const attribution = attributionHeader();
   if (attribution) {
     headers["X-Attribution"] = attribution;
+  }
+
+  // The library's language (CAN-19). Sent only from the Turkish UI: the API
+  // serves Turkish pieces to nobody else, so a missing header means English.
+  if (currentLocale() === "tr") {
+    headers["X-ActorRise-Locale"] = "tr";
   }
 
   const { timeoutMs, ...fetchInit } = options ?? {};
