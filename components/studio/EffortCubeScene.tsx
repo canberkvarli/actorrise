@@ -229,7 +229,7 @@ export default function EffortCubeScene({
       cube.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), glassMat));
 
       // Corner nodes, one per working action.
-      const cornerGeo = new THREE.SphereGeometry(0.028, 12, 8); // minimal points: the light is what you look at
+      const cornerGeo = new THREE.SphereGeometry(0.016, 10, 6); // minimal points: the light is what you look at
       const corners = ACTIONS.map((a) => {
         const mat = new THREE.MeshBasicNodeMaterial({ color: new THREE.Color("#ededed") });
         const m = new THREE.Mesh(cornerGeo, mat);
@@ -498,17 +498,17 @@ export default function EffortCubeScene({
         const portrait = h > w;
         camera.aspect = w / h;
         if (portrait) {
-          cube.position.set(0, 2.35, 0);
-          cubeScale = 1.15;
+          cube.position.set(0, 2.4, 0);
+          cubeScale = 1.4;
           camera.fov = 52;
-          rest.pos.set(2.6, 3.3, 10.2);
-          rest.target.set(0, 2.25, 0);
+          rest.pos.set(2.6, 3.3, 10.6);
+          rest.target.set(0, 2.3, 0);
         } else {
-          cube.position.set(0, 1.95, 0);
-          cubeScale = 1.7;
+          cube.position.set(0, 2.15, 0);
+          cubeScale = 2.05;
           camera.fov = 38;
-          rest.pos.set(2.4, 3.1, 9.6);
-          rest.target.set(0, 1.85, 0);
+          rest.pos.set(2.3, 3.0, 10.4);
+          rest.target.set(0, 2.05, 0);
         }
         if (!introStarted) {
           // Arrive from high and far, then settle: about a second.
@@ -650,6 +650,8 @@ export default function EffortCubeScene({
       const air = { near: 10, far: 24, drift: 0, unrest: 0.15, light: 1 };
       const airDust = new THREE.Color("#dcdcdc");
       const tmpAir = new THREE.Color();
+      const lightTint = new THREE.Color();
+      const tmpCast = new THREE.Color();
 
       // ---------- Frame ----------
       const shown = { ...pointRef.current }; // eased toward pointRef
@@ -671,7 +673,12 @@ export default function EffortCubeScene({
         const lit = closing ? fade * fade : 1 - Math.pow(1 - fade, 3);
         const A = airOf(airRef.current);
         const k = 1 - Math.exp(-dt * (reducedMotion ? 20 : 1.6));
-        sky.lerp(tmpAir.set(A.sky), k);
+        // The light casts its colour into the room. With no atmosphere chosen it fills the
+        // space; a chosen air keeps its own colours and the light only tints them.
+        performerColor(shown, lightTint);
+        const still = A.id === "still";
+        const cast = still ? 1 : 0.4;
+        sky.lerp(tmpAir.set(A.sky).lerp(tmpCast.copy(lightTint).multiplyScalar(0.035), cast), k);
         (scene.background as THREE.Color).copy(sky);
         const fog = scene.fog as THREE.Fog;
         fog.color.copy(sky);
@@ -682,9 +689,11 @@ export default function EffortCubeScene({
         air.drift += (A.drift - air.drift) * k;
         air.unrest += (A.unrest - air.unrest) * k;
         air.light += (A.light - air.light) * k;
-        (uPoolA.value as THREE.Color).lerp(tmpAir.set(A.floor), k);
-        (uAirGlow.value as THREE.Color).lerp(tmpAir.set(A.floor), k);
-        uAirGlowStrength.value += ((A.id === "still" ? 0.28 : 0.62) * lit - uAirGlowStrength.value) * k;
+        // A coloured dusk, not a floodlight: dark tints of the light, well under the bloom threshold.
+        (uPoolA.value as THREE.Color).lerp(tmpAir.set(A.floor).lerp(tmpCast.copy(lightTint).multiplyScalar(0.2), cast * 0.85), k);
+        (uAirGlow.value as THREE.Color).lerp(tmpAir.set(A.floor).lerp(tmpCast.copy(lightTint).multiplyScalar(0.16), cast * 0.9), k);
+        uAirGlowStrength.value += ((still ? 0.55 : 0.62) * lit - uAirGlowStrength.value) * k;
+        edgesMat.color.copy(PALE).lerp(lightTint, 0.45);
         airDust.lerp(tmpAir.set(A.dust), k);
         uFade.value = lit * air.light;
         if (closing && fade === 0 && closeResolve) {
@@ -783,7 +792,7 @@ export default function EffortCubeScene({
             size = e < 0.38 ? 1 : 1 - easeInOutCubic(clamp01((e - 0.38) / 0.55));
           }
           const tSec = performance.now() / 1000;
-          figure.apply(poseAt(G.spec, tSec, size));
+          figure.animate(poseAt(G.spec, tSec, size), dt, 1 - size, tSec);
           const { p, radiate } = progressAt(G.spec, tSec);
           const gHeat = heatOf(effortOf(G.spec));
           const [hr, hg, hb] = heatRGB(gHeat);

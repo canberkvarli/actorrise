@@ -1,7 +1,9 @@
 /**
- * Heat: the Studio is black and white until a movement has heat in it. Strong
- * and sudden burn (orange, then red); light and sustained stay white. One
- * function for the 3D and the interface, plain TS for Ghost Light.
+ * Heat: the colour of a movement, its temperature. Light and sustained run cool
+ * blue, the middle is white, strong and sudden burn orange, then red. The
+ * Studio's surface is black and white; this is the only colour, and the light
+ * casts it into the room. One function for the 3D and the interface, plain TS
+ * for Ghost Light.
  */
 
 import type { EffortPoint } from "./effort";
@@ -15,10 +17,13 @@ export function heatOf(p: EffortPoint): number {
 
 type RGB = [number, number, number];
 
-// White until past the middle (neutral reads white), then amber, orange, red.
+// Temperature: light and sustained run cool blue, the middle is white,
+// strong and sudden burn amber, orange, red.
 const STOPS: [number, RGB][] = [
-  [0.0, [0.96, 0.96, 0.95]],
-  [0.55, [0.98, 0.95, 0.9]],
+  [0.0, [0.45, 0.62, 1.0]],
+  [0.25, [0.66, 0.78, 1.0]],
+  [0.45, [0.9, 0.93, 1.0]],
+  [0.55, [0.98, 0.96, 0.93]],
   [0.7, [1.0, 0.72, 0.34]],
   [0.85, [1.0, 0.42, 0.12]],
   [1.0, [0.9, 0.15, 0.17]],

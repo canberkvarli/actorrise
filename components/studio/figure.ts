@@ -22,8 +22,13 @@ function limb(len: number, r: number, mat: THREE.Material): THREE.Mesh {
 
 export type Figure = {
   group: THREE.Group;
-  /** Put the body in a pose. */
+  /** Put the body in a pose, exactly (used to sample the sculpture). */
   apply: (pose: Pose) => void;
+  /**
+   * Move toward a pose like a body does: each joint on a spring, the arms a little
+   * looser than the torso so they follow through, a breath when the gesture is inside.
+   */
+  animate: (target: Pose, dt: number, breath: number, t: number) => void;
   /** Hands in world space, after apply(). */
   hands: () => [THREE.Vector3, THREE.Vector3];
   /** 0 dark .. 1 burning: the centre, for a gesture taken inside. */
@@ -102,19 +107,28 @@ export function buildFigure(): Figure {
     return { side, spread, abd, raise, elbow, hand };
   });
 
-  const apply = (pose: Pose) => {
+  const apply = (pose: Pose, breath = 0, t = 0) => {
     const c = pose.crouch;
     // Knees bend forward as the hips drop; up on the toes lifts a little.
     const thigh = Math.max(0, c) * 1.1;
     const shin = Math.max(0, c) * 2.0;
-    legs.forEach(({ hip, knee }) => {
-      hip.rotation.x = -thigh;
-      knee.rotation.x = shin;
+    // Leaning in, the body steps into it: the front foot forward, the back one behind.
+    const stance = Math.max(-0.5, Math.min(0.5, pose.lean));
+    legs.forEach(({ hip, knee }, i) => {
+      const front = i === 1 ? 1 : -0.6; // the right leg leads
+      hip.rotation.x = -thigh - stance * 0.55 * front;
+      knee.rotation.x = shin + Math.max(0, stance * front) * 0.35;
     });
-    const drop = 0.46 * (1 - Math.cos(thigh)) + 0.46 * (1 - Math.cos(shin - thigh));
+    const drop = 0.46 * (1 - Math.cos(thigh)) + 0.46 * (1 - Math.cos(shin - thigh)) + Math.abs(stance) * 0.04;
     root.position.y = HIP_Y - drop + Math.max(0, -c) * 0.12;
-    spine.rotation.x = pose.lean;
+    // The hips turn against the shoulders; the head keeps looking out.
+    root.rotation.y = -pose.twist * 0.3;
+    const b = Math.sin(t * 1.7) * breath;
+    spine.rotation.x = pose.lean + b * 0.02;
     spine.rotation.y = pose.twist;
+    chest.scale.set(1 + b * 0.012, 1 + b * 0.018, 1 + b * 0.012);
+    head.rotation.x = -pose.lean * 0.55;
+    head.rotation.y = -pose.twist * 0.45;
     arms.forEach(({ side, spread, abd, raise, elbow }, i) => {
       const a = pose.arms[i];
       spread.rotation.y = side * a.spread * 0.9;
@@ -123,6 +137,45 @@ export function buildFigure(): Figure {
       elbow.rotation.x = -a.bend;
     });
     group.updateMatrixWorld(true);
+  };
+
+  // Springs, one per joint value. Torso stiffer, arms looser: the arms arrive a beat late
+  // and overshoot a touch, which is what makes it read as a body and not a puppet.
+  const KEYS = ["lean", "twist", "crouch"] as const;
+  const STIFF = { lean: 90, twist: 80, crouch: 75, raise: 55, spread: 55, bend: 48 };
+  const DAMP = 0.7; // under 1: a little follow-through
+  const st = {
+    lean: [0, 0],
+    twist: [0, 0],
+    crouch: [0, 0],
+    arms: [0, 1].map(() => ({ raise: [0.15, 0], spread: [0.12, 0], bend: [0.15, 0] })),
+  };
+  const step = (v: number[], target: number, k: number, dt: number) => {
+    const c = 2 * Math.sqrt(k) * DAMP;
+    v[1] += (k * (target - v[0]) - c * v[1]) * dt;
+    v[0] += v[1] * dt;
+  };
+  const animate = (target: Pose, dt: number, breath: number, t: number) => {
+    const n = Math.max(1, Math.ceil(dt / (1 / 120))); // small steps keep stiff springs stable
+    const h = Math.min(dt, 0.05) / n;
+    for (let s = 0; s < n; s++) {
+      KEYS.forEach((key) => step(st[key], target[key], STIFF[key], h));
+      st.arms.forEach((a, i) => {
+        step(a.raise, target.arms[i].raise, STIFF.raise, h);
+        step(a.spread, target.arms[i].spread, STIFF.spread, h);
+        step(a.bend, target.arms[i].bend, STIFF.bend, h);
+      });
+    }
+    apply(
+      {
+        lean: st.lean[0],
+        twist: st.twist[0],
+        crouch: st.crouch[0],
+        arms: st.arms.map((a) => ({ raise: a.raise[0], spread: a.spread[0], bend: Math.max(0, a.bend[0]) })) as Pose["arms"],
+      },
+      breath,
+      t,
+    );
   };
 
   const hands = (): [THREE.Vector3, THREE.Vector3] => [
@@ -138,10 +191,11 @@ export function buildFigure(): Figure {
 
   const setBody = (light: number) => {
     const l = Math.max(0, Math.min(1, light));
-    bodyMat.opacity = 0.22 + 0.5 * l;
-    bodyMat.color.copy(BODY).multiplyScalar(0.45 + 0.35 * l);
+    // Dim: the hands, their trails and the centre carry the light, not the body.
+    bodyMat.opacity = 0.18 + 0.42 * l;
+    bodyMat.color.copy(BODY).multiplyScalar(0.3 + 0.25 * l);
   };
 
   apply({ lean: 0, twist: 0, crouch: 0, arms: [{ raise: 0.15, spread: 0.12, bend: 0.15 }, { raise: 0.15, spread: 0.12, bend: 0.15 }] });
-  return { group, apply, hands, setCentre, setBody };
+  return { group, apply: (p: Pose) => apply(p), animate, hands, setCentre, setBody };
 }
