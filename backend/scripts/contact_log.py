@@ -189,7 +189,7 @@ where f between current_date - :max_days and current_date - :min_days
   and not exists (
     select 1 from contact_log l
     where (lower(l.address) = first.a or (l.domain = first.d and l.domain <> ''))
-      and l.kind in ('chase', 'reply', 'checkin', 'partner'))
+      and l.kind in ('chase', 'reply', 'checkin', 'partner', 'closed'))
 order by f
 """
 
@@ -213,7 +213,7 @@ def main() -> None:
     c.add_argument("--org")
     a = sub.add_parser("add")
     a.add_argument("address")
-    a.add_argument("--kind", required=True, help="note | educator | checkin | outreach | chase | reply")
+    a.add_argument("--kind", required=True, help="note | educator | checkin | outreach | chase | reply | closed")
     a.add_argument("--subject", required=True)
     a.add_argument("--org")
     du = sub.add_parser("due", help="organisations owed their one chase")
