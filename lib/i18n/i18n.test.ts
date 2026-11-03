@@ -1,34 +1,41 @@
 import { describe, expect, it } from "vitest";
-import { detectLocale, readLocaleCookie, localeCookieString } from "./locale";
+import { detectLocale, pickLocale, readLocaleCookie, localeCookieString, TURKISH_ON_WEB } from "./locale";
 import { interpolate, translate, translateList } from "./index";
 
-describe("detectLocale", () => {
+describe("the web is English only", () => {
+  it("resolves every visitor to English, a saved Turkish choice included", () => {
+    expect(TURKISH_ON_WEB).toBe(false);
+    expect(detectLocale({ cookie: "NEXT_LOCALE=tr", languages: ["tr-TR"], timeZone: "Europe/Istanbul" })).toBe("en");
+  });
+});
+
+describe("pickLocale (the rules when Turkish is on)", () => {
   it("an explicit cookie beats every detected signal", () => {
-    expect(detectLocale({ cookie: "a=1; NEXT_LOCALE=en", languages: ["tr-TR"], timeZone: "Europe/Istanbul" })).toBe("en");
-    expect(detectLocale({ cookie: "NEXT_LOCALE=tr", languages: ["en-US"], timeZone: "America/Los_Angeles" })).toBe("tr");
+    expect(pickLocale({ cookie: "a=1; NEXT_LOCALE=en", languages: ["tr-TR"], timeZone: "Europe/Istanbul" })).toBe("en");
+    expect(pickLocale({ cookie: "NEXT_LOCALE=tr", languages: ["en-US"], timeZone: "America/Los_Angeles" })).toBe("tr");
   });
 
   it("a Turkish-first browser gets Turkish anywhere", () => {
-    expect(detectLocale({ languages: ["tr-TR", "en"], timeZone: "Europe/Berlin" })).toBe("tr");
-    expect(detectLocale({ languages: ["tr"] })).toBe("tr");
+    expect(pickLocale({ languages: ["tr-TR", "en"], timeZone: "Europe/Berlin" })).toBe("tr");
+    expect(pickLocale({ languages: ["tr"] })).toBe("tr");
   });
 
   it("only the first language counts", () => {
-    expect(detectLocale({ languages: ["en-US", "tr"], timeZone: "Europe/Berlin" })).toBe("en");
+    expect(pickLocale({ languages: ["en-US", "tr"], timeZone: "Europe/Berlin" })).toBe("en");
   });
 
   it("Turkish time means Turkish, even on an English browser", () => {
-    expect(detectLocale({ languages: ["en-US"], timeZone: "Europe/Istanbul" })).toBe("tr");
+    expect(pickLocale({ languages: ["en-US"], timeZone: "Europe/Istanbul" })).toBe("tr");
   });
 
   it("falls back to English", () => {
-    expect(detectLocale({})).toBe("en");
-    expect(detectLocale({ cookie: "NEXT_LOCALE=fr", languages: ["de-DE"], timeZone: "Europe/Berlin" })).toBe("en");
+    expect(pickLocale({})).toBe("en");
+    expect(pickLocale({ cookie: "NEXT_LOCALE=fr", languages: ["de-DE"], timeZone: "Europe/Berlin" })).toBe("en");
   });
 
   it("does not match a language that merely starts with tr", () => {
     // there is no such tag today; the guard is that only `tr` and `tr-*` count
-    expect(detectLocale({ languages: ["trv"] })).toBe("en");
+    expect(pickLocale({ languages: ["trv"] })).toBe("en");
   });
 });
 

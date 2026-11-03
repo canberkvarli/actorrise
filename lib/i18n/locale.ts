@@ -20,6 +20,16 @@
  */
 
 export const LOCALES = ["en", "tr"] as const;
+
+/**
+ * The web is English only (Canberk, 2026-11-03). The Turkish UI lives in Ghost
+ * Light, where a Turkish actor brings their own script and rehearses it; the
+ * web's monologue library is for English-speaking actors. With this off every
+ * visitor resolves to English (a saved "tr" cookie included) and the EN/TR
+ * switch is not drawn. The Turkish strings and the rules below are kept, so
+ * turning it back on is this one line.
+ */
+export const TURKISH_ON_WEB = false;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en";
 export const LOCALE_COOKIE = "NEXT_LOCALE";
@@ -40,7 +50,16 @@ export function readLocaleCookie(cookieHeader: string | null | undefined): Local
   return null;
 }
 
-export function detectLocale({
+export function detectLocale(signals: {
+  cookie?: string | null;
+  languages?: readonly string[] | null;
+  timeZone?: string | null;
+}): Locale {
+  return TURKISH_ON_WEB ? pickLocale(signals) : DEFAULT_LOCALE;
+}
+
+/** The order above, for when the web has Turkish on. */
+export function pickLocale({
   cookie,
   languages,
   timeZone,

@@ -106,6 +106,11 @@ they are here. When he gives a new standing rule, add it here, not to a memory f
   use `halfvec_cosine_ops`. Do not re-embed at a smaller dimension. A hidden row usually carries
   no embedding; un-hiding goes through `unhide()` (`services/monologue_visibility.py`), which
   re-embeds it if the vector is missing.
+- **The web is English only (2026-11-03).** `TURKISH_ON_WEB = false` in `lib/i18n/locale.ts`:
+  every visitor resolves to English and the EN/TR switch is not drawn. The Turkish UI lives in
+  Ghost Light (repo `canberkvarli/ghostlight`), where a Turkish actor brings their own script and
+  rehearses it in Turkish; the web's monologue library is for English-speaking actors. The
+  Turkish strings and the gate below stay in place for the app's requests.
 - **Language gate (CAN-19).** The UI language picks the library, everywhere: the Turkish UI
   (`X-ActorRise-Locale: tr`, sent by `lib/api.ts`) is served **Turkish only**, everything else
   **English only** (Canberk, 2026-11-03: "no Turkish actor can do English pieces; they have to

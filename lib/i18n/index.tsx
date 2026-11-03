@@ -27,7 +27,7 @@ import { en, type Messages } from "./messages/en";
 import { tr } from "./messages/tr";
 
 export type { Locale } from "./locale";
-export { LOCALES } from "./locale";
+export { LOCALES, TURKISH_ON_WEB } from "./locale";
 
 const DICTIONARIES: Record<Locale, Messages> = { en, tr };
 

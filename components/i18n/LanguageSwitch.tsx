@@ -1,6 +1,6 @@
 "use client";
 
-import { LOCALES, setLocale, useLocale, useT, type Locale } from "@/lib/i18n";
+import { LOCALES, TURKISH_ON_WEB, setLocale, useLocale, useT, type Locale } from "@/lib/i18n";
 import { trackEvent } from "@/lib/events";
 
 /**
@@ -15,10 +15,14 @@ export function LanguageSwitch({ tone = "auto", className = "" }: { tone?: "dark
   const t = useT();
 
   const pick = (next: Locale) => {
+    if (!TURKISH_ON_WEB) return;
     if (next === locale) return;
     setLocale(next);
     trackEvent("language_switched", { from: locale, to: next });
   };
+
+  // The web is English only (lib/i18n/locale.ts); the switch is not drawn.
+  if (!TURKISH_ON_WEB) return null;
 
   const idle = tone === "dark" ? "var(--t-muted-light-2)" : undefined;
   const active = tone === "dark" ? "var(--t-gel)" : undefined;
