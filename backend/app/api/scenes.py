@@ -12,6 +12,7 @@ from app.models.actor import (Play, Scene, SceneFavorite, SceneLine,
 from app.models.user import User
 from app.services import class_shelf
 from app.services.rehearsal import journal
+from app.services.rehearsal.language import script_language
 from app.services.rehearsal.access import (FREE_LIBRARY_SCENE_TITLES,
                                            is_free_library_scene as _is_free_library_scene)
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -85,6 +86,8 @@ class SceneDetailResponse(SceneResponse):
     has_original_snapshot: bool = False
     # False on a teacher's scene a student opens: read and rehearse, not rewrite.
     can_edit: bool = True
+    # The play's language ("en", "tr"): its act and scene labels read in it.
+    language: str = "en"
 
 
 # ============================================================================
@@ -223,7 +226,10 @@ def _rung(rung: str, script, scene=None, line=None, character=None,
         "script": {"id": script.id, "title": script.title, "genre": script.genre,
                    "is_sample": bool(script.is_sample)} if script else None,
         "scene": {"id": scene.id, "title": scene.title, "act": scene.act,
-                  "scene_number": scene.scene_number} if scene else None,
+                  "scene_number": scene.scene_number,
+                  # The play's language: the act and scene labels read in it.
+                  "language": script_language(scene.play.language if scene.play else None, script)}
+                 if scene else None,
         "character": character,
         "line": line,
         "progress": progress,
@@ -414,6 +420,7 @@ async def get_scene_detail(
         **scene.__dict__,
         "play_title": scene.play.title,
         "play_author": scene.play.author,
+        "language": script_language(scene.play.language, script),
         "is_favorited": is_favorited,
         "is_free_library": _is_free_library_scene(scene),
         "primary_emotions": scene.primary_emotions or [],

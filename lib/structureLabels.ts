@@ -1,18 +1,23 @@
 /**
- * Act and scene labels, in the reader's language.
+ * Act and scene labels, in the play's own language.
  *
  * The parser stores structure in English whatever the play is spoken in:
  * "Act 2", "Scene 3", "Prologue" (backend/app/services/script_structure.py,
  * which also reads PERDE and SAHNE into those same labels). Some scripts carry
- * a bare "2". On the Turkish UI those read "2. Perde", "3. Sahne", "Prolog".
+ * a bare "2". A Turkish play reads "2. Perde", "3. Sahne", "Prolog", on the
+ * English UI as well; an English play reads "Act 2" on the Turkish UI. The
+ * labels belong to the play, the way its words do.
+ *
+ * The language is the play's, from the server (`language` on the scene, the
+ * scan, the scene map, What's next and the rehearsal payload), never the UI.
  *
  * Only labels in those shapes are translated. Anything a script spelled out
  * itself ("The Ballroom", "INT. OFFICE - DAY", an act a teacher named) is
- * shown as it is. English is left exactly as it was: this returns the label
- * untouched, so a screen that showed "2" still shows "2".
+ * shown as it is. An English play is left exactly as it was: this returns the
+ * label untouched, so a screen that showed "2" still shows "2".
  */
 import { translate } from "./i18n";
-import type { Locale } from "./i18n/locale";
+import { speechLang } from "./speech-language";
 
 export type StructureKind = "act" | "scene";
 
@@ -37,12 +42,17 @@ const SHAPED: Record<StructureKind, RegExp> = {
   scene: /^scene\s+(\d+|[ivxlc]+)\.?$/i,
 };
 
-/** One label (an act or a scene) in `locale`. Null and empty stay as they are. */
+/**
+ * One label (an act or a scene) in the play's language, `language` as the
+ * server sends it ("tr"; absent or anything else is English). Null and empty
+ * stay as they are.
+ */
 export function localizeStructure<T extends string | null | undefined>(
   raw: T,
   kind: StructureKind,
-  locale: Locale,
+  language: string | null | undefined,
 ): T | string {
+  const locale = speechLang(language);
   if (locale === "en" || !raw) return raw;
   const label = raw.trim();
   if (/^prologue\.?$/i.test(label)) return translate(locale, "playStructure.prologue");

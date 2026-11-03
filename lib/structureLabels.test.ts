@@ -31,6 +31,14 @@ describe("localizeStructure", () => {
     }
   });
 
+  it("follows the play's language as the server sends it", () => {
+    expect(localizeStructure("Act 1", "act", "tr-TR")).toBe("1. Perde");
+    // An English play, or a server that did not say: as stored.
+    expect(localizeStructure("Act 1", "act", undefined)).toBe("Act 1");
+    expect(localizeStructure("Act 1", "act", null)).toBe("Act 1");
+    expect(localizeStructure("Act 1", "act", "de")).toBe("Act 1");
+  });
+
   it("passes empty values through", () => {
     expect(localizeStructure(null, "act", "tr")).toBeNull();
     expect(localizeStructure(undefined, "scene", "tr")).toBeUndefined();

@@ -192,7 +192,7 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25, duration: 0.3 }}>{t('appScenesRehearse.tapToBegin')}</motion.span>
         </button>
       )}
-      {ended && !error && <Ending scene={payload.scene} guided={guided} onAgain={onAgain} onLeave={onLeave} />}
+      {ended && !error && <Ending scene={payload.scene} language={payload.language} guided={guided} onAgain={onAgain} onLeave={onLeave} />}
       {error && (
         <p className="r-chrome fixed inset-x-0 bottom-0 z-40 px-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-4 text-center"
           style={{ background: 'var(--t-paper)' }}>

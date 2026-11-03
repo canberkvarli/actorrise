@@ -39,6 +39,7 @@ from app.services.reading_budget import LIMIT_PROBLEM, reading_budget, tell_foun
 from app.models.user import User
 from app.services.character_names import canonicalize_scene_characters
 from app.services.script_parser import PARSER_VERSION, ScriptParser
+from app.services.rehearsal.language import detect as detect_language
 
 router = APIRouter(prefix="/api/scripts", tags=["scripts"])
 
@@ -230,6 +231,9 @@ class ScriptScanResponse(BaseModel):
     # The map. Every scene in the file, whether or not it will be extracted —
     # what gets built is a separate, metered decision.
     scenes: List[ScannedScene] = []
+    # What the script is written in ("en", "tr"), read off its text: the act
+    # and scene labels on the map read in it.
+    language: str = "en"
 
 
 # ============================================================================
@@ -332,6 +336,7 @@ def _scan_file(file_content: bytes, file_ext: str) -> ScriptScanResponse:
         estimated_quick_seconds=est_quick,
         estimated_full_seconds=est_full,
         scenes=scenes,
+        language=detect_language(raw_text[:20000]),
     )
 
 
@@ -3375,9 +3380,14 @@ def kept_scan(script) -> Optional[ScriptScanResponse]:
     if not isinstance(kept, dict) or kept.get("key") != _scan_key(script.source_text):
         return None
     try:
-        return ScriptScanResponse(**kept["scan"])
+        scan = ScriptScanResponse(**kept["scan"])
     except Exception:
         return None
+    if "language" not in kept["scan"]:
+        # Kept before the map carried a language: read it off the text, which
+        # is cheap, rather than reading the whole script again.
+        scan.language = detect_language(script.source_text[:20000])
+    return scan
 
 
 def keep_scan(script, scan: ScriptScanResponse) -> None:

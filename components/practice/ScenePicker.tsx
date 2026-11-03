@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { isSolo, type ScannedScene } from "@/lib/scriptMap";
-import { useLocale, useT } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { localizeStructure } from "@/lib/structureLabels";
 
 type Translate = ReturnType<typeof useT>;
@@ -15,6 +15,8 @@ export type { ScannedScene };
 
 interface ScenePickerProps {
   scenes: ScannedScene[];
+  /** What the script is written in ("en", "tr"): the act and scene labels read in it. */
+  language?: string;
   pageCount: number;
   /** Filename, used as the script's name until extraction finds a real title. */
   fileName: string;
@@ -102,6 +104,7 @@ function scriptName(t: Translate, fileName: string): string {
  */
 export function ScenePicker({
   scenes,
+  language,
   pageCount,
   fileName,
   limit,
@@ -111,7 +114,6 @@ export function ScenePicker({
   built = [],
 }: ScenePickerProps) {
   const t = useT();
-  const locale = useLocale();
   const [picked, setPicked] = useState<Set<number>>(() => new Set());
   const builtSet = useMemo(() => new Set(built), [built]);
   const isBuilt = (scene: ScannedScene) => builtSet.has(scene.index);
@@ -228,7 +230,7 @@ export function ScenePicker({
               <div className="mb-2.5 flex items-center gap-3 px-2">
                 <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary" />
                 <h3 className="font-typewriter text-[15px] font-bold uppercase tracking-[0.14em] text-paper-ink">
-                  {localizeStructure(act, "act", locale)}
+                  {localizeStructure(act, "act", language)}
                 </h3>
                 <span aria-hidden className="h-px flex-1 bg-paper-rule" />
                 {actScenes.filter((s) => !isSolo(s) && !isBuilt(s)).length > 1 && (
@@ -332,7 +334,7 @@ export function ScenePicker({
                               isPicked ? "font-bold text-primary" : "text-paper-ink",
                             )}
                           >
-                            {localizeStructure(sceneName(t, scene, i), "scene", locale)}
+                            {localizeStructure(sceneName(t, scene, i), "scene", language)}
                           </span>
                           {scene.title && (
                             <span className="text-[15.5px] italic leading-7 text-paper-ink/70">

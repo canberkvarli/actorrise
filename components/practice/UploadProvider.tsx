@@ -101,6 +101,8 @@ type ScanResult = {
   estimated_full_seconds: number;
   /** Every scene in the file. Absent from older backends. */
   scenes?: ScannedScene[];
+  /** What the script is written in ("en", "tr"); its act and scene labels read in it. */
+  language?: string;
 };
 
 /**
@@ -1146,6 +1148,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           {scanResult?.scenes && (
             <ScenePicker
               scenes={scanResult.scenes}
+              language={scanResult.language}
               pageCount={scanResult.page_count}
               fileName={pendingFile?.name ?? fileName}
               limit={sceneLimit}
@@ -1179,6 +1182,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           {more?.map?.scan.scenes && (
             <ScenePicker
               scenes={more.map.scan.scenes}
+              language={more.map.scan.language}
               pageCount={more.map.scan.page_count}
               fileName={more.script.title}
               limit={more.map.limit}

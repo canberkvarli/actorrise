@@ -15,6 +15,8 @@ export type SceneMapScan = {
   estimated_quick_seconds: number;
   estimated_full_seconds: number;
   scenes?: ScannedScene[];
+  /** What the script is written in ("en", "tr"); its act and scene labels read in it. */
+  language?: string;
 };
 
 /** What `POST /api/scripts/{id}/scene-map` answers. No AI runs for it. */

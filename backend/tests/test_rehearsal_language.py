@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from app.api import speech
 from app.api.auth import get_current_user
 from app.core.config import settings
-from app.services.rehearsal.language import detect, normalise, scene_language
+from app.services.rehearsal.language import detect, normalise, scene_language, script_language
 from app.services.script_parser import _cue_names, parse_dialogue
 from app.services.script_structure import _match_act, _match_scene, detect_structure
 
@@ -54,6 +54,37 @@ class Detect(unittest.TestCase):
         self.assertEqual(scene_language("en", False, [TURKISH]), "en")  # a library play says what it is
         self.assertEqual(scene_language("en", True, [TURKISH]), "tr")   # an upload is read
         self.assertEqual(scene_language(None, True, [ENGLISH]), "en")
+
+
+class ScriptLanguage(unittest.TestCase):
+    """The play's language for its labels, when the lines are not at hand."""
+
+    def test_a_library_play_says_what_it_is(self):
+        self.assertEqual(script_language("tr", None), "tr")
+        self.assertEqual(script_language("en", None), "en")
+        self.assertEqual(script_language(None, None), "en")
+
+    def test_an_upload_is_read_from_its_text(self):
+        self.assertEqual(script_language("en", SimpleNamespace(raw_text=TURKISH * 3, source_text=None)), "tr")
+        self.assertEqual(script_language("en", SimpleNamespace(raw_text=None, source_text=TURKISH * 3)), "tr")
+        self.assertEqual(script_language("en", SimpleNamespace(raw_text=ENGLISH, source_text=None)), "en")
+        self.assertEqual(script_language("en", SimpleNamespace(raw_text=None, source_text=None)), "en")
+
+    def test_a_marked_play_wins_over_its_text(self):
+        self.assertEqual(script_language("tr", SimpleNamespace(raw_text=ENGLISH, source_text=None)), "tr")
+
+
+class ScanLanguage(unittest.TestCase):
+    def test_a_kept_scan_from_before_reads_the_language_off_the_text(self):
+        from app.api import scripts
+
+        old = {"page_count": 1, "has_structure": False, "num_acts": 0, "num_sections": 1,
+               "show_mode_choice": False, "estimated_quick_seconds": 8, "estimated_full_seconds": 10, "scenes": []}
+        script = SimpleNamespace(source_text=TURKISH * 3, scene_map=None)
+        script.scene_map = {"key": scripts._scan_key(script.source_text), "scan": old}
+        self.assertEqual(scripts.kept_scan(script).language, "tr")
+        script.scene_map["scan"] = {**old, "language": "en"}  # one that says keeps what it says
+        self.assertEqual(scripts.kept_scan(script).language, "en")
 
 
 class TurkishCues(unittest.TestCase):

@@ -6,7 +6,7 @@ import { IconScissors, IconPlayerPlayFilled } from "@tabler/icons-react";
 
 import type { WhatsNext as WhatsNextData } from "@/hooks/useWhatsNext";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
-import { useLocale, useT } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { localizeStructure } from "@/lib/structureLabels";
 
 /**
@@ -79,9 +79,8 @@ function ActionDot({ children }: { children: React.ReactNode }) {
 export function WhatsNext({ data }: { data: WhatsNextData }) {
   const { rung, script, scene, line, character, progress } = data;
   const t = useT();
-  const locale = useLocale();
 
-  const sceneSlug = [localizeStructure(scene?.act, "act", locale), localizeStructure(scene?.scene_number, "scene", locale)]
+  const sceneSlug = [localizeStructure(scene?.act, "act", scene?.language), localizeStructure(scene?.scene_number, "scene", scene?.language)]
     .filter(Boolean).join(" · ");
 
   /* A run in progress goes straight to the stage, at the line where the

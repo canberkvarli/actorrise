@@ -19,6 +19,8 @@ export interface WhatsNext {
     title: string;
     act?: string | null;
     scene_number?: string | null;
+    /** The play's language ("en", "tr"): its act and scene labels read in it. */
+    language?: string;
   } | null;
   character: string | null;
   line: { character: string; text: string } | null;

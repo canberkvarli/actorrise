@@ -9,10 +9,15 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useTrialWords } from '@/hooks/useTrialWords';
 import { GATE_COPY } from '@/lib/paywall/copy';
 import type { ScenePayload } from '@/lib/rehearsal/contract';
-import { useLocale, useT } from '@/lib/i18n';
+import { translate, useT } from '@/lib/i18n';
+import { speechLang } from '@/lib/speech-language';
 import { localizeStructure } from '@/lib/structureLabels';
 
-interface Props { scene: ScenePayload['scene']; guided: boolean; onAgain: () => void; onLeave: () => void }
+interface Props {
+  scene: ScenePayload['scene']; guided: boolean; onAgain: () => void; onLeave: () => void;
+  /** The play's language (the payload's `language`): the act and scene read in it. */
+  language?: string;
+}
 
 /** The last line holds this long before anything is said about it. */
 const HOLD_MS = 1000;
@@ -52,7 +57,7 @@ export function whereInPlay(
  * the Plus ticket when this actor may be asked, quoting the trial they just
  * earned. Any other run ends on a card at the foot of the script.
  */
-export function Ending({ scene, guided, onAgain, onLeave }: Props) {
+export function Ending({ scene, guided, onAgain, onLeave, language }: Props) {
   const [shown, setShown] = useState(false);
   /* The guided end does not open until the trial length is the real one. It
      asked once at 700ms and opened at 1000ms whatever had come back, so a slow
@@ -83,7 +88,7 @@ export function Ending({ scene, guided, onAgain, onLeave }: Props) {
     return () => { alive = false; clearTimeout(first); clearTimeout(next); clearTimeout(cap); };
   }, [guided, mutate]);
   if (!shown) return null;
-  if (!guided) return <RunEnd scene={scene} onAgain={onAgain} onLeave={onLeave} />;
+  if (!guided) return <RunEnd scene={scene} language={language} onAgain={onAgain} onLeave={onLeave} />;
   /* The house comes down as soon as the line has held, and the page is laid
      on it once it knows what to say. Drawn only when both were ready, the
      stage sat bare for up to three seconds and the page cut in over it. */
@@ -121,18 +126,22 @@ function GuidedEnd({ onAgain, onLeave }: { onAgain: () => void; onLeave: () => v
   );
 }
 
-function RunEnd({ scene, onAgain, onLeave }: { scene: ScenePayload['scene']; onAgain: () => void; onLeave: () => void }) {
+function RunEnd({ scene, language, onAgain, onLeave }: {
+  scene: ScenePayload['scene']; language?: string; onAgain: () => void; onLeave: () => void;
+}) {
   const t = useT();
-  const locale = useLocale();
-  // "Act 2" as the parser stores it reads "2. Perde" on the Turkish UI.
+  // The act and scene read in the play's language, whatever the UI is: "Act 2"
+  // as the parser stores it is "2. Perde" in a Turkish play, and a bare "2" in
+  // an English play is "Act 2" on the Turkish UI too.
+  const playLang = speechLang(language);
   const named = {
     ...scene,
-    act: localizeStructure(scene.act, 'act', locale),
-    scene_number: localizeStructure(scene.scene_number, 'scene', locale),
+    act: localizeStructure(scene.act, 'act', playLang),
+    scene_number: localizeStructure(scene.scene_number, 'scene', playLang),
   };
   const where = whereInPlay(named, {
-    act: n => t('appScenesRehearse.act', { n }),
-    scene: n => t('appScenesRehearse.scene', { n }),
+    act: n => translate(playLang, 'appScenesRehearse.act', { n }),
+    scene: n => translate(playLang, 'appScenesRehearse.scene', { n }),
   });
   return (
     <motion.div role="status" className="r-end"

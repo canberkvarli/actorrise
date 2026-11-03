@@ -70,3 +70,23 @@ def scene_language(play_language: Optional[str], is_upload: bool, texts: Iterabl
     if not is_upload:
         return DEFAULT
     return detect(" ".join(t for t in texts if t))
+
+
+# How much of an uploaded script's text is read to tell its language. The
+# opening pages carry a cast list and stage directions as well as speech, and
+# that is still plenty: Turkish prose runs at 3-5% ı ğ ş.
+_SAMPLE_CHARS = 20000
+
+
+def script_language(play_language: Optional[str], script=None) -> str:
+    """The language of a play, for anything that labels or hears it.
+
+    A library play says what it is. An upload is read from its own text
+    (`raw_text`, else `source_text`), which is there when the scene's lines
+    are not at hand.
+    """
+    marked = normalise(play_language)
+    if marked != DEFAULT or script is None:
+        return marked
+    text = getattr(script, "raw_text", None) or getattr(script, "source_text", None) or ""
+    return detect(text[:_SAMPLE_CHARS])

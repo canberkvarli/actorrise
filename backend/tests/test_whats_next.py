@@ -258,3 +258,28 @@ class WithNothingOfYourOwnTheDemoSpeaks(Fixture):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheSceneSaysWhatLanguageItIsIn(Fixture):
+    """The act and scene labels read in the play's language (lib/structureLabels.ts)."""
+
+    def test_an_english_script_is_english(self):
+        self._scene(self._script())
+        self.assertEqual(whats_next(self.db, self.user.id)["scene"]["language"], "en")
+
+    def test_a_turkish_upload_is_read_from_its_text(self):
+        script = self._script()
+        script.raw_text = (
+            "Olmak ya da olmamak, işte bütün mesele bu. Hangisi daha soylu: zalim talihin "
+            "taşlarına, oklarına katlanmak mı, yoksa bir dert denizine karşı silaha sarılıp "
+            "o dertlere son vermek mi? Ben de bilmiyorum, değil mi?"
+        )
+        self.db.commit()
+        self._scene(script)
+        self.assertEqual(whats_next(self.db, self.user.id)["scene"]["language"], "tr")
+
+    def test_a_turkish_play_is_turkish(self):
+        self.play.language = "tr"
+        self.db.commit()
+        self._scene(self._script())
+        self.assertEqual(whats_next(self.db, self.user.id)["scene"]["language"], "tr")
