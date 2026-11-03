@@ -20,7 +20,7 @@
     },
     {
       "kind": "scene",
-      "seconds": 13,
+      "seconds": 16.4,
       "play": "The Importance of Being Earnest",
       "title": "Act I",
       "bg": "ink",
@@ -56,14 +56,13 @@
       "action": "Free on the App Store",
       "bg": "ink",
       "store": true,
-      "sfx": [
-        {
-          "name": "dins",
-          "at": 0.1,
-          "vol": 0.6
-        }
-      ],
-      "snap": true
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.53,
+        1.06
+      ]
     }
   ],
   "source": {
@@ -75,7 +74,7 @@
   },
   "music": {
     "style": "pizzicato",
-    "volume": 0.22,
+    "volume": 0.3,
     "drop": "end"
   },
   "captions": {

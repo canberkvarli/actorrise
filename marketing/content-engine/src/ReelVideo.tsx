@@ -60,8 +60,8 @@ type Screen = {
  * the warm glow of a ghost light; paper is the light house style. `store` shows the App Store badge
  * style button (use it for Ghost Light), otherwise `action` is plain text like actorrise.com. */
 type End = { kind: "end"; seconds: number; brand: string; line: string; action: string; icon?: string; bg?: "ink" | "paper"; store?: boolean;
-  /** Sharp ending on the `dins` sound (four rising notes, one last din): a hard cut, the ghost light warms up a step on each din, the icon and name snap in on the last one. No fades. */
-  snap?: boolean };
+  /** Sharp ending: hard cut, everything lands on the music's beats (see SnapEnd). No fades. */
+  snap?: boolean; beats?: number[] };
 /** Sound effects on a beat, from public/sfx/cine: impact, reveal, note, switch, tick, heartbeat, room, riser, chime (the happy close).
  * Bright ones too: chime (default on the end card), ping, pong, toing, plink, click, tap.
  * `at` is seconds into the beat (negative starts before the cut, e.g. a riser at -1.5). Few and heavy. */
@@ -384,33 +384,24 @@ const SceneBeat: React.FC<{ b: Scene }> = ({ b }) => {
   );
 };
 
-/** Timing of public/sfx/cine/dins.wav (seconds into the file): four rising notes, then the last din. */
-const DINS = [0, 0.14, 0.28, 0.42];
-const DIN_LAST = 0.7;
-const DIN_AT = 0.1; // where the end beat puts the dins cue
-
+/** The sharp ending: a hard cut, the icon and name land on the music's drop (make_music puts the drop on
+ * the end card's first frame), the line and the App Store button on the next two beats. `beats` are seconds
+ * into the end card, default [0, 0.55, 1.1]; read them from the bed's onsets when the tempo differs. */
 const SnapEnd: React.FC<{ b: End }> = ({ b }) => {
   const f = useCurrentFrame();
-  const fr = (sec: number) => Math.round((DIN_AT + sec) * RFPS);
-  const step = DINS.filter((d) => f >= fr(d)).length; // 0..4, the light warms up on each din
-  const last = fr(DIN_LAST);
-  const hit = f >= last;
+  const [t0, t1, t2] = (b.beats ?? [0, 0.55, 1.1]).map((x) => Math.round(x * RFPS));
   const pop = (a: number) => (f < a ? 0 : 1);
-  const kick = (a: number) => interpolate(f, [a, a + 5], [1.1, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
-  const flick = (d: number) => (f >= fr(d) && f < fr(d) + 3 ? 1.35 : 1);
-  const glow = hit ? 1 : (step / 4) * 0.7 * DINS.reduce((m, d) => Math.max(m, flick(d)), 1);
+  const kick = (a: number) => interpolate(f, [a, a + 6], [1.12, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
+  const flash = interpolate(f, [t0, t0 + 8], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const glow = 0.8 + 0.2 * flash + 0.05 * Math.sin(f / 14);
   return (
     <AbsoluteFill style={{ background: CUR.dark, justifyContent: "center", alignItems: "center", paddingBottom: 300 }}>
-      <AbsoluteFill style={{ background: `radial-gradient(ellipse ${40 + 15 * glow}% ${24 + 10 * glow}% at 50% 36%, rgba(232,121,43,${0.34 * glow}) 0%, rgba(232,121,43,0) 72%)` }} />
-      {!hit && step > 0 && (
-        <div style={{ position: "absolute", top: "36%", left: "50%", width: 18 + step * 6, height: 18 + step * 6, marginLeft: -(9 + step * 3), marginTop: -(9 + step * 3) - 150,
-          borderRadius: "50%", background: `rgba(255,214,160,${0.35 + step * 0.15})`, boxShadow: `0 0 ${30 * step}px rgba(232,121,43,${0.3 * step})` }} />
-      )}
-      <Img src={staticFile(b.icon ?? "icon.png")} style={{ width: 220, height: 220, borderRadius: 50, opacity: pop(last), transform: `scale(${kick(last)})`,
-        boxShadow: `0 0 90px rgba(232,121,43,0.35)` }} />
-      <div style={{ marginTop: 54, fontFamily: F.serif, fontWeight: 600, fontSize: 108, color: CUR.onDark, letterSpacing: -1, opacity: pop(last), transform: `scale(${kick(last)})` }}>{b.brand}</div>
-      <div style={{ marginTop: 12, fontFamily: F.serifI, fontStyle: "italic", fontSize: 50, color: "rgba(251,247,240,0.72)", opacity: pop(last + 9) }}>{b.line}</div>
-      <div style={{ marginTop: 58, opacity: pop(last + 15), transform: `scale(${kick(last + 15)})` }}>
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse ${55 + 25 * flash}% ${34 + 18 * flash}% at 50% 36%, rgba(232,121,43,${0.3 * glow + 0.25 * flash}) 0%, rgba(232,121,43,0) 72%)` }} />
+      <Img src={staticFile(b.icon ?? "icon.png")} style={{ width: 220, height: 220, borderRadius: 50, opacity: pop(t0), transform: `scale(${kick(t0)})`,
+        boxShadow: `0 0 ${90 + 80 * flash}px rgba(232,121,43,${0.35 + 0.3 * flash})` }} />
+      <div style={{ marginTop: 54, fontFamily: F.serif, fontWeight: 600, fontSize: 108, color: CUR.onDark, letterSpacing: -1, opacity: pop(t0), transform: `scale(${kick(t0)})` }}>{b.brand}</div>
+      <div style={{ marginTop: 12, fontFamily: F.serifI, fontStyle: "italic", fontSize: 50, color: "rgba(251,247,240,0.72)", opacity: pop(t1), transform: `scale(${kick(t1)})` }}>{b.line}</div>
+      <div style={{ marginTop: 58, opacity: pop(t2), transform: `scale(${kick(t2)})` }}>
         {b.store ? (
           <div style={{ display: "flex", alignItems: "center", gap: 18, padding: "20px 46px", borderRadius: 22, background: CUR.onDark, color: CUR.dark }}>
             <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}>

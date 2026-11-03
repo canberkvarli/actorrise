@@ -10,18 +10,10 @@ Canberk, after the Earnest scene read: "first scene is really good", the ending 
   name carries a small sharp AI mark (SCENE PARTNER the first time, AI after), YOU is said once next to the
   actor's character, never "your line" over and over.
 - **The cue line arrives word by word**, underlined as it comes, never the whole line at once.
-- **No fade out endings.** End beat `"snap": true` with sfx `[{"name": "dins", "at": 0.1, "vol": 0.6}]`
-  and `seconds` about 3: hard cut to the dark stage, four rising dins warm a small light up step by step,
-  and on the one last din the Ghost Light icon and name snap in, the line and App Store button right after.
-  This replaces the slow dissolve, the chime and the tap for every film from now on.
-
-## 2026-11-04, it is never about the theatre (wins over everything below)
-
-Canberk: "it's never about the theatre or the stage." Real films show ordinary life, where the app
-is actually used: someone on the subway with earbuds in, listening to the scene partner and mouthing
-their lines; in the corner of a café with the phone propped on a cup; at the kitchen table; in bed at
-night in the phone's glow; on a park bench. Quietly rehearsing to memorize: that is the app. No
-stages, no empty theatres, no audience seats in new films. The series is now "Everyday Rehearsal".
+- **No fade out endings, no added end sound.** End beat `"snap": true`, `"sfx": []`, `seconds` about 3. The
+  music bed already builds and drops on the end card's first frame: hard cut, Ghost Light icon and name land
+  on that drop, the line and App Store button on the next two beats (`"beats"`, default [0, 0.55, 1.1]).
+  The music is the effect; nothing is laid on top of it.
 
 ## 2026-11-04, voices and scenes (wins over everything below)
 
