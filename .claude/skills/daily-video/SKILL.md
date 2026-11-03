@@ -142,6 +142,20 @@ TikTok media item (and Instagram when connected). Check it with
 `ffmpeg -ss <seconds> -i out/<id>.mp4 -frames:v 1 cover.png` and look at it. Never let the
 cover be a mid camera move or empty paper. YouTube Shorts cannot take a cover through the API.
 
+## Two runs: maker and poster (2026-11-03)
+
+The demo account and Pexels key live in the actorrise cloud environment, and TryPost only
+attaches in the default one, so the day is split across two scheduled tasks:
+- **Maker** (10:36 Istanbul, actorrise environment): steps 1 to 4, then publish and hand off.
+  Run `scripts/publish.sh out/<id>.mp4` for the public URL, put the captions in the spec under
+  `"captions": {"tiktok": "...", "youtube_title": "...", "youtube_description": "...", "instagram": "..."}`
+  and the cover frame as `"cover_ms"`, append a log.csv row with status `rendered` and the URL in
+  `url`, commit and push. It does not touch TryPost. If it has the TryPost tools anyway, it may do step 5 itself.
+- **Poster** (11:36 Istanbul, default environment, has TryPost): finds today's `rendered` row
+  (newest if more than one), does step 5 with the spec's captions and cover, flips the row to
+  `pending` with the post ids, pushes, and sends Canberk the video. If there is no `rendered` row
+  today, it tells Canberk the maker did not finish and stops.
+
 ## 5. Queue for approval
 
 TryPost (app.trypost.it, workspace "ActorRise") is the approval calendar. The connector is
