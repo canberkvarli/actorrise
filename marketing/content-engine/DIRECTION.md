@@ -3,6 +3,16 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-03, night: the ending sound (wins over everything below)
+
+Canberk, after the cinema re-render of curtain at seven: "quieter chime please, very like faster,
+maybe like a tap sound, not that crazy of a chime."
+- The end card lands on one small, quick sound, not the full `chime`. Use `tap` (or `plink`) at
+  vol 0.25 to 0.35, right as the icon settles (about 0.5s into the end beat). Short and soft.
+- `chime` only if a film truly needs it, and then quiet (vol 0.3 or less). Never the loud bell.
+- The cinema look (letterboxed, small subtitle lines under the action) is the one he likes for
+  real films; text never sits on an actor's head.
+
 ## 2026-11-03, evening (wins over everything below)
 
 Canberk, after the curtain film: "it's good, we need more like that."
