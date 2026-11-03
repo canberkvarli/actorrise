@@ -94,6 +94,24 @@ def main(spec_path):
             if line.get("who", "").upper() == "PARTNER" or b.get("voice_you"):
                 changed |= voice_line(line, spec, n, key, "partner" if line.get("who", "").upper() == "PARTNER" else "narrator")
             n += 1
+    # Scene beats end right after the last line (Canberk, 2026-11-04: it waited about 3 seconds).
+    # Same timeline as sceneTimeline in ReelVideo.tsx: start 0.7, each line its length plus 0.45.
+    for b in spec.get("beats", []):
+        if b.get("kind") != "scene" or not b.get("lines"):
+            continue
+        t = b.get("start", 0.7)
+        for i, l in enumerate(b["lines"]):
+            d = l.get("dur") or (l["words"][-1]["e"] + 0.15 if l.get("words") else len(l["text"].split()) * 0.36 + 0.4)
+            t += d + (0.45 if i < len(b["lines"]) - 1 else 0)
+        secs = round(t + 0.6, 2)
+        if b.get("seconds") != secs:
+            b["seconds"] = secs; changed = True
+    # Drawn films: the narration should run through the film, not two short lines (Canberk, 2026-11-04).
+    if spec.get("scenes") and (spec.get("voice") or {}).get("lines"):
+        total = sum(sc.get("seconds", 0) for sc in spec["scenes"])
+        spoken = sum(l.get("dur", 0) for l in spec["voice"]["lines"])
+        if total and spoken < 0.6 * total:
+            print(f"WARNING: narration covers {spoken:.1f}s of {total:.1f}s; write a continuous voice-over", file=sys.stderr)
     if changed:
         json.dump(spec, open(spec_path, "w"), indent=2, ensure_ascii=False)
     print(spec_path, "voiced" if changed else "already voiced")

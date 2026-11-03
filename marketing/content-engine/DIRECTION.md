@@ -3,6 +3,24 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-05, small hours: the tram film is the reference (wins over everything below)
+
+Canberk approved the tram film ("it was perfect, same vibe for that type") and gave notes on the others:
+- **Real films: the tram woman film is the reference.** One everyday moment, one unbroken shot, three
+  short lines, pulse sound, crisp Ghost Light close. Match its pace and restraint.
+- **Drawn films: the voice-over runs through the whole film.** A real narration script, about 45 to 60
+  words for a 20 second film, one line flowing into the next with almost no gaps. Never read a scene
+  title, a heading or the text already on screen; tell the little story. voice.py warns when the
+  narration covers less than 60 percent of the film; treat that warning as a failure and rewrite.
+- **One font, the house font.** Playfair (and Playfair italic) everywhere: titles, subtitles, labels,
+  the drawn films' notes and phones. No Montserrat, no typewriter, no caps looks. Every look uses it.
+- **Scene reads:** the play's name sits above the script page as its own heading, not inside the
+  card. The scene ends about 0.6s after the last line (voice.py sets the beat's length), then a hard
+  cut to the end card. No rising sound before the ending (riser and crash only exist in `build`).
+- **Rotate the features.** The monologue finder is fine, but no more than about once a week. Check the
+  last runs in the Callboard log and pick a different feature: scene partner, bring your sides, run
+  lines, memorise, the nightly speech, auditions board.
+
 ## 2026-11-04, late: real films are American ads (wins over everything below)
 
 Canberk: "live action ones are like advertisements, think American advertisements." Real one-shot

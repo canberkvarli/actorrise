@@ -45,8 +45,9 @@ const applyLook = (look: StoryLook) => {
 };
 loadFont({ family: F.serif, url: staticFile("fonts/playfair.woff2"), weight: "600" });
 loadFont({ family: F.serifI, url: staticFile("fonts/playfair-italic.woff2"), weight: "400", style: "italic" });
-loadFont({ family: F.type, url: staticFile("fonts/courier-italic.woff2"), weight: "400", style: "italic" });
-loadFont({ family: F.sans, url: staticFile("fonts/montserrat.woff2"), weight: "600" });
+// House font everywhere (Canberk, 2026-11-04): the typewriter and sans families both load Playfair now.
+loadFont({ family: F.type, url: staticFile("fonts/playfair-italic.woff2"), weight: "400", style: "italic" });
+loadFont({ family: F.sans, url: staticFile("fonts/playfair.woff2"), weight: "600" });
 
 // ---------- spec ----------
 type Night = { type: "night"; seconds: number; time: string; cue: string };

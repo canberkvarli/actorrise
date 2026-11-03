@@ -350,8 +350,9 @@ def compose(spec):
                 for x, n in mel:
                     mx.note("lead", "music_box", n, tb + x * beat, beat * 1.1, 0.35, -0.25)
 
-    # The drop: a riser into it, a hit on it (not for felt: the piano just resolves).
-    if style not in ("felt", "pulse"):
+    # The drop: a riser into it, a hit on it, only for `build`. Canberk, 2026-11-04: no rising sound
+    # before the ending, the end card just lands.
+    if style == "build":
         mx.add("fx", t_drop - bar, riser(bar), 0.4)
         mx.add("fx", t_drop, crash(), 0.45)
         mx.add("fx", t_drop, kick(1.3), 0.9)

@@ -108,17 +108,18 @@ type Look = {
 const LOOKS: Record<LookName, Look> = {
   paper: { light: "#f2ece0", dark: "#15110e", accent: "#e8792b", onLight: "#15110e", onDark: "#fbf7f0", onAccent: "#fbf7f0", key: "#e8792b", font: "serif", arrive: "rise", mark: "italic" },
   noir: { light: "#0b0b0b", dark: "#0b0b0b", accent: "#e8792b", onLight: "#f5f5f3", onDark: "#f5f5f3", onAccent: "#0b0b0b", key: "#e8792b", font: "serif", arrive: "fade", mark: "italic" },
-  mono: { light: "#fafafa", dark: "#0a0a0a", accent: "#0a0a0a", onLight: "#0a0a0a", onDark: "#fafafa", onAccent: "#fafafa", key: "#0a0a0a", font: "sans", arrive: "fade", mark: "underline", scale: 0.86 },
-  bold: { light: "#e8792b", dark: "#111111", accent: "#e8792b", onLight: "#111111", onDark: "#e8792b", onAccent: "#111111", key: "#ffffff", font: "sans", caps: true, arrive: "slam", mark: "color", scale: 0.92 },
-  marker: { light: "#f7f5f0", dark: "#141414", accent: "#ffe15a", onLight: "#141414", onDark: "#f7f5f0", onAccent: "#141414", key: "#141414", font: "sans", arrive: "rise", mark: "marker", scale: 0.88 },
+  mono: { light: "#fafafa", dark: "#0a0a0a", accent: "#0a0a0a", onLight: "#0a0a0a", onDark: "#fafafa", onAccent: "#fafafa", key: "#0a0a0a", font: "serif", arrive: "fade", mark: "underline", scale: 0.86 },
+  bold: { light: "#e8792b", dark: "#111111", accent: "#e8792b", onLight: "#111111", onDark: "#e8792b", onAccent: "#111111", key: "#ffffff", font: "serif", arrive: "slam", mark: "color", scale: 0.92 },
+  marker: { light: "#f7f5f0", dark: "#141414", accent: "#ffe15a", onLight: "#141414", onDark: "#f7f5f0", onAccent: "#141414", key: "#141414", font: "serif", arrive: "rise", mark: "marker", scale: 0.88 },
   cinema: { light: "#e9e4da", dark: "#000000", accent: "#e8792b", onLight: "#000000", onDark: "#f2efe8", onAccent: "#000000", key: "#e8792b", font: "serif", arrive: "fade", mark: "italic", letterbox: true, subtitle: true },
-  midnight: { light: "#0d1020", dark: "#070914", accent: "#f2b75b", onLight: "#f3efe6", onDark: "#f3efe6", onAccent: "#0d1020", key: "#f2b75b", font: "sans", arrive: "type", mark: "color", scale: 0.88 },
+  midnight: { light: "#0d1020", dark: "#070914", accent: "#f2b75b", onLight: "#f3efe6", onDark: "#f3efe6", onAccent: "#0d1020", key: "#f2b75b", font: "serif", arrive: "type", mark: "color", scale: 0.88 },
 };
 const LookCtx = React.createContext<Look>(LOOKS.paper);
 const F = { serif: "Playfair", serifI: "PlayfairItalic", sans: "Montserrat" };
 loadFont({ family: F.serif, url: staticFile("fonts/playfair.woff2"), weight: "600" });
 loadFont({ family: F.serifI, url: staticFile("fonts/playfair-italic.woff2"), weight: "400", style: "italic" });
-loadFont({ family: F.sans, url: staticFile("fonts/montserrat.woff2"), weight: "600" });
+// House font everywhere (Canberk, 2026-11-04): the "sans" family is Playfair too, so no label or caption falls back to Montserrat.
+loadFont({ family: F.sans, url: staticFile("fonts/playfair.woff2"), weight: "600" });
 
 const ease = Easing.bezier(0.22, 1, 0.36, 1);
 const prog = (f: number, a: number, b: number) =>
@@ -169,7 +170,7 @@ const Sub: React.FC<{ text: string; color: string; at: number }> = ({ text, colo
   const f = useCurrentFrame();
   const p = prog(f, at, at + 14);
   return (
-    <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 38, letterSpacing: 1, color, opacity: 0.75 * p, marginTop: 34, textAlign: "center", textTransform: CUR.caps ? "uppercase" : undefined }}>
+    <div style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400, fontSize: 52, color, opacity: 0.8 * p, marginTop: 30, textAlign: "center" }}>
       {text}
     </div>
   );
@@ -341,13 +342,15 @@ const SceneBeat: React.FC<{ b: Scene }> = ({ b }) => {
         </AbsoluteFill>
       )}
       <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", paddingTop: b.caption ? (L.letterbox ? 320 : 200) : 0, paddingBottom: 220 }}>
+        {/* The play's name sits above the script page, not inside it (Canberk, 2026-11-04). */}
+        {(b.title || b.play) && (
+          <div style={{ width: 880, marginBottom: 30, textAlign: "center", opacity: page, transform: `translateY(${(1 - page) * 24}px)` }}>
+            {b.play && <div style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400, fontSize: 56, lineHeight: 1.1, color: fg }}>{b.play}</div>}
+            {b.title && <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 30, letterSpacing: 4, color: key, marginTop: 10 }}>{b.title.toUpperCase()}</div>}
+          </div>
+        )}
         <div style={{ width: 880, padding: "56px 64px", borderRadius: 28, background: (b.bg ?? "paper") === "ink" ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.55)",
           boxShadow: "0 30px 80px rgba(0,0,0,0.12)", opacity: page, transform: `translateY(${(1 - page) * 40}px)` }}>
-          {(b.title || b.play) && (
-            <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 24, letterSpacing: 3, color: fg, opacity: 0.55, marginBottom: 34, textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {[b.play, b.title].filter(Boolean).join("  ·  ")}
-            </div>
-          )}
           {tl.map((l, i) => {
             const lt = t - l.at;
             const active = lt >= -0.05 && lt <= estDur(l) + 0.2;
