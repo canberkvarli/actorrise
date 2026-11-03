@@ -28,15 +28,33 @@ cd backend && uv run python scripts/remote.py opt_out <address> "<reason>" [--bo
 cd backend && uv run python scripts/remote.py contact_log due
 cd backend && uv run python scripts/remote.py class_link list
 cd backend && uv run python scripts/remote.py cue_report
+cd backend && uv run python scripts/remote.py loop_snapshot take
+cd backend && uv run python scripts/remote.py loop_snapshot show
+cd backend && uv run python scripts/remote.py loop_snapshot keep best_move "<line>"
 ```
 
 You are in the cloud when `$CLAUDE_CODE_REMOTE` is set, or when a script times out
 connecting to `pooler.supabase.com`. `revenuecat_report.py` and `voice_check.py` reach no
 database and run directly. The bridge allows only these scripts (and `grant_comp`); anything
 else comes back 400, which means do it on the laptop, not find another way. A 409 means
-another script is still running: wait a minute and run it again. There is no written.txt,
-no tracker and no yesterday's brief in the cloud: the contact log table is the record, and
-"compared with yesterday" lines say "no yesterday in the cloud" instead of guessing.
+another script is still running: wait a minute and run it again. There is no written.txt
+and no tracker in the cloud: the contact log table is the record of who was written to.
+
+## 0b. Yesterday (every run, laptop or cloud)
+
+Yesterday lives in the `loop_snapshots` table (2026-11-03), not in files, so a cloud run
+compares the same way the laptop does. Use `remote.py` in the cloud, the script directly here:
+
+1. `scripts/loop_snapshot.py show` first, before today's numbers are taken: the newest day
+   before today, with yesterday's brief, money, RevenueCat subscriptions, class-link joins
+   and yesterday's best move. Every "compare against yesterday" below reads this.
+2. `conversion_brief.py --save` (step 1) stores today's brief by itself.
+3. `scripts/loop_snapshot.py take` stores today's money, RevenueCat and class links.
+4. At the very end, `scripts/loop_snapshot.py keep best_move "<the Best move line>"`.
+
+"no snapshot yet" means no yesterday: the comparison lines say so instead of guessing. A
+kind stored as `unavailable: ...` failed yesterday; it is not a zero. Older than one day
+(a gap): say from which day you are comparing.
 
 ## 1. The brief
 
@@ -65,7 +83,7 @@ cd backend && uv run python scripts/revenuecat_report.py
 ```
 
 Every app subscription ever, with status (trialing, active, expired) and whether it renews.
-Compare against yesterday's file: a new row, a `trialing` that went `active` (paid) or
+Compare against yesterday's `revenuecat` snapshot (step 0b): a new row, a `trialing` that went `active` (paid) or
 `expired` (lapsed), or a `will_renew` that became `will_not_renew` (they turned off renewal;
 an annual one has already paid for the year) is a "Moved" line. If it disagrees with
 section 6, the webhook missed something: say so under "Broken". If it fails, say so and do
@@ -107,8 +125,8 @@ Only what is new and real goes in the summary, under "The app". The feedback quo
 
 ## 2. The inbox
 
-Load the Gmail tools and search for replies since the last run (the date of the newest other
-file in `outputs/conversion/`, or 24 hours if there is none): `in:inbox newer_than:2d -from:me`.
+Load the Gmail tools and search for replies since the last run (the day `loop_snapshot.py show`
+printed, or 24 hours if there is no snapshot): `in:inbox newer_than:2d -from:me`.
 Read each thread that is a reply to something Canberk or ActorRise sent.
 
 Sort every reply into exactly one of these:
@@ -245,7 +263,7 @@ too right? partnerships etc, that's our in the conversion loop daily check"). Wh
 organization into actors on the site is one thing, seen once so far: a teacher who said yes
 had the class sign up during a lesson (Gilroy, 36 students). A link mailed to a teacher who
 never answered has never been used (6 of 6, October). So each run:
-- Read `scripts/class_link.py list` against yesterday's. A link that gained joins is a
+- Read `scripts/class_link.py list` against yesterday's `class_links` snapshot (step 0b). A link that gained joins is a
   "Moved" line with the number. The first join on a link is the moment to thank that teacher
   (a reply draft, on the thread).
 - A teacher who wrote back and has not had an answer from Canberk, or who was offered Plus
@@ -349,7 +367,7 @@ compare, find the best move"). Compare the steps from the brief, 14 days: wall o
 → CTA clicked → checkout started → trial started (Stripe session `complete`) → paid; plus
 signups → rehearsed, educators and students on comps → paying, app payers. Name the step
 that loses the most people who were closest to paying, and the single action that would
-move it, sized in people. Read yesterday's file in `outputs/conversion/` for yesterday's
+move it, sized in people. Read yesterday's `best_move` snapshot (step 0b) for yesterday's
 move and say in a clause whether it happened and what changed. One line. The baseline
 (2026-10-14, 16 days): soft asks shown to ~38 people, ~0 clicked; hard walls hit by ~10,
 5 clicked, 4 reached Stripe, 1 trial, 3 abandoned at the card step (two on iOS Safari).

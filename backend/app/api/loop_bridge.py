@@ -30,13 +30,16 @@ MAX_OUT = 1_000_000
 
 # script -> subcommands allowed as the first argument (None: any arguments).
 ALLOWED: dict[str, set[str] | None] = {
-    "conversion_brief": set(),           # no arguments: the brief comes back on stdout
+    "conversion_brief": {"--store"},     # the brief comes back on stdout; --store keeps it for tomorrow
+    "loop_snapshot": {"take", "show", "keep"},
     "contact_log": {"check", "add", "due"},
     "opt_out": None,
     "class_link": {"make", "invite", "list", "off", "on"},
     "grant_comp": None,
     "cue_report": None,
 }
+# Scripts that may also run with no arguments at all.
+BARE_OK = {"conversion_brief"}
 
 _busy = threading.Lock()
 
@@ -66,7 +69,9 @@ def validate(job: Job) -> list[str]:
     if subs is not None:
         if not subs and job.args:
             raise HTTPException(status_code=400, detail=f"{job.script} takes no arguments here")
-        if subs and (not job.args or job.args[0] not in subs):
+        if job.script in BARE_OK and len(job.args) > 1:
+            raise HTTPException(status_code=400, detail=f"{job.script} takes one flag at most here")
+        if subs and not (job.args and job.args[0] in subs) and not (not job.args and job.script in BARE_OK):
             raise HTTPException(status_code=400, detail=f"{job.script}: first argument must be one of {sorted(subs)}")
     if any(len(a) > 2000 or "\x00" in a for a in job.args):
         raise HTTPException(status_code=400, detail="argument too long")

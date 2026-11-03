@@ -596,6 +596,8 @@ def build(conn) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--save", action="store_true", help="write to outputs/conversion/ instead of stdout")
+    ap.add_argument("--store", action="store_true",
+                    help="keep it in loop_snapshots for tomorrow's run (--save does too); still prints")
     args = ap.parse_args()
 
     from sqlalchemy import create_engine
@@ -613,6 +615,16 @@ def main() -> None:
         if conn.execute(text("show transaction_read_only")).scalar() != "on":
             raise SystemExit("refusing to run: the connection is not read-only")
         brief = build(conn)
+
+    if args.save or args.store:
+        # Its own write connection, after the read-only one has closed. A cloud
+        # session has no outputs/ from yesterday; tomorrow's run reads this.
+        from loop_snapshot import store
+
+        try:
+            store("brief", brief)
+        except Exception as e:  # noqa: BLE001
+            print(f"not stored for tomorrow: {e}", file=sys.stderr)
 
     if not args.save:
         print(brief)

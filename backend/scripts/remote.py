@@ -7,6 +7,7 @@ app/api/loop_bridge.py and print here as if they ran locally:
   uv run python scripts/remote.py conversion_brief --save
   uv run python scripts/remote.py contact_log check someone@example.com --org "Some School"
   uv run python scripts/remote.py opt_out someone@example.com "OPT-OUT: ..."
+  uv run python scripts/remote.py loop_snapshot show     # yesterday, to compare with today
 
 Needs LOOP_TOKEN (the same value as on Render) and optionally LOOP_URL
 (default https://api.actorrise.com). `--save` on the brief is handled here: the
@@ -48,7 +49,8 @@ def main() -> None:
     script, args = sys.argv[1].removesuffix(".py").removeprefix("scripts/"), sys.argv[2:]
     save = script == "conversion_brief" and "--save" in args
     if save:
-        args = [a for a in args if a != "--save"]
+        # The API keeps it in loop_snapshots too, so tomorrow's run has a yesterday.
+        args = ["--store"]
     res = call(script, args)
     if res.get("stderr"):
         print(res["stderr"], file=sys.stderr, end="")

@@ -79,6 +79,9 @@ Two rules hold there:
 - **No memory files there.** What the laptop's memory knows is not in a cloud session. Who was
   written to is the `contact_log` table (`scripts/contact_log.py`), not a file, so the check
   before every email works the same in both places.
+- **Yesterday is a table too.** `loop_snapshots` keeps each day's brief, money, RevenueCat,
+  class-link joins and best move for 30 days (`scripts/loop_snapshot.py show|take|keep`), so
+  "what moved" is a real comparison in the cloud. See `/conversion-loop` step 0b.
 
 # Working rules (Canberk's standing decisions, for every session, cloud or laptop)
 
