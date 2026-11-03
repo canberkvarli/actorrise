@@ -57,36 +57,26 @@ def detect(text: str) -> str:
     return "tr" if common / len(words) >= _MIN_TURKISH_WORD_SHARE else DEFAULT
 
 
-def scene_language(play_language: Optional[str], is_upload: bool, texts: Iterable[str]) -> str:
-    """The rehearsal language of one scene.
-
-    A library play says what it is (plays.language, "tr" for the Turkish
-    translations). An uploaded script's play row is never marked, so its
-    words are read instead.
-    """
-    marked = normalise(play_language)
-    if marked != DEFAULT:
-        return marked
-    if not is_upload:
-        return DEFAULT
-    return detect(" ".join(t for t in texts if t))
-
-
 # How much of an uploaded script's text is read to tell its language. The
 # opening pages carry a cast list and stage directions as well as speech, and
 # that is still plenty: Turkish prose runs at 3-5% ı ğ ş.
 _SAMPLE_CHARS = 20000
 
 
-def script_language(play_language: Optional[str], script=None) -> str:
-    """The language of a play, for anything that labels or hears it.
+def script_language(play_language: Optional[str], script=None, fallback: Iterable[str] = ()) -> str:
+    """The language of a play: the one rule for everything that labels or
+    hears it (the rehearsal payload, the scene, What's next, the scan).
 
-    A library play says what it is. An upload is read from its own text
-    (`raw_text`, else `source_text`), which is there when the scene's lines
-    are not at hand.
+    A library play says what it is (plays.language, "tr" for the Turkish
+    translations). An uploaded script's play row is never marked, so the
+    script is read from its own text (`raw_text`, else `source_text`), the
+    same text for every scene of it, so every screen agrees. `fallback`
+    (a scene's lines) is read only when the script has no text stored.
     """
     marked = normalise(play_language)
     if marked != DEFAULT or script is None:
         return marked
-    text = getattr(script, "raw_text", None) or getattr(script, "source_text", None) or ""
+    text = getattr(script, "raw_text", None) or getattr(script, "source_text", None)
+    if not text:
+        text = " ".join(t for t in fallback if t)
     return detect(text[:_SAMPLE_CHARS])

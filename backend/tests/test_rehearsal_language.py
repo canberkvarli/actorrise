@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from app.api import speech
 from app.api.auth import get_current_user
 from app.core.config import settings
-from app.services.rehearsal.language import detect, normalise, scene_language, script_language
+from app.services.rehearsal.language import detect, normalise, script_language
 from app.services.script_parser import _cue_names, parse_dialogue
 from app.services.script_structure import _match_act, _match_scene, detect_structure
 
@@ -49,11 +49,6 @@ class Detect(unittest.TestCase):
         self.assertEqual(normalise("de"), "en")
         self.assertEqual(normalise("<script>"), "en")
 
-    def test_scene_language(self):
-        self.assertEqual(scene_language("tr", False, ["anything"]), "tr")
-        self.assertEqual(scene_language("en", False, [TURKISH]), "en")  # a library play says what it is
-        self.assertEqual(scene_language("en", True, [TURKISH]), "tr")   # an upload is read
-        self.assertEqual(scene_language(None, True, [ENGLISH]), "en")
 
 
 class ScriptLanguage(unittest.TestCase):
@@ -69,6 +64,15 @@ class ScriptLanguage(unittest.TestCase):
         self.assertEqual(script_language("en", SimpleNamespace(raw_text=None, source_text=TURKISH * 3)), "tr")
         self.assertEqual(script_language("en", SimpleNamespace(raw_text=ENGLISH, source_text=None)), "en")
         self.assertEqual(script_language("en", SimpleNamespace(raw_text=None, source_text=None)), "en")
+
+    def test_lines_are_read_only_when_the_script_has_no_text(self):
+        bare = SimpleNamespace(raw_text=None, source_text=None)
+        self.assertEqual(script_language("en", bare, [TURKISH]), "tr")
+        self.assertEqual(script_language("en", bare, [ENGLISH]), "en")
+        # The script's own text wins over a scene's lines: every scene of it agrees.
+        self.assertEqual(script_language("en", SimpleNamespace(raw_text=ENGLISH * 2, source_text=None), [TURKISH]), "en")
+        # A library scene (no script) is what its play says, whatever its lines.
+        self.assertEqual(script_language("en", None, [TURKISH]), "en")
 
     def test_a_marked_play_wins_over_its_text(self):
         self.assertEqual(script_language("tr", SimpleNamespace(raw_text=ENGLISH, source_text=None)), "tr")

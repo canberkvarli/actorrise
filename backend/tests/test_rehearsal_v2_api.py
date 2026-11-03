@@ -100,6 +100,19 @@ class Api(unittest.TestCase):
         self.db.commit()
         self.assertEqual(self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()["language"], "tr")
 
+    def test_an_uploads_payload_reads_the_language_off_the_script(self):
+        # The same rule as the scene, What's next and the scan
+        # (script_language): the script's own text, so every screen agrees.
+        script = UserScript(user_id=self.user.id, title="T", author="A", original_filename="t.txt", file_type="txt",
+                            raw_text="Olmak ya da olmamak, işte bütün mesele bu. Hangisi daha soylu: zalim talihin "
+                                     "taşlarına katlanmak mı, yoksa bir dert denizine karşı silaha sarılmak mı? "
+                                     "Ben de bilmiyorum, değil mi?")
+        self.db.add(script); self.db.flush()
+        self.scene.user_script_id = script.id
+        self.scene.is_library = False
+        self.db.commit()
+        self.assertEqual(self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()["language"], "tr")
+
     def test_scene_payload_says_whether_the_actor_may_direct(self):
         body = self.client.get(f"/api/rehearsal/scenes/{self.scene.id}").json()
         self.assertFalse(body["can_direct"])
