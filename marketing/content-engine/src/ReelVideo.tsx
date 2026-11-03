@@ -37,6 +37,7 @@ type Broll = {
   at?: "top" | "center" | "lower"; // where the type sits
   dim?: number; // 0..1 darkening for legibility
   credit?: string; // Pexels author, kept in the spec for attribution
+  sound?: number; // keep the footage's own audio at this volume (real room sound), default muted
 };
 type TapEv = { t: number; tap?: { x: number; y: number }; typing?: string; mark?: string };
 type Screen = {
@@ -52,7 +53,10 @@ type Screen = {
   audio?: { src: string; at: number; volume?: number }[]; // the scene partner reading, timed in recording seconds
 };
 type End = { kind: "end"; seconds: number; brand: string; line: string; action: string; icon?: string };
-export type ReelBeat = Title | Broll | Screen | End;
+/** Sound effects on a beat, from public/sfx/cine: impact, reveal, note, switch, tick, heartbeat, room, riser.
+ * `at` is seconds into the beat (negative starts before the cut, e.g. a riser at -1.5). Few and heavy. */
+export type Cue = { name: string; at?: number; vol?: number };
+export type ReelBeat = (Title | Broll | Screen | End) & { sfx?: Cue[] };
 export type ReelSpec = {
   id: string;
   beats: ReelBeat[];
@@ -120,8 +124,8 @@ const BrollBeat: React.FC<{ b: Broll }> = ({ b }) => {
   return (
     <AbsoluteFill style={{ background: C.ink }}>
       <AbsoluteFill style={{ transform: `scale(${scale})` }}>
-        <OffthreadVideo src={staticFile(b.src)} startFrom={Math.round((b.start ?? 0) * RFPS)} muted
-          style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <OffthreadVideo src={staticFile(b.src)} startFrom={Math.round((b.start ?? 0) * RFPS)} muted={!b.sound}
+          volume={b.sound ?? 0} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       </AbsoluteFill>
       <AbsoluteFill style={{ background: `linear-gradient(180deg, rgba(0,0,0,${(b.dim ?? 0.35) * 0.6}) 0%, rgba(0,0,0,${b.dim ?? 0.35}) 55%, rgba(0,0,0,${(b.dim ?? 0.35) * 1.3}) 100%)` }} />
       {b.text && (
@@ -225,6 +229,18 @@ export const ReelVideo: React.FC<{ spec: ReelSpec }> = ({ spec }) => {
   return (
     <AbsoluteFill style={{ background: C.ink, overflow: "hidden" }}>
       {spec.music && <Audio src={staticFile(`music/${spec.id}.wav`)} volume={spec.music.volume ?? 0.5} />}
+      {spec.beats.flatMap((b, i) => {
+        // The end card always lands with the reveal hit unless the beat sets its own sounds.
+        const cues = b.sfx ?? (b.kind === "end" ? [{ name: "reveal", at: 0, vol: 0.9 }] : []);
+        return cues.map((c, k) => {
+          const at = starts[i] + Math.round((c.at ?? 0) * RFPS);
+          return (
+            <Sequence key={`sfx${i}-${k}`} from={Math.max(0, at)} layout="none">
+              <Audio src={staticFile(`sfx/cine/${c.name}.wav`)} volume={c.vol ?? 0.9} startFrom={at < 0 ? -at : 0} />
+            </Sequence>
+          );
+        });
+      })}
       {spec.beats.map((b, i) => {
         const len = Math.round(b.seconds * RFPS);
         const from = starts[i];

@@ -17,6 +17,9 @@ and make today's visibly different: a different feature, hook style, opening bea
 
 ## 1. Pick today's scenario
 
+Read `marketing/content-engine/DIRECTION.md` first: it is Canberk's standing creative direction and
+wins over anything below (engines, which brand closes which film, sound).
+
 The subject is an actor's daily life and headspace, not the app. The app shows up as the
 relief at the end of a real moment actors recognize. Canberk's ideas are seeds to curate
 from, never literal specs (2026-11-02): when he mentions an image ("a thinking man at a
