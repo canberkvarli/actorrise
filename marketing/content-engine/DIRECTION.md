@@ -3,6 +3,16 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-04, late: real films are American ads (wins over everything below)
+
+Canberk: "live action ones are like advertisements, think American advertisements." Real one-shot
+films are cut like a polished US brand spot (Apple, Google, Nike style): one clear human moment,
+warm and confident, three short punchy lines at most, the product as the answer, a crisp brand
+close. No arty melancholy, no slow drift: it should feel like a 15 second ad that could air on TV.
+Sound: the `pulse` style (a soft low thum like a heartbeat plus sparse natural pin/pon notes),
+Canberk approved it. Not the `felt` piano (too melodic, like the intro of a song). No voice, no hiss.
+`"music": {"style": "pulse"}` on every real film.
+
 ## 2026-11-04, night: who speaks, what you hear, who sees it first (wins over everything below)
 
 Canberk watched the voiced films: the voice did not work on a one-shot film. So:
