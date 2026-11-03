@@ -3,6 +3,35 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-03, later (wins over the block below)
+
+Two kinds of film, alternating, plus the occasional walkthrough:
+
+**1. Drawn films (hand drawn, animated, the paper and ink world).**
+- About the product and what it lets an actor do: bring your sides, rehearse a scene with the
+  reader, find the piece by describing it, run lines, the nightly speech. Told as a little story.
+- Always new drawings. Never reuse an image or a scene from an earlier film: no more actor at a
+  pin board, no more night window, no more stack of books, unless the drawing is genuinely new.
+  Every drawn film adds at least one new scene type to `src/StoryVideo.tsx` (or a new drawn
+  component) and records its motifs in the log notes as `motifs=a,b,c`; before drawing, read the
+  last 30 days of motifs and pick different ones.
+- Show the app very little. The drawings are the point: people should be curious enough to go and
+  look. At most a glimpse of a drawn screen, never a tour.
+
+**2. Real films (live footage, one continuous scene).**
+- ONE unbroken shot, about 10 seconds (8 to 14). No cuts, no closeups (closeups read as AI). Wide,
+  from the audience: the camera sits in the house seats looking at the stage.
+- Example: an actor on a chair on an empty stage, script in hand, checking the time; an empty chair
+  facing them. Two or three short lines of text arrive over that same shot (broll beat `lines`), then
+  the slow Ghost Light ending dissolves in. Nothing else.
+- Build it as exactly two beats: one `broll` beat with `lines` (and `push` 0.03 to 0.06), then the
+  `end` beat (`"bg": "ink"`, `"store": true`). Keep the footage's room sound low (`sound` 0.3) if it has any.
+- Pexels searches that fit: "empty theater stage chair", "actor waiting stage", "theater rehearsal
+  wide", "audience view stage". Reject a clip that cuts inside itself, is a closeup, or looks generated.
+
+**3. Walkthroughs (now and then).** Only from the real Ghost Light app (`ghostlight-web/serve.sh`,
+then the recorder with `APP=ghostlight`), never actorrise.com on a phone, which looks wrong.
+
 ## 2026-11-03
 
 - Three engines, rotate them. Never the same engine two days running.

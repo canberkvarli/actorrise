@@ -38,6 +38,9 @@ type Broll = {
   dim?: number; // 0..1 darkening for legibility
   credit?: string; // Pexels author, kept in the spec for attribution
   sound?: number; // keep the footage's own audio at this volume (real room sound), default muted
+  /** Several lines over ONE unbroken shot (no cuts): each fades in at `at` and out at `until` (seconds into the beat). */
+  lines?: { text: string; accent?: string; at: number; until?: number; size?: number }[];
+  push?: number; // how much the camera creeps in over the shot, default 0.06 (0 = locked off)
 };
 type TapEv = { t: number; tap?: { x: number; y: number }; typing?: string; mark?: string };
 type Screen = {
@@ -123,7 +126,7 @@ const TitleBeat: React.FC<{ b: Title }> = ({ b }) => (
 const BrollBeat: React.FC<{ b: Broll }> = ({ b }) => {
   const f = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
-  const scale = interpolate(f, [0, durationInFrames], [1.04, 1.12]); // slow push, never static
+  const scale = interpolate(f, [0, durationInFrames], [1.02, 1.02 + (b.push ?? 0.06)]); // a slow creep, like a camera on a dolly
   const pos = b.at ?? "center";
   return (
     <AbsoluteFill style={{ background: C.ink }}>
@@ -132,6 +135,20 @@ const BrollBeat: React.FC<{ b: Broll }> = ({ b }) => {
           volume={b.sound ?? 0} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       </AbsoluteFill>
       <AbsoluteFill style={{ background: `linear-gradient(180deg, rgba(0,0,0,${(b.dim ?? 0.35) * 0.6}) 0%, rgba(0,0,0,${b.dim ?? 0.35}) 55%, rgba(0,0,0,${(b.dim ?? 0.35) * 1.3}) 100%)` }} />
+      {(b.lines ?? []).map((l, i) => {
+        const a0 = Math.round(l.at * RFPS);
+        const a1 = l.until !== undefined ? Math.round(l.until * RFPS) : durationInFrames + 30;
+        if (f < a0 - 1 || f > a1 + 12) return null;
+        const out = interpolate(f, [a1, a1 + 12], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        return (
+          <AbsoluteFill key={i} style={{
+            opacity: out, justifyContent: pos === "top" ? "flex-start" : pos === "lower" ? "flex-end" : "center",
+            alignItems: "center", padding: pos === "top" ? "260px 80px 0" : pos === "lower" ? "0 80px 560px" : "0 80px 300px",
+          }}>
+            <Words text={l.text} accent={l.accent} color={C.cream} accentC={C.orange} size={l.size ?? 96} at={a0} />
+          </AbsoluteFill>
+        );
+      })}
       {b.text && (
         <AbsoluteFill style={{
           justifyContent: pos === "top" ? "flex-start" : pos === "lower" ? "flex-end" : "center",
