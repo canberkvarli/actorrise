@@ -1,13 +1,19 @@
 ---
 name: daily-video
-description: The daily content run. Writes one new Ghost Light / ActorRise story video from real library data, renders it with marketing/content-engine, writes captions, and queues it for Canberk's approval. Never posts on its own.
+description: The daily content run. Makes one new Ghost Light / ActorRise video (usually a reel built from a real recording of the app plus stock footage and Apple style type, sometimes the drawn paper story), writes captions, and queues it for Canberk's approval. Never posts on its own.
 ---
 
 # Daily video
 
-One new 20 to 30 second story video a day, in the house style (paper, ink, one continuous
-take, the app redrawn live, synthesized sound). Canberk approves every post. This run never
-publishes anything.
+One new 18 to 30 second video a day. Canberk approves every post. This run never publishes anything.
+
+Two engines (Canberk, 2026-11-03: "it's the same video again", "it doesn't have to be an
+animation", "a nice advertisement, Apple or Anthropic style"):
+- **Reel** (the default, at least 3 of every 4 days): the real app recorded live in a phone,
+  real stock footage of actor moments, big clean type, built from beats in `src/ReelVideo.tsx`.
+- **Story** (at most 1 in 4 days): the drawn paper world in `src/StoryVideo.tsx`.
+Never the same engine and beat order two days running. Look at the last 3 specs before you start
+and make today's visibly different: a different feature, hook style, opening beat and music style.
 
 ## 1. Pick today's scenario
 
@@ -45,8 +51,14 @@ creative"). Not the same format two days running:
 - Silent comedy: no words for ten seconds, just drawing, sound and timing, then one line.
 - The object's view: the crumpled monologue, the highlighter, the phone on the stack of books tells it.
 
-Build the drawn scenes each moment needs (new scene types in `src/StoryVideo.tsx`, same ink
-style, with sounds). Reuse existing scene types only when they truly fit the moment.
+Formats work in both engines. For a reel, think in beats: the hook (one striking line over
+footage or on a plain field), the pain (one or two quick beats), the app doing the thing (real
+screen recording, zooms on taps), the end card. Hooks that work: a question actors ask themselves,
+a POV line, a number from the app's own feature (never users or prices), a "things you did not
+know" list, a speedrun ("find a comedic monologue in 9 seconds").
+
+For a story, build the drawn scenes each moment needs (new scene types in `src/StoryVideo.tsx`,
+same ink style, with sounds). Reuse existing scene types only when they truly fit the moment.
 When the numbers show a winner (see step 6), lean into it, changing one variable at a time.
 
 ## 2. Pull real data
@@ -58,6 +70,26 @@ would type. Only public domain plays get text on screen (author died before 1956
 before 1929). Save the SQL and the rows you used in the spec under a `"source"` key.
 
 ## 3. Write the spec and render
+
+### Reel (default)
+
+1. Read the app as it is today, signed in as the demo account (`DEMO_EMAIL`/`DEMO_PASSWORD` in the
+   environment): `node recorder/record.mjs explore <path>` for each page the feature touches, and
+   look at the screenshots. Bottom nav (2026-11-03): Monologues `/monologues`, ScenePartner
+   `/practice`, Collection `/rehearse`, Auditions `/auditions`, Account. Use the real labels.
+2. Write `flows/<feature>-<slug>.json` and record it: `node recorder/record.mjs flow flows/<name>.json`.
+   Re-record until it is clean (no spinners held, no error card, no empty state, no Ghost Light
+   banner: close it first). If the reader plays audio, the events file lists it: use it.
+3. Stock footage: `python3 scripts/pexels.py search "<actor moment>"`, then `get <id> public/reel/<id>/<name>.mp4`.
+   Real footage only, never AI people; a stock person is never a user, never quoted. Keep the credit in `"source"`.
+4. Copy the recording into `public/reel/<id>/` and write `specs/<date>-reel-<slug>.json` with
+   `"beats"` (kinds and fields in `src/ReelVideo.tsx`): copy the recording's events into the screen
+   beat so the zooms land on the taps. End card: web feature (ScenePartner, auditions, collection) ->
+   brand "ActorRise", action "actorrise.com"; monologue search or a Ghost Light feature -> brand
+   "Ghost Light", action "Free on the App Store". Line: "built by a working actor".
+5. `scripts/render.sh specs/<id>.json` (it picks the reel template and makes the music).
+
+### Story (at most 1 in 4)
 
 Copy `specs/story-night-before.json` as the starting point, write `specs/<date>-<slug>.json`.
 Scene types and fields are in `marketing/content-engine/README.md`. If the scenario needs a
