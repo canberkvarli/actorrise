@@ -29,10 +29,10 @@ import json
 import os
 import sys
 import urllib.parse
-import urllib.request
 from pathlib import Path
 from types import SimpleNamespace
 
+import httpx
 from dotenv import load_dotenv
 
 backend_dir = Path(__file__).resolve().parent.parent
@@ -58,11 +58,14 @@ def _rest():
         h = dict(headers)
         if prefer:
             h["Prefer"] = prefer
+        # httpx, not urllib: it carries its own certificate bundle (certifi).
+        # A python.org Python on macOS ships with no trusted roots until its
+        # "Install Certificates" step is run, and urllib then fails every
+        # HTTPS call with CERTIFICATE_VERIFY_FAILED.
         data = json.dumps(body).encode() if body is not None else None
-        req = urllib.request.Request(base + path, data=data, method=method, headers=h)
-        with urllib.request.urlopen(req, timeout=120) as r:
-            raw = r.read()
-            return json.loads(raw) if raw else None
+        r = httpx.request(method, base + path, content=data, headers=h, timeout=120)
+        r.raise_for_status()
+        return r.json() if r.content else None
 
     return call
 
