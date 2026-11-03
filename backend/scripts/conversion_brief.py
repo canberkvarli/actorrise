@@ -325,14 +325,72 @@ where s.created_at > now() - interval '30 days' and not coalesce(u.exclude_from_
 """
 
 ABSENT_TITLES = """
-select s.content_gap->>'play', count(*), count(distinct s.user_id), max(s.created_at)::date
+select min(s.content_gap->>'play'), count(*), count(distinct s.user_id), max(s.created_at)::date,
+       bool_or(coalesce((s.content_gap->>'carried_but_empty')::boolean, false))
 from search_logs s left join users u on u.id = s.user_id
 where s.created_at > now() - interval '30 days' and not coalesce(u.exclude_from_stats, false)
   and (s.weak_match or s.results_count = 0)
   and s.content_gap->>'play' is not null
   and jsonb_array_length(coalesce(s.content_gap->'available_in', '[]'::jsonb)) = 0
-group by 1 order by 3 desc, 2 desc limit 12
+group by lower(s.content_gap->>'play') order by 3 desc, 2 desc limit 20
 """
+
+
+def recheck_absent(rows: list[tuple], carried_now) -> tuple[list[tuple], list[str]]:
+    """Split the logged gaps into still absent and carried today.
+
+    content_gap is what the search said at the time, kept for 30 days, so a
+    title the search has since learned to find stays on the list for a month:
+    "harry potter" was logged as a gap on Oct 5 and Oct 27, the prefix match
+    that finds its eight film pieces shipped Oct 30, and the brief still said
+    it was in no tab on Nov 3. carried_now(title) is today's answer, the
+    source_types the title is carried under (empty when it is not).
+    """
+    absent, found = [], []
+    for title, searches, people, last, empty_shell in rows:
+        tabs = carried_now(title)
+        if tabs:
+            found.append(f"{title} ({', '.join(tabs)})")
+        else:
+            absent.append((title, searches, people, last, "listed, no pieces" if empty_shell else ""))
+    return absent[:12], found
+
+
+def recheck_weak(rows: list[tuple], finds_now) -> list[tuple]:
+    """Add what today's search makes of each weak query: the show or character it
+    now routes to, or blank. "shiv roy" was weak on Nov 1 and routes to Shiv's
+    Succession pieces since Nov 2; without this the brief reads as a gap."""
+    return [tuple(r) + (finds_now(r[0]) or "",) for r in rows]
+
+
+def _carried_now(conn):
+    from app.services.search.title_lookup import find_catalogue_source_types
+
+    def check(title: str) -> list[str]:
+        try:
+            return find_catalogue_source_types(conn, title)
+        except Exception:  # noqa: BLE001 - the brief must still print
+            return []
+    return check
+
+
+def _finds_now(conn):
+    from app.services.search.title_lookup import (detect_catalogue_character,
+                                                  detect_catalogue_title)
+
+    def check(query: str) -> str:
+        try:
+            hit = detect_catalogue_title(conn, query)
+            if hit:
+                return hit["title"]
+            ch = detect_catalogue_character(conn, query)
+            if ch:
+                return f"character {ch['character']}"
+        except Exception:  # noqa: BLE001
+            pass
+        return ""
+    return check
+
 
 GAP_KINDS = {
     "teens / high school": (r"\bteen|high ?school|highschool|\b1[2-8]\b|young|\bkids?\b|child|middle school|tween",
@@ -415,15 +473,6 @@ def written_to(conn=None) -> list[str]:
     return sorted(addrs) or ["nobody@nowhere"]
 
 
-def still_absent(conn, rows: list[tuple]) -> list[tuple]:
-    """ABSENT_TITLES replays what search said when it ran, so a title added since, or one
-    a search could not match back then (Harry Potter until 6923677d), would be listed as
-    missing for 30 days. Ask the library now and keep only what it still lacks."""
-    from app.services.search.title_lookup import find_catalogue_source_types
-
-    return [r for r in rows if not find_catalogue_source_types(conn, r[0])]
-
-
 def build(conn) -> str:
     from sqlalchemy import bindparam, text
 
@@ -441,6 +490,7 @@ def build(conn) -> str:
     ]
 
     walked = q(WALKED_AWAY, days=2, limit=25)
+    absent, found_since = recheck_absent(q(ABSENT_TITLES), _carried_now(conn))
     worth = [r for r in q(WORTH, written=written_to(conn)) if r[4] > 0]
 
     # Ghost Light. Apple's analytics columns are NULL until the first instance
@@ -530,12 +580,15 @@ def build(conn) -> str:
         "### Weak or empty searches\n",
         "{1} of {0} searches came back weak or empty. Weak counts recoveries too, so check a".format(*q(SEARCH_TOTALS)[0]),
         "title in plays.title, monologues.title and character_name before calling it missing.\n",
-        table(("query", "times", "people", "fewest results"), q(FAILED_SEARCHES)),
+        table(("query", "times", "people", "fewest results", "finds today"),
+              recheck_weak(q(FAILED_SEARCHES), _finds_now(conn))),
         "### Where the library is thin, 30 days\n",
         gap_overall + " A kind well above that rate is where to add pieces.\n",
         table(("kind of piece", "weak", "searches", "weak rate", "people"), gap_kinds),
-        "Titles searched that are in no tab (screen titles come in like the rest of the TV and film corpus):\n",
-        table(("title", "searches", "people", "last"), still_absent(conn, q(ABSENT_TITLES))),
+        "Titles searched that are in no tab, checked against the library today (screen titles come in like the rest of the TV and film corpus):\n",
+        table(("title", "searches", "people", "last", "note"), absent),
+        ("Logged as missing but carried today (the search learned them since, or a tab hid them): "
+         + "; ".join(found_since) + ".") if found_since else "",
     ]
     return "\n".join(parts)
 

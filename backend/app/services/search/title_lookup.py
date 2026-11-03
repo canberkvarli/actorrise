@@ -1480,11 +1480,20 @@ def match_empty_shelf(query: str, shelf: list) -> Optional[Dict[str, object]]:
         return None
     q_words = [w for w in nq.split() if len(w) >= 4]
 
+    # Containment is on whole words, and a query inside a longer title needs two
+    # words of its own. "horror" was a plain substring of "little shop of
+    # horrors", so a genre search came back as "we list Little Shop of Horrors,
+    # no monologues yet" and the brief counted it as a search for the show
+    # (2026-10-09, three searches).
+    pq = f" {nq} "
     for title, author in shelf:
         nt = _shelf_norm(title)
         if len(nt) < _EMPTY_SHELF_MIN_TITLE:
             continue
-        if nt == nq or (len(nq) >= 6 and (nq in nt or nt in nq)):
+        pt = f" {nt} "
+        if nt == nq or (len(nq) >= 6 and (
+            (len(nq.split()) >= 2 and pq in pt) or pt in pq
+        )):
             return {"play": title, "author": author, "carried_but_empty": True}
         if len(nt) >= 6 and difflib.SequenceMatcher(None, nq, nt).ratio() >= _EMPTY_SHELF_TITLE_RATIO:
             return {"play": title, "author": author, "carried_but_empty": True}

@@ -12,6 +12,7 @@ SHELF = [
     ("War", "Unknown"),
     ("Test", None),
     ("The Music Man", "Franklin Lacey, Meredith Willson"),
+    ("Little Shop of Horrors", "Alan Menken, Howard Ashman"),
 ]
 
 
@@ -31,6 +32,13 @@ class MatchTests(unittest.TestCase):
             self.assertIsNotNone(hit, q)
             self.assertIsNone(hit["play"], q)
             self.assertEqual(hit["author"], "Clifford Odets", q)
+
+    def test_genre_word_inside_a_title_is_not_the_title(self):
+        # 2026-10-09: "horror" was logged as a search for Little Shop of Horrors.
+        for q in ("horror", "horrors", "horror monologue"):
+            self.assertIsNone(match_empty_shelf(q, SHELF), q)
+        self.assertEqual(match_empty_shelf("little shop of horrors", SHELF)["play"], "Little Shop of Horrors")
+        self.assertEqual(match_empty_shelf("audrey little shop of horrors", SHELF)["play"], "Little Shop of Horrors")
 
     def test_short_or_descriptive_queries_never_match(self):
         self.assertIsNone(match_empty_shelf("war", SHELF))  # three letters
