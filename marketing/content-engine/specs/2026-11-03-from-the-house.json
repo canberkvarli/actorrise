@@ -1,0 +1,81 @@
+{
+  "id": "2026-11-03-from-the-house",
+  "look": "cinema",
+  "cut": "hard",
+  "beats": [
+    {
+      "kind": "broll",
+      "seconds": 11,
+      "src": "reel/2026-11-03-from-the-house/house.mp4",
+      "start": 2,
+      "push": 0.04,
+      "dim": 0.5,
+      "at": "top",
+      "credit": "WeStarMoney Rec on Pexels",
+      "lines": [
+        {
+          "text": "Some nights you watch.",
+          "accent": "watch.",
+          "at": 0.8,
+          "until": 4.2
+        },
+        {
+          "text": "Tonight you run the scene.",
+          "accent": "run",
+          "at": 4.6,
+          "until": 8.0
+        },
+        {
+          "text": "Someone reads the other part.",
+          "accent": "other part.",
+          "at": 8.3
+        }
+      ],
+      "sfx": [
+        {
+          "name": "room",
+          "at": 0,
+          "vol": 0.25
+        },
+        {
+          "name": "impact",
+          "at": 4.6,
+          "vol": 0.6
+        }
+      ]
+    },
+    {
+      "kind": "end",
+      "seconds": 4,
+      "brand": "Ghost Light",
+      "line": "built by a working actor",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [
+        {
+          "name": "reveal",
+          "at": 0.2,
+          "vol": 0.7
+        }
+      ]
+    }
+  ],
+  "source": {
+    "footage": {
+      "pexels_id": 27395048,
+      "credit": "WeStarMoney Rec on Pexels",
+      "page": "https://www.pexels.com/video/a-man-sitting-on-a-chair-in-a-theatre-27395048/",
+      "note": "one continuous wide shot, no cuts (ffmpeg scene detect at 0.35 found none), no audio track"
+    },
+    "feature": "run-lines",
+    "why": "Ghost Light runs lines with you and reads the other part. No monologue text on screen, so no database rows needed."
+  },
+  "captions": {
+    "tiktok": "How many rehearsals have you watched from the side this month? #actorslife #actortok #audition #monologue #actors",
+    "youtube_title": "Some nights you watch. Tonight you run it. #shorts",
+    "youtube_description": "Some nights you watch. Tonight you run the scene.\nGhost Light reads the other part, free on the App Store. Built by a working actor.\n#actorslife #rehearsal #actors #theatre",
+    "instagram": "Three things a rehearsal needs:\na scene, a reason, someone to read the other part.\nGhost Light brings the third one home. Built by a working actor.\nLink in bio.\n#actorslife #monologue #audition #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 6500
+}
