@@ -357,7 +357,7 @@ const SceneBeat: React.FC<{ b: Scene }> = ({ b }) => {
                 <div style={{ fontFamily: L.font === "sans" ? F.sans : F.serif, fontWeight: 600, fontSize: 50 * (L.scale ?? 1), lineHeight: 1.22, color: fg,
                   fontStyle: partner ? undefined : "normal" }}>
                   {partner || b.voice_you
-                    ? ws.map((w, k) => <span key={k} style={{ opacity: active || done ? (lt >= w.s - 0.02 ? 1 : 0.3) : 0.3, color: active && lt >= w.s - 0.02 && lt <= w.e + 0.08 ? key : undefined, marginRight: 12 }}>{w.w}</span>)
+                    ? ws.map((w, k) => <span key={k} style={{ opacity: active || done ? (lt >= w.s - 0.02 ? 1 : 0.3) : 0.3, color: active && lt >= w.s - 0.02 && lt <= w.e + 0.08 ? key : undefined, marginRight: 12, display: "inline-block" }}>{w.w}</span>)
                     : <span style={{ borderBottom: active ? `4px solid ${key}` : "4px solid transparent", paddingBottom: 2 }}>{l.text}</span>}
                 </div>
               </div>

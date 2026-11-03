@@ -1,0 +1,83 @@
+{
+  "id": "2026-11-04-earnest-scene",
+  "look": "cinema",
+  "cut": "hard",
+  "beats": [
+    {
+      "kind": "title",
+      "seconds": 2.6,
+      "text": "It reads the other part.",
+      "accent": "other",
+      "sub": "You bring yours.",
+      "bg": "ink",
+      "sfx": [
+        {
+          "name": "click",
+          "at": 0.3,
+          "vol": 0.35
+        }
+      ]
+    },
+    {
+      "kind": "scene",
+      "seconds": 13,
+      "play": "The Importance of Being Earnest",
+      "title": "Act I",
+      "bg": "ink",
+      "start": 0.6,
+      "lines": [
+        {
+          "who": "PARTNER",
+          "text": "Where have you been since last Thursday?"
+        },
+        {
+          "who": "YOU",
+          "text": "In the country."
+        },
+        {
+          "who": "PARTNER",
+          "text": "What on earth do you do there?"
+        },
+        {
+          "who": "YOU",
+          "text": "When one is in town one amuses oneself. When one is in the country one amuses other people."
+        }
+      ]
+    },
+    {
+      "kind": "end",
+      "seconds": 3.8,
+      "brand": "Ghost Light",
+      "line": "built by a working actor",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [
+        {
+          "name": "tap",
+          "at": 0.5,
+          "vol": 0.3
+        }
+      ]
+    }
+  ],
+  "source": {
+    "text": "Oscar Wilde, The Importance of Being Earnest (1895), Act I, Algernon and Jack. Public domain (Wilde died 1900). Stage directions dropped, lines contiguous.",
+    "feature": "scene-partner",
+    "board": "Callboard plan 2026-11-04: format scene, series scene-reads, look cinema. The partner reads Algernon (PARTNER, voiced), you read Jack (YOU, the underlined cue, silent).",
+    "why": "First film built on the new scene beat: the partner's lines light up as they are read, your line is the cue. Earnest (Algernon) is one of the pages Google sends actors to most (CONTEXT.md).",
+    "voice_note": "ElevenLabs refused ELEVENLABS_API_KEY on 2026-11-04 (a key ID, not an sk_ secret), so the partner lines are not voiced in this render; they light up on estimated timing."
+  },
+  "music": {
+    "style": "pizzicato",
+    "volume": 0.3,
+    "drop": "end"
+  },
+  "captions": {
+    "tiktok": "Algernon is covered. You just have to be Jack. #actorslife #actortok #scenework #theatre #oscarwilde",
+    "youtube_title": "Run Earnest with a partner who never cancels #shorts",
+    "youtube_description": "Ghost Light reads the other part, you take the cue.\nFree on the App Store. Built by a working actor.\n#actorslife #acting #theatre #oscarwilde",
+    "instagram": "When one is in town one amuses oneself. When you rehearse alone, someone has to read Algernon.\nGhost Light reads him. Your line is underlined. Say it out loud.\nBuilt by a working actor. Link in bio.\n#actorslife #actorsofinstagram #actortraining #scenework #oscarwilde"
+  },
+  "cover_ms": 13000
+}
