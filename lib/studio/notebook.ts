@@ -28,7 +28,16 @@ export type Role = {
   updatedAt: number;
 };
 
-export type Notebook = { roles: Role[]; activeId: string | null };
+export type Notebook = {
+  roles: Role[];
+  activeId: string | null;
+  /** Roles deleted here and not yet deleted on the account: id -> when. */
+  deleted?: Record<string, number>;
+  /** The `updatedAt` of each role as the account last confirmed it. */
+  synced?: Record<string, number>;
+  /** The account this notebook was last synced with, so a shared browser never mixes two actors. */
+  owner?: number;
+};
 
 const KEY = "studio_notebook_v1";
 
@@ -60,7 +69,7 @@ export function loadNotebook(): Notebook {
     if (!roles.length) return emptyNotebook();
     roles.forEach((r) => r.moments.forEach((m) => (m.point = clampPoint(m.point))));
     const activeId = roles.some((r) => r.id === nb.activeId) ? nb.activeId : roles[0].id;
-    return { roles, activeId };
+    return { roles, activeId, deleted: nb.deleted ?? {}, synced: nb.synced ?? {}, owner: nb.owner };
   } catch {
     return emptyNotebook();
   }

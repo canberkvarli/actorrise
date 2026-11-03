@@ -27,6 +27,7 @@ import {
 import type { ArcState, CornerLabel, PinLabel, SceneApi } from "./EffortCubeScene";
 import Notebook from "./Notebook";
 import { display, EASE, mono } from "./style";
+import { useStudioSync } from "./useStudioSync";
 
 // three/webgpu touches `navigator` and `window`; keep it out of the server render.
 const EffortCubeScene = dynamic(() => import("./EffortCubeScene"), { ssr: false });
@@ -106,6 +107,7 @@ export default function EffortCube() {
     return () => window.clearTimeout(t);
   }, [nb]);
 
+  const sync = useStudioSync(nb, setNb);
   const role: Role | null = nb ? activeRole(nb) : null;
   const moments = useMemo(() => role?.moments ?? [], [role]);
 
@@ -620,19 +622,21 @@ export default function EffortCube() {
           }}
           onNewRole={() => {
             const r = newRole();
-            setNb((cur) => (cur ? { roles: [...cur.roles, r], activeId: r.id } : cur));
+            setNb((cur) => (cur ? { ...cur, roles: [...cur.roles, r], activeId: r.id } : cur));
             setActiveMoment(null);
             setTab("questions");
           }}
           onDeleteRole={() =>
             setNb((cur) => {
               if (!cur) return cur;
-              const roles = cur.roles.filter((r) => r.id !== cur.activeId);
+              const gone = cur.activeId;
+              const deleted = gone ? { ...(cur.deleted ?? {}), [gone]: Date.now() } : cur.deleted;
+              const roles = cur.roles.filter((r) => r.id !== gone);
               if (!roles.length) {
                 const r = newRole();
-                return { roles: [r], activeId: r.id };
+                return { ...cur, roles: [r], activeId: r.id, deleted };
               }
-              return { roles, activeId: roles[0].id };
+              return { ...cur, roles, activeId: roles[0].id, deleted };
             })
           }
           point={point}
@@ -642,6 +646,7 @@ export default function EffortCube() {
           playing={playing}
           onPlay={() => setPlaying((v) => !v)}
           fine={fine}
+          sync={sync}
         />
       )}
 

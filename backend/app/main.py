@@ -32,6 +32,7 @@ from app.api.class_links import router as class_links_router
 from app.api.class_shelf import router as class_shelf_router
 from app.api.community import router as community_router
 from app.api.monologue_work import router as monologue_work_router
+from app.api.studio import router as studio_router
 from app.api.auth import router as auth_router
 from app.api.tapes import router as tapes_router
 from app.api.contact import router as contact_router
@@ -66,6 +67,7 @@ from app.models.app_setting import AppSetting  # noqa: F401; register with Base 
 from app.models.user_event import UserEvent  # noqa: F401; register with Base for create_all
 from app.models.book import BookList, BookListItem, BookListShare, TonightPick  # noqa: F401; register with Base for create_all
 from app.models.practice import PracticeEntry  # noqa: F401; register with Base for create_all
+from app.models.studio import StudioRole  # noqa: F401; register with Base for create_all
 from app.models.push import PushSend, PushToken, WidgetKey  # noqa: F401; register with Base for create_all
 from app.models.lifecycle_email import LifecycleEmailSend  # noqa: F401; register with Base for create_all
 from fastapi import FastAPI
@@ -628,6 +630,7 @@ app.include_router(auditions_router)
 app.include_router(class_links_router)
 app.include_router(class_shelf_router)
 app.include_router(monologue_work_router)
+app.include_router(studio_router)
 app.include_router(community_router)
 app.include_router(tapes_router)
 app.include_router(public_router)

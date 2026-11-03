@@ -11,6 +11,7 @@ import { read, type EffortPoint } from "@/lib/studio/effort";
 import { answered, arcRange, type Moment, type Notebook as NotebookData, type Role } from "@/lib/studio/notebook";
 import { GROUPS, QUESTIONS, type Question } from "@/lib/studio/questions";
 import { display, EASE, mono } from "./style";
+import type { SyncStatus } from "./useStudioSync";
 
 type Props = {
   open: boolean;
@@ -33,6 +34,7 @@ type Props = {
   playing: boolean;
   onPlay: () => void;
   fine: boolean;
+  sync: SyncStatus;
 };
 
 const chip = (on = false) =>
@@ -142,7 +144,8 @@ export default function Notebook(props: Props) {
           aria-label="Play and scene"
           style={{ fontSize: 13, marginTop: 4, color: "#e9d6c4" }}
         />
-        <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
+        <SyncLine sync={props.sync} />
+        <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
           <button
             type="button"
             onClick={() => onTab("questions")}
@@ -182,6 +185,43 @@ export default function Notebook(props: Props) {
         </div>
       )}
     </aside>
+  );
+}
+
+const SYNC_TEXT: Record<SyncStatus, string> = {
+  local: "On this device only.",
+  loading: "Opening your notebook…",
+  saving: "Saving…",
+  saved: "Saved to your account.",
+  offline: "Couldn't reach your account. Saved here, will try again.",
+};
+
+function SyncLine({ sync }: { sync: SyncStatus }) {
+  return (
+    <div
+      aria-live="polite"
+      style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 10, fontSize: 11.5, color: "#e9d6c4" }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+          background: sync === "saved" ? "#7fbf8a" : sync === "offline" ? "#d9a441" : "rgba(233,214,196,0.45)",
+          transition: "background 300ms",
+        }}
+      />
+      <span style={{ opacity: 0.65 }}>{SYNC_TEXT[sync]}</span>
+      {sync === "local" && (
+        <a
+          href="/login?redirect=/studio"
+          style={{ color: "#ffd2a6", textDecoration: "underline", textUnderlineOffset: 3 }}
+        >
+          Sign in to keep it everywhere
+        </a>
+      )}
+    </div>
   );
 }
 
