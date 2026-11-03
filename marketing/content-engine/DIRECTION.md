@@ -3,6 +3,17 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-03, looks (wins over everything below)
+
+Canberk: "like ElevenLabs or a startup: different styles, different captions, different colours,
+not just what I said." So every video picks a **look** (reel spec `"look"`): paper, noir, mono,
+bold, marker, cinema, midnight (see LOOKS in `src/ReelVideo.tsx`: colours, serif or sans, caps,
+how words arrive, how the key word is marked). Never the same look two days running, and not the
+same look as the last video of the same kind. Captions on the posts vary too: a question one day, a
+one-liner the next, a short list another. Drawn films can vary their palette the same way (ink
+colour, paper tone, accent). The Ghost Light icon and name on the end card stay the same; everything
+around them can change. Add new looks when a video needs one that does not exist.
+
 ## 2026-11-03, later (wins over the block below)
 
 Two kinds of film, alternating, plus the occasional walkthrough:
