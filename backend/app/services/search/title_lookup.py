@@ -328,7 +328,9 @@ def find_catalogue_source_types(db, title: str) -> list[str]:
             f"SELECT COALESCE(p.source_type, 'play') st, "
             f"  ({expr} = :n OR (length(:sq) >= {_MIN_SQUASHED_CHARS} AND {sq_expr} = :sq)) exact, "
             f"  EXISTS (SELECT 1 FROM monologues m WHERE m.play_id = p.id "
-            f"          AND m.embedding_vector IS NOT NULL) visible "
+            f"          AND m.embedding_vector IS NOT NULL) visible, "
+            f"  p.title, "
+            f"  (length({expr}) >= 4 AND :n ~ ('\\m' || {expr} || '\\M')) inside "
             f"FROM plays p "
             f"WHERE ({expr} = :n "
             f"      OR (length({expr}) >= 4 AND :n ~ ('\\m' || {expr} || '\\M')) "
@@ -337,6 +339,8 @@ def find_catalogue_source_types(db, title: str) -> list[str]:
         ),
         {"n": norm, "sq": squashed},
     ).fetchall()
+    # A row that matched only as a prefix must pass prefix_names_title().
+    rows = [r for r in rows if r[1] or r[4] or prefix_names_title(norm, r[3])]
     return pick_carried_source_types(rows)
 
 
@@ -344,6 +348,35 @@ def find_catalogue_source_types(db, title: str) -> list[str]:
 # eight Harry Potter films) counts as that title. Long enough that a common
 # word cannot do it: "big" must not claim "Big Fish".
 _MIN_PREFIX_CHARS = 8
+
+# What may follow a one-word prefix for it to still be the title's own name: a
+# subtitle mark ("Spider-Man: Into the Spider-Verse"), a number ("Rocky 2"), or a
+# volume word.
+_PREFIX_BREAK = re.compile(
+    r"^(\s*[:;(\[\u2013\u2014-]|\s+\d|\s+(part|vol|volume|episode|chapter)\b)", re.I
+)
+
+
+def prefix_names_title(norm_query: str, stored_title: str) -> bool:
+    """Whether a query that is the start of `stored_title` names that title.
+
+    Two words or more is a name ("harry potter", "queen charlotte", "kill
+    bill"). One word is too often just a word: "twilight" claimed The Twilight
+    Zone (the film Twilight is not carried, 2026-11-03), and over 90 days
+    "dramatic" claimed The Dramatic Values in Plautus, "shakespeare" Shakespeare
+    in Love, "something" Something Wicked This Way Comes. So one word counts only
+    when the stored title does not open with an article (the query then is not
+    its start at all) and the word is followed by a subtitle mark or a number.
+    """
+    if len(norm_query.split()) >= 2:
+        return True
+    title = (stored_title or "").strip()
+    if re.match(r"(the|a|an)\s", title, re.I):
+        return False
+    letters = norm_query.replace(" ", "")
+    head = re.match("".join(re.escape(c) + r"[^0-9a-z]*?" for c in letters[:-1])
+                    + re.escape(letters[-1]), title, re.I) if letters else None
+    return bool(head) and bool(_PREFIX_BREAK.match(title[head.end():]))
 
 
 def pick_carried_source_types(rows) -> list[str]:
