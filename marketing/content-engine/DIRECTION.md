@@ -16,6 +16,18 @@ Canberk, after the curtain film: "it's good, we need more like that."
   clicks, taps, pops on every move, so the drawing feels alive. Add those sounds to
   `public/sfx` when a drawn film needs one that does not exist.
 
+## 2026-11-03, evening (wins over everything below)
+
+- The real one-shot film worked. Make more like it: a wide shot from the audience, someone alone
+  on a stage or in a rehearsal room, waiting for a partner who does not come, running lines to an
+  empty chair, checking the time. The same moments as the drawn films, as live action.
+- Endings are happy, not dark: the end card lands with the bright `chime` (celesta and glockenspiel,
+  the default now). Use `reveal` (the deep piano hit) only if a film truly needs weight.
+- Drawn films: sound effects, not music. Playful and alive: `ping`, `pong`, `toing`, `plink`,
+  `click`, `tap` (public/sfx/cine) plus the existing boops and pops, each on a real action
+  (a note lands, a tap, a page flips, an idea arrives). No music bed in drawn films unless one
+  moment truly needs it, and then quiet.
+
 ## 2026-11-03, looks (wins over everything below)
 
 Canberk: "like ElevenLabs or a startup: different styles, different captions, different colours,

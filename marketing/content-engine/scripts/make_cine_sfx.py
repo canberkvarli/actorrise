@@ -179,3 +179,62 @@ if __name__ == "__main__":
     for name, fn, w in [("impact", impact, 0.5), ("reveal", reveal, 0.6), ("note", note, 0.5), ("switch", switch, 0.2),
                         ("tick", tick, 0.0), ("heartbeat", heartbeat, 0.0), ("room", room, 0.8), ("riser", riser, 0.4), ("chime", chime, 0.4)]:
         save(name, fn(), w)
+
+
+# ---- bright, happy sounds (Canberk, 2026-11-03: "a happy ping chime ending, no need to be dark";
+# drawn films: "ping pong toing toing, clicks, taps, alive and well", not music) ----
+def chime():
+    """End card: a warm, happy major chime, celesta and glockenspiel, ringing out."""
+    sec = 3.2
+    x = np.zeros(int(sec * SR))
+    for k, m in enumerate((72, 76, 79, 84)):  # C E G C, a quick rising arpeggio
+        s = sample("celesta", m, sec) * 0.55 + sample("glockenspiel", m + 12, sec) * 0.3
+        i = int(k * 0.07 * SR)
+        x[i:] += s[: len(x) - i]
+    return verb(x, 2.4, 0.3)[: int(sec * SR)]
+
+
+def ping():
+    """One bright ping, like a thought landing."""
+    sec = 1.4
+    return verb(sample("glockenspiel", 88, sec) * 0.8 + sample("celesta", 76, sec) * 0.4, 1.2, 0.2)[: int(sec * SR)]
+
+
+def toing():
+    """A springy toing: a plucked note bending up."""
+    sec = 0.6
+    tt = t(sec)
+    f = 220 * (1 + 0.9 * (1 - np.exp(-tt * 9))) * (1 + 0.04 * np.sin(2 * np.pi * 18 * tt) * np.exp(-tt * 4))
+    return np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt * 7) * 0.8
+
+
+def plink():
+    """A small pizzicato plink, for a tap that matters."""
+    sec = 0.6
+    return sample("pizzicato_strings", 79, sec) * 0.9
+
+
+def click():
+    """A crisp little click."""
+    sec = 0.08
+    tt = t(0.012)
+    return pad(hp(rng.normal(0, 1, len(tt)), 3000) * np.exp(-tt * 500) + np.sin(2 * np.pi * 3200 * tt) * np.exp(-tt * 600) * 0.6, sec)
+
+
+def tap():
+    """A soft finger tap on glass."""
+    sec = 0.12
+    tt = t(0.03)
+    return pad(lp(rng.normal(0, 1, len(tt)), 2500) * np.exp(-tt * 220) * 0.9 + np.sin(2 * np.pi * 900 * tt) * np.exp(-tt * 260) * 0.4, sec)
+
+
+def pong():
+    """A rounder, lower answer to ping."""
+    sec = 1.0
+    return verb(sample("vibraphone", 67, sec) * 0.9, 0.8, 0.15)[: int(sec * SR)]
+
+
+if __name__ == "__main__":
+    for name, fn, w in [("chime", chime, 0.6), ("ping", ping, 0.3), ("pong", pong, 0.3), ("toing", toing, 0.0),
+                        ("plink", plink, 0.2), ("click", click, 0.0), ("tap", tap, 0.0)]:
+        save(name, fn(), w)

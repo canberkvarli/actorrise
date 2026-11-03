@@ -61,6 +61,7 @@ type Screen = {
  * style button (use it for Ghost Light), otherwise `action` is plain text like actorrise.com. */
 type End = { kind: "end"; seconds: number; brand: string; line: string; action: string; icon?: string; bg?: "ink" | "paper"; store?: boolean };
 /** Sound effects on a beat, from public/sfx/cine: impact, reveal, note, switch, tick, heartbeat, room, riser, chime (the happy close).
+ * Bright ones too: chime (default on the end card), ping, pong, toing, plink, click, tap.
  * `at` is seconds into the beat (negative starts before the cut, e.g. a riser at -1.5). Few and heavy. */
 export type Cue = { name: string; at?: number; vol?: number };
 export type ReelBeat = (Title | Broll | Screen | End) & { sfx?: Cue[] };
@@ -315,7 +316,7 @@ export const ReelVideo: React.FC<{ spec: ReelSpec }> = ({ spec }) => {
       {spec.music && <Audio src={staticFile(`music/${spec.id}.wav`)} volume={spec.music.volume ?? 0.5} />}
       {spec.beats.flatMap((b, i) => {
         // The end card always lands with the reveal hit unless the beat sets its own sounds.
-        const cues = b.sfx ?? (b.kind === "end" ? [{ name: "reveal", at: 0, vol: 0.9 }] : []);
+        const cues = b.sfx ?? (b.kind === "end" ? [{ name: "chime", at: 0.6, vol: 0.85 }] : []); // happy chime as the brand settles
         return cues.map((c, k) => {
           const at = starts[i] + Math.round((c.at ?? 0) * RFPS);
           return (
