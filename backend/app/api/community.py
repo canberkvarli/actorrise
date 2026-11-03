@@ -24,10 +24,12 @@ from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user, get_current_user_optional
 from app.core.database import get_db
-from app.models.actor import ActorProfile, UserScript
+from app.models.actor import ActorProfile, Monologue, UserScript
 from app.models.community import CommunityEvent
 from app.models.user import User
 from app.services.community import RETIRED_EVENT_TYPES
+from app.services.library_language import current_languages, script_clause
+from app.services.search.semantic_search import language_clause
 
 # Community library needs at least this many shared scripts before it stops
 # showing the "still gathering" cold-start state.
@@ -115,6 +117,8 @@ def get_feed(
         .all()
     )
 
+    rows = _in_request_language(db, rows)
+
     events: List[FeedEvent] = []
     for event, user, profile in rows:
         display_name = (profile.name if profile else None) or (
@@ -180,6 +184,38 @@ class CommunityLibraryResponse(BaseModel):
     ready: bool  # False → show the "still gathering scripts" cold-start state
 
 
+def _in_request_language(db: Session, rows):
+    """Feed rows the request's library language allows (CAN-19).
+
+    English requests see the feed as it always was. The Turkish UI sees an
+    event only when it names no material (joined, a milestone, a search by
+    tone) or names a Turkish monologue: a title alone cannot be told, and a
+    Turkish actor is never pointed at an English piece.
+    """
+    if "en" in current_languages():
+        return rows
+    ids = {
+        int(e.payload["monologue_id"]) for e, _u, _p in rows
+        if isinstance(e.payload, dict) and str(e.payload.get("monologue_id") or "").isdigit()
+    }
+    shown_ids = set()
+    if ids:
+        shown_ids = {
+            mid for (mid,) in db.query(Monologue.id)
+            .filter(Monologue.id.in_(ids), language_clause())
+        }
+    kept = []
+    for row in rows:
+        payload = row[0].payload if isinstance(row[0].payload, dict) else {}
+        mid = str(payload.get("monologue_id") or "")
+        if mid.isdigit():
+            if int(mid) in shown_ids:
+                kept.append(row)
+        elif not payload.get("title"):
+            kept.append(row)
+    return kept
+
+
 def community_scripts_query(db: Session):
     """Shared scripts plus the demos, real shares first, newest within each.
 
@@ -196,6 +232,7 @@ def community_scripts_query(db: Session):
                 UserScript.is_sample.is_(True),
             ),
             UserScript.is_guided.is_(False),
+            script_clause(),  # the request's library language (CAN-19)
         )
         .order_by(
             UserScript.is_sample.asc(),

@@ -1,9 +1,10 @@
 """The library's language gate (CAN-19).
 
 Canberk, 2026-11-03: "if English speakers search something in English we don't
-show Turkish monologues." The safety is the default: everything is English only
-unless a request from the Turkish UI widens it, so these tests pin the default
-as hard as the widened case.
+show Turkish monologues", and later the same day: "no Turkish actor can do
+English pieces; they have to change the UI first." So the Turkish UI is served
+Turkish only and everything else English only. The default (no request, no
+header) is English, and these tests pin it as hard as the Turkish case.
 """
 
 import unittest
@@ -67,10 +68,11 @@ class LanguageGateQueryTests(unittest.TestCase):
     def test_explicit_english_matches_the_default(self):
         self.assertEqual(self.ids(DEFAULT_LANGUAGES), self.ids())
 
-    def test_turkish_ui_sees_both_libraries(self):
-        self.assertEqual(self.ids(TURKISH_LANGUAGES), {self.en.id, self.tr.id, self.unknown.id})
+    def test_turkish_ui_sees_turkish_only(self):
+        # No English piece, and no unlabelled one (which is English).
+        self.assertEqual(self.ids(TURKISH_LANGUAGES), {self.tr.id})
 
-    def test_pending_turkish_stays_hidden_even_when_widened(self):
+    def test_pending_turkish_stays_hidden_on_the_turkish_ui(self):
         self.assertNotIn(self.tr_pending.id, self.ids(TURKISH_LANGUAGES))
 
     def test_other_foreign_plays_stay_out(self):
@@ -88,6 +90,8 @@ class LanguageGateQueryTests(unittest.TestCase):
         self.assertTrue(language_hides(self.nl))
         self.assertTrue(language_hides(self.tr))
         self.assertFalse(language_hides(self.tr, TURKISH_LANGUAGES))
+        self.assertTrue(language_hides(self.en, TURKISH_LANGUAGES))
+        self.assertTrue(language_hides(self.unknown, TURKISH_LANGUAGES))
         self.assertFalse(language_hides(self.en))
 
 
@@ -98,7 +102,7 @@ class RequestLanguagesTests(unittest.TestCase):
     def test_no_header_is_english(self):
         self.assertEqual(request_languages(self.req({})), DEFAULT_LANGUAGES)
 
-    def test_turkish_header_widens(self):
+    def test_turkish_header_is_turkish_only(self):
         self.assertEqual(request_languages(self.req({"X-ActorRise-Locale": "tr"})), TURKISH_LANGUAGES)
         self.assertEqual(request_languages(self.req({"X-ActorRise-Locale": " TR "})), TURKISH_LANGUAGES)
 

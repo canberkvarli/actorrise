@@ -36,7 +36,8 @@ from app.models.actor import (Monologue, MonologueBeat, MonologueFavorite,
                               Play)
 from app.models.user import User
 from app.services.search.grounding import query_is_unservable
-from app.services.search.semantic_search import exclude_hidden, language_clause, TURKISH_LANGUAGES, DEFAULT_LANGUAGES
+from app.services.library_language import current_languages, languages_for_locale
+from app.services.search.semantic_search import exclude_hidden, language_clause
 from app.services.search.originality import originality_cap
 from app.services.search.query_optimizer import (correct_query_typos,
                                                  is_filter_only_query,
@@ -402,14 +403,13 @@ async def get_lead_magnet_monologues(
 def request_languages(request: Request) -> tuple:
     """Library languages this request may be served (CAN-19).
 
-    English only, unless the Turkish UI says so with `X-ActorRise-Locale: tr`
-    (lib/api.ts sets it from the active locale). Anything else, a missing
-    header included, is English: the iOS app, crawlers and older web builds
-    never see a Turkish piece. Only /search reads this; every other endpoint
-    stays on DEFAULT_LANGUAGES through exclude_hidden.
+    The Turkish UI (`X-ActorRise-Locale: tr`, from lib/api.ts) is served
+    Turkish only; anything else, a missing header included, English only.
+    Every other endpoint gets the same answer through exclude_hidden and the
+    request's language (services/library_language); /search reads it here too
+    because it passes it on explicitly.
     """
-    locale = (request.headers.get("x-actorrise-locale") or "").strip().lower()
-    return TURKISH_LANGUAGES if locale == "tr" else DEFAULT_LANGUAGES
+    return languages_for_locale(request.headers.get("x-actorrise-locale"))
 
 
 @router.get("/search", response_model=SearchResponse)
@@ -1384,7 +1384,7 @@ def get_first_rehearsal_monologue(
             .join(Play, Play.id == Monologue.play_id)
             .filter(
                 Monologue.review_status.is_(None),
-                language_clause(),  # English only: a first piece is never a Turkish one
+                language_clause(),  # the request's library language: Turkish UI, Turkish piece
                 Monologue.estimated_duration_seconds.between(*_FIRST_PIECE_SECONDS),
                 Monologue.word_count.between(*_FIRST_PIECE_WORDS),
                 or_(
@@ -1588,9 +1588,12 @@ async def get_tonight(
 ):
     """A run of days, each with the house's speech for that day. Public."""
     today = datetime.now(timezone.utc).date()
-    key = (house, today.isoformat(), days)
+    # The library language is part of the answer (CAN-19): in the key, and in
+    # Vary so a shared cache never hands the Turkish UI's day to an English one.
+    key = (house, today.isoformat(), days, current_languages())
     now = time.time()
     response.headers["Cache-Control"] = "public, max-age=3600"
+    response.headers["Vary"] = "X-ActorRise-Locale"
     hit = _tonight_cache.get(key)
     if hit and now - hit[0] < _TONIGHT_TTL_SECONDS:
         return hit[1]

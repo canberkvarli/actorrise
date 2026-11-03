@@ -183,34 +183,31 @@ def review_hides_from_search(review_status) -> bool:
     return review_status in HIDDEN_REVIEW_STATUSES
 
 
-#: Which library languages a request may be served (CAN-19).
-#:
-#: English only unless a request explicitly asks for more. That default is the
-#: whole safety: the iOS app, the SEO pages, emails, push, recommendations and
-#: anything written later never see a Turkish piece by accident, because they
-#: never pass anything. Only a request from the Turkish UI widens it, through
-#: request_languages() in app/api/monologues.py (the X-ActorRise-Locale header).
-#: Canberk, 2026-11-03: "if English speakers search something in English we
-#: don't show Turkish monologues."
-#:
-#: A play with no language is English; that is true of every NULL row today.
-DEFAULT_LANGUAGES: tuple = ("en",)
-TURKISH_LANGUAGES: tuple = ("en", "tr")
+#: Which library languages a request may be served (CAN-19). The rule and the
+#: request's language live in services/library_language: the Turkish UI is
+#: served Turkish only, everything else English only. These functions take an
+#: explicit `languages` to pin one (SEO pages pin English); with none they
+#: follow the request, and outside a request they are English.
+from app.services.library_language import (  # noqa: E402
+    DEFAULT_LANGUAGES,
+    TURKISH_LANGUAGES,
+    resolve as resolve_languages,
+)
 
 
-def language_clause(languages=DEFAULT_LANGUAGES):
+def language_clause(languages=None):
     """SQL condition: the monologue's play is in one of `languages`.
 
     A subquery on plays rather than a join, so it composes with queries that
     already join Play and with ones that do not. For inline .filter() calls
     that cannot go through exclude_hidden.
     """
-    langs = tuple(languages or DEFAULT_LANGUAGES)
+    langs = resolve_languages(languages)
     foreign = select(Play.id).where(func.coalesce(Play.language, "en").notin_(langs))
     return ~Monologue.play_id.in_(foreign)
 
 
-def language_gate(query, languages=DEFAULT_LANGUAGES):
+def language_gate(query, languages=None):
     """Keep only monologues whose play's language is in `languages`."""
     return query.filter(language_clause(languages))
 
@@ -221,9 +218,9 @@ def play_language(monologue) -> str:
     return (getattr(play, "language", None) or "en") if play is not None else "en"
 
 
-def language_hides(monologue, languages=DEFAULT_LANGUAGES) -> bool:
+def language_hides(monologue, languages=None) -> bool:
     """Row-level twin of language_gate, for code that filters loaded rows."""
-    return play_language(monologue) not in tuple(languages or DEFAULT_LANGUAGES)
+    return play_language(monologue) not in resolve_languages(languages)
 
 
 #: How much a Turkish piece is lifted for a Turkish query. Enough to put a
@@ -255,7 +252,7 @@ def _english_vocabulary() -> frozenset:
     return frozenset(words)
 
 
-def exclude_hidden(query, languages=DEFAULT_LANGUAGES):
+def exclude_hidden(query, languages=None):
     """Apply the review-status gate to a query selecting Monologue rows.
 
     A helper rather than an inline `.filter()`, because inline is exactly how
@@ -268,8 +265,9 @@ def exclude_hidden(query, languages=DEFAULT_LANGUAGES):
 
     Anything selecting monologues for a user to see goes through here.
 
-    It also applies the language gate, English only by default (see
-    DEFAULT_LANGUAGES), so every caller is covered without changing it.
+    It also applies the language gate: the request's library language
+    (services/library_language), English outside a request, so every caller is
+    covered without changing it.
     """
     return language_gate(
         query.filter(
@@ -835,11 +833,11 @@ def _fuzzy_quote_match(
 class SemanticSearch:
     """Semantic search using vector embeddings"""
 
-    def __init__(self, db: Session, languages=DEFAULT_LANGUAGES):
+    def __init__(self, db: Session, languages=None):
         self.db = db
         # Library languages this request may see. English only unless the API
         # passes TURKISH_LANGUAGES for a request from the Turkish UI (CAN-19).
-        self.languages = tuple(languages or DEFAULT_LANGUAGES)
+        self.languages = resolve_languages(languages)
         self.analyzer = ContentAnalyzer()
         self.query_optimizer = QueryOptimizer()
         # Global cache manager: Level 1 Redis if available, otherwise memory-only.

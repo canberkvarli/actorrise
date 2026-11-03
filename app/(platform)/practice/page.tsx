@@ -22,7 +22,7 @@ import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
 import { GuidedInvitation } from "@/components/practice/GuidedInvitation";
 import { shouldInvite } from "@/lib/guided-invite";
 import { isOnboardingDoneThisSession, subscribeFirstRun } from "@/lib/firstRun";
-import { useT } from "@/lib/i18n";
+import { useLocale, useT } from "@/lib/i18n";
 
 /**
  * /practice — the page that opens after login.
@@ -107,7 +107,10 @@ export default function PracticePage() {
       alive = false;
     };
   }, [inviteCandidate, inviteChecked, refreshUser]);
-  const invite = inviteCandidate && inviteChecked;
+  const locale = useLocale();
+  // The guided first scenes are English; the Turkish UI is served Turkish only
+  // (CAN-19), so it is not invited to them and opens on the shelf.
+  const invite = inviteCandidate && inviteChecked && locale !== "tr";
   const inviteChecking = inviteCandidate && !inviteChecked;
   // The onboarding card shows on this page now (lib/onboarding-routes), over
   // the top of whatever is here. The invitation waits for it: mounted under

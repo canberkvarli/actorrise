@@ -124,6 +124,24 @@ def _pairing_filter(query, pairing: str):
     ))
 
 
+def _shelf_language_clause():
+    """Shelf scenes in the request's library language (CAN-19). A shelf scene
+    names its play, or else the scene it was copied from; one with neither is
+    English, as an unmarked play is."""
+    from sqlalchemy import and_, false, select, true
+
+    from app.models.actor import Scene
+    from app.services.library_language import play_id_clause, resolve
+
+    from_source = select(Scene.id).where(play_id_clause(Scene.play_id))
+    return or_(
+        and_(ShelfScene.play_id.isnot(None), play_id_clause(ShelfScene.play_id)),
+        and_(ShelfScene.play_id.is_(None), ShelfScene.source_scene_id.in_(from_source)),
+        and_(ShelfScene.play_id.is_(None), ShelfScene.source_scene_id.is_(None),
+             true() if "en" in resolve() else false()),
+    )
+
+
 @router.get("")
 def list_shelf(
     pairing: Optional[str] = None,
@@ -138,7 +156,7 @@ def list_shelf(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    query = db.query(ShelfScene).filter(ShelfScene.status == "live")
+    query = db.query(ShelfScene).filter(ShelfScene.status == "live", _shelf_language_clause())
     if pairing in PAIRINGS:
         query = _pairing_filter(query, pairing)
     if age in shelf_labels.AGES and age != "any":

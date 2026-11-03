@@ -326,6 +326,7 @@ export default function ProfileOnboardingFlow({
   const { refreshUser } = useAuth();
   const router = useRouter();
   const t = useT();
+  const locale = useLocale();
   const optionLabel = useOptionLabel();
   const queryClient = useQueryClient();
   const reduce = useReducedMotion();
@@ -538,10 +539,20 @@ export default function ProfileOnboardingFlow({
     // variant: the skip waits and speaks quietly since 2026-10-21. Before it,
     // 26 of 57 skipped; the 31 who answered opened monologues just as often
     // (58% vs 54%) and 15 of them finished a scene. Compare on this tag.
+    // The ending offers the guided first scenes, and those are English. The
+    // Turkish UI is served Turkish only (CAN-19), so it goes where the skip
+    // goes: the monologues, with the picks above already kept.
+    if (locale === "tr") {
+      trackEvent("onboarding_ending_skip", { reason: "no_turkish_scene" });
+      endFlow();
+      setSubmitting(false);
+      router.push("/monologues");
+      return;
+    }
     trackEvent("onboarding_ending_shown", { variant: "quiet_skip" });
     setPhase("ending");
     setSubmitting(false);
-  }, [submitting, persist, answers, variant, accountType, endFlow, router]);
+  }, [submitting, persist, answers, variant, accountType, endFlow, router, locale]);
 
   /** A part tapped on the ending: the same three scenes as the hub's invitation. */
   const answerScene = useCallback(() => {

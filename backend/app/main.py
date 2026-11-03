@@ -616,6 +616,13 @@ class LogCORSOriginMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+# The library language of each request (CAN-19): the Turkish UI's
+# X-ActorRise-Locale header serves it Turkish only, everything else English.
+# Innermost, so it is set in the context the endpoint runs in.
+from app.services.library_language import LibraryLanguageMiddleware  # noqa: E402
+
+app.add_middleware(LibraryLanguageMiddleware)
+
 # Log OPTIONS origin first (runs last), then CORS
 app.add_middleware(LogCORSOriginMiddleware)
 

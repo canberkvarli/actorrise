@@ -39,7 +39,7 @@ from app.services.reading_budget import LIMIT_PROBLEM, reading_budget, tell_foun
 from app.models.user import User
 from app.services.character_names import canonicalize_scene_characters
 from app.services.script_parser import PARSER_VERSION, ScriptParser
-from app.services.rehearsal.language import detect as detect_language
+from app.services.rehearsal.language import detect as detect_language, script_language
 
 router = APIRouter(prefix="/api/scripts", tags=["scripts"])
 
@@ -1333,11 +1333,14 @@ def shelf_scripts_query(db: Session, user_id: int):
     The guided first scene is a sample too, but it is started by the hub, not
     picked off a shelf, so it never appears here.
     """
-    from sqlalchemy import or_
+    from sqlalchemy import and_, or_
+    from app.services.library_language import script_clause
     return db.query(UserScript).filter(
         or_(
             UserScript.user_id == user_id,
-            UserScript.is_sample == True,
+            # The samples are library material: the request's language only
+            # (CAN-19). The actor's own scripts show whatever they are in.
+            and_(UserScript.is_sample == True, script_clause()),
         ),
         UserScript.is_guided.is_(False),
         or_(UserScript.processing_status.is_(None), UserScript.processing_status != DELETED),
@@ -2475,13 +2478,17 @@ async def add_scene_to_script(
             copyright_status="user_uploaded",
             license_type="user_content",
             text_format="plain",
+            # No text on this play, so the insert hook cannot read it: the
+            # script's own text says (library_language, CAN-19).
+            language=script_language(None, script),
         )
         db.add(play)
         db.commit()
         db.refresh(play)
 
-    # Parse lines from body: "CHARACTER: text" format
-    line_pattern = re.compile(r"^([A-Za-z][A-Za-z\s'.\-]*?):\s*(.+)$")
+    # Parse lines from body: "CHARACTER: text" format. Any letter opens the
+    # name, so "ŞİRİN: ..." is a line as "SARAH: ..." always was.
+    line_pattern = re.compile(r"^([^\W\d_](?:[^\W\d_]|[\s'.\-])*?):\s*(.+)$")
     parsed_lines = []
     for raw_line in request.body.strip().split("\n"):
         raw_line = raw_line.strip()

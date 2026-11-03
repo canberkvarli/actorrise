@@ -464,7 +464,7 @@ def prepass_can_honour(filters: Optional[dict], title: str) -> bool:
 
 
 def find_title_monologues(db, title: str, filters: Optional[dict] = None,
-                          limit: int = 20, languages: tuple = ("en",)) -> list:
+                          limit: int = 20, languages: tuple | None = None) -> list:
     """The monologues of `title`, best-first. Empty list when we carry none.
 
     This is the pre-pass behind ``match_strategy="title_exact"``. The 2026-08-20
@@ -501,7 +501,7 @@ def find_title_monologues(db, title: str, filters: Optional[dict] = None,
 
 
 def find_author_monologues(db, author: str, filters: Optional[dict] = None,
-                           limit: int = 20, languages: tuple = ("en",)) -> list:
+                           limit: int = 20, languages: tuple | None = None) -> list:
     """The monologues of `author`, best-first. Empty when we carry none.
 
     Naming an author is a lookup, exactly as naming a show is, and for the
@@ -533,7 +533,7 @@ def find_author_monologues(db, author: str, filters: Optional[dict] = None,
 
 
 def _lookup_over_plays(db, title_norm: Optional[str], filters: dict,
-                       limit: int, browsing: bool = False, languages: tuple = ("en",)) -> list:
+                       limit: int, browsing: bool = False, languages: tuple | None = None) -> list:
     """Shared body: resolve matching plays, then their shippable monologues.
 
     `title_norm` None means "every play the other filters allow" — which is
@@ -1123,7 +1123,7 @@ def _surname_in_play(db, names, surname: str) -> bool:
 
 
 def find_character_monologues(db, names: list, filters: Optional[dict] = None,
-                              limit: int = 20, languages: tuple = ("en",)) -> list:
+                              limit: int = 20, languages: tuple | None = None) -> list:
     """Monologues whose character is `names` (the raw variants of one normalised
     name), best-first. The character sibling of find_title_monologues: same
     filter cascade, same review gate, same quality ordering. Empty on anything

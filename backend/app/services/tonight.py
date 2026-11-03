@@ -94,11 +94,15 @@ _POOL_TTL_SECONDS = 3600
 def _pool_ids(db: Session, house: str) -> list:
     """The house pool as ids, held for an hour: the read wall asks on every
     open, and the pool only moves as popularity does."""
-    hit = _pool_cache.get(house)
+    # Per library language too (CAN-19): the Turkish UI's pool is Turkish.
+    from app.services.library_language import current_languages
+
+    key = (house, current_languages())
+    hit = _pool_cache.get(key)
     if hit and time.time() - hit[0] < _POOL_TTL_SECONDS:
         return hit[1]
     ids = [int(m.id) for m in house_pool(db, house)]
-    _pool_cache[house] = (time.time(), ids)
+    _pool_cache[key] = (time.time(), ids)
     return ids
 
 

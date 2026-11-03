@@ -3,6 +3,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import (ARRAY, JSON, BigInteger, Boolean, Column, DateTime,
                         Float, ForeignKey, Integer, String, Text,
                         UniqueConstraint)
+from sqlalchemy import event
 from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import deferred, relationship
@@ -296,6 +297,17 @@ class SearchHistory(Base):
     filters = Column(JSONB(none_as_null=True), nullable=True)  # Applied filters
     result_count = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
+
+
+@event.listens_for(Play, "before_insert")
+def _mark_upload_language(_mapper, _connection, play) -> None:
+    """A new play that brings its text but no language is read for one, so an
+    upload in Turkish is marked Turkish wherever it was created (seven paths
+    in api/scripts.py). Only ever marks Turkish; see
+    services/library_language.mark_upload_language."""
+    from app.services.library_language import mark_upload_language
+
+    mark_upload_language(play)
 
 
 # ============================================================================

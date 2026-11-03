@@ -12,6 +12,7 @@ from app.models.actor import (Play, Scene, SceneFavorite, SceneLine,
 from app.models.user import User
 from app.services import class_shelf
 from app.services.rehearsal import journal
+from app.services.library_language import play_id_clause
 from app.services.rehearsal.language import script_language
 from app.services.rehearsal.access import (FREE_LIBRARY_SCENE_TITLES,
                                            is_free_library_scene as _is_free_library_scene)
@@ -127,6 +128,12 @@ async def list_scenes(
 
     if library_only:
         query = query.filter(Scene.is_library.is_(True))
+
+    # Anything but the actor's own uploads is library material, served in the
+    # request's language only (CAN-19): the Turkish UI never lists an English
+    # scene.
+    if not user_scripts_only:
+        query = query.filter(play_id_clause(Scene.play_id))
 
     if play_id:
         query = query.filter(Scene.play_id == play_id)
@@ -307,10 +314,12 @@ def whats_next(db: Session, user_id: int) -> Optional[dict]:
 
     # 4. Nothing of their own. The sample play speaks first — a real line of
     #    Shakespeare is a better welcome than an empty shelf.
+    #    The sample play is English, so the Turkish UI (CAN-19) has no demo.
     demo_scene = (
         db.query(Scene)
         .join(UserScript, Scene.user_script_id == UserScript.id)
-        .filter(UserScript.is_sample.is_(True), UserScript.is_guided.is_(False))
+        .filter(UserScript.is_sample.is_(True), UserScript.is_guided.is_(False),
+                play_id_clause(Scene.play_id))
         .order_by(UserScript.id, Scene.id)
         .first()
     )
@@ -351,15 +360,19 @@ def get_first_rehearsal_scene(
     Falls back to any free-tier library scene if the hero scene isn't seeded
     in this environment, so the activation flow degrades gracefully.
     """
+    # In the request's language (CAN-19): the hero scene is English, so the
+    # Turkish UI gets the 404 below until there is a Turkish one.
     scene = (
         db.query(Scene)
-        .filter(Scene.is_library.is_(True), Scene.title == FIRST_REHEARSAL_SCENE_TITLE)
+        .filter(Scene.is_library.is_(True), Scene.title == FIRST_REHEARSAL_SCENE_TITLE,
+                play_id_clause(Scene.play_id))
         .first()
     )
     if scene is None:
         scene = (
             db.query(Scene)
-            .filter(Scene.is_library.is_(True), Scene.title.in_(FREE_LIBRARY_SCENE_TITLES))
+            .filter(Scene.is_library.is_(True), Scene.title.in_(FREE_LIBRARY_SCENE_TITLES),
+                    play_id_clause(Scene.play_id))
             .first()
         )
     if scene is None:

@@ -2,7 +2,8 @@
 
 import { AuthProvider } from "@/lib/auth";
 import { QueryClient, QueryClientProvider, hydrate, dehydrate, type DehydratedState } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { currentLocale, useLocale } from "@/lib/i18n";
 
 const REACT_QUERY_CACHE_KEY = "actorrise-react-query-cache";
 const PERSIST_CACHE_MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
@@ -36,7 +37,8 @@ function persistCache(client: QueryClient) {
     const state = dehydrate(client);
     localStorage.setItem(
       REACT_QUERY_CACHE_KEY,
-      JSON.stringify({ clientState: state, timestamp: Date.now(), build: BUILD })
+      // The locale too: the library is served in the UI's language (CAN-19).
+      JSON.stringify({ clientState: state, timestamp: Date.now(), build: BUILD, locale: currentLocale() })
     );
   } catch {
     // Storage full or unavailable — ignore
@@ -55,9 +57,13 @@ function createQueryClient(): QueryClient {
           clientState?: DehydratedState;
           timestamp?: number;
           build?: string;
+          locale?: string;
         };
         const age = persisted.timestamp ? Date.now() - persisted.timestamp : 0;
-        if (age < PERSIST_CACHE_MAX_AGE && persisted.clientState && (persisted.build ?? "") === BUILD) {
+        // A cache written on the other UI language holds the other library
+        // (CAN-19): never drawn from. Older caches carry no locale: English.
+        const sameLocale = (persisted.locale ?? "en") === currentLocale();
+        if (age < PERSIST_CACHE_MAX_AGE && persisted.clientState && (persisted.build ?? "") === BUILD && sameLocale) {
           // The timestamp is the last write of the whole cache, which every
           // visit renews; each query's own age is what says it is a day old.
           const now = Date.now();
@@ -95,6 +101,17 @@ export function AuthProviderWrapper({ children }: { children: React.ReactNode })
     window.addEventListener("beforeunload", onUnload);
     return () => window.removeEventListener("beforeunload", onUnload);
   }, [queryClient]);
+
+  // The UI language picks the library (CAN-19), and every request says which
+  // (lib/api.ts). A switch mid-visit refetches everything, so no list drawn in
+  // one language stays on screen in the other.
+  const locale = useLocale();
+  const seenLocale = useRef(locale);
+  useEffect(() => {
+    if (seenLocale.current === locale) return;
+    seenLocale.current = locale;
+    void queryClient.invalidateQueries({ refetchType: "all" });
+  }, [locale, queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>

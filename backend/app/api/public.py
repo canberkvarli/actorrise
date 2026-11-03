@@ -8,7 +8,7 @@ Cached to limit DB load.
 import time
 from typing import Any
 
-from app.services.search.semantic_search import language_clause
+from app.services.search.semantic_search import DEFAULT_LANGUAGES, language_clause
 from app.core.database import get_db
 from app.models.actor import FilmTvReference, Monologue, Play
 from app.models.billing import UsageMetrics
@@ -80,7 +80,7 @@ def get_public_stats(db: Session = Depends(get_db)) -> dict[str, Any]:
     # unfiltered count() here would have advertised 15,016 against 8,597 real.
     # English only (CAN-19): the number is printed on English pages as the size
     # of the library an English speaker can search.
-    searchable = and_(Monologue.review_status.is_(None), language_clause())
+    searchable = and_(Monologue.review_status.is_(None), language_clause(DEFAULT_LANGUAGES))
 
     monologue_count = db.query(sql_count(Monologue.id)).filter(searchable).scalar() or 0
     play_monologue_count = (

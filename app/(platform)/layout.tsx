@@ -14,6 +14,7 @@ import { useFilmTvFavoriteCount } from "@/hooks/useFilmTvFavorites";
 import { useProfile } from "@/hooks/useDashboardData";
 import { SWRConfig } from "swr";
 import { localStorageProvider } from "@/lib/swrCache";
+import { SwrLocaleRefetch } from "@/components/i18n/SwrLocaleRefetch";
 import { useSubscription } from "@/hooks/useSubscription";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageTransition } from "@/components/transition/PageTransition";
@@ -262,6 +263,7 @@ export default function PlatformLayout({
         dedupingInterval: 10000, // 10 seconds
       }}
     >
+    <SwrLocaleRefetch />
     <TooltipProvider>
     <UploadProvider>
     {/* overflow-x-clip, not -hidden: `hidden` forces overflow-y to auto, which
