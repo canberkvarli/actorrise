@@ -1,0 +1,72 @@
+{
+  "id": "2026-11-07-ride-in",
+  "look": "cinema",
+  "cut": "hard",
+  "music": {
+    "style": "pulse",
+    "drop": "end"
+  },
+  "beats": [
+    {
+      "kind": "broll",
+      "seconds": 10.5,
+      "src": "reel/2026-11-07-ride-in/tram.mp4",
+      "start": 3,
+      "push": 0.04,
+      "dim": 0.3,
+      "at": "lower",
+      "credit": "MART PRODUCTION on Pexels",
+      "lines": [
+        {
+          "text": "Callback Friday.",
+          "accent": "Friday.",
+          "at": 0.5,
+          "until": 3.4
+        },
+        {
+          "text": "Lines on the ride in.",
+          "accent": "ride",
+          "at": 3.8,
+          "until": 6.9
+        },
+        {
+          "text": "Ghost Light runs them with you.",
+          "accent": "you.",
+          "at": 7.3
+        }
+      ],
+      "sfx": []
+    },
+    {
+      "kind": "end",
+      "seconds": 3.0,
+      "brand": "Ghost Light",
+      "line": "built by a working actor",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "pexels": 7252609,
+    "pexels_url": "https://www.pexels.com/video/woman-using-smartphone-while-riding-a-public-transportation-7252609/",
+    "author": "MART PRODUCTION",
+    "why": "One continuous medium wide shot on a tram, no cuts, no closeup, a real commuter on her phone. Stock person, never a user, never quoted.",
+    "idea": "ideas/i3 (subway, rehearsing on the way), feature=run-lines",
+    "feature": "run-lines"
+  },
+  "captions": {
+    "tiktok": "Callback Friday? The ride in is rehearsal now. #actorslife #actortok #audition #runlines #actors",
+    "youtube_title": "Callback Friday. Run lines on the ride in. #shorts",
+    "youtube_description": "Your commute is rehearsal time now.\nGhost Light runs lines with you, free on the App Store. Built by a working actor.\n#actorslife #audition #acting #actors",
+    "instagram": "Twenty minutes on the tram. Callback on Friday.\nThat's three full runs of your sides before you even get to work.\nGhost Light runs lines with you, built by a working actor. Link in bio.\n#actorslife #audition #actorsofinstagram #actortraining #monologue"
+  },
+  "cover_ms": 9000
+}
