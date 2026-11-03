@@ -1,37 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 
-import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { trackEvent } from "@/lib/events";
-import {
-  GUIDED_ACTOR,
-  GUIDED_LINE_COUNT,
-  GUIDED_OPENING_LINE,
-  GUIDED_PARTNER,
-  guidedRoute,
-  titleCase,
-} from "@/lib/guided-scene";
-import { fetchGuidedSceneId, startGuidedScene } from "@/lib/guided-start";
+import { GuidedChoices } from "@/components/practice/GuidedChoices";
 import { useUpload } from "@/components/practice/UploadProvider";
 import { useT } from "@/lib/i18n";
 
 /**
  * The hub, for an actor who has never rehearsed.
  *
- * Not a description of ScenePartner: the partner's first line, already said
- * to you, and one control that answers it. The shelf, the walkthrough and the
- * tour are all absent on this state; see lib/guided-invite.ts for who gets it.
+ * Not a description of ScenePartner: three short scenes, two parts each, and
+ * one tap on a part starts it. The shelf, the walkthrough and the tour are all
+ * absent on this state; see lib/guided-invite.ts for who gets it.
+ *
+ * Until 2026-11-03 this was "Late" alone (Riley's "You're late." and Answer).
  */
 export function GuidedInvitation() {
-  const router = useRouter();
   const { refreshUser } = useAuth();
   const t = useT();
   const { isUploading, openPicker } = useUpload();
-  const [starting, setStarting] = useState(false);
-  const [failed, setFailed] = useState(false);
   const shownRef = useRef(false);
 
   useEffect(() => {
@@ -46,75 +35,23 @@ export function GuidedInvitation() {
     trackEvent("guided_scene_shown");
   }, []);
 
-  // Warmed while they read the line: the rehearse page's own chunk, and the
-  // scene payload it fetches first. Asking for the payload here is what queues
-  // the partner's audio on the server, so by the time they tap Answer the
-  // lines Riley speaks are synthesised or on their way. The page fetches the
-  // payload again itself; the second ask finds the audio already there.
-  const [sceneId, setSceneId] = useState<number | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const id = await fetchGuidedSceneId();
-        if (cancelled) return;
-        setSceneId(id);
-        router.prefetch(guidedRoute(id));
-        await api.get(`/api/rehearsal/scenes/${id}`);
-      } catch {}
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
-
-  const answer = async () => {
-    if (starting) return;
-    setStarting(true);
-    setFailed(false);
-    // The tap itself lives in lib/guided-start (the onboarding card ends on
-    // the same scene): mic asked for inside the gesture, the scene found, the
-    // start logged. If the scene id has not arrived yet it asks once more
-    // rather than send them to a page that cannot open.
-    try {
-      router.push(await startGuidedScene("hub", sceneId));
-    } catch {
-      setFailed(true);
-      setStarting(false);
-      return;
-    }
-    // Answering IS seeing the first rehearsal. POST /api/rehearsal/runs/guided
-    // sets has_seen_first_rehearsal on the server (lib/guided-invite reads it);
-    // the user is pulled afterwards so the hub does not invite again if they
-    // come straight back. After the cut, not before: refreshing first
-    // re-rendered this page as the shelf for the beat the route change took,
-    // which read as two pages flashing past.
+  // Starting IS seeing the first rehearsal. POST /api/rehearsal/runs/guided
+  // sets has_seen_first_rehearsal on the server (lib/guided-invite reads it);
+  // the user is pulled after the cut so the hub does not invite again if they
+  // come straight back, and never before it (the shelf flashed past).
+  const leaving = () => {
     setTimeout(() => void refreshUser(), 4000);
   };
 
   return (
-    <section className="t-invite" aria-labelledby="guided-opening-line" data-starting={starting}>
-      <p className="t-invite__cue">{GUIDED_PARTNER}</p>
-      <h1 id="guided-opening-line" className="t-invite__line">
-        {GUIDED_OPENING_LINE}
+    <section className="t-invite" aria-labelledby="guided-pick-title">
+      <h1 id="guided-pick-title" className="t-invite__line">
+        {t("appPracticeGuided.pickTitle")}
       </h1>
-      <p className="t-invite__house">
-        {starting
-          ? t("appPracticeGuided.waiting", { partner: titleCase(GUIDED_PARTNER) })
-          : t("appPracticeGuided.house", {
-              partner: titleCase(GUIDED_PARTNER),
-              actor: titleCase(GUIDED_ACTOR),
-              n: GUIDED_LINE_COUNT,
-            })}
-      </p>
-      <button type="button" className="t-invite__answer" onClick={answer} disabled={starting}>
-        {starting ? t("appPracticeGuided.oneMoment") : t("appPracticeGuided.answer")}
-      </button>
-      {failed && (
-        <p className="t-invite__house" role="alert">
-          {t("appPracticeGuided.failed")}
-        </p>
-      )}
+      <p className="t-invite__house">{t("appPracticeGuided.pickHouse")}</p>
+      <div className="mt-6 w-full">
+        <GuidedChoices from="hub" onLeaving={leaving} />
+      </div>
       <div className="t-invite__alt">
         <button type="button" className="t-how-link" onClick={openPicker} disabled={isUploading}>
           {isUploading ? t("appPracticeGuided.bringingIn") : t("appPracticeGuided.bringInstead")}
@@ -123,4 +60,3 @@ export function GuidedInvitation() {
     </section>
   );
 }
-

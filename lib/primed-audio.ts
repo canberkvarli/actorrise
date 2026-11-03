@@ -120,3 +120,46 @@ export function takePrimedAudio(): HTMLAudioElement | null {
   primed = null;
   return audio;
 }
+
+/*
+ * The same, for the rehearse page's AudioContext (lib/rehearsal/browser/
+ * audio-player.ts), which is what actually plays the partner now.
+ *
+ * Until 2026-11-03 nothing primed it. The Answer tap asked for the mic and
+ * moved on, so on an iPhone the page opened with a suspended context and sat
+ * on "Tap to begin" in grey on the script: 44 of 71 guided runs on iOS in
+ * October never logged a single event. A context resumed inside the Answer
+ * tap is still running after the client-side route change, and the run
+ * begins by itself as it does on desktop. If it is not (the mic prompt can
+ * interrupt it), the page still has its own tap.
+ */
+let primedContext: AudioContext | null = null;
+
+/** Call first thing, synchronously, inside the tap that leads to a scene. */
+export function primeAudioContext(): void {
+  if (typeof window === "undefined" || typeof AudioContext === "undefined") return;
+  try {
+    if (primedContext && primedContext.state !== "closed") {
+      void primedContext.resume().catch(() => {});
+      return;
+    }
+    const ctx = new AudioContext({ latencyHint: "interactive" });
+    void ctx.resume().catch(() => {});
+    // One silent sample: older iOS only counts the context as unlocked once
+    // something has been started on it inside the gesture.
+    const src = ctx.createBufferSource();
+    src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+    src.connect(ctx.destination);
+    src.start(0);
+    primedContext = ctx;
+  } catch {
+    primedContext = null;
+  }
+}
+
+/** Taken once by the next AudioPlayer; null if nothing was primed. */
+export function takePrimedContext(): AudioContext | null {
+  const ctx = primedContext;
+  primedContext = null;
+  return ctx && ctx.state !== "closed" ? ctx : null;
+}

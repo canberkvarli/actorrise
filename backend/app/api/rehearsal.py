@@ -23,7 +23,7 @@ from app.models.rehearsal import PartnerAudio, RehearsalEvent, RehearsalRun
 from app.models.user import User
 from app.services import class_shelf
 from app.services.events import record_user_event
-from app.services.guided_scene import GUIDED_ACTOR, guided_scene, guided_scenes, guided_script_of
+from app.services.guided_scene import GUIDED_ACTOR, guided_key, guided_scene, guided_scenes, guided_script_of
 from app.services.rehearsal import journal, partner_audio
 from app.services.rehearsal.access import assert_can_rehearse, can_direct_partner
 from app.services.rehearsal.contract import RehearsalLine, lines_for, same_character
@@ -397,13 +397,21 @@ def start_run(
     return {"run_id": run.id, "voices": voices}
 
 
+# Where a guided run was started from, as the web says it. Anything else is dropped.
+GUIDED_DOORS = frozenset({"hub", "onboarding"})
+
+
 class StartGuided(BaseModel):
-    """The phone's first scenes: one of the guided scenes, the part the actor
-    picked and the voice they heard. All optional; the web sends nothing and
-    gets the one scene and part it always did."""
+    """One of the guided scenes, the part the actor picked and the voice they
+    heard (the phone; the web since 2026-11-03, which offers the same three).
+    All optional: an old web link sends nothing and gets Late and ALEX.
+    `from` is the door, hub or onboarding (the web only)."""
+    model_config = {"populate_by_name": True}
+
     scene_id: int | None = None
     character: str | None = None
     voices: dict[str, str] = Field(default_factory=dict)
+    door: str | None = Field(default=None, alias="from")
 
 
 @router.post("/runs/guided")
@@ -439,7 +447,10 @@ def start_guided_run(
     # computed from the meter, which this route deliberately does not touch.
     user.has_seen_first_rehearsal = True
     db.commit()
-    record_user_event(user.id, "guided_scene_started", {"platform": "web"})
+    props: dict[str, Any] = {"platform": "web", "key": guided_key(db, scene)}
+    if req.door in GUIDED_DOORS:
+        props["from"] = req.door
+    record_user_event(user.id, "guided_scene_started", props)
     return {"run_id": run.id, "scene_id": scene.id, "character": actor, "voices": voices}
 
 

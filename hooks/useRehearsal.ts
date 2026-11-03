@@ -39,6 +39,7 @@ import { AudioPlayer } from '@/lib/rehearsal/browser/audio-player';
 import { LineLoader, type LineSource } from '@/lib/rehearsal/browser/line-loader';
 import { getCharacterNotes } from '@/lib/scenePrefs';
 import { speechLang } from '@/lib/speech-language';
+import { platformOf } from '@/lib/guided-scene';
 
 export type { Readiness };
 
@@ -47,8 +48,11 @@ export interface Rehearsal {
   readiness: Readiness;
   /** `line1 && stt && !error`. */
   canBegin: boolean;
-  /** Once per mount, after the actor has chosen a part and voices. Rejects if the run cannot be opened (the Plus gate). */
-  prepare: (character: string, voices: Record<string, string>, opts?: { guided?: boolean; resumeLine?: number; resumeRunId?: number }) => Promise<void>;
+  /**
+   * Once per mount, after the actor has chosen a part and voices. Rejects if the run cannot be opened (the Plus gate).
+   * A guided run sends `character` only when the actor picked one of the keyed scenes' parts; `from` is the door.
+   */
+  prepare: (character: string, voices: Record<string, string>, opts?: { guided?: boolean; from?: string; resumeLine?: number; resumeRunId?: number }) => Promise<void>;
   /** Call from the Begin tap itself: the audio context is unlocked synchronously inside it. */
   begin: () => void;
   /**
@@ -60,7 +64,25 @@ export interface Rehearsal {
   /** The Plus gate (or the meter) refused the run; its message is `readiness.error`. */
   gated: boolean;
   pause: () => void; resume: () => void; skip: () => void; back: () => void; jumpTo: (line: number) => void;
+  /** The actor's line again, mic reopened, no cue (an unheard line). */
+  sayAgain: () => void;
   leave: () => void;
+}
+
+/** Seconds of an open mic with nothing heard before a guided line shows big. */
+export const GUIDED_UNHEARD_S = 6;
+
+/**
+ * Why a run that never logged `started` stopped waiting, from what the page
+ * had when it went. Before 2026-11-03 such a run left no event at all (145 of
+ * 305 guided runs of "Late" in October), so nobody could tell a slow partner
+ * line from a live session that never opened from an iPhone waiting for a tap.
+ */
+export function waitingOn(r: { line1: boolean; stt: boolean; error: string | null }): 'error' | 'line' | 'live' | 'tap' {
+  if (r.error) return 'error';
+  if (!r.line1) return 'line';
+  if (!r.stt) return 'live';
+  return 'tap';
 }
 
 type Opened = { run_id: number; scene_id: number; character: string; voices: Record<string, string> };
@@ -101,6 +123,13 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
   const resumeLineRef = useRef<number | null>(null);
   const preparedRef = useRef(false);
   const failedRef = useRef(new Map<number, string>()); // partner line → why it failed to load
+  const [deaf, setDeaf] = useState(false); // a guided run going on without its live session
+  const [opened, setOpened] = useState(false); // the engine exists (a live session can fail before it does)
+  const guidedRef = useRef(false);
+  // When the run opened and when each half of readiness arrived, for the
+  // event a run that never starts leaves behind (waitingOn).
+  const preStart = useRef({ openedAt: 0, line1Ms: null as number | null, sttMs: null as number | null, logged: false });
+  const readinessRef = useRef<Readiness | null>(null);
   // handover_ms is read off the audio clock, which does not advance inside one
   // JS task, so on a last-word handover it is 0 by construction and never
   // measures our work. compute_ms is that work: from the words (or the quiet)
@@ -158,7 +187,8 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
         resumeLine = picked.line_index;
       } else {
         run = opts?.guided
-          ? (await api.post<GuidedRun>('/api/rehearsal/runs/guided')).data
+          ? (await api.post<GuidedRun>('/api/rehearsal/runs/guided',
+              character ? { scene_id: payload.scene.id, character, from: opts.from } : { from: opts.from })).data
           : { scene_id: payload.scene.id, character, ...(await api.post<{ run_id: number; voices: Record<string, string> }>(
               '/api/rehearsal/runs', { scene_id: payload.scene.id, character, voices })).data };
       }
@@ -179,6 +209,8 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     }
 
     void open();
+    guidedRef.current = Boolean(opts?.guided);
+    preStart.current = { openedAt: performance.now(), line1Ms: null, sttMs: null, logged: false };
     const player = (playerRef.current ??= new AudioPlayer());
     const loader = (loaderRef.current ??= new LineLoader(player));
     const journal = (journalRef.current = new Journal(transportFor(run.run_id, tokenRef)));
@@ -194,7 +226,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
         journal.emit(type, line, at, payload); flush();
       } },
       schedule: (at, fn) => player.schedule(at, fn),
-    });
+    }, opts?.guided ? { unheardAfterS: GUIDED_UNHEARD_S } : {});
     resumeLineRef.current = resumeLine;
     const first = firstNeededLine(script, resumeLine);
     const start = first ?? resumeLine ?? 0;
@@ -210,6 +242,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     let last = -1;
     engine.subscribe(() => { publish(); const at = cursor(); if (at !== last) { last = at; follow(); } });
     engineRef.current = engine;
+    setOpened(true);
     if (process.env.NODE_ENV !== 'production') (window as Window & { __rehearsal?: Engine }).__rehearsal = engine;
     publish();
 
@@ -244,33 +277,66 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
 
   const tryUnlock = useCallback(() => playerRef.current?.unlock().state === 'running', []);
 
-  // The live session failed to open or dropped: the run stops there.
+  // The live session failed to open or dropped: the run stops there. A guided
+  // run goes on without it (Engine.deafen): each of the actor's lines shows
+  // with "next", which beats "something went wrong" on the first scene of
+  // someone's first visit. 25 of the 69 runs of "Late" that stopped on line
+  // one in October stopped this way.
   useEffect(() => {
-    if (status !== 'error') return;
+    if (status !== 'error' || !opened) return;
+    if (guidedRef.current && engineRef.current?.deafen()) { setDeaf(true); return; }
     engineRef.current?.abandon('stt_failed');
     loaderRef.current?.stop(); // nothing will play: stop polling for partner audio
+  }, [status, opened]);
+
+  useEffect(() => {
+    if (status === 'ready' && preStart.current.openedAt && preStart.current.sttMs === null)
+      preStart.current.sttMs = Math.round(performance.now() - preStart.current.openedAt);
   }, [status]);
+  useEffect(() => {
+    if (base.line1 && preStart.current.openedAt && preStart.current.line1Ms === null)
+      preStart.current.line1Ms = Math.round(performance.now() - preStart.current.openedAt);
+  }, [base.line1]);
+
+  /**
+   * A run that is open and never began says why when the page goes: an
+   * `abandoned` (closing it) as the page leaves, a `paused` (not closing it)
+   * when the tab is only hidden. Payload: what it was waiting on, how long
+   * each half of readiness took, the platform. Once per kind.
+   */
+  const notStarted = useCallback((type: 'abandoned' | 'paused', reason: string) => {
+    const engine = engineRef.current, journal = journalRef.current, p = preStart.current;
+    if (!engine || !journal || engine.snapshot().state !== 'ready' || (type === 'abandoned' && p.logged)) return;
+    if (type === 'abandoned') p.logged = true;
+    const r = readinessRef.current ?? { line1: false, stt: false, error: null, mic: false, upgradeUrl: null };
+    journal.emit(type, null, 0, {
+      reason, before_start: true, waiting_on: waitingOn(r), error: r.error, mic: r.mic,
+      open_ms: Math.round(performance.now() - p.openedAt), line1_ms: p.line1Ms, stt_ms: p.sttMs,
+      guided: guidedRef.current, platform: platformOf(navigator.userAgent),
+    });
+  }, []);
 
   // Hidden: pause and send what is pending. Visible again: the context resumes, the scene does not.
   useEffect(() => {
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden') { engineRef.current?.pause(); journalRef.current?.beacon(); }
+      if (document.visibilityState === 'hidden') { notStarted('paused', 'hidden'); engineRef.current?.pause(); journalRef.current?.beacon(); }
       else if (engineRef.current && playerRef.current) playerRef.current.context().resume().catch(() => {});
     };
-    const onPageHide = () => journalRef.current?.beacon();
+    const onPageHide = () => { notStarted('abandoned', 'pagehide'); journalRef.current?.beacon(); };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pagehide', onPageHide);
     return () => { document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('pagehide', onPageHide); };
-  }, []);
+  }, [notStarted]);
 
   useEffect(() => () => {
+    notStarted('abandoned', 'unmounted');
     engineRef.current?.abandon('unmounted');
     journalRef.current?.beacon();
     if (process.env.NODE_ENV !== 'production') delete (window as Window & { __rehearsal?: Engine }).__rehearsal;
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     loaderRef.current?.stop();
     playerRef.current?.close();
-  }, []);
+  }, [notStarted]);
 
   // Every control that can start a partner line unlocks first, synchronously,
   // like begin: iOS suspends the context when the tab hides or the mic moves,
@@ -286,14 +352,17 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
       skip: () => unlocked(e => e.skip()),
       back: () => unlocked(e => e.back()),
       jumpTo: (l: number) => unlocked(e => e.jumpTo(l)),
-      leave: () => { engineRef.current?.abandon('left'); journalRef.current?.beacon(); },
+      sayAgain: () => engineRef.current?.sayAgain(),
+      leave: () => { notStarted('abandoned', 'left'); engineRef.current?.abandon('left'); journalRef.current?.beacon(); },
     };
-  }, []);
+  }, [notStarted]);
 
   const readiness: Readiness = {
     ...base,
-    stt: status === 'ready',
-    error: base.error ?? lineError ?? (status === 'error' ? plainError(liveFailureKind(base.mic)) : null),
+    // A deaf guided run has no live session to wait for.
+    stt: status === 'ready' || deaf,
+    error: base.error ?? lineError ?? (status === 'error' && !deaf ? plainError(liveFailureKind(base.mic)) : null),
   };
+  readinessRef.current = readiness;
   return { snapshot, readiness, canBegin: canBegin(readiness), prepare, begin, tryUnlock, gated, ...controls };
 }

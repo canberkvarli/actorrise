@@ -1,3 +1,5 @@
+import { takePrimedContext } from '@/lib/primed-audio';
+
 /**
  * One AudioContext for the run. Decodes partner lines into buffers and
  * schedules them on the context clock, which is the clock the engine uses
@@ -14,7 +16,8 @@ export class AudioPlayer {
 
   /** The one place a context is made, so the interruption listener is always on it. */
   private create(): AudioContext {
-    const ctx = new AudioContext({ latencyHint: 'interactive' });
+    // The context the Answer tap started, when there is one (lib/primed-audio).
+    const ctx = takePrimedContext() ?? new AudioContext({ latencyHint: 'interactive' });
     ctx.addEventListener('statechange', () => {
       if (this.ctx === ctx && ctx.state !== 'running') this.onInterrupted?.();
     });

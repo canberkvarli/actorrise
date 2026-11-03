@@ -12,7 +12,8 @@ import { useErrorText } from './errorText';
 
 /**
  * /scenes/<id>/rehearse — fetch the scene, hand off. `?guided=1` is the first
- * run, where the server picks the part. `?go=1` comes from the scene preview,
+ * run: `as` is the part tapped on the three first scenes (none on an old Late
+ * link, where the server picks), `from` the door (hub | onboarding). `?go=1` comes from the scene preview,
  * where the actor already cast it: no Curtain when the saved part fits.
  *
  * No skeleton and no spinner: the page is paper until the script is there.
@@ -24,6 +25,8 @@ export default function RehearsePage() {
   const search = useSearchParams();
   const guided = search.get('guided') === '1';
   const go = search.get('go') === '1';
+  const guidedAs = search.get('as');
+  const from = search.get('from');
   const [payload, setPayload] = useState<ScenePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { refreshUser } = useAuth();
@@ -50,7 +53,7 @@ export default function RehearsePage() {
   return (
     <div className={`theatre-tokens theatre-rehearsal overflow-x-clip ${theatreFontVars} ${typewriterFontVar}`}>
       {error && <p className="r-chrome mx-auto max-w-prose px-6 py-16">{errorText(error)}</p>}
-      {payload && <RehearseScreen payload={payload} guided={guided} go={go} />}
+      {payload && <RehearseScreen payload={payload} guided={guided} go={go} guidedAs={guidedAs} from={from} />}
     </div>
   );
 }

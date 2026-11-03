@@ -20,6 +20,7 @@ import { Stage } from './Stage';
 import { Dock, TopBar } from './Dock';
 import { Ending } from './Ending';
 import { FirstRunHint } from './FirstRunHint';
+import { Unheard } from './Unheard';
 import { useErrorText } from './errorText';
 import { useT } from '@/lib/i18n';
 
@@ -43,11 +44,17 @@ const failure = () => plainError('other');
  * part and it is the Curtain; so is the Plus gate
  * (lib/rehearsal/entry decides).
  */
-export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload; guided: boolean; go: boolean }) {
+export function RehearseScreen({ payload, guided, go, guidedAs, from }: {
+  payload: ScenePayload; guided: boolean; go: boolean;
+  /** The part picked on one of the three first scenes; absent on an old Late link (the server picks). */
+  guidedAs?: string | null;
+  /** The door a guided run came through: hub | onboarding. */
+  from?: string | null;
+}) {
   const router = useRouter();
   const t = useT();
   const errorText = useErrorText();
-  const { snapshot, readiness, canBegin, prepare, begin, tryUnlock, gated, pause, resume, skip, back, jumpTo, leave } = useRehearsal(payload);
+  const { snapshot, readiness, canBegin, prepare, begin, tryUnlock, gated, pause, resume, skip, back, jumpTo, sayAgain, leave } = useRehearsal(payload);
   // What the scene is spoken in (the script's language, not the UI's).
   const lang = speechLang(payload.language);
   const [goPart] = useState(() => skipsCurtain(payload.characters, getMyRoles(payload.scene.id),
@@ -83,12 +90,14 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
     }
   }, [prepare]);
 
-  // Guided: the server picks the part and the voices, so the arguments are empty.
+  // Guided: the part the actor tapped on the hub or the onboarding card (or,
+  // on an old Late link, none: the server picks); the server picks the voices.
   useEffect(() => {
     if (!guided || guidedStarted.current) return;
     guidedStarted.current = true;
-    prepare('', {}, { guided: true }).catch(() => setPrepError(failure()));
-  }, [guided, prepare]);
+    const part = guidedAs && payload.characters.find(c => sameCharacter(c, guidedAs));
+    prepare(part || '', {}, { guided: true, from: from ?? undefined }).catch(() => setPrepError(failure()));
+  }, [guided, guidedAs, from, payload.characters, prepare]);
 
   // Go: prepare once, on mount, as the Curtain would on a tapped part.
   useEffect(() => {
@@ -186,11 +195,18 @@ export function RehearseScreen({ payload, guided, go }: { payload: ScenePayload;
           <span>{t('appScenesRehearse.gettingReady')}</span>
         </div>
       )}
+      {/* iOS only, mostly: the context did not survive the trip from the tap.
+          A real button, not grey words on the script; the whole sheet still
+          takes the tap. */}
       {waitingTap && !error && (
-        <button type="button" className="fixed inset-0 z-40 block w-full cursor-default" onClick={begin}>
-          <motion.span className="r-chrome r-soft absolute inset-x-0 top-[40dvh] text-center text-base"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25, duration: 0.3 }}>{t('appScenesRehearse.tapToBegin')}</motion.span>
-        </button>
+        <div className="fixed inset-0 z-40 flex cursor-default items-center justify-center"
+          style={{ background: 'color-mix(in oklab, var(--t-paper) 60%, transparent)' }} onClick={begin}>
+          <motion.button type="button" className="r-play r-play--wide" onClick={e => { e.stopPropagation(); begin(); }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25, duration: 0.3 }}>{t('appScenesRehearse.begin')}</motion.button>
+        </div>
+      )}
+      {snapshot?.state === 'actor' && snapshot.unheard && !error && liveLine !== null && (
+        <Unheard text={payload.lines[liveLine]?.text ?? ''} deaf={snapshot.deaf} onAgain={sayAgain} onSkip={skip} />
       )}
       {ended && !error && <Ending scene={payload.scene} language={payload.language} guided={guided} onAgain={onAgain} onLeave={onLeave} />}
       {error && (

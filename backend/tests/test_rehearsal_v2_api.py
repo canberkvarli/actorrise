@@ -220,7 +220,7 @@ class Api(unittest.TestCase):
         self.assertEqual((body["scene_id"], body["character"]), (self.scene.id, api.GUIDED_ACTOR))
         self.assertTrue(self.db.get(RehearsalRun, body["run_id"]).is_guided)
         api.assert_can_rehearse.assert_not_called()
-        api.record_user_event.assert_called_once_with(self.user.id, "guided_scene_started", {"platform": "web"})
+        api.record_user_event.assert_called_once_with(self.user.id, "guided_scene_started", {"platform": "web", "key": "late"})
         with mock.patch.object(api, "guided_scene", return_value=None):
             self.assertEqual(self.client.post("/api/rehearsal/runs/guided").status_code, 404)
 
@@ -255,6 +255,20 @@ class Api(unittest.TestCase):
         self.assertEqual(r.json()["character"], "JO")
         # A scene that is not guided is not a guided run, whoever asks.
         self.assertEqual(self.client.post("/api/rehearsal/runs/guided", json={"scene_id": self.scene.id}).status_code, 404)
+
+    def test_guided_scene_started_carries_the_scene_key_and_the_door(self):
+        from scripts.seed_sample_script import seed_guided_three
+        seed_guided_three(self.db); self.db.commit()
+        flirt = self.db.query(Scene).filter(Scene.title == "A flirt").one()
+        api.record_user_event.reset_mock()
+        r = self.client.post("/api/rehearsal/runs/guided", json={"scene_id": flirt.id, "character": "ELI", "from": "onboarding"})
+        self.assertEqual(r.status_code, 200, r.text)
+        api.record_user_event.assert_called_once_with(
+            self.user.id, "guided_scene_started", {"platform": "web", "key": "flirt", "from": "onboarding"})
+        # A door the web never sends is dropped, not stored.
+        api.record_user_event.reset_mock()
+        self.client.post("/api/rehearsal/runs/guided", json={"scene_id": flirt.id, "character": "ELI", "from": "<script>"})
+        api.record_user_event.assert_called_once_with(self.user.id, "guided_scene_started", {"platform": "web", "key": "flirt"})
 
     def test_guided_run_marks_the_first_rehearsal_seen(self):
         """What the old start-guided route did: the hub stops inviting because

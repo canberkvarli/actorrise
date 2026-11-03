@@ -7,6 +7,11 @@ export const appScenes = {
     epilogue: "Epilogue",
   },
   appScenesRehearse: {
+    unheardSayAgain: "Say it again",
+    unheardSkip: "Skip line",
+    unheardHint: "I didn't catch that.",
+    unheardDeaf: "Say it out loud, then tap next.",
+    unheardNext: "Next",
     startFrom: "Start from {character}: {text}",
     you: "you",
     leave: "Leave",

@@ -9,6 +9,11 @@ export const appScenes: Widen<typeof en> = {
     epilogue: "Epilog",
   },
   appScenesRehearse: {
+    unheardSayAgain: "Tekrar söyle",
+    unheardSkip: "Repliği geç",
+    unheardHint: "Duyamadım.",
+    unheardDeaf: "Yüksek sesle söyle, sonra ilerle.",
+    unheardNext: "İlerle",
     startFrom: "{character} ile buradan başla: {text}",
     you: "sen",
     leave: "Çık",

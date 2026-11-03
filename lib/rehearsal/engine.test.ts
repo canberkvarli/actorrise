@@ -424,3 +424,78 @@ describe('Engine: "line" said out loud', () => {
     expect(e.snapshot().calls).toBe(0);
   });
 });
+
+describe('Engine: an unheard line (the guided scene)', () => {
+  let ports: ReturnType<typeof fakePorts>;
+  let engine: Engine;
+  const micOpen = 100 + 1.0 + BREATH_S + 0.5;
+  const toActor = () => { engine.begin(); ports.tick(micOpen - 100); fire(micOpen); };
+  beforeEach(() => { timers = []; ports = fakePorts(); engine = new Engine(buildScript(LINES, 'ANNA'), ports, { unheardAfterS: 6 }); });
+
+  it('goes unheard after the wait with no word, and never plays the partner again', () => {
+    toActor();
+    const plays = ports.scheduled.length;
+    ports.tick(5.9); fire(ports.now());
+    expect(engine.snapshot().unheard).toBe(false);
+    ports.tick(0.2); fire(ports.now());
+    expect(engine.snapshot().unheard).toBe(true);
+    expect(engine.snapshot().state).toBe('actor');
+    ports.tick(30); fire(ports.now());
+    expect(ports.scheduled.length).toBe(plays);
+  });
+
+  it('a word heard pushes the wait on from that word', () => {
+    toActor();
+    ports.tick(4); engine.delta('out');
+    ports.tick(4); fire(ports.now());
+    expect(engine.snapshot().unheard).toBe(false);
+    ports.tick(2.1); fire(ports.now());
+    expect(engine.snapshot().unheard).toBe(true);
+  });
+
+  it('say it again reopens the mic on the same line without the cue', () => {
+    toActor();
+    ports.tick(7); fire(ports.now());
+    const plays = ports.scheduled.length;
+    engine.sayAgain();
+    const s = engine.snapshot();
+    expect(s.unheard).toBe(false);
+    expect(s.lineIndex).toBe(2);
+    expect(ports.mic.open).toHaveBeenCalledTimes(2);
+    expect(ports.scheduled.length).toBe(plays);
+    ports.tick(7); fire(ports.now());
+    expect(engine.snapshot().unheard).toBe(true);
+  });
+
+  it('skip line moves the scene on and journals how the line went', () => {
+    toActor();
+    ports.tick(7); fire(ports.now());
+    engine.sayAgain();
+    engine.skip();
+    expect(engine.snapshot().lineIndex).toBe(3);
+    expect(ports.journal.emit).toHaveBeenCalledWith('actor_line_read', 2, expect.any(Number),
+      expect.objectContaining({ ended_by: 'skipped', unheard: 1, again: 1, deaf: false }));
+  });
+
+  it('deaf: the run goes on, each actor line shown at once with no mic', () => {
+    toActor();
+    expect(engine.deafen()).toBe(true);
+    expect(engine.snapshot().unheard).toBe(true);
+    engine.sayAgain(); // no mic to say it to
+    expect(ports.mic.open).toHaveBeenCalledTimes(1);
+    engine.skip();
+    const end = ports.now() + 0.4; ports.tick(0.4); fire(end);
+    expect(engine.snapshot().state).toBe('actor');
+    expect(engine.snapshot().unheard).toBe(true);
+    expect(ports.mic.open).toHaveBeenCalledTimes(1);
+  });
+
+  it('without the option nothing goes unheard and deafen refuses', () => {
+    const plain = new Engine(buildScript(LINES, 'ANNA'), ports);
+    timers = [];
+    plain.begin(); ports.tick(micOpen - 100); fire(micOpen);
+    ports.tick(60); fire(ports.now());
+    expect(plain.snapshot().unheard).toBe(false);
+    expect(plain.deafen()).toBe(false);
+  });
+});

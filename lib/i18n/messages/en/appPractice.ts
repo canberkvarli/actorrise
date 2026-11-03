@@ -62,6 +62,9 @@ export const appPractice = {
     readThis: "Read this",
   },
   appPracticeGuided: {
+    pickTitle: "Pick a scene.",
+    pickHouse: "Pick your part. I'll read the other one. Under a minute.",
+    playAs: "Play {name}, {who}",
     waiting: "{partner} is waiting.",
     house: "I'll read {partner}. You're {actor}. {n} lines, under a minute.",
     oneMoment: "One moment",

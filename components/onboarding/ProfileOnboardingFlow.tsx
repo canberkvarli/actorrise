@@ -10,8 +10,7 @@ import { trackEvent } from "@/lib/events";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { useLocale, useT, type MessageKey } from "@/lib/i18n";
 import { markOnboardingDone } from "@/components/onboarding/useTourTrigger";
-import { fetchGuidedSceneId, startGuidedScene } from "@/lib/guided-start";
-import { GUIDED_ACTOR, GUIDED_LINE_COUNT, GUIDED_PARTNER, titleCase } from "@/lib/guided-scene";
+import { GuidedChoices } from "@/components/practice/GuidedChoices";
 import { noteOnboardingPicksKept } from "@/lib/onboardingPicks";
 import { Glyph } from "@/components/brand/glyphs";
 import LampSketch from "@/components/onboarding/LampSketch";
@@ -367,9 +366,6 @@ export default function ProfileOnboardingFlow({
   // "ending" is the new-account close: one line to say, not a list. The
   // backfill variant (an actor who already has a shelf) keeps the payoff.
   const [phase, setPhase] = useState<"q" | "settling" | "ending" | "payoff">("q");
-  const guidedIdRef = useRef<number | null>(null);
-  const [answering, setAnswering] = useState(false);
-  const [answerFailed, setAnswerFailed] = useState(false);
   const [picks, setPicks] = useState<Monologue[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -497,10 +493,6 @@ export default function ProfileOnboardingFlow({
     setSubmitting(true);
     setDirection(1);
     setPhase("settling");
-    // The scene id, fetched while the profile writes, so Answer is instant.
-    if (variant === "new" && accountType !== "educator") {
-      void fetchGuidedSceneId().then((id) => { guidedIdRef.current = id; }).catch(() => {});
-    }
     try {
       await persist();
     } catch {
@@ -551,21 +543,11 @@ export default function ProfileOnboardingFlow({
     setSubmitting(false);
   }, [submitting, persist, answers, variant, accountType, endFlow, router]);
 
-  /** Answer on the ending: the same tap as the hub's invitation. */
-  const answerScene = useCallback(async () => {
-    if (answering) return;
-    setAnswering(true);
-    setAnswerFailed(false);
+  /** A part tapped on the ending: the same three scenes as the hub's invitation. */
+  const answerScene = useCallback(() => {
     trackEvent("onboarding_ending_answer");
-    try {
-      const route = await startGuidedScene("onboarding", guidedIdRef.current);
-      endFlow();
-      router.push(route);
-    } catch {
-      setAnswerFailed(true);
-      setAnswering(false);
-    }
-  }, [answering, endFlow, router]);
+    endFlow();
+  }, [endFlow]);
 
   const skipScene = useCallback(() => {
     trackEvent("onboarding_ending_skip");
@@ -980,7 +962,7 @@ export default function ProfileOnboardingFlow({
               exit={{ opacity: 0, x: -28 }}
               transition={stepTransition}
             >
-              <OnboardingEnding onAnswer={answerScene} onSkip={skipScene} answering={answering} failed={answerFailed} />
+              <OnboardingEnding onLeaving={answerScene} onSkip={skipScene} />
             </motion.div>
           ) : (
             <motion.div
@@ -1099,20 +1081,8 @@ async function fetchPicks(answers: OnboardingAnswers): Promise<Monologue[]> {
  */
 const SKIP_DELAY_MS = 4000;
 
-function OnboardingEnding({
-  onAnswer,
-  onSkip,
-  answering,
-  failed,
-}: {
-  onAnswer: () => void;
-  onSkip: () => void;
-  answering: boolean;
-  failed: boolean;
-}) {
+function OnboardingEnding({ onLeaving, onSkip }: { onLeaving: () => void; onSkip: () => void }) {
   const t = useT();
-  const partner = titleCase(GUIDED_PARTNER);
-  const actor = titleCase(GUIDED_ACTOR);
   // The way out to the library stays, but it is not the first thing on the
   // card any more: it arrives after a few seconds, smaller. Long enough to
   // read the invitation, short enough that nobody in a hurry is held.
@@ -1138,20 +1108,11 @@ function OnboardingEnding({
         {t("appShellOnboarding.sayC")}
       </h2>
       <p className="mx-auto mt-4 max-w-[34ch] text-[15px] leading-relaxed" style={{ color: "var(--t-muted-dark)" }}>
-        {answering
-          ? t("appShellOnboarding.partnerWaiting", { partner })
-          : t("appShellOnboarding.sceneInvite", { partner, actor, n: GUIDED_LINE_COUNT })}
+        {t("appPracticeGuided.pickHouse")}
       </p>
-      <div className="mx-auto mt-7 flex max-w-[280px] justify-center">
-        <CtaPill onClick={onAnswer} disabled={answering}>
-          {answering ? t("appShellOnboarding.oneMoment") : t("appShellOnboarding.answer")}
-        </CtaPill>
+      <div className="mt-6">
+        <GuidedChoices from="onboarding" onLeaving={onLeaving} />
       </div>
-      {failed && (
-        <p role="alert" className="mt-3 text-[13px]" style={{ color: "var(--t-muted-dark)" }}>
-          {t("appShellOnboarding.didntStart")}
-        </p>
-      )}
       <p
         className="mt-6 text-[12px] transition-opacity duration-700 motion-reduce:transition-none"
         style={{

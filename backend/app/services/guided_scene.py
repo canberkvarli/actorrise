@@ -54,6 +54,14 @@ def guided_scenes(db: Session) -> list[tuple[str, Scene, UserScript]]:
     return out
 
 
+def guided_key(db: Session, scene: Scene) -> str:
+    """The key a guided scene is read apart by in guided_scene_started:
+    fight / flirt / confession, or "late" for the old single scene."""
+    script = db.get(UserScript, scene.user_script_id) if scene.user_script_id else None
+    title = script.title if script is not None else None
+    return next((key for key, t in GUIDED_KEYS if t == title), "late")
+
+
 def guided_script_of(db: Session, scene_id: int) -> Optional[UserScript]:
     """The guided script a scene belongs to, or None: a scene the guided run may start."""
     scene = db.get(Scene, scene_id)

@@ -5,6 +5,9 @@ describe("guided scene helpers", () => {
   it("routes to the guided run", () => {
     expect(guidedRoute(937)).toBe("/scenes/937/rehearse?guided=1");
   });
+  it("carries the part and the door for a keyed scene", () => {
+    expect(guidedRoute(41, { as: "JO", from: "hub" })).toBe("/scenes/41/rehearse?guided=1&as=JO&from=hub");
+  });
   it("names the platform from the user agent", () => {
     expect(platformOf("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)")).toBe("ios");
     expect(platformOf("Mozilla/5.0 (iPad; CPU OS 17_0)")).toBe("ios");

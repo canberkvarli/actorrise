@@ -64,6 +64,9 @@ export const appPractice: Widen<typeof en> = {
     readThis: "Bunu oku",
   },
   appPracticeGuided: {
+    pickTitle: "Bir sahne seç.",
+    pickHouse: "Rolünü seç, diğerini ben okurum. Bir dakikadan kısa.",
+    playAs: "{name} ol, {who}",
     waiting: "{partner} bekliyor.",
     house: "{partner} rolünü ben okuyorum, sen {actor} oluyorsun. {n} replik, bir dakikadan kısa.",
     oneMoment: "Bir saniye",

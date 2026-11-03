@@ -57,6 +57,24 @@ export interface Snapshot {
   heard: Map<number, Set<number>>;
   /** Times the actor has called "line" on this turn (line-call.ts). Starts again with the turn, and on resume. */
   calls: number;
+  /**
+   * The actor's line was not heard: the mic has been open UNHEARD_S with no
+   * word since (or there is no mic at all, `deaf`). The screen shows the line
+   * big with "say it again" and "skip line". Only with `unheardAfterS` set.
+   */
+  unheard: boolean;
+  /** No transcriber for the rest of the run: every actor line is read, then skipped on. */
+  deaf: boolean;
+}
+
+export interface EngineOptions {
+  /**
+   * Seconds of an open mic with no word before the line counts as unheard.
+   * Unset: never (a memorising actor may hold a line that long on purpose).
+   * The guided first scene sets it: 69 of 160 started runs of "Late" stopped on
+   * the actor's first line, most after about ten seconds of nothing.
+   */
+  unheardAfterS?: number;
 }
 
 export class Engine {
@@ -80,8 +98,13 @@ export class Engine {
   private resumeFrom = 0; // position in the beat that resume goes on from; -1 = the next turn
   private primed = -1; // the actor turn last primed for; cleared with the mic
   private listeners = new Set<() => void>();
+  private unheard = false;
+  private unheardCount = 0; // times this turn went unheard; journalled with the read
+  private again = 0; // "say it again" on this turn
+  private lastHeard = 0; // audio clock: the mic opening, or the last word since
+  private deaf = false;
 
-  constructor(private script: Script, private ports: EnginePorts) {}
+  constructor(private script: Script, private ports: EnginePorts, private opts: EngineOptions = {}) {}
 
   // ── reading ──
 
@@ -91,6 +114,7 @@ export class Engine {
     return {
       state: this.state, actor: this.script.actor, turnIndex: this.turnIndex, lineIndex,
       read: this.read, sounding: this.sounding, heard: this.heard, calls: this.calls.size,
+      unheard: this.unheard, deaf: this.deaf,
     };
   }
 
@@ -160,6 +184,43 @@ export class Engine {
     this.jumpToTurn(t, turn.kind === 'partner' ? Math.max(0, turn.lineIndices.indexOf(lineIndex)) : 0);
   }
 
+  /**
+   * "Say it again": the same actor line, the mic opened afresh, from its first
+   * word. The partner is NOT played again: the cue replaying while the mic
+   * could not hear was what kept actors on line one.
+   */
+  sayAgain() {
+    if (this.state !== 'actor' || this.deaf) return;
+    const turn = this.script.turns[this.turnIndex] as ActorTurn;
+    this.again++;
+    this.ports.mic.close();
+    this.primed = -1;
+    this.clearTimers();
+    this.read = EMPTY_READ;
+    this.calls = new Set();
+    this.tokenCount = 0;
+    this.quietAt = 0;
+    this.waitingOnPrompt = false;
+    this.unheard = false;
+    this.openMic(turn);
+    this.changed();
+  }
+
+  /**
+   * The transcriber is gone for good (the live session failed or the mic was
+   * refused). With `unheardAfterS` set the run goes on without it: each of the
+   * actor's lines shows at once with "skip line". Without it, the run stops.
+   * Returns whether the run carries on.
+   */
+  deafen(): boolean {
+    if (this.opts.unheardAfterS === undefined) return false;
+    this.deaf = true;
+    this.ports.mic.close();
+    if (this.state === 'actor') { this.unheard = true; this.unheardCount++; }
+    this.changed();
+    return true;
+  }
+
   /** `reason` lands in the event's payload: stt_failed, left, unmounted... */
   abandon(reason?: string) {
     if (this.state === 'ended' || this.state === 'ready') return;
@@ -183,6 +244,7 @@ export class Engine {
     if (this.state !== 'actor') return; // partner bleed, or a paused mic
     const turn = this.script.turns[this.turnIndex] as ActorTurn;
     const now = this.ports.clock.now();
+    this.lastHeard = now;
     this.timeline.mark('delta', now);
     if (this.timeline.get('first_delta') === undefined) this.timeline.mark('first_delta', now);
     // The read carries on from the last delta of this turn, so the reading
@@ -257,9 +319,26 @@ export class Engine {
 
   private openMic(turn: ActorTurn) {
     this.state = 'actor';
+    if (this.deaf) { this.unheard = true; this.unheardCount++; return; }
     this.prime(turn.index);
     this.ports.mic.open();
-    this.timeline.mark('mic_open', this.ports.clock.now());
+    this.lastHeard = this.ports.clock.now();
+    this.timeline.mark('mic_open', this.lastHeard);
+    this.armUnheard(this.lastHeard);
+  }
+
+  /** Check, at `from + unheardAfterS`, that a word has come since; if one has, check again from it. */
+  private armUnheard(from: number) {
+    const after = this.opts.unheardAfterS;
+    if (after === undefined) return;
+    const turn = this.turnIndex;
+    this.cancels.push(this.ports.schedule(from + after, () => {
+      if (this.state !== 'actor' || this.turnIndex !== turn || this.unheard) return;
+      if (this.lastHeard > from) { this.armUnheard(this.lastHeard); return; }
+      this.unheard = true;
+      this.unheardCount++;
+      this.changed();
+    }));
   }
 
   /** Send turn `t`'s keywords, once: the beat before it usually already has. */
@@ -306,6 +385,7 @@ export class Engine {
     this.timeline.mark('handover', this.ports.clock.now());
     this.heard.set(turn.lineIndex, new Set(this.read.matched));
     const marks = this.timeline, read = this.read, calls = this.calls.size;
+    const unheardCount = this.unheardCount, again = this.again;
     // The next beat is scheduled at now by enter(), in this same call. The mark
     // is set only once play() has taken its first line: refused, it stays unset.
     this.enter(this.turnIndex + 1, (scheduled) => {
@@ -315,6 +395,9 @@ export class Engine {
         matched: [...read.matched].sort((a, b) => a - b),
         score: read.score,
         calls,
+        // How the line was got through when the mic did not hear it: shown
+        // big (unheard), tried again, or no transcriber at all.
+        ...(this.opts.unheardAfterS === undefined ? {} : { unheard: unheardCount, again, deaf: this.deaf }),
         // null when nothing was measured (a skip with no delta, a cold or refused partner line).
         handover_ms: marks.handoverMs(),
         output_latency_ms: Math.round(this.ports.clock.outputLatency() * 1000),
@@ -331,6 +414,9 @@ export class Engine {
   }
 
   private clearRead() {
+    this.unheard = false;
+    this.unheardCount = 0;
+    this.again = 0;
     this.read = EMPTY_READ;
     this.calls = new Set();
     this.tokenCount = 0;
