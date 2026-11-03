@@ -8,6 +8,7 @@
  */
 
 import type { EffortPoint } from "./effort";
+import { lastChange } from "./after";
 import type { Role } from "./notebook";
 import type { QuestionId } from "./questions";
 
@@ -38,6 +39,9 @@ export function gist(text: string, max = 180): string {
 
 export function buildCues(role: Role, lines: string[] = [], reducedMotion = false): Cue[] {
   const cues: Cue[] = [{ kind: "breath", ms: reducedMotion ? 3000 : 7000 }];
+  // Start from your own note: what you said you'd change last time.
+  const change = lastChange(role);
+  if (change) cues.push({ kind: "answer", ask: "Last time you said you'd change", text: gist(change), ms: 6500 });
   for (const { id, ask } of ASK) {
     const a = role.answers[id]?.trim();
     if (a) cues.push({ kind: "answer", ask, text: gist(a), ms: 5000 + Math.min(3000, a.length * 20) });

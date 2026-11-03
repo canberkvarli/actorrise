@@ -174,6 +174,8 @@ CLIENT_EVENT_NAMES = frozenset(
         "studio_prep_step",  # {step, index}: the guided path, one a step reached
         "studio_prep_done",  # {answers, beats, has_piece}
         "studio_run_it",  # {monologue_id}: from prep into the rehearsal
+        "studio_after_asked",  # the "how did it go?" card was shown, once a visit
+        "studio_after_saved",  # {kind, feel, worked, change}: lengths, not the words
     }
 )
 

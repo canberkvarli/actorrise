@@ -7,6 +7,7 @@
  */
 
 import { clampPoint, type EffortPoint } from "./effort";
+import type { Take } from "./after";
 import type { AirId } from "./air";
 import type { QuestionId } from "./questions";
 
@@ -40,6 +41,12 @@ export type Role = {
   answers: Partial<Record<QuestionId, string>>;
   moments: Moment[];
   piece?: Piece | null;
+  /** Notes after doing it, newest first (lib/studio/after.ts). */
+  takes?: Take[];
+  /** When the role was last worked: Places finished, or Run it. */
+  ranAt?: number;
+  /** "Not now" on the after card, for that run. */
+  afterDismissedAt?: number;
   updatedAt: number;
 };
 

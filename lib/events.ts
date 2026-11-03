@@ -61,7 +61,9 @@ export type UserEventName =
   | "studio_places_finished"
   | "studio_prep_step"
   | "studio_prep_done"
-  | "studio_run_it";
+  | "studio_run_it"
+  | "studio_after_asked"
+  | "studio_after_saved";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

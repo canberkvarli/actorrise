@@ -11,12 +11,13 @@ import { AIRS } from "@/lib/studio/air";
 import { read, type EffortPoint } from "@/lib/studio/effort";
 import { answered, arcRange, type Moment, type Notebook as NotebookData, type Role } from "@/lib/studio/notebook";
 import { GROUPS, QUESTIONS, type Question } from "@/lib/studio/questions";
+import { AfterTab } from "./After";
 import { PieceChooser, PieceText, type PieceState } from "./PieceText";
 import { trackEvent } from "@/lib/events";
 import { display, EASE, mono } from "./style";
 import type { SyncStatus } from "./useStudioSync";
 
-export type Tab = "text" | "questions" | "moments";
+export type Tab = "text" | "questions" | "moments" | "after";
 
 type Props = {
   open: boolean;
@@ -28,6 +29,9 @@ type Props = {
   onTab: (t: Tab) => void;
   signedIn: boolean;
   pieceState: PieceState;
+  /** The After form is open (the "how did it go?" card opens it). */
+  writingAfter: boolean;
+  onWritingAfter: (v: boolean) => void;
   /** Run Places; absent when the role has nothing to play yet. */
   onPlaces?: () => void;
   line: number | null;
@@ -156,7 +160,7 @@ export default function Notebook(props: Props) {
           style={{ fontSize: 13, marginTop: 4, color: "#e9d6c4" }}
         />
         <SyncLine sync={props.sync} />
-        <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+        <div style={{ display: "flex", gap: 6, marginTop: 12, overflowX: "auto", scrollbarWidth: "none" }}>
           <button
             type="button"
             onClick={() => onTab("text")}
@@ -181,12 +185,28 @@ export default function Notebook(props: Props) {
           >
             Moments <span style={{ ...mono, opacity: 0.6, letterSpacing: 0 }}>{role.moments.length}</span>
           </button>
+          <button
+            type="button"
+            onClick={() => onTab("after")}
+            className="uppercase tracking-[0.14em]"
+            style={chip(tab === "after")}
+          >
+            After{role.takes?.length ? <span style={{ ...mono, opacity: 0.6, letterSpacing: 0 }}> {role.takes.length}</span> : null}
+          </button>
         </div>
       </div>
 
       {/* Body. */}
       <div className="studio-scroll" style={{ flex: 1, overflowY: "auto", padding: "14px 18px 22px" }}>
-        {tab === "text" ? <TextTab {...props} /> : tab === "questions" ? <Questions {...props} /> : <Moments {...props} />}
+        {tab === "text" ? (
+          <TextTab {...props} />
+        ) : tab === "questions" ? (
+          <Questions {...props} />
+        ) : tab === "moments" ? (
+          <Moments {...props} />
+        ) : (
+          <AfterTab role={role} onEdit={onEdit} writing={props.writingAfter} onWriting={props.onWritingAfter} />
+        )}
       </div>
 
       {props.onPlaces && (

@@ -16,6 +16,7 @@ import { trackEvent } from "@/lib/events";
 import { ACTIONS, actionPoint, read, type ActionId, type EffortPoint } from "@/lib/studio/effort";
 import { AIRS } from "@/lib/studio/air";
 import { newId, type Moment, type Role } from "@/lib/studio/notebook";
+import { lastChange } from "@/lib/studio/after";
 import { CORE, STEPS, resumeAt, type Step } from "@/lib/studio/prep";
 import { QUESTIONS, type QuestionId } from "@/lib/studio/questions";
 import { PieceChooser, type PieceState } from "./PieceText";
@@ -37,6 +38,8 @@ type Props = {
   /** Make a just-added moment the active one (it isn't in the list yet for onGoTo). */
   onActive: (id: string) => void;
   onPlaces: () => void;
+  /** Mark the role as worked before leaving for the rehearsal. */
+  onRunIt: () => void;
   onClose: () => void;
 };
 
@@ -513,7 +516,9 @@ function BeatEditor({
 
 /* ---------- 5. Ready ---------- */
 
-function DoneStep({ role, onPlaces, onClose }: Props) {
+function DoneStep(props: Props) {
+  const { role, onPlaces, onClose } = props;
+  const change = lastChange(role);
   const answers = CORE.filter((id) => role.answers[id]?.trim()).length;
   useEffect(() => {
     trackEvent("studio_prep_done", { answers, beats: role.moments.length, has_piece: !!role.piece });
@@ -527,11 +532,22 @@ function DoneStep({ role, onPlaces, onClose }: Props) {
         {answers} of {CORE.length} questions answered · {role.moments.length}{" "}
         {role.moments.length === 1 ? "beat" : "beats"}. Now put it in your body.
       </p>
+      {change && (
+        <div style={{ borderLeft: "2px solid #CB4B00", padding: "4px 0 4px 12px" }}>
+          <div className="uppercase tracking-[0.2em] text-[#e9d6c4]" style={{ fontSize: 10, opacity: 0.6 }}>
+            Last time you said you&apos;d change
+          </div>
+          <p style={{ ...display, fontSize: 18, lineHeight: 1.35, marginTop: 4 }}>{change}</p>
+        </div>
+      )}
       <div style={{ display: "grid", gap: 8 }}>
         {role.piece && (
           <a
             href={`/monologue/${role.piece.id}/work`}
-            onClick={() => trackEvent("studio_run_it", { monologue_id: role.piece!.id })}
+            onClick={() => {
+              trackEvent("studio_run_it", { monologue_id: role.piece!.id });
+              props.onRunIt();
+            }}
             style={{ ...navBtn(true), display: "block", textAlign: "center", padding: "13px 16px", fontSize: 13 }}
           >
             Run it

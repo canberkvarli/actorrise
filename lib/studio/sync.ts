@@ -7,6 +7,7 @@
  * an edit made after it.
  */
 
+import { cleanTakes } from "./after";
 import { AIRS } from "./air";
 import { clampPoint } from "./effort";
 import { newRole, type Notebook, type Piece, type Role } from "./notebook";
@@ -19,6 +20,7 @@ export function isBlank(r: Role): boolean {
     !r.name.trim() &&
     !r.scene.trim() &&
     !r.piece &&
+    !r.takes?.length &&
     !r.moments.length &&
     !Object.values(r.answers).some((v) => v?.trim())
   );
@@ -54,9 +56,13 @@ export function roleFromServer(s: ServerRole): Role | null {
           author: String(p.author ?? ""),
         }
       : null;
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? v : undefined);
   return {
     id: s.id,
     piece,
+    takes: cleanTakes(d.takes),
+    ...(num(d.ranAt) ? { ranAt: num(d.ranAt) } : {}),
+    ...(num(d.afterDismissedAt) ? { afterDismissedAt: num(d.afterDismissedAt) } : {}),
     name: typeof d.name === "string" ? d.name : "",
     scene: typeof d.scene === "string" ? d.scene : "",
     answers,

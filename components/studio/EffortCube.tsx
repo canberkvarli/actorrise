@@ -33,6 +33,8 @@ import Places from "./Places";
 import Prep from "./Prep";
 import { isBlank } from "@/lib/studio/sync";
 import { hasPlaces } from "@/lib/studio/places";
+import { afterDue } from "@/lib/studio/after";
+import { when } from "./After";
 import { airOf, type AirId } from "@/lib/studio/air";
 import { AirSound } from "./airSound";
 import { display, EASE, mono } from "./style";
@@ -126,6 +128,18 @@ export default function EffortCube() {
   const pieceState = usePiece(role?.piece?.id);
   const [places, setPlaces] = useState(false);
   const [prep, setPrep] = useState(false);
+  const [writingAfter, setWritingAfter] = useState(false);
+  // The clock the "how did it go?" card reads, a minute at a time.
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const first = window.setTimeout(tick, 0);
+    const t = window.setInterval(tick, 60000);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(t);
+    };
+  }, []);
   // A new, empty role opens straight into the guided path, once a visit.
   const prepOffered = useRef(false);
   useEffect(() => {
@@ -323,7 +337,17 @@ export default function EffortCube() {
     setPlaces(true);
     apiRef.current?.focusPerformer();
   };
-  const endPlaces = () => {
+  /** The role was worked: saved at once, since Run it leaves the page. */
+  const markRan = () =>
+    setNb((cur) => {
+      if (!cur) return cur;
+      const next = updateRole(cur, activeRole(cur).id, (r) => ({ ...r, ranAt: Date.now() }));
+      saveNotebook(next);
+      return next;
+    });
+
+  const endPlaces = (worked: boolean) => {
+    if (worked) markRan();
     setPlaces(false);
     apiRef.current?.home();
   };
@@ -803,10 +827,27 @@ export default function EffortCube() {
           fine={fine}
           sync={sync}
           pieceState={pieceState}
+          writingAfter={writingAfter}
+          onWritingAfter={setWritingAfter}
           onPlaces={canPlaces ? startPlaces : undefined}
           signedIn={!!user}
           line={line}
           onLine={setLine}
+        />
+      )}
+
+      {role && now > 0 && afterDue(role, now) && shown && !open && !prep && (
+        <AfterCard
+          name={role.name}
+          ranAt={role.ranAt ?? now}
+          now={now}
+          wide={wide}
+          onTell={() => {
+            setTab("after");
+            setWritingAfter(true);
+            setOpen(true);
+          }}
+          onLater={() => editRole((r) => ({ ...r, afterDismissedAt: r.ranAt ?? Date.now() }))}
         />
       )}
 
@@ -824,6 +865,7 @@ export default function EffortCube() {
           onGoTo={goTo}
           onActive={setActiveMoment}
           onPlaces={startPlaces}
+          onRunIt={markRan}
           onClose={() => setPrep(false)}
         />
       )}
@@ -850,6 +892,88 @@ export default function EffortCube() {
         .studio-bare::placeholder { color: rgba(233,214,196,0.38); }
       `}</style>
     </main>
+  );
+}
+
+function AfterCard({
+  name,
+  ranAt,
+  now,
+  wide,
+  onTell,
+  onLater,
+}: {
+  name: string;
+  ranAt: number;
+  now: number;
+  wide: boolean;
+  onTell: () => void;
+  onLater: () => void;
+}) {
+  const sent = useRef(false);
+  useEffect(() => {
+    if (sent.current) return;
+    sent.current = true;
+    trackEvent("studio_after_asked", {});
+  }, []);
+  return (
+    <div
+      role="status"
+      style={{
+        position: "absolute",
+        zIndex: 4,
+        top: wide ? 96 : 84,
+        left: "50%",
+        translate: "-50% 0",
+        width: "min(calc(100vw - 32px), 420px)",
+        padding: "14px 16px",
+        borderRadius: 16,
+        background: "rgba(26,15,11,0.82)",
+        border: "1px solid rgba(203,75,0,0.55)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
+        animation: `studio-in 600ms ${EASE}`,
+      }}
+    >
+      <div style={{ ...display, fontSize: 20, lineHeight: 1.25 }}>How did it go?</div>
+      <p style={{ fontSize: 13, color: "#e9d6c4", opacity: 0.75, marginTop: 4, lineHeight: 1.45 }}>
+        You worked {name || "this role"} {when(ranAt, now)}. Two lines while it&apos;s fresh, and the next run starts
+        from them.
+      </p>
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button
+          type="button"
+          onClick={onTell}
+          style={{
+            fontSize: 12,
+            padding: "8px 14px",
+            borderRadius: 999,
+            border: "1px solid #CB4B00",
+            background: "#CB4B00",
+            color: "#fff6ee",
+            cursor: "pointer",
+          }}
+        >
+          Tell me
+        </button>
+        <button
+          type="button"
+          onClick={onLater}
+          style={{
+            fontSize: 12,
+            padding: "8px 14px",
+            borderRadius: 999,
+            border: "1px solid rgba(243,217,191,0.2)",
+            background: "transparent",
+            color: "#e9d6c4",
+            cursor: "pointer",
+          }}
+        >
+          Not now
+        </button>
+      </div>
+    </div>
   );
 }
 

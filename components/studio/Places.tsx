@@ -23,7 +23,8 @@ type Props = {
   onLine: (i: number | null) => void;
   /** Which moment is playing (its air follows), or null between moments. */
   onMoment: (i: number | null) => void;
-  onClose: () => void;
+  /** `worked`: they got at least halfway, so it counts as having run the piece. */
+  onClose: (worked: boolean) => void;
 };
 
 export default function Places({ role, lines, reducedMotion, onPoint, onLine, onMoment, onClose }: Props) {
@@ -42,7 +43,8 @@ export default function Places({ role, lines, reducedMotion, onPoint, onLine, on
   const close = useCallback(() => {
     trackEvent("studio_places_finished", { cues: cues.length, reached: i + 1, completed: i >= cues.length - 1 });
     setLeaving(true);
-    window.setTimeout(() => cb.current.onClose(), reducedMotion ? 0 : 450);
+    const worked = i >= Math.floor(cues.length / 2);
+    window.setTimeout(() => cb.current.onClose(worked), reducedMotion ? 0 : 450);
   }, [reducedMotion, cues.length, i]);
 
   const next = useCallback(() => {
