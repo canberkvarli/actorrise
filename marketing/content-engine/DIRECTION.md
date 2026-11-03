@@ -21,6 +21,8 @@ Canberk, after the curtain film: "it's good, we need more like that."
 - The real one-shot film worked. Make more like it: a wide shot from the audience, someone alone
   on a stage or in a rehearsal room, waiting for a partner who does not come, running lines to an
   empty chair, checking the time. The same moments as the drawn films, as live action.
+- Real films use the **cinema** look by default (Canberk liked it on "from the house" and rejected
+  "curtain at seven" for the midnight font). Rotate looks mainly across drawn films.
 - Endings are happy, not dark: the end card lands with the bright `chime` (celesta and glockenspiel,
   the default now). Use `reveal` (the deep piano hit) only if a film truly needs weight.
 - Drawn films: sound effects, not music. Playful and alive: `ping`, `pong`, `toing`, `plink`,
