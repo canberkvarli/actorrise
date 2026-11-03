@@ -28,7 +28,46 @@
       "lines": [
         {
           "who": "PARTNER",
-          "text": "Where have you been since last Thursday?"
+          "text": "Where have you been since last Thursday?",
+          "audio": "voice/2026-11-04-earnest-scene/00.mp3",
+          "words": [
+            {
+              "w": "Where",
+              "s": 0.046,
+              "e": 0.255
+            },
+            {
+              "w": "have",
+              "s": 0.279,
+              "e": 0.383
+            },
+            {
+              "w": "you",
+              "s": 0.418,
+              "e": 0.488
+            },
+            {
+              "w": "been",
+              "s": 0.534,
+              "e": 0.72
+            },
+            {
+              "w": "since",
+              "s": 0.789,
+              "e": 1.01
+            },
+            {
+              "w": "last",
+              "s": 1.045,
+              "e": 1.231
+            },
+            {
+              "w": "Thursday?",
+              "s": 1.277,
+              "e": 1.8
+            }
+          ],
+          "dur": 1.95
         },
         {
           "who": "YOU",
@@ -36,7 +75,46 @@
         },
         {
           "who": "PARTNER",
-          "text": "What on earth do you do there?"
+          "text": "What on earth do you do there?",
+          "audio": "voice/2026-11-04-earnest-scene/02.mp3",
+          "words": [
+            {
+              "w": "What",
+              "s": 0.046,
+              "e": 0.209
+            },
+            {
+              "w": "on",
+              "s": 0.244,
+              "e": 0.302
+            },
+            {
+              "w": "earth",
+              "s": 0.337,
+              "e": 0.522
+            },
+            {
+              "w": "do",
+              "s": 0.546,
+              "e": 0.615
+            },
+            {
+              "w": "you",
+              "s": 0.65,
+              "e": 0.731
+            },
+            {
+              "w": "do",
+              "s": 0.789,
+              "e": 0.917
+            },
+            {
+              "w": "there?",
+              "s": 0.998,
+              "e": 1.347
+            }
+          ],
+          "dur": 1.497
         },
         {
           "who": "YOU",
@@ -70,7 +148,7 @@
     "feature": "scene-partner",
     "board": "Callboard plan 2026-11-04: format scene, series scene-reads, look cinema. The partner reads Algernon (PARTNER, voiced), you read Jack (YOU, the underlined cue, silent).",
     "why": "First film built on the new scene beat: the partner's lines light up as they are read, your line is the cue. Earnest (Algernon) is one of the pages Google sends actors to most (CONTEXT.md).",
-    "voice_note": "ElevenLabs refused ELEVENLABS_API_KEY on 2026-11-04 (a key ID, not an sk_ secret), so the partner lines are not voiced in this render; they light up on estimated timing."
+    "voice_note": "Voiced 2026-11-04 with ElevenLabs (Lily reads Algernon); Jack's lines stay silent cues."
   },
   "music": {
     "style": "pizzicato",
@@ -83,5 +161,5 @@
     "youtube_description": "Ghost Light reads the other part, you take the cue.\nFree on the App Store. Built by a working actor.\n#actorslife #acting #theatre #oscarwilde",
     "instagram": "When one is in town one amuses oneself. When you rehearse alone, someone has to read Algernon.\nGhost Light reads him. Your line is underlined. Say it out loud.\nBuilt by a working actor. Link in bio.\n#actorslife #actorsofinstagram #actortraining #scenework #oscarwilde"
   },
-  "cover_ms": 13000
+  "cover_ms": 15000
 }
