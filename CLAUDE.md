@@ -95,9 +95,20 @@ they are here. When he gives a new standing rule, add it here, not to a memory f
 - Run the full backend suite before pushing: `cd backend && .venv/bin/python -m pytest tests/ -q`.
 
 **The database**
-- Supabase sits near its 500 MB cap and most of it is the embedding column and its HNSW index.
-  No re-embed at a smaller size, no halfvec. A hidden row carries no embedding; un-hiding goes
-  through `unhide()` (`services/monologue_visibility.py`), which re-embeds it.
+- Supabase free tier, 500 MB cap. Since 2026-11-03 `monologues.embedding_vector` is
+  **`halfvec(1536)`** with a `halfvec_cosine_ops` HNSW index (CAN-20, Canberk's go-ahead): 476 →
+  322 MB, and 8 test searches returned the same top 20 in the same order as full precision.
+  The model still declares `Vector(1536)` on purpose (see the comment in `models/actor.py`);
+  Postgres casts vector → halfvec implicitly, so queries need nothing. Any index rebuild must
+  use `halfvec_cosine_ops`. Do not re-embed at a smaller dimension. A hidden row usually carries
+  no embedding; un-hiding goes through `unhide()` (`services/monologue_visibility.py`), which
+  re-embeds it if the vector is missing.
+- **Language gate (CAN-19).** Every user-facing monologue list is English only by default:
+  `exclude_hidden()` applies `language_gate()`, and inline filters use `language_clause()` /
+  `language_hides()` (`services/search/semantic_search.py`). Only `/api/monologues/search`
+  widens it, and only for `X-ActorRise-Locale: tr` (sent by `lib/api.ts` from the Turkish UI).
+  New code that lists monologues must go through these; never widen a default.
+  Canberk, 2026-11-03: English speakers never see Turkish monologues.
 - Prod reads: `engine.connect().execution_options(postgresql_readonly=True)`. The pooler ignores
   the read-only startup option. Any other prod write: ask him first, except `class_link.py`,
   `grant_comp.py`, `opt_out.py` and `contact_log.py add`, which are yours to run.
@@ -105,6 +116,15 @@ they are here. When he gives a new standing rule, add it here, not to a memory f
 - `monologues.word_count` and `estimated_duration_seconds` are stored: after editing `text`,
   run `scripts/resync_word_counts.py`.
 - New monologues come in through `services/data_ingestion/pipeline.py::ingest_play()` only.
+  **One exception, Turkish translations (CAN-21):** these come from scanned books whose OCR has
+  to be proofread against the page images first, so they go in through
+  `scripts/build_turkish_import.py` (analysis, embedding and segments from the same services;
+  `--upload` writes through Supabase REST, which a cloud session can reach). Rules for it:
+  the translator must have died more than 70 years ago (FSEK art. 27) and the edition must
+  credit no modern editor; plays get `language='tr'` and `translator`; every monologue goes in
+  as `review_status='pending'` **with** its embedding, and Canberk approves each one in
+  `/admin/monologues/review` after reading it as a native speaker. First run: Orhan Burian's
+  Hamlet, play 3490, monologues 44138–44161.
   A film or TV reference row goes in only if that film yields pieces, never just the metadata.
   Never host film or TV scene text publicly.
 - "Not in the library" needs three places checked: `plays.title`, `monologues.title`,
