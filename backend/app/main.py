@@ -87,12 +87,31 @@ def _make_error_response(status_code: int, detail: str) -> JSONResponse:
     )
 
 
+def _ensure_rls_tables() -> None:
+    """Tables that must never exist without RLS: create them, RLS on, in one transaction,
+    before create_all could make them bare. Idempotent. Two workers starting at once can
+    race on CREATE; the loser logs and the winner's table stands."""
+    from app.models.studio import DDL as STUDIO_DDL
+
+    if engine.dialect.name != "postgresql":
+        return
+    try:
+        with engine.begin() as conn:
+            for stmt in STUDIO_DDL:
+                conn.execute(stmt)
+    except Exception as e:  # noqa: BLE001
+        import logging
+
+        logging.getLogger("uvicorn.error").warning("studio_roles setup skipped: %s", e)
+
+
 def _init_db() -> None:
     """Connect to DB, enable pgvector, create tables. Safe to call multiple times."""
     try:
         with engine.connect() as conn:
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             conn.commit()
+        _ensure_rls_tables()
         Base.metadata.create_all(bind=engine)
     except Exception as e:
         import logging
