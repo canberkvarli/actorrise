@@ -1,0 +1,92 @@
+{
+  "id": "2026-11-03-seven-oclock",
+  "music": {
+    "style": "festive"
+  },
+  "scenes": [
+    {
+      "type": "thinking",
+      "seconds": 3.4,
+      "line1": "Three weeks",
+      "line2": "without a monologue.",
+      "accent": "monologue.",
+      "notes": [
+        "tonight",
+        "tomorrow",
+        "Sunday"
+      ],
+      "strike": 1
+    },
+    {
+      "type": "notify",
+      "seconds": 4.4,
+      "line": "Seven o'clock.",
+      "accent": "Seven",
+      "cue": "(it remembers for you.)",
+      "from": "6:59",
+      "to": "7:00",
+      "day": "Tuesday, November 3",
+      "app": "GHOST LIGHT",
+      "title": "Tonight's speech",
+      "body": "The Girl, from The Finger of God."
+    },
+    {
+      "type": "phone",
+      "mode": "read",
+      "seconds": 4.2,
+      "line": "One speech.",
+      "accent": "speech.",
+      "read": {
+        "tag": "THE GIRL",
+        "title": "The Finger",
+        "titleItalic": "of God",
+        "meta": "Percival Wilde · 1920 · 0:28",
+        "text": "I used to be like the\nother girls. I used to\nwatch the clock. I used\nto count the hours and\nthe minutes till the\nday's work was over.\nBut it's different now.",
+        "mark": 2,
+        "note": "slow."
+      }
+    },
+    {
+      "type": "stage",
+      "seconds": 4.2,
+      "time": "Tonight.",
+      "cue": "(28 seconds. out loud.)",
+      "quote": "“It's different now.”",
+      "accent": "now."
+    },
+    {
+      "type": "end",
+      "seconds": 4.0,
+      "brand": "Ghost Light",
+      "tagline": "(one speech a night.)",
+      "action": "Free on the App Store",
+      "kicker": "(seven o'clock.)"
+    }
+  ],
+  "source": {
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "sql": "select m.id, m.character_name, p.title, p.author, p.year_written, m.estimated_duration_seconds secs, m.overdone_score, m.tone, m.primary_emotion, m.favorite_count, m.view_count from monologues m join plays p on p.id=m.play_id where p.source_type='play' and p.year_written < 1929 order by (m.favorite_count + m.view_count/10) desc limit 25",
+    "why": "Same ordering the Tonight pool uses (_tonight_pool in backend/app/api/monologues.py: stage house, favorite_count + view_count/10), so this is a speech Ghost Light can actually hand out at seven.",
+    "rows": [
+      {
+        "id": 8473,
+        "character": "The Girl",
+        "play": "The Finger of God",
+        "author": "Percival Wilde",
+        "year": 1920,
+        "secs": 28,
+        "overdone": 0,
+        "tone": "contemplative",
+        "emotion": "melancholy",
+        "themes": [
+          "identity",
+          "ambition",
+          "freedom"
+        ]
+      }
+    ],
+    "push_text": "backend/app/services/push.py: title \"Tonight's speech\", body f\"{character.title()}, from {play}.\" -> \"The Girl, from The Finger of God.\"",
+    "public_domain": "Percival Wilde died 1953, play published before 1929 (database year 1920): text on screen is fine. The page is a verbatim excerpt of row 8473 starting at 'I used to be'.",
+    "feature": "reminder"
+  }
+}

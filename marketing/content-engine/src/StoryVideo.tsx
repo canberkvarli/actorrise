@@ -67,7 +67,7 @@ type Email = {
   mark?: string; // phrase in the body to underline in orange
   cue?: string;
 };
-export type StoryScene = Night | Books | Thinking | Email | Phone | Stage | End;
+export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Stage | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive"; drop?: string | number; volume?: number; seed?: string };
 export type StorySpec = { id: string; scenes: StoryScene[]; music?: StoryMusic };
@@ -945,6 +945,105 @@ const PhoneScene: React.FC<{ s: Phone; first: boolean }> = ({ s, first }) => {
   );
 };
 
+// ---------- the seven o'clock knock (Ghost Light's tonight push) ----------
+/**
+ * Lock screen on the drawn phone. The clock ticks from `from` to `to`, then the
+ * notification drops in with a chime and a finger taps it. Text matches
+ * backend/app/services/push.py: title "Tonight's speech", body "<Character>, from <Play>."
+ */
+type Notify = {
+  type: "notify";
+  seconds: number;
+  line: string;
+  accent: string;
+  cue?: string;
+  from: string; // clock before, e.g. "6:59"
+  to: string; // clock after, e.g. "7:00"
+  day: string; // e.g. "Tuesday, November 3"
+  app: string; // e.g. "GHOST LIGHT"
+  title: string;
+  body: string;
+};
+
+const NotifyScene: React.FC<{ s: Notify }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const up = spring({ frame: f - 2, fps, config: { damping: 18 } });
+  const zoom = 1 + 0.16 * spring({ frame: f - 14, fps, config: { damping: 22 } });
+  const tickAt = 40;
+  const dropAt = tickAt + 6;
+  const drop = spring({ frame: f - dropAt, fps, config: { damping: 13, mass: 0.6 } });
+  const tapAt = dropAt + 26;
+  const pressed = prog(f, tapAt + 14, tapAt + 20);
+  const shownTime = f < tickAt ? s.from : s.to;
+  const flip = interpolate(f, [tickAt - 3, tickAt, tickAt + 4], [1, 0.6, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return (
+    <AbsoluteFill>
+      <Sfx name="pop" at={6} vol={0.8} />
+      <Sfx name="boop_lo" at={tickAt} vol={0.55} />
+      <Sfx name="chime" at={dropAt} vol={0.85} />
+      <Sfx name="boop_hi" at={tapAt + 14} vol={0.7} />
+      {s.cue && <Sfx name="typing" at={tapAt + 20} frames={typeFrames(s.cue)} vol={0.45} />}
+      <Glow glow={0.5} y="62%" />
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 150 }}>
+        <Rise at={6}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={104} />
+        </Rise>
+        {s.cue && (
+          <div style={{ position: "relative", marginTop: 14 }}>
+            <Cue text={s.cue} color={C.inkSoft} at={tapAt + 20} />
+          </div>
+        )}
+      </AbsoluteFill>
+      <AbsoluteFill style={{ transform: `translateY(${(1 - up) * 800}px) scale(${zoom})`, transformOrigin: "540px 980px" }}>
+        <DrawnPhone start={0}>
+          {/* lock screen */}
+          <div style={{ position: "absolute", top: 96, width: SW, textAlign: "center", opacity: prog(f, 14, 26) }}>
+            <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 26, letterSpacing: 2, color: APP.dim }}>{s.day}</div>
+            <div
+              style={{
+                fontFamily: F.serif,
+                fontWeight: 600,
+                fontSize: 150,
+                lineHeight: 1.05,
+                color: f < tickAt ? APP.cream : C.orange,
+                transform: `scaleY(${flip})`,
+              }}
+            >
+              {shownTime}
+            </div>
+          </div>
+          {/* the notification */}
+          <div
+            style={{
+              position: "absolute",
+              left: 26,
+              top: 360,
+              width: SW - 52,
+              borderRadius: 28,
+              background: "#f7f0e2",
+              boxShadow: `6px 6px 0 ${APP.yellow}`,
+              padding: "22px 24px",
+              opacity: prog(f, dropAt, dropAt + 6),
+              transform: `translateY(${(1 - drop) * -260}px) scale(${1 - pressed * 0.04})`,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 11, background: C.orange, border: `3px solid ${C.ink}` }} />
+              <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 20, letterSpacing: 3, color: "#6b5d50", flex: 1 }}>{s.app}</div>
+              <div style={{ fontFamily: F.type, fontSize: 20, color: "#6b5d50" }}>now</div>
+            </div>
+            <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 38, color: "#1b140f", marginTop: 14 }}>{s.title}</div>
+            <div style={{ fontFamily: F.type, fontSize: 24, color: "#2a1f17", marginTop: 6, lineHeight: 1.35, whiteSpace: "nowrap" }}>{s.body}</div>
+          </div>
+        </DrawnPhone>
+        <HoldingHand start={8} />
+        <TapFinger at={tapAt} x={560} y={1250} />
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 // ---------- the audition room ----------
 /** Simple line figure of an actor mid speech, one hand reaching out. */
 const Actor: React.FC<{ start: number }> = ({ start }) => {
@@ -1271,6 +1370,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "thinking" ? <ThinkingScene s={sc} /> :
       sc.type === "email" ? <EmailScene s={sc} /> :
       sc.type === "phone" ? <PhoneScene s={sc} first={firstPhone} /> :
+      sc.type === "notify" ? <NotifyScene s={sc} /> :
       sc.type === "stage" ? <StageScene s={sc} /> :
       <EndScene s={sc} />;
   };
