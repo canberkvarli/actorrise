@@ -42,11 +42,15 @@
           "who": "YOU",
           "text": "When one is in town one amuses oneself. When one is in the country one amuses other people."
         }
-      ]
+      ],
+      "names": {
+        "PARTNER": "ALGERNON",
+        "YOU": "JACK"
+      }
     },
     {
       "kind": "end",
-      "seconds": 3.8,
+      "seconds": 3.0,
       "brand": "Ghost Light",
       "line": "built by a working actor",
       "action": "Free on the App Store",
@@ -54,11 +58,12 @@
       "store": true,
       "sfx": [
         {
-          "name": "tap",
-          "at": 0.5,
-          "vol": 0.3
+          "name": "dins",
+          "at": 0.1,
+          "vol": 0.6
         }
-      ]
+      ],
+      "snap": true
     }
   ],
   "source": {
@@ -70,7 +75,7 @@
   },
   "music": {
     "style": "pizzicato",
-    "volume": 0.3,
+    "volume": 0.22,
     "drop": "end"
   },
   "captions": {

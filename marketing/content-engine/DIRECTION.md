@@ -3,6 +3,18 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-04, scene reads and the ending (wins over everything below)
+
+Canberk, after the Earnest scene read: "first scene is really good", the ending "can be much much better".
+- **Scene beats name the characters.** Set `"names": {"PARTNER": "ALGERNON", "YOU": "JACK"}`: the partner's
+  name carries a small sharp AI mark (SCENE PARTNER the first time, AI after), YOU is said once next to the
+  actor's character, never "your line" over and over.
+- **The cue line arrives word by word**, underlined as it comes, never the whole line at once.
+- **No fade out endings.** End beat `"snap": true` with sfx `[{"name": "dins", "at": 0.1, "vol": 0.6}]`
+  and `seconds` about 3: hard cut to the dark stage, four rising dins warm a small light up step by step,
+  and on the one last din the Ghost Light icon and name snap in, the line and App Store button right after.
+  This replaces the slow dissolve, the chime and the tap for every film from now on.
+
 ## 2026-11-04, it is never about the theatre (wins over everything below)
 
 Canberk: "it's never about the theatre or the stage." Real films show ordinary life, where the app

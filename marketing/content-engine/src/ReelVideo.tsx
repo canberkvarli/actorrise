@@ -59,7 +59,9 @@ type Screen = {
  * after another, then the App Store line. `bg` ink (default for cinematic films) is a dark stage with
  * the warm glow of a ghost light; paper is the light house style. `store` shows the App Store badge
  * style button (use it for Ghost Light), otherwise `action` is plain text like actorrise.com. */
-type End = { kind: "end"; seconds: number; brand: string; line: string; action: string; icon?: string; bg?: "ink" | "paper"; store?: boolean };
+type End = { kind: "end"; seconds: number; brand: string; line: string; action: string; icon?: string; bg?: "ink" | "paper"; store?: boolean;
+  /** Sharp ending on the `dins` sound (four rising notes, one last din): a hard cut, the ghost light warms up a step on each din, the icon and name snap in on the last one. No fades. */
+  snap?: boolean };
 /** Sound effects on a beat, from public/sfx/cine: impact, reveal, note, switch, tick, heartbeat, room, riser, chime (the happy close).
  * Bright ones too: chime (default on the end card), ping, pong, toing, plink, click, tap.
  * `at` is seconds into the beat (negative starts before the cut, e.g. a riser at -1.5). Few and heavy. */
@@ -71,6 +73,8 @@ type Spoken = { text: string; audio?: string; words?: { w: string; s: number; e:
 type Scene = {
   kind: "scene"; seconds: number; title?: string; play?: string; bg?: Bg; caption?: string; accent?: string;
   lines: (Spoken & { who: string })[]; voice_you?: boolean; start?: number;
+  /** Character names on the page, e.g. {"PARTNER": "ALGERNON", "YOU": "JACK"}: the partner gets a small AI mark, YOU is said once. */
+  names?: { PARTNER?: string; YOU?: string };
 };
 export type ReelBeat = (Title | Broll | Screen | End | Scene) & { sfx?: Cue[] };
 export type ReelSpec = {
@@ -351,14 +355,22 @@ const SceneBeat: React.FC<{ b: Scene }> = ({ b }) => {
             const ws = wordTimes(l);
             return (
               <div key={i} style={{ marginBottom: 30, opacity: shown * (done ? 0.42 : 1), transform: `translateY(${(1 - shown) * 16}px)` }}>
-                <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 24, letterSpacing: 3, color: partner ? key : fg, opacity: 0.85, marginBottom: 8 }}>
-                  {partner ? "SCENE PARTNER" : "YOU"}{active && !partner ? "  ·  your line" : ""}
+                <div style={{ display: "flex", alignItems: "center", gap: 14, fontFamily: F.sans, fontWeight: 600, fontSize: 24, letterSpacing: 3, color: partner ? key : fg, opacity: 0.85, marginBottom: 8 }}>
+                  <span>{partner ? (b.names?.PARTNER ?? "SCENE PARTNER") : (b.names?.YOU ?? "YOU")}</span>
+                  {partner && b.names?.PARTNER && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 9px", border: `2px solid ${key}`, fontSize: 18, letterSpacing: 2 }}>
+                      <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 0 L9.6 6.4 L16 8 L9.6 9.6 L8 16 L6.4 9.6 L0 8 L6.4 6.4 Z" fill={key} /></svg>
+                      {i === tl.findIndex((x) => x.who.toUpperCase() === "PARTNER") ? "SCENE PARTNER" : "AI"}
+                    </span>
+                  )}
+                  {!partner && b.names?.YOU && i === tl.findIndex((x) => x.who.toUpperCase() !== "PARTNER") && <span style={{ opacity: 0.6 }}>·  YOU</span>}
                 </div>
                 <div style={{ fontFamily: L.font === "sans" ? F.sans : F.serif, fontWeight: 600, fontSize: 50 * (L.scale ?? 1), lineHeight: 1.22, color: fg,
                   fontStyle: partner ? undefined : "normal" }}>
                   {partner || b.voice_you
                     ? ws.map((w, k) => <span key={k} style={{ opacity: active || done ? (lt >= w.s - 0.02 ? 1 : 0.3) : 0.3, color: active && lt >= w.s - 0.02 && lt <= w.e + 0.08 ? key : undefined, marginRight: 12, display: "inline-block" }}>{w.w}</span>)
-                    : <span style={{ borderBottom: active ? `4px solid ${key}` : "4px solid transparent", paddingBottom: 2 }}>{l.text}</span>}
+                    : ws.map((w, k) => { const on = done || (active && lt >= w.s - 0.02);
+                        return <span key={k} style={{ display: "inline-block", opacity: on ? 1 : 0, transform: on ? undefined : "translateY(6px)", borderBottom: `4px solid ${active && on ? key : "transparent"}`, paddingBottom: 2, paddingRight: 12 }}>{w.w}</span>; })}
                 </div>
               </div>
             );
@@ -368,6 +380,48 @@ const SceneBeat: React.FC<{ b: Scene }> = ({ b }) => {
       {tl.filter((l) => l.audio).map((l, i) => (
         <Sequence key={i} from={Math.round(l.at * RFPS)} layout="none"><Audio src={staticFile(l.audio!)} volume={1} /></Sequence>
       ))}
+    </AbsoluteFill>
+  );
+};
+
+/** Timing of public/sfx/cine/dins.wav (seconds into the file): four rising notes, then the last din. */
+const DINS = [0, 0.14, 0.28, 0.42];
+const DIN_LAST = 0.7;
+const DIN_AT = 0.1; // where the end beat puts the dins cue
+
+const SnapEnd: React.FC<{ b: End }> = ({ b }) => {
+  const f = useCurrentFrame();
+  const fr = (sec: number) => Math.round((DIN_AT + sec) * RFPS);
+  const step = DINS.filter((d) => f >= fr(d)).length; // 0..4, the light warms up on each din
+  const last = fr(DIN_LAST);
+  const hit = f >= last;
+  const pop = (a: number) => (f < a ? 0 : 1);
+  const kick = (a: number) => interpolate(f, [a, a + 5], [1.1, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
+  const flick = (d: number) => (f >= fr(d) && f < fr(d) + 3 ? 1.35 : 1);
+  const glow = hit ? 1 : (step / 4) * 0.7 * DINS.reduce((m, d) => Math.max(m, flick(d)), 1);
+  return (
+    <AbsoluteFill style={{ background: CUR.dark, justifyContent: "center", alignItems: "center", paddingBottom: 300 }}>
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse ${40 + 15 * glow}% ${24 + 10 * glow}% at 50% 36%, rgba(232,121,43,${0.34 * glow}) 0%, rgba(232,121,43,0) 72%)` }} />
+      {!hit && step > 0 && (
+        <div style={{ position: "absolute", top: "36%", left: "50%", width: 18 + step * 6, height: 18 + step * 6, marginLeft: -(9 + step * 3), marginTop: -(9 + step * 3) - 150,
+          borderRadius: "50%", background: `rgba(255,214,160,${0.35 + step * 0.15})`, boxShadow: `0 0 ${30 * step}px rgba(232,121,43,${0.3 * step})` }} />
+      )}
+      <Img src={staticFile(b.icon ?? "icon.png")} style={{ width: 220, height: 220, borderRadius: 50, opacity: pop(last), transform: `scale(${kick(last)})`,
+        boxShadow: `0 0 90px rgba(232,121,43,0.35)` }} />
+      <div style={{ marginTop: 54, fontFamily: F.serif, fontWeight: 600, fontSize: 108, color: CUR.onDark, letterSpacing: -1, opacity: pop(last), transform: `scale(${kick(last)})` }}>{b.brand}</div>
+      <div style={{ marginTop: 12, fontFamily: F.serifI, fontStyle: "italic", fontSize: 50, color: "rgba(251,247,240,0.72)", opacity: pop(last + 9) }}>{b.line}</div>
+      <div style={{ marginTop: 58, opacity: pop(last + 15), transform: `scale(${kick(last + 15)})` }}>
+        {b.store ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 18, padding: "20px 46px", borderRadius: 22, background: CUR.onDark, color: CUR.dark }}>
+            <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}>
+              <span style={{ fontFamily: F.sans, fontSize: 22, letterSpacing: 1, opacity: 0.75 }}>FREE ON THE</span>
+              <span style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 44 }}>App Store</span>
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 42, letterSpacing: 1, color: CUR.onDark }}>{b.action}</div>
+        )}
+      </div>
     </AbsoluteFill>
   );
 };
@@ -438,11 +492,12 @@ export const ReelVideo: React.FC<{ spec: ReelSpec }> = ({ spec }) => {
         const inP = i === 0 || cut !== "push" || isEnd ? 1 : prog(frame, from, from + P);
         const y = (1 - inP) * 1920;
         const D = 24; // the end card dissolves over the last shot, slowly
-        const op = isEnd && i > 0 ? interpolate(frame, [from, from + D], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1;
+        const snapEnd = isEnd && (b as End).snap;
+        const op = isEnd && i > 0 && !snapEnd ? interpolate(frame, [from, from + D], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1;
         return (
-          <Sequence key={i} from={from} durationInFrames={len + (i < spec.beats.length - 1 ? (spec.beats[i + 1].kind === "end" ? 24 : cut === "push" ? P : 0) : 0)}>
+          <Sequence key={i} from={from} durationInFrames={len + (i < spec.beats.length - 1 ? (spec.beats[i + 1].kind === "end" && !(spec.beats[i + 1] as End).snap ? 24 : cut === "push" ? P : 0) : 0)}>
             <AbsoluteFill style={{ transform: `translateY(${y}px)`, opacity: op }}>
-              {b.kind === "title" ? <TitleBeat b={b} /> : b.kind === "broll" ? <BrollBeat b={b} /> : b.kind === "screen" ? <ScreenBeat b={b} /> : b.kind === "scene" ? <SceneBeat b={b} /> : <EndBeat b={b} />}
+              {b.kind === "title" ? <TitleBeat b={b} /> : b.kind === "broll" ? <BrollBeat b={b} /> : b.kind === "screen" ? <ScreenBeat b={b} /> : b.kind === "scene" ? <SceneBeat b={b} /> : b.snap ? <SnapEnd b={b} /> : <EndBeat b={b} />}
             </AbsoluteFill>
             {cut === "flash" && i > 0 && (
               <AbsoluteFill style={{ background: "#fff", opacity: interpolate(frame - from, [0, 4], [0.9, 0], { extrapolateRight: "clamp" }) }} />
