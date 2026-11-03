@@ -1,0 +1,86 @@
+{
+  "id": "2026-11-03-partner-not-coming",
+  "look": "noir",
+  "cut": "hard",
+  "beats": [
+    {
+      "kind": "broll",
+      "seconds": 11,
+      "src": "reel/2026-11-03-partner-not-coming/alone.mp4",
+      "start": 0.5,
+      "push": 0.03,
+      "dim": 0.35,
+      "at": "top",
+      "credit": "cottonbro studio on Pexels",
+      "lines": [
+        {
+          "text": "Scene work at eight.",
+          "accent": "eight.",
+          "at": 0.6,
+          "until": 3.6
+        },
+        {
+          "text": "Partner cancelled.",
+          "accent": "cancelled.",
+          "at": 4.0,
+          "until": 7.4
+        },
+        {
+          "text": "Run it anyway.",
+          "accent": "anyway.",
+          "at": 7.8
+        }
+      ],
+      "sfx": [
+        {
+          "name": "tick",
+          "at": 0.6,
+          "vol": 0.3
+        },
+        {
+          "name": "click",
+          "at": 4.0,
+          "vol": 0.45
+        },
+        {
+          "name": "impact",
+          "at": 7.8,
+          "vol": 0.5
+        }
+      ]
+    },
+    {
+      "kind": "end",
+      "seconds": 4,
+      "brand": "Ghost Light",
+      "line": "built by a working actor",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [
+        {
+          "name": "chime",
+          "at": 0.9,
+          "vol": 0.6
+        }
+      ]
+    }
+  ],
+  "source": {
+    "footage": {
+      "pexels_id": 6896053,
+      "credit": "cottonbro studio on Pexels",
+      "page": "https://www.pexels.com/video/an-actor-reviewing-his-script-6896053/",
+      "note": "one continuous shot, an actor alone on a chair on stage with his pages, the empty house behind him; ffmpeg scene detect at 0.3 found no cuts; medium wide, no closeup"
+    },
+    "feature": "scene-partner",
+    "why": "The empty chair story as live action (DIRECTION 2026-11-03 evening): the partner is not coming, the reader reads the other lines so you rehearse alone. Ghost Light has a scene partner, so it closes on Ghost Light. No monologue text on screen, so no database rows needed."
+  },
+  "captions": {
+    "tiktok": "Scene work at eight, partner cancelled at seven. Ghost Light reads the other lines. #actorslife #actortok #rehearsal #scenework #actors",
+    "youtube_title": "POV: your scene partner bails the night before #shorts",
+    "youtube_description": "No partner tonight? Ghost Light reads the other lines so you can run the scene alone.\nFree on the App Store. Built by a working actor.\n#actorslife #rehearsal #acting #theatre",
+    "instagram": "Partner cancelled. Three ways the night goes:\n1. Skip it.\n2. Read both parts to the mirror.\n3. Let Ghost Light read the other lines and run it properly.\nBuilt by a working actor. Link in bio.\n#actorslife #scenework #actorsofinstagram #actortraining #rehearsal"
+  },
+  "cover_ms": 9500
+}
