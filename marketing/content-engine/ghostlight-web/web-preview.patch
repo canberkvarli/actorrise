@@ -1,0 +1,725 @@
+From f359d96b8ba9bda051f7727829e1ff99e7c015fe Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 3 Nov 2026 10:21:34 +0300
+Subject: [PATCH] Web preview for marketing recordings: the real screens in a
+ browser at phone size
+
+Branch only, never main. Adds react-native-web, react-dom and @expo/metro-runtime, and
+the smallest web-only changes for `expo export --platform web` to build and render:
+a web resolver in metro.config.js (Uniwind 1.11's missing InputAccessoryView, and a web
+entry that loads Skia's CanvasKit first), offline.web.ts in place of expo-sqlite, and no
+anonymous sign-in on web. scripts/web-preview.sh builds and serves it with /api passed
+through to the real API. The iOS bundle is unchanged.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01EFXvs3f7YjmQkfWVrLdj8m
+---
+ README.md                      |  21 +++
+ metro.config.js                |  42 +++++-
+ package-lock.json              | 261 +++++++++++++++++++++++++++++----
+ package.json                   |   3 +
+ scripts/web-preview-server.mjs |  81 ++++++++++
+ scripts/web-preview.sh         |  17 +++
+ src/lib/offline.web.ts         |  16 ++
+ src/lib/session.ts             |   6 +-
+ web-preview/entry.js           |   9 ++
+ 9 files changed, 426 insertions(+), 30 deletions(-)
+ create mode 100644 scripts/web-preview-server.mjs
+ create mode 100755 scripts/web-preview.sh
+ create mode 100644 src/lib/offline.web.ts
+ create mode 100644 web-preview/entry.js
+
+diff --git a/README.md b/README.md
+index 3748a9a..57357f0 100644
+--- a/README.md
++++ b/README.md
+@@ -67,3 +67,24 @@ stays legible. Not a demo of Skia. The light is emphasis; the words are the prod
+ 
+ Step 1 (onboarding) does not start until Step 0 feels good. The build order in spec §5 is
+ deliberate.
++
++## Web preview (branch `web-preview` only)
++
++A browser build of the real screens at phone size, so Playwright can record them for marketing
++videos. It is not a web version of the app and never ships: it lives on this branch, and every
++change it needs is web only (`*.web.ts` files, a `Platform.OS === 'web'` guard, and a web-only
++resolver in `metro.config.js`). iOS and Android bundles are unchanged.
++
++```bash
++scripts/web-preview.sh        # builds dist/ and serves it on http://127.0.0.1:8099
++```
++
++Record at 390x844, device scale 3, mobile, en-US. What differs from the phone:
++
++- No anonymous session is minted on web (it would add a user per recording). Signed out, the
++  tab bar stays hidden and search, saves and the board ask to sign in. Sign in with email and
++  password at `/auth`, then reuse Playwright's `storageState` so later runs start signed in.
++- No offline shelf (`src/lib/offline.web.ts`) and no purchases (the paywall says the App Store is
++  unreachable). Haptics, tilt and the microphone do nothing useful in a browser; untested.
++- `/api` goes through the local server to api.actorrise.com, because the API does not allow a
++  localhost origin.
+diff --git a/metro.config.js b/metro.config.js
+index c87360c..8a86862 100644
+--- a/metro.config.js
++++ b/metro.config.js
+@@ -1,9 +1,49 @@
++const path = require('path');
+ const { getDefaultConfig } = require('expo/metro-config');
+ const { withUniwindConfig } = require('uniwind/metro');
+ 
+ const config = getDefaultConfig(__dirname);
+ 
+-module.exports = withUniwindConfig(config, {
++const uniwindConfig = withUniwindConfig(config, {
+   cssEntryFile: './src/global.css',
+   dtsFile: './src/uniwind-types.d.ts',
+ });
++
++// Web preview only (branch web-preview, for marketing recordings). Uniwind 1.11 lists
++// InputAccessoryView among the react-native-web components it swaps for its own, but
++// ships no file for it, so the web bundle fails to resolve. Hand that one import
++// straight to react-native-web. iOS and Android never take this path.
++const webPreviewDir = path.join(__dirname, 'web-preview');
++const uniwindResolve =uniwindConfig.resolver.resolveRequest;
++uniwindConfig.resolver.resolveRequest = (context, moduleName, platform) => {
++  if (
++    platform === 'web' &&
++    moduleName === './exports/InputAccessoryView' &&
++    context.originModulePath.includes(`${path.sep}react-native-web${path.sep}`)
++  ) {
++    return {
++      type: 'sourceFile',
++      filePath: path.join(
++        path.dirname(context.originModulePath),
++        'exports',
++        'InputAccessoryView',
++        'index.js',
++      ),
++    };
++  }
++  // Web preview only: start the web bundle from web-preview/entry.js, which loads
++  // Skia's CanvasKit before handing over to expo-router/entry.
++  if (
++    platform === 'web' &&
++    /(^|\/)expo-router\/entry(\.js)?$/.test(moduleName) &&
++    !context.originModulePath.startsWith(webPreviewDir) &&
++    !context.originModulePath.includes(`${path.sep}node_modules${path.sep}`)
++  ) {
++    return { type: 'sourceFile', filePath: path.join(webPreviewDir, 'entry.js') };
++  }
++  return uniwindResolve
++    ? uniwindResolve(context, moduleName, platform)
++    : context.resolveRequest(context, moduleName, platform);
++};
++
++module.exports = uniwindConfig;
+diff --git a/package-lock.json b/package-lock.json
+index 300c527..a428b11 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -14,6 +14,7 @@
+         "@expo-google-fonts/instrument-serif": "^0.4.1",
+         "@expo-google-fonts/montserrat": "^0.4.2",
+         "@expo-google-fonts/playfair-display": "^0.4.2",
++        "@expo/metro-runtime": "~57.0.12",
+         "@expo/vector-icons": "^15.0.2",
+         "@react-native-async-storage/async-storage": "2.2.0",
+         "@react-native-community/datetimepicker": "9.1.0",
+@@ -56,6 +57,7 @@
+         "expo-web-browser": "~57.0.2",
+         "posthog-react-native": "^4.66.3",
+         "react": "19.2.3",
++        "react-dom": "19.2.3",
+         "react-native": "0.86.2",
+         "react-native-gesture-handler": "~2.32.0",
+         "react-native-purchases": "^10.7.2",
+@@ -63,6 +65,7 @@
+         "react-native-safe-area-context": "~5.7.0",
+         "react-native-screens": "~4.26.0",
+         "react-native-url-polyfill": "^4.0.0",
++        "react-native-web": "~0.21.0",
+         "react-native-worklets": "0.10.1",
+         "tailwindcss": "^4.3.3",
+         "uniwind": "^1.11.0"
+@@ -2270,9 +2273,9 @@
+       }
+     },
+     "node_modules/@expo/log-box": {
+-      "version": "57.0.3",
+-      "resolved": "https://registry.npmjs.org/@expo/log-box/-/log-box-57.0.3.tgz",
+-      "integrity": "sha512-qv/cMliNax6es07Un/4IGJIcs4PUuhTKKTrJZX/0X2YRcOT5cqm/QicibZwTIbiZWi1i8P4YBRQTfFT2B17giw==",
++      "version": "57.0.4",
++      "resolved": "https://registry.npmjs.org/@expo/log-box/-/log-box-57.0.4.tgz",
++      "integrity": "sha512-IxwS9s1L2muj8mj8AQSuiy7u8OFJdc02NRFo2me/Tj6DiaeG5SREqmpBE4rQpR2cadqSg5jl8Qab8Cjie616dg==",
+       "license": "MIT",
+       "dependencies": {
+         "@expo/dom-webview": "^57.0.1",
+@@ -2322,6 +2325,31 @@
+         "walker": "^1.0.8"
+       }
+     },
++    "node_modules/@expo/metro-runtime": {
++      "version": "57.0.17",
++      "resolved": "https://registry.npmjs.org/@expo/metro-runtime/-/metro-runtime-57.0.17.tgz",
++      "integrity": "sha512-fiWYLaMDV8hoIpyPztRFPhGbHCHWlVfRTac3jZV7tP+fYCpo1QmgsuL23ubnoWqDZhFuRDNk+hQ4y21DMmxEFA==",
++      "license": "MIT",
++      "dependencies": {
++        "@expo/log-box": "^57.0.4",
++        "anser": "^1.4.9",
++        "pretty-format": "^29.7.0",
++        "stacktrace-parser": "^0.1.10",
++        "whatwg-fetch": "^3.0.0"
++      },
++      "peerDependencies": {
++        "@expo/log-box": "^57.0.4",
++        "expo": "*",
++        "react": "*",
++        "react-dom": "*",
++        "react-native": "*"
++      },
++      "peerDependenciesMeta": {
++        "react-dom": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/@expo/osascript": {
+       "version": "2.7.1",
+       "resolved": "https://registry.npmjs.org/@expo/osascript/-/osascript-2.7.1.tgz",
+@@ -5550,6 +5578,15 @@
+         "url": "https://opencollective.com/core-js"
+       }
+     },
++    "node_modules/cross-fetch": {
++      "version": "3.2.0",
++      "resolved": "https://registry.npmjs.org/cross-fetch/-/cross-fetch-3.2.0.tgz",
++      "integrity": "sha512-Q+xVJLoGOeIMXZmbUK4HYk+69cQH6LudR0Vu/pRm2YlU/hDV9CiS0gKUMaWY5f2NeUH9C1nV3bsTlCo0FsTV1Q==",
++      "license": "MIT",
++      "dependencies": {
++        "node-fetch": "^2.7.0"
++      }
++    },
+     "node_modules/cross-spawn": {
+       "version": "7.0.6",
+       "resolved": "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz",
+@@ -5564,6 +5601,15 @@
+         "node": ">= 8"
+       }
+     },
++    "node_modules/css-in-js-utils": {
++      "version": "3.1.0",
++      "resolved": "https://registry.npmjs.org/css-in-js-utils/-/css-in-js-utils-3.1.0.tgz",
++      "integrity": "sha512-fJAcud6B3rRu+KHYk+Bwf+WFL2MDCJJ1XG9x137tJQ0xYxor7XziQtuGFbWNdqrvF4Tk26O3H73nfVqXt/fW1A==",
++      "license": "MIT",
++      "dependencies": {
++        "hyphenate-style-name": "^1.0.3"
++      }
++    },
+     "node_modules/csstype": {
+       "version": "3.2.3",
+       "resolved": "https://registry.npmjs.org/csstype/-/csstype-3.2.3.tgz",
+@@ -6374,31 +6420,6 @@
+         }
+       }
+     },
+-    "node_modules/expo-router/node_modules/@expo/metro-runtime": {
+-      "version": "57.0.12",
+-      "resolved": "https://registry.npmjs.org/@expo/metro-runtime/-/metro-runtime-57.0.12.tgz",
+-      "integrity": "sha512-WpgjfRFh88B5tKJrbsypvyxx0MKuXMo+ru9Gbjq4Qwj7OboJmrQ+g555YCgiQD3uk3J1ThzgEU06yZOV43suGA==",
+-      "license": "MIT",
+-      "dependencies": {
+-        "@expo/log-box": "^57.0.3",
+-        "anser": "^1.4.9",
+-        "pretty-format": "^29.7.0",
+-        "stacktrace-parser": "^0.1.10",
+-        "whatwg-fetch": "^3.0.0"
+-      },
+-      "peerDependencies": {
+-        "@expo/log-box": "^57.0.3",
+-        "expo": "*",
+-        "react": "*",
+-        "react-dom": "*",
+-        "react-native": "*"
+-      },
+-      "peerDependenciesMeta": {
+-        "react-dom": {
+-          "optional": true
+-        }
+-      }
+-    },
+     "node_modules/expo-router/node_modules/@expo/ui": {
+       "version": "57.0.12",
+       "resolved": "https://registry.npmjs.org/@expo/ui/-/ui-57.0.12.tgz",
+@@ -7061,6 +7082,62 @@
+         "bser": "2.1.1"
+       }
+     },
++    "node_modules/fbjs": {
++      "version": "3.0.5",
++      "resolved": "https://registry.npmjs.org/fbjs/-/fbjs-3.0.5.tgz",
++      "integrity": "sha512-ztsSx77JBtkuMrEypfhgc3cI0+0h+svqeie7xHbh1k/IKdcydnvadp/mUaGgjAOXQmQSxsqgaRhS3q9fy+1kxg==",
++      "license": "MIT",
++      "dependencies": {
++        "cross-fetch": "^3.1.5",
++        "fbjs-css-vars": "^1.0.0",
++        "loose-envify": "^1.0.0",
++        "object-assign": "^4.1.0",
++        "promise": "^7.1.1",
++        "setimmediate": "^1.0.5",
++        "ua-parser-js": "^1.0.35"
++      }
++    },
++    "node_modules/fbjs-css-vars": {
++      "version": "1.0.2",
++      "resolved": "https://registry.npmjs.org/fbjs-css-vars/-/fbjs-css-vars-1.0.2.tgz",
++      "integrity": "sha512-b2XGFAFdWZWg0phtAWLHCk836A1Xann+I+Dgd3Gk64MHKZO44FfoD1KxyvbSh0qZsIoXQGGlVztIY+oitJPpRQ==",
++      "license": "MIT"
++    },
++    "node_modules/fbjs/node_modules/promise": {
++      "version": "7.3.1",
++      "resolved": "https://registry.npmjs.org/promise/-/promise-7.3.1.tgz",
++      "integrity": "sha512-nolQXZ/4L+bP/UGlkfaIujX9BKxGwmQ9OT4mOt5yvy8iK1h3wqTEJCijzGANTCCl9nWjY41juyAn2K3Q1hLLTg==",
++      "license": "MIT",
++      "dependencies": {
++        "asap": "~2.0.3"
++      }
++    },
++    "node_modules/fbjs/node_modules/ua-parser-js": {
++      "version": "1.0.41",
++      "resolved": "https://registry.npmjs.org/ua-parser-js/-/ua-parser-js-1.0.41.tgz",
++      "integrity": "sha512-LbBDqdIC5s8iROCUjMbW1f5dJQTEFB1+KO9ogbvlb3nm9n4YHa5p4KTvFPWvh2Hs8gZMBuiB1/8+pdfe/tDPug==",
++      "funding": [
++        {
++          "type": "opencollective",
++          "url": "https://opencollective.com/ua-parser-js"
++        },
++        {
++          "type": "paypal",
++          "url": "https://paypal.me/faisalman"
++        },
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/faisalman"
++        }
++      ],
++      "license": "MIT",
++      "bin": {
++        "ua-parser-js": "script/cli.js"
++      },
++      "engines": {
++        "node": "*"
++      }
++    },
+     "node_modules/fdir": {
+       "version": "6.5.0",
+       "resolved": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz",
+@@ -7387,6 +7464,12 @@
+         "node": ">= 14"
+       }
+     },
++    "node_modules/hyphenate-style-name": {
++      "version": "1.1.0",
++      "resolved": "https://registry.npmjs.org/hyphenate-style-name/-/hyphenate-style-name-1.1.0.tgz",
++      "integrity": "sha512-WDC/ui2VVRrz3jOVi+XtjqkDjiVjTtFaAGiW37k6b+ohyQ5wYDOGkvCZa8+H0nx3gyvv0+BST9xuOgIyGQ00gw==",
++      "license": "BSD-3-Clause"
++    },
+     "node_modules/iceberg-js": {
+       "version": "0.8.1",
+       "resolved": "https://registry.npmjs.org/iceberg-js/-/iceberg-js-0.8.1.tgz",
+@@ -7424,6 +7507,15 @@
+       "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==",
+       "license": "ISC"
+     },
++    "node_modules/inline-style-prefixer": {
++      "version": "7.0.1",
++      "resolved": "https://registry.npmjs.org/inline-style-prefixer/-/inline-style-prefixer-7.0.1.tgz",
++      "integrity": "sha512-lhYo5qNTQp3EvSSp3sRvXMbVQTLrvGV6DycRMJ5dm2BLMiJ30wpXKdDdgX+GmJZ5uQMucwRKHamXSst3Sj/Giw==",
++      "license": "MIT",
++      "dependencies": {
++        "css-in-js-utils": "^3.1.0"
++      }
++    },
+     "node_modules/invariant": {
+       "version": "2.2.4",
+       "resolved": "https://registry.npmjs.org/invariant/-/invariant-2.2.4.tgz",
+@@ -8586,6 +8678,26 @@
+         "url": "https://opencollective.com/express"
+       }
+     },
++    "node_modules/node-fetch": {
++      "version": "2.7.0",
++      "resolved": "https://registry.npmjs.org/node-fetch/-/node-fetch-2.7.0.tgz",
++      "integrity": "sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==",
++      "license": "MIT",
++      "dependencies": {
++        "whatwg-url": "^5.0.0"
++      },
++      "engines": {
++        "node": "4.x || >=6.0.0"
++      },
++      "peerDependencies": {
++        "encoding": "^0.1.0"
++      },
++      "peerDependenciesMeta": {
++        "encoding": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/node-forge": {
+       "version": "1.4.0",
+       "resolved": "https://registry.npmjs.org/node-forge/-/node-forge-1.4.0.tgz",
+@@ -8643,6 +8755,15 @@
+         "node": "^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0"
+       }
+     },
++    "node_modules/object-assign": {
++      "version": "4.1.1",
++      "resolved": "https://registry.npmjs.org/object-assign/-/object-assign-4.1.1.tgz",
++      "integrity": "sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=0.10.0"
++      }
++    },
+     "node_modules/on-finished": {
+       "version": "2.3.0",
+       "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.3.0.tgz",
+@@ -9038,6 +9159,12 @@
+         "node": "^10 || ^12 || >=14"
+       }
+     },
++    "node_modules/postcss-value-parser": {
++      "version": "4.2.0",
++      "resolved": "https://registry.npmjs.org/postcss-value-parser/-/postcss-value-parser-4.2.0.tgz",
++      "integrity": "sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==",
++      "license": "MIT"
++    },
+     "node_modules/posthog-react-native": {
+       "version": "4.66.3",
+       "resolved": "https://registry.npmjs.org/posthog-react-native/-/posthog-react-native-4.66.3.tgz",
+@@ -9219,6 +9346,18 @@
+         "ws": "^7"
+       }
+     },
++    "node_modules/react-dom": {
++      "version": "19.2.3",
++      "resolved": "https://registry.npmjs.org/react-dom/-/react-dom-19.2.3.tgz",
++      "integrity": "sha512-yELu4WmLPw5Mr/lmeEpox5rw3RETacE++JgHqQzd2dg+YbJuat3jH4ingc+WPZhxaoFzdv9y33G+F7Nl5O0GBg==",
++      "license": "MIT",
++      "dependencies": {
++        "scheduler": "^0.27.0"
++      },
++      "peerDependencies": {
++        "react": "^19.2.3"
++      }
++    },
+     "node_modules/react-fast-compare": {
+       "version": "3.2.2",
+       "resolved": "https://registry.npmjs.org/react-fast-compare/-/react-fast-compare-3.2.2.tgz",
+@@ -9442,6 +9581,38 @@
+         "react-native": "*"
+       }
+     },
++    "node_modules/react-native-web": {
++      "version": "0.21.4",
++      "resolved": "https://registry.npmjs.org/react-native-web/-/react-native-web-0.21.4.tgz",
++      "integrity": "sha512-77B6KlalB4osNIck91TNFixPkYPsTbuNEvw8P7IV+4v4/5wZSBRKZnw0Zhx6YjuauDTz71gc8IW+fVhcBMjr5A==",
++      "license": "MIT",
++      "dependencies": {
++        "@babel/runtime": "^7.18.6",
++        "@react-native/normalize-colors": "^0.74.1",
++        "fbjs": "^3.0.4",
++        "inline-style-prefixer": "^7.0.1",
++        "memoize-one": "^6.0.0",
++        "nullthrows": "^1.1.1",
++        "postcss-value-parser": "^4.2.0",
++        "styleq": "^0.1.3"
++      },
++      "peerDependencies": {
++        "react": "^18.0.0 || ^19.0.0",
++        "react-dom": "^18.0.0 || ^19.0.0"
++      }
++    },
++    "node_modules/react-native-web/node_modules/@react-native/normalize-colors": {
++      "version": "0.74.89",
++      "resolved": "https://registry.npmjs.org/@react-native/normalize-colors/-/normalize-colors-0.74.89.tgz",
++      "integrity": "sha512-qoMMXddVKVhZ8PA1AbUCk83trpd6N+1nF2A6k1i6LsQObyS92fELuk8kU/lQs6M7BsMHwqyLCpQJ1uFgNvIQXg==",
++      "license": "MIT"
++    },
++    "node_modules/react-native-web/node_modules/memoize-one": {
++      "version": "6.0.0",
++      "resolved": "https://registry.npmjs.org/memoize-one/-/memoize-one-6.0.0.tgz",
++      "integrity": "sha512-rkpe71W0N0c0Xz6QD0eJETuWAJGnJ9afsl1srmwPrI+yBCkge5EycXXbYRyvL29zZVUWQCY7InPRCv3GDXuZNw==",
++      "license": "MIT"
++    },
+     "node_modules/react-native-worklets": {
+       "version": "0.10.1",
+       "resolved": "https://registry.npmjs.org/react-native-worklets/-/react-native-worklets-0.10.1.tgz",
+@@ -9940,6 +10111,12 @@
+       "integrity": "sha512-qepMx2JxAa5jjfzxG79yPPq+8BuFToHd1hm7kI+Z4zAq1ftQiP7HcxMhDDItrbtwVeLg/cY2JnKnrcFkmiswNA==",
+       "license": "MIT"
+     },
++    "node_modules/setimmediate": {
++      "version": "1.0.5",
++      "resolved": "https://registry.npmjs.org/setimmediate/-/setimmediate-1.0.5.tgz",
++      "integrity": "sha512-MATJdZp8sLqDl/68LfQmbP8zKPLQNV6BIZoIgrscFDQ+RsvK/BxeDQOgyxKKoh0y/8h3BqVFnCqQ/gd+reiIXA==",
++      "license": "MIT"
++    },
+     "node_modules/setprototypeof": {
+       "version": "1.2.0",
+       "resolved": "https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.2.0.tgz",
+@@ -10233,6 +10410,12 @@
+       "integrity": "sha512-0MP/Cxx5SzeeZ10p/bZI0S6MpgD+yxAhi1BOQ34jgnMXsCq3j1t6tQnZu+KdlL7dvJTLT3g9xN8tl10TqgFMcg==",
+       "license": "MIT"
+     },
++    "node_modules/styleq": {
++      "version": "0.1.3",
++      "resolved": "https://registry.npmjs.org/styleq/-/styleq-0.1.3.tgz",
++      "integrity": "sha512-3ZUifmCDCQanjeej1f6kyl/BeP/Vae5EYkQ9iJfUm/QwZvlgnZzyflqAsAWYURdtea8Vkvswu2GrC57h3qffcA==",
++      "license": "MIT"
++    },
+     "node_modules/supports-color": {
+       "version": "7.2.0",
+       "resolved": "https://registry.npmjs.org/supports-color/-/supports-color-7.2.0.tgz",
+@@ -10440,6 +10623,12 @@
+       "integrity": "sha512-FWAPzCIHZHnrE/5/w9MPk0kK25hSQSH2IKhYh9PyjS3SG/+IEMvlwIHbhz+oF7xl54I+ueZlVnMjyzdSwLmAwA==",
+       "license": "MIT"
+     },
++    "node_modules/tr46": {
++      "version": "0.0.3",
++      "resolved": "https://registry.npmjs.org/tr46/-/tr46-0.0.3.tgz",
++      "integrity": "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==",
++      "license": "MIT"
++    },
+     "node_modules/tslib": {
+       "version": "2.8.1",
+       "resolved": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
+@@ -11176,12 +11365,28 @@
+         "defaults": "^1.0.3"
+       }
+     },
++    "node_modules/webidl-conversions": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/webidl-conversions/-/webidl-conversions-3.0.1.tgz",
++      "integrity": "sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==",
++      "license": "BSD-2-Clause"
++    },
+     "node_modules/whatwg-fetch": {
+       "version": "3.6.20",
+       "resolved": "https://registry.npmjs.org/whatwg-fetch/-/whatwg-fetch-3.6.20.tgz",
+       "integrity": "sha512-EqhiFU6daOA8kpjOWTL0olhVOF3i7OrFzSYiGsEMB8GcXS+RrzauAERX65xMeNWVqxA6HXH2m69Z9LaKKdisfg==",
+       "license": "MIT"
+     },
++    "node_modules/whatwg-url": {
++      "version": "5.0.0",
++      "resolved": "https://registry.npmjs.org/whatwg-url/-/whatwg-url-5.0.0.tgz",
++      "integrity": "sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==",
++      "license": "MIT",
++      "dependencies": {
++        "tr46": "~0.0.3",
++        "webidl-conversions": "^3.0.0"
++      }
++    },
+     "node_modules/whatwg-url-minimum": {
+       "version": "0.1.2",
+       "resolved": "https://registry.npmjs.org/whatwg-url-minimum/-/whatwg-url-minimum-0.1.2.tgz",
+diff --git a/package.json b/package.json
+index 4d5252c..6c383d6 100644
+--- a/package.json
++++ b/package.json
+@@ -20,6 +20,7 @@
+     "@expo-google-fonts/instrument-serif": "^0.4.1",
+     "@expo-google-fonts/montserrat": "^0.4.2",
+     "@expo-google-fonts/playfair-display": "^0.4.2",
++    "@expo/metro-runtime": "~57.0.12",
+     "@expo/vector-icons": "^15.0.2",
+     "@react-native-async-storage/async-storage": "2.2.0",
+     "@react-native-community/datetimepicker": "9.1.0",
+@@ -62,6 +63,7 @@
+     "expo-web-browser": "~57.0.2",
+     "posthog-react-native": "^4.66.3",
+     "react": "19.2.3",
++    "react-dom": "19.2.3",
+     "react-native": "0.86.2",
+     "react-native-gesture-handler": "~2.32.0",
+     "react-native-purchases": "^10.7.2",
+@@ -69,6 +71,7 @@
+     "react-native-safe-area-context": "~5.7.0",
+     "react-native-screens": "~4.26.0",
+     "react-native-url-polyfill": "^4.0.0",
++    "react-native-web": "~0.21.0",
+     "react-native-worklets": "0.10.1",
+     "tailwindcss": "^4.3.3",
+     "uniwind": "^1.11.0"
+diff --git a/scripts/web-preview-server.mjs b/scripts/web-preview-server.mjs
+new file mode 100644
+index 0000000..4779dc7
+--- /dev/null
++++ b/scripts/web-preview-server.mjs
+@@ -0,0 +1,81 @@
++// Web preview server (marketing recordings only, not a product).
++// Serves dist/ with a single page fallback, and passes /api/* through to the real API
++// so the browser sees one origin (api.actorrise.com does not allow localhost by CORS).
++// Usage: node scripts/web-preview-server.mjs [port] [dist dir]
++import { createServer } from 'node:http';
++import { readFile, stat } from 'node:fs/promises';
++import { extname, join, normalize, resolve } from 'node:path';
++
++const PORT = Number(process.argv[2] || process.env.PORT || 8099);
++const ROOT = resolve(process.argv[3] || 'dist');
++const API = process.env.WEB_PREVIEW_API || 'https://api.actorrise.com';
++
++const TYPES = {
++  '.html': 'text/html; charset=utf-8',
++  '.js': 'application/javascript',
++  '.css': 'text/css',
++  '.json': 'application/json',
++  '.wasm': 'application/wasm',
++  '.png': 'image/png',
++  '.jpg': 'image/jpeg',
++  '.svg': 'image/svg+xml',
++  '.ico': 'image/x-icon',
++  '.ttf': 'font/ttf',
++  '.otf': 'font/otf',
++  '.woff': 'font/woff',
++  '.woff2': 'font/woff2',
++  '.mp3': 'audio/mpeg',
++  '.mp4': 'video/mp4',
++};
++
++async function proxy(req, res) {
++  const chunks = [];
++  for await (const c of req) chunks.push(c);
++  const headers = { ...req.headers };
++  delete headers.host;
++  delete headers.origin;
++  delete headers.referer;
++  delete headers['content-length'];
++  try {
++    const upstream = await fetch(API + req.url, {
++      method: req.method,
++      headers,
++      body: ['GET', 'HEAD'].includes(req.method) ? undefined : Buffer.concat(chunks),
++      redirect: 'manual',
++    });
++    const out = {};
++    upstream.headers.forEach((v, k) => {
++      if (!['content-encoding', 'content-length', 'transfer-encoding', 'connection'].includes(k)) out[k] = v;
++    });
++    res.writeHead(upstream.status, out);
++    res.end(Buffer.from(await upstream.arrayBuffer()));
++  } catch (e) {
++    res.writeHead(502, { 'content-type': 'text/plain' });
++    res.end(`proxy error: ${e.message}`);
++  }
++}
++
++async function serveFile(req, res) {
++  const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
++  let file = normalize(join(ROOT, path));
++  if (!file.startsWith(ROOT)) file = join(ROOT, 'index.html');
++  try {
++    if ((await stat(file)).isDirectory()) file = join(file, 'index.html');
++  } catch {
++    file = join(ROOT, 'index.html');
++  }
++  try {
++    const body = await readFile(file);
++    res.writeHead(200, { 'content-type': TYPES[extname(file)] || 'application/octet-stream' });
++    res.end(body);
++  } catch {
++    res.writeHead(404);
++    res.end();
++  }
++}
++
++createServer((req, res) => (req.url.startsWith('/api/') ? proxy(req, res) : serveFile(req, res))).listen(
++  PORT,
++  '127.0.0.1',
++  () => console.log(`web preview on http://127.0.0.1:${PORT} (api -> ${API})`),
++);
+diff --git a/scripts/web-preview.sh b/scripts/web-preview.sh
+new file mode 100755
+index 0000000..2aafe1d
+--- /dev/null
++++ b/scripts/web-preview.sh
+@@ -0,0 +1,17 @@
++#!/usr/bin/env bash
++# Web preview of Ghost Light, for marketing screen recordings only. Not a product.
++# Builds the web export into dist/ and serves it on a port, with /api passed through
++# to api.actorrise.com so the browser stays on one origin.
++#   scripts/web-preview.sh [port]      (default 8099)
++# Needs .env with EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.
++set -euo pipefail
++cd "$(dirname "$0")/.."
++PORT="${1:-8099}"
++
++env -u EXPO_NO_DOTENV EXPO_PUBLIC_API_URL="http://127.0.0.1:${PORT}" \
++  npx expo export --platform web --clear
++# Skia on web loads CanvasKit's wasm from the site root.
++cp node_modules/canvaskit-wasm/bin/full/canvaskit.wasm dist/
++
++# NODE_USE_ENV_PROXY lets Node's fetch use HTTPS_PROXY where one is set (cloud sessions).
++NODE_USE_ENV_PROXY=1 exec node scripts/web-preview-server.mjs "$PORT" dist
+diff --git a/src/lib/offline.web.ts b/src/lib/offline.web.ts
+new file mode 100644
+index 0000000..e61da18
+--- /dev/null
++++ b/src/lib/offline.web.ts
+@@ -0,0 +1,16 @@
++import type { Monologue } from '../data/monologues';
++
++/**
++ * Web preview stub (branch web-preview, marketing recordings only). expo-sqlite on web
++ * needs a wasm worker and cross-origin isolation headers; the preview has no offline
++ * shelf, so every call is a no-op and reads come back empty. Native uses offline.ts.
++ */
++export function setOfflineAllowed(_next: boolean): void {}
++export async function saveOffline(_m: Monologue): Promise<void> {}
++export async function removeOffline(_id: string): Promise<void> {}
++export async function listOffline(): Promise<Monologue[]> {
++  return [];
++}
++export async function getOffline(_id: string): Promise<Monologue | null> {
++  return null;
++}
+diff --git a/src/lib/session.ts b/src/lib/session.ts
+index dfa94d2..8106fb8 100644
+--- a/src/lib/session.ts
++++ b/src/lib/session.ts
+@@ -1,4 +1,4 @@
+-import { AppState } from 'react-native';
++import { AppState, Platform } from 'react-native';
+ import type { Session } from '@supabase/supabase-js';
+ 
+ import { supabase } from './supabase';
+@@ -53,6 +53,10 @@ export async function bootstrapSession(): Promise<SessionState> {
+     };
+   }
+ 
++  // Web preview (marketing recordings) never mints an anonymous user: every fresh
++  // browser would add a row to auth.users and to the funnel. Native is unchanged.
++  if (Platform.OS === 'web') return { status: 'disabled' };
++
+   const { data, error } = await supabase.auth.signInAnonymously();
+   if (error) {
+     if (error.code === 'anonymous_provider_disabled') {
+diff --git a/web-preview/entry.js b/web-preview/entry.js
+new file mode 100644
+index 0000000..4856578
+--- /dev/null
++++ b/web-preview/entry.js
+@@ -0,0 +1,9 @@
++// Web preview entry (branch web-preview, marketing recordings only). metro.config.js
++// points the web bundle here instead of expo-router/entry. Skia on web needs CanvasKit
++// on the global before any Skia module runs, so load it first, then start the app.
++// canvaskit.wasm is copied into dist/ by scripts/web-preview.sh. Native never loads this.
++import { LoadSkiaWeb } from '@shopify/react-native-skia/lib/module/web';
++
++LoadSkiaWeb({ locateFile: (file) => `/${file}` }).then(() => {
++  require('expo-router/entry');
++});
+-- 
+2.43.0
+

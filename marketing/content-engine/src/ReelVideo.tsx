@@ -52,7 +52,11 @@ type Screen = {
   zoom?: number; // how far to push in on a tap, default 1.55
   audio?: { src: string; at: number; volume?: number }[]; // the scene partner reading, timed in recording seconds
 };
-type End = { kind: "end"; seconds: number; brand: string; line: string; action: string; icon?: string };
+/** The close. Fades in slowly over the last shot (no slide), the icon settles, the words arrive one
+ * after another, then the App Store line. `bg` ink (default for cinematic films) is a dark stage with
+ * the warm glow of a ghost light; paper is the light house style. `store` shows the App Store badge
+ * style button (use it for Ghost Light), otherwise `action` is plain text like actorrise.com. */
+type End = { kind: "end"; seconds: number; brand: string; line: string; action: string; icon?: string; bg?: "ink" | "paper"; store?: boolean };
 /** Sound effects on a beat, from public/sfx/cine: impact, reveal, note, switch, tick, heartbeat, room, riser.
  * `at` is seconds into the beat (negative starts before the cut, e.g. a riser at -1.5). Few and heavy. */
 export type Cue = { name: string; at?: number; vol?: number };
@@ -204,17 +208,33 @@ const ScreenBeat: React.FC<{ b: Screen }> = ({ b }) => {
 
 const EndBeat: React.FC<{ b: End }> = ({ b }) => {
   const f = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const pop = spring({ frame: f - 2, fps, config: { damping: 12, mass: 0.6 } });
+  const dark = (b.bg ?? "ink") === "ink";
+  const fg = dark ? C.cream : C.ink;
+  const slow = (a: number, d: number) => interpolate(f, [a, a + d], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+  const icon = slow(6, 26);
+  const glow = slow(0, 40) * (0.9 + 0.1 * Math.sin(f / 14));
+  const fade = (a: number, d = 22): React.CSSProperties => ({ opacity: slow(a, d), transform: `translateY(${(1 - slow(a, d)) * 18}px)`, filter: `blur(${(1 - slow(a, d)) * 6}px)` });
   return (
-    <AbsoluteFill style={{ background: C.paper, justifyContent: "center", alignItems: "center", paddingBottom: 340 }}>
-      <Img src={staticFile(b.icon ?? "icon.png")} style={{ width: 230, height: 230, borderRadius: 52, transform: `scale(${pop})`, boxShadow: "0 30px 70px rgba(30,15,5,0.25)" }} />
-      <div style={{ marginTop: 56 }}><Words text={b.brand} color={C.ink} accentC={C.orange} size={112} at={8} /></div>
-      <div style={{ marginTop: 18 }}><Words text={b.line} color={C.ink} accentC={C.orange} size={52} at={16} /></div>
-      <div style={{
-        marginTop: 60, padding: "26px 54px", borderRadius: 60, background: C.ink, color: C.cream, fontFamily: F.sans, fontWeight: 600,
-        fontSize: 40, opacity: prog(f, 24, 36), transform: `translateY(${(1 - prog(f, 24, 36)) * 30}px)`,
-      }}>{b.action}</div>
+    <AbsoluteFill style={{ background: dark ? C.ink : C.paper, justifyContent: "center", alignItems: "center", paddingBottom: 300 }}>
+      {dark && <AbsoluteFill style={{ background: `radial-gradient(ellipse 55% 34% at 50% 36%, rgba(232,121,43,${0.28 * glow}) 0%, rgba(232,121,43,0) 72%)` }} />}
+      <Img src={staticFile(b.icon ?? "icon.png")} style={{
+        width: 220, height: 220, borderRadius: 50, opacity: icon, transform: `scale(${0.94 + 0.06 * icon})`,
+        boxShadow: dark ? `0 0 ${90 * icon}px rgba(232,121,43,${0.35 * icon})` : "0 30px 70px rgba(30,15,5,0.22)",
+      }} />
+      <div style={{ marginTop: 54, fontFamily: F.serif, fontWeight: 600, fontSize: 108, color: fg, letterSpacing: -1, ...fade(24) }}>{b.brand}</div>
+      <div style={{ marginTop: 12, fontFamily: F.serifI, fontStyle: "italic", fontSize: 50, color: dark ? "rgba(251,247,240,0.72)" : "rgba(21,17,14,0.7)", ...fade(38) }}>{b.line}</div>
+      <div style={{ marginTop: 58, ...fade(54, 20) }}>
+        {b.store ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 18, padding: "20px 46px", borderRadius: 22, background: dark ? C.cream : C.ink, color: dark ? C.ink : C.cream }}>
+            <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}>
+              <span style={{ fontFamily: F.sans, fontSize: 22, letterSpacing: 1, opacity: 0.75 }}>FREE ON THE</span>
+              <span style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 44 }}>App Store</span>
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 42, letterSpacing: 1, color: fg }}>{b.action}</div>
+        )}
+      </div>
     </AbsoluteFill>
   );
 };
@@ -245,11 +265,14 @@ export const ReelVideo: React.FC<{ spec: ReelSpec }> = ({ spec }) => {
         const len = Math.round(b.seconds * RFPS);
         const from = starts[i];
         // Push: the next beat slides up over the last one; the outgoing beat stays rendered under it.
-        const inP = i === 0 || cut !== "push" ? 1 : prog(frame, from, from + P);
+        const isEnd = b.kind === "end";
+        const inP = i === 0 || cut !== "push" || isEnd ? 1 : prog(frame, from, from + P);
         const y = (1 - inP) * 1920;
+        const D = 24; // the end card dissolves over the last shot, slowly
+        const op = isEnd && i > 0 ? interpolate(frame, [from, from + D], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1;
         return (
-          <Sequence key={i} from={from} durationInFrames={len + (i < spec.beats.length - 1 && cut === "push" ? P : 0)}>
-            <AbsoluteFill style={{ transform: `translateY(${y}px)` }}>
+          <Sequence key={i} from={from} durationInFrames={len + (i < spec.beats.length - 1 ? (spec.beats[i + 1].kind === "end" ? 24 : cut === "push" ? P : 0) : 0)}>
+            <AbsoluteFill style={{ transform: `translateY(${y}px)`, opacity: op }}>
               {b.kind === "title" ? <TitleBeat b={b} /> : b.kind === "broll" ? <BrollBeat b={b} /> : b.kind === "screen" ? <ScreenBeat b={b} /> : <EndBeat b={b} />}
             </AbsoluteFill>
             {cut === "flash" && i > 0 && (

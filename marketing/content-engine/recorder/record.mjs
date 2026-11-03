@@ -29,7 +29,7 @@ import { execFileSync } from "node:child_process";
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const BASE = (process.env.BASE_URL || "https://www.actorrise.com").replace(/\/$/, "");
-const AUTH = path.join(ROOT, "out", ".auth.json");
+const AUTH = path.join(ROOT, "out", process.env.APP === "ghostlight" ? ".auth-ghostlight.json" : ".auth.json");
 const VIEW = { width: 390, height: 844 }; // iPhone 15 logical size
 const DPR = 3;
 const OUT_W = 1080;
@@ -84,6 +84,7 @@ async function open() {
 async function login(ctx) {
   // ANON=1 records the public, signed out site (landing, public monologue pages) with no login.
   if (process.env.ANON === "1") return;
+  if (process.env.APP === "ghostlight") return loginGhostLight(ctx);
   const page = await ctx.newPage();
   await page.goto(`${BASE}/monologues`, { waitUntil: "domcontentloaded" });
   await sleep(1500);
@@ -101,6 +102,30 @@ async function login(ctx) {
   await page.locator('input[type="password"]').first().fill(DEMO_PASSWORD);
   await page.locator('input[type="password"]').first().press("Enter");
   await page.waitForURL((u) => !/\/login/.test(u.toString()), { timeout: 20000 });
+  await ctx.storageState({ path: AUTH });
+  await page.close();
+}
+
+// Ghost Light (ghostlight-web/serve.sh): /auth has Sign in / New account tabs and an email +
+// password form (Supabase signInWithPassword), so the same demo account works.
+async function loginGhostLight(ctx) {
+  const page = await ctx.newPage();
+  await page.goto(`${BASE}/saves`, { waitUntil: "networkidle" }).catch(() => {});
+  await sleep(1500);
+  const prompt = await page.getByText(/sign in/i).count();
+  if (!prompt) { await page.close(); return; }
+  const { DEMO_EMAIL, DEMO_PASSWORD } = process.env;
+  if (!DEMO_EMAIL || !DEMO_PASSWORD) throw new Error("DEMO_EMAIL / DEMO_PASSWORD are not set in this environment");
+  await page.goto(`${BASE}/auth`, { waitUntil: "networkidle" }).catch(() => {});
+  await sleep(1000);
+  const tab = page.getByText(/^sign in$/i).first();
+  if (await tab.count()) await tab.click().catch(() => {});
+  const email = page.locator('input[type="email"], input[autocomplete="email"], input[inputmode="email"]').first();
+  await email.fill(DEMO_EMAIL);
+  const pw = page.locator('input[type="password"]').first();
+  await pw.fill(DEMO_PASSWORD);
+  await pw.press("Enter");
+  await sleep(4000);
   await ctx.storageState({ path: AUTH });
   await page.close();
 }
