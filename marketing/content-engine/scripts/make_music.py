@@ -375,7 +375,7 @@ def compose(spec):
         mx.add("fx", t_drop, kick(1.3), 0.9)
     if style in ("build", "pizzicato"):
         mx.note("fx", "timpani", S["bass"][bars_pre % 4] - 12 if S["bass"][bars_pre % 4] > 40 else S["bass"][bars_pre % 4], t_drop, 1.5, 0.6)
-    if style == "wood":  # the knock the Ghost Light icon lands on
+    if style in ("wood", "pulse"):  # the knock the Ghost Light icon lands on (the Earnest ending, Canberk loves it)
         mx.note("fx", "woodblock", 72, t_drop, 0.4, 0.4, 0)
         mx.note("fx", "kalimba", S["prog"][0][-1] + 12, t_drop + 0.55, 0.8, 0.22, 0.2)
         mx.note("fx", "kalimba", S["prog"][0][-1] + 19, t_drop + 1.1, 0.8, 0.2, -0.2)
@@ -385,7 +385,7 @@ def compose(spec):
     # too much shoosh). The drop keeps its riser.
     # Last chord rings out under the end card.
     mx.chord("keys", {"sunny": "electric_piano_1", "pizzicato": "orchestral_harp", "build": "acoustic_grand_piano",
-                      "festive": "music_box", "felt": "acoustic_grand_piano", "pulse": "celesta", "wood": "marimba"}[style], [72, 79] if style == "pulse" else [60, 64, 67, 72] if style == "felt" else S["prog"][0], t_drop if style == "wood" else max(t_drop, total - 1.6), 1.8, 0.2 if style == "pulse" else 0.3)
+                      "festive": "music_box", "felt": "acoustic_grand_piano", "pulse": "celesta", "wood": "marimba"}[style], [72, 79] if style == "pulse" else [60, 64, 67, 72] if style == "felt" else S["prog"][0], t_drop if style in ("wood", "pulse") else max(t_drop, total - 1.6), 1.8, 0.2 if style == "pulse" else 0.3)
 
     # Bus processing: the intro is filtered and opens up on the drop.
     n = mx.n

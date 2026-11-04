@@ -3,6 +3,16 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-04, 13:48: the Earnest ending is THE ending (wins over everything below)
+
+Canberk on the re-rendered Earnest: "beautiful ending, I love it, keep that." Every film from now on:
+- **Sound:** the `wood` bed (marimba, kalimba, woodblock) under walkthroughs, scene reads and drawn
+  films, quiet (`volume` about 0.16 under a voice, 0.25 without). Real one-shot films keep `pulse`.
+- **Ending:** snap end card, `seconds` 1.8, `beats` [0, 0.55, 1.1], `sfx` []. Hard cut in; the woodblock
+  knock lands with the Ghost Light icon, a kalimba note with the line, another with the App Store button,
+  the marimba chord rings, the video stops. No fade, no riser, no extra chime. make_music.py does this
+  for `wood` and `pulse` automatically.
+
 ## 2026-11-04, 11:10: acted voices, no black bars (wins over everything below)
 
 - **Every voice-over is acted, never monotone** (Canberk: "very important"). Voices run on ElevenLabs
