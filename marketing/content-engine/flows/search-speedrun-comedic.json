@@ -1,0 +1,20 @@
+{
+  "start": "/search",
+  "lead": 700,
+  "steps": [
+    {"mark": "search"},
+    {"click": {"css": "input"}, "after": 200},
+    {"type": "comedic, under two minutes, classical", "into": {"css": "input"}, "delay": 40},
+    {"press": "Enter"},
+    {"mark": "searching"},
+    {"waitFor": "monologues."},
+    {"wait": 1500},
+    {"mark": "results"},
+    {"click": "Bottom", "after": 300},
+    {"mark": "open"},
+    {"wait": 4000},
+    {"mark": "read"},
+    {"scroll": 300, "after": 2000}
+  ],
+  "tail": 600
+}

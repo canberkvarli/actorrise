@@ -1,8 +1,8 @@
-From f359d96b8ba9bda051f7727829e1ff99e7c015fe Mon Sep 17 00:00:00 2001
+From 935b9e495604adbcd26d32a61e8f17c8b23e5ea1 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 3 Nov 2026 10:21:34 +0300
-Subject: [PATCH] Web preview for marketing recordings: the real screens in a
- browser at phone size
+Subject: [PATCH 1/2] Web preview for marketing recordings: the real screens in
+ a browser at phone size
 
 Branch only, never main. Adds react-native-web, react-dom and @expo/metro-runtime, and
 the smallest web-only changes for `expo export --platform web` to build and render:
@@ -114,7 +114,7 @@ index c87360c..8a86862 100644
 +
 +module.exports = uniwindConfig;
 diff --git a/package-lock.json b/package-lock.json
-index 300c527..a428b11 100644
+index 4a6c67c..768ed48 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -14,6 +14,7 @@
@@ -125,7 +125,7 @@ index 300c527..a428b11 100644
          "@expo/vector-icons": "^15.0.2",
          "@react-native-async-storage/async-storage": "2.2.0",
          "@react-native-community/datetimepicker": "9.1.0",
-@@ -56,6 +57,7 @@
+@@ -60,6 +61,7 @@
          "expo-web-browser": "~57.0.2",
          "posthog-react-native": "^4.66.3",
          "react": "19.2.3",
@@ -133,7 +133,7 @@ index 300c527..a428b11 100644
          "react-native": "0.86.2",
          "react-native-gesture-handler": "~2.32.0",
          "react-native-purchases": "^10.7.2",
-@@ -63,6 +65,7 @@
+@@ -67,6 +69,7 @@
          "react-native-safe-area-context": "~5.7.0",
          "react-native-screens": "~4.26.0",
          "react-native-url-polyfill": "^4.0.0",
@@ -141,7 +141,7 @@ index 300c527..a428b11 100644
          "react-native-worklets": "0.10.1",
          "tailwindcss": "^4.3.3",
          "uniwind": "^1.11.0"
-@@ -2270,9 +2273,9 @@
+@@ -2274,9 +2277,9 @@
        }
      },
      "node_modules/@expo/log-box": {
@@ -154,7 +154,7 @@ index 300c527..a428b11 100644
        "license": "MIT",
        "dependencies": {
          "@expo/dom-webview": "^57.0.1",
-@@ -2322,6 +2325,31 @@
+@@ -2326,6 +2329,31 @@
          "walker": "^1.0.8"
        }
      },
@@ -186,7 +186,7 @@ index 300c527..a428b11 100644
      "node_modules/@expo/osascript": {
        "version": "2.7.1",
        "resolved": "https://registry.npmjs.org/@expo/osascript/-/osascript-2.7.1.tgz",
-@@ -5550,6 +5578,15 @@
+@@ -5569,6 +5597,15 @@
          "url": "https://opencollective.com/core-js"
        }
      },
@@ -202,7 +202,7 @@ index 300c527..a428b11 100644
      "node_modules/cross-spawn": {
        "version": "7.0.6",
        "resolved": "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz",
-@@ -5564,6 +5601,15 @@
+@@ -5583,6 +5620,15 @@
          "node": ">= 8"
        }
      },
@@ -218,7 +218,7 @@ index 300c527..a428b11 100644
      "node_modules/csstype": {
        "version": "3.2.3",
        "resolved": "https://registry.npmjs.org/csstype/-/csstype-3.2.3.tgz",
-@@ -6374,31 +6420,6 @@
+@@ -6433,31 +6479,6 @@
          }
        }
      },
@@ -250,7 +250,7 @@ index 300c527..a428b11 100644
      "node_modules/expo-router/node_modules/@expo/ui": {
        "version": "57.0.12",
        "resolved": "https://registry.npmjs.org/@expo/ui/-/ui-57.0.12.tgz",
-@@ -7061,6 +7082,62 @@
+@@ -7121,6 +7142,62 @@
          "bser": "2.1.1"
        }
      },
@@ -313,7 +313,7 @@ index 300c527..a428b11 100644
      "node_modules/fdir": {
        "version": "6.5.0",
        "resolved": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz",
-@@ -7387,6 +7464,12 @@
+@@ -7447,6 +7524,12 @@
          "node": ">= 14"
        }
      },
@@ -326,7 +326,7 @@ index 300c527..a428b11 100644
      "node_modules/iceberg-js": {
        "version": "0.8.1",
        "resolved": "https://registry.npmjs.org/iceberg-js/-/iceberg-js-0.8.1.tgz",
-@@ -7424,6 +7507,15 @@
+@@ -7484,6 +7567,15 @@
        "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==",
        "license": "ISC"
      },
@@ -342,7 +342,7 @@ index 300c527..a428b11 100644
      "node_modules/invariant": {
        "version": "2.2.4",
        "resolved": "https://registry.npmjs.org/invariant/-/invariant-2.2.4.tgz",
-@@ -8586,6 +8678,26 @@
+@@ -8646,6 +8738,26 @@
          "url": "https://opencollective.com/express"
        }
      },
@@ -369,7 +369,7 @@ index 300c527..a428b11 100644
      "node_modules/node-forge": {
        "version": "1.4.0",
        "resolved": "https://registry.npmjs.org/node-forge/-/node-forge-1.4.0.tgz",
-@@ -8643,6 +8755,15 @@
+@@ -8703,6 +8815,15 @@
          "node": "^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0"
        }
      },
@@ -385,7 +385,7 @@ index 300c527..a428b11 100644
      "node_modules/on-finished": {
        "version": "2.3.0",
        "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.3.0.tgz",
-@@ -9038,6 +9159,12 @@
+@@ -9098,6 +9219,12 @@
          "node": "^10 || ^12 || >=14"
        }
      },
@@ -398,7 +398,7 @@ index 300c527..a428b11 100644
      "node_modules/posthog-react-native": {
        "version": "4.66.3",
        "resolved": "https://registry.npmjs.org/posthog-react-native/-/posthog-react-native-4.66.3.tgz",
-@@ -9219,6 +9346,18 @@
+@@ -9279,6 +9406,18 @@
          "ws": "^7"
        }
      },
@@ -417,7 +417,7 @@ index 300c527..a428b11 100644
      "node_modules/react-fast-compare": {
        "version": "3.2.2",
        "resolved": "https://registry.npmjs.org/react-fast-compare/-/react-fast-compare-3.2.2.tgz",
-@@ -9442,6 +9581,38 @@
+@@ -9502,6 +9641,38 @@
          "react-native": "*"
        }
      },
@@ -456,7 +456,7 @@ index 300c527..a428b11 100644
      "node_modules/react-native-worklets": {
        "version": "0.10.1",
        "resolved": "https://registry.npmjs.org/react-native-worklets/-/react-native-worklets-0.10.1.tgz",
-@@ -9940,6 +10111,12 @@
+@@ -10000,6 +10171,12 @@
        "integrity": "sha512-qepMx2JxAa5jjfzxG79yPPq+8BuFToHd1hm7kI+Z4zAq1ftQiP7HcxMhDDItrbtwVeLg/cY2JnKnrcFkmiswNA==",
        "license": "MIT"
      },
@@ -469,7 +469,7 @@ index 300c527..a428b11 100644
      "node_modules/setprototypeof": {
        "version": "1.2.0",
        "resolved": "https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.2.0.tgz",
-@@ -10233,6 +10410,12 @@
+@@ -10293,6 +10470,12 @@
        "integrity": "sha512-0MP/Cxx5SzeeZ10p/bZI0S6MpgD+yxAhi1BOQ34jgnMXsCq3j1t6tQnZu+KdlL7dvJTLT3g9xN8tl10TqgFMcg==",
        "license": "MIT"
      },
@@ -482,7 +482,7 @@ index 300c527..a428b11 100644
      "node_modules/supports-color": {
        "version": "7.2.0",
        "resolved": "https://registry.npmjs.org/supports-color/-/supports-color-7.2.0.tgz",
-@@ -10440,6 +10623,12 @@
+@@ -10512,6 +10695,12 @@
        "integrity": "sha512-FWAPzCIHZHnrE/5/w9MPk0kK25hSQSH2IKhYh9PyjS3SG/+IEMvlwIHbhz+oF7xl54I+ueZlVnMjyzdSwLmAwA==",
        "license": "MIT"
      },
@@ -495,7 +495,7 @@ index 300c527..a428b11 100644
      "node_modules/tslib": {
        "version": "2.8.1",
        "resolved": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
-@@ -11176,12 +11365,28 @@
+@@ -11248,12 +11437,28 @@
          "defaults": "^1.0.3"
        }
      },
@@ -525,7 +525,7 @@ index 300c527..a428b11 100644
        "version": "0.1.2",
        "resolved": "https://registry.npmjs.org/whatwg-url-minimum/-/whatwg-url-minimum-0.1.2.tgz",
 diff --git a/package.json b/package.json
-index 4d5252c..6c383d6 100644
+index e04494e..f81103e 100644
 --- a/package.json
 +++ b/package.json
 @@ -20,6 +20,7 @@
@@ -536,7 +536,7 @@ index 4d5252c..6c383d6 100644
      "@expo/vector-icons": "^15.0.2",
      "@react-native-async-storage/async-storage": "2.2.0",
      "@react-native-community/datetimepicker": "9.1.0",
-@@ -62,6 +63,7 @@
+@@ -66,6 +67,7 @@
      "expo-web-browser": "~57.0.2",
      "posthog-react-native": "^4.66.3",
      "react": "19.2.3",
@@ -544,7 +544,7 @@ index 4d5252c..6c383d6 100644
      "react-native": "0.86.2",
      "react-native-gesture-handler": "~2.32.0",
      "react-native-purchases": "^10.7.2",
-@@ -69,6 +71,7 @@
+@@ -73,6 +75,7 @@
      "react-native-safe-area-context": "~5.7.0",
      "react-native-screens": "~4.26.0",
      "react-native-url-polyfill": "^4.0.0",
@@ -720,6 +720,44 @@ index 0000000..4856578
 +LoadSkiaWeb({ locateFile: (file) => `/${file}` }).then(() => {
 +  require('expo-router/entry');
 +});
+-- 
+2.43.0
+
+
+From 2c764b41474cc2b57f1b197dfc5dfcc2b1db990c Mon Sep 17 00:00:00 2001
+From: preview <preview@local>
+Date: Wed, 4 Nov 2026 06:55:59 +0000
+Subject: [PATCH 2/2] Web preview: no screenshot listener on web
+ (PrivacyShield)
+
+---
+ src/components/PrivacyShield.tsx | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/src/components/PrivacyShield.tsx b/src/components/PrivacyShield.tsx
+index 5928487..4709fb8 100644
+--- a/src/components/PrivacyShield.tsx
++++ b/src/components/PrivacyShield.tsx
+@@ -1,5 +1,5 @@
+ import { useEffect, useRef, useState } from 'react';
+-import { AppState, StyleSheet, Text, View } from 'react-native';
++import { AppState, Platform, StyleSheet, Text, View } from 'react-native';
+ import { BlurView } from 'expo-blur';
+ import { addScreenshotListener } from 'expo-screen-capture';
+ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+@@ -22,6 +22,12 @@ import { useTheme } from '../theme/ThemeContext';
+  * best-effort layer, and a nice touch on both.
+  */
+ export function PrivacyShield() {
++  // Web preview: expo-screen-capture has no web listener, and a browser has no app switcher.
++  if (Platform.OS === 'web') return null;
++  return <PrivacyShieldNative />;
++}
++
++function PrivacyShieldNative() {
+   const { colors: c } = useTheme();
+   const [backgrounded, setBackgrounded] = useState(false);
+   const [shot, setShot] = useState(false);
 -- 
 2.43.0
 
