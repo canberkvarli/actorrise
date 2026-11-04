@@ -3,6 +3,18 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-04, 11:10: acted voices, no black bars (wins over everything below)
+
+- **Every voice-over is acted, never monotone** (Canberk: "very important"). Voices run on ElevenLabs
+  `eleven_v3`, which performs audio tags. Each voiced line gets a `say` field: the same words with tags
+  for the feeling, e.g. `"say": "[wry] Five actors in the lobby. [sighs] Every single one brought Juliet."`.
+  `text` stays clean for the screen. Pick tones that fit the moment and vary them line to line: [warmly],
+  [amused], [conspiratorial], [delighted], [teasing], [whispers], [excited], [sighs], [laughs softly].
+  The scene partner acts the character (Algernon teasing, a Chekhov sister weary). No line without a tag.
+- **No black bars, ever.** Every frame is full bleed 1080x1920. No letterbox (removed from the cinema
+  look), no footage scaled to fit with bars above and below: cover the frame. Instagram and TikTok show
+  the full frame when a video is opened, so bars that hide in the grid crop show up there.
+
 ## 2026-11-04, late morning: wooden sounds and a sharp Ghost Light close (wins over everything below)
 
 Canberk, on the comedic nine seconds walkthrough:

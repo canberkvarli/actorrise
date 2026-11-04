@@ -23,12 +23,15 @@ import base64, json, os, re, sys, urllib.error, urllib.request
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 API = "https://api.elevenlabs.io/v1"
 VOICES = {"narrator": "JBFqnCBsd6RMkjVDRZzb", "george": "JBFqnCBsd6RMkjVDRZzb", "partner": "pFZP5JQG7iQjIQuC4Bku", "lily": "pFZP5JQG7iQjIQuC4Bku"}
-MODEL = os.environ.get("ELEVENLABS_TTS_MODEL", "eleven_multilingual_v2")
+# eleven_v3 acts: it reads audio tags like [amused], [warmly], [whispers], [sighs], [excited]
+# (Canberk, 2026-11-04: emotion and tone in every voice-over, never monotone).
+MODEL = os.environ.get("ELEVENLABS_TTS_MODEL", "eleven_v3")
 
 
 def tts(text, voice_id, key, settings=None):
     body = {"text": text, "model_id": MODEL,
-            "voice_settings": settings or {"stability": 0.45, "similarity_boost": 0.8, "style": 0.35, "use_speaker_boost": True}}
+            "voice_settings": settings or ({"stability": 0.0, "similarity_boost": 0.8} if MODEL.startswith("eleven_v3")
+                                           else {"stability": 0.3, "similarity_boost": 0.8, "style": 0.6, "use_speaker_boost": True})}
     req = urllib.request.Request(f"{API}/text-to-speech/{voice_id}/with-timestamps?output_format=mp3_44100_128",
                                  data=json.dumps(body).encode(), method="POST",
                                  headers={"xi-api-key": key, "Content-Type": "application/json"})
@@ -45,8 +48,15 @@ def tts(text, voice_id, key, settings=None):
 def words_from_alignment(al):
     """Character timings -> word timings."""
     chars, starts, ends = al["characters"], al["character_start_times_seconds"], al["character_end_times_seconds"]
-    out, cur, s0 = [], "", None
+    out, cur, s0, tag = [], "", None, 0
     for c, s, e in zip(chars, starts, ends):
+        # audio tags ([amused], [speaking softly]) are acted, not shown
+        if c == "[":
+            tag += 1; continue
+        if c == "]":
+            tag = max(0, tag - 1); continue
+        if tag:
+            continue
         if c.isspace():
             if cur:
                 out.append({"w": cur, "s": round(s0, 3), "e": round(prev_e, 3)})
@@ -66,7 +76,8 @@ def voice_line(line, spec, idx, key, default):
         return False
     vid = line.get("voice") or default
     vid = (spec.get("voices") or {}).get(vid, VOICES.get(vid.lower(), vid))
-    res = tts(line["text"], vid, key)
+    # `say` is the acted script with audio tags; `text` stays clean for what is shown on screen.
+    res = tts(line.get("say") or line["text"], vid, key)
     rel = f"voice/{spec['id']}/{idx:02d}.mp3"
     path = os.path.join(ROOT, "public", rel)
     os.makedirs(os.path.dirname(path), exist_ok=True)

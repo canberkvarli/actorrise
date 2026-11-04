@@ -97,7 +97,7 @@ const C = { paper: "#f2ece0", ink: "#15110e", orange: "#e8792b", cream: "#fbf7f0
  *   mono     near white, black sans, words fade up, key word underlined (clean startup, ElevenLabs feel)
  *   bold     orange field, huge sans caps, words slam in, key word in white
  *   marker   off white, black sans, a yellow highlighter swipes behind the key word
- *   cinema   letterboxed footage, small subtitle style captions, ink cards with italic serif
+ *   cinema   full bleed footage (no letterbox bars: they show as black bars full screen on IG and TikTok), small subtitle style captions, ink cards with italic serif
  *   midnight deep blue black, cream sans, words type on, key word in warm amber */
 export type LookName = "paper" | "noir" | "mono" | "bold" | "marker" | "cinema" | "midnight";
 type Look = {
@@ -111,7 +111,7 @@ const LOOKS: Record<LookName, Look> = {
   mono: { light: "#fafafa", dark: "#0a0a0a", accent: "#0a0a0a", onLight: "#0a0a0a", onDark: "#fafafa", onAccent: "#fafafa", key: "#0a0a0a", font: "serif", arrive: "fade", mark: "underline", scale: 0.86 },
   bold: { light: "#e8792b", dark: "#111111", accent: "#e8792b", onLight: "#111111", onDark: "#e8792b", onAccent: "#111111", key: "#ffffff", font: "serif", arrive: "slam", mark: "color", scale: 0.92 },
   marker: { light: "#f7f5f0", dark: "#141414", accent: "#ffe15a", onLight: "#141414", onDark: "#f7f5f0", onAccent: "#141414", key: "#141414", font: "serif", arrive: "rise", mark: "marker", scale: 0.88 },
-  cinema: { light: "#e9e4da", dark: "#000000", accent: "#e8792b", onLight: "#000000", onDark: "#f2efe8", onAccent: "#000000", key: "#e8792b", font: "serif", arrive: "fade", mark: "italic", letterbox: true, subtitle: true },
+  cinema: { light: "#e9e4da", dark: "#000000", accent: "#e8792b", onLight: "#000000", onDark: "#f2efe8", onAccent: "#000000", key: "#e8792b", font: "serif", arrive: "fade", mark: "italic", subtitle: true },
   midnight: { light: "#0d1020", dark: "#070914", accent: "#f2b75b", onLight: "#f3efe6", onDark: "#f3efe6", onAccent: "#0d1020", key: "#f2b75b", font: "serif", arrive: "type", mark: "color", scale: 0.88 },
 };
 const LookCtx = React.createContext<Look>(LOOKS.paper);
