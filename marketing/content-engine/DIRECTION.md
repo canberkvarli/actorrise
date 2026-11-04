@@ -3,6 +3,16 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-04, late morning: wooden sounds and a sharp Ghost Light close (wins over everything below)
+
+Canberk, on the comedic nine seconds walkthrough:
+- **Music is wooden and organic.** Walkthroughs use `"music": {"style": "wood", "drop": "end"}` (marimba,
+  kalimba, woodblock); real films keep `pulse`. No pizzicato, sunny, festive or build beds unless he asks.
+- **Walkthroughs: no "Real app. No cuts." caption.** Let the phone fill the frame and zoom into it; never
+  crop the top of the phone. Put the hook on the title card, with the key word in the accent colour.
+- **The end lands and stops.** Snap end, about 1.8s: the Ghost Light icon on the drop, line and App Store
+  on the next two beats, then the video ends. No fade out, no tail.
+
 ## 2026-11-05, small hours: the tram film is the reference (wins over everything below)
 
 Canberk approved the tram film ("it was perfect, same vibe for that type") and gave notes on the others:
