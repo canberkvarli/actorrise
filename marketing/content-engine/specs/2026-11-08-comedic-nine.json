@@ -26,53 +26,54 @@
           "mark": "search"
         },
         {
-          "t": 1.149,
+          "t": 1.155,
           "tap": {
             "x": 0.49615404177934697,
             "y": 0.31399966416200753
           }
         },
         {
-          "t": 1.685,
+          "t": 1.695,
           "tap": {
             "x": 0.49615404177934697,
             "y": 0.31399966416200753
           }
         },
         {
-          "t": 1.757,
+          "t": 1.772,
           "typing": "comedic, under two minutes, classical"
         },
         {
-          "t": 3.991
+          "t": 4.061
         },
         {
-          "t": 4.342,
+          "t": 4.414,
           "mark": "searching"
         },
         {
-          "t": 8.296,
+          "t": 7.97,
           "mark": "results"
         },
         {
-          "t": 8.901,
+          "t": 8.4,
           "tap": {
             "x": 0.5,
             "y": 0.6540284360189573
           }
         },
         {
-          "t": 9.58,
+          "t": 9.24,
           "mark": "open"
         },
         {
-          "t": 14.282,
+          "t": 13.942,
           "mark": "read"
         },
         {
-          "t": 14.632
+          "t": 14.292
         }
       ],
+      "zoom": 1.12,
       "bg": "paper",
       "sfx": []
     },
@@ -111,8 +112,8 @@
   "captions": {
     "tiktok": "Typed \"comedic, under two minutes\" and was reading Bottom from Midsummer before nine seconds were up. #actortok #monologue #audition #actorslife #actors",
     "youtube_title": "A comedic monologue in nine seconds #shorts",
-    "youtube_description": "Describe the piece you need and Ghost Light finds it. Real app, no cuts.\nFree on the App Store, built by a working actor.\n#monologue #audition #actorslife #acting",
-    "instagram": "A comedic monologue in nine seconds.\n1. Say what you need: comedic, under two minutes.\n2. Pick one. Bottom, A Midsummer Night's Dream.\n3. Read it.\nReal app, no cuts. Ghost Light, built by a working actor. Link in bio.\n#actorslife #monologue #audition #actorsofinstagram #actortraining"
+    "youtube_description": "Describe the piece you need and Ghost Light finds it.\nFree on the App Store, built by a working actor.\n#monologue #audition #actorslife #acting",
+    "instagram": "A comedic monologue in nine seconds.\n1. Say what you need: comedic, under two minutes.\n2. Pick one. Bottom, A Midsummer Night's Dream.\n3. Read it.\nGhost Light, built by a working actor. Link in bio.\n#actorslife #monologue #audition #actorsofinstagram #actortraining"
   },
   "cover_ms": 12300
 }
