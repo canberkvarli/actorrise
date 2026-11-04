@@ -3,6 +3,17 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-04, 13:53: app recordings look like the phone, mostly dark
+
+Canberk on the comedic walkthrough: "beautifully designed", but two web artefacts gave it away: a
+square box behind the lamp logo (react-native-web drew its glow as a box-shadow) and a rectangle around
+the typed words (the browser's focus outline). The recorder now hides both on every recording. Check the
+first frames of every app recording for anything a real iPhone would not show (focus rings, scrollbars,
+hover states, square shadows) before using it.
+- **Ghost Light records in its dark theme by default** (the dark stage is the brand). About one
+  walkthrough in three can be light for variety: `SCHEME=light` on the recorder. Pick the frame's look
+  to match (dark app inside a dark or paper frame both work).
+
 ## 2026-11-04, 13:48: the Earnest ending is THE ending (wins over everything below)
 
 Canberk on the re-rendered Earnest: "beautiful ending, I love it, keep that." Every film from now on:

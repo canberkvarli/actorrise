@@ -61,7 +61,9 @@ async function open() {
     userAgent:
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
     storageState: fs.existsSync(AUTH) ? AUTH : undefined,
-    colorScheme: "light",
+    // SCHEME=dark|light. Ghost Light's home is the dark stage, so it records dark unless told otherwise
+    // (Canberk, 2026-11-04: mostly dark, light now and then for variety).
+    colorScheme: process.env.SCHEME || (process.env.APP === "ghostlight" ? "dark" : "light"),
     // The site picks Turkish on the client from a tr language or a Europe/Istanbul clock
     // (lib/i18n/locale.ts). This machine runs on Istanbul time, so pin English three ways.
     locale: "en-US",
@@ -69,6 +71,20 @@ async function open() {
   });
   const host = new URL(BASE).hostname;
   await ctx.addCookies([{ name: "NEXT_LOCALE", value: "en", domain: host, path: "/" }]);
+  // Web-only artefacts that never show on the phone (Canberk, 2026-11-04): the browser's focus box
+  // around a typed field, the tap flash, and react-native-web turning the lamp's soft shadow into a
+  // square box-shadow behind the logo. Hide them and give the lamp its glow back as a drop-shadow.
+  await ctx.addInitScript(() => {
+    const css = `
+      input, textarea, [contenteditable], *:focus, *:focus-visible { outline: none !important; }
+      input:focus, textarea:focus { box-shadow: none !important; }
+      * { -webkit-tap-highlight-color: transparent !important; }
+      [aria-label="Ghost Light"], [aria-label="Ghost Light"] * { box-shadow: none !important; }
+      [aria-label="Ghost Light"] img { filter: drop-shadow(0 0 7px rgba(255, 184, 108, 0.6)); }
+      ::selection { background: transparent; }`;
+    const add = () => { const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st); };
+    if (document.head) add(); else document.addEventListener("DOMContentLoaded", add);
+  });
   // Log every <audio>/Audio() play with its source and time.
   await ctx.addInitScript(() => {
     window.__plays = [];
