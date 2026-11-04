@@ -80,7 +80,10 @@ async function open() {
       input:focus, textarea:focus { box-shadow: none !important; }
       * { -webkit-tap-highlight-color: transparent !important; }
       [aria-label="Ghost Light"], [aria-label="Ghost Light"] * { box-shadow: none !important; }
-      [aria-label="Ghost Light"] img { filter: drop-shadow(0 0 7px rgba(255, 184, 108, 0.6)); }
+      /* The lamp's img sits in a 30x30 overflow:hidden box, so a glow on the img is clipped into a
+         square. Put the glow on the unclipped wrapper instead. */
+      [aria-label="Ghost Light"] img { filter: none !important; }
+      [aria-label="Ghost Light"] { filter: drop-shadow(0 0 7px rgba(255, 184, 108, 0.6)); }
       ::selection { background: transparent; }`;
     const add = () => { const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st); };
     if (document.head) add(); else document.addEventListener("DOMContentLoaded", add);
