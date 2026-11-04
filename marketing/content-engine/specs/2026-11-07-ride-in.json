@@ -4,6 +4,7 @@
   "cut": "hard",
   "music": {
     "style": "pulse",
+    "volume": 0.4,
     "drop": "end"
   },
   "beats": [
@@ -39,9 +40,9 @@
     },
     {
       "kind": "end",
-      "seconds": 3.0,
+      "seconds": 1.8,
       "brand": "Ghost Light",
-      "line": "built by a working actor",
+      "line": "For when everyone else has gone home.",
       "action": "Free on the App Store",
       "bg": "ink",
       "store": true,

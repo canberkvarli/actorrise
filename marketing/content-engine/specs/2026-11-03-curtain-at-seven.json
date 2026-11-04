@@ -31,33 +31,22 @@
           "at": 7.8
         }
       ],
-      "sfx": [
-        {
-          "name": "tick",
-          "at": 0.6,
-          "vol": 0.35
-        },
-        {
-          "name": "impact",
-          "at": 4.0,
-          "vol": 0.55
-        }
-      ]
+      "sfx": []
     },
     {
       "kind": "end",
-      "seconds": 4,
+      "seconds": 1.8,
       "brand": "Ghost Light",
-      "line": "built by a working actor",
+      "line": "For when everyone else has gone home.",
       "action": "Free on the App Store",
       "bg": "ink",
       "store": true,
-      "sfx": [
-        {
-          "name": "chime",
-          "at": 0.9,
-          "vol": 0.6
-        }
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.55,
+        1.1
       ]
     }
   ],
@@ -77,5 +66,10 @@
     "youtube_description": "New sides just landed? Bring them into Ghost Light and run them before you go on.\nFree on the App Store. Built by a working actor.\n#actorslife #audition #theatre #rehearsal",
     "instagram": "What do you do with six hours and brand new sides?\nBring the pages into Ghost Light and run them till they sit.\nBuilt by a working actor. Link in bio.\n#actorslife #audition #actorsofinstagram #actortraining #theatre"
   },
-  "cover_ms": 6000
+  "cover_ms": 6000,
+  "music": {
+    "style": "pulse",
+    "volume": 0.4,
+    "drop": "end"
+  }
 }

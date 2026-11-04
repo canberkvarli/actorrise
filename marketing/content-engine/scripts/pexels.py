@@ -30,8 +30,13 @@ def search(q, n=10):
 
 def get(vid, out):
     v = call(f"{API}/videos/{vid}")
-    files = [f for f in v["video_files"] if f.get("height") and f["height"] > f["width"] and f["width"] <= 1080]
-    files.sort(key=lambda f: f["width"], reverse=True)
+    # Never upscale (Canberk, 2026-11-04: soft videos). Take the smallest portrait file at least 1080 wide;
+    # only if none exists fall back to the biggest one, and say so.
+    port = [f for f in v["video_files"] if f.get("height") and f["height"] > f["width"]]
+    big = sorted([f for f in port if f["width"] >= 1080], key=lambda f: f["width"])
+    files = big or sorted(port, key=lambda f: f["width"], reverse=True)
+    if files and files[0]["width"] < 1080:
+        print(f"WARNING: best file is only {files[0]['width']} wide, it will look soft; pick another clip", file=sys.stderr)
     if not files:
         sys.exit("no portrait file for this clip")
     os.makedirs(os.path.dirname(out), exist_ok=True)

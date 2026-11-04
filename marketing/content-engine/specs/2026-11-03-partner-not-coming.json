@@ -31,38 +31,22 @@
           "at": 7.8
         }
       ],
-      "sfx": [
-        {
-          "name": "tick",
-          "at": 0.6,
-          "vol": 0.3
-        },
-        {
-          "name": "click",
-          "at": 4.0,
-          "vol": 0.45
-        },
-        {
-          "name": "impact",
-          "at": 7.8,
-          "vol": 0.5
-        }
-      ]
+      "sfx": []
     },
     {
       "kind": "end",
-      "seconds": 4,
+      "seconds": 1.8,
       "brand": "Ghost Light",
-      "line": "built by a working actor",
+      "line": "For when everyone else has gone home.",
       "action": "Free on the App Store",
       "bg": "ink",
       "store": true,
-      "sfx": [
-        {
-          "name": "chime",
-          "at": 0.9,
-          "vol": 0.6
-        }
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.55,
+        1.1
       ]
     }
   ],
@@ -82,5 +66,10 @@
     "youtube_description": "No partner tonight? Ghost Light reads the other lines so you can run the scene alone.\nFree on the App Store. Built by a working actor.\n#actorslife #rehearsal #acting #theatre",
     "instagram": "Partner cancelled. Three ways the night goes:\n1. Skip it.\n2. Read both parts to the mirror.\n3. Let Ghost Light read the other lines and run it properly.\nBuilt by a working actor. Link in bio.\n#actorslife #scenework #actorsofinstagram #actortraining #rehearsal"
   },
-  "cover_ms": 9500
+  "cover_ms": 9500,
+  "music": {
+    "style": "pulse",
+    "volume": 0.4,
+    "drop": "end"
+  }
 }

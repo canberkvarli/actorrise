@@ -26,9 +26,14 @@ if [ "${2:-}" = "still" ]; then
   exit 0
 fi
 npx remotion render src/index.ts "$COMP" "out/${ID}.raw.mp4" --props="$PROPS" "${BROWSER_FLAG[@]}" \
-  --concurrency="$CORES" --crf=20 --x264-preset=veryfast
+  --concurrency="$CORES" --crf=12 --x264-preset=veryfast
 # Loudness for phone speakers.
-ffmpeg -loglevel error -y -i "out/${ID}.raw.mp4" -c:v copy -af "loudnorm=I=-16:TP=-1.5:LRA=11" -ar 48000 -c:a aac -b:a 160k "out/${ID}.mp4"
+# Upload quality (Canberk, 2026-11-04: videos looked soft on IG/TikTok). Instagram and TikTok re-encode
+# everything, so give them a rich source: ~12 Mbps H.264 High, 1080x1920, 30fps, faststart. A dark, still
+# film at CRF alone came out near 0.25 Mbps and fell apart on their second encode.
+ffmpeg -loglevel error -y -i "out/${ID}.raw.mp4" -c:v libx264 -preset slow -profile:v high -pix_fmt yuv420p \
+  -b:v 12M -minrate 8M -maxrate 16M -bufsize 24M -x264-params "nal-hrd=vbr" -movflags +faststart \
+  -af "loudnorm=I=-16:TP=-1.5:LRA=11" -ar 48000 -c:a aac -b:a 256k "out/${ID}.mp4"
 rm -f "out/${ID}.raw.mp4"
 # Contact strip of 6 frames for a quick visual check.
 DUR="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "out/${ID}.mp4")"

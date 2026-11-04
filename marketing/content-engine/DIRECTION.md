@@ -3,6 +3,16 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-04, 15:25: silent films sound good, every video is sharp
+
+- **Silent one-shot films:** `pulse` bed (volume about 0.4) and the Earnest ending, nothing else. No
+  `chime`, no `tick`, no extra sound effects on the shot. The old loud end chime is gone for good.
+- **End card line:** "For when everyone else has gone home." (Canberk liked it; the ghost light idea.)
+- **Quality:** render.sh now uploads ~12 Mbps H.264 High with 256k audio, and pexels.py never takes a
+  file narrower than 1080 when a bigger one exists. If the best file of a clip is under 1080 wide,
+  pick another clip: upscaled footage looks soft after Instagram's own re-encode.
+- **No black bars** still applies: check the first and last frames of every render are full bleed.
+
 ## 2026-11-04, 13:53: app recordings look like the phone, mostly dark
 
 Canberk on the comedic walkthrough: "beautifully designed", but two web artefacts gave it away: a
