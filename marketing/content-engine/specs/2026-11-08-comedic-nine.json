@@ -1,16 +1,16 @@
 {
   "id": "2026-11-08-comedic-nine",
-  "look": "mono",
+  "look": "paper",
   "cut": "hard",
   "music": {
-    "style": "pizzicato",
+    "style": "wood",
     "drop": "end"
   },
   "beats": [
     {
       "kind": "title",
       "seconds": 2.0,
-      "text": "A comedic monologue in nine seconds.",
+      "text": "A monologue in nine seconds.",
       "accent": "nine",
       "bg": "paper",
       "sfx": []
@@ -73,14 +73,12 @@
           "t": 14.632
         }
       ],
-      "caption": "Real app. No cuts.",
-      "accent": "cuts.",
       "bg": "paper",
       "sfx": []
     },
     {
       "kind": "end",
-      "seconds": 3.0,
+      "seconds": 1.8,
       "brand": "Ghost Light",
       "line": "built by a working actor",
       "action": "Free on the App Store",

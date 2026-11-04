@@ -193,6 +193,10 @@ STYLES = {
     # pulse: not a song. A soft low thum on the beat like a heartbeat in the room, and now and then
     # a single plucked or bell note (pin, pon). Natural, sparse, no chords, no melody. Real one-shot films.
     "pulse": dict(bpm=62, swing=0.0, prog=[[57, 64], [57, 64], [55, 62], [57, 64]], bass=[45, 45, 43, 45]),
+    # wood: organic and wooden (Canberk, 2026-11-04: "wooden sounds, organic natural sounds"). A soft
+    # marimba root, a quiet woodblock tick, a kalimba note here and there. No drums, no pads, no riser.
+    # Lands on the end card's first frame with one marimba chord and a woodblock knock.
+    "wood": dict(bpm=96, swing=0.08, prog=[[57, 64, 69], [53, 60, 65], [55, 62, 67], [57, 64, 69]], bass=[45, 41, 43, 45]),
     "felt": dict(bpm=64, swing=0.0, prog=[[57, 60, 64], [53, 57, 60, 64], [48, 52, 55, 59], [55, 59, 62]],
                  bass=[45, 41, 48, 43]),
     "festive": dict(bpm=118, swing=0.0, prog=[[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]],
@@ -319,6 +323,19 @@ def compose(spec):
                 instr = str(rng.choice(["pizzicato_strings", "celesta", "vibraphone"]))
                 mx.note("lead", instr, note, at, beat * 1.5, 0.16 if instr != "pizzicato_strings" else 0.22, float(rng.uniform(-0.5, 0.5)))
 
+        elif style == "wood":
+            if b < bars_pre:
+                mx.note("bass", "marimba", bs, tb, beat * 1.6, 0.42, -0.15)
+                mx.note("bass", "marimba", bs + 7, tb + beat * 2, beat * 1.2, 0.26, -0.1)
+                for x in (1, 3):
+                    mx.note("drums", "woodblock", 76, tb + x * beat, beat * 0.4, 0.14 + 0.04 * lift, 0.3)
+                if mid:
+                    mx.note("drums", "woodblock", 81, tb + 3.5 * beat, beat * 0.3, 0.08, -0.3)
+                pent = [69, 72, 74, 76, 79, 81]
+                for _ in range(int(rng.integers(1, 3))):
+                    at = tb + float(rng.choice([0.5, 1.5, 2.5, 3.0])) * beat + float(rng.uniform(-0.02, 0.02))
+                    mx.note("lead", str(rng.choice(["kalimba", "marimba"])), int(rng.choice(pent)), at, beat * 1.4, 0.2, float(rng.uniform(-0.4, 0.4)))
+
         elif style == "felt":
             # left hand: a low root and a fifth, held; right hand: a few chord tones, then a small melody
             mx.note("bass", "acoustic_grand_piano", bs - 12, tb, bar * 1.1, 0.30, -0.2)
@@ -358,13 +375,17 @@ def compose(spec):
         mx.add("fx", t_drop, kick(1.3), 0.9)
     if style in ("build", "pizzicato"):
         mx.note("fx", "timpani", S["bass"][bars_pre % 4] - 12 if S["bass"][bars_pre % 4] > 40 else S["bass"][bars_pre % 4], t_drop, 1.5, 0.6)
+    if style == "wood":  # the knock the Ghost Light icon lands on
+        mx.note("fx", "woodblock", 72, t_drop, 0.4, 0.4, 0)
+        mx.note("fx", "kalimba", S["prog"][0][-1] + 12, t_drop + 0.55, 0.8, 0.22, 0.2)
+        mx.note("fx", "kalimba", S["prog"][0][-1] + 19, t_drop + 1.1, 0.8, 0.2, -0.2)
     if style == "festive":
         mx.note("fx", "glockenspiel", S["prog"][0][0] + 24, t_drop, 1.2, 0.4)
     # No extra whoosh into the cuts: the template's camera slide is the only one (Canberk, 2026-11-02:
     # too much shoosh). The drop keeps its riser.
     # Last chord rings out under the end card.
     mx.chord("keys", {"sunny": "electric_piano_1", "pizzicato": "orchestral_harp", "build": "acoustic_grand_piano",
-                      "festive": "music_box", "felt": "acoustic_grand_piano", "pulse": "celesta"}[style], [72, 79] if style == "pulse" else [60, 64, 67, 72] if style == "felt" else S["prog"][0], max(t_drop, total - 1.6), 1.8, 0.2 if style == "pulse" else 0.3)
+                      "festive": "music_box", "felt": "acoustic_grand_piano", "pulse": "celesta", "wood": "marimba"}[style], [72, 79] if style == "pulse" else [60, 64, 67, 72] if style == "felt" else S["prog"][0], t_drop if style == "wood" else max(t_drop, total - 1.6), 1.8, 0.2 if style == "pulse" else 0.3)
 
     # Bus processing: the intro is filtered and opens up on the drop.
     n = mx.n

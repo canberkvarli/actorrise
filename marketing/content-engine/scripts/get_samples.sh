@@ -5,7 +5,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 INSTR="acoustic_grand_piano electric_piano_1 acoustic_bass pizzicato_strings string_ensemble_1 tremolo_strings
-celesta glockenspiel music_box vibraphone timpani acoustic_guitar_nylon orchestral_harp"
+celesta glockenspiel music_box vibraphone timpani acoustic_guitar_nylon orchestral_harp
+marimba kalimba woodblock xylophone"
 DIRS=(); for i in $INSTR; do DIRS+=("/FluidR3_GM/$i-mp3/"); done
 if [ ! -d samples/.git ]; then
   git clone -q --depth 1 --filter=blob:none --sparse https://github.com/gleitz/midi-js-soundfonts.git samples

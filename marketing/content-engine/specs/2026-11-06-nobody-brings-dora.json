@@ -4,201 +4,401 @@
   "voice": {
     "lines": [
       {
-        "text": "Everyone in that lobby brought Juliet.",
-        "at": 0.5,
+        "text": "Five actors in the lobby. Every single one of them brought Juliet.",
+        "at": 0.3,
         "audio": "voice/2026-11-06-nobody-brings-dora/00.mp3",
         "words": [
           {
-            "w": "Everyone",
-            "s": 0.035,
-            "e": 0.441
+            "w": "Five",
+            "s": 0.058,
+            "e": 0.372
+          },
+          {
+            "w": "actors",
+            "s": 0.418,
+            "e": 0.755
           },
           {
             "w": "in",
-            "s": 0.476,
-            "e": 0.534
+            "s": 0.801,
+            "e": 0.871
           },
           {
-            "w": "that",
-            "s": 0.58,
-            "e": 0.708
+            "w": "the",
+            "s": 0.917,
+            "e": 0.987
           },
           {
-            "w": "lobby",
-            "s": 0.778,
-            "e": 1.057
+            "w": "lobby.",
+            "s": 1.033,
+            "e": 1.463
+          },
+          {
+            "w": "Every",
+            "s": 1.707,
+            "e": 1.985
+          },
+          {
+            "w": "single",
+            "s": 2.032,
+            "e": 2.334
+          },
+          {
+            "w": "one",
+            "s": 2.392,
+            "e": 2.519
+          },
+          {
+            "w": "of",
+            "s": 2.554,
+            "e": 2.601
+          },
+          {
+            "w": "them",
+            "s": 2.635,
+            "e": 2.763
           },
           {
             "w": "brought",
-            "s": 1.115,
-            "e": 1.393
+            "s": 2.821,
+            "e": 3.077
           },
           {
             "w": "Juliet.",
-            "s": 1.451,
-            "e": 2.043
+            "s": 3.135,
+            "e": 3.692
           }
         ],
-        "dur": 2.193
+        "dur": 3.842
       },
       {
-        "text": "So type the piece nobody brings.",
-        "at": 4.5,
+        "text": "So you open Ghost Light and type what you actually need. Funny, a woman, nobody does it.",
+        "at": 4.34,
         "audio": "voice/2026-11-06-nobody-brings-dora/01.mp3",
         "words": [
           {
             "w": "So",
             "s": 0.07,
-            "e": 0.174
+            "e": 0.163
+          },
+          {
+            "w": "you",
+            "s": 0.221,
+            "e": 0.313
+          },
+          {
+            "w": "open",
+            "s": 0.395,
+            "e": 0.65
+          },
+          {
+            "w": "Ghost",
+            "s": 0.72,
+            "e": 0.952
+          },
+          {
+            "w": "Light",
+            "s": 1.022,
+            "e": 1.242
+          },
+          {
+            "w": "and",
+            "s": 1.289,
+            "e": 1.382
           },
           {
             "w": "type",
-            "s": 0.232,
-            "e": 0.441
+            "s": 1.428,
+            "e": 1.66
           },
           {
-            "w": "the",
-            "s": 0.464,
-            "e": 0.534
+            "w": "what",
+            "s": 1.683,
+            "e": 1.788
           },
           {
-            "w": "piece",
-            "s": 0.569,
-            "e": 0.813
+            "w": "you",
+            "s": 1.823,
+            "e": 1.892
+          },
+          {
+            "w": "actually",
+            "s": 1.95,
+            "e": 2.287
+          },
+          {
+            "w": "need.",
+            "s": 2.345,
+            "e": 2.798
+          },
+          {
+            "w": "Funny,",
+            "s": 3.309,
+            "e": 3.738
+          },
+          {
+            "w": "a",
+            "s": 3.773,
+            "e": 3.843
+          },
+          {
+            "w": "woman,",
+            "s": 3.913,
+            "e": 4.261
           },
           {
             "w": "nobody",
-            "s": 0.871,
-            "e": 1.173
+            "s": 4.342,
+            "e": 4.644
           },
           {
-            "w": "brings.",
-            "s": 1.231,
-            "e": 1.707
-          }
-        ],
-        "dur": 1.857
-      },
-      {
-        "text": "Bernard Shaw. Funny. And nobody's doing it.",
-        "at": 8.6,
-        "audio": "voice/2026-11-06-nobody-brings-dora/02.mp3",
-        "words": [
-          {
-            "w": "Bernard",
-            "s": 0.058,
-            "e": 0.395
-          },
-          {
-            "w": "Shaw.",
-            "s": 0.453,
-            "e": 0.859
-          },
-          {
-            "w": "Funny.",
-            "s": 0.94,
-            "e": 1.358
-          },
-          {
-            "w": "And",
-            "s": 1.382,
-            "e": 1.533
-          },
-          {
-            "w": "nobody's",
-            "s": 1.591,
-            "e": 1.904
-          },
-          {
-            "w": "doing",
-            "s": 1.939,
-            "e": 2.159
+            "w": "does",
+            "s": 4.69,
+            "e": 4.876
           },
           {
             "w": "it.",
-            "s": 2.218,
-            "e": 2.403
+            "s": 4.934,
+            "e": 5.166
           }
         ],
-        "dur": 2.553
+        "dur": 5.316
       },
       {
-        "text": "Now watch the panel.",
-        "at": 12.7,
+        "text": "Up comes Dora, from Shaw's Fanny's First Play. Under a minute, and genuinely funny.",
+        "at": 9.86,
+        "audio": "voice/2026-11-06-nobody-brings-dora/02.mp3",
+        "words": [
+          {
+            "w": "Up",
+            "s": 0.035,
+            "e": 0.197
+          },
+          {
+            "w": "comes",
+            "s": 0.279,
+            "e": 0.522
+          },
+          {
+            "w": "Dora,",
+            "s": 0.58,
+            "e": 1.045
+          },
+          {
+            "w": "from",
+            "s": 1.08,
+            "e": 1.242
+          },
+          {
+            "w": "Shaw's",
+            "s": 1.312,
+            "e": 1.649
+          },
+          {
+            "w": "Fanny's",
+            "s": 1.718,
+            "e": 2.067
+          },
+          {
+            "w": "First",
+            "s": 2.125,
+            "e": 2.403
+          },
+          {
+            "w": "Play.",
+            "s": 2.461,
+            "e": 2.902
+          },
+          {
+            "w": "Under",
+            "s": 3.146,
+            "e": 3.402
+          },
+          {
+            "w": "a",
+            "s": 3.448,
+            "e": 3.483
+          },
+          {
+            "w": "minute,",
+            "s": 3.529,
+            "e": 3.913
+          },
+          {
+            "w": "and",
+            "s": 3.947,
+            "e": 4.098
+          },
+          {
+            "w": "genuinely",
+            "s": 4.168,
+            "e": 4.656
+          },
+          {
+            "w": "funny.",
+            "s": 4.714,
+            "e": 5.132
+          }
+        ],
+        "dur": 5.282
+      },
+      {
+        "text": "You walk in, you say everybody calls me Darling, and the panel finally looks up.",
+        "at": 15.34,
         "audio": "voice/2026-11-06-nobody-brings-dora/03.mp3",
         "words": [
           {
-            "w": "Now",
-            "s": 0.07,
-            "e": 0.221
+            "w": "You",
+            "s": 0.058,
+            "e": 0.174
           },
           {
-            "w": "watch",
-            "s": 0.29,
-            "e": 0.511
+            "w": "walk",
+            "s": 0.232,
+            "e": 0.453
+          },
+          {
+            "w": "in,",
+            "s": 0.546,
+            "e": 0.859
+          },
+          {
+            "w": "you",
+            "s": 0.975,
+            "e": 1.068
+          },
+          {
+            "w": "say",
+            "s": 1.138,
+            "e": 1.289
+          },
+          {
+            "w": "everybody",
+            "s": 1.335,
+            "e": 1.73
+          },
+          {
+            "w": "calls",
+            "s": 1.8,
+            "e": 2.043
+          },
+          {
+            "w": "me",
+            "s": 2.101,
+            "e": 2.183
+          },
+          {
+            "w": "Darling,",
+            "s": 2.229,
+            "e": 2.717
+          },
+          {
+            "w": "and",
+            "s": 2.833,
+            "e": 2.961
           },
           {
             "w": "the",
-            "s": 0.569,
-            "e": 0.639
+            "s": 3.007,
+            "e": 3.077
           },
           {
-            "w": "panel.",
-            "s": 0.685,
-            "e": 1.126
+            "w": "panel",
+            "s": 3.111,
+            "e": 3.413
+          },
+          {
+            "w": "finally",
+            "s": 3.483,
+            "e": 3.843
+          },
+          {
+            "w": "looks",
+            "s": 3.889,
+            "e": 4.122
+          },
+          {
+            "w": "up.",
+            "s": 4.191,
+            "e": 4.516
           }
         ],
-        "dur": 1.276
+        "dur": 4.666
       },
       {
-        "text": "Ghost Light. Free on the App Store.",
-        "at": 17.0,
+        "text": "Ghost Light. Built by a working actor. Free on the App Store.",
+        "at": 20.21,
         "audio": "voice/2026-11-06-nobody-brings-dora/04.mp3",
         "words": [
           {
             "w": "Ghost",
             "s": 0.058,
-            "e": 0.337
+            "e": 0.348
           },
           {
             "w": "Light.",
             "s": 0.406,
-            "e": 0.708
+            "e": 0.755
+          },
+          {
+            "w": "Built",
+            "s": 1.138,
+            "e": 1.405
+          },
+          {
+            "w": "by",
+            "s": 1.463,
+            "e": 1.591
+          },
+          {
+            "w": "a",
+            "s": 1.649,
+            "e": 1.672
+          },
+          {
+            "w": "working",
+            "s": 1.73,
+            "e": 2.055
+          },
+          {
+            "w": "actor.",
+            "s": 2.125,
+            "e": 2.589
           },
           {
             "w": "Free",
-            "s": 0.824,
-            "e": 1.045
+            "s": 2.763,
+            "e": 2.995
           },
           {
             "w": "on",
-            "s": 1.08,
-            "e": 1.149
+            "s": 3.03,
+            "e": 3.1
           },
           {
             "w": "the",
-            "s": 1.173,
-            "e": 1.242
+            "s": 3.135,
+            "e": 3.204
           },
           {
             "w": "App",
-            "s": 1.3,
-            "e": 1.428
+            "s": 3.251,
+            "e": 3.367
           },
           {
             "w": "Store.",
-            "s": 1.486,
-            "e": 1.869
+            "s": 3.425,
+            "e": 3.82
           }
         ],
-        "dur": 2.019
+        "dur": 3.97
       }
     ]
   },
   "scenes": [
     {
       "type": "lobby",
-      "seconds": 4.4,
+      "seconds": 4.24,
       "line": "Everyone brought Juliet.",
       "accent": "Juliet.",
       "cue": "(same page. same balcony.)",
@@ -210,7 +410,7 @@
     {
       "type": "phone",
       "mode": "search",
-      "seconds": 4.0,
+      "seconds": 5.52,
       "line": "Type the other kind.",
       "accent": "other",
       "cue": "(the one nobody brings.)",
@@ -250,7 +450,7 @@
     {
       "type": "phone",
       "mode": "read",
-      "seconds": 4.2,
+      "seconds": 5.48,
       "line": "Funny. And fresh.",
       "accent": "fresh.",
       "read": {
@@ -265,7 +465,7 @@
     },
     {
       "type": "panel",
-      "seconds": 4.2,
+      "seconds": 4.87,
       "line": "Nobody brings Dora.",
       "accent": "Dora.",
       "cue": "(fanny's first play. shaw.)",
@@ -274,7 +474,7 @@
     },
     {
       "type": "end",
-      "seconds": 3.8,
+      "seconds": 4.77,
       "brand": "Ghost Light",
       "tagline": "(nobody brings that one.)",
       "action": "Free on the App Store",
