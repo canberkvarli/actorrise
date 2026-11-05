@@ -45,6 +45,24 @@ The research shortlist of sources (teen and youth, musicals, adult contemporary)
 the session where it was made and told to Canberk in chat. When a source is approved, it
 gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here.
 
+## Ingested
+
+- **2026-11-05, Daily Actor** (`--source dailyactor`): 139 stage pieces, monologues
+  44179-44318. Film and TV pages skipped.
+- **2026-11-05, YouthPLAYS** (`--source youthplays`): 85 teen and youth pieces,
+  monologues 44319-44403. Undated plays carry a labelled floor year (see
+  `date_youthplays.py`).
+
+Both were written from a cloud session with `--write-rest`, which goes through
+`app/services/data_ingestion/rest_writer.py` because Postgres is unreachable there.
+
+## Blocked, and why
+
+- **Stage Partners**: their CDN answers 403 to every non-browser client. Run from the
+  laptop with `--user-agent`, or ask them.
+- **Theatrefolk, MTI, Brooklyn Publishers**: robots.txt names ClaudeBot and other AI
+  crawlers. Permission only.
+
 ## Public domain, still worth taking
 
 - Plays published 1928 to 1963 whose copyright was never renewed.
