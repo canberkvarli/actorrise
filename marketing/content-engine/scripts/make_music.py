@@ -197,6 +197,13 @@ STYLES = {
     # marimba root, a quiet woodblock tick, a kalimba note here and there. No drums, no pads, no riser.
     # Lands on the end card's first frame with one marimba chord and a woodblock knock.
     "wood": dict(bpm=96, swing=0.08, prog=[[57, 64, 69], [53, 60, 65], [55, 62, 67], [57, 64, 69]], bass=[45, 41, 43, 45]),
+    # bed: a quiet, continuous background under everything (Canberk, 2026-11-05: without music the films
+    # "sound really creepy"; he wants "a music that is running in the background, not super catchy").
+    # Soft held strings and a warm electric piano on slow, bright chords. No drums, no melody, nothing
+    # to hum. Under drawn films, walkthroughs and voiced films. Ends on the Earnest ending (woodblock
+    # knock, two kalimba notes, the marimba chord).
+    "bed": dict(bpm=72, swing=0.0, prog=[[57, 61, 64, 69], [54, 57, 61, 66], [50, 54, 57, 62], [52, 56, 59, 64]],
+                bass=[45, 42, 38, 40]),
     "felt": dict(bpm=64, swing=0.0, prog=[[57, 60, 64], [53, 57, 60, 64], [48, 52, 55, 59], [55, 59, 62]],
                  bass=[45, 41, 48, 43]),
     "festive": dict(bpm=118, swing=0.0, prog=[[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]],
@@ -336,6 +343,13 @@ def compose(spec):
                     at = tb + float(rng.choice([0.5, 1.5, 2.5, 3.0])) * beat + float(rng.uniform(-0.02, 0.02))
                     mx.note("lead", str(rng.choice(["kalimba", "marimba"])), int(rng.choice(pent)), at, beat * 1.4, 0.2, float(rng.uniform(-0.4, 0.4)))
 
+        elif style == "bed":
+            if b < bars_pre:
+                # held strings, a slow swell into each bar, and one soft Rhodes chord on the bar
+                mx.chord("pad", "string_ensemble_1", ch, tb, bar * 1.05, 0.16, 0.0, strum=0.0)
+                mx.chord("keys", "electric_piano_1", sorted(ch)[1:], tb + beat * 0.02, bar * 0.9, 0.13, 0.1, strum=0.03)
+                mx.note("bass", "acoustic_bass", bs, tb, bar * 0.9, 0.22, -0.1)
+
         elif style == "felt":
             # left hand: a low root and a fifth, held; right hand: a few chord tones, then a small melody
             mx.note("bass", "acoustic_grand_piano", bs - 12, tb, bar * 1.1, 0.30, -0.2)
@@ -375,7 +389,7 @@ def compose(spec):
         mx.add("fx", t_drop, kick(1.3), 0.9)
     if style in ("build", "pizzicato"):
         mx.note("fx", "timpani", S["bass"][bars_pre % 4] - 12 if S["bass"][bars_pre % 4] > 40 else S["bass"][bars_pre % 4], t_drop, 1.5, 0.6)
-    if style in ("wood", "pulse"):  # the knock the Ghost Light icon lands on (the Earnest ending, Canberk loves it)
+    if style in ("wood", "pulse", "bed"):  # the knock the Ghost Light icon lands on (the Earnest ending, Canberk loves it)
         mx.note("fx", "woodblock", 72, t_drop, 0.4, 0.4, 0)
         mx.note("fx", "kalimba", S["prog"][0][-1] + 12, t_drop + 0.55, 0.8, 0.22, 0.2)
         mx.note("fx", "kalimba", S["prog"][0][-1] + 19, t_drop + 1.1, 0.8, 0.2, -0.2)
@@ -385,13 +399,15 @@ def compose(spec):
     # too much shoosh). The drop keeps its riser.
     # Last chord rings out under the end card.
     mx.chord("keys", {"sunny": "electric_piano_1", "pizzicato": "orchestral_harp", "build": "acoustic_grand_piano",
-                      "festive": "music_box", "felt": "acoustic_grand_piano", "pulse": "celesta", "wood": "marimba"}[style], [72, 79] if style == "pulse" else [60, 64, 67, 72] if style == "felt" else S["prog"][0], t_drop if style in ("wood", "pulse") else max(t_drop, total - 1.6), 1.8, 0.2 if style == "pulse" else 0.3)
+                      "festive": "music_box", "felt": "acoustic_grand_piano", "pulse": "celesta", "wood": "marimba", "bed": "marimba"}[style], [72, 79] if style == "pulse" else [60, 64, 67, 72] if style == "felt" else S["prog"][0], t_drop if style in ("wood", "pulse", "bed") else max(t_drop, total - 1.6), 1.8, 0.2 if style == "pulse" else 0.3)
 
     # Bus processing: the intro is filtered and opens up on the drop.
     n = mx.n
     t = np.arange(n) / SR
     out = np.zeros((2, n), np.float32)
     for name, b in mx.bus.items():
+        if style == "bed" and name in ("pad", "keys", "bass"):  # soft and far away, never in front
+            b = np.stack([filt(b[c], "low", 1800) for c in range(2)])
         if name in ("keys", "bass", "drums", "lead", "pad") and style in ("sunny", "festive"):
             dark = np.stack([filt(b[c], "low", 1100 if style == "sunny" else 2200) for c in range(2)])
             k = np.clip((t - (t_open - 0.6)) / 0.6, 0, 1)  # sweep open into the first move

@@ -253,6 +253,13 @@ async function flow(file) {
       const steps = 24;
       for (let k = 0; k < steps; k++) { await page.mouse.wheel(0, s.scroll / steps); await sleep(16); }
     } else if (s.mark) events.push({ t: now(), mark: s.mark });
+    // Ghost Light's Tape room on the web preview: hand the scripted ear words to "hear"
+    // (tape-ear.web.ts), one every `ms`. The app's own cue rules decide what they mean.
+    else if (s.say !== undefined) {
+      events.push({ t: now(), say: s.say });
+      await page.evaluate(([t, ms]) => window.__tapeSay?.(t, ms), [s.say, s.ms ?? 240]);
+      events.push({ t: now(), said: s.say.split(" ").slice(-1)[0] });
+    }
     await sleep(s.after ?? 350);
   }
   await sleep(spec.tail ?? 900);

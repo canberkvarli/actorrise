@@ -1,7 +1,7 @@
-From 935b9e495604adbcd26d32a61e8f17c8b23e5ea1 Mon Sep 17 00:00:00 2001
+From 69857f361c11ff0824bb133e161393b8393c7c41 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 3 Nov 2026 10:21:34 +0300
-Subject: [PATCH 1/2] Web preview for marketing recordings: the real screens in
+Subject: [PATCH 1/3] Web preview for marketing recordings: the real screens in
  a browser at phone size
 
 Branch only, never main. Adds react-native-web, react-dom and @expo/metro-runtime, and
@@ -114,7 +114,7 @@ index c87360c..8a86862 100644
 +
 +module.exports = uniwindConfig;
 diff --git a/package-lock.json b/package-lock.json
-index 4a6c67c..768ed48 100644
+index 76e379a..a09ed4c 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -14,6 +14,7 @@
@@ -125,7 +125,7 @@ index 4a6c67c..768ed48 100644
          "@expo/vector-icons": "^15.0.2",
          "@react-native-async-storage/async-storage": "2.2.0",
          "@react-native-community/datetimepicker": "9.1.0",
-@@ -60,6 +61,7 @@
+@@ -61,6 +62,7 @@
          "expo-web-browser": "~57.0.2",
          "posthog-react-native": "^4.66.3",
          "react": "19.2.3",
@@ -133,7 +133,7 @@ index 4a6c67c..768ed48 100644
          "react-native": "0.86.2",
          "react-native-gesture-handler": "~2.32.0",
          "react-native-purchases": "^10.7.2",
-@@ -67,6 +69,7 @@
+@@ -68,6 +70,7 @@
          "react-native-safe-area-context": "~5.7.0",
          "react-native-screens": "~4.26.0",
          "react-native-url-polyfill": "^4.0.0",
@@ -141,7 +141,7 @@ index 4a6c67c..768ed48 100644
          "react-native-worklets": "0.10.1",
          "tailwindcss": "^4.3.3",
          "uniwind": "^1.11.0"
-@@ -2274,9 +2277,9 @@
+@@ -2275,9 +2278,9 @@
        }
      },
      "node_modules/@expo/log-box": {
@@ -154,7 +154,7 @@ index 4a6c67c..768ed48 100644
        "license": "MIT",
        "dependencies": {
          "@expo/dom-webview": "^57.0.1",
-@@ -2326,6 +2329,31 @@
+@@ -2327,6 +2330,31 @@
          "walker": "^1.0.8"
        }
      },
@@ -186,7 +186,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/@expo/osascript": {
        "version": "2.7.1",
        "resolved": "https://registry.npmjs.org/@expo/osascript/-/osascript-2.7.1.tgz",
-@@ -5569,6 +5597,15 @@
+@@ -5570,6 +5598,15 @@
          "url": "https://opencollective.com/core-js"
        }
      },
@@ -202,7 +202,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/cross-spawn": {
        "version": "7.0.6",
        "resolved": "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz",
-@@ -5583,6 +5620,15 @@
+@@ -5584,6 +5621,15 @@
          "node": ">= 8"
        }
      },
@@ -218,7 +218,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/csstype": {
        "version": "3.2.3",
        "resolved": "https://registry.npmjs.org/csstype/-/csstype-3.2.3.tgz",
-@@ -6433,31 +6479,6 @@
+@@ -6434,31 +6480,6 @@
          }
        }
      },
@@ -250,7 +250,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/expo-router/node_modules/@expo/ui": {
        "version": "57.0.12",
        "resolved": "https://registry.npmjs.org/@expo/ui/-/ui-57.0.12.tgz",
-@@ -7121,6 +7142,62 @@
+@@ -7131,6 +7152,62 @@
          "bser": "2.1.1"
        }
      },
@@ -313,7 +313,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/fdir": {
        "version": "6.5.0",
        "resolved": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz",
-@@ -7447,6 +7524,12 @@
+@@ -7457,6 +7534,12 @@
          "node": ">= 14"
        }
      },
@@ -326,7 +326,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/iceberg-js": {
        "version": "0.8.1",
        "resolved": "https://registry.npmjs.org/iceberg-js/-/iceberg-js-0.8.1.tgz",
-@@ -7484,6 +7567,15 @@
+@@ -7494,6 +7577,15 @@
        "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==",
        "license": "ISC"
      },
@@ -342,7 +342,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/invariant": {
        "version": "2.2.4",
        "resolved": "https://registry.npmjs.org/invariant/-/invariant-2.2.4.tgz",
-@@ -8646,6 +8738,26 @@
+@@ -8656,6 +8748,26 @@
          "url": "https://opencollective.com/express"
        }
      },
@@ -369,7 +369,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/node-forge": {
        "version": "1.4.0",
        "resolved": "https://registry.npmjs.org/node-forge/-/node-forge-1.4.0.tgz",
-@@ -8703,6 +8815,15 @@
+@@ -8713,6 +8825,15 @@
          "node": "^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0"
        }
      },
@@ -385,7 +385,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/on-finished": {
        "version": "2.3.0",
        "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.3.0.tgz",
-@@ -9098,6 +9219,12 @@
+@@ -9108,6 +9229,12 @@
          "node": "^10 || ^12 || >=14"
        }
      },
@@ -398,7 +398,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/posthog-react-native": {
        "version": "4.66.3",
        "resolved": "https://registry.npmjs.org/posthog-react-native/-/posthog-react-native-4.66.3.tgz",
-@@ -9279,6 +9406,18 @@
+@@ -9289,6 +9416,18 @@
          "ws": "^7"
        }
      },
@@ -417,7 +417,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/react-fast-compare": {
        "version": "3.2.2",
        "resolved": "https://registry.npmjs.org/react-fast-compare/-/react-fast-compare-3.2.2.tgz",
-@@ -9502,6 +9641,38 @@
+@@ -9512,6 +9651,38 @@
          "react-native": "*"
        }
      },
@@ -456,7 +456,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/react-native-worklets": {
        "version": "0.10.1",
        "resolved": "https://registry.npmjs.org/react-native-worklets/-/react-native-worklets-0.10.1.tgz",
-@@ -10000,6 +10171,12 @@
+@@ -10010,6 +10181,12 @@
        "integrity": "sha512-qepMx2JxAa5jjfzxG79yPPq+8BuFToHd1hm7kI+Z4zAq1ftQiP7HcxMhDDItrbtwVeLg/cY2JnKnrcFkmiswNA==",
        "license": "MIT"
      },
@@ -469,7 +469,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/setprototypeof": {
        "version": "1.2.0",
        "resolved": "https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.2.0.tgz",
-@@ -10293,6 +10470,12 @@
+@@ -10303,6 +10480,12 @@
        "integrity": "sha512-0MP/Cxx5SzeeZ10p/bZI0S6MpgD+yxAhi1BOQ34jgnMXsCq3j1t6tQnZu+KdlL7dvJTLT3g9xN8tl10TqgFMcg==",
        "license": "MIT"
      },
@@ -482,7 +482,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/supports-color": {
        "version": "7.2.0",
        "resolved": "https://registry.npmjs.org/supports-color/-/supports-color-7.2.0.tgz",
-@@ -10512,6 +10695,12 @@
+@@ -10522,6 +10705,12 @@
        "integrity": "sha512-FWAPzCIHZHnrE/5/w9MPk0kK25hSQSH2IKhYh9PyjS3SG/+IEMvlwIHbhz+oF7xl54I+ueZlVnMjyzdSwLmAwA==",
        "license": "MIT"
      },
@@ -495,7 +495,7 @@ index 4a6c67c..768ed48 100644
      "node_modules/tslib": {
        "version": "2.8.1",
        "resolved": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
-@@ -11248,12 +11437,28 @@
+@@ -11258,12 +11447,28 @@
          "defaults": "^1.0.3"
        }
      },
@@ -525,7 +525,7 @@ index 4a6c67c..768ed48 100644
        "version": "0.1.2",
        "resolved": "https://registry.npmjs.org/whatwg-url-minimum/-/whatwg-url-minimum-0.1.2.tgz",
 diff --git a/package.json b/package.json
-index e04494e..f81103e 100644
+index 7b07225..a6aa28a 100644
 --- a/package.json
 +++ b/package.json
 @@ -20,6 +20,7 @@
@@ -536,7 +536,7 @@ index e04494e..f81103e 100644
      "@expo/vector-icons": "^15.0.2",
      "@react-native-async-storage/async-storage": "2.2.0",
      "@react-native-community/datetimepicker": "9.1.0",
-@@ -66,6 +67,7 @@
+@@ -67,6 +68,7 @@
      "expo-web-browser": "~57.0.2",
      "posthog-react-native": "^4.66.3",
      "react": "19.2.3",
@@ -544,7 +544,7 @@ index e04494e..f81103e 100644
      "react-native": "0.86.2",
      "react-native-gesture-handler": "~2.32.0",
      "react-native-purchases": "^10.7.2",
-@@ -73,6 +75,7 @@
+@@ -74,6 +76,7 @@
      "react-native-safe-area-context": "~5.7.0",
      "react-native-screens": "~4.26.0",
      "react-native-url-polyfill": "^4.0.0",
@@ -724,10 +724,10 @@ index 0000000..4856578
 2.43.0
 
 
-From 2c764b41474cc2b57f1b197dfc5dfcc2b1db990c Mon Sep 17 00:00:00 2001
+From 47c8bd613205dd63d0e327950457474a2f9d6fb2 Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Wed, 4 Nov 2026 06:55:59 +0000
-Subject: [PATCH 2/2] Web preview: no screenshot listener on web
+Subject: [PATCH 2/3] Web preview: no screenshot listener on web
  (PrivacyShield)
 
 ---
@@ -758,6 +758,121 @@ index 5928487..4709fb8 100644
    const { colors: c } = useTheme();
    const [backgrounded, setBackgrounded] = useState(false);
    const [shot, setShot] = useState(false);
+-- 
+2.43.0
+
+
+From 40be09799a423d6d14228b37e77a439b8659faf9 Mon Sep 17 00:00:00 2001
+From: preview <preview@local>
+Date: Thu, 5 Nov 2026 15:36:20 +0000
+Subject: [PATCH 3/3] Web preview: the tape room rolls in a browser (scripted
+ ear, camera record waits for cut)
+
+---
+ scripts/web-preview-camera.mjs       | 18 +++++++++
+ scripts/web-preview.sh               |  1 +
+ src/rehearsal/native/tape-ear.web.ts | 55 ++++++++++++++++++++++++++++
+ 3 files changed, 74 insertions(+)
+ create mode 100644 scripts/web-preview-camera.mjs
+ create mode 100644 src/rehearsal/native/tape-ear.web.ts
+
+diff --git a/scripts/web-preview-camera.mjs b/scripts/web-preview-camera.mjs
+new file mode 100644
+index 0000000..57ec42e
+--- /dev/null
++++ b/scripts/web-preview-camera.mjs
+@@ -0,0 +1,18 @@
++// Web preview only: expo-camera's web build cannot record, so a take ends the moment it rolls.
++// For marketing recordings, make record() wait until stopRecording() (no file is written; the
++// room goes back to ready after "cut"). Idempotent; touches node_modules only, never the app.
++import fs from 'node:fs';
++const f = 'node_modules/expo-camera/build/ExpoCamera.web.js';
++let s = fs.readFileSync(f, 'utf8');
++if (!s.includes('__previewStop')) {
++  s = s.replace(
++    "console.warn('stopRecording is not supported on web.');",
++    "globalThis.__previewStop?.(); globalThis.__previewStop = undefined;",
++  ).replace(
++    "console.warn('record is not supported on web.');\n            return { uri: '' };",
++    "return new Promise((res) => { globalThis.__previewStop = () => res({ uri: '' }); });",
++  );
++  if (!s.includes('__previewStop = () =>')) throw new Error('expo-camera web build changed; update web-preview-camera.mjs');
++  fs.writeFileSync(f, s);
++}
++console.log('camera record shim on');
+diff --git a/scripts/web-preview.sh b/scripts/web-preview.sh
+index 2aafe1d..803dd25 100755
+--- a/scripts/web-preview.sh
++++ b/scripts/web-preview.sh
+@@ -8,6 +8,7 @@ set -euo pipefail
+ cd "$(dirname "$0")/.."
+ PORT="${1:-8099}"
+ 
++node scripts/web-preview-camera.mjs
+ env -u EXPO_NO_DOTENV EXPO_PUBLIC_API_URL="http://127.0.0.1:${PORT}" \
+   npx expo export --platform web --clear
+ # Skia on web loads CanvasKit's wasm from the site root.
+diff --git a/src/rehearsal/native/tape-ear.web.ts b/src/rehearsal/native/tape-ear.web.ts
+new file mode 100644
+index 0000000..6d02a56
+--- /dev/null
++++ b/src/rehearsal/native/tape-ear.web.ts
+@@ -0,0 +1,55 @@
++/**
++ * Web preview only (marketing recordings): the tape room's ear without a microphone.
++ *
++ * A browser has no on-device recogniser, so this ear "hears" what the recorder hands it:
++ * window.__tapeSay("and action") delivers those words one by one, as Apple's recogniser
++ * would, and everything after that is the real room: tape-cues.ts decides whether a word is
++ * a cue or a line, live-read.ts moves the piece under the lens. The iOS build never loads
++ * this file (Metro picks tape-ear.ts there).
++ */
++import { tokenize } from '../word-match';
++import type { Heard } from '../tape-cues';
++import type { TapeEarCallbacks } from './tape-ear';
++
++export type { TapeEarCallbacks };
++
++declare global {
++  interface Window { __tapeSay?: (text: string, msPerWord?: number) => Promise<void>; __tapeEarReady?: boolean }
++}
++
++export class TapeEar {
++  private words: string[] = [];
++  private at: number[] = [];
++  private base = 0;
++  private listening = false;
++  constructor(private cb: TapeEarCallbacks) {}
++
++  static available(): boolean { return true; }
++  static speakerOut() {}
++  static async permission(): Promise<boolean> { return true; }
++
++  attach() {
++    window.__tapeSay = async (text: string, msPerWord = 260) => {
++      for (const w of tokenize(text)) {
++        if (!this.listening) return;
++        this.words.push(w);
++        this.at.push(Date.now());
++        this.cb.onLevel?.(0.7);
++        this.emit();
++        await new Promise((r) => setTimeout(r, msPerWord));
++      }
++      this.cb.onLevel?.(0.1);
++    };
++    window.__tapeEarReady = true;
++  }
++  prime(_script: string[]) {}
++  listen() { this.listening = true; this.words = []; this.at = []; this.base = 0; }
++  reset() { this.base = this.words.length; this.emit(); }
++  refresh() {}
++  stop() { this.listening = false; }
++  detach() { this.stop(); window.__tapeEarReady = false; }
++  private emit() {
++    const h: Heard = { words: this.words.slice(this.base), at: this.at.slice(this.base) };
++    this.cb.onHeard(h);
++  }
++}
 -- 
 2.43.0
 

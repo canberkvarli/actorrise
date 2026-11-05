@@ -3,6 +3,25 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-05, evening: quiet music under everything, feature demos show the feature working
+
+Canberk on the Tape room film: "beautiful ending and sounds", loved the guy doing the product, but
+wanted a real demonstration, and: "without music it sounds really creepy."
+- **Every film gets a very subtle background bed, drawn films too.** `"music": {"style": "bed"}`
+  (soft held strings and a warm Rhodes, slow bright chords, no drums, no melody, nothing catchy),
+  `volume` about 0.14 under a voice, 0.2 without. It still lands on the Earnest ending (woodblock
+  knock, two kalimba notes, marimba chord). This replaces "no music bed" for drawn films. Real
+  one-shot films may keep `pulse` if it is not sparse enough to feel empty; when in doubt, `bed`.
+- **Feature demos show the feature actually working**, in one continuous take, not stock footage
+  around a glimpse. If the feature is voice driven, say the cues in the voice-over (a second voice
+  for the actor, e.g. Will, the narrator George for the explanation) and let the app react on screen.
+  The Ghost Light web preview has a scripted ear (`{"say": "..."}` flow step) so the Tape room
+  rolls on "action", keeps rolling on a "cut" in the script and stops on a lone "cut".
+- **App footage fills the frame**: screen beat `"frame": "full"` (full height, blurred edges, no
+  bezel) when a person is in the camera; a `focus` event pushes in on the line that matters.
+  Real-looking camera: `FAKE_CAM=<file.y4m>` on the recorder, stock footage only.
+- Captions on screen are the voice-over's word by word subtitles; keep them short and spoken.
+
 ## 2026-11-04, 15:25: silent films sound good, every video is sharp
 
 - **Silent one-shot films:** `pulse` bed (volume about 0.4) and the Earnest ending, nothing else. No

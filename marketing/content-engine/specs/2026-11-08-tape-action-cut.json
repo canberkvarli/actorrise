@@ -1,0 +1,301 @@
+{
+  "id": "2026-11-08-tape-action-cut",
+  "look": "noir",
+  "cut": "hard",
+  "music": {
+    "style": "bed",
+    "volume": 0.14,
+    "drop": "end"
+  },
+  "voice": {
+    "volume": 1,
+    "lines": [
+      {
+        "text": "My monologue has the word cut in it.",
+        "say": "[wry] My monologue has the word cut in it.",
+        "at": 0.2,
+        "audio": "voice/2026-11-08-tape-action-cut/00.mp3",
+        "words": [
+          {
+            "w": "My",
+            "s": 0.2,
+            "e": 0.24
+          },
+          {
+            "w": "monologue",
+            "s": 0.3,
+            "e": 0.8
+          },
+          {
+            "w": "has",
+            "s": 0.86,
+            "e": 1.04
+          },
+          {
+            "w": "the",
+            "s": 1.06,
+            "e": 1.12
+          },
+          {
+            "w": "word",
+            "s": 1.168,
+            "e": 1.36
+          },
+          {
+            "w": "cut",
+            "s": 1.48,
+            "e": 1.84
+          },
+          {
+            "w": "in",
+            "s": 1.893,
+            "e": 2.0
+          },
+          {
+            "w": "it.",
+            "s": 2.053,
+            "e": 2.24
+          }
+        ],
+        "dur": 2.39
+      },
+      {
+        "text": "Action.",
+        "say": "[firmly] Action!",
+        "at": 3.0,
+        "voice": "bIHbv24MWmeRgasZH58o",
+        "audio": "voice/2026-11-08-tape-action-cut/01.mp3",
+        "words": [
+          {
+            "w": "Action!",
+            "s": 0.464,
+            "e": 0.64
+          }
+        ],
+        "dur": 0.79
+      },
+      {
+        "text": "It knows the whole speech. So when Falstaff says cut,",
+        "say": "[conspiratorial] It knows the whole speech. So when Falstaff says cut...",
+        "at": 5.2,
+        "audio": "voice/2026-11-08-tape-action-cut/02.mp3",
+        "words": [
+          {
+            "w": "It",
+            "s": 0.071,
+            "e": 0.08
+          },
+          {
+            "w": "knows",
+            "s": 0.147,
+            "e": 0.48
+          },
+          {
+            "w": "the",
+            "s": 0.52,
+            "e": 0.64
+          },
+          {
+            "w": "whole",
+            "s": 0.68,
+            "e": 0.88
+          },
+          {
+            "w": "speech.",
+            "s": 0.96,
+            "e": 1.52
+          },
+          {
+            "w": "So",
+            "s": 1.787,
+            "e": 2.32
+          },
+          {
+            "w": "when",
+            "s": 2.352,
+            "e": 2.48
+          },
+          {
+            "w": "Falstaff",
+            "s": 2.58,
+            "e": 3.2
+          },
+          {
+            "w": "says",
+            "s": 3.264,
+            "e": 3.52
+          },
+          {
+            "w": "cut...",
+            "s": 3.74,
+            "e": 4.56
+          }
+        ],
+        "dur": 4.71
+      },
+      {
+        "text": "it keeps rolling.",
+        "say": "[amused] ...it keeps rolling.",
+        "at": 12.4,
+        "audio": "voice/2026-11-08-tape-action-cut/03.mp3",
+        "words": [
+          {
+            "w": "...it",
+            "s": 0.068,
+            "e": 0.16
+          },
+          {
+            "w": "keeps",
+            "s": 0.213,
+            "e": 0.48
+          },
+          {
+            "w": "rolling.",
+            "s": 0.54,
+            "e": 1.92
+          }
+        ],
+        "dur": 2.07
+      },
+      {
+        "text": "Cut.",
+        "say": "[calmly] Cut.",
+        "at": 16.6,
+        "voice": "bIHbv24MWmeRgasZH58o",
+        "audio": "voice/2026-11-08-tape-action-cut/04.mp3",
+        "words": [
+          {
+            "w": "Cut.",
+            "s": 0.35,
+            "e": 0.48
+          }
+        ],
+        "dur": 0.63
+      },
+      {
+        "text": "Say it yourself, and it stops.",
+        "say": "[warmly] Say it yourself, and it stops.",
+        "at": 17.4,
+        "audio": "voice/2026-11-08-tape-action-cut/05.mp3",
+        "words": [
+          {
+            "w": "Say",
+            "s": 0.204,
+            "e": 0.24
+          },
+          {
+            "w": "it",
+            "s": 0.293,
+            "e": 0.4
+          },
+          {
+            "w": "yourself,",
+            "s": 0.462,
+            "e": 1.2
+          },
+          {
+            "w": "and",
+            "s": 1.22,
+            "e": 1.28
+          },
+          {
+            "w": "it",
+            "s": 1.333,
+            "e": 1.44
+          },
+          {
+            "w": "stops.",
+            "s": 1.533,
+            "e": 2.08
+          }
+        ],
+        "dur": 2.23
+      }
+    ]
+  },
+  "beats": [
+    {
+      "kind": "screen",
+      "seconds": 19.8,
+      "src": "reel/2026-11-08-tape-action-cut/app.mp4",
+      "start": 1.2,
+      "events": [
+        {
+          "t": 0.584,
+          "mark": "ready"
+        },
+        {
+          "t": 4.942,
+          "mark": "heard-action"
+        },
+        {
+          "t": 16.091,
+          "mark": "line-done"
+        },
+        {
+          "t": 18.569,
+          "mark": "heard-cut"
+        },
+        {
+          "t": 21.069,
+          "mark": "after"
+        },
+        {
+          "t": 12.6,
+          "focus": {
+            "x": 0.5,
+            "y": 0.07,
+            "zoom": 1.2,
+            "hold": 2.4
+          },
+          "mark": "falstaff-cut"
+        }
+      ],
+      "zoom": 1.06,
+      "bg": "ink",
+      "sfx": [],
+      "frame": "full"
+    },
+    {
+      "kind": "end",
+      "seconds": 1.8,
+      "brand": "Ghost Light",
+      "line": "For when everyone else has gone home.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "plan": "plan/2026-11-08 (series backstage, wildcard), remade after Canberk's notes on 2026-11-08-tape-cut: one continuous Tape room demo, voice says action and cut, subtle music bed",
+    "feature": "tape",
+    "app": "Ghost Light Tape room, real app as a web page (ghostlight-web/serve.sh), flow flows/tape-action-cut.json. The web preview's scripted ear (tape-ear.web.ts) hands the room the words; the real tape-cues.ts and live-read.ts decide: 'action' rolls, Falstaff's 'my buckler cut through' is a line (keeps rolling), a lone 'cut' stops. Camera fed stock footage via FAKE_CAM. On the web the stopped take goes back to the ready screen (no file is written), where the phone would play it back.",
+    "monologue": {
+      "id": 24790,
+      "character": "Falstaff",
+      "play": "Henry IV, Part 1",
+      "author": "William Shakespeare",
+      "public_domain": true
+    },
+    "pexels": [
+      {
+        "id": 8136210,
+        "url": "https://www.pexels.com/video/a-man-talking-to-the-camera-8136210/",
+        "author": "ANTONI SHKRABA production",
+        "use": "camera feed in the Tape room, played forward then backward to cover the take"
+      }
+    ],
+    "voices": {
+      "narrator": "George (ElevenLabs)",
+      "actor cues": "Will (ElevenLabs premade bIHbv24MWmeRgasZH58o)"
+    },
+    "note": "Stock person, never a user, never quoted."
+  }
+}

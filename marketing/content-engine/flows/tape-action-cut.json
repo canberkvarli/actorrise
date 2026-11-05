@@ -1,0 +1,46 @@
+{
+  "start": "/tape/24790",
+  "lead": 600,
+  "steps": [
+    {
+      "mark": "ready"
+    },
+    {
+      "wait": 3000
+    },
+    {
+      "say": "action",
+      "ms": 300
+    },
+    {
+      "mark": "heard-action"
+    },
+    {
+      "wait": 900
+    },
+    {
+      "say": "I am a rogue if I were not at half-sword with a dozen of them two hours together. I have scaped by miracle. I am eight times thrust through the doublet, four through the hose, my buckler cut through and through, my sword hacked like a handsaw.",
+      "ms": 190
+    },
+    {
+      "mark": "line-done"
+    },
+    {
+      "wait": 1100
+    },
+    {
+      "say": "cut",
+      "ms": 300
+    },
+    {
+      "mark": "heard-cut"
+    },
+    {
+      "wait": 1800
+    },
+    {
+      "mark": "after"
+    }
+  ],
+  "tail": 600
+}

@@ -42,7 +42,9 @@ type Broll = {
   lines?: { text: string; accent?: string; at: number; until?: number; size?: number }[];
   push?: number; // how much the camera creeps in over the shot, default 0.06 (0 = locked off)
 };
-type TapEv = { t: number; tap?: { x: number; y: number }; typing?: string; mark?: string };
+type TapEv = { t: number; tap?: { x: number; y: number }; typing?: string; mark?: string;
+  /** Push in on a spot with no tap ring (e.g. a line of the script), held `hold` seconds. */
+  focus?: { x: number; y: number; zoom?: number; hold?: number } };
 type Screen = {
   kind: "screen";
   seconds: number;
@@ -53,6 +55,9 @@ type Screen = {
   accent?: string;
   bg?: Bg;
   zoom?: number; // how far to push in on a tap, default 1.55
+  /** "full": the recording fills the frame at full height, no phone bezel; the sides are the same
+   * video blurred, so there are never bars (Canberk, 2026-11-05: "just the guy fully"). */
+  frame?: "phone" | "full";
   audio?: { src: string; at: number; volume?: number }[]; // the scene partner reading, timed in recording seconds
 };
 /** The close. Fades in slowly over the last shot (no slide), the icon settles, the words arrive one
@@ -231,14 +236,35 @@ const ScreenBeat: React.FC<{ b: Screen }> = ({ b }) => {
   const start = b.start ?? 0;
   const t = start + f / fps; // recording time
   const taps = (b.events ?? []).filter((e) => e.tap && e.t >= start - 0.2 && e.t <= start + b.seconds);
-  // Zoom toward the latest tap, ease back out 1.4s later.
+  const pushes = (b.events ?? []).filter((e) => (e.tap || e.focus) && e.t >= start - 0.2 && e.t <= start + b.seconds);
+  // Zoom toward the latest tap (or focus), ease back out 1.4s later (a focus: after its hold).
   let z = 1, cx = 0.5, cy = 0.5;
-  for (const e of taps) {
+  for (const e of pushes) {
     const local = (e.t - start) * fps;
-    const inP = spring({ frame: f - (local - 8), fps, config: { damping: 200 }, durationInFrames: 16 });
-    const outP = spring({ frame: f - (local + 42), fps, config: { damping: 200 }, durationInFrames: 18 });
+    const hold = e.focus ? Math.round((e.focus.hold ?? 1.4) * fps) : 42;
+    const inP = spring({ frame: f - (local - 8), fps, config: { damping: 200 }, durationInFrames: e.focus ? 22 : 16 });
+    const outP = spring({ frame: f - (local + hold), fps, config: { damping: 200 }, durationInFrames: e.focus ? 22 : 18 });
     const k = Math.max(0, inP - outP);
-    if (k > 0.001) { z = 1 + ((b.zoom ?? 1.55) - 1) * k; cx = e.tap!.x; cy = e.tap!.y; }
+    const pt = e.focus ?? e.tap!;
+    if (k > 0.001) { z = 1 + ((e.focus?.zoom ?? b.zoom ?? 1.55) - 1) * k; cx = pt.x; cy = pt.y; }
+  }
+  if (b.frame === "full") {
+    // Full height, centred; the recording is narrower than the frame, so its own blurred copy fills the sides.
+    const H = 1920, W = Math.round(H * (PHONE_W / PHONE_H));
+    const fx = (0.5 - cx) * W * (z - 1), fy = (0.5 - cy) * H * (z - 1);
+    const vid = (extra: React.CSSProperties) => (
+      <OffthreadVideo src={staticFile(b.src)} startFrom={Math.round(start * fps)} muted style={{ objectFit: "cover", ...extra }} />
+    );
+    return (
+      <AbsoluteFill style={{ background: "#000", overflow: "hidden" }}>
+        {vid({ position: "absolute", inset: -80, width: 1080 + 160, height: 1920 + 160, filter: "blur(48px) brightness(0.55)" })}
+        <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
+          <div style={{ width: W, height: H, transform: `translate(${fx}px, ${fy}px) scale(${z})`, boxShadow: "0 0 80px rgba(0,0,0,0.5)" }}>
+            {vid({ width: "100%", height: "100%" })}
+          </div>
+        </AbsoluteFill>
+      </AbsoluteFill>
+    );
   }
   const intro = spring({ frame: f, fps, config: { damping: 18, mass: 0.7 } });
   const tx = (0.5 - cx) * PHONE_W * (z - 1);
