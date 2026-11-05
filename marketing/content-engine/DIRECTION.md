@@ -3,6 +3,22 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-06, 01:00: say what the feature IS (wins over everything below)
+
+Canberk on the Tape room remake: music, sound effects and the ending are perfect. The message was wrong.
+- **Lead with the feature's plain job, never an edge case.** The Tape room is "self-tape hands free:
+  say action, it rolls; say cut, it stops and plays the take back". The cut-inside-the-monologue trick is
+  a detail for the App Store page, not the hook. Before writing any film, write the feature in one
+  sentence a tired actor gets in two seconds, and make the film show exactly that.
+- **Tape room film shape:** hook card (the problem: nobody to hit record) → the app's camera full frame
+  with an actor in it → "Action!" → he performs two short lines → "Oof. Okay... cut." → it stops and
+  the take plays straight back → one short narrator line → the Earnest ending.
+- **People in footage:** a different person every film, someone who reads as an actor performing (an
+  expressive man or woman mid-speech at home), never the same clip twice. Keep the voice lines short so
+  lip movement and words never visibly fight.
+- **Layout:** one idea per moment, big readable cue words (ACTION, CUT) in the house font, nothing
+  crowding the app.
+
 ## 2026-11-05, evening: quiet music under everything, feature demos show the feature working
 
 Canberk on the Tape room film: "beautiful ending and sounds", loved the guy doing the product, but
