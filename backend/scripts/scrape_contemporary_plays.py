@@ -73,7 +73,10 @@ MIN_WORDS = 150
 #: module, so the legal ceiling and the extraction ceiling cannot drift apart.
 MAX_WORDS = EXCERPT_MAX_WORDS
 
-CREDIT_TEMPLATE = "{title} by {author}. Excerpt. Full play at {source_url}"
+#: US works published before this year are public domain.
+PUBLIC_DOMAIN_BEFORE = 1928
+
+CREDIT_TEMPLATE ="{title} by {author}. Excerpt. Full play at {source_url}"
 
 
 # ── Era ──────────────────────────────────────────────────────────────────────
@@ -157,6 +160,8 @@ class Parsed:
     author: str
     character_name: str
     text: str
+    #: `plays.genre`. A musical's book scene is `musical`, so a filter can find it.
+    genre: str = "drama"
 
     def source_url_ok(self) -> bool:
         """An excerpt with no route back to the original is not attributable."""
@@ -434,7 +439,264 @@ def extract_speech(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional[
     ), None
 
 
+# ── Daily Actor ──────────────────────────────────────────────────────────────
+#
+# dailyactor.com/monologues/<slug>/ — one speech per page, in the clear, with a
+# details box above it. Verified 2026-11-05 against the live page markup:
+#
+#     <div class="details ..."><h3>...'Other Desert Cities' by Jon Robin Baitz</h3>
+#       <p><strong>From</strong>: <span>Play</span></p>        Play|Musical|Movie|TV
+#       <p><strong>Character</strong>: <span>Trip Wyeth, a bright...</span></p>
+#       ... <a href="http://amzn.to/...">Buy the Play</a> ...
+#     </div>
+#     <div class="entry-content ..."><p><strong>Trip</strong>: You know...</p>...
+#
+# 397 pages, listed in monologues-sitemap.xml. About half are film and TV, which
+# this script never takes (no screen text on a public page, a standing rule).
+# robots.txt allows /monologues/ HTML and disallows only the PDFs, which we do
+# not read.
+
+_DA_SITEMAP = "https://www.dailyactor.com/monologues-sitemap.xml"
+_DA_LOC = re.compile(r"<loc>(https://www\.dailyactor\.com/monologues/[^<]+)</loc>")
+_DA_DETAILS = re.compile(r'<div class="details[^"]*"[^>]*>(?P<box>.*?)</div>', re.S)
+_DA_HEAD = re.compile(r"<h3[^>]*>(?P<h>.*?)</h3>", re.S)
+_DA_FIELD = re.compile(
+    r"<strong[^>]*>\s*(?P<k>[A-Za-z ]+?)\s*</strong>\s*:\s*<span[^>]*>(?P<v>.*?)</span>", re.S
+)
+_DA_BODY = re.compile(r'<div class="entry-content[^"]*"[^>]*>(?P<body>.*?)(<div id=.jp-relatedposts|</div>)', re.S)
+_DA_BY = re.compile(r"^[\"'‘’“”]?(?P<title>.+?)[\"'‘’“”]?\s+by\s+(?P<author>.+?)\s*$")
+_DA_STAGE = {"play": "drama", "musical": "musical"}
+
+
+def _strip_tags(s: str) -> str:
+    s = re.sub(r"<br\s*/?>", "\n", s, flags=re.I)
+    return unescape(re.sub(r"<[^>]+>", "", s)).replace("\xa0", " ").strip()
+
+
+_SMALL_WORDS = {"a", "an", "and", "the", "of", "in", "on", "at", "to", "for", "or", "by"}
+
+
+def _da_title(title: str) -> str:
+    """'FENCES' -> 'Fences', '9 TO 5: THE MUSICAL' -> '9 to 5: The Musical'.
+
+    Only an all-caps title is recased; 'Doubt: A Parable' is left alone, so the
+    play matches the row other sources already filed it under.
+    """
+    if title != title.upper():
+        return title
+    words = title.lower().split()
+    out = [
+        w if (i and w in _SMALL_WORDS and not words[i - 1].endswith(":")) else w[:1].upper() + w[1:]
+        for i, w in enumerate(words)
+    ]
+    return " ".join(out)
+
+
+def _spoken_words(text: str) -> int:
+    return len(strip_artifacts(to_display_text(text)).split())
+
+
+def fit_excerpt(paras: list[str], max_words: int = MAX_WORDS) -> list[str]:
+    """Cut a speech that runs past the excerpt ceiling, at a clean place.
+
+    Whole paragraphs come off the end first; if the last one kept still runs
+    over, it is cut after its last sentence that fits. The words are measured
+    exactly as `evaluate` measures them, so a cut piece always clears the
+    ceiling. A speech already under it is returned untouched.
+    """
+    kept = list(paras)
+    while kept and _spoken_words("\n\n".join(kept)) > max_words:
+        if len(kept) > 1 and _spoken_words("\n\n".join(kept[:-1])) >= MIN_WORDS:
+            kept.pop()
+            continue
+        sentences = re.split(r"(?<=[.!?…])\s+", kept[-1])
+        while len(sentences) > 1 and _spoken_words("\n\n".join(kept[:-1] + [" ".join(sentences)])) > max_words:
+            sentences.pop()
+        kept[-1] = " ".join(sentences)
+        break
+    return kept
+
+
+def discover_dailyactor(url: str, html: str) -> list[Link]:
+    """Every monologue page in the sitemap. Labels are slugs; the page has the rest."""
+    return [
+        Link(url=u, character_name="", label=u.rstrip("/").rsplit("/", 1)[-1])
+        for u in dict.fromkeys(_DA_LOC.findall(html))
+    ]
+
+
+def extract_dailyactor(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional[str]]:
+    html = blob.decode("utf-8", "replace")
+    box = _DA_DETAILS.search(html)
+    if not box:
+        return None, "no_details_box"
+    fields = {
+        m.group("k").strip().lower(): _strip_tags(m.group("v"))
+        for m in _DA_FIELD.finditer(box.group("box"))
+    }
+    medium = fields.get("from", "").strip().lower()
+    if medium not in _DA_STAGE:
+        # Movie and TV are skipped by rule, not by accident.
+        return None, f"not_stage:{medium or 'unknown'}"
+
+    head = _DA_HEAD.search(box.group("box"))
+    by = _DA_BY.match(_strip_tags(head.group("h"))) if head else None
+    if not by:
+        return None, "no_title_by_author"
+    title = _da_title(by.group("title").strip(" '\"‘’“”"))
+    # "Patricia Resnick. Music & Lyrics by Dolly Parton", "Michael Frayn (Adapted
+    # from Anton Chekov's earlier play)": the writer is the part before the note.
+    author = re.split(r"\.\s+Music|\s+\(", by.group("author"))[0].strip()
+
+    body = _DA_BODY.search(html)
+    if not body:
+        return None, "no_body"
+    paras = [
+        _strip_tags(p)
+        for p in re.findall(r"<p[^>]*>(.*?)</p>", body.group("body"), re.S)
+    ]
+    paras = [p for p in paras if p]
+    if not paras:
+        return None, "no_body"
+
+    # The speech opens "<strong>Trip</strong>: You know..." — that cue is the
+    # character as the script names them. Fall back to the details box, whose
+    # value reads "Trip Wyeth, a bright, funny, TV producer".
+    cue = re.match(r"^(?P<cue>[A-Z][\w .'\-]{0,40}?)\s*:\s+(?P<rest>.+)$", paras[0], re.S)
+    character = ""
+    if cue:
+        character = cue.group("cue").strip()
+        paras[0] = cue.group("rest").strip()
+    if not character:
+        character = fields.get("character", "").split(",")[0].strip()
+    if not character:
+        # Annie Wood's standalone pieces name nobody; the page still gives a gender.
+        character = {"female": "Woman", "male": "Man"}.get(fields.get("gender", "").lower(), "")
+    if not character:
+        return None, "no_character"
+
+    # A page that runs into a second speaker is a scene, not a monologue.
+    for p in paras[1:]:
+        other = re.match(r"^([A-Z][\w .'\-]{0,40}?)\s*:\s+", p)
+        if other and other.group(1).strip().casefold() != character.casefold():
+            return None, "two_speakers"
+
+    # The page's "Buy the Play" link is Daily Actor's own Amazon affiliate link,
+    # so it is not stored: the credit points at the page that carries it.
+    return Parsed(
+        url=link.url,
+        play_title=title,
+        author=author,
+        character_name=character.title() if character.isupper() else character,
+        text="\n\n".join(fit_excerpt(paras)),
+        genre=_DA_STAGE[medium],
+    ), None
+
+
+# ── YouthPLAYS ───────────────────────────────────────────────────────────────
+#
+# youthplays.com/monologue/<slug>-<id> — about 110 free monologues from the
+# publisher's own plays, nearly all teen and youth characters. Verified
+# 2026-11-05:
+#
+#     <h3>Billy</h3>
+#     <h4>from <i><a href="/play/...">Kid Turboni Brings the Rain</a></i> by <a>Mark J. Costello</a></h4>
+#     <p><b>Genre:</b> Comedy, Dramedy</p>
+#     ...<div class="col-md-6 ...">  setup paragraph, a "(Warning: ... used as
+#        directed by YouthPLAYS ...)" paragraph, then the cue alone and centred:
+#        <p style="text-align: center;"><strong>BILLY</strong></p>, then the speech,
+#        ending at <div style="margin-top:30px;..."> (the mailing-list button).
+#
+# robots.txt: "Allow: /", with /admin/, /musical-score/ and the client login
+# disallowed, none of which this reads.
+
+_YP_INDEX = "https://www.youthplays.com/monologues.php"
+_YP_LINK = re.compile(r'href="(/monologue/[^"]+)"')
+_YP_H3 = re.compile(r"<h3>(?P<c>.*?)</h3>\s*<h4>\s*from\s*<i>(?P<t>.*?)</i>\s*by\s*(?P<a>.*?)</h4>", re.S)
+_YP_GENRE = re.compile(r"<b>Genre:</b>(?P<g>.*?)</p>", re.S)
+_YP_BODY = re.compile(
+    r'<div class="row" style="background:#fff;[^"]*">\s*<div class="col[^"]*">(?P<body>.*?)<div style="margin-top:30px',
+    re.S,
+)
+
+
+def discover_youthplays(url: str, html: str) -> list[Link]:
+    return [
+        Link(url="https://www.youthplays.com" + href, character_name="", label=href.rsplit("/", 1)[-1])
+        for href in dict.fromkeys(_YP_LINK.findall(html))
+    ]
+
+
+def extract_youthplays(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional[str]]:
+    html = blob.decode("utf-8", "replace")
+    head = _YP_H3.search(html)
+    body = _YP_BODY.search(html)
+    if not head or not body:
+        return None, "unexpected_markup"
+    character = _strip_tags(head.group("c"))
+    # "Alice 5" is the fifth Alice monologue on the site, not her name.
+    character = re.sub(r"\s+\d+$", "", character)
+    title, author = _strip_tags(head.group("t")), _strip_tags(head.group("a"))
+
+    paras = [
+        _strip_tags(p)
+        for p in re.split(r"</p>|<br\s*/?>\s*</span>\s*</font>", body.group("body"))
+    ]
+    paras = [re.sub(r"\s+", " ", p).strip() for p in paras]
+    paras = [p for p in paras if p]
+
+    # The speech starts after the cue: a paragraph that is the character's name
+    # in capitals, alone. Everything above it is setup and the usage warning.
+    start = None
+    for i, p in enumerate(paras):
+        if p.isupper() and len(p) <= 40 and not p.startswith("("):
+            start = i + 1
+            break
+    if start is None or start >= len(paras):
+        return None, "no_cue"
+    speech = paras[start:]
+    if any(p.isupper() and len(p) <= 40 and not p.startswith("(") for p in speech):
+        return None, "two_speakers"
+
+    genre_m = _YP_GENRE.search(html)
+    genre = _strip_tags(genre_m.group("g")).split(",")[0].strip().lower() if genre_m else "drama"
+    return Parsed(
+        url=link.url,
+        play_title=title,
+        author=author,
+        character_name=character.title() if character.isupper() else character,
+        text="\n\n".join(fit_excerpt(speech)),
+        genre={"dramedy": "comedy"}.get(genre, genre or "drama"),
+    ), None
+
+
 SOURCES: dict[str, Source] = {
+    "youthplays": Source(
+        key="youthplays",
+        name="YouthPLAYS",
+        index_urls=[_YP_INDEX],
+        discover=discover_youthplays,
+        extract=extract_youthplays,
+        note=(
+            "Publisher's own free monologue pages, whole speech in the HTML. "
+            "VERIFIED 2026-11-05. robots.txt allows /monologue/. Teen and youth "
+            "characters. Credit: play, playwright, YouthPLAYS."
+        ),
+        delay=1.0,
+    ),
+    "dailyactor": Source(
+        key="dailyactor",
+        name="Daily Actor",
+        index_urls=[_DA_SITEMAP],
+        discover=discover_dailyactor,
+        extract=extract_dailyactor,
+        note=(
+            "Monologue pages from published plays and musicals, whole speech in "
+            "the HTML. VERIFIED 2026-11-05. robots.txt allows /monologues/ pages. "
+            "Film and TV pages are skipped by rule."
+        ),
+        delay=1.0,
+    ),
     "stage_partners": Source(
         key="stage_partners",
         name="Stage Partners",
@@ -493,6 +755,15 @@ def evaluate(parsed: Parsed, years: dict[str, int]) -> Row:
 
     reasons: list[str] = []
 
+    # `ingest_monologue` refuses a row with no category, so a play missing from
+    # the years file is reported here rather than discovered at write time.
+    if year is None:
+        reasons.append("no_verified_year")
+    # Published before 1928 is public domain in the US. It belongs in the
+    # classical library under its real rights, not here as a fair-use excerpt.
+    elif year < PUBLIC_DOMAIN_BEFORE:
+        reasons.append("public_domain_era")
+
     verdict = assess_monologue_quality(
         display, spoken=spoken, min_words=MIN_WORDS, max_words=MAX_WORDS
     )
@@ -519,6 +790,58 @@ def evaluate(parsed: Parsed, years: dict[str, int]) -> Row:
         ok=not reasons,
         reasons=sorted(set(reasons)),
     )
+
+
+# ── Write through Supabase REST (cloud sessions) ────────────────────────────
+
+def write_via_rest(kept: list[Row], parsed_by_url: dict[str, Parsed]) -> None:
+    """The `--write` loop, through PostgREST. See `data_ingestion/rest_writer.py`."""
+    from app.services.ai.content_analyzer import ContentAnalyzer
+    from app.services.ai.langchain.embeddings import generate_embeddings_batch
+    from app.services.data_ingestion.rest_writer import (
+        Rest,
+        ingest_monologue_rest,
+        rejected_fingerprints,
+    )
+
+    rest = Rest()
+    analyzer = ContentAnalyzer()
+    seen = rejected_fingerprints(rest, [parsed_by_url[r.source_url].text for r in kept])
+    inserted: list[int] = []
+    outcomes: dict[str, int] = {}
+    for i, row in enumerate(kept, 1):
+        parsed = parsed_by_url[row.source_url]
+        try:
+            report = ingest_monologue_rest(
+                rest,
+                play_title=parsed.play_title, author=parsed.author,
+                character=parsed.character_name, text=parsed.text,
+                copyright_status=COPYRIGHT_STATUS, license_type=LICENSE_TYPE,
+                source_url=parsed.url, year_written=row.year_written,
+                category=row.category, genre=parsed.genre,
+                min_words=MIN_WORDS, max_words=MAX_WORDS,
+                analyzer=analyzer, embed=generate_embeddings_batch, rejected=seen,
+            )
+        except Exception as e:  # one bad row must not stop the batch
+            outcomes[f"error:{type(e).__name__}"] = outcomes.get(f"error:{type(e).__name__}", 0) + 1
+            print(f"  [{i}/{len(kept)}] ERROR {type(e).__name__}: {e}  {parsed.url}")
+            continue
+        if report.inserted:
+            inserted.extend(report.inserted_ids)
+            print(f"  [{i}/{len(kept)}] + {report.inserted_ids[0]}  "
+                  f"{parsed.character_name}, {parsed.play_title}")
+        else:
+            why = report.refused or (
+                "duplicate" if report.duplicates else
+                "seen_before" if report.already_rejected else
+                next(iter(report.rejected), "unknown")
+            )
+            outcomes[why] = outcomes.get(why, 0) + 1
+
+    print(f"\n  inserted: {len(inserted)}"
+          + (f" (ids {min(inserted)}-{max(inserted)})" if inserted else ""))
+    for why, n in sorted(outcomes.items(), key=lambda kv: -kv[1]):
+        print(f"    {why:30s} {n}")
 
 
 # ── Self check ───────────────────────────────────────────────────────────────
@@ -583,6 +906,15 @@ def main() -> None:
                     help="Override the User-Agent. See UA_HELP; this is a "
                          "deliberate choice, not a default.")
     ap.add_argument("--write", action="store_true", help="Persist to DB")
+    ap.add_argument("--write-rest", action="store_true",
+                    help="Persist through Supabase REST, for a machine with no "
+                         "Postgres connection (a cloud session)")
+    ap.add_argument("--cache", default="",
+                    help="Directory to keep fetched pages in; a page already "
+                         "there is not fetched again")
+    ap.add_argument("--missing-years", action="store_true",
+                    help="List the plays with no verified year, for "
+                         "data/contemporary_play_years.json")
     ap.add_argument("--dry-run", action="store_true", help="Report only (default)")
     ap.add_argument("--self-check", action="store_true", help="Offline invariant check")
     ap.add_argument("--debug", action="store_true")
@@ -595,7 +927,7 @@ def main() -> None:
         ap.error("--source is required (or use --self-check)")
 
     source = SOURCES[args.source]
-    write = args.write and not args.dry_run
+    write = (args.write or args.write_rest) and not args.dry_run
     years = load_years()
 
     if not years:
@@ -618,7 +950,16 @@ def main() -> None:
     if args.user_agent:
         headers["User-Agent"] = args.user_agent
 
+    cache = Path(args.cache) if args.cache else None
+    if cache:
+        cache.mkdir(parents=True, exist_ok=True)
+
     def fetch(url: str) -> tuple[Optional[bytes], Optional[str]]:
+        import hashlib
+        hit = cache / (hashlib.md5(url.encode()).hexdigest() + ".html") if cache else None
+        # The sitemap is re-read every run; it is how new pages are found.
+        if hit and hit.exists() and url not in source.index_urls:
+            return hit.read_bytes(), None
         time.sleep(source.delay)
         try:
             resp = session.get(url, headers=headers, timeout=TIMEOUT)
@@ -626,6 +967,8 @@ def main() -> None:
             return None, f"{type(e).__name__}: {e}"
         if resp.status_code != 200:
             return None, f"HTTP {resp.status_code}"
+        if hit:
+            hit.write_bytes(resp.content)
         return resp.content, None
 
     urls = source.index_urls[: args.limit] if args.limit else source.index_urls
@@ -719,7 +1062,21 @@ def main() -> None:
             f"    {r.credit}"
         )
 
+    if args.missing_years:
+        missing: dict[tuple[str, str], int] = {}
+        for r in rows:
+            if "no_verified_year" in r.reasons:
+                k = (r.play_title, r.author)
+                missing[k] = missing.get(k, 0) + 1
+        print(f"\n  {len(missing)} plays with no verified year:")
+        for (title, author), n in sorted(missing.items()):
+            print(f"    {n:2d}  {title} | {author}")
+
     if not write:
+        return
+
+    if args.write_rest:
+        write_via_rest(kept, parsed_by_url)
         return
 
     from app.core.database import SessionLocal
@@ -748,6 +1105,7 @@ def main() -> None:
                 source_url=parsed.url,
                 year_written=row.year_written,
                 category=row.category,
+                genre=parsed.genre,
                 min_words=MIN_WORDS,
                 max_words=MAX_WORDS,
                 apply=True,
