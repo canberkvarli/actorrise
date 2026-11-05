@@ -139,6 +139,11 @@ they are here. When he gives a new standing rule, add it here, not to a memory f
   as `review_status='pending'` **with** its embedding, and Canberk approves each one in
   `/admin/monologues/review` after reading it as a native speaker. First run: Orhan Burian's
   Hamlet, play 3490, monologues 44138–44161.
+  **Contemporary plays (2026-11-05, Canberk):** copyrighted plays come in as text, not
+  metadata only: one monologue per row, at most 400 words, `copyrighted` / `fair_use`,
+  playwright credit and a `source_url` to the play, never the full script. Written permission
+  makes it `licensed`. A takedown request is honoured the same day. See
+  `backend/scripts/CONTEMPORARY_SOURCES.md`.
   A film or TV reference row goes in only if that film yields pieces, never just the metadata.
   Never host film or TV scene text publicly.
 - "Not in the library" needs three places checked: `plays.title`, `monologues.title`,
