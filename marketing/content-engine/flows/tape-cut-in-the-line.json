@@ -1,0 +1,37 @@
+{
+    "start": "/tape/24790",
+    "lead": 600,
+    "steps": [
+        {
+            "mark": "ready"
+        },
+        {
+            "wait": 1800
+        },
+        {
+            "click": {
+                "css": "[aria-label=\"Action\"]"
+            },
+            "after": 200
+        },
+        {
+            "mark": "action"
+        },
+        {
+            "wait": 6500
+        },
+        {
+            "mark": "rolling"
+        },
+        {
+            "mark": "cut"
+        },
+        {
+            "wait": 3000
+        },
+        {
+            "mark": "review"
+        }
+    ],
+    "tail": 800
+}

@@ -1,0 +1,134 @@
+{
+  "id": "2026-11-08-tape-cut",
+  "look": "bold",
+  "cut": "hard",
+  "music": {
+    "style": "wood",
+    "volume": 0.25,
+    "drop": "end"
+  },
+  "beats": [
+    {
+      "kind": "title",
+      "seconds": 2.2,
+      "text": "My monologue has the word cut in it.",
+      "accent": "cut",
+      "sfx": []
+    },
+    {
+      "kind": "broll",
+      "seconds": 6.6,
+      "src": "reel/2026-11-08-tape-cut/ringlight.mp4",
+      "start": 4,
+      "push": 0.04,
+      "dim": 0.35,
+      "at": "lower",
+      "credit": "MART PRODUCTION on Pexels",
+      "sfx": [],
+      "lines": [
+        {
+          "text": "Say action. It rolls.",
+          "accent": "rolls.",
+          "at": 0.3,
+          "until": 2.1,
+          "size": 84
+        },
+        {
+          "text": "Cut in a line? Rolls on.",
+          "accent": "on.",
+          "at": 2.4,
+          "until": 4.4,
+          "size": 84
+        },
+        {
+          "text": "Say cut. It stops.",
+          "accent": "stops.",
+          "at": 4.7,
+          "size": 84
+        }
+      ]
+    },
+    {
+      "kind": "screen",
+      "seconds": 4.6,
+      "src": "reel/2026-11-08-tape-cut/app.mp4",
+      "start": 1.6,
+      "events": [
+        {
+          "t": 0.585,
+          "mark": "ready"
+        },
+        {
+          "t": 3.169,
+          "tap": {
+            "x": 0.5,
+            "y": 0.9407582938388626
+          },
+          "label": "[aria-label=\"Action\"]"
+        },
+        {
+          "t": 3.705,
+          "mark": "action"
+        }
+      ],
+      "zoom": 1.1,
+      "bg": "ink",
+      "caption": "The Tape room.",
+      "accent": "Tape",
+      "sfx": []
+    },
+    {
+      "kind": "end",
+      "seconds": 1.8,
+      "brand": "Ghost Light",
+      "line": "For when everyone else has gone home.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "plan": "plan/2026-11-08 (series backstage, wildcard, look bold)",
+    "feature": "tape",
+    "app": "Ghost Light Tape room, real app as a web page (ghostlight-web/serve.sh), demo account; flow flows/tape-cut-in-the-line.json; camera fed real stock footage through FAKE_CAM (Chromium fake capture). A take cannot roll in a browser (no native recorder), so the app shows the room ready and the 3 2 1 countdown.",
+    "how_it_works": "app/tape/[id].tsx and src/rehearsal/tape-cues.ts on ghostlight main: action rolls, cut stops, again redoes, keeper stars; a cut inside the script is a line, not a cue.",
+    "monologue": {
+      "id": 24790,
+      "character": "Falstaff",
+      "play": "Henry IV, Part 1",
+      "author": "William Shakespeare",
+      "public_domain": true,
+      "cut_line": "my buckler cut through and through"
+    },
+    "sql": "select m.id, m.character_name, p.title from monologues m join plays p on p.id=m.play_id where lower(m.text) ~ '\\mcut\\M' and p.author in (...)",
+    "pexels": [
+      {
+        "id": 7480852,
+        "url": "https://www.pexels.com/video/woman-recording-herself-on-a-phone-7480852/",
+        "author": "MART PRODUCTION",
+        "use": "broll"
+      },
+      {
+        "id": 8136210,
+        "url": "https://www.pexels.com/video/a-man-talking-to-the-camera-8136210/",
+        "author": "ANTONI SHKRABA production",
+        "use": "fake camera feed in the Tape room"
+      }
+    ],
+    "note": "Stock people, never users, never quoted."
+  },
+  "captions": {
+    "tiktok": "Ever had a self tape stop on your own line? The Tape room knows Falstaff's cut from yours. #selftape #actortok #audition #actorslife #actors",
+    "youtube_title": "A self tape that knows your line from your cue #shorts",
+    "youtube_description": "Say action and it rolls. A cut inside your speech keeps it rolling; your own cut stops it.\nThe Tape room in Ghost Light, built by a working actor.\n#selftape #audition #actorslife #acting",
+    "instagram": "My monologue has the word cut in it.\n\nFalstaff: \"my buckler cut through and through.\" The Tape room keeps rolling. Say cut yourself and it stops. Say keeper and it stars the take you liked.\n\nGhost Light, built by a working actor. Link in bio.\n\n#selftape #actorslife #audition #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 1800
+}

@@ -51,7 +51,10 @@ function chromePath() {
 async function open() {
   const browser = await chromium.launch({
     executablePath: process.env.CHROME || chromePath(),
-    args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--autoplay-policy=no-user-gesture-required"],
+    // FAKE_CAM=<file.y4m> puts real footage in the camera instead of Chromium's green test pattern
+    // (the Tape room opens on the camera). Stock footage only, never a real user.
+    args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--autoplay-policy=no-user-gesture-required",
+      ...(process.env.FAKE_CAM ? [`--use-file-for-fake-video-capture=${process.env.FAKE_CAM}`] : [])],
   });
   const ctx = await browser.newContext({
     viewport: VIEW,
