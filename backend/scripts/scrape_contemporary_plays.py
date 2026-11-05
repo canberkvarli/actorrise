@@ -65,9 +65,11 @@ from app.services.licensing import (
 COPYRIGHT_STATUS = COPYRIGHTED
 LICENSE_TYPE = LICENSE_FAIR_USE
 
-#: Floor is 150 rather than the corpus-wide 100. A stage audition piece wants to
-#: be a real 60 to 90 seconds; 100 is calibrated to include shorter screen work.
-MIN_WORDS = 150
+#: The corpus-wide floor (`monologue_quality.DEFAULT_MIN_WORDS`, 100 words). It
+#: was 150 here, on the idea that a stage piece wants 60 to 90 seconds, but
+#: actors ask for one-minute pieces by name and Daily Actor files dozens of them:
+#: 150 threw away 38 of its 182 stage pieces. Film and TV already use 100.
+MIN_WORDS = 100
 
 #: Ceiling is NOT a local number. It is the fair-use bound from the licensing
 #: module, so the legal ceiling and the extraction ceiling cannot drift apart.
@@ -473,6 +475,9 @@ def _strip_tags(s: str) -> str:
     return unescape(re.sub(r"<[^>]+>", "", s)).replace("\xa0", " ").strip()
 
 
+#: Typos on the source page, corrected to the published title.
+_DA_TITLE_FIXES = {"Pterodactylcs": "Pterodactyls"}
+
 _SMALL_WORDS = {"a", "an", "and", "the", "of", "in", "on", "at", "to", "for", "or", "by"}
 
 
@@ -482,6 +487,10 @@ def _da_title(title: str) -> str:
     Only an all-caps title is recased; 'Doubt: A Parable' is left alone, so the
     play matches the row other sources already filed it under.
     """
+    # "Mean Girls, The Musical", "HAIRSPRAY the MUSICAL", "Footloose: The Musical":
+    # the genre column already says musical, and one show should be one play row.
+    title = re.sub(r"[\s,:]+the\s+musical\s*$", "", title, flags=re.I).strip()
+    title = _DA_TITLE_FIXES.get(title, title)
     if title != title.upper():
         return title
     words = title.lower().split()
@@ -556,6 +565,10 @@ def extract_dailyactor(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optio
         for p in re.findall(r"<p[^>]*>(.*?)</p>", body.group("body"), re.S)
     ]
     paras = [p for p in paras if p]
+    # Site notes after the speech: "For more information on Reina Hardy and the
+    # play, click here", "*From the Play ...", "**Both Male and Female can play".
+    while paras and re.match(r"^(\*|for more information|click here)", paras[-1], re.I):
+        paras.pop()
     if not paras:
         return None, "no_body"
 
@@ -620,6 +633,9 @@ _YP_BODY = re.compile(
 )
 
 
+_YP_EDITION = re.compile(r"\s*\((full-length|one-act)( version)?\)\s*$", re.I)
+
+
 def discover_youthplays(url: str, html: str) -> list[Link]:
     return [
         Link(url="https://www.youthplays.com" + href, character_name="", label=href.rsplit("/", 1)[-1])
@@ -635,28 +651,42 @@ def extract_youthplays(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optio
         return None, "unexpected_markup"
     character = _strip_tags(head.group("c"))
     # "Alice 5" is the fifth Alice monologue on the site, not her name.
-    character = re.sub(r"\s+\d+$", "", character)
+    character = re.sub(r"\s+(\d+|\(\d+\))$", "", character)
     title, author = _strip_tags(head.group("t")), _strip_tags(head.group("a"))
+    # One play, two editions: "Love (Awkwardly) (full-length version)".
+    title = _YP_EDITION.sub("", title).strip()
 
-    paras = [
-        _strip_tags(p)
-        for p in re.split(r"</p>|<br\s*/?>\s*</span>\s*</font>", body.group("body"))
-    ]
-    paras = [re.sub(r"\s+", " ", p).strip() for p in paras]
-    paras = [p for p in paras if p]
+    # Pages are hand-made in a WYSIWYG editor: paragraphs arrive as <p> or
+    # <div>, and inside one the cue is often split off by a <br>. So lines are
+    # found at every break (to find the cue), but kept grouped by paragraph.
+    lines: list[tuple[int, str]] = []
+    for b, block in enumerate(re.split(r"</p>|</div>", body.group("body"), flags=re.I)):
+        for line in re.split(r"<br\s*/?>", block, flags=re.I):
+            line = re.sub(r"[ \t\xa0\n]+", " ", _strip_tags(line)).strip()
+            if line:
+                lines.append((b, line))
 
-    # The speech starts after the cue: a paragraph that is the character's name
-    # in capitals, alone. Everything above it is setup and the usage warning.
-    start = None
-    for i, p in enumerate(paras):
-        if p.isupper() and len(p) <= 40 and not p.startswith("("):
-            start = i + 1
-            break
-    if start is None or start >= len(paras):
+    def is_cue(line: str) -> bool:
+        return line.isupper() and len(line) <= 40 and not line.startswith("(")
+
+    # The speech starts after the cue: the character's name in capitals, alone.
+    # Everything above it is setup and the usage warning.
+    start = next((i + 1 for i, (_, line) in enumerate(lines) if is_cue(line)), None)
+    if start is None or start >= len(lines):
         return None, "no_cue"
-    speech = paras[start:]
-    if any(p.isupper() and len(p) <= 40 and not p.startswith("(") for p in speech):
+    if any(is_cue(line) for _, line in lines[start:]):
         return None, "two_speakers"
+
+    speech: list[str] = []
+    last_block = None
+    for b, line in lines[start:]:
+        direction_only = line.startswith("(") and line.endswith((")", ".)"))
+        if speech and (b == last_block or direction_only):
+            # Same paragraph, or a lone "(Beat.)": it belongs with what precedes it.
+            speech[-1] = f"{speech[-1]} {line}"
+        else:
+            speech.append(line)
+        last_block = b
 
     genre_m = _YP_GENRE.search(html)
     genre = _strip_tags(genre_m.group("g")).split(",")[0].strip().lower() if genre_m else "drama"
@@ -862,7 +892,7 @@ def self_check() -> int:
           may_store_text(COPYRIGHT_STATUS, LICENSE_TYPE, word_count=401) is False)
     check("ceiling is EXCERPT_MAX_WORDS, not a local literal",
           MAX_WORDS == EXCERPT_MAX_WORDS == 400)
-    check("floor is 150", MIN_WORDS == 150)
+    check("floor is the corpus-wide 100", MIN_WORDS == 100)
     check("no basis at all is refused",
           may_store_text(COPYRIGHT_STATUS, None) is False)
 

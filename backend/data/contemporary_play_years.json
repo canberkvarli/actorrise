@@ -52,7 +52,7 @@
     "author": "Ian McWethy",
     "verified": true
   },
-  "TOO MANY DETECTIVES AT THE MURDER MANSION (FULL-LENGTH)": {
+  "TOO MANY DETECTIVES AT THE MURDER MANSION": {
     "year": 2024,
     "source": "Open Library edition record /books/OL52630512M: the Stage Partners acting edition, publish_date 2024. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
     "author": "Ian McWethy",
@@ -81,5 +81,815 @@
     "source": "Open Library edition record /books/OL49323206M: the Stage Partners acting edition, publish_date 2022. This is the EDITION's publication year, not a premiere date; it is used only to band the play against the 1980 cutoff, which it clears by decades. Resolved at edition level on purpose: the work-level `first_publish_year` returns 1975 for Tuck Everlasting, which is Natalie Babbitt's novel rather than Mark Frattaroli's stage adaptation.",
     "author": "Conor Eifler",
     "verified": true
+  },
+  "42nd Street": {
+    "year": 1980,
+    "author": "Michael Stewart & Mark Bramble",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "9 to 5": {
+    "year": 2008,
+    "author": "Patricia Resnick",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "A Bright Room Called Day": {
+    "year": 1985,
+    "author": "Tony Kushner",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "A Chorus Line": {
+    "year": 1975,
+    "author": "James Kirkwood Jr. & Nicholas Dante",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "A Little Princess": {
+    "year": 2004,
+    "author": "Brian Crawley",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "A Raisin in the Sun": {
+    "year": 1959,
+    "author": "Lorraine Hansberry",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Annie": {
+    "year": 1976,
+    "author": "Thomas Meehan",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Arcadia": {
+    "year": 1993,
+    "author": "Tom Stoppard",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Assassins": {
+    "year": 1990,
+    "author": "Stephen Sondheim and John Weidman",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Beyond Therapy": {
+    "year": 1981,
+    "author": "Christopher Durang",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Brighton Beach Memoirs": {
+    "year": 1982,
+    "author": "Neil Simon",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Buried Child": {
+    "year": 1978,
+    "author": "Sam Shepard",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Crimes of the Heart": {
+    "year": 1979,
+    "author": "Beth Henley",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Cry-Baby": {
+    "year": 2007,
+    "author": "Mark O’Donnell & Thomas Meehan",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Danny and the Deep Blue Sea": {
+    "year": 1983,
+    "author": "John Patrick Shanley",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Dentity Crisis": {
+    "year": 1978,
+    "author": "Christopher Durang",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Disgraced": {
+    "year": 2012,
+    "author": "Ayad Akhtar",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Doubt: A Parable": {
+    "year": 2004,
+    "author": "John Patrick Shanley",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Fat Pig": {
+    "year": 2004,
+    "author": "Neil LaBute",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Fences": {
+    "year": 1985,
+    "author": "August Wilson",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Footloose": {
+    "year": 1998,
+    "author": "Dean Pitchford & Walter Bobbie",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Frankie and Johnny in the Clair De Lune": {
+    "year": 1987,
+    "author": "Terrence McNally",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Grace": {
+    "year": 2004,
+    "author": "Craig Wright",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Hairspray": {
+    "year": 2002,
+    "author": "Thomas Meehan & Mark O’Donnell",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Harvey": {
+    "year": 1944,
+    "author": "Mary Chase",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "In the Next Room (Or the Vibrator Play)": {
+    "year": 2009,
+    "author": "Sarah Ruhl",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "It’s Only a Play": {
+    "year": 1982,
+    "author": "Terrence McNally",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Key Exchange": {
+    "year": 1981,
+    "author": "Kevin Wade",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Laughing Wild": {
+    "year": 1987,
+    "author": "Christopher Durang",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Laundry and Bourbon": {
+    "year": 1980,
+    "author": "James McLure",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Les Liaisons Dangereuses": {
+    "year": 1985,
+    "author": "Christopher Hampton",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Marion Bridge": {
+    "year": 1998,
+    "author": "Daniel MacIvor",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Matilda": {
+    "year": 2010,
+    "author": "Dennis Kelly & Tim Minchin",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Mean Girls": {
+    "year": 2017,
+    "author": "Tina Fey",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Network": {
+    "year": 2017,
+    "author": "Lee Hall",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Oleanna": {
+    "year": 1992,
+    "author": "David Mamet",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Other Desert Cities": {
+    "year": 2010,
+    "author": "Jon Robin Baitz",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Proof": {
+    "year": 2000,
+    "author": "David Auburn",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Pterodactyls": {
+    "year": 1993,
+    "author": "Nicky Silver",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Reasons to be Pretty": {
+    "year": 2008,
+    "author": "Neil LaBute",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Recent Tragic Events": {
+    "year": 2002,
+    "author": "Craig Wright",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Shows for Days": {
+    "year": 2015,
+    "author": "Douglas Carter Beane",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Slow Dance on the Killing Ground": {
+    "year": 1964,
+    "author": "William Hanley",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Snakebit": {
+    "year": 1999,
+    "author": "David Marshall Grant",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Spike Heels": {
+    "year": 1992,
+    "author": "Theresa Rebeck",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "SubUrbia": {
+    "year": 1994,
+    "author": "Eric Bogosian",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Sylvia": {
+    "year": 1995,
+    "author": "A.R. Gurney",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "The (curious case of the) Watson Intelligence": {
+    "year": 2012,
+    "author": "Madeleine George",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "The Book of Mormon": {
+    "year": 2011,
+    "author": "Trey Parker, Robert Lopez & Matt Stone",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "The Columnist": {
+    "year": 2012,
+    "author": "David Auburn",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "The Dining Room": {
+    "year": 1981,
+    "author": "A. R. Gurney",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "The Early Girl": {
+    "year": 1986,
+    "author": "Caroline Kava",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "The Glass Menagerie": {
+    "year": 1944,
+    "author": "Tennessee Williams",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "The Lisbon Traviata": {
+    "year": 1985,
+    "author": "Terrence McNally",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "The Marriage of Bette and Boo": {
+    "year": 1985,
+    "author": "Christopher Durang",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "The Performers": {
+    "year": 2012,
+    "author": "David West Read",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "This is Our Youth": {
+    "year": 1996,
+    "author": "Kenneth Lonergan",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Wild Honey": {
+    "year": 1984,
+    "author": "Michael Frayn",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "You're a Good Man, Charlie Brown": {
+    "year": 1967,
+    "author": "Clark Gesner",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Cocktails at Pam's": {
+    "year": 1986,
+    "author": "Stewart Lemoine",
+    "source": "First production year, compiled 2026-11-05 from premiere records known to the editor; used to band the era only. Confirm against IBDB/Lortel/publisher before relying on the exact year.",
+    "verified": false
+  },
+  "Annie Jump and the Library of Heaven": {
+    "year": 2019,
+    "author": "Reina Hardy",
+    "source": "Premiered 29 March 2019, Renaissance Theaterworks, Milwaukee (WUWM, Shepherd Express). Won Br!NK 2017.",
+    "verified": true
+  },
+  "Are you ready?": {
+    "year": 2001,
+    "author": "David Auburn",
+    "source": "First produced 29 January 2001, Westbank Theatre, New York (Wikipedia, David Auburn).",
+    "verified": true
+  },
+  "She Was Lost, And Is Found": {
+    "year": 1978,
+    "author": "Richard Hensley",
+    "source": "Published by Samuel French, New York, 1978 (edition year).",
+    "verified": true
+  },
+  "Glassheart": {
+    "year": 2015,
+    "author": "Reina Hardy",
+    "source": "Produced at Know Theatre, Cincinnati; the season year was not confirmed. Reina Hardy is a 2010s playwright, so the band is certain and the exact year is not.",
+    "verified": false
+  },
+  "Most Likely To: The Senior Superlative Musical": {
+    "year": 2015,
+    "author": "Michael Tester",
+    "source": "Published by Dramatic Publishing; no year found. A 2010s school musical, so the band is certain and the exact year is not.",
+    "verified": false
+  },
+  "A Girl of the Limberlost": {
+    "year": 2000,
+    "author": "Marie Kohler",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/a-girl-of-the-limberlost-by-marie-kohler-504 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "An Actual Baby Person": {
+    "year": 2000,
+    "author": "Barbara Lindsay",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/an-actual-baby-person-by-barbara-lindsay-206 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Anne of Green Gables": {
+    "year": 2000,
+    "author": "Donna Hoke",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/anne-of-green-gables-by-donna-hoke-611 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Between Mars and Me": {
+    "year": 2000,
+    "author": "Rose Helsinger",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/Between-Mars-and-Me-by-Rose-Helsinger-493 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Blood, Sweat, and Cheers: A Comedy About Competitive Cheerleading": {
+    "year": 2000,
+    "author": "Kaci Beeler",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/blood-sweat-and-cheers-a-comedy-about-competitive-cheerleading-by-kaci-beeler-amy-gentry-349 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Children of Hooverville": {
+    "year": 2000,
+    "author": "Hollie Michaels",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/children-of-hooverville-by-hollie-michaels-268 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Chiraptophobia": {
+    "year": 2011,
+    "author": "Hannah Estelle Sears",
+    "source": "YouthPLAYS play page https://www.youthplays.com/play/chiraptophobia-by-hannah-estelle-sears-211: earliest dated production or award on the page (2011). An upper bound on the premiere, used to band the era only.",
+    "verified": true
+  },
+  "Clay": {
+    "year": 2000,
+    "author": "Carol S. Lashof",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/clay-by-carol-s.-lashof-154 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Cracked Sky": {
+    "year": 2000,
+    "author": "Jonathan Dorf",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/cracked-sky-by-jonathan-dorf-421 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Creature Features (Modern Day Mutants)": {
+    "year": 2000,
+    "author": "Christian Kiley",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/creature-features-modern-day-mutants-by-christian-kiley-167 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Cupid and Psyche: An Internet Love Story": {
+    "year": 2000,
+    "author": "Maria Hernandez",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/cupid-and-psyche-an-internet-love-story-by-maria-hernandez-emma-rosecan-alexis-stickovitch-245 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Dear Chuck": {
+    "year": 2000,
+    "author": "Jonathan Dorf",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/dear-chuck-full-length-version-by-jonathan-dorf-274 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Disruption: A Pandemic Decalogue": {
+    "year": 2020,
+    "author": "Randy Wyatt",
+    "source": "YouthPLAYS play page https://www.youthplays.com/play/disruption-a-pandemic-decalogue-by-randy-wyatt-574: earliest dated production or award on the page (2020). An upper bound on the premiere, used to band the era only.",
+    "verified": true
+  },
+  "Dodge": {
+    "year": 2000,
+    "author": "Ed Shockley",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/dodge-by-ed-shockley-36 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Dracula of Pennsylvania": {
+    "year": 2014,
+    "author": "Don Goodrum",
+    "source": "YouthPLAYS play page https://www.youthplays.com/play/dracula-of-pennsylvania-by-don-goodrum-388: earliest dated production or award on the page (2014). An upper bound on the premiere, used to band the era only.",
+    "verified": true
+  },
+  "ESL": {
+    "year": 2000,
+    "author": "Tom Smith",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/esl-by-tom-smith-119 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Funtown": {
+    "year": 2022,
+    "author": "Laura Neill",
+    "source": "YouthPLAYS play page https://www.youthplays.com/play/funtown-by-laura-neill-672: earliest dated production or award on the page (2022). An upper bound on the premiere, used to band the era only.",
+    "verified": true
+  },
+  "G.B.F. Forever": {
+    "year": 2011,
+    "author": "Asher Wyndham",
+    "source": "YouthPLAYS play page https://www.youthplays.com/play/g.b.f.-forever-by-asher-wyndham-209: earliest dated production or award on the page (2011). An upper bound on the premiere, used to band the era only.",
+    "verified": true
+  },
+  "Golden Ladder": {
+    "year": 2000,
+    "author": "Donna Spector",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/golden-ladder-by-donna-spector-226 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Gwen and Mary at Glenn Ross": {
+    "year": 2000,
+    "author": "Robin Pond",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/gwen-and-mary-at-glenn-ross-by-robin-pond-306 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Harry's Hotter at Twilight": {
+    "year": 2000,
+    "author": "Jonathan Dorf",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/harrys-hotter-at-twilight-full-length-version-by-jonathan-dorf-160 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Herby Alice Counts Down to Yesterday": {
+    "year": 2000,
+    "author": "Nicole B. Adkins",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/herby-alice-counts-down-to-yesterday-by-nicole-b.-adkins-137 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Kid Turboni Brings the Rain": {
+    "year": 2015,
+    "author": "Mark J. Costello",
+    "source": "YouthPLAYS play page https://www.youthplays.com/play/kid-turboni-brings-the-rain-by-mark-j.-costello-485: earliest dated production or award on the page (2015). An upper bound on the premiere, used to band the era only.",
+    "verified": true
+  },
+  "Last Right Before the Void": {
+    "year": 2000,
+    "author": "Jonathan Dorf",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/last-right-before-the-void-by-jonathan-dorf-19 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Le Goalie": {
+    "year": 2000,
+    "author": "Nelson Yu",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/le-goalie-by-nelson-yu-179 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Like a Metaphor": {
+    "year": 2000,
+    "author": "Emily Cicchini",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/like-a-metaphor-by-emily-cicchini-235 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Linda": {
+    "year": 2017,
+    "author": "Diana Burbano",
+    "source": "YouthPLAYS play page https://www.youthplays.com/play/linda-by-diana-burbano-627: earliest dated production or award on the page (2017). An upper bound on the premiere, used to band the era only.",
+    "verified": true
+  },
+  "Lockdown": {
+    "year": 2000,
+    "author": "Julia Edwards",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/lockdown-by-julia-edwards-192 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Love (Awkwardly)": {
+    "year": 2000,
+    "author": "Maryann Carolan",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/love-awkwardly-full-length-version-by-maryann-carolan-john-rotondo-183 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Masks": {
+    "year": 2000,
+    "author": "Paul Doniger",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/masks-by-paul-e.-doniger-76 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Me, My Selfie & I": {
+    "year": 2000,
+    "author": "Jonathan Dorf",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/me-my-selfie-and-i-by-jonathan-dorf-480 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Mi Coche, Mi Quince": {
+    "year": 2000,
+    "author": "Susan Lieberman",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/mi-coche-mi-quince-by-susan-lieberman-356 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Murder (Comedy) in Space!": {
+    "year": 2000,
+    "author": "Ed Shockley",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/murder-comedy-in-space-by-ed-shockley-30 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Ocean Debris": {
+    "year": 2000,
+    "author": "Cassandra Hsiao",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/ocean-debris-by-cassandra-hsiao-521 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Of Plastic Things and Butterfly Wings": {
+    "year": 2000,
+    "author": "Greg Romero",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/of-plastic-things-and-butterfly-wings-by-greg-romero-255 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "One Good Thing": {
+    "year": 2000,
+    "author": "Don Zolidis",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/one-good-thing-by-don-zolidis-70 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Orni-what?": {
+    "year": 2000,
+    "author": "Nancy Brewka-Clark",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/orni-what--by-nancy-brewka-clark-214 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Prime": {
+    "year": 2015,
+    "author": "Ellen Margolis",
+    "source": "YouthPLAYS play page https://www.youthplays.com/play/prime-by-ellen-margolis-389: earliest dated production or award on the page (2015). An upper bound on the premiere, used to band the era only.",
+    "verified": true
+  },
+  "Rosaline Wrecked It All": {
+    "year": 2000,
+    "author": "Stephen Kaplan",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/rosaline-wrecked-it-all-by-stephen-kaplan-677 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Rumors of Polar Bears": {
+    "year": 2000,
+    "author": "Jonathan Dorf",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/rumors-of-polar-bears-full-length-version-by-jonathan-dorf-85 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Secret Life Under the Stairs": {
+    "year": 2000,
+    "author": "Krista Knutsen-Marushy",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/secret-life-under-the-stairs-by-kris-knutsen-72 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Snakes in a Lunchbox": {
+    "year": 2000,
+    "author": "Arthur M. Jolly",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/snakes-in-a-lunchbox-by-arthur-m.-jolly-291 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Spinning": {
+    "year": 2000,
+    "author": "Jonathan Dorf",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/spinning-by-jonathan-dorf-640 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Standardized Testing": {
+    "year": 2000,
+    "author": "Matthew Onufrak",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/standardized-testing-by-matthew-onufrak-591 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Supermarket of Lost": {
+    "year": 2000,
+    "author": "Cassandra Hsiao",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/supermarket-of-lost-by-cassandra-hsiao-463 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Techies": {
+    "year": 2000,
+    "author": "Don Goodrum",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/techies-by-don-goodrum-228 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "The Adventures of Rocky & Skye": {
+    "year": 2012,
+    "author": "Kelly DuMar",
+    "source": "YouthPLAYS play page https://www.youthplays.com/play/the-adventures-of-rocky-skye-by-kelly-dumar-114: earliest dated production or award on the page (2012). An upper bound on the premiere, used to band the era only.",
+    "verified": true
+  },
+  "The Baseball King": {
+    "year": 2000,
+    "author": "Amelia Ross",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/the-baseball-king-by-amelia-ross-68 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "The Exceptional Childhood Center": {
+    "year": 2000,
+    "author": "Dylan Schifrin",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/the-exceptional-childhood-center-by-dylan-schifrin-368 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "The Female Quixote": {
+    "year": 2000,
+    "author": "Claire Wittman",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/the-female-quixote-by-claire-wittman-657 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "The Grippe of October": {
+    "year": 2000,
+    "author": "John P. McEneny",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/the-grippe-of-october-by-john-p.-mceneny-313 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "The Jungle Book": {
+    "year": 2000,
+    "author": "Callan Stout",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/the-jungle-book-by-callan-stout-148 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "The Locker Next 2 Mine": {
+    "year": 2000,
+    "author": "Jonathan Dorf",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/the-locker-next-2-mine-full-length-version-by-jonathan-dorf-218 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "The Post Office": {
+    "year": 2022,
+    "author": "Melissa Leilani Larson",
+    "source": "YouthPLAYS play page https://www.youthplays.com/play/the-post-office-by-melissa-leilani-larson-589: earliest dated production or award on the page (2022). An upper bound on the premiere, used to band the era only.",
+    "verified": true
+  },
+  "The Secret Garden": {
+    "year": 2000,
+    "author": "Isabella Russell-Ides",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/the-secret-garden-by-isabella-russell-ides-283 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "The Show Ends When The Stoop Breaks": {
+    "year": 2000,
+    "author": "Cris Eli Blak",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/the-show-ends-when-the-stoop-breaks-by-cris-eli-blak-673 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "The Superhero Ultraferno": {
+    "year": 2000,
+    "author": "Don Zolidis",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/the-superhero-ultraferno-full-length-version-by-don-zolidis-375 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "The Very Bad Girl Scouts": {
+    "year": 2000,
+    "author": "John P. McEneny",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/the-very-bad-girl-scouts-by-john-p.-mceneny-312 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "There Is No Play": {
+    "year": 2000,
+    "author": "Arthur M. Jolly",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/there-is-no-play-by-arthur-m-jolly-687 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Tough Girls Don't Pull Hair": {
+    "year": 2011,
+    "author": "Asher Wyndham",
+    "source": "YouthPLAYS play page https://www.youthplays.com/play/tough-girls-dont-pull-hair-by-asher-wyndham-205: earliest dated production or award on the page (2011). An upper bound on the premiere, used to band the era only.",
+    "verified": true
+  },
+  "Uncertainty Theory": {
+    "year": 2000,
+    "author": "Maura Campbell",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/uncertainty-theory-by-maura-campbell-177 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Waiting for the Bus": {
+    "year": 2000,
+    "author": "Benjamin Connor",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/waiting-for-the-bus-by-benjamin-connor-488 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "War of the Buttons": {
+    "year": 2000,
+    "author": "Jonathan Dorf",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/war-of-the-buttons-by-jonathan-dorf-66 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "What Comes Around...": {
+    "year": 2000,
+    "author": "Tom Smith",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/what-comes-around...-by-tom-smith-100 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "What the Well Dressed Girl is Wearing": {
+    "year": 2012,
+    "author": "Arthur M. Jolly",
+    "source": "YouthPLAYS play page https://www.youthplays.com/play/what-the-well-dressed-girl-is-wearing-by-arthur-m.-jolly-247: earliest dated production or award on the page (2012). An upper bound on the premiere, used to band the era only.",
+    "verified": true
+  },
+  "screens": {
+    "year": 2000,
+    "author": "Jessica McGettrick",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/screens-by-jessica-mcgettrick-277 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "sunset on seb and hiro.": {
+    "year": 2000,
+    "author": "christopher oscar peña",
+    "source": "FLOOR, not a premiere: https://www.youthplays.com/play/sunset-on-seb-and-hiro-by-christopher-oscar-pena-628 carries no year. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "4 A.M.": {
+    "year": 2000,
+    "author": "Jonathan Dorf and Alison Wood",
+    "source": "FLOOR, not a premiere: YouthPLAYS play with no year on its page. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Alley Dog": {
+    "year": 2000,
+    "author": "Paul Lewis",
+    "source": "FLOOR, not a premiere: YouthPLAYS play with no year on its page. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
+  },
+  "Wish, A Musical": {
+    "year": 2000,
+    "author": "Paul Lewis",
+    "source": "FLOOR, not a premiere: YouthPLAYS play with no year on its page. YouthPLAYS publishes new plays written for young performers, and every dated play page in its catalogue is 2011 or later, so its edition is no earlier than 2000. Era banding only.",
+    "verified": false
   }
 }

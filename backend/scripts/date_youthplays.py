@@ -9,7 +9,11 @@ asks for, and it bands the play correctly against the 1980 cutoff. It can be
 later than the true premiere, never earlier, and `year_written` is used for era
 banding only, so that error is harmless.
 
-A play page with no year in it gets no entry, and its monologues stay out.
+A play page with no year in it gets a FLOOR instead, when `--floor` is given:
+YouthPLAYS publishes new plays written for young performers (every play page
+that carries a date is 2011 or later), so its edition of a play is no earlier
+than the publisher. The entry says it is a floor and is marked unverified.
+Without `--floor` such a play gets no entry and its monologues stay out.
 
     .venv/bin/python scripts/date_youthplays.py --cache <dir>          # report
     .venv/bin/python scripts/date_youthplays.py --cache <dir> --write  # update the file
@@ -65,6 +69,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", required=True)
     ap.add_argument("--write", action="store_true")
+    ap.add_argument("--floor", type=int, default=0,
+                    help="Year to record for a play whose page carries none")
     args = ap.parse_args()
     cache = Path(args.cache)
     cache.mkdir(parents=True, exist_ok=True)
@@ -88,6 +94,16 @@ def main() -> None:
         if not ys:
             missing += 1
             print(f"  ----  {title} | {author}  (no year on {url})")
+            if args.floor and title.casefold() not in known:
+                years[title] = {
+                    "year": args.floor,
+                    "author": author,
+                    "source": f"FLOOR, not a premiere: {url} carries no year. YouthPLAYS "
+                              "publishes new plays written for young performers, and every "
+                              "dated play page in its catalogue is 2011 or later, so its "
+                              f"edition is no earlier than {args.floor}. Era banding only.",
+                    "verified": False,
+                }
             continue
         found += 1
         print(f"  {ys[0]}  {title} | {author}")
