@@ -633,7 +633,7 @@ _YP_BODY = re.compile(
 )
 
 
-_YP_EDITION = re.compile(r"\s*\((full-length|one-act)( version)?\)\s*$", re.I)
+_YP_EDITION = re.compile(r"\s*\((full-length|one-act|the musical)( version)?\)\s*$", re.I)
 
 
 def discover_youthplays(url: str, html: str) -> list[Link]:
@@ -958,7 +958,263 @@ def extract_szymkowicz(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optio
     ), None
 
 
+# ── Jonathan Dorf ────────────────────────────────────────────────────────────
+#
+# jonathandorf.com/free-monologue/<slug>/ — 50 pieces from his plays, 37 of them
+# teen, "free for auditions and classwork". robots.txt allows the public site and
+# names ClaudeBot only to allow it ("AI crawlers. Allowed on the public site, kept
+# out of the admin."). Verified 2026-11-06:
+#
+#     <h1>Achilles</h1> <p><span>Teen</span> <span>Any Gender</span></p>
+#     <a class="source-play" ...><span class="source-play-title">Thank You for ...&nbsp;<span>→</span></span></a>
+#     <div class="script-page"><p><strong><em>(Note: ...)</em></strong></p>
+#       <p><strong>ACHILLES</strong></p><p>That's how it goes ...</p>
+#       <p><strong><em>(Beat.)</em></strong></p> ...</div>
+
+_JD_INDEX = "https://www.jonathandorf.com/free-scenes-and-monologues/free-monologues/"
+_JD_LINK = re.compile(r'href="(https://(?:www\.)?jonathandorf\.com/free-monologue/[^"]+)"')
+_JD_PLAY = re.compile(r'<span class="source-play-title">(?P<t>.*?)<span class="source-play-arrow"', re.S)
+_JD_BODY = re.compile(r'<div class="script-page">(?P<body>.*?)</div>', re.S)
+
+
+def discover_dorf(url: str, html: str) -> list[Link]:
+    return [
+        Link(url=u, character_name="", label=u.rstrip("/").rsplit("/", 1)[-1])
+        for u in dict.fromkeys(_JD_LINK.findall(html))
+    ]
+
+
+def extract_dorf(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional[str]]:
+    html = blob.decode("utf-8", "replace")
+    play = _JD_PLAY.search(html)
+    body = _JD_BODY.search(html)
+    if not play or not body:
+        return None, "unexpected_markup"
+    title = _YP_EDITION.sub("", re.sub(r"\s+", " ", _strip_tags(play.group("t")))).strip()
+
+    lines = [
+        re.sub(r"[ \t\xa0\n]+", " ", _strip_tags(p)).strip()
+        for p in re.split(r"</p>|<br\s*/?>", body.group("body"), flags=re.I)
+    ]
+    lines = [ln for ln in lines if ln]
+
+    def is_cue(ln: str) -> bool:
+        return ln.isupper() and len(ln) <= 40 and not ln.startswith("(")
+
+    start = next((i for i, ln in enumerate(lines) if is_cue(ln)), None)
+    if start is None:
+        return None, "no_cue"
+    character = lines[start]
+    speech: list[str] = []
+    for ln in lines[start + 1:]:
+        if is_cue(ln):
+            return None, "two_speakers"
+        if speech and ln.startswith("(") and ln.endswith(")"):
+            speech[-1] = f"{speech[-1]} {ln}"  # a lone "(Beat.)" stays with its line
+        else:
+            speech.append(ln)
+    if not speech:
+        return None, "no_body"
+    return Parsed(
+        url=link.url,
+        play_title=title,
+        author="Jonathan Dorf",
+        character_name=character.title(),
+        text="\n\n".join(fit_excerpt(speech)),
+    ), None
+
+
+# ── Reina Hardy ──────────────────────────────────────────────────────────────
+#
+# reinahardy.com/free-monologues-for-{women,men,teen-girls,teen-boys}/ — her
+# monologues from published plays, "free to use for class, competitions, or
+# auditions". robots.txt allows all but /wp-admin/. Verified 2026-11-06:
+#
+#     <p id="whole-story"><strong>Annie Jump, a 13 year old science genius, introduces herself.</strong></p>
+#     <p>From <em><a href="...">Annie Jump and the Library of Heaven</a></em> (<a>Buy on Amazon</a>) ...</p>
+#     <p><em>Lights shift as Annie steps forward ...</em></p>
+#     <p>ANNIE: Yeah. So all of that stuff was ...</p>  <p>...</p>  <p>*</p>
+#
+# Many pieces per page: one link per piece, "<page>#<anchor id>".
+
+_RH_PAGES = [
+    f"https://www.reinahardy.com/free-monologues-for-{who}/"
+    for who in ("women", "men", "teen-girls", "teen-boys")
+]
+_RH_PARA = re.compile(r"<p(?P<attrs>[^>]*)>(?P<inner>.*?)</p>", re.S)
+_RH_ID = re.compile(r'\bid="(?P<id>[^"]+)"')
+_RH_FROM = re.compile(r"^From\s+(?:<em>)?\s*<a [^>]*>(?P<t>.*?)</a>", re.S)
+#: The page's own index: <a href="#whole-story">"quote"</a><br>Annie: 13<br>tags
+_RH_INDEX = re.compile(r'<a href="#(?P<id>[^"]+)">.*?</a>\s*<br\s*/?>\s*(?P<name>[^:<]{1,40}):', re.S)
+_RH_CUE = re.compile(r"^(?P<cue>[A-Z][A-Z .'\-]{0,30}):\s*(?P<rest>.+)$", re.S)
+
+
+def _rh_pieces(html: str) -> dict[str, dict]:
+    paras = [(m.group("attrs"), m.group("inner").strip()) for m in _RH_PARA.finditer(html)]
+    named = {m.group("id"): _strip_tags(m.group("name")).strip() for m in _RH_INDEX.finditer(html)}
+    pieces: dict[str, dict] = {}
+    current: Optional[dict] = None
+    for attrs, inner in paras:
+        text = re.sub(r"[ \t\xa0\n]+", " ", _strip_tags(inner)).strip()
+        anchor = _RH_ID.search(attrs)
+        if anchor:
+            current = {"play": "", "character": "", "paras": [], "done": False,
+                       "indexed": named.get(anchor.group("id"), "")}
+            pieces[anchor.group("id")] = current
+            continue
+        if current is None or current["done"]:
+            continue
+        if text == "*":
+            current["done"] = True
+            continue
+        frm = _RH_FROM.match(inner)
+        if frm and not current["play"]:
+            current["play"] = re.sub(r"\s+", " ", _strip_tags(frm.group("t"))).strip()
+            continue
+        cue = _RH_CUE.match(text)
+        if not current["play"]:
+            continue
+        if not current["character"]:
+            if cue:
+                current["character"] = cue.group("cue").strip()
+                current["paras"].append(cue.group("rest").strip())
+                continue
+            if re.fullmatch(r"<em>.*</em>", inner, re.S) or not current["indexed"]:
+                continue  # stage direction before the speech
+            # No cue printed: the speech starts here; the index names the speaker.
+            current["character"] = current["indexed"]
+        if cue and cue.group("cue").strip() != current["character"]:
+            current["two"] = True
+        if text:
+            current["paras"].append(text)
+    return {k: v for k, v in pieces.items() if v["play"] and v["character"] and v["paras"]}
+
+
+def discover_reinahardy(url: str, html: str) -> list[Link]:
+    return [
+        Link(url=f"{url}#{anchor}", character_name=p["character"], label=f"{p['play']}/{anchor}")
+        for anchor, p in _rh_pieces(html).items()
+    ]
+
+
+def extract_reinahardy(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional[str]]:
+    anchor = link.url.rsplit("#", 1)[1]
+    p = _rh_pieces(blob.decode("utf-8", "replace")).get(anchor)
+    if not p:
+        return None, "piece_missing"
+    if p.get("two"):
+        return None, "two_speakers"
+    return Parsed(
+        url=link.url,
+        play_title=p["play"],
+        author="Reina Hardy",
+        character_name=p["character"].title(),
+        text="\n\n".join(fit_excerpt(p["paras"])),
+    ), None
+
+
+# ── Tristan B. Willis ────────────────────────────────────────────────────────
+#
+# tristanbwillis.com/{women,men,gender-neutral,non-binary}-characters — his
+# monologues from his plays, "free to use for actors in auditions or the
+# classroom". robots.txt: "Allow: /". Wix, but the text is in the server HTML.
+# Verified 2026-11-06:
+#
+#     <h5 ...><span>SHERRY from <span style="font-style:italic;">Use All Available Doors</span> (Black, late 30s+)</span></h5>
+#     <p ...>I've always loved stories. ...</p> ... until the next <h5>.
+
+_TW_PAGES = [
+    f"https://www.tristanbwillis.com/{who}-characters"
+    for who in ("women", "men", "gender-neutral", "non-binary")
+]
+_TW_HEAD = re.compile(r"<h5[^>]*>(?P<h>.*?)</h5>", re.S)
+_TW_TITLE = re.compile(r"^(?P<c>[A-Z][A-Z .'\-]{0,40}?)\s+from\s+(?P<t>.+?)\s*(?:\((?P<note>[^)]*)\))?\s*$")
+
+
+def _tw_pieces(html: str) -> list[dict]:
+    parts = _TW_HEAD.split(html)
+    # split() with one group gives [before, head1, body1, head2, body2, ...]
+    pieces = []
+    for head, body in zip(parts[1::2], parts[2::2]):
+        m = _TW_TITLE.match(re.sub(r"[ \t\xa0\n​]+", " ", _strip_tags(head)).strip())
+        if not m:
+            continue
+        paras = []
+        for p in re.findall(r"<p[^>]*>(.*?)</p>", body, re.S):
+            text = re.sub(r"[ \t\xa0\n​]+", " ", _strip_tags(p)).strip()
+            if not text:
+                continue
+            italic_only = re.fullmatch(r"\s*<span[^>]*font-style:italic[^>]*>.*</span>\s*", p, re.S)
+            paras.append(f"({text})" if italic_only and not text.startswith("(") else text)
+        if paras:
+            pieces.append({"character": m.group("c"), "play": m.group("t"), "paras": paras})
+    return pieces
+
+
+def discover_willis(url: str, html: str) -> list[Link]:
+    return [
+        Link(url=f"{url}#{i}", character_name=p["character"], label=f"{p['play']}/{i}")
+        for i, p in enumerate(_tw_pieces(html))
+    ]
+
+
+def extract_willis(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional[str]]:
+    index = int(link.url.rsplit("#", 1)[1])
+    pieces = _tw_pieces(blob.decode("utf-8", "replace"))
+    if index >= len(pieces):
+        return None, "piece_missing"
+    p = pieces[index]
+    speech = list(p["paras"])
+    # A piece that opens or closes on a stage direction: the direction stays,
+    # but folded into the speech so it is not a paragraph of its own.
+    while speech and speech[-1].startswith("(") and len(speech) > 1:
+        speech[-2] = f"{speech[-2]} {speech.pop()}"
+    return Parsed(
+        url=link.url,
+        play_title=p["play"],
+        author="Tristan B. Willis",
+        character_name=p["character"].title(),
+        text="\n\n".join(fit_excerpt(speech)),
+    ), None
+
+
 SOURCES: dict[str, Source] = {
+    "willis": Source(
+        key="willis",
+        name="Tristan B. Willis",
+        index_urls=_TW_PAGES,
+        discover=discover_willis,
+        extract=extract_willis,
+        note=(
+            "The playwright's own free monologues from his plays. VERIFIED "
+            "2026-11-06. robots.txt: Allow: /."
+        ),
+        delay=1.0,
+    ),
+    "reinahardy": Source(
+        key="reinahardy",
+        name="Reina Hardy",
+        index_urls=_RH_PAGES,
+        discover=discover_reinahardy,
+        extract=extract_reinahardy,
+        note=(
+            "The playwright's own free monologues from her published plays. "
+            "VERIFIED 2026-11-06. robots.txt allows the pages."
+        ),
+        delay=1.0,
+    ),
+    "dorf": Source(
+        key="dorf",
+        name="Jonathan Dorf",
+        index_urls=[_JD_INDEX],
+        discover=discover_dorf,
+        extract=extract_dorf,
+        note=(
+            "The playwright's own free monologues from his plays, mostly teen. "
+            "VERIFIED 2026-11-06. robots.txt allows the public site to ClaudeBot by name."
+        ),
+        delay=1.0,
+    ),
     "szymkowicz": Source(
         key="szymkowicz",
         name="Adam Szymkowicz (his blog)",
