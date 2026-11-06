@@ -70,6 +70,11 @@ def due_moments(a: Audition, now: datetime) -> list[str]:
     if after_at <= now < after_at + WINDOW:
         due.append("after")
     wanted = reminder_moments(a)
+    # A self-tape already sent (the app's "mark it sent", or the file's status):
+    # "it's due in three days" and "it's due tomorrow" would only nag. The day
+    # after still asks how it went.
+    if a.kind == "self_tape" and a.status == "submitted":
+        wanted = [m for m in wanted if m == "after"]
     return [m for m in due if m in wanted]
 
 

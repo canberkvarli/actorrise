@@ -66,6 +66,16 @@ class DueTests(unittest.TestCase):
         a = aud(kind="self_tape", starts_at=None, due_at=utc(2026, 10, 12, 21, 0))  # Mon 5pm EDT
         self.assertEqual(reminders.due_moments(a, utc(2026, 10, 11, 23, 10)), ["eve"])
 
+    def test_a_sent_self_tape_gets_no_nudge_before_it_is_due(self):
+        due = utc(2026, 10, 12, 21, 0)  # Mon 5pm EDT
+        sent = aud(kind="self_tape", status="submitted", starts_at=None, due_at=due)
+        self.assertEqual(reminders.due_moments(sent, utc(2026, 10, 9, 22, 10)), [])   # prep window
+        self.assertEqual(reminders.due_moments(sent, utc(2026, 10, 11, 23, 10)), [])  # eve window
+        self.assertEqual(reminders.due_moments(sent, utc(2026, 10, 13, 13, 5)), ["after"])
+        # Not yet sent, it still gets them; an in-person "submitted" is untouched.
+        self.assertEqual(reminders.due_moments(aud(kind="self_tape", starts_at=None, due_at=due), utc(2026, 10, 11, 23, 10)), ["eve"])
+        self.assertEqual(reminders.due_moments(aud(status="submitted"), utc(2026, 10, 8, 23, 30)), ["eve"])
+
     def test_muted_closed_and_undated_never_due(self):
         t = utc(2026, 10, 8, 23, 30)
         self.assertEqual(reminders.due_moments(aud(reminders_on=False), t), [])
