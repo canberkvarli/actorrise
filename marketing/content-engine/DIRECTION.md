@@ -3,6 +3,14 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-06, 11:20: one text layer at a time (wins over everything below)
+
+Canberk on the hands-free remake: "too much caption", the voice-over subtitles and the app's own
+script text sat on top of each other. When the app shows text (a script, a monologue, a scene page),
+NO voice-over subtitles and no extra captions over it: `"voice": {"subtitles": false}` for those
+lines, or end the subtitles before the screen beat. At most a single big cue word (ACTION, CUT) away
+from the app's text. Subtitles only over footage or cards that carry no text of their own.
+
 ## 2026-11-06, 01:00: say what the feature IS (wins over everything below)
 
 Canberk on the Tape room remake: music, sound effects and the ending are perfect. The message was wrong.
