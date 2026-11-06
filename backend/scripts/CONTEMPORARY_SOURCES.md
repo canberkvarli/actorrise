@@ -53,8 +53,17 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
   monologues 44319-44403. Undated plays carry a labelled floor year (see
   `date_youthplays.py`).
 
-Both were written from a cloud session with `--write-rest`, which goes through
+- **2026-11-06, NYCastings** (`--source nycastings`): 24 pieces, 44404-44427. Posts with
+  no author credit (most kids' "Jr." musicals) are skipped.
+- **2026-11-06, Adam Szymkowicz's blog** (`--source szymkowicz`): 109 pieces, 44428-44536;
+  20 more were the same speeches NYCastings carries and were refused as duplicates.
+
+All were written from a cloud session with `--write-rest`, which goes through
 `app/services/data_ingestion/rest_writer.py` because Postgres is unreachable there.
+Duplicates are checked library-wide by the database function `monologue_duplicate_of`
+(`scripts/add_monologue_duplicate_function.py`): identical text, near-identical vector,
+and the same speech in another cut. Three such cuts from the first Daily Actor run
+(44193, 44208, 44212) were deleted on 2026-11-06.
 
 ## Blocked, and why
 
