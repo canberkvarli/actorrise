@@ -26,7 +26,7 @@ if [ "${2:-}" = "still" ]; then
   exit 0
 fi
 npx remotion render src/index.ts "$COMP" "out/${ID}.raw.mp4" --props="$PROPS" "${BROWSER_FLAG[@]}" \
-  --concurrency="$CORES" --crf=12 --x264-preset=veryfast
+  --concurrency="${CONCURRENCY:-$CORES}" --crf=12 --x264-preset=veryfast
 # Loudness for phone speakers.
 # Upload quality (Canberk, 2026-11-04: videos looked soft on IG/TikTok). Instagram and TikTok re-encode
 # everything, so give them a rich source: ~12 Mbps H.264 High, 1080x1920, 30fps, faststart. A dark, still

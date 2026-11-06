@@ -1,0 +1,18 @@
+{
+  "start": "/tape/847",
+  "lead": 600,
+  "steps": [
+    { "mark": "ready" },
+    { "at": 3.0, "say": "action", "ms": 300, "after": 0 },
+    { "mark": "heard-action" },
+    { "at": 4.6, "say": "Now is the winter of our discontent", "ms": 420, "after": 0 },
+    { "at": 7.55, "say": "made glorious summer by this son of York", "ms": 320, "after": 0 },
+    { "mark": "line-done" },
+    { "at": 10.78, "say": "oof okay", "ms": 680, "after": 0 },
+    { "mark": "oof" },
+    { "at": 13.115, "say": "cut", "ms": 300, "after": 0 },
+    { "mark": "heard-cut" },
+    { "at": 22.0, "mark": "after" }
+  ],
+  "tail": 600
+}

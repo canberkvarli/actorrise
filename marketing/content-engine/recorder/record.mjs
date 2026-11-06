@@ -230,6 +230,8 @@ async function flow(file) {
   await sleep(spec.lead ?? 700);
 
   for (const s of spec.steps) {
+    // "at": run this step at a fixed second of the recording (so cues land under a voice-over).
+    if (s.at !== undefined) await sleep(Math.max(0, s.at * 1000 - (Date.now() - t0)));
     if (s.goto) { await page.goto(BASE + s.goto, { waitUntil: "networkidle" }).catch(() => {}); events.push({ t: now(), goto: s.goto }); }
     else if (s.click !== undefined) {
       const el = locate(page, s.click);

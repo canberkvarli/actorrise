@@ -1,7 +1,7 @@
-From 69857f361c11ff0824bb133e161393b8393c7c41 Mon Sep 17 00:00:00 2001
+From 0ec65d708a7a9ab21ae741f819946a3f0190e657 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 3 Nov 2026 10:21:34 +0300
-Subject: [PATCH 1/3] Web preview for marketing recordings: the real screens in
+Subject: [PATCH 1/4] Web preview for marketing recordings: the real screens in
  a browser at phone size
 
 Branch only, never main. Adds react-native-web, react-dom and @expo/metro-runtime, and
@@ -724,10 +724,10 @@ index 0000000..4856578
 2.43.0
 
 
-From 47c8bd613205dd63d0e327950457474a2f9d6fb2 Mon Sep 17 00:00:00 2001
+From aabe4a0a3439222254a1d5f44a52c84fabbe9dba Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Wed, 4 Nov 2026 06:55:59 +0000
-Subject: [PATCH 2/3] Web preview: no screenshot listener on web
+Subject: [PATCH 2/4] Web preview: no screenshot listener on web
  (PrivacyShield)
 
 ---
@@ -762,10 +762,10 @@ index 5928487..4709fb8 100644
 2.43.0
 
 
-From 40be09799a423d6d14228b37e77a439b8659faf9 Mon Sep 17 00:00:00 2001
+From 6cf59430608f2b54d0810cdef10e7f399c60617d Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Thu, 5 Nov 2026 15:36:20 +0000
-Subject: [PATCH 3/3] Web preview: the tape room rolls in a browser (scripted
+Subject: [PATCH 3/4] Web preview: the tape room rolls in a browser (scripted
  ear, camera record waits for cut)
 
 ---
@@ -872,6 +872,149 @@ index 0000000..6d02a56
 +    const h: Heard = { words: this.words.slice(this.base), at: this.at.slice(this.base) };
 +    this.cb.onHeard(h);
 +  }
++}
+-- 
+2.43.0
+
+
+From cefc9e8963da5b602b0683c1b6b4e4c3d06486e1 Mon Sep 17 00:00:00 2001
+From: preview <preview@local>
+Date: Thu, 5 Nov 2026 22:53:12 +0000
+Subject: [PATCH 4/4] Web preview: the tape room plays the take back
+ (MediaRecorder camera, takes in memory, video plays on mount)
+
+---
+ scripts/web-preview-camera.mjs | 51 +++++++++++++++++++++--------
+ src/lib/takes.web.ts           | 60 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 98 insertions(+), 13 deletions(-)
+ create mode 100644 src/lib/takes.web.ts
+
+diff --git a/scripts/web-preview-camera.mjs b/scripts/web-preview-camera.mjs
+index 57ec42e..20bb538 100644
+--- a/scripts/web-preview-camera.mjs
++++ b/scripts/web-preview-camera.mjs
+@@ -1,18 +1,43 @@
+-// Web preview only: expo-camera's web build cannot record, so a take ends the moment it rolls.
+-// For marketing recordings, make record() wait until stopRecording() (no file is written; the
+-// room goes back to ready after "cut"). Idempotent; touches node_modules only, never the app.
++// Web preview only: expo-camera's web build cannot record. For marketing recordings, record()
++// films the camera's own stream with MediaRecorder until stopRecording(), and hands back a
++// blob: URL, so the room plays the take straight back the way the phone does.
++// Idempotent; touches node_modules only, never the app.
+ import fs from 'node:fs';
+ const f = 'node_modules/expo-camera/build/ExpoCamera.web.js';
+ let s = fs.readFileSync(f, 'utf8');
+-if (!s.includes('__previewStop')) {
+-  s = s.replace(
+-    "console.warn('stopRecording is not supported on web.');",
+-    "globalThis.__previewStop?.(); globalThis.__previewStop = undefined;",
+-  ).replace(
+-    "console.warn('record is not supported on web.');\n            return { uri: '' };",
+-    "return new Promise((res) => { globalThis.__previewStop = () => res({ uri: '' }); });",
+-  );
+-  if (!s.includes('__previewStop = () =>')) throw new Error('expo-camera web build changed; update web-preview-camera.mjs');
++const REC = `return new Promise((res) => {
++                const stream = video.current?.srcObject;
++                if (!stream || typeof MediaRecorder === 'undefined') { globalThis.__previewStop = () => res({ uri: '' }); return; }
++                const mr = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 8000000 });
++                const chunks = [];
++                mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
++                mr.onstop = () => res({ uri: URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })) });
++                globalThis.__previewStop = () => { if (mr.state !== 'inactive') mr.stop(); };
++                mr.start(200);
++            });`;
++if (!s.includes('MediaRecorder(stream')) {
++  s = s.replace("console.warn('stopRecording is not supported on web.');",
++    "globalThis.__previewStop?.(); globalThis.__previewStop = undefined;");
++  s = s.replace("console.warn('record is not supported on web.');\n            return { uri: '' };", REC);
++  // an older run of this shim: upgrade it in place
++  s = s.replace("return new Promise((res) => { globalThis.__previewStop = () => res({ uri: '' }); });", REC);
++  if (!s.includes('MediaRecorder(stream')) throw new Error('expo-camera web build changed; update web-preview-camera.mjs');
+   fs.writeFileSync(f, s);
+ }
+-console.log('camera record shim on');
++console.log('camera record shim on (MediaRecorder)');
++
++// expo-video's web player drops a play() made before its <video> mounts (the review calls
++// play() in the player's setup), so the take would sit on its first frame. Remember the ask
++// and play on mount, as the native player does.
++const v = 'node_modules/expo-video/build/VideoPlayer.web.js';
++let w = fs.readFileSync(v, 'utf8');
++if (!w.includes('__wantPlay')) {
++  w = w.replace('this._synchronizeWithFirstVideo(video);\n    }',
++    'this._synchronizeWithFirstVideo(video);\n        if (this.__wantPlay) { this.__wantPlay = false; video.play().catch(() => {}); }\n    }');
++  w = w.replace('play() {\n        this._mountedVideos.forEach((video) => {\n            video.play();\n        });\n    }',
++    'play() {\n        if (this._mountedVideos.size === 0) this.__wantPlay = true;\n        this._mountedVideos.forEach((video) => {\n            video.play();\n        });\n    }');
++  w = w.replace('pause() {\n', 'pause() {\n        this.__wantPlay = false;\n');
++  if ((w.match(/__wantPlay/g) || []).length < 4) throw new Error('expo-video web build changed; update web-preview-camera.mjs');
++  fs.writeFileSync(v, w);
++}
++console.log('video play-on-mount shim on');
+diff --git a/src/lib/takes.web.ts b/src/lib/takes.web.ts
+new file mode 100644
+index 0000000..3f6667d
+--- /dev/null
++++ b/src/lib/takes.web.ts
+@@ -0,0 +1,60 @@
++/**
++ * Web preview only (marketing recordings): the tape room's shelf in memory.
++ *
++ * A browser has no documents folder, so a take recorded by the preview's camera shim
++ * (a blob: URL from MediaRecorder) is kept in a list for the session. The room, the
++ * review and the cues are the real ones; only where the file lives differs. The iOS
++ * build never loads this file (Metro picks takes.ts there).
++ */
++export const FREE_TAPE = 'free';
++export const SLATE_TAPE = 'slate';
++
++export interface Take {
++  id: string; pieceId: string; number: number; file: string; createdAt: number;
++  durationMs: number; endMs: number; startMs?: number; starred: boolean;
++  character?: string; source?: string; turn?: number; thumb?: string;
++}
++
++type WebFile = { uri: string; exists: boolean; delete(): void };
++let shelf: Take[] = [];
++let last: string | null = null;
++
++const fileOf = (uri: string): WebFile => ({
++  uri,
++  exists: Boolean(uri),
++  delete() { try { URL.revokeObjectURL(uri); } catch { /* gone */ } },
++});
++
++export async function lastTapePiece(): Promise<string | null> { return last; }
++export async function rememberTapePiece(id: string): Promise<void> { last = id; }
++
++export function takeFile(take: Pick<Take, 'file'>): WebFile { return fileOf(take.file); }
++export function thumbFile(_take: Take): WebFile | null { return null; }
++
++export async function takesFor(pieceId: string): Promise<Take[]> {
++  return shelf.filter((t) => t.pieceId === pieceId).sort((a, b) => a.number - b.number);
++}
++
++export async function addTake(
++  pieceId: string, recordedUri: string, durationMs: number, endMs: number,
++  meta: { character?: string; source?: string; turn?: number } = {},
++): Promise<Take> {
++  const number = shelf.filter((t) => t.pieceId === pieceId).reduce((m, t) => Math.max(m, t.number), 0) + 1;
++  const take: Take = { id: `${pieceId}-${Date.now().toString(36)}`, pieceId, number, file: recordedUri,
++    createdAt: Date.now(), durationMs, endMs, starred: false, ...meta };
++  shelf = [...shelf, take];
++  return take;
++}
++
++export async function allTakes(): Promise<Take[]> { return [...shelf].sort((a, b) => b.createdAt - a.createdAt); }
++export async function getTake(id: string): Promise<Take | null> { return shelf.find((t) => t.id === id) ?? null; }
++export async function setTrim(id: string, startMs: number, endMs: number): Promise<void> {
++  shelf = shelf.map((t) => (t.id === id ? { ...t, startMs, endMs } : t));
++}
++export async function setStarred(id: string, starred: boolean): Promise<void> {
++  shelf = shelf.map((t) => (t.id === id ? { ...t, starred } : t));
++}
++export async function deleteTake(id: string): Promise<void> {
++  shelf.find((t) => t.id === id && takeFile(t).delete());
++  shelf = shelf.filter((t) => t.id !== id);
 +}
 -- 
 2.43.0

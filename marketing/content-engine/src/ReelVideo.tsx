@@ -59,6 +59,9 @@ type Screen = {
    * video blurred, so there are never bars (Canberk, 2026-11-05: "just the guy fully"). */
   frame?: "phone" | "full";
   audio?: { src: string; at: number; volume?: number }[]; // the scene partner reading, timed in recording seconds
+  /** Big cue words over the app (ACTION, CUT), house font, at recording time `t`, held `hold` seconds.
+   * `y` is the word's height in the frame, 0..1 (default 0.56, clear of the prompter and the record button). */
+  cues?: { word: string; t: number; hold?: number; color?: "key" | "cream"; y?: number }[];
 };
 /** The close. Fades in slowly over the last shot (no slide), the icon settles, the words arrive one
  * after another, then the App Store line. `bg` ink (default for cinematic films) is a dark stage with
@@ -72,7 +75,9 @@ type End = { kind: "end"; seconds: number; brand: string; line: string; action: 
  * `at` is seconds into the beat (negative starts before the cut, e.g. a riser at -1.5). Few and heavy. */
 export type Cue = { name: string; at?: number; vol?: number };
 /** A spoken line with word timings (seconds from the line's start), filled in by scripts/voice.py. */
-type Spoken = { text: string; audio?: string; words?: { w: string; s: number; e: number }[]; dur?: number; voice?: string };
+type Spoken = { text: string; audio?: string; words?: { w: string; s: number; e: number }[]; dur?: number; voice?: string;
+  /** false: voiced but not subtitled (a line already on screen as a title or a cue word). */
+  sub?: boolean };
 /** The scene partner demo: a script page, lines lighting up as they are read. PARTNER lines are
  * voiced (Lily by default); YOU lines are the actor's, shown as the cue to speak, silent unless voice_you. */
 type Scene = {
@@ -263,6 +268,8 @@ const ScreenBeat: React.FC<{ b: Screen }> = ({ b }) => {
             {vid({ width: "100%", height: "100%" })}
           </div>
         </AbsoluteFill>
+        <CueWords b={b} />
+        <BeatAudio b={b} />
       </AbsoluteFill>
     );
   }
@@ -300,11 +307,39 @@ const ScreenBeat: React.FC<{ b: Screen }> = ({ b }) => {
           </div>
         </div>
       </AbsoluteFill>
-      {(b.audio ?? []).map((a, i) => {
-        const at = Math.round((a.at - start) * fps);
-        if (at < 0 || a.at > start + b.seconds) return null;
-        return <Sequence key={i} from={at} layout="none"><Audio src={staticFile(a.src)} volume={a.volume ?? 1} /></Sequence>;
-      })}
+      <CueWords b={b} />
+      <BeatAudio b={b} />
+    </AbsoluteFill>
+  );
+};
+
+/** Sounds the app itself made during the recording (the scene partner, the Tape room's roll and cut tones). */
+const BeatAudio: React.FC<{ b: Screen }> = ({ b }) => {
+  const { fps } = useVideoConfig();
+  const start = b.start ?? 0;
+  return (<>{(b.audio ?? []).map((a, i) => {
+    const at = Math.round((a.at - start) * fps);
+    if (at < 0 || a.at > start + b.seconds) return null;
+    return <Sequence key={i} from={at} layout="none"><Audio src={staticFile(a.src)} volume={a.volume ?? 1} /></Sequence>;
+  })}</>);
+};
+
+/** One big word at a time over the app: lands with a small settle, holds, fades. House font. */
+const CueWords: React.FC<{ b: Screen }> = ({ b }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const t = (b.start ?? 0) + f / fps;
+  const c = (b.cues ?? []).find((q) => t >= q.t - 0.05 && t <= q.t + (q.hold ?? 1.1) + 0.3);
+  if (!c) return null;
+  const lt = t - c.t;
+  const k = spring({ frame: Math.round(lt * fps), fps, config: { damping: 14, mass: 0.6 } });
+  const out = interpolate(lt, [(c.hold ?? 1.1), (c.hold ?? 1.1) + 0.3], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const color = c.color === "cream" ? "#fbf7f0" : footKey();
+  return (
+    <AbsoluteFill style={{ alignItems: "center", pointerEvents: "none" }}>
+      <div style={{ position: "absolute", top: `${(c.y ?? 0.56) * 100}%`, transform: `translateY(-50%) scale(${1.12 - 0.12 * k})`,
+        opacity: Math.min(1, k * 1.6) * out, fontFamily: F.serif, fontWeight: 600, fontSize: 196, letterSpacing: 4, color,
+        textShadow: "0 6px 40px rgba(0,0,0,0.55)" }}>{c.word}</div>
     </AbsoluteFill>
   );
 };
@@ -317,7 +352,7 @@ const Subtitles: React.FC<{ lines: (Spoken & { at: number })[] }> = ({ lines }) 
   const f = useCurrentFrame();
   const L = React.useContext(LookCtx);
   const t = f / RFPS;
-  const line = lines.find((l) => t >= l.at - 0.1 && t <= l.at + estDur(l) + 0.35);
+  const line = lines.find((l) => l.sub !== false && t >= l.at - 0.1 && t <= l.at + estDur(l) + 0.35);
   if (!line) return null;
   const lt = t - line.at;
   const ws = wordTimes(line);
@@ -529,7 +564,11 @@ export const ReelVideo: React.FC<{ spec: ReelSpec }> = ({ spec }) => {
       {(spec.voice?.lines ?? []).filter((l) => l.audio).map((l, i) => (
         <Sequence key={`vo${i}`} from={Math.round(l.at * RFPS)} layout="none"><Audio src={staticFile(l.audio!)} volume={spec.voice?.volume ?? 1} /></Sequence>
       ))}
-      {spec.voice && spec.voice.subtitles !== false && <Subtitles lines={spec.voice.lines} />}
+      {spec.voice && spec.voice.subtitles !== false && (() => {
+        // Never over the end card: it lands clean (the Earnest ending).
+        const endAt = spec.beats.findIndex((b) => b.kind === "end");
+        return endAt >= 0 && frame >= starts[endAt] ? null : <Subtitles lines={spec.voice.lines} />;
+      })()}
       {look.letterbox && (<>
         <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 230, background: "#000" }} />
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 230, background: "#000" }} />
