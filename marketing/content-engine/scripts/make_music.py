@@ -192,7 +192,10 @@ STYLES = {
     # no drums, no riser, no hiss; warm, slow, a little hopeful, resolving on the end card.
     # pulse: not a song. A soft low thum on the beat like a heartbeat in the room, and now and then
     # a single plucked or bell note (pin, pon). Natural, sparse, no chords, no melody. Real one-shot films.
-    "pulse": dict(bpm=62, swing=0.0, prog=[[57, 64], [57, 64], [55, 62], [57, 64]], bass=[45, 45, 43, 45]),
+    # pulse, lighter (Canberk, 2026-11-06: the low dum dum felt too dark and dramatic on the kitchen film).
+    # Major key and a touch quicker; the thump stays but softer, and a bright kalimba / celesta layer
+    # plays from the very first bar so the film opens light. Still sparse: never a song.
+    "pulse": dict(bpm=76, swing=0.0, prog=[[60, 64, 67], [65, 69, 72], [67, 71, 74], [60, 64, 67]], bass=[48, 53, 55, 48]),
     # wood: organic and wooden (Canberk, 2026-11-04: "wooden sounds, organic natural sounds"). A soft
     # marimba root, a quiet woodblock tick, a kalimba note here and there. No drums, no pads, no riser.
     # Lands on the end card's first frame with one marimba chord and a woodblock knock.
@@ -319,11 +322,15 @@ def compose(spec):
 
         elif style == "pulse":
             # thum ... thum: a felt-soft low thump on beats 1 and 3, the second one quieter
-            for x, g in ((0, 0.55), (2, 0.38)):
+            for x, g in ((0, 0.34), (2, 0.22)):
                 th = kick(0.15)
-                mx.add("drums", tb + x * beat, filt(th, "low", 260), g)
-            # pin / pon: one or two single notes per bar at loose, natural moments (pentatonic, never a tune)
-            pent = [69, 72, 74, 76, 79, 81, 84]
+                mx.add("drums", tb + x * beat, filt(th, "low", 320), g)
+            # the light layer: the bar's major chord broken softly, high and gentle, from bar one
+            chord = S["prog"][b % len(S["prog"])]
+            for x, n in ((0.0, chord[0] + 12), (1.0, chord[1] + 12), (2.0, chord[2] + 12), (3.0, chord[1] + 12)):
+                mx.note("pad", "kalimba", n, tb + x * beat + float(rng.uniform(-0.015, 0.015)), beat * 1.2, 0.17, float(rng.uniform(-0.3, 0.3)))
+            # pin / pon: one or two single notes per bar at loose, natural moments (major pentatonic, never a tune)
+            pent = [72, 74, 76, 79, 81, 84, 88]
             for _ in range(int(rng.integers(1, 3))):
                 at = tb + float(rng.choice([0.5, 1.5, 2.5, 3.25])) * beat + float(rng.uniform(-0.04, 0.04))
                 note = int(rng.choice(pent))
