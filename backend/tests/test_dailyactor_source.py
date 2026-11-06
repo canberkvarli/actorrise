@@ -194,3 +194,53 @@ def test_rest_skips_what_was_rejected_before():
     rest = FakeRest()
     report = rest_writer.ingest_monologue_rest(rest, **kwargs(), rejected={text_fingerprint(TEXT)})
     assert report.already_rejected == 1 and rest.posted == []
+
+
+# ── NYCastings and Szymkowicz ────────────────────────────────────────────────
+
+NYC_PAGE = """
+<div class="entry-content-text" itemprop="text"><p><strong>&#8220;Okay. So I guess this is it.&#8221; From the play &#8216;Rare Birds&#8217;. Evan rethinks his life. Ideal for males, 15-18 &#8211; 1-2 Minutes.</strong></p>
+<p>By: Adam Szymkowicz</p>
+<div dir="ltr">EVAN:<br /> I have been thinking about it all week and I</div>
+<div dir="ltr">still do not know what to say to you about any of it.</div>
+<div dir="ltr"></div>
+<div dir="ltr">So I will just say it.</div>
+<p>&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;<br /> Link to full play here: <a href="http://x">x</a></p></div>
+<div class="entry-tag-cat"></div>""".encode()
+
+
+def test_nycastings_joins_hard_wrapped_lines_and_reads_single_quote_titles():
+    link = scp.Link(url="https://www.nycastings.com/rare-birds-teen-male-drama/", character_name="", label="")
+    parsed, why = scp.extract_nycastings(link, NYC_PAGE)
+    assert why is None
+    assert (parsed.play_title, parsed.author, parsed.character_name) == ("Rare Birds", "Adam Szymkowicz", "Evan")
+    first, second = parsed.text.split("\n\n")
+    assert first == "I have been thinking about it all week and I still do not know what to say to you about any of it."
+    assert second == "So I will just say it."  # stops at the rule, never takes the link line
+
+
+def test_nycastings_discovery_keeps_posts_and_drops_site_pages():
+    html = ('<a href="https://www.nycastings.com/pretty-theft-teen-female-drama/">'
+            '<a href="https://www.nycastings.com/edit-profile/">')
+    assert [link.label for link in scp.discover_nycastings("", html)] == ["pretty-theft-teen-female-drama"]
+
+
+SZ_PAGE = """<div class='post-body entry-content' id='p'>
+<div><span style="font-size: large;"><b><a href="https://publisher/sex-writer/">THE SEX WRITER</a></b></span></div>
+<div><span>1.&nbsp;</span></div><div><span>JANE</span></div>
+<div><p>Thank you, Jacob, but I think we have to stop there.</p><p>Great semester everyone.</p></div>
+<div><span>2.</span></div>
+<div><p>JANEThere was an artist colony.</p></div>
+<div><span style="font-size: large;"><b><a href="https://www.patreon.com/x">Adam's Patreon</a></b></span></div>
+<div class='post-footer'>""".encode()
+
+
+def test_szymkowicz_reads_every_speech_on_the_page():
+    pieces = scp._sz_pieces(SZ_PAGE.decode())
+    assert [(p["play"], p["character"]) for p in pieces] == [("THE SEX WRITER", "JANE"), ("THE SEX WRITER", "JANE")]
+    assert pieces[0]["paras"] == ["Thank you, Jacob, but I think we have to stop there.", "Great semester everyone."]
+    assert pieces[1]["paras"] == ["There was an artist colony."]  # the glued cue is split off
+    links = scp.discover_szymkowicz("https://aszym.blogspot.com/w.html", SZ_PAGE.decode())
+    parsed, _ = scp.extract_szymkowicz(links[1], SZ_PAGE)
+    assert (parsed.play_title, parsed.character_name, parsed.author) == ("The Sex Writer", "Jane", "Adam Szymkowicz")
+    assert parsed.url.endswith("#1")

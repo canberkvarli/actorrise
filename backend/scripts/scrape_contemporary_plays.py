@@ -700,7 +700,289 @@ def extract_youthplays(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optio
     ), None
 
 
+# ── NYCastings ───────────────────────────────────────────────────────────────
+#
+# nycastings.com/<play>-<age>-<gender>-<genre>/ — one speech per post, from the
+# "play monologues" and "musical monologues" categories (about 160 posts).
+# Verified 2026-11-05:
+#
+#     <div class="entry-content-text" itemprop="text">
+#       <p><strong>"First line..." From the play, "Pretty Theft." In this
+#          monologue ... Ideal for Teen Females – 1-3 Minutes.</strong></p>
+#       <p>By: Adam Szymkowicz</p>
+#       <div>ALLEGRA:<br/> And I'm working at this ...</div>
+#       <div>fun. She was supposed to ...</div>        <- hard-wrapped lines
+#       <div></div>                                    <- the paragraph break
+#       ...
+#       <p>————————<br/> Link to full play here: <a href="...">...</a></p>
+#
+# robots.txt disallows only account and legacy .asp paths.
+
+_NYC_INDEX = [
+    f"https://www.nycastings.com/category/monologues/{cat}/" + (f"page/{n}/" if n > 1 else "")
+    for cat, pages in (("play-monologues", 6), ("musical-monologues", 3))
+    for n in range(1, pages + 1)
+]
+_NYC_LINK = re.compile(r'href="(https://www\.nycastings\.com/[a-z0-9\-]+/)"')
+_NYC_POST = re.compile(r"-(male|female|unisex)-|monologue", re.I)
+_NYC_BODY = re.compile(r'<div class="entry-content-text"[^>]*>(?P<body>.*?)<div class=.entry-tag-cat', re.S)
+_NYC_FROM = re.compile(
+    r"From\s+(?:the\s+(?P<kind>play|musical|show)\s*,?\s*)?[\"“”‘'](?P<t>.+?)[.,]?[\"”’'](?!\w)", re.I
+)
+#: The site's slips, corrected to the published credit.
+_NYC_AUTHOR_FIXES = {
+    "Adam SzymkowiczA": "Adam Szymkowicz",
+    "George Kaufman and Moss Heart": "George S. Kaufman and Moss Hart",
+}
+_NYC_TITLE_FIXES = {"Good Morning, Good Night!": "Good Morning, Good Night", "ubu": "Ubu"}
+_NYC_BY = re.compile(r"^\s*(?:By|Written by)\s*:?\s*(?P<a>.+?)\s*$", re.I)
+#: "...Came to Dinner." by George Kaufman and Moss Heart. — the credit in the intro.
+_NYC_INLINE_BY = re.compile(r"[\"”]\.?\s*by\s+(?P<a>[A-Z][^.]+?)\.")
+#: "ALLEGRA: And I'm..." or "THE PHOTOGRAPHER" alone on its line.
+_NYC_CUE = re.compile(r"^(?P<cue>[A-Z][A-Z0-9 .'\-]{0,30}?)(?::\s*(?P<rest>.*)|\s*)$")
+
+
+def discover_nycastings(url: str, html: str) -> list[Link]:
+    return [
+        Link(url=u, character_name="", label=u.rstrip("/").rsplit("/", 1)[-1])
+        for u in dict.fromkeys(_NYC_LINK.findall(html))
+        if _NYC_POST.search(u.rstrip("/").rsplit("/", 1)[-1])
+    ]
+
+
+def extract_nycastings(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional[str]]:
+    html = blob.decode("utf-8", "replace")
+    body = _NYC_BODY.search(html)
+    if not body:
+        return None, "unexpected_markup"
+    html_body = re.sub(r"<div class='mailmunch[^>]*></div>", "", body.group("body"))
+
+    # Blocks are <p> and <div>; an EMPTY block is a paragraph break, and lines
+    # inside one paragraph were hard-wrapped by whoever pasted the text in.
+    lines: list[str] = []
+    for block in re.split(r"</p>|</div>", html_body, flags=re.I):
+        for piece in re.split(r"<br\s*/?>", block, flags=re.I):
+            lines.append(re.sub(r"[ \t\xa0\n]+", " ", _strip_tags(piece)).strip())
+
+    intro = next((ln for ln in lines if _NYC_FROM.search(ln)), "")
+    m = _NYC_FROM.search(intro)
+    if not m:
+        return None, "no_title"
+    title = m.group("t").strip()
+    kind = (m.group("kind") or ("musical" if "musical" in intro.lower() else "play")).lower()
+    author = next((_NYC_BY.match(ln).group("a") for ln in lines if _NYC_BY.match(ln)), "")
+    if not author:
+        inline = _NYC_INLINE_BY.search(intro)
+        author = inline.group("a").strip() if inline else ""
+    if not author:
+        return None, "no_author"
+    author = _NYC_AUTHOR_FIXES.get(author.strip(), author.strip())
+    title = _da_title(_NYC_TITLE_FIXES.get(title, title))
+
+    # The cue comes after the intro, never inside it.
+    after = lines.index(intro) + 1
+    start = next((i for i in range(after, len(lines)) if _NYC_CUE.match(lines[i])), None)
+    if start is None:
+        return None, "no_cue"
+    cue = _NYC_CUE.match(lines[start])
+    character = cue.group("cue").strip()
+    body_lines = [cue.group("rest") or ""] + lines[start + 1:]
+
+    paras: list[str] = []
+    current: list[str] = []
+    for ln in body_lines:
+        if re.match(r"^[—\-_=]{6,}", ln) or ln.lower().startswith("link to full"):
+            break
+        other = _NYC_CUE.match(ln)
+        # Only "NAME: words" is a second speaker; a short all-caps line alone
+        # can be a shout inside the speech.
+        if other and other.group("rest") is not None and other.group("cue").strip() != character:
+            return None, "two_speakers"
+        if not ln:
+            if current:
+                paras.append(" ".join(current))
+                current = []
+            continue
+        current.append(ln)
+    if current:
+        paras.append(" ".join(current))
+    paras = [p for p in paras if p]
+    if not paras:
+        return None, "no_body"
+
+    return Parsed(
+        url=link.url,
+        play_title=title,
+        author=author,
+        character_name=character.title(),
+        text="\n\n".join(fit_excerpt(paras)),
+        genre="musical" if kind == "musical" else "drama",
+    ), None
+
+
+# ── Adam Szymkowicz's blog ───────────────────────────────────────────────────
+#
+# aszym.blogspot.com "Monologues for Women" / "Monologues for Men": the
+# playwright's own collection from his plays, posted for actors ("Yes you have
+# my permission to do any of these monologues in class or in competition"),
+# updated 2026-03-16. About 20,000 words on the women's page. robots.txt allows
+# it. (His Squarespace site blocks AI crawlers; this blog does not, and it is
+# the page he points actors to.) Verified 2026-11-05:
+#
+#     <span style="font-size: large;"><b><a href="https://...publisher.../">THE SEX WRITER</a></b></span>
+#     <div>1.</div> <div>JANE</div> <div><p>Thank you, Jacob, but ...</p><p>...</p></div>
+#     <div>2.</div> <div>JANE</div> ...
+#
+# One page carries many speeches, so discovery emits one link per speech,
+# "<page>#<n>", and extraction parses the page and returns the nth.
+
+SZ_AUTHOR = "Adam Szymkowicz"
+_SZ_PAGES = [
+    "https://aszym.blogspot.com/2014/11/monologues-for-women.html",
+    "https://aszym.blogspot.com/2014/11/monologues-for-men.html",
+]
+_SZ_BODY = re.compile(r"class=.post-body entry-content[^>]*>(?P<body>.*?)<div class=.post-footer", re.S)
+#: Every play heading is a link to its publisher (or NPX): that, not the font,
+#: is what marks a title. The large bold span sometimes wraps a whole speech.
+_SZ_PLAY_LINK = re.compile(r"<a [^>]*href=\"[^\"]+\"[^>]*>(?P<t>(?:(?!</a>).){2,90}?)</a>", re.S)
+_SZ_NOT_PLAYS = re.compile(r"patreon|new play exchange|books by|amazon|see also|monologues for", re.I)
+_SZ_MARK = "\u0001PLAY\u0001"
+_SZ_END = "\u0001END\u0001"
+#: "1." / "1" alone, or leading a line: a new piece.
+_SZ_NUMBER = re.compile(r"^(?P<n>\d{1,3})\.?\s*(?P<rest>.*)$")
+_CUE_WORDS = r"[A-Z][A-Z.'\-]*(?: [A-Z][A-Z.'\-]*){0,3}"
+#: "JANEThank you", "DEATHHi.", "MAGPIEI know": the cue glued to the speech.
+_SZ_GLUED = re.compile(rf"^(?P<cue>{_CUE_WORDS}?)(?=[A-Z](?:[a-z’']|\s))(?P<rest>.+)$")
+#: "JULIE Because I want...", after a number or a title.
+_SZ_SPACED = re.compile(rf"^(?P<cue>{_CUE_WORDS})\s+(?P<rest>[A-Z(“\"].*)$")
+
+
+def _sz_pieces(html: str) -> list[dict]:
+    body = _SZ_BODY.search(html)
+    if not body:
+        return []
+
+    def mark(m: re.Match) -> str:
+        title = re.sub(r"\s+", " ", _strip_tags(m.group("t"))).strip()
+        if _SZ_NOT_PLAYS.search(title):
+            # The page's own footer links: whatever speech was open has ended.
+            return f"<br/>{_SZ_END}<br/>"
+        if len(title) < 3:
+            return m.group(0)
+        return f"<br/>{_SZ_MARK}{title}<br/>"
+
+    marked = _SZ_PLAY_LINK.sub(mark, body.group("body"))
+    lines = [
+        re.sub(r"[ \t\xa0\n]+", " ", _strip_tags(raw)).strip()
+        for raw in re.split(r"</p>|</div>|<br\s*/?>", marked, flags=re.I)
+    ]
+
+    pieces: list[dict] = []
+    play = ""
+    current: Optional[dict] = None
+    expect_cue = False
+
+    def start(character: str) -> None:
+        nonlocal current, expect_cue
+        current = {"play": play, "character": character.strip(), "paras": []}
+        pieces.append(current)
+        expect_cue = False
+
+    for line in lines:
+        if not line or re.fullmatch(r"[-—_=\s]{6,}", line):
+            continue
+        if line == _SZ_END:
+            play, current, expect_cue = "", None, False
+            continue
+        if line.startswith(_SZ_MARK):
+            play = re.sub(r"\s*\(from [^)]*\)\s*$", "", line[len(_SZ_MARK):], flags=re.I).strip()
+            play = re.sub(r"\s+\d+$", "", play) if not play.lower().startswith("clown bar") else play
+            current, expect_cue = None, True
+            continue
+        if not play:
+            continue
+        num = _SZ_NUMBER.match(line)
+        if num and (not num.group("rest") or _SZ_SPACED.match(num.group("rest")) or _SZ_GLUED.match(num.group("rest"))):
+            current, expect_cue = None, True
+            line = num.group("rest")
+            if not line:
+                continue
+        if line.isupper() and len(line) <= 30 and not line.startswith("("):
+            start(line)
+            continue
+        glued = _SZ_GLUED.match(line)
+        spaced = _SZ_SPACED.match(line) if expect_cue else None
+        hit = glued if (glued and len(glued.group("cue").replace(" ", "")) >= 2) else spaced
+        if hit and (expect_cue or current is None or glued):
+            start(hit.group("cue"))
+            current["paras"].append(hit.group("rest").strip())
+            continue
+        if current is not None:
+            current["paras"].append(line)
+    return [p for p in pieces if p["paras"] and p["play"]]
+
+
+#: Where the blog's markup splits a word across a link or a span.
+_SZ_TITLE_FIXES = {
+    "Hristmas Tree Farm": "The Christmas Tree Farm",
+    "Christmas Tree Farm": "The Christmas Tree Farm",
+}
+_SZ_CHARACTER_FIXES = {"Allegr": "Allegra"}
+
+
+def discover_szymkowicz(url: str, html: str) -> list[Link]:
+    return [
+        Link(url=f"{url}#{i}", character_name=p["character"], label=f"{p['play']}/{p['character']}/{i}")
+        for i, p in enumerate(_sz_pieces(html))
+    ]
+
+
+def extract_szymkowicz(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional[str]]:
+    index = int(link.url.rsplit("#", 1)[1])
+    pieces = _sz_pieces(blob.decode("utf-8", "replace"))
+    if index >= len(pieces):
+        return None, "piece_missing"
+    p = pieces[index]
+    title = _da_title(p["play"])
+    title = _SZ_TITLE_FIXES.get(title, title)
+    character = re.sub(r"^\d+\.\s*|[.:,]+$", "", p["character"]).strip().title()
+    character = _SZ_CHARACTER_FIXES.get(character, character)
+    if character.lower().startswith("monologues for"):
+        return None, "no_character"
+    return Parsed(
+        url=link.url,
+        play_title=title,
+        author=SZ_AUTHOR,
+        character_name=character,
+        text="\n\n".join(fit_excerpt(p["paras"])),
+    ), None
+
+
 SOURCES: dict[str, Source] = {
+    "szymkowicz": Source(
+        key="szymkowicz",
+        name="Adam Szymkowicz (his blog)",
+        index_urls=_SZ_PAGES,
+        discover=discover_szymkowicz,
+        extract=extract_szymkowicz,
+        note=(
+            "The playwright's own monologue collection from his plays, posted for "
+            "actors. VERIFIED 2026-11-05. robots.txt allows the blog."
+        ),
+        delay=1.0,
+    ),
+    "nycastings": Source(
+        key="nycastings",
+        name="NYCastings",
+        index_urls=_NYC_INDEX,
+        discover=discover_nycastings,
+        extract=extract_nycastings,
+        note=(
+            "Play and musical monologue posts, whole speech in the HTML. VERIFIED "
+            "2026-11-05. robots.txt allows these posts. Credit: play, playwright."
+        ),
+        delay=1.0,
+    ),
     "youthplays": Source(
         key="youthplays",
         name="YouthPLAYS",
@@ -984,11 +1266,14 @@ def main() -> None:
     if cache:
         cache.mkdir(parents=True, exist_ok=True)
 
-    def fetch(url: str) -> tuple[Optional[bytes], Optional[str]]:
+    def fetch(url: str, fresh: bool = False) -> tuple[Optional[bytes], Optional[str]]:
         import hashlib
+        # "<page>#<n>" names one speech on a page that holds many: one fetch.
+        url = url.split("#", 1)[0]
         hit = cache / (hashlib.md5(url.encode()).hexdigest() + ".html") if cache else None
-        # The sitemap is re-read every run; it is how new pages are found.
-        if hit and hit.exists() and url not in source.index_urls:
+        # An index is re-read every run (it is how new pages are found); a page
+        # it led to is not. On Szymkowicz's blog the two are the same page.
+        if hit and hit.exists() and not fresh:
             return hit.read_bytes(), None
         time.sleep(source.delay)
         try:
@@ -1006,7 +1291,7 @@ def main() -> None:
     links: list[Link] = []
     index_failed = 0
     for i, url in enumerate(urls, 1):
-        blob, err = fetch(url)
+        blob, err = fetch(url, fresh=True)
         if blob is None:
             index_failed += 1
             print(f"  [{i}/{len(urls)}] INDEX FAIL {err}  {url}")
