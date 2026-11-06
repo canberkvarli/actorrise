@@ -58,6 +58,15 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
 - **2026-11-06, Adam Szymkowicz's blog** (`--source szymkowicz`): 109 pieces, 44428-44536;
   20 more were the same speeches NYCastings carries and were refused as duplicates.
 
+- **2026-11-06, Jonathan Dorf** (`--source dorf`): 25 pieces, mostly teen; 11 more were
+  YouthPLAYS speeches already stored. **Tristan B. Willis** (`--source willis`): 4 pieces.
+  **Reina Hardy** (`--source reinahardy`): written but not run; her site's bot check
+  refused the live page reads that day, and only about 3 pieces clear the gate.
+
+Asks rather than scrapes (permission emails): Monologue Blogger (terms forbid commercial
+use), Broadway Play Publishing (about 1,500 free audition pieces, 403 to our client),
+Don Zolidis (403), Arthur M. Jolly (PDFs, disallowed), Stage Partners (403).
+
 All were written from a cloud session with `--write-rest`, which goes through
 `app/services/data_ingestion/rest_writer.py` because Postgres is unreachable there.
 Duplicates are checked library-wide by the database function `monologue_duplicate_of`
