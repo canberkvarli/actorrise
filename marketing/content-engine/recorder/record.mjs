@@ -18,6 +18,8 @@
 //   {"wait": 1500}                          ms, or {"waitFor": "text that should appear"}
 //   {"scroll": 600}                         px, smooth
 //   {"mark": "results"}                     a named moment the edit can cut to
+//   {"cam": 6.1, "say": "cut"}              timed on the camera's clock instead of the recording's:
+//                                           second 6.1 of the FAKE_CAM clip (it starts when the camera opens)
 // Every click is logged with its position so the edit can zoom and draw the tap.
 // Audio the page plays (the scene partner reading) is logged with its time and saved.
 import { createRequire } from "node:module";
@@ -90,6 +92,18 @@ async function open() {
       ::selection { background: transparent; }`;
     const add = () => { const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st); };
     if (document.head) add(); else document.addEventListener("DOMContentLoaded", add);
+  });
+  // The camera's clock: when the page's camera stream opened. Chromium's FAKE_CAM file starts at its
+  // first frame when the device opens, so a flow step with "cam": <s> lands on second <s> of the clip.
+  await ctx.addInitScript(() => {
+    const md = navigator.mediaDevices;
+    if (!md?.getUserMedia) return;
+    const orig = md.getUserMedia.bind(md);
+    md.getUserMedia = async (c) => {
+      const s = await orig(c);
+      if (c && c.video) { (window.__camAts = window.__camAts || []).push(performance.timeOrigin + performance.now()); window.__camAt = window.__camAts[window.__camAts.length - 1]; }
+      return s;
+    };
   });
   // Log every <audio>/Audio() play with its source and time.
   await ctx.addInitScript(() => {
@@ -229,9 +243,16 @@ async function flow(file) {
   const now = () => (Date.now() - t0) / 1000;
   await sleep(spec.lead ?? 700);
 
+  const camAt = await page.evaluate(() => window.__camAt || null);
+  if (camAt) events.push({ t: (camAt - t0) / 1000, mark: "camera-open" });
   for (const s of spec.steps) {
     // "at": run this step at a fixed second of the recording (so cues land under a voice-over).
     if (s.at !== undefined) await sleep(Math.max(0, s.at * 1000 - (Date.now() - t0)));
+    // "cam": the same on the camera clip's clock, so the scripted ear lands on the actor's words.
+    if (s.cam !== undefined) {
+      if (!camAt) throw new Error('"cam" step but the page never opened a camera');
+      await sleep(Math.max(0, camAt + s.cam * 1000 - Date.now()));
+    }
     if (s.goto) { await page.goto(BASE + s.goto, { waitUntil: "networkidle" }).catch(() => {}); events.push({ t: now(), goto: s.goto }); }
     else if (s.click !== undefined) {
       const el = locate(page, s.click);
@@ -266,6 +287,8 @@ async function flow(file) {
   }
   await sleep(spec.tail ?? 900);
   await cdp.send("Page.stopScreencast");
+  const camAts = await page.evaluate(() => window.__camAts || []);
+  if (camAts.length > 1) console.warn(`camera opened ${camAts.length} times at ${camAts.map((a) => ((a - t0) / 1000).toFixed(2)).join(', ')}s: a FAKE_CAM clip restarts on each open`);
   const plays = await page.evaluate(() => window.__plays || []);
   // Save audio the page played (scene partner lines), timed against the recording.
   const audio = [];

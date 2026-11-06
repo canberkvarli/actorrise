@@ -1,0 +1,139 @@
+{
+  "id": "2026-11-10-tape-actor-app",
+  "look": "noir",
+  "cut": "hard",
+  "music": {
+    "style": "bed",
+    "volume": 0.12,
+    "drop": "end"
+  },
+  "source": {
+    "footage": "Generated with Gemini Omni (gemini-omni-1.2-flash), fictional actor, labelled as AI on every platform. Canberk approved the actor on 2026-11-06. Same clip and audio as 2026-11-10-tape-actor.",
+    "feature": "tape-room",
+    "why": "The approved tape-actor film, seen through the real Ghost Light Tape room: the app's camera with him in it, the app's own prompter, REC rolling on his action, stopping on his cut, rolling again.",
+    "app": "Ghost Light web preview (ghostlight-web/serve.sh), flow flows/tape-actor-app.json, FAKE_CAM = actor.mp4 with a 4s held first frame in front. Ear words are timed on the camera's clock to his words; the app's own tape-cues.ts decides. Camera to clip offset measured by frame matching: clip second 0 = recording second 3.55 (within one frame, 83 samples). One tap: the app ignores the ear while a take plays back, so the flow taps the review's x (Back to the camera) at clip 7.5s; every REC change is by voice.",
+    "monologue": {
+      "id": 847,
+      "character": "Richard",
+      "play": "Richard III",
+      "author": "William Shakespeare",
+      "public_domain": true,
+      "sql": "select m.id, m.character_name, p.title, p.author from monologues m join plays p on p.id=m.play_id where m.text ilike 'Now is the winter of our discontent%'"
+    },
+    "clip_words": "action 0.15-0.55, line 1.10-5.10, uhh 5.45, cut 6.10-6.30, 'yeah that didn't feel like it, let's go again' 6.85-8.55, action 9.45-9.85 (RMS envelope at 50 ms)"
+  },
+  "beats": [
+    {
+      "kind": "screen",
+      "seconds": 10.9,
+      "src": "reel/2026-11-10-tape-actor-app/app.mp4",
+      "start": 3.55,
+      "frame": "full",
+      "bg": "ink",
+      "zoom": 1.0,
+      "sfx": [],
+      "events": [
+        {
+          "t": -0.465,
+          "mark": "camera-open"
+        },
+        {
+          "t": 0.296,
+          "mark": "ready"
+        },
+        {
+          "t": 3.991,
+          "mark": "heard-action"
+        },
+        {
+          "t": 8.786,
+          "mark": "line-done"
+        },
+        {
+          "t": 9.95,
+          "mark": "heard-cut"
+        },
+        {
+          "t": 11.383,
+          "mark": "back-to-camera"
+        },
+        {
+          "t": 13.289,
+          "mark": "heard-action-2"
+        },
+        {
+          "t": 14.736,
+          "mark": "end"
+        }
+      ],
+      "audio": [
+        {
+          "src": "reel/2026-11-08-tape-actor/actor.mp4",
+          "at": 3.55,
+          "volume": 1.0
+        },
+        {
+          "src": "reel/2026-11-10-tape-actor-app/roll.mp3",
+          "at": 4.258,
+          "volume": 0.5
+        },
+        {
+          "src": "reel/2026-11-10-tape-actor-app/cut.mp3",
+          "at": 10.122,
+          "volume": 0.5
+        },
+        {
+          "src": "reel/2026-11-10-tape-actor-app/roll.mp3",
+          "at": 13.556,
+          "volume": 0.5
+        }
+      ],
+      "cues": [
+        {
+          "word": "ACTION",
+          "t": 3.7,
+          "hold": 0.9,
+          "color": "key",
+          "y": 0.6
+        },
+        {
+          "word": "CUT",
+          "t": 9.67,
+          "hold": 0.55,
+          "color": "cream",
+          "y": 0.6
+        },
+        {
+          "word": "ACTION",
+          "t": 13.0,
+          "hold": 1.0,
+          "color": "key",
+          "y": 0.6
+        }
+      ]
+    },
+    {
+      "kind": "end",
+      "seconds": 1.8,
+      "brand": "Ghost Light",
+      "line": "Say action. Say cut. It rolls for you.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "captions": {
+    "tiktok": "No more walking to the phone between takes. Say action, say cut. The actor is AI generated. #selftape #actortok #audition #actorslife #actors",
+    "youtube_title": "Self-tape hands free. Say action, say cut. #shorts",
+    "youtube_description": "Self-tape hands free. Say action, it rolls. Say cut, it stops and plays the take back.\nGhost Light, free on the App Store. Built by a working actor.\nThe actor is AI generated.\n#selftape #audition #actorslife #acting",
+    "instagram": "Self-tape hands free.\nSay action, Ghost Light rolls. Say cut, it stops and plays the take back. Then go again.\nBuilt by a working actor. Link in bio.\nThe actor is AI generated.\n#selftape #actorslife #audition #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 3000
+}

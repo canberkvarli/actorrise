@@ -1,0 +1,79 @@
+{
+  "start": "/tape/847",
+  "lead": 300,
+  "note": "FAKE_CAM = actor.mp4 with its first frame held 4s in front and the last held 1.5s after, so clip second c is camera second 4 + c. Ear words land on his own words (silencedetect on the clip). The app ignores the ear while a take plays back, so one tap on the review's x ('Back to the camera') brings the live camera back before his last 'action'; every REC change is by voice.",
+  "steps": [
+    {
+      "mark": "ready"
+    },
+    {
+      "cam": 4.15,
+      "say": "action",
+      "ms": 300,
+      "after": 0
+    },
+    {
+      "mark": "heard-action"
+    },
+    {
+      "cam": 5.1,
+      "say": "Now is the winter of our discontent",
+      "ms": 185,
+      "after": 0
+    },
+    {
+      "cam": 6.5,
+      "say": "made glorious summer",
+      "ms": 380,
+      "after": 0
+    },
+    {
+      "cam": 7.8,
+      "say": "by this son of York",
+      "ms": 260,
+      "after": 0
+    },
+    {
+      "mark": "line-done"
+    },
+    {
+      "cam": 10.1,
+      "say": "cut",
+      "ms": 300,
+      "after": 0
+    },
+    {
+      "mark": "heard-cut"
+    },
+    {
+      "cam": 11.4,
+      "click": {
+        "css": "[aria-label=\"Back to the camera\"]"
+      },
+      "after": 0
+    },
+    {
+      "mark": "back-to-camera"
+    },
+    {
+      "cam": 11.75,
+      "say": "let's go again",
+      "ms": 200,
+      "after": 0
+    },
+    {
+      "cam": 13.45,
+      "say": "action",
+      "ms": 300,
+      "after": 0
+    },
+    {
+      "mark": "heard-action-2"
+    },
+    {
+      "cam": 15.2,
+      "mark": "end"
+    }
+  ],
+  "tail": 200
+}
