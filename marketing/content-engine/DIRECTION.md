@@ -3,6 +3,20 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-06, 12:50: AI actors for feature demos, always labelled (wins over everything below)
+
+Canberk approved a generated actor for the Tape room film ("that guy is perfect"). This replaces "no AI
+people" for feature demos only:
+- Generate with `scripts/omni.py` (Gemini Omni). The person is ordinary looking, natural, a real working
+  actor at home, never model handsome. Speech natural and a little messy ("uhh... cut! yeah that didn't
+  feel like it, let's go again").
+- Check the voice is the same person all the way through; the first word sometimes comes out in another
+  voice: patch it from a later line of his.
+- **Disclosure, every time:** the AI label on each platform (Instagram is_ai_generated, TikTok is_aigc,
+  YouTube is_ai_generated) AND a plain line in the caption: "The actor is AI generated."
+- Show him inside the real app when the feature has a camera: FAKE_CAM = the generated clip, the scripted
+  ear timed to his words, so the Tape room's own interface (script, REC, playback) frames him.
+
 ## 2026-11-06, 11:20: one text layer at a time (wins over everything below)
 
 Canberk on the hands-free remake: "too much caption", the voice-over subtitles and the app's own
