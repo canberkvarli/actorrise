@@ -2,18 +2,63 @@
   "id": "2026-11-10-tape-actor",
   "look": "noir",
   "cut": "hard",
-  "music": {"style": "bed", "volume": 0.12, "drop": "end"},
+  "music": {
+    "style": "bed",
+    "volume": 0.12,
+    "drop": "end"
+  },
   "source": {
     "footage": "Generated with Gemini Omni (gemini-omni-1.2-flash), fictional actor, labelled as AI on every platform. Canberk approved the actor on 2026-11-06.",
     "feature": "tape-room",
     "why": "Self-tape hands free: say action, it rolls; say cut, it stops. One actor, one take, then the brand."
   },
   "beats": [
-    {"kind": "broll", "seconds": 8.6, "src": "reel/2026-11-08-tape-actor/actor.mp4", "start": 0, "push": 0.02, "sound": 1.0,
-     "lines": [
-       {"text": "ACTION", "accent": "ACTION", "at": 0.2, "until": 1.4, "size": 150},
-       {"text": "CUT", "accent": "CUT", "at": 7.75, "size": 150}
-     ], "sfx": []},
-    {"kind": "end", "seconds": 1.8, "brand": "Ghost Light", "line": "Say action. Say cut. It rolls for you.", "action": "Free on the App Store", "bg": "ink", "store": true, "sfx": [], "snap": true, "beats": [0, 0.55, 1.1]}
+    {
+      "kind": "broll",
+      "seconds": 10.0,
+      "src": "reel/2026-11-08-tape-actor/actor.mp4",
+      "start": 0,
+      "push": 0.02,
+      "sound": 1.0,
+      "lines": [
+        {
+          "text": "ACTION",
+          "accent": "ACTION",
+          "at": 0.15,
+          "until": 1.1,
+          "size": 150
+        },
+        {
+          "text": "CUT",
+          "accent": "CUT",
+          "at": 6.25,
+          "until": 7.4,
+          "size": 150
+        },
+        {
+          "text": "ACTION",
+          "accent": "ACTION",
+          "at": 9.4,
+          "size": 150
+        }
+      ],
+      "sfx": []
+    },
+    {
+      "kind": "end",
+      "seconds": 1.8,
+      "brand": "Ghost Light",
+      "line": "Say action. Say cut. It rolls for you.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
   ]
 }
