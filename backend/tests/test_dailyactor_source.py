@@ -87,18 +87,23 @@ def test_no_year_and_public_domain_years_are_not_kept():
 # ── REST writer ──────────────────────────────────────────────────────────────
 
 class FakeRest:
-    def __init__(self, plays=None, monologues=None):
+    def __init__(self, plays=None, dup_text=None, dup_vector=None):
         self.plays = plays or []
-        self.monologues = monologues or []
+        #: What the database function would answer, without and with a vector.
+        self.dup_text = dup_text
+        self.dup_vector = dup_vector
         self.posted: list[tuple[str, dict]] = []
+        self.dup_calls: list[bool] = []
+
+    def duplicate_of(self, text, vector=None):
+        self.dup_calls.append(vector is not None)
+        return self.dup_vector if vector is not None else self.dup_text
 
     def get(self, table, **params):
         if table == "plays":
             title = params["title"][3:]
             return [p for p in self.plays if p["title"] == title
                     and ("author" not in params or p["author"] == params["author"][3:])]
-        if table == "monologues":
-            return list(self.monologues)
         return []
 
     def post(self, table, body):
@@ -155,14 +160,34 @@ def test_rest_refuses_without_rights_or_era():
     assert rest.posted == []
 
 
-def test_rest_catches_same_title_duplicates():
-    play = {"id": 7, "title": "Other Desert Cities", "author": "Jon Robin Baitz",
-            "copyright_status": "copyrighted", "license_type": "fair_use", "year_written": 2010}
-    exact = FakeRest([dict(play)], [{"id": 1, "text": TEXT.upper(), "embedding_vector": None}])
-    assert rest_writer.ingest_monologue_rest(exact, **kwargs()).duplicates == 1
-    near = FakeRest([dict(play)], [{"id": 1, "text": "other words", "embedding_vector": "[1.0" + ",0.0" * 1535 + "]"}])
-    assert rest_writer.ingest_monologue_rest(near, **kwargs()).duplicates == 1
-    assert all(t != "monologues" for t, _ in exact.posted + near.posted)
+def test_an_exact_duplicate_costs_nothing():
+    """Word for word already stored: refused before the play row and the analyser."""
+    rest = FakeRest(dup_text=(1, "identical_text"))
+    report = rest_writer.ingest_monologue_rest(rest, **kwargs(analyzer=None, embed=None))
+    assert report.duplicates == 1 and rest.posted == [] and rest.dup_calls == [False]
+
+
+def test_a_near_duplicate_or_another_cut_is_refused_after_embedding():
+    rest = FakeRest(dup_vector=(1, "overlapping_cut:0.0410"))
+    report = rest_writer.ingest_monologue_rest(rest, **kwargs())
+    assert report.duplicates == 1
+    assert all(t != "monologues" for t, _ in rest.posted)
+    assert rest.dup_calls == [False, True]
+
+
+def test_the_vector_check_sends_the_vector_to_the_database():
+    sent = {}
+
+    class Spy(rest_writer.Rest):
+        def __init__(self):
+            pass
+
+        def _call(self, method, path, body=None):
+            sent.update(body)
+            return []
+
+    assert Spy().duplicate_of("words", [0.5] * 1536) is None
+    assert sent["p_embedding"].startswith("[0.500000,") and sent["p_max_distance"] == 0.02
 
 
 def test_rest_skips_what_was_rejected_before():

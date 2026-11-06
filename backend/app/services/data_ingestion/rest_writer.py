@@ -9,13 +9,12 @@ keeps every guarantee `pipeline.ingest_monologue` gives, in the same order:
     memory -> quality gate -> play get-or-create -> duplicate -> analyse ->
     embed -> insert
 
-One difference, and it is a narrowing. `find_duplicate` scans the whole corpus
-by fingerprint and by nearest neighbour on the HNSW index. PostgREST can do
-neither, so here both checks run in Python against every monologue on a play
-with the SAME TITLE (any author, so "Proof" by Auburn and a film "Proof" are
-compared). A duplicate filed under a different title would be missed; those
-are the rare case the corpus-wide check exists for, and a laptop run with
-`ingest_monologue` still catches them.
+The duplicate check is the database function `monologue_duplicate_of`
+(scripts/add_monologue_duplicate_function.py), called over PostgREST as an RPC.
+It is corpus-wide like `find_duplicate` (fingerprint, then nearest neighbour on
+the HNSW index) and adds one rule `find_duplicate` lacks: the same speech in a
+different cut. The fingerprint half runs before the analyser, so a re-run
+spends nothing on a piece already stored.
 
 Pure HTTP plus the analyser and the embedder. Importing this opens no database.
 """
@@ -23,7 +22,6 @@ Pure HTTP plus the analyser and the embedder. Importing this opens no database.
 from __future__ import annotations
 
 import json
-import math
 import os
 import urllib.parse
 import urllib.request
@@ -78,22 +76,17 @@ class Rest:
     def patch(self, table: str, body: dict, **params: str) -> list[dict]:
         return self._call("PATCH", f"{table}?{urllib.parse.urlencode(params)}", body) or []
 
+    def duplicate_of(self, text: str, vector: Optional[list[float]] = None) -> Optional[tuple[int, str]]:
+        """`monologue_duplicate_of` in the database: ``(id, reason)`` or None."""
+        body: dict[str, Any] = {"p_text": text, "p_max_distance": DUPLICATE_DISTANCE}
+        if vector is not None:
+            body["p_embedding"] = _vector_literal(vector)
+        rows = self._call("POST", "rpc/monologue_duplicate_of", body) or []
+        return (rows[0]["id"], rows[0]["reason"]) if rows else None
 
-def _vector(raw: Any) -> Optional[list[float]]:
-    if raw is None:
-        return None
-    if isinstance(raw, str):
-        raw = json.loads(raw)
-    return [float(x) for x in raw]
 
-
-def _cosine_distance(a: list[float], b: list[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
-    na = math.sqrt(sum(x * x for x in a))
-    nb = math.sqrt(sum(y * y for y in b))
-    if not na or not nb:
-        return 1.0
-    return 1.0 - dot / (na * nb)
+def _vector_literal(vector: list[float]) -> str:
+    return "[" + ",".join(f"{x:.6f}" for x in vector) + "]"
 
 
 def rejected_fingerprints(rest: Rest, texts: list[str]) -> set[str]:
@@ -187,6 +180,12 @@ def ingest_monologue_rest(
             report._bump(reason)
         return report
 
+    # Already stored, word for word? Checked before the play row and before
+    # the analyser, so a re-run of a source costs nothing for what it has.
+    if rest.duplicate_of(display):
+        report.duplicates = 1
+        return report
+
     # --- play: get or create, rights rule identical to ingest_monologue ------
     found = rest.get(
         "plays", select="id,copyright_status,license_type,year_written",
@@ -212,16 +211,6 @@ def ingest_monologue_rest(
         report.play_created = True
     report.play_id = play_id
 
-    # --- duplicate: fingerprint and vector, against same-title plays --------
-    same_title = [p["id"] for p in rest.get("plays", select="id", title=f"eq.{play_title}")]
-    neighbours = rest.get(
-        "monologues", select="id,text,embedding_vector",
-        play_id=f"in.({','.join(str(i) for i in same_title)})",
-    ) if same_title else []
-    if any(text_fingerprint(m["text"]) == fp for m in neighbours):
-        report.duplicates = 1
-        return report
-
     analysis = analyzer.analyze_monologue(
         text=display, character=character, play_title=play_title, author=author,
     )
@@ -230,11 +219,10 @@ def ingest_monologue_rest(
     if not vector:
         report.refused = "no embedding"
         return report
-    for m in neighbours:
-        other = _vector(m.get("embedding_vector"))
-        if other and _cosine_distance(vector, other) <= DUPLICATE_DISTANCE:
-            report.duplicates = 1
-            return report
+    # Near-identical, or the same speech in another cut, anywhere in the library.
+    if rest.duplicate_of(display, vector):
+        report.duplicates = 1
+        return report
 
     meta = resolve_metadata({}, analysis)
     row = {
@@ -251,7 +239,7 @@ def ingest_monologue_rest(
         "primary_emotion": analysis.get("primary_emotion"),
         "emotion_scores": analysis.get("emotion_scores"),
         "themes": analysis.get("themes"),
-        "embedding_vector": "[" + ",".join(f"{x:.6f}" for x in vector) + "]",
+        "embedding_vector": _vector_literal(vector),
         "search_tags": analyzer.generate_search_tags(analysis, display, character),
         "text_segments": None,
     }
