@@ -3,6 +3,14 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-06, 13:25: Tape room films are one continuous take (wins over everything below)
+
+Canberk on the actor-in-the-app film: "it looks amazing". Next version: no playback/recap scene after
+"cut"; the film stays one continuous take in the Tape room. He is building two things in Ghost Light
+itself: the prompter highlights each word as the actor says it, and on "cut" the take shrinks like an
+iPhone screenshot and flies into Tapes at the bottom right. When those ship (OTA), re-record the Tape
+room film with them; until then do not fake either in the edit.
+
 ## 2026-11-06, 12:50: AI actors for feature demos, always labelled (wins over everything below)
 
 Canberk approved a generated actor for the Tape room film ("that guy is perfect"). This replaces "no AI
