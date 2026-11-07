@@ -55,13 +55,30 @@ WALL = """(e.event_name = 'upgrade_modal_viewed'
 # comes after it anyway.
 CHOSEN_SAVE = """f.user_id = u.id and f.removed_at is null
             and f.created_at > u.created_at + interval '15 minutes'"""
+# A v2 run that is FINISHED: reached the end and spoken, the rule in
+# app/services/rehearsal/spoken.py (at least half the actor's lines heard: not
+# skipped, not deaf, score above 0). In SQL here because ACTIVITY is per row of
+# a bigger query; the guided section below goes through the service itself.
+SPOKEN_RUN = """exists (select 1 from rehearsal_events c where c.run_id = rr.id and c.type = 'completed')
+  and 2 * (select count(distinct a.line_index) from rehearsal_events a
+           where a.run_id = rr.id and a.type = 'actor_line_read'
+             and coalesce(a.payload->>'ended_by', '') <> 'skipped'
+             and coalesce(a.payload->>'deaf', '') <> 'true'
+             and case when a.payload->>'score' ~ '^[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?$'
+                      then (a.payload->>'score')::float else 0 end > 0)
+      >= (select count(*) from scene_lines sl where sl.scene_id = rr.scene_id
+          and lower(trim(sl.character_name)) = lower(trim(rr.character)))
+  and exists (select 1 from scene_lines sl where sl.scene_id = rr.scene_id
+              and lower(trim(sl.character_name)) = lower(trim(rr.character)))"""
+
 ACTIVITY = f"""concat_ws(', ',
     nullif((select count(*) from monologue_favorites f
             where {CHOSEN_SAVE}), 0) || ' saved',
     nullif((select count(distinct v.monologue_id) from monologue_views v
             where v.user_id = u.id and v.created_at > now() - interval '30 days'), 0) || ' read this month',
     nullif((select count(*) from rehearsal_sessions r
-            where r.user_id = u.id and r.status = 'completed'), 0) || ' scenes finished',
+            where r.user_id = u.id and r.status = 'completed')
+         + (select count(*) from rehearsal_runs rr where rr.user_id = u.id and {SPOKEN_RUN}), 0) || ' scenes finished',
     'last searched "' || left((select s.query from search_logs s
             where s.user_id = u.id and s.source = 'search'
             order by s.created_at desc limit 1), 50) || '"')"""
@@ -473,6 +490,18 @@ def written_to(conn=None) -> list[str]:
     return sorted(addrs) or ["nobody@nowhere"]
 
 
+def guided_section(conn) -> str:
+    """By scene and part, counting people (app/services/rehearsal/guided_report)."""
+    from datetime import datetime, timezone
+
+    from sqlalchemy.orm import Session
+
+    from app.services.rehearsal.guided_report import as_table, breakdown
+
+    since = datetime.now(timezone.utc) - timedelta(days=14)
+    return as_table(breakdown(Session(bind=conn), since))
+
+
 def build(conn) -> str:
     from sqlalchemy import bindparam, text
 
@@ -515,6 +544,7 @@ def build(conn) -> str:
             store_rows.append((name, now_v if now_v is not None else "", before_v if before_v is not None else "",
                                change(int(now_v or 0), int(before_v or 0)) if isinstance(now_v, int) or now_v is None else ""))
     reads7, readers7, reads14, readers14 = q(APP_READS)[0]
+    guided = guided_section(conn)
     gap_overall, gap_kinds = gap_rows(q(GAP_SEARCHES))
 
     parts = [
@@ -545,6 +575,10 @@ def build(conn) -> str:
             ("name", "email", "signed up", "what they've done", "actions this week"),
             worth,
         ),
+        "## 5b. The guided first scene, last 14 days, people\n",
+        "Finished means spoken: reached the end with at least half the actor's lines heard.",
+        "Reached the end counts runs skipped through on a dead mic too. Staff left out.\n",
+        guided,
         "## 6. Ghost Light, the iOS app\n",
         "### The store, last 7 days against the 7 before\n",
         "App Store Connect, synced at 16:00 UTC and about a day behind. Downloads are",

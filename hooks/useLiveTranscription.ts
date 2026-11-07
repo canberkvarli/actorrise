@@ -55,8 +55,8 @@ export interface LiveTranscription {
   /** Is the microphone live right now? */
   listening: boolean;
 
-  /** Open the session. Safe to call more than once; later calls are no-ops. */
-  open: () => Promise<void>;
+  /** Open the session. Safe to call more than once; later calls are no-ops. Resolves true once it is open. */
+  open: () => Promise<boolean>;
   /** Ask for the session's key now, ahead of open(), so open() does not wait on it. */
   warm: () => void;
   /** Tell the transcriber what is coming. Sent when the partner starts, so it is ready when the mic opens. */
@@ -119,7 +119,7 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
   const trackRef = useRef<MediaStreamTrack | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const quietTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const openingRef = useRef<Promise<void> | null>(null);
+  const openingRef = useRef<Promise<boolean> | null>(null);
   /* The session key, asked for early by warm(). Only the first open() takes it:
      a key is good for one session. */
   const secretRef = useRef<Promise<string> | null>(null);
@@ -247,8 +247,8 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
     secretRef.current = asked;
   }, [askSecret]);
 
-  const open = useCallback(async () => {
-    if (pcRef.current) return;
+  const open = useCallback(async (): Promise<boolean> => {
+    if (pcRef.current) return true;
     if (openingRef.current) return openingRef.current;
 
     const run = (async () => {
@@ -309,6 +309,7 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
 
         pcRef.current = pc;
         setStatus('ready');
+        return true;
       } catch (err: unknown) {
         setStatus('error');
         setError(err instanceof Error ? err.message : 'Could not start live transcription');
@@ -316,6 +317,7 @@ export function useLiveTranscription(options: OpenOptions): LiveTranscription {
            the mic check is still using it. */
         streamRef.current = null;
         trackRef.current = null;
+        return false;
       } finally {
         openingRef.current = null;
       }

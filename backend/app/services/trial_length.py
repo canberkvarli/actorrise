@@ -7,7 +7,10 @@ behaviour that shows the product working, and until now it won nothing: of the
 "Finished" is the server's word, never the browser's. It means a v2 run that
 journal.is_fully_read accepts: a `completed` event AND an actor_line_read for
 every one of the actor's lines in that scene (the journal is client-written,
-so `completed` alone is one forged POST and buys nothing). Or, from before v2,
+so `completed` alone is one forged POST and buys nothing) AND spoken: at least
+half those lines heard (services/rehearsal/spoken). Since 2026-11-07 a guided
+run skipped through on a dead mic reaches the end but earns nothing; before
+that it earned the second week. Or, from before v2,
 a rehearsal_sessions row the old deliver endpoint closed as `completed`. Those
 old rows still count; nobody loses a week they earned. The browser also
 reports guided_scene_finished through POST /api/events, and that event is

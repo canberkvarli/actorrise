@@ -84,9 +84,29 @@ class Journal(unittest.TestCase):
         self.assertTrue(journal.is_finished(self.db, run.id))
         self.assertFalse(journal.is_fully_read(self.db, run.id))
         self.assertFalse(journal.user_has_finished_a_scene(self.db, self.user.id))
-        journal.append(self.db, run.id, self.user.id, [ev(3, "actor_line_read", 2)])
+        journal.append(self.db, run.id, self.user.id, [ev(3, "actor_line_read", 2, ended_by="last_word", score=1)])
         self.assertTrue(journal.is_fully_read(self.db, run.id))
         self.assertTrue(journal.user_has_finished_a_scene(self.db, self.user.id))
+
+    def test_skipped_through_on_a_dead_mic_reaches_the_end_but_is_not_fully_read(self):
+        # Runs 484, 497, 502, 508, 517 of "A fight": every line skipped, nothing heard.
+        run = self.start()
+        journal.append(self.db, run.id, self.user.id, [
+            ev(0, "started"),
+            ev(1, "actor_line_read", 0, ended_by="skipped", score=0, matched=[], deaf=False),
+            ev(2, "actor_line_read", 2, ended_by="skipped", score=0, matched=[], deaf=True),
+            ev(3, "completed", 3)])
+        self.assertTrue(journal.is_finished(self.db, run.id))
+        self.assertFalse(journal.is_fully_read(self.db, run.id))
+        self.assertFalse(journal.user_has_finished_a_scene(self.db, self.user.id))
+
+    def test_half_the_lines_heard_is_spoken(self):
+        run = self.start()
+        journal.append(self.db, run.id, self.user.id, [
+            ev(0, "actor_line_read", 0, ended_by="quiet", score=0.67),
+            ev(1, "actor_line_read", 2, ended_by="skipped", score=0),
+            ev(2, "completed", 3)])
+        self.assertTrue(journal.is_fully_read(self.db, run.id))
 
     def test_reading_every_line_without_completing_is_not_finished(self):
         run = self.start()

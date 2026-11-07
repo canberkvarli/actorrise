@@ -128,7 +128,7 @@ CLIENT_EVENT_NAMES = frozenset(
         "run_entry_shown",  # {monologue_id, surface: sheet|bar}, once per page view
         "run_entry_tapped",  # {monologue_id, surface: sheet|bar|margin|saved}
         "run_start_screen_shown",  # {monologue_id, reason}: the room asked for a tap before starting
-        "guided_scene_finished",  # {lines_heard, tap_mode, take_ms_total}
+        "guided_scene_finished",  # reached the end. v1 {lines_heard, tap_mode, take_ms_total}; v2 {lines_heard, spoken, heard, lines}: only spoken=true is a finish
         # The money. On 2026-09-27 real charges were $60 a month from five
         # people, and nothing in Postgres said how many actors ever saw a price:
         # the upgrade modal and the trial offer reported to GA4 only. These

@@ -502,7 +502,15 @@ async def append_events(
     if any(isinstance(e, dict) and e.get("type") == "completed" for e in events):
         run = journal.db_run(db, run_id)
         if run is not None and run.is_guided:
-            record_user_event(user.id, "guided_scene_finished", {"lines_heard": journal.furthest_line(db, run_id)})
+            # Reached the end. `spoken` says whether it counts as finished
+            # (services/rehearsal/spoken); a run skipped through on a dead mic is not.
+            from app.services.rehearsal.spoken import outcomes
+
+            o = outcomes(db, [run])[run.id]
+            record_user_event(user.id, "guided_scene_finished", {
+                "lines_heard": journal.furthest_line(db, run_id),
+                "spoken": o["spoken"], "heard": o["heard"], "lines": o["lines"],
+            })
     return Response(status_code=204)
 
 

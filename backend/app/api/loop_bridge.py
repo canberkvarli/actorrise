@@ -37,6 +37,7 @@ ALLOWED: dict[str, set[str] | None] = {
     "class_link": {"make", "invite", "list", "off", "on"},
     "grant_comp": None,
     "cue_report": None,
+    "guided_finishes": None,             # the guided first scene by scene and part, people; read only
 }
 # Scripts that may also run with no arguments at all.
 BARE_OK = {"conversion_brief"}

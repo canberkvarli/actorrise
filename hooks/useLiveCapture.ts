@@ -52,7 +52,7 @@ export interface LiveCapture {
   /** Is the microphone live? */
   listening: boolean;
   /** Open the session. Called once, when the scene loads. */
-  open: () => Promise<void>;
+  open: () => Promise<boolean>;
   /** The actor's turn begins. */
   beginTurn: (keywords?: string[]) => void;
   /** The actor's turn ends. */

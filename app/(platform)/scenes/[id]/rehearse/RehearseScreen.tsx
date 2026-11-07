@@ -21,6 +21,7 @@ import { Dock, TopBar } from './Dock';
 import { Ending } from './Ending';
 import { FirstRunHint } from './FirstRunHint';
 import { Unheard } from './Unheard';
+import { MicStalled } from './MicStalled';
 import { useErrorText } from './errorText';
 import { useT } from '@/lib/i18n';
 
@@ -54,7 +55,7 @@ export function RehearseScreen({ payload, guided, go, guidedAs, from }: {
   const router = useRouter();
   const t = useT();
   const errorText = useErrorText();
-  const { snapshot, readiness, canBegin, prepare, begin, tryUnlock, gated, pause, resume, skip, back, jumpTo, sayAgain, leave } = useRehearsal(payload);
+  const { snapshot, readiness, canBegin, prepare, begin, tryUnlock, gated, pause, resume, skip, back, jumpTo, sayAgain, retryMic, withoutMic, leave } = useRehearsal(payload);
   // What the scene is spoken in (the script's language, not the UI's).
   const lang = speechLang(payload.language);
   const [goPart] = useState(() => skipsCurtain(payload.characters, getMyRoles(payload.scene.id),
@@ -208,6 +209,7 @@ export function RehearseScreen({ payload, guided, go, guidedAs, from }: {
       {snapshot?.state === 'actor' && snapshot.unheard && !error && liveLine !== null && (
         <Unheard text={payload.lines[liveLine]?.text ?? ''} deaf={snapshot.deaf} onAgain={sayAgain} onSkip={skip} />
       )}
+      {snapshot?.stalled && !error && <MicStalled onRetry={retryMic} onWithoutMic={withoutMic} />}
       {ended && !error && <Ending scene={payload.scene} language={payload.language} guided={guided} onAgain={onAgain} onLeave={onLeave} />}
       {error && (
         <p className="r-chrome fixed inset-x-0 bottom-0 z-40 px-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-4 text-center"

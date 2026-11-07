@@ -89,12 +89,23 @@ class TrialLengthTests(Fixture):
         own = self._alex_line_indexes()
         self.assertEqual(len(own), 3)
         run = journal.create_run(self.db, self.user.id, self.scene.id, "ALEX", {})
-        reads = [{"seq": i, "type": "actor_line_read", "line_index": idx, "at_ms": i, "payload": {}} for i, idx in enumerate(own)]
+        reads = [{"seq": i, "type": "actor_line_read", "line_index": idx, "at_ms": i, "payload": {"ended_by": "last_word", "score": 1}} for i, idx in enumerate(own)]
         journal.append(self.db, run.id, self.user.id, reads + [
             {"seq": len(own), "type": "completed", "line_index": 5, "at_ms": 9, "payload": {}},
         ])
         self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), trial_length.EARNED_TRIAL_DAYS)
         self.assertTrue(trial_length.has_finished_a_scene(self.db, self.user.id))
+
+    def test_a_guided_run_skipped_through_on_a_dead_mic_does_not(self):
+        from app.services.rehearsal import journal
+        own = self._alex_line_indexes()
+        run = journal.create_run(self.db, self.user.id, self.scene.id, "ALEX", {}, is_guided=True)
+        reads = [{"seq": i, "type": "actor_line_read", "line_index": idx, "at_ms": i,
+                  "payload": {"ended_by": "skipped", "score": 0, "matched": [], "deaf": True}} for i, idx in enumerate(own)]
+        journal.append(self.db, run.id, self.user.id, reads + [
+            {"seq": len(own), "type": "completed", "line_index": 5, "at_ms": 9, "payload": {}},
+        ])
+        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), trial_length.BASE_TRIAL_DAYS)
 
     def test_a_forged_completed_event_alone_does_not(self):
         # The journal is client-written. `completed` without the reads to back

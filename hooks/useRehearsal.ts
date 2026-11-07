@@ -66,6 +66,14 @@ export interface Rehearsal {
   pause: () => void; resume: () => void; skip: () => void; back: () => void; jumpTo: (line: number) => void;
   /** The actor's line again, mic reopened, no cue (an unheard line). */
   sayAgain: () => void;
+  /**
+   * The run is stopped on a dead mic (`snapshot.stalled`): open the mic again
+   * on the same line. Where the live session had failed, it is opened afresh
+   * first; resolves false if it still would not open (the run stays stopped).
+   */
+  retryMic: () => Promise<boolean>;
+  /** From the same stop: read on without the mic, each line with "next". */
+  withoutMic: () => void;
   leave: () => void;
 }
 
@@ -124,6 +132,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
   const preparedRef = useRef(false);
   const failedRef = useRef(new Map<number, string>()); // partner line → why it failed to load
   const [deaf, setDeaf] = useState(false); // a guided run going on without its live session
+  const deafRef = useRef(false);
   const [opened, setOpened] = useState(false); // the engine exists (a live session can fail before it does)
   const guidedRef = useRef(false);
   // When the run opened and when each half of readiness arrived, for the
@@ -150,12 +159,14 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
   // useLiveCapture owns the one microphone stream; the words come from our own session below.
   const { prewarmStream, streamRef } = useLiveCapture();
   const getStream = useCallback(async () => {
+    // A stream whose track has ended (the device unplugged, the OS took it) is asked for again.
+    if (streamRef.current && streamRef.current.getAudioTracks().every(t => t.readyState === 'ended')) streamRef.current = null;
     await prewarmStream();
     if (streamRef.current) setBase(b => ({ ...b, mic: true }));
     return streamRef.current;
   }, [prewarmStream, streamRef]);
   const lang = speechLang(payload.language);
-  const { open, warm, prime, beginTurn, endTurn, status } = useLiveTranscription({
+  const { open, warm, prime, beginTurn, endTurn, close: closeLive, status } = useLiveTranscription({
     getStream,
     keywords: payload.characters,
     language: lang,
@@ -284,7 +295,7 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
   // one in October stopped this way.
   useEffect(() => {
     if (status !== 'error' || !opened) return;
-    if (guidedRef.current && engineRef.current?.deafen()) { setDeaf(true); return; }
+    if (guidedRef.current && engineRef.current?.deafen()) { deafRef.current = true; setDeaf(true); return; }
     engineRef.current?.abandon('stt_failed');
     loaderRef.current?.stop(); // nothing will play: stop polling for partner audio
   }, [status, opened]);
@@ -338,6 +349,22 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     playerRef.current?.close();
   }, [notStarted]);
 
+  const retryMic = useCallback(async () => {
+    playerRef.current?.unlock(); // inside the tap, before anything awaits
+    const engine = engineRef.current;
+    if (!engine?.snapshot().stalled) return false;
+    if (deafRef.current) {
+      // The live session had failed: open a new one, then listen again.
+      closeLive();
+      if (!(await open())) return false;
+      deafRef.current = false;
+      setDeaf(false);
+      engine.hear();
+    }
+    engine.resume();
+    return true;
+  }, [closeLive, open]);
+
   // Every control that can start a partner line unlocks first, synchronously,
   // like begin: iOS suspends the context when the tab hides or the mic moves,
   // and only a call inside the tap itself brings it back.
@@ -348,14 +375,17 @@ export function useRehearsal(payload: ScenePayload): Rehearsal {
     };
     return {
       pause: () => engineRef.current?.pause(),
-      resume: () => unlocked(e => e.resume()),
+      // Resume from a dead-mic stop is "try again": see retryMic.
+      resume: () => { if (engineRef.current?.snapshot().stalled) void retryMic(); else unlocked(e => e.resume()); },
+      retryMic,
+      withoutMic: () => engineRef.current?.withoutMic(),
       skip: () => unlocked(e => e.skip()),
       back: () => unlocked(e => e.back()),
       jumpTo: (l: number) => unlocked(e => e.jumpTo(l)),
       sayAgain: () => engineRef.current?.sayAgain(),
       leave: () => { notStarted('abandoned', 'left'); engineRef.current?.abandon('left'); journalRef.current?.beacon(); },
     };
-  }, [notStarted]);
+  }, [notStarted, retryMic]);
 
   const readiness: Readiness = {
     ...base,

@@ -34,6 +34,20 @@ interface SessionEntry {
   duration_seconds: number | null;
   started_at: string | null;
   completed_at: string | null;
+  /** Reached the end AND at least half the actor's lines heard (services/rehearsal/spoken). The only finish. */
+  spoken: boolean;
+  is_guided: boolean;
+}
+
+interface GuidedRow {
+  scene: string;
+  /** null: every part of the scene together. */
+  part: string | null;
+  opened: number;
+  started: number;
+  reached_end: number;
+  finished: number;
+  dead_mic: number;
 }
 
 interface SessionsResponse {
@@ -46,7 +60,10 @@ interface SessionsResponse {
 interface Analytics {
   funnel: {
     total: number;
+    /** Reached the end, raw: includes runs skipped through on a dead mic. */
     completed: number;
+    /** Finished: reached the end and spoken. completion_rate divides this. */
+    spoken: number;
     /** They left and the client told us. */
     abandoned: number;
     /** They went silent; the hourly sweep closed it. */
@@ -67,6 +84,7 @@ interface Analytics {
     play_title: string;
     total: number;
     completed: number;
+    spoken: number;
     abandoned: number;
     timed_out: number;
     unfinished: number;
@@ -79,6 +97,7 @@ interface Analytics {
     email: string;
     total: number;
     completed: number;
+    spoken: number;
     abandoned: number;
     timed_out: number;
     unfinished: number;
@@ -126,7 +145,14 @@ function timeAgo(dateStr: string | null): string {
   return `${Math.floor(diffHours / 24)}d ago`;
 }
 
+/** A run that reached the end with the actor's lines unheard is not a finish. */
+function rowStatus(s: Pick<SessionEntry, "status" | "spoken">): string {
+  return s.status === "completed" && !s.spoken ? "unheard" : s.status;
+}
+
 function statusColor(status: string): string {
+  if (status === "unheard")
+    return "bg-stone-50 text-stone-700 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-700";
   if (status === "completed")
     return "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800";
   if (status === "abandoned")
@@ -143,6 +169,8 @@ function statusLabel(status: string): string {
   if (status === "timed_out") return "went silent";
   if (status === "abandoned") return "left mid-scene";
   if (status === "in_progress") return "in progress";
+  if (status === "unheard") return "reached end, unheard";
+  if (status === "completed") return "finished";
   return status;
 }
 
@@ -189,7 +217,8 @@ function FunnelBar({ f }: { f: Analytics["funnel"] }) {
         <p className="text-xs text-muted-foreground tabular-nums">{f.total} sessions</p>
       </div>
       <div className="flex h-3 w-full overflow-hidden">
-        <div style={{ width: seg(f.completed), backgroundColor: BRAND }} title={`${f.completed} finished the scene`} />
+        <div style={{ width: seg(f.spoken), backgroundColor: BRAND }} title={`${f.spoken} finished the scene, spoken`} />
+        <div className="bg-stone-400/70 dark:bg-stone-500/60" style={{ width: seg(f.completed - f.spoken) }} title={`${f.completed - f.spoken} reached the end with their lines unheard`} />
         <div className="bg-muted-foreground/30" style={{ width: seg(f.in_progress) }} title={`${f.in_progress} rehearsing right now`} />
         <div className="bg-red-400/70 dark:bg-red-500/50" style={{ width: seg(f.abandoned) }} title={`${f.abandoned} left mid-scene`} />
         <div className="bg-amber-400/70 dark:bg-amber-500/50" style={{ width: seg(f.timed_out) }} title={`${f.timed_out} went silent`} />
@@ -197,7 +226,11 @@ function FunnelBar({ f }: { f: Analytics["funnel"] }) {
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5" style={{ backgroundColor: BRAND }} />
-          {f.completed} finished
+          {f.spoken} finished
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 bg-stone-400/70 dark:bg-stone-500/60" />
+          {f.completed - f.spoken} reached the end unheard
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 bg-muted-foreground/30" />
@@ -215,8 +248,9 @@ function FunnelBar({ f }: { f: Analytics["funnel"] }) {
       <p className="text-[11px] leading-snug text-muted-foreground">
         &ldquo;Left mid-scene&rdquo; means they navigated away and we caught it. &ldquo;Went
         silent&rdquo; means they vanished and an hourly sweep closed the session six hours later.
-        Both count as not finishing. &ldquo;Rehearsing now&rdquo; is live — anything older than six
-        hours has already been swept.
+        Both count as not finishing. So does &ldquo;reached the end unheard&rdquo;: the run got to
+        its last line with fewer than half the actor&apos;s lines heard (skipped through on a dead
+        mic). &ldquo;Rehearsing now&rdquo; is live — anything older than six hours has already been swept.
       </p>
     </div>
   );
@@ -278,7 +312,7 @@ function SceneTable({ rows }: { rows: Analytics["by_scene"] }) {
               <tr className="border-b border-border text-muted-foreground">
                 <th className="py-1.5 text-left font-medium">Scene</th>
                 <th className="py-1.5 text-right font-medium">Sessions</th>
-                <th className="py-1.5 text-right font-medium">Done</th>
+                <th className="py-1.5 text-right font-medium" title="Finished, spoken (reached the end in brackets)">Done</th>
                 <th className="py-1.5 text-right font-medium">Compl.</th>
                 <th className="py-1.5 text-right font-medium">Avg</th>
               </tr>
@@ -291,7 +325,10 @@ function SceneTable({ rows }: { rows: Analytics["by_scene"] }) {
                     <p className="truncate text-muted-foreground">{r.play_title}</p>
                   </td>
                   <td className="py-1.5 text-right tabular-nums">{r.total}</td>
-                  <td className="py-1.5 text-right tabular-nums">{r.completed}</td>
+                  <td className="py-1.5 text-right tabular-nums">
+                    {r.spoken}
+                    {r.completed > r.spoken && <span className="text-muted-foreground"> ({r.completed})</span>}
+                  </td>
                   <td className="py-1.5 text-right"><CompletionPill rate={r.completion_rate} /></td>
                   <td className="py-1.5 text-right tabular-nums text-muted-foreground">
                     {formatDuration(r.avg_duration_seconds)}
@@ -319,7 +356,7 @@ function UserTable({ rows }: { rows: Analytics["by_user"] }) {
               <tr className="border-b border-border text-muted-foreground">
                 <th className="py-1.5 text-left font-medium">Actor</th>
                 <th className="py-1.5 text-right font-medium">Sessions</th>
-                <th className="py-1.5 text-right font-medium">Done</th>
+                <th className="py-1.5 text-right font-medium" title="Finished, spoken (reached the end in brackets)">Done</th>
                 <th className="py-1.5 text-right font-medium">Compl.</th>
                 <th className="py-1.5 text-right font-medium">Last active</th>
               </tr>
@@ -331,11 +368,60 @@ function UserTable({ rows }: { rows: Analytics["by_user"] }) {
                     <span className="truncate block text-foreground">{r.email}</span>
                   </td>
                   <td className="py-1.5 text-right tabular-nums">{r.total}</td>
-                  <td className="py-1.5 text-right tabular-nums">{r.completed}</td>
+                  <td className="py-1.5 text-right tabular-nums">
+                    {r.spoken}
+                    {r.completed > r.spoken && <span className="text-muted-foreground"> ({r.completed})</span>}
+                  </td>
                   <td className="py-1.5 text-right"><CompletionPill rate={r.completion_rate} /></td>
                   <td className="py-1.5 text-right text-muted-foreground whitespace-nowrap">
                     {timeAgo(r.last_active)}
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The guided first scene by scene and part, counting people. Answers "which part loses people?". */
+function GuidedTable({ rows }: { rows: GuidedRow[] }) {
+  return (
+    <div className="border border-border bg-card p-4 space-y-3">
+      <div>
+        <p className="text-sm font-medium">Guided first scene, by part</p>
+        <p className="text-xs text-muted-foreground">
+          People, not runs. Finished means spoken: reached the end with at least half their lines heard.
+        </p>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No guided runs in range.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border text-muted-foreground">
+                <th className="py-1.5 text-left font-medium">Scene</th>
+                <th className="py-1.5 text-left font-medium">Part</th>
+                <th className="py-1.5 text-right font-medium">Opened</th>
+                <th className="py-1.5 text-right font-medium">Started</th>
+                <th className="py-1.5 text-right font-medium">Reached end</th>
+                <th className="py-1.5 text-right font-medium">Finished</th>
+                <th className="py-1.5 text-right font-medium">Dead mic</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={`${r.scene}-${r.part ?? ""}`} className={`border-b border-border/50 last:border-0 ${r.part === null ? "font-medium" : ""}`}>
+                  <td className="py-1.5 pr-2">{r.part === null ? r.scene : ""}</td>
+                  <td className="py-1.5 pr-2">{r.part ?? "all"}</td>
+                  <td className="py-1.5 text-right tabular-nums">{r.opened}</td>
+                  <td className="py-1.5 text-right tabular-nums">{r.started}</td>
+                  <td className="py-1.5 text-right tabular-nums text-muted-foreground">{r.reached_end}</td>
+                  <td className="py-1.5 text-right tabular-nums" style={{ color: BRAND }}>{r.finished}</td>
+                  <td className="py-1.5 text-right tabular-nums text-muted-foreground">{r.dead_mic}</td>
                 </tr>
               ))}
             </tbody>
@@ -464,6 +550,12 @@ export default function AdminSessionsPage() {
   });
   const a = analyticsQuery.data;
 
+  const guidedQuery = useQuery({
+    queryKey: ["admin-sessions-guided"],
+    queryFn: async () => (await api.get<{ rows: GuidedRow[] }>("/api/admin/sessions/guided")).data.rows,
+    staleTime: 30_000,
+  });
+
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["admin-sessions", debouncedQ, statusFilter, page],
     queryFn: async () => {
@@ -488,6 +580,7 @@ export default function AdminSessionsPage() {
   const refreshAll = () => {
     refetch();
     analyticsQuery.refetch();
+    guidedQuery.refetch();
   };
 
   return (
@@ -519,9 +612,10 @@ export default function AdminSessionsPage() {
               // Sample size up front: at these volumes one or two sessions move
               // the percentage several points, and a bare "29.6%" hides that.
               hint={
-                a.funnel.ended < 30
-                  ? `only ${a.funnel.completed} of ${a.funnel.ended} ended sessions — too few to trust`
-                  : `${a.funnel.completed} of ${a.funnel.ended} ended sessions`
+                (a.funnel.ended < 30
+                  ? `only ${a.funnel.spoken} of ${a.funnel.ended} ended sessions finished spoken — too few to trust`
+                  : `${a.funnel.spoken} of ${a.funnel.ended} ended sessions finished spoken`)
+                + `; ${a.funnel.completed} reached the end`
               }
               accent
             />
@@ -552,6 +646,8 @@ export default function AdminSessionsPage() {
             <DropOff rows={a.dropoff} />
             <SceneTable rows={a.by_scene} />
           </div>
+
+          {guidedQuery.data && <GuidedTable rows={guidedQuery.data} />}
 
           <UserTable rows={a.by_user} />
         </>
@@ -588,7 +684,7 @@ export default function AdminSessionsPage() {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="all">All statuses</option>
-              <option value="completed">Finished the scene</option>
+              <option value="completed">Reached the end (spoken or not)</option>
               <option value="in_progress">Rehearsing now</option>
               <option value="unfinished">Didn&apos;t finish (either kind)</option>
               <option value="abandoned">Left mid-scene</option>
@@ -630,8 +726,8 @@ export default function AdminSessionsPage() {
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <Badge variant="outline" className={statusColor(s.status)}>
-                          {statusLabel(s.status)}
+                        <Badge variant="outline" className={statusColor(rowStatus(s))}>
+                          {statusLabel(rowStatus(s))}
                         </Badge>
                         <span className="text-muted-foreground">
                           as <span className="font-medium text-foreground">{s.user_character}</span>
@@ -697,8 +793,8 @@ export default function AdminSessionsPage() {
                             </span>
                           </td>
                           <td className="py-2">
-                            <Badge variant="outline" className={statusColor(s.status)}>
-                              {statusLabel(s.status)}
+                            <Badge variant="outline" className={statusColor(rowStatus(s))}>
+                              {statusLabel(rowStatus(s))}
                             </Badge>
                           </td>
                           <td className="py-2">

@@ -13,6 +13,8 @@ from app.services.admin_filters import test_user_filter
 from app.services.rehearsal import partner_audio
 from app.services.rehearsal.contract import lines_for
 from app.services.rehearsal.delivery import scene_voicing
+from app.services.rehearsal.guided_report import breakdown as guided_breakdown
+from app.services.rehearsal.spoken import outcomes
 from app.services.rehearsal.voices import voice_by_id
 from app.services.rehearsal_cleanup import TIMED_OUT_STATUS, UNFINISHED_STATUSES, stale_cutoff
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -97,6 +99,9 @@ def _rows(
             "duration_seconds": s.duration_seconds,
             "started_at": s.started_at,
             "completed_at": s.completed_at,
+            # v1 closed a session only on delivered lines, so its completed was spoken.
+            "spoken": s.status == "completed",
+            "is_guided": False,
         })
 
     runs = [
@@ -122,6 +127,7 @@ def _rows(
             .group_by(SceneLine.scene_id)
             .all()
         )
+        said = outcomes(db, runs)
         for r in runs:
             ev = events[r.id]
             status = _run_status(ev, r.started_at, now)
@@ -150,6 +156,9 @@ def _rows(
                 "duration_seconds": duration,
                 "started_at": r.started_at,
                 "completed_at": done_at,
+                # "completed" is reaching the end; only a spoken run is finished.
+                "spoken": said[r.id]["spoken"],
+                "is_guided": bool(r.is_guided),
             })
 
     user_map: dict[int, str] = {}
@@ -198,7 +207,9 @@ def _counts(rows: list[dict[str, Any]]) -> dict[str, int]:
     status = [r["status"] for r in rows]
     return {
         "total": len(rows),
+        # Reached the end, raw. `spoken` is the finish (services/rehearsal/spoken).
         "completed": status.count("completed"),
+        "spoken": sum(1 for r in rows if r["status"] == "completed" and r.get("spoken")),
         "abandoned": status.count("abandoned"),
         "timed_out": status.count(TIMED_OUT_STATUS),
         "in_progress": status.count("in_progress"),
@@ -223,6 +234,8 @@ def _item(r: dict[str, Any]) -> dict[str, Any]:
         "duration_seconds": r["duration_seconds"],
         "started_at": r["started_at"].isoformat() if r["started_at"] else None,
         "completed_at": r["completed_at"].isoformat() if r["completed_at"] else None,
+        "spoken": bool(r.get("spoken")),
+        "is_guided": bool(r.get("is_guided")),
     }
 
 
@@ -266,6 +279,7 @@ def get_rehearsal_sessions(
         summary = {
             "total_sessions": c["total"],
             "completed": c["completed"],
+            "spoken": c["spoken"],
             "abandoned": c["abandoned"],
             "timed_out": c["timed_out"],
             "in_progress": c["in_progress"],
@@ -300,6 +314,7 @@ def get_session_analytics(
 
     c = _counts(rows)
     completed, abandoned, timed_out = c["completed"], c["abandoned"], c["timed_out"]
+    spoken = c["spoken"]
     unfinished = abandoned + timed_out
     timed = [r["duration_seconds"] for r in rows if r["duration_seconds"] is not None]
     avg_duration = _avg(timed)
@@ -337,11 +352,13 @@ def get_session_analytics(
             "play_title": play_title,
             "total": g["total"],
             "completed": g["completed"],
+            "spoken": g["spoken"],
             "abandoned": g["abandoned"],
             "timed_out": g["timed_out"],
             "unfinished": g_unfinished,
             "in_progress": g["in_progress"],
-            "completion_rate": _rate(g["completed"], g_unfinished),
+            # Finished means spoken: a run skipped through to the end is ended, not finished.
+            "completion_rate": _rate(g["spoken"], g["completed"] - g["spoken"] + g_unfinished),
             "ended": g["completed"] + g_unfinished,
             "avg_duration_seconds": round(d) if d else None,
         })
@@ -355,10 +372,11 @@ def get_session_analytics(
             "email": email,
             "total": g["total"],
             "completed": g["completed"],
+            "spoken": g["spoken"],
             "abandoned": g["abandoned"],
             "timed_out": g["timed_out"],
             "unfinished": g_unfinished,
-            "completion_rate": _rate(g["completed"], g_unfinished),
+            "completion_rate": _rate(g["spoken"], g["completed"] - g["spoken"] + g_unfinished),
             "ended": g["completed"] + g_unfinished,
             "last_active": last.isoformat() if last else None,
         })
@@ -367,11 +385,12 @@ def get_session_analytics(
         "funnel": {
             "total": c["total"],
             "completed": completed,
+            "spoken": spoken,
             "abandoned": abandoned,
             "timed_out": timed_out,
             "unfinished": unfinished,
             "in_progress": c["in_progress"],
-            "completion_rate": _rate(completed, unfinished),
+            "completion_rate": _rate(spoken, completed - spoken + unfinished),
             # Sample size behind the rate, so the percentage isn't read as settled.
             "ended": completed + unfinished,
         },
@@ -382,6 +401,19 @@ def get_session_analytics(
         "by_scene": by_scene,
         "by_user": by_user,
     }
+
+
+@router.get("/sessions/guided")
+def get_guided_breakdown(
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date: Optional[str] = Query(None, alias="to"),
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, Any]:
+    """The guided first scene by scene key and by part, counting people. See
+    services/rehearsal/guided_report. Staff left out."""
+    start_dt, end_dt = _date_range(from_date, to_date)
+    return {"rows": guided_breakdown(db, start_dt, end_dt)}
 
 
 def _run_lines(db: Session, run_id: int) -> dict[str, Any]:

@@ -477,7 +477,7 @@ describe('Engine: an unheard line (the guided scene)', () => {
       expect.objectContaining({ ended_by: 'skipped', unheard: 1, again: 1, deaf: false }));
   });
 
-  it('deaf: the run goes on, each actor line shown at once with no mic', () => {
+  it('deaf: one line goes by with next, the second one with nothing heard stops the run', () => {
     toActor();
     expect(engine.deafen()).toBe(true);
     expect(engine.snapshot().unheard).toBe(true);
@@ -485,9 +485,81 @@ describe('Engine: an unheard line (the guided scene)', () => {
     expect(ports.mic.open).toHaveBeenCalledTimes(1);
     engine.skip();
     const end = ports.now() + 0.4; ports.tick(0.4); fire(end);
+    expect(engine.snapshot().state).toBe('paused');
+    expect(engine.snapshot().stalled).toBe(true);
+    expect(engine.snapshot().lineIndex).toBe(4);
+    expect(ports.mic.open).toHaveBeenCalledTimes(1);
+    expect(ports.journal.emit).toHaveBeenCalledWith('paused', 4, expect.any(Number), { reason: 'deaf', missed: 1, deaf: true });
+  });
+
+  it('deaf, then read without the mic: every line after goes by with next, never stopped again', () => {
+    toActor();
+    engine.deafen();
+    engine.skip();
+    const end = ports.now() + 0.4; ports.tick(0.4); fire(end);
+    engine.withoutMic();
     expect(engine.snapshot().state).toBe('actor');
     expect(engine.snapshot().unheard).toBe(true);
-    expect(ports.mic.open).toHaveBeenCalledTimes(1);
+    expect(ports.journal.emit).toHaveBeenCalledWith('resumed', 4, expect.any(Number), { reason: 'without_mic' });
+    engine.skip();
+    expect(engine.snapshot().state).toBe('ended');
+    expect(ports.journal.emit).toHaveBeenCalledWith('actor_line_read', 4, expect.any(Number), expect.objectContaining({ ended_by: 'skipped', deaf: true }));
+  });
+
+  it('a dead mic cannot be skipped through: the second silent line stops the run', () => {
+    toActor();
+    engine.skip(); // one line missed: still fine
+    expect(engine.snapshot().lineIndex).toBe(3);
+    const end = ports.now() + 0.4; ports.tick(0.4); fire(end);
+    expect(engine.snapshot().state).toBe('actor');
+    engine.skip(); // nothing heard on this one either
+    const s = engine.snapshot();
+    expect(s.state).toBe('paused');
+    expect(s.stalled).toBe(true);
+    expect(s.lineIndex).toBe(4);
+    expect(ports.journal.emit).toHaveBeenCalledWith('paused', 4, expect.any(Number), { reason: 'deaf', missed: 1, deaf: false });
+    expect(ports.journal.emit).not.toHaveBeenCalledWith('completed', expect.anything(), expect.anything(), expect.anything());
+    engine.skip(); // paused: does nothing
+    expect(engine.snapshot().state).toBe('paused');
+  });
+
+  it('the unheard wait on the second silent line stops the run instead of offering skip', () => {
+    toActor();
+    engine.skip();
+    const end = ports.now() + 0.4; ports.tick(0.4); fire(end);
+    ports.tick(6.1); fire(ports.now());
+    expect(engine.snapshot().stalled).toBe(true);
+    expect(engine.snapshot().unheard).toBe(false);
+  });
+
+  it('try again (resume) reopens the mic on the same line; a word heard lets the run go on', () => {
+    toActor();
+    engine.skip();
+    const end = ports.now() + 0.4; ports.tick(0.4); fire(end);
+    engine.skip();
+    const opens = (ports.mic.open as ReturnType<typeof vi.fn>).mock.calls.length;
+    engine.resume();
+    expect(ports.journal.emit).toHaveBeenCalledWith('resumed', 4, expect.any(Number), { reason: 'try_again' });
+    const s = engine.snapshot();
+    expect(s.stalled).toBe(false);
+    expect(s.state).toBe('actor');
+    expect(s.lineIndex).toBe(4);
+    expect(ports.mic.open).toHaveBeenCalledTimes(opens + 1);
+    engine.delta('go');
+    expect(engine.snapshot().state).toBe('ended');
+  });
+
+  it('a heard line between two silent ones resets the count', () => {
+    const lines = [L(0, 'ANNA', 'One.'), L(1, 'ANNA', 'Two.'), L(2, 'ANNA', 'Three.'), L(3, 'ANNA', 'Four.')];
+    const e = new Engine(buildScript(lines, 'ANNA'), ports, { unheardAfterS: 6 });
+    e.begin();
+    e.skip();
+    e.delta('two');
+    expect(e.snapshot().lineIndex).toBe(2);
+    e.skip();
+    expect(e.snapshot().lineIndex).toBe(3);
+    e.skip();
+    expect(e.snapshot().stalled).toBe(true);
   });
 
   it('without the option nothing goes unheard and deafen refuses', () => {
@@ -497,5 +569,7 @@ describe('Engine: an unheard line (the guided scene)', () => {
     ports.tick(60); fire(ports.now());
     expect(plain.snapshot().unheard).toBe(false);
     expect(plain.deafen()).toBe(false);
+    plain.skip(); plain.skip(); // an actor skipping on purpose is never stopped
+    expect(plain.snapshot().stalled).toBe(false);
   });
 });

@@ -109,12 +109,15 @@ def _actor_line_indexes(db: Session, scene_id: int, character: str) -> set[int]:
 
 
 def is_fully_read(db: Session, run_id: int) -> bool:
-    """Completed, and every one of the actor's lines has an actor_line_read.
+    """Completed, every one of the actor's lines has an actor_line_read, and
+    the run was SPOKEN (services/rehearsal/spoken: at least half the actor's
+    lines heard, not skipped through on a dead mic).
 
     The journal is client-written, so `completed` on its own is one forged
-    POST. is_finished stays the word for resume and the sessions list; this is
-    the word for anything that grants something (the trial rule). A part with
-    no lines in its scene is never fully read: there is nothing to have read.
+    POST. is_finished stays the word for resume and the sessions list ("reached
+    the end"); this is the word for anything that grants something (the trial
+    rule). A part with no lines in its scene is never fully read: there is
+    nothing to have read.
     """
     run = db.get(RehearsalRun, run_id)
     if run is None or not is_finished(db, run_id):
@@ -122,13 +125,14 @@ def is_fully_read(db: Session, run_id: int) -> bool:
     own = _actor_line_indexes(db, run.scene_id, run.character or "")
     if not own:
         return False
-    read = {
-        int(i) for (i,) in db.query(RehearsalEvent.line_index)
+    reads = [
+        (int(i), p) for (i, p) in db.query(RehearsalEvent.line_index, RehearsalEvent.payload)
         .filter(RehearsalEvent.run_id == run_id, RehearsalEvent.type == "actor_line_read",
                 RehearsalEvent.line_index.isnot(None))
-        .distinct()
-    }
-    return own <= read
+    ]
+    from app.services.rehearsal.spoken import spoken
+
+    return own <= {i for i, _ in reads} and spoken(reads, own)
 
 
 def user_has_finished_a_scene(db: Session, user_id: int) -> bool:

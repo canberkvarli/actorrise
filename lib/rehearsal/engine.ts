@@ -65,6 +65,12 @@ export interface Snapshot {
   unheard: boolean;
   /** No transcriber for the rest of the run: every actor line is read, then skipped on. */
   deaf: boolean;
+  /**
+   * The mic heard nothing on this actor line and the one before it: the run is
+   * paused on this line until the actor tries the mic again (`resume`) or
+   * chooses to read without it (`withoutMic`). Only with `unheardAfterS` set.
+   */
+  stalled: boolean;
 }
 
 export interface EngineOptions {
@@ -76,6 +82,14 @@ export interface EngineOptions {
    */
   unheardAfterS?: number;
 }
+
+/**
+ * Actor lines in a row the mic heard nothing on before the run stops on the
+ * next one. One missed line is a skip; two is a mic that is not working. Five
+ * of the ten guided runs of "A fight" that reached the end from 2026-11-03 to
+ * 2026-11-06 had nothing heard on any line: all eight skipped in 4 to 12 s.
+ */
+export const MISSED_BEFORE_STALL = 2;
 
 export class Engine {
   private state: EngineState = 'ready';
@@ -103,6 +117,9 @@ export class Engine {
   private again = 0; // "say it again" on this turn
   private lastHeard = 0; // audio clock: the mic opening, or the last word since
   private deaf = false;
+  private missed = 0; // actor lines in a row finished with not one word matched
+  private stalled = false;
+  private withoutMicChosen = false; // the actor chose to read on with no mic: never stalled again
 
   constructor(private script: Script, private ports: EnginePorts, private opts: EngineOptions = {}) {}
 
@@ -114,7 +131,7 @@ export class Engine {
     return {
       state: this.state, actor: this.script.actor, turnIndex: this.turnIndex, lineIndex,
       read: this.read, sounding: this.sounding, heard: this.heard, calls: this.calls.size,
-      unheard: this.unheard, deaf: this.deaf,
+      unheard: this.unheard, deaf: this.deaf, stalled: this.stalled,
     };
   }
 
@@ -149,7 +166,8 @@ export class Engine {
   /** The same line again, at now: an actor line from its first word, a beat from the line it was on. */
   resume() {
     if (this.state !== 'paused') return;
-    this.ports.journal.emit('resumed', this.snapshot().lineIndex, this.atMs());
+    this.ports.journal.emit('resumed', this.snapshot().lineIndex, this.atMs(), this.stalled ? { reason: 'try_again' } : undefined);
+    this.stalled = false;
     if (this.resumeFrom < 0) { this.enter(this.turnIndex + 1); return; } // the beat had finished
     const turn = this.script.turns[this.turnIndex];
     this.clearRead();
@@ -161,7 +179,13 @@ export class Engine {
 
   /** The actor's line: read as skipped. A partner line: on to the line after it, or the end. */
   skip() {
-    if (this.state === 'actor') { this.finishActorTurn('skipped'); return; }
+    if (this.state === 'actor') {
+      // Nothing heard on the line before and nothing on this one: a skip here
+      // would carry a dead mic through the scene. Stop instead.
+      if (this.shouldStall()) { this.stall(); return; }
+      this.finishActorTurn('skipped');
+      return;
+    }
     if (this.state !== 'partner') return;
     const next = this.snapshot().lineIndex + 1;
     if (this.script.turnOfLine[next] === undefined) { this.silence(); this.enter(this.script.turns.length); return; }
@@ -216,9 +240,36 @@ export class Engine {
     if (this.opts.unheardAfterS === undefined) return false;
     this.deaf = true;
     this.ports.mic.close();
-    if (this.state === 'actor') { this.unheard = true; this.unheardCount++; }
+    if (this.state === 'actor') { this.unheard = true; this.unheardCount++; if (this.shouldStall()) { this.stall(); return true; } }
     this.changed();
     return true;
+  }
+
+  /**
+   * From the stall: go on with no mic, each of the actor's lines shown with
+   * "next". Journalled as a `resumed` with `without_mic`; the lines read after
+   * it carry `deaf: true`, so they never count as spoken.
+   */
+  withoutMic() {
+    if (!this.stalled || this.state !== 'paused') return;
+    this.ports.journal.emit('resumed', this.snapshot().lineIndex, this.atMs(), { reason: 'without_mic' });
+    this.stalled = false;
+    this.withoutMicChosen = true;
+    this.deaf = true;
+    this.clearRead();
+    this.openMic(this.script.turns[this.turnIndex] as ActorTurn);
+    this.changed();
+  }
+
+  /**
+   * The transcriber is back (a live session reopened after it failed): the
+   * actor's lines are listened for again. Only before the actor chose to read
+   * without the mic.
+   */
+  hear() {
+    if (!this.deaf || this.withoutMicChosen) return;
+    this.deaf = false;
+    this.unheard = false;
   }
 
   /** `reason` lands in the event's payload: stt_failed, left, unmounted... */
@@ -304,6 +355,8 @@ export class Engine {
     if (turn.kind === 'partner') scheduled = this.startBeat(turn, position); else this.openMic(turn);
     finished?.(scheduled);
     this.ports.journal.emit('line_reached', this.sounding ?? this.lineOfTurn(t), this.atMs());
+    // No transcriber, and nothing heard on the line before: stop here, after the journal has the line.
+    if (turn.kind === 'actor' && this.deaf && this.shouldStall()) { this.stall(); return; }
     this.changed();
   }
 
@@ -337,8 +390,26 @@ export class Engine {
       if (this.lastHeard > from) { this.armUnheard(this.lastHeard); return; }
       this.unheard = true;
       this.unheardCount++;
+      if (this.shouldStall()) { this.stall(); return; }
       this.changed();
     }));
+  }
+
+  /** On an actor line with nothing heard yet, after MISSED_BEFORE_STALL - 1 such lines. */
+  private shouldStall(): boolean {
+    return this.opts.unheardAfterS !== undefined && !this.withoutMicChosen && this.state === 'actor'
+      && this.read.matched.size === 0 && this.missed >= MISSED_BEFORE_STALL - 1;
+  }
+
+  /** Paused on this line, mic off, `paused` journalled with reason `deaf`. */
+  private stall() {
+    this.silence();
+    this.resumeFrom = 0;
+    this.state = 'paused';
+    this.stalled = true;
+    this.unheard = false; // the stop panel takes the line's place
+    this.ports.journal.emit('paused', this.snapshot().lineIndex, this.atMs(), { reason: 'deaf', missed: this.missed, deaf: this.deaf });
+    this.changed();
   }
 
   /** Send turn `t`'s keywords, once: the beat before it usually already has. */
@@ -386,6 +457,7 @@ export class Engine {
     this.heard.set(turn.lineIndex, new Set(this.read.matched));
     const marks = this.timeline, read = this.read, calls = this.calls.size;
     const unheardCount = this.unheardCount, again = this.again;
+    this.missed = read.matched.size === 0 ? this.missed + 1 : 0;
     // The next beat is scheduled at now by enter(), in this same call. The mark
     // is set only once play() has taken its first line: refused, it stays unset.
     this.enter(this.turnIndex + 1, (scheduled) => {
