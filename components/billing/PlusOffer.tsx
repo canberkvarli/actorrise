@@ -34,6 +34,8 @@ interface PlusOfferProps {
   /** The quiet way out. Left off on an inline wall, which has nothing to close. */
   onDismiss?: () => void;
   dismissLabel?: string;
+  /** Told when either price link is tapped, so a host can tell a click from a dismissal. */
+  onCtaClick?: () => void;
 }
 
 /**
@@ -47,7 +49,7 @@ interface PlusOfferProps {
  *
  * Carries no theatre tokens of its own: every host already binds them.
  */
-export function PlusOffer({ feature, lead, onDismiss, dismissLabel }: PlusOfferProps) {
+export function PlusOffer({ feature, lead, onDismiss, dismissLabel, onCtaClick }: PlusOfferProps) {
   const { subscription } = useSubscription();
   const tier = subscription?.tier_name ?? "free";
   const words = useTrialText();
@@ -114,14 +116,20 @@ export function PlusOffer({ feature, lead, onDismiss, dismissLabel }: PlusOfferP
         <Link
           href={offer.href}
           className="t-wall__cta"
-          onClick={() => trackPaywallCtaClicked(feature, "wall", tier, "annual")}
+          onClick={() => {
+            onCtaClick?.();
+            trackPaywallCtaClicked(feature, "wall", tier, "annual");
+          }}
         >
           {offer.cta}
         </Link>
         <Link
           href={offer.monthlyHref}
           className="t-wall__quiet"
-          onClick={() => trackPaywallCtaClicked(feature, "wall", tier, "monthly")}
+          onClick={() => {
+            onCtaClick?.();
+            trackPaywallCtaClicked(feature, "wall", tier, "monthly");
+          }}
         >
           {offer.monthlyLabel}
         </Link>

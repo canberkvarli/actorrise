@@ -338,6 +338,25 @@ export function trackTrialOfferDismissed(params: TrialOfferDismissedParams) {
 }
 
 /** The click on a price's own button. begin_checkout is a page later and can be lost. */
+/**
+ * A hard wall closed without a click. Until 2026-11-07 only the soft ask sent
+ * paywall_dismissed, so a wall shown 17 times to 7 people with no click said
+ * nothing about why: closed at once (never read it) or read and left.
+ * `how`: not_now (the quiet button) or closed (X, Escape, outside tap).
+ */
+export function trackWallDismissed(
+  gate: string,
+  tier: string,
+  how: "not_now" | "closed",
+  seconds: number,
+) {
+  trackEvent("paywall_dismissed", {
+    ...paywallProps(gate, "wall", tier, here()),
+    how,
+    seconds,
+  });
+}
+
 export function trackPaywallCtaClicked(
   gate: string,
   kind: PaywallKind,

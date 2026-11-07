@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { PlusOffer } from "@/components/billing/PlusOffer";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
-import { trackUpgradeModalViewed } from "@/lib/analytics";
+import { trackUpgradeModalViewed, trackWallDismissed } from "@/lib/analytics";
 import type { WallKind } from "@/lib/paywall/offer";
 import { useT } from "@/lib/i18n";
 
@@ -58,10 +58,26 @@ export function MonologuePaywallModal({
   const words = useTrialWords();
   const t = useT();
 
+  // When it opened, so a close can say how long the wall was read.
+  const openedAt = useRef<number | null>(null);
+  // A CTA click navigates away; that is not a dismissal.
+  const clicked = useRef(false);
+
   useEffect(() => {
     if (!open) return;
+    openedAt.current = Date.now();
+    clicked.current = false;
     trackUpgradeModalViewed({ feature, tier_current: currentTier });
   }, [open, feature, currentTier]);
+
+  const close = (how: "not_now" | "closed") => {
+    if (openedAt.current !== null && !clicked.current) {
+      const seconds = Math.round((Date.now() - openedAt.current) / 1000);
+      trackWallDismissed(feature, currentTier, how, seconds);
+    }
+    openedAt.current = null;
+    onOpenChange(false);
+  };
 
   // After a taste (or the reverse trial) the first thing to say is what they
   // had. A caller's own title is about a feature; the taste outranks it only
@@ -72,7 +88,10 @@ export function MonologuePaywallModal({
     description ?? (words.tasted ? words.overBody : t("appMonologuePaywall.body"));
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => (next ? onOpenChange(true) : close("closed"))}
+    >
       {/* theatre-tokens and the faces ride on the dialog itself: Radix portals
           to document.body, so it lands outside every scoped wrapper and the
           --t-* vars would resolve to nothing. */}
@@ -86,7 +105,10 @@ export function MonologuePaywallModal({
         <PlusOffer
           feature={feature}
           lead={lead}
-          onDismiss={() => onOpenChange(false)}
+          onDismiss={() => close("not_now")}
+          onCtaClick={() => {
+            clicked.current = true;
+          }}
           dismissLabel={quietLabel ?? t("appMonologueWall.notNow")}
         />
       </DialogContent>
