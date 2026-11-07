@@ -219,3 +219,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** studio teacher, class link sent 2026-10-18, nobody joined yet
 **They said:** "Thank you. I will use it today. And again just to be clear two person “scenes” are not in the database, just monologues?"
 **Heard as:** could not find the feature (scenes come from an uploaded script in ScenePartner, there is no scene library to browse)
+
+## 2026-11-07
+
+**Replying to:** day10 (second reply on the thread)
+**Account:** signed up about 2026-10-24, free
+**They said:** "I'm particularly interested in contemporary comedic monologues with natural dialogue and interesting subtext. Could you let me know what you currently have in your library that might be suitable?"
+**Heard as:** content gap, contemporary comedy for young women (college audition prep)
