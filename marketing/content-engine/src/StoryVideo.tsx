@@ -85,9 +85,9 @@ type Email = {
 type Lobby = { type: "lobby"; seconds: number; line: string; accent: string; cue?: string; page: string; bubble: string; sign?: string; count?: number };
 /** The panel from the actor's side: three tired faces, then one line lands and they wake up. */
 type Panel = { type: "panel"; seconds: number; line: string; accent: string; cue?: string; quote: string; wakeAt?: number };
-export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | End;
+export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
-export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive"; drop?: string | number; volume?: number; seed?: string };
+export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
 export type StoryVoice = { lines: { text: string; at: number; audio?: string; dur?: number }[]; volume?: number };
 export type StorySpec = { id: string; scenes: StoryScene[]; music?: StoryMusic; look?: StoryLook; voice?: StoryVoice };
@@ -1453,6 +1453,249 @@ const PanelScene: React.FC<{ s: Panel }> = ({ s }) => {
   );
 };
 
+// ---------- sides at noon: an envelope opens and the pages fly out (2026-11-10) ----------
+/** A drawn envelope with a 12:00 postmark; the flap lifts and the sides fly out to the right. */
+type Inbox = { type: "inbox"; seconds: number; line: string; accent: string; cue?: string; time?: string; pages?: number };
+const FlyingPage: React.FC<{ at: number; k: number; x0: number; y0: number; x1: number; y1: number; label: string }> = ({ at, k, x0, y0, x1, y1, label }) => {
+  const f = useCurrentFrame();
+  const p = prog(f, at, at + 26);
+  if (f < at) return null;
+  // a soft arc: up first, then away
+  const x = x0 + (x1 - x0) * p;
+  const y = y0 + (y1 - y0) * p - Math.sin(p * Math.PI) * (260 + k * 60);
+  const rot = (k % 2 ? 1 : -1) * (8 + 30 * p) + p * 20;
+  const s = 0.6 + 0.4 * Math.min(1, p * 3);
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`}>
+      <rect x={-80} y={-104} width={160} height={208} rx={6} fill="#ffffff" stroke={C.ink} strokeWidth={5} />
+      <text x={0} y={-62} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={22} letterSpacing={3} fill={C.ink}>{label}</text>
+      <path d="M-52 -30 L 52 -30 M-52 -4 L 40 -4 M-52 22 L 50 22 M-52 48 L 30 48" stroke={C.inkSoft} strokeWidth={5} strokeLinecap="round" />
+      <path d="M-52 74 L 20 74" stroke={C.orange} strokeWidth={6} strokeLinecap="round" />
+    </g>
+  );
+};
+const InboxScene: React.FC<{ s: Inbox }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const n = s.pages ?? 3;
+  const L = 200, R = 880, Tt = 720, B = 1120;
+  const flapOpen = prog(f, 24, 36);
+  const stamp = spring({ frame: f - 12, fps, config: { damping: 10, mass: 0.6 } });
+  const flyAt = (k: number) => 36 + k * 9;
+  // the envelope gives a little hop each time a page leaves
+  const hop = Array.from({ length: n }, (_, k) => Math.max(0, 1 - Math.abs(f - flyAt(k)) / 4)).reduce((a, b) => Math.max(a, b), 0);
+  const flapTip = Tt + (1 - flapOpen) * 210 - flapOpen * 150;
+  return (
+    <AbsoluteFill>
+      <Sfx name="pop" at={4} vol={0.5} />
+      <Sfx name="thud" at={13} vol={0.55} />
+      <Sfx name="cine/click" at={26} vol={0.5} />
+      {Array.from({ length: n }, (_, k) => (
+        <Sfx key={k} name={k === n - 1 ? "cine/toing" : "cine/plink"} at={flyAt(k)} vol={0.45} />
+      ))}
+      {s.cue && <Sfx name="typing" at={74} frames={typeFrames(s.cue)} vol={0.4} />}
+      <Glow glow={0.35} y="48%" />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <g transform={`translate(0 ${-hop * 14})`}>
+          {/* back of the envelope */}
+          <Ink d={`M${L} ${Tt} L ${R} ${Tt} L ${R} ${B} L ${L} ${B} Z`} start={0} dur={20} w={6} fill="#fbf7ef" />
+          {Array.from({ length: n }, (_, k) => (
+            <FlyingPage key={k} at={flyAt(k)} k={k} x0={540 - 40 + k * 40} y0={Tt + 60} x1={1260 + k * 80} y1={420 + k * 160} label={k === 0 ? "SIDES" : `P. ${k + 1}`} />
+          ))}
+          {/* the front pocket over the pages */}
+          <Ink d={`M${L} ${B} L 540 ${Tt + 210} L ${R} ${B}`} start={8} dur={14} w={5} />
+          <path d={`M${L + 3} ${B - 2} L 540 ${Tt + 214} L ${R - 3} ${B - 2} Z`} fill="#fbf7ef" opacity={prog(f, 14, 22)} />
+          <path d={`M${L} ${B} L 540 ${Tt + 210} L ${R} ${B}`} fill="none" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" opacity={prog(f, 20, 22)} />
+          {/* the flap lifts */}
+          <path d={`M${L} ${Tt} L 540 ${flapTip} L ${R} ${Tt} Z`} fill={flapOpen > 0.5 ? "#f3ecdf" : "#fbf7ef"} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" opacity={prog(f, 16, 22)} />
+        </g>
+        {/* the postmark: a clock at twelve */}
+        <g transform={`translate(${R - 110} ${Tt - 150}) rotate(-12) scale(${stamp})`} opacity={Math.min(1, stamp * 1.4)}>
+          <circle r={86} fill="none" stroke={C.orange} strokeWidth={6} />
+          <circle r={70} fill="none" stroke={C.orange} strokeWidth={3} strokeDasharray="6 8" />
+          <path d="M0 0 L 0 -48 M0 0 L 0 -34" stroke={C.orange} strokeWidth={8} strokeLinecap="round" />
+          <circle r={7} fill={C.orange} />
+          <text y={44} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={26} letterSpacing={2} fill={C.orange}>{s.time ?? "12:00"}</text>
+        </g>
+      </svg>
+      <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", paddingTop: 1220 }}>
+        <Rise at={50}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={112} />
+        </Rise>
+        <div style={{ height: 18 }} />
+        {s.cue && <Cue text={s.cue} color={C.orange} at={74} />}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+// ---------- bring them in: the pages land in the phone, the reader's line lights ----------
+type Bring = { type: "bring"; seconds: number; line: string; accent: string; cue?: string; label?: string; title?: string; partner?: string; you?: string; pages?: number };
+const BringScene: React.FC<{ s: Bring }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const n = s.pages ?? 3;
+  const X = 330, Y = 330, W = 420, H = 820;
+  const body = `M${X + 60} ${Y} L ${X + W - 60} ${Y} C ${X + W - 20} ${Y}, ${X + W} ${Y + 20}, ${X + W} ${Y + 60} L ${X + W} ${Y + H - 60} C ${X + W} ${Y + H - 20}, ${X + W - 20} ${Y + H}, ${X + W - 60} ${Y + H} L ${X + 60} ${Y + H} C ${X + 20} ${Y + H}, ${X} ${Y + H - 20}, ${X} ${Y + H - 60} L ${X} ${Y + 60} C ${X} ${Y + 20}, ${X + 20} ${Y}, ${X + 60} ${Y} Z`;
+  const landAt = (k: number) => 8 + k * 8 + 20;
+  const lastLand = landAt(n - 1);
+  const screen = prog(f, 4, 14);
+  const flash = Array.from({ length: n }, (_, k) => Math.max(0, 1 - Math.abs(f - landAt(k)) / 5)).reduce((a, b) => Math.max(a, b), 0);
+  const rows = prog(f, lastLand + 2, lastLand + 14);
+  const lit = prog(f, lastLand + 18, lastLand + 26);
+  const under = prog(f, lastLand + 34, lastLand + 46);
+  // the reader's little sound wave while its line is lit
+  const wave = (k: number) => 10 + Math.abs(Math.sin((f + k * 5) / 3)) * 22 * lit * (1 - under * 0.7);
+  const sx = X + 18, sw = W - 36;
+  return (
+    <AbsoluteFill>
+      {Array.from({ length: n }, (_, k) => (
+        <Sfx key={k} name={k % 2 ? "boop_hi" : "pop"} at={landAt(k)} vol={0.55} />
+      ))}
+      <Sfx name="cine/ping" at={lastLand + 18} vol={0.5} />
+      <Sfx name="pencil_short" at={lastLand + 34} vol={0.4} />
+      <Sfx name="cine/tap" at={lastLand + 46} vol={0.4} />
+      {s.cue && <Sfx name="typing" at={lastLand + 50} frames={typeFrames(s.cue)} vol={0.4} />}
+      <Glow glow={0.5} y="38%" />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Ink d={body} start={0} dur={16} w={7} fill={PAPER_FILL} />
+      </svg>
+      <div style={{ position: "absolute", left: sx, top: Y + 18, width: sw, height: H - 36, borderRadius: 46, background: APP.bg, opacity: screen, overflow: "hidden" }}>
+        <div style={{ position: "absolute", left: sw / 2 - 50, top: 14, width: 100, height: 28, borderRadius: 14, background: "#000" }} />
+        <div style={{ position: "absolute", inset: 0, background: `rgba(242,207,58,${flash * 0.1})` }} />
+        <div style={{ position: "absolute", left: 34, right: 34, top: 80, opacity: rows }}>
+          <div style={{ fontFamily: F_PAPER.sans, fontWeight: 600, fontSize: 18, letterSpacing: 3, color: APP.dim }}>{s.label ?? "YOUR SIDES"}</div>
+          <div style={{ fontFamily: F_PAPER.serifI, fontStyle: "italic", fontSize: 34, color: APP.cream, marginTop: 6, whiteSpace: "nowrap" }}>{s.title ?? "Callback, six o'clock"}</div>
+          <div style={{ height: 1, background: APP.line, margin: "22px 0 28px" }} />
+          {/* the reader's line, lit */}
+          <div style={{ position: "relative", borderRadius: 14, padding: "16px 16px", background: `rgba(242,207,58,${0.16 * lit})`, border: `2px solid rgba(242,207,58,${0.7 * lit})` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ fontFamily: F_PAPER.sans, fontWeight: 600, fontSize: 18, letterSpacing: 3, color: lit > 0.5 ? APP.yellow : APP.dim }}>{s.partner ?? "READER"}</div>
+              <div style={{ display: "flex", gap: 4, alignItems: "center", height: 34 }}>
+                {[0, 1, 2, 3, 4].map((k) => (
+                  <div key={k} style={{ width: 5, height: wave(k), borderRadius: 3, background: APP.yellow, opacity: lit }} />
+                ))}
+              </div>
+            </div>
+            {[0.92, 0.78, 0.6].map((w, k) => (
+              <div key={k} style={{ height: 10, width: `${w * 100}%`, borderRadius: 5, background: lit > 0.5 ? "rgba(244,234,217,0.85)" : APP.line, marginTop: 14 }} />
+            ))}
+          </div>
+          {/* your line, the cue, underlined */}
+          <div style={{ padding: "26px 16px 0" }}>
+            <div style={{ fontFamily: F_PAPER.sans, fontWeight: 600, fontSize: 18, letterSpacing: 3, color: APP.cream }}>{s.you ?? "YOU"}</div>
+            {[0.86, 0.52].map((w, k) => (
+              <div key={k} style={{ position: "relative", height: 10, width: `${w * 100}%`, borderRadius: 5, background: APP.line, marginTop: 14 }}>
+                {k === 0 && <div style={{ position: "absolute", left: 0, top: 18, height: 5, width: `${under * 100}%`, borderRadius: 3, background: C.orange }} />}
+              </div>
+            ))}
+          </div>
+          <div style={{ padding: "30px 16px 0", opacity: 0.6 }}>
+            <div style={{ fontFamily: F_PAPER.sans, fontWeight: 600, fontSize: 18, letterSpacing: 3, color: APP.dim }}>{s.partner ?? "READER"}</div>
+            {[0.7, 0.9].map((w, k) => (
+              <div key={k} style={{ height: 10, width: `${w * 100}%`, borderRadius: 5, background: APP.line, marginTop: 14 }} />
+            ))}
+          </div>
+        </div>
+      </div>
+      {/* the pages arrive from the left and slip into the screen */}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {Array.from({ length: n }, (_, k) => {
+          const at = 8 + k * 8;
+          const p = prog(f, at, landAt(k));
+          if (f < at || p >= 1) return null;
+          const x = -200 + (540 + 200) * p;
+          const y = 560 + k * 120 - Math.sin(p * Math.PI) * 220;
+          const sc = 1 - 0.75 * p;
+          return (
+            <g key={k} transform={`translate(${x} ${y}) rotate(${(1 - p) * (k % 2 ? 40 : -30)}) scale(${sc})`} opacity={1 - prog(f, landAt(k) - 4, landAt(k))}>
+              <rect x={-80} y={-104} width={160} height={208} rx={6} fill="#ffffff" stroke={C.ink} strokeWidth={5} />
+              <path d="M-52 -30 L 52 -30 M-52 -4 L 40 -4 M-52 22 L 50 22 M-52 48 L 30 48" stroke={C.inkSoft} strokeWidth={5} strokeLinecap="round" />
+            </g>
+          );
+        })}
+      </svg>
+      <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", paddingTop: 1230 }}>
+        <Rise at={lastLand + 20}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={104} />
+        </Rise>
+        <div style={{ height: 18 }} />
+        {s.cue && <Cue text={s.cue} color={C.orange} at={lastLand + 50} />}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+// ---------- the afternoon: a clock spins noon to six, a run ticks off each time round ----------
+type Runs = { type: "runs"; seconds: number; line: string; accent: string; cue?: string; runs?: number; from?: number; to?: number };
+const RunsScene: React.FC<{ s: Runs }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const runs = s.runs ?? 4;
+  const from = s.from ?? 12, to = s.to ?? 18; // hours, 24h
+  const cx = 540, cy = 720, r = 290;
+  const spinA = 16, spinB = 16 + 92;
+  const t = prog(f, spinA, spinB);
+  const hours = from + (to - from) * t;
+  const hourDeg = (hours % 12) * 30;
+  const minDeg = (hours - from) * 360;
+  const runAt = (k: number) => Math.round(spinA + ((k + 1) / runs) * (spinB - spinA));
+  const settle = spring({ frame: f - spinB, fps, config: { damping: 8, mass: 0.5 } });
+  const wob = f > spinB ? (1 - settle) * 6 : 0;
+  const ticks = Array.from({ length: 12 }, (_, k) => {
+    const a = (k * 30 * Math.PI) / 180;
+    const r0 = k % 3 === 0 ? r - 46 : r - 30;
+    return `M${cx + Math.sin(a) * r0} ${cy - Math.cos(a) * r0} L ${cx + Math.sin(a) * (r - 12)} ${cy - Math.cos(a) * (r - 12)}`;
+  }).join(" ");
+  const face = `M${cx} ${cy - r} C ${cx + r * 0.56} ${cy - r - 2}, ${cx + r + 2} ${cy - r * 0.56}, ${cx + r} ${cy} C ${cx + r - 2} ${cy + r * 0.56}, ${cx + r * 0.56} ${cy + r + 2}, ${cx} ${cy + r} C ${cx - r * 0.56} ${cy + r - 2}, ${cx - r - 2} ${cy + r * 0.56}, ${cx - r} ${cy} C ${cx - r + 2} ${cy - r * 0.56}, ${cx - r * 0.56} ${cy - r - 2}, ${cx} ${cy - r} Z`;
+  const tallyX = (k: number) => 540 - ((runs - 1) * 92) / 2 + k * 92;
+  const hand = (deg: number, len: number, w: number, col: string) => (
+    <path d={`M${cx} ${cy + 24} L ${cx} ${cy - len}`} stroke={col} strokeWidth={w} strokeLinecap="round" transform={`rotate(${deg + wob} ${cx} ${cy})`} />
+  );
+  return (
+    <AbsoluteFill>
+      <Sfx name="cine/tick" at={spinA} vol={0.35} frames={spinB - spinA} />
+      {Array.from({ length: runs }, (_, k) => (
+        <Sfx key={k} name={k === runs - 1 ? "cine/toing" : "cine/ping"} at={runAt(k)} vol={0.45} />
+      ))}
+      {s.cue && <Sfx name="typing" at={spinB + 22} frames={typeFrames(s.cue)} vol={0.4} />}
+      <Glow glow={0.4} y="38%" />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the clock on the wall: a nail, a face, the hands */}
+        <Ink d={`M${cx} ${cy - r - 70} L ${cx - 60} ${cy - r + 6} M${cx} ${cy - r - 70} L ${cx + 60} ${cy - r + 6}`} start={0} dur={10} w={4} color={C.inkSoft} />
+        <circle cx={cx} cy={cy - r - 70} r={9} fill={C.ink} opacity={prog(f, 2, 6)} />
+        <Ink d={face} start={2} dur={20} w={7} fill="#fbf7ef" />
+        <Ink d={ticks} start={10} dur={12} w={6} />
+        {/* the afternoon sweeps round in orange behind the hands */}
+        {t > 0 && (() => {
+          const a0 = ((from % 12) * 30 * Math.PI) / 180, a1 = (hourDeg * Math.PI) / 180 + (hours >= 18 ? 0 : 0);
+          const rr = r - 70;
+          const large = hourDeg - (from % 12) * 30 > 180 ? 1 : 0;
+          const x0 = cx + Math.sin(a0) * rr, y0 = cy - Math.cos(a0) * rr;
+          const x1 = cx + Math.sin(a1) * rr, y1 = cy - Math.cos(a1) * rr;
+          return <path d={`M${cx} ${cy} L ${x0} ${y0} A ${rr} ${rr} 0 ${large} 1 ${x1} ${y1} Z`} fill="rgba(232,121,43,0.16)" />;
+        })()}
+        <g opacity={prog(f, 14, 20)}>
+          {hand(minDeg, r - 64, 8, C.ink)}
+          {hand(hourDeg, r - 130, 13, C.orange)}
+          <circle cx={cx} cy={cy} r={16} fill={C.ink} />
+        </g>
+        {/* one tally mark per run with the reader */}
+        {Array.from({ length: runs }, (_, k) => (
+          <Ink key={k} d={`M${tallyX(k) - 6} 1110 C ${tallyX(k) - 2} 1150, ${tallyX(k) + 4} 1190, ${tallyX(k) + 6} 1230`} start={runAt(k) - 4} dur={6} w={12} color={k === runs - 1 ? C.orange : C.ink} />
+        ))}
+      </svg>
+      <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", paddingTop: 1290 }}>
+        <Rise at={spinB + 6}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={104} />
+        </Rise>
+        <div style={{ height: 18 }} />
+        {s.cue && <Cue text={s.cue} color={C.orange} at={spinB + 22} />}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 /** Pencil speed streaks that sweep across while the camera moves. */
 const Streaks: React.FC<{ seed: number }> = ({ seed }) => {
   const f = useCurrentFrame();
@@ -1568,6 +1811,9 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "stage" ? <StageScene s={sc} /> :
       sc.type === "lobby" ? <LobbyScene s={sc} /> :
       sc.type === "panel" ? <PanelScene s={sc} /> :
+      sc.type === "inbox" ? <InboxScene s={sc} /> :
+      sc.type === "bring" ? <BringScene s={sc} /> :
+      sc.type === "runs" ? <RunsScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

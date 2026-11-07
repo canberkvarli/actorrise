@@ -1,0 +1,369 @@
+{
+  "id": "2026-11-10-sides-at-noon",
+  "look": "paper",
+  "music": {
+    "style": "bed",
+    "drop": "end",
+    "volume": 0.14
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "Twelve o'clock. The sides hit your inbox, and the callback is at six.",
+        "at": 0.3,
+        "say": "[urgent] Twelve o'clock. [amused] The sides hit your inbox, and the callback is at six.",
+        "audio": "voice/2026-11-10-sides-at-noon/00.mp3",
+        "words": [
+          {
+            "w": "Twelve",
+            "s": 0.126,
+            "e": 0.16
+          },
+          {
+            "w": "o'clock.",
+            "s": 0.24,
+            "e": 1.16
+          },
+          {
+            "w": "The",
+            "s": 1.646,
+            "e": 1.766
+          },
+          {
+            "w": "sides",
+            "s": 1.833,
+            "e": 2.166
+          },
+          {
+            "w": "hit",
+            "s": 2.206,
+            "e": 2.326
+          },
+          {
+            "w": "your",
+            "s": 2.358,
+            "e": 2.486
+          },
+          {
+            "w": "inbox,",
+            "s": 2.579,
+            "e": 3.286
+          },
+          {
+            "w": "and",
+            "s": 3.326,
+            "e": 3.446
+          },
+          {
+            "w": "the",
+            "s": 3.466,
+            "e": 3.526
+          },
+          {
+            "w": "callback",
+            "s": 3.579,
+            "e": 4.006
+          },
+          {
+            "w": "is",
+            "s": 4.059,
+            "e": 4.166
+          },
+          {
+            "w": "at",
+            "s": 4.193,
+            "e": 4.246
+          },
+          {
+            "w": "six.",
+            "s": 4.386,
+            "e": 4.806
+          }
+        ],
+        "dur": 4.956
+      },
+      {
+        "text": "You open them straight in Ghost Light, and it reads the other part out loud.",
+        "at": 5.6,
+        "say": "[conspiratorial] You open them straight in Ghost Light, [warmly] and it reads the other part out loud.",
+        "audio": "voice/2026-11-10-sides-at-noon/01.mp3",
+        "words": [
+          {
+            "w": "You",
+            "s": 0.07,
+            "e": 0.08
+          },
+          {
+            "w": "open",
+            "s": 0.144,
+            "e": 0.4
+          },
+          {
+            "w": "them",
+            "s": 0.432,
+            "e": 0.56
+          },
+          {
+            "w": "straight",
+            "s": 0.604,
+            "e": 0.96
+          },
+          {
+            "w": "in",
+            "s": 1.013,
+            "e": 1.12
+          },
+          {
+            "w": "Ghost",
+            "s": 1.173,
+            "e": 1.44
+          },
+          {
+            "w": "Light,",
+            "s": 1.493,
+            "e": 2.16
+          },
+          {
+            "w": "and",
+            "s": 2.305,
+            "e": 2.32
+          },
+          {
+            "w": "it",
+            "s": 2.347,
+            "e": 2.4
+          },
+          {
+            "w": "reads",
+            "s": 2.467,
+            "e": 2.8
+          },
+          {
+            "w": "the",
+            "s": 2.82,
+            "e": 2.88
+          },
+          {
+            "w": "other",
+            "s": 2.92,
+            "e": 3.12
+          },
+          {
+            "w": "part",
+            "s": 3.184,
+            "e": 3.44
+          },
+          {
+            "w": "out",
+            "s": 3.5,
+            "e": 3.68
+          },
+          {
+            "w": "loud.",
+            "s": 3.76,
+            "e": 4.16
+          }
+        ],
+        "dur": 4.31
+      },
+      {
+        "text": "Once over lunch. Once on the bus. By six you've run it four times, and you're off book.",
+        "at": 10.5,
+        "say": "[playful] Once over lunch. Once on the bus. [delighted] By six you've run it four times, and you're off book.",
+        "audio": "voice/2026-11-10-sides-at-noon/02.mp3",
+        "words": [
+          {
+            "w": "Once",
+            "s": 0.202,
+            "e": 0.24
+          },
+          {
+            "w": "over",
+            "s": 0.272,
+            "e": 0.4
+          },
+          {
+            "w": "lunch.",
+            "s": 0.48,
+            "e": 1.28
+          },
+          {
+            "w": "Once",
+            "s": 1.36,
+            "e": 1.68
+          },
+          {
+            "w": "on",
+            "s": 1.707,
+            "e": 1.76
+          },
+          {
+            "w": "the",
+            "s": 1.78,
+            "e": 1.84
+          },
+          {
+            "w": "bus.",
+            "s": 1.96,
+            "e": 2.72
+          },
+          {
+            "w": "By",
+            "s": 3.253,
+            "e": 3.28
+          },
+          {
+            "w": "six",
+            "s": 3.38,
+            "e": 3.68
+          },
+          {
+            "w": "you've",
+            "s": 3.7,
+            "e": 3.84
+          },
+          {
+            "w": "run",
+            "s": 3.88,
+            "e": 4.0
+          },
+          {
+            "w": "it",
+            "s": 4.053,
+            "e": 4.16
+          },
+          {
+            "w": "four",
+            "s": 4.224,
+            "e": 4.48
+          },
+          {
+            "w": "times,",
+            "s": 4.56,
+            "e": 5.12
+          },
+          {
+            "w": "and",
+            "s": 5.16,
+            "e": 5.28
+          },
+          {
+            "w": "you're",
+            "s": 5.3,
+            "e": 5.44
+          },
+          {
+            "w": "off",
+            "s": 5.48,
+            "e": 5.6
+          },
+          {
+            "w": "book.",
+            "s": 5.68,
+            "e": 6.08
+          }
+        ],
+        "dur": 6.23
+      },
+      {
+        "text": "Ghost Light. Built by a working actor.",
+        "at": 17.3,
+        "say": "[warm and confident] Ghost Light. Built by a working actor.",
+        "audio": "voice/2026-11-10-sides-at-noon/03.mp3",
+        "words": [
+          {
+            "w": "Ghost",
+            "s": 0.276,
+            "e": 0.32
+          },
+          {
+            "w": "Light.",
+            "s": 0.387,
+            "e": 1.2
+          },
+          {
+            "w": "Built",
+            "s": 1.28,
+            "e": 1.68
+          },
+          {
+            "w": "by",
+            "s": 1.76,
+            "e": 1.92
+          },
+          {
+            "w": "a",
+            "s": 2.04,
+            "e": 2.16
+          },
+          {
+            "w": "working",
+            "s": 2.19,
+            "e": 2.4
+          },
+          {
+            "w": "actor.",
+            "s": 2.467,
+            "e": 2.96
+          }
+        ],
+        "dur": 3.11
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "type": "inbox",
+      "seconds": 5.4,
+      "line": "Sides at noon.",
+      "accent": "noon.",
+      "cue": "(callback at six.)",
+      "time": "12:00",
+      "pages": 3
+    },
+    {
+      "type": "bring",
+      "seconds": 5.0,
+      "line": "Bring them in.",
+      "accent": "in.",
+      "cue": "(your line is the cue.)",
+      "label": "YOUR SIDES",
+      "title": "Callback, six o'clock",
+      "partner": "PARTNER",
+      "you": "YOU",
+      "pages": 3
+    },
+    {
+      "type": "runs",
+      "seconds": 6.6,
+      "line": "Noon to six.",
+      "accent": "six.",
+      "cue": "(four runs. off book.)",
+      "runs": 4,
+      "from": 12,
+      "to": 18
+    },
+    {
+      "type": "end",
+      "seconds": 3.6,
+      "brand": "Ghost Light",
+      "tagline": "(sides at noon. callback at six.)",
+      "action": "Free on the App Store",
+      "kicker": "(break a leg.)"
+    }
+  ],
+  "source": {
+    "feature": "your-script",
+    "app_check": "Ghost Light main: app/(tabs)/(scene)/rehearse/index.tsx has 'Add sides' in the Scene partner hub (own sides need an account); app.json registers PDF, Word and plain text as 'Sides' documents so a file from Mail opens in Ghost Light.",
+    "data": "No monologue, title or quote on screen: the sides are the actor's own, drawn as blank lines.",
+    "plan": "2026-11-10 (Callboard), series drawn-life",
+    "motifs": "envelope-noon-postmark,pages-fly-into-phone,clock-noon-to-six-tally"
+  },
+  "captions": {
+    "tiktok": "Sides at noon, callback at six. How many runs can you get in? #actorslife #audition #callback #actortok #actors",
+    "youtube_title": "Sides at noon. Callback at six. #shorts",
+    "youtube_description": "Open your sides in Ghost Light and it reads the other part out loud.\nBuilt by a working actor. Free on the App Store.\n#audition #actorslife #callback #actors",
+    "instagram": "Sides at noon. Callback at six.\n\nYou open them in Ghost Light and it reads the other part out loud. Once over lunch, once on the bus, four runs by six.\nBuilt by a working actor. Link in bio.\n\n#actorslife #audition #callback #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 15000
+}
