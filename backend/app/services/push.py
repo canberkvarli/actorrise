@@ -123,6 +123,12 @@ def run_tonight(db: Session, now: Optional[datetime] = None, send: bool = True) 
             continue
         if not send:
             continue
+        # One knock per actor, to the phone that registered last. Every fresh
+        # install (each TestFlight build, a reinstall) can leave its own token
+        # behind, and old tokens can still reach the same phone: sending to all
+        # of them was the same notification three times at once (2026-11-08).
+        newest = max(tokens, key=lambda t: t.updated_at or t.created_at or now)
+        tokens = [newest]
         messages = [{
             "to": t.token,
             "title": "Tonight's speech",

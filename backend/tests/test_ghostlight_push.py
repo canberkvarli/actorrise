@@ -72,6 +72,17 @@ class Tonight(Base):
         push.run_tonight(self.db, now=at_local(19) + timedelta(minutes=15))
         self.assertEqual(len(self.sent), 1)
 
+    def test_one_knock_however_many_tokens_the_phone_left_behind(self):
+        old = datetime.now(timezone.utc) - timedelta(days=3)
+        first = self.db.query(PushToken).first()
+        first.updated_at = old
+        self.db.add(PushToken(user_id=self.me.id, token="ExponentPushToken[old0000002]", tz=NY, updated_at=old - timedelta(days=1)))
+        self.db.add(PushToken(user_id=self.me.id, token="ExponentPushToken[new0000003]", tz=NY, updated_at=datetime.now(timezone.utc)))
+        self.db.commit()
+        stats = push.run_tonight(self.db, now=at_local(19))
+        self.assertEqual((stats["sent"], len(self.sent)), (1, 1))
+        self.assertEqual(self.sent[0]["to"], "ExponentPushToken[new0000003]")
+
     def test_not_when_already_in_the_work(self):
         day = at_local(19).astimezone(ZoneInfo(NY)).date()
         self.db.add(PracticeEntry(user_id=self.me.id, day=day, kind="class"))
