@@ -70,6 +70,34 @@ def _been_in_tonight(db: Session, user_id: int, start_utc: datetime, day) -> boo
     ).first() is not None
 
 
+#: Unanswered tonight knocks in a row before the knock goes quiet. The phone's own rule (nudges.ts).
+QUIET_AFTER = 5
+
+
+def _quiet(db: Session, user_id: int, zone) -> bool:
+    """The last five knocks went unanswered: nothing done in the app since the first of them.
+
+    Comes back by itself: one read, one practice entry or one answered pick
+    after that first knock and the next night knocks again.
+    """
+    days = [
+        d for (d,) in db.query(PushSend.day)
+        .filter(PushSend.user_id == user_id, PushSend.kind == KIND_TONIGHT)
+        .order_by(PushSend.day.desc())
+        .limit(QUIET_AFTER)
+        .all()
+    ]
+    if len(days) < QUIET_AFTER:
+        return False
+    first = days[-1]
+    since = datetime(first.year, first.month, first.day, tzinfo=zone).astimezone(timezone.utc).replace(tzinfo=None)
+    if db.query(PracticeEntry.id).filter(PracticeEntry.user_id == user_id, PracticeEntry.day >= first).first():
+        return False
+    if db.query(TonightPick.id).filter(TonightPick.user_id == user_id, TonightPick.day >= first, TonightPick.answer.isnot(None)).first():
+        return False
+    return db.query(MonologueView.id).filter(MonologueView.user_id == user_id, MonologueView.created_at >= since).first() is None
+
+
 def due_tonight(db: Session, now: Optional[datetime] = None) -> Iterable[tuple]:
     """(user_id, tokens, zone, local date) for every actor whose seven o'clock is now."""
     now = now or datetime.now(timezone.utc)
@@ -91,7 +119,7 @@ def run_tonight(db: Session, now: Optional[datetime] = None, send: bool = True) 
     from app.services.tonight import pick_for
 
     now = now or datetime.now(timezone.utc)
-    stats = {"due": 0, "skipped": 0, "sent": 0, "failed": 0}
+    stats = {"due": 0, "skipped": 0, "quiet": 0, "sent": 0, "failed": 0}
     for user_id, tokens, zone, day in due_tonight(db, now):
         stats["due"] += 1
         if db.query(PushSend.id).filter(PushSend.user_id == user_id, PushSend.kind == KIND_TONIGHT, PushSend.day == day).first():
@@ -99,6 +127,9 @@ def run_tonight(db: Session, now: Optional[datetime] = None, send: bool = True) 
         start = datetime(day.year, day.month, day.day, tzinfo=zone).astimezone(timezone.utc).replace(tzinfo=None)
         if _been_in_tonight(db, user_id, start, day):
             stats["skipped"] += 1
+            continue
+        if _quiet(db, user_id, zone):
+            stats["quiet"] += 1
             continue
         last = db.query(TonightPick.house).filter(TonightPick.user_id == user_id).order_by(TonightPick.day.desc()).first()
         house = last[0] if last else "stage"

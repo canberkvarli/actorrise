@@ -83,6 +83,28 @@ class Tonight(Base):
         self.assertEqual((stats["sent"], len(self.sent)), (1, 1))
         self.assertEqual(self.sent[0]["to"], "ExponentPushToken[new0000003]")
 
+    def test_quiet_after_five_unanswered_and_back_after_a_read(self):
+        today = at_local(19).astimezone(ZoneInfo(NY)).date()
+        for n in range(1, 6):
+            self.db.add(PushSend(user_id=self.me.id, kind=push.KIND_TONIGHT, day=today - timedelta(days=n)))
+        self.db.commit()
+        stats = push.run_tonight(self.db, now=at_local(19))
+        self.assertEqual((stats["quiet"], len(self.sent)), (1, 0))
+        # One read since the first of the five, and it knocks again.
+        m = self.db.query(Monologue).first()
+        self.db.add(MonologueView(monologue_id=m.id, user_id=self.me.id,
+                                  created_at=(at_local(19) - timedelta(days=2)).astimezone(timezone.utc).replace(tzinfo=None)))
+        self.db.commit()
+        stats = push.run_tonight(self.db, now=at_local(19))
+        self.assertEqual((stats["sent"], len(self.sent)), (1, 1))
+
+    def test_four_unanswered_still_knocks(self):
+        today = at_local(19).astimezone(ZoneInfo(NY)).date()
+        for n in range(1, 5):
+            self.db.add(PushSend(user_id=self.me.id, kind=push.KIND_TONIGHT, day=today - timedelta(days=n)))
+        self.db.commit()
+        self.assertEqual(push.run_tonight(self.db, now=at_local(19))["sent"], 1)
+
     def test_not_when_already_in_the_work(self):
         day = at_local(19).astimezone(ZoneInfo(NY)).date()
         self.db.add(PracticeEntry(user_id=self.me.id, day=day, kind="class"))
