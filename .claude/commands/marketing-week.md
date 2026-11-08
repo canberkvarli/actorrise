@@ -165,6 +165,13 @@ When all three are back:
 
 ## 3. The page for Canberk
 
+First, record that it ran, so the daily loop (which may run in the cloud, with no
+`outputs/marketing/`) can say when:
+
+```bash
+cd backend && uv run python scripts/loop_snapshot.py keep marketing_week "$WEEK"
+```
+
 Write `outputs/marketing/$WEEK/README.md` and end your reply with the same thing, as plain
 text with bold headings, NOT inside a code fence (a fenced block renders in the terminal's
 code colour, which Canberk could not read on his theme, 2026-10-01):

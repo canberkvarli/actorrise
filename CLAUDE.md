@@ -82,6 +82,9 @@ Two rules hold there:
 - **Yesterday is a table too.** `loop_snapshots` keeps each day's brief, money, RevenueCat,
   class-link joins and best move for 30 days (`scripts/loop_snapshot.py show|take|keep`), so
   "what moved" is a real comparison in the cloud. See `/conversion-loop` step 0b.
+- **"Is it in the library" works there too.** `scripts/library_check.py` (over `remote.py`)
+  is the three-place check, read only, so a cloud run can verify and send search notes.
+  When `/marketing-week` last ran is `loop_snapshot.py last marketing_week`, not a folder.
 
 # Working rules (Canberk's standing decisions, for every session, cloud or laptop)
 

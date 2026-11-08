@@ -31,6 +31,9 @@ cd backend && uv run python scripts/remote.py cue_report
 cd backend && uv run python scripts/remote.py loop_snapshot take
 cd backend && uv run python scripts/remote.py loop_snapshot show
 cd backend && uv run python scripts/remote.py loop_snapshot keep best_move "<line>"
+cd backend && uv run python scripts/remote.py loop_snapshot last marketing_week
+cd backend && uv run python scripts/remote.py library_check "<title or character>"
+cd backend && uv run python scripts/remote.py library_check --emotion <word>
 ```
 
 You are in the cloud when `$CLAUDE_CODE_REMOTE` is set, or when a script times out
@@ -125,8 +128,17 @@ Only what is new and real goes in the summary, under "The app". The feedback quo
 
 ## 2. The inbox
 
-Load the Gmail tools and search for replies since the last run (the day `loop_snapshot.py show`
-printed, or 24 hours if there is no snapshot): `in:inbox newer_than:2d -from:me`.
+Load the Gmail tools and run two searches. A reply that came in before the window is still
+owed an answer, and the window alone missed one on 2026-11-08 (an actor who wrote on 11-05
+and had waited 3 days, found by the laptop run and not by the cloud one):
+
+1. New since the last run: `in:inbox -from:me after:<the day loop_snapshot.py show printed,
+   minus one day, as YYYY/MM/DD>` (no snapshot: `newer_than:3d`).
+2. Still unanswered: `in:inbox -from:me newer_than:14d`, and for each thread whose last
+   message is from them, not from Canberk, check there is no answer in Gmail sent and no
+   draft on it. Those are "waiting" whatever day they came in; say in the summary how many
+   days each has waited.
+
 Read each thread that is a reply to something Canberk or ActorRise sent.
 
 Sort every reply into exactly one of these:
@@ -203,6 +215,12 @@ someone in section 2: the server emails them a day after their wall.
   and `monologues.character_name`. On 2026-10-05 a note said nothing from Sentimental Value
   was in; the film's rows carry it only as the play title, and another actor had opened two
   of them that same day. If a search only hit `monologues.title`, it has not checked.
+  `scripts/library_check.py "<title or character>"` (over `remote.py` in the cloud) is that
+  check, done for you: visible pieces only, by play, in all three places, and a full name
+  tried word by word ("Bella Baxter" is filed as "Bella"). A hit on a character name alone is
+  a different person until the play says otherwise ("Hamilton" is a character in Kids). For
+  a note about a kind of piece, `library_check.py --emotion <word>` counts by primary emotion.
+  A note whose facts came from this check is verified, cloud or laptop: send it.
 - **Send these, don't draft them**, under the one exception in CLAUDE.md ("Never autonomously",
   Canberk 2026-10-03). Before sending each one, confirm in this run: every fact in it was
   checked against the database; the voice check is clean; the person is an individual actor
@@ -274,8 +292,9 @@ never answered has never been used (6 of 6, October). So each run:
 - A product complaint from a teacher is a bug for every teacher: say which page under
   "The app" and check whether it is fixed (2026-10-23: a teacher was led into a rehearsal
   scene at signup and never found the library; fixed 4822d35b, teachers now end on it).
-- Say when `/marketing-week` last ran (the newest folder in `outputs/marketing/`). Older
-  than 8 days is a "Broken" line: new organizations stop coming in without it.
+- Say when `/marketing-week` last ran: `scripts/loop_snapshot.py last marketing_week` (the
+  folder in `outputs/marketing/` exists only on the laptop). Older than 8 days is a "Broken"
+  line: new organizations stop coming in without it.
 
 **An organization ready to ask** (Canberk, 2026-10-25: "partnerships, hosted by or
 supported by, on our landing page"). `/admin/organizations` marks an org "ready to ask"

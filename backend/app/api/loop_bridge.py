@@ -31,12 +31,13 @@ MAX_OUT = 1_000_000
 # script -> subcommands allowed as the first argument (None: any arguments).
 ALLOWED: dict[str, set[str] | None] = {
     "conversion_brief": {"--store"},     # the brief comes back on stdout; --store keeps it for tomorrow
-    "loop_snapshot": {"take", "show", "keep"},
+    "loop_snapshot": {"take", "show", "keep", "last"},
     "contact_log": {"check", "add", "due"},
     "opt_out": None,
     "class_link": {"make", "invite", "list", "off", "on"},
     "grant_comp": None,
     "cue_report": None,
+    "library_check": None,               # the three-place "is it in" check; read only
     "guided_finishes": None,             # the guided first scene by scene and part, people; read only
 }
 # Scripts that may also run with no arguments at all.

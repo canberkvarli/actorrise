@@ -8,6 +8,8 @@ app/api/loop_bridge.py and print here as if they ran locally:
   uv run python scripts/remote.py contact_log check someone@example.com --org "Some School"
   uv run python scripts/remote.py opt_out someone@example.com "OPT-OUT: ..."
   uv run python scripts/remote.py loop_snapshot show     # yesterday, to compare with today
+  uv run python scripts/remote.py library_check "Poor Things"   # in the library? before a note says so
+  uv run python scripts/remote.py loop_snapshot last marketing_week
 
 Needs LOOP_TOKEN (the same value as on Render) and optionally LOOP_URL
 (default https://api.actorrise.com). `--save` on the brief is handled here: the
