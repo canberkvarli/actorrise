@@ -1,0 +1,217 @@
+{
+  "id": "2026-11-11-nunnery-scene",
+  "look": "noir",
+  "cut": "hard",
+  "voices": {
+    "partner": "bIHbv24MWmeRgasZH58o"
+  },
+  "beats": [
+    {
+      "kind": "title",
+      "seconds": 2.6,
+      "text": "Your Hamlet cancelled.",
+      "accent": "cancelled",
+      "sub": "This one never does.",
+      "bg": "ink",
+      "sfx": [
+        {
+          "name": "click",
+          "at": 0.3,
+          "vol": 0.35
+        }
+      ]
+    },
+    {
+      "kind": "scene",
+      "seconds": 16.94,
+      "play": "Hamlet",
+      "title": "Act 3, Scene 1",
+      "bg": "ink",
+      "start": 0.6,
+      "names": {
+        "PARTNER": "Hamlet",
+        "YOU": "OPHELIA"
+      },
+      "lines": [
+        {
+          "who": "PARTNER",
+          "text": "Ha, ha! are you honest?",
+          "say": "[bitter laugh, suddenly cold] Ha, ha! Are you honest?",
+          "audio": "voice/2026-11-11-nunnery-scene/00.mp3",
+          "words": [
+            {
+              "w": "Ha,",
+              "s": 0.542,
+              "e": 0.6
+            },
+            {
+              "w": "ha!",
+              "s": 0.613,
+              "e": 0.72
+            },
+            {
+              "w": "Are",
+              "s": 0.9,
+              "e": 1.44
+            },
+            {
+              "w": "you",
+              "s": 1.56,
+              "e": 1.92
+            },
+            {
+              "w": "honest?",
+              "s": 2.011,
+              "e": 2.64
+            }
+          ],
+          "dur": 2.79
+        },
+        {
+          "who": "YOU",
+          "text": "My lord?"
+        },
+        {
+          "who": "PARTNER",
+          "text": "Are you fair?",
+          "say": "[quiet, testing] Are you fair?",
+          "audio": "voice/2026-11-11-nunnery-scene/02.mp3",
+          "words": [
+            {
+              "w": "Are",
+              "s": 0.21,
+              "e": 0.24
+            },
+            {
+              "w": "you",
+              "s": 0.3,
+              "e": 0.48
+            },
+            {
+              "w": "fair?",
+              "s": 0.576,
+              "e": 1.28
+            }
+          ],
+          "dur": 1.43
+        },
+        {
+          "who": "YOU",
+          "text": "What means your lordship?"
+        },
+        {
+          "who": "PARTNER",
+          "text": "Get thee to a nunnery: why wouldst thou be a breeder of sinners?",
+          "say": "[urgent, raw, almost pleading] Get thee to a nunnery. [harsher] Why wouldst thou be a breeder of sinners?",
+          "audio": "voice/2026-11-11-nunnery-scene/04.mp3",
+          "words": [
+            {
+              "w": "Get",
+              "s": 0.2,
+              "e": 0.24
+            },
+            {
+              "w": "thee",
+              "s": 0.288,
+              "e": 0.48
+            },
+            {
+              "w": "to",
+              "s": 0.533,
+              "e": 0.64
+            },
+            {
+              "w": "a",
+              "s": 0.68,
+              "e": 0.72
+            },
+            {
+              "w": "nunnery.",
+              "s": 0.8,
+              "e": 1.36
+            },
+            {
+              "w": "Why",
+              "s": 2.45,
+              "e": 2.48
+            },
+            {
+              "w": "wouldst",
+              "s": 2.52,
+              "e": 2.8
+            },
+            {
+              "w": "thou",
+              "s": 2.816,
+              "e": 2.88
+            },
+            {
+              "w": "be",
+              "s": 2.933,
+              "e": 3.04
+            },
+            {
+              "w": "a",
+              "s": 3.12,
+              "e": 3.2
+            },
+            {
+              "w": "breeder",
+              "s": 3.24,
+              "e": 3.52
+            },
+            {
+              "w": "of",
+              "s": 3.573,
+              "e": 3.68
+            },
+            {
+              "w": "sinners?",
+              "s": 3.74,
+              "e": 4.32
+            }
+          ],
+          "dur": 4.47
+        },
+        {
+          "who": "YOU",
+          "text": "Heavenly powers, restore him!"
+        }
+      ]
+    },
+    {
+      "kind": "end",
+      "seconds": 1.8,
+      "brand": "Ghost Light",
+      "line": "built by a working actor",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "text": "William Shakespeare, Hamlet, Act 3 Scene 1 (the nunnery scene), Hamlet and Ophelia. Public domain. Lines as stored in ActorRise scene 844 (scene_lines 5 to 10), contiguous.",
+    "feature": "scenes",
+    "board": "Callboard plan 2026-11-11: format scene, series scene-reads, look noir. You read Ophelia (YOU, the underlined cue, silent); the partner reads Hamlet (PARTNER, voiced by Will).",
+    "why": "Scene reads series: a famous public domain scene from the scenes library, the partner reads the other part. Hamlet is the most known two hander in the library."
+  },
+  "music": {
+    "style": "bed",
+    "volume": 0.14,
+    "drop": "end"
+  },
+  "captions": {
+    "tiktok": "Your Hamlet cancelled. This one reads every night, you just have to be Ophelia. #actorslife #actortok #hamlet #scenework #theatre",
+    "youtube_title": "Run the nunnery scene when your Hamlet cancels #shorts",
+    "youtube_description": "Ghost Light reads Hamlet. You read Ophelia, your line is the cue.\nThe partner's voice is AI generated. Free on the App Store, built by a working actor.\n#actorslife #hamlet #theatre #shakespeare",
+    "instagram": "Who reads Hamlet when Hamlet doesn't show?\nGhost Light reads him out loud. Your line lights up as the cue. Run the nunnery scene tonight, alone.\nThe partner's voice is AI generated. Built by a working actor. Link in bio.\n#actorslife #actorsofinstagram #actortraining #hamlet #shakespeare"
+  },
+  "cover_ms": 18800
+}
