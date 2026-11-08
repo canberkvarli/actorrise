@@ -15,14 +15,14 @@ updated in place, so a re-render never pays twice; delete "audio" from a line to
 
 Needs ELEVENLABS_API_KEY and api.elevenlabs.io allowed. Exit code 2 = not available here (the
 film renders without voices, and the subtitles fall back to the beat text).
-Voices (ElevenLabs premade, commercial use on paid plans): narrator George, partner Lily. Override
+Voices (ElevenLabs premade, commercial use on paid plans): narrator Liam (Canberk picked him from the samples on 2026-11-09), partner Lily. Override
 per line with "voice": "<name or voice_id>", or per spec with "voices": {"narrator": id, "partner": id}.
 """
 import base64, json, os, re, sys, urllib.error, urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 API = "https://api.elevenlabs.io/v1"
-VOICES = {"narrator": "JBFqnCBsd6RMkjVDRZzb", "george": "JBFqnCBsd6RMkjVDRZzb", "partner": "pFZP5JQG7iQjIQuC4Bku", "lily": "pFZP5JQG7iQjIQuC4Bku"}
+VOICES = {"narrator": "TX3LPaxmHKxFdv7VOQHJ", "liam": "TX3LPaxmHKxFdv7VOQHJ", "george": "JBFqnCBsd6RMkjVDRZzb", "partner": "pFZP5JQG7iQjIQuC4Bku", "lily": "pFZP5JQG7iQjIQuC4Bku"}
 # eleven_v3 acts: it reads audio tags like [amused], [warmly], [whispers], [sighs], [excited]
 # (Canberk, 2026-11-04: emotion and tone in every voice-over, never monotone).
 MODEL = os.environ.get("ELEVENLABS_TTS_MODEL", "eleven_v3")

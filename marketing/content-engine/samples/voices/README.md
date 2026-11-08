@@ -14,3 +14,5 @@ All twelve read the same acted script on eleven_v3, stability 0.0, similarity_bo
 10 Alice, Xb7hH8MSUJpSbSDYk0k2, female, British, middle aged, clear engaging educator, premade
 11 Eric, cjVigY5qzO86Huf0OWal, male, American, middle aged, smooth and trustworthy, premade
 12 George, JBFqnCBsd6RMkjVDRZzb, male, British, middle aged, warm captivating storyteller, the current narrator for comparison, premade
+
+PICKED: 09 Liam (Canberk, 2026-11-09). He is the narrator for every drawn film.
