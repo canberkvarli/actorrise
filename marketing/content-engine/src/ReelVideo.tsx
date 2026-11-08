@@ -41,6 +41,12 @@ type Broll = {
   /** Several lines over ONE unbroken shot (no cuts): each fades in at `at` and out at `until` (seconds into the beat). */
   lines?: { text: string; accent?: string; at: number; until?: number; size?: number }[];
   push?: number; // how much the camera creeps in over the shot, default 0.06 (0 = locked off)
+  /** The app in the corner: a rounded picture in picture card over the footage, a real recording of the
+   * app cut to the person's lines by scripts/card.py (which writes `src` from `rec` and `segments`).
+   * Top right by default, `width` px wide, shown from `at` seconds into the beat (after a hook line, so
+   * only one text layer is on screen at a time). */
+  pip?: { src: string; width?: number; top?: number; right?: number; at?: number; radius?: number;
+    rec?: string; segments?: { f: [number, number]; r?: number; hold?: number }[]; crop?: [number, number][] };
 };
 type TapEv = { t: number; tap?: { x: number; y: number }; typing?: string; mark?: string;
   /** Push in on a spot with no tap ring (e.g. a line of the script), held `hold` seconds. */
@@ -193,6 +199,23 @@ const TitleBeat: React.FC<{ b: Title }> = ({ b }) => (
   </AbsoluteFill>
 );
 
+/** The app card over footage. A hard cut in (a quick scale settle, no fade), the card's own video runs
+ * on the beat's clock so its segments land where scripts/card.py put them. */
+const PipCard: React.FC<{ p: NonNullable<Broll["pip"]> }> = ({ p }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const at = Math.round((p.at ?? 0) * fps);
+  if (f < at) return null;
+  const k = spring({ frame: f - at, fps, config: { damping: 18, stiffness: 220 }, durationInFrames: 10 });
+  return (
+    <div style={{ position: "absolute", top: p.top ?? 56, right: p.right ?? 36, width: p.width ?? 410,
+      borderRadius: p.radius ?? 30, overflow: "hidden", transform: `scale(${0.94 + 0.06 * k})`, transformOrigin: "top right",
+      boxShadow: "0 18px 50px rgba(0,0,0,0.55)", outline: "1.5px solid rgba(255,255,255,0.14)", background: "#110d0a" }}>
+      <OffthreadVideo src={staticFile(p.src)} muted style={{ width: "100%", display: "block" }} />
+    </div>
+  );
+};
+
 const BrollBeat: React.FC<{ b: Broll }> = ({ b }) => {
   const f = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
@@ -219,6 +242,7 @@ const BrollBeat: React.FC<{ b: Broll }> = ({ b }) => {
           </AbsoluteFill>
         );
       })}
+      {b.pip && <PipCard p={b.pip} />}
       {b.text && (
         <AbsoluteFill style={{
           justifyContent: pos === "top" ? "flex-start" : pos === "lower" ? "flex-end" : "center",

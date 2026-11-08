@@ -18,6 +18,7 @@
 //   {"wait": 1500}                          ms, or {"waitFor": "text that should appear"}
 //   {"scroll": 600}                         px, smooth
 //   {"mark": "results"}                     a named moment the edit can cut to
+//   {"mic": "My lord, I have..."}          the scene partner's scripted microphone (the actor's line), one word every `ms`
 //   {"cam": 6.1, "say": "cut"}              timed on the camera's clock instead of the recording's:
 //                                           second 6.1 of the FAKE_CAM clip (it starts when the camera opens)
 // Every click is logged with its position so the edit can zoom and draw the tap.
@@ -92,6 +93,33 @@ async function open() {
       ::selection { background: transparent; }`;
     const add = () => { const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st); };
     if (document.head) add(); else document.addEventListener("DOMContentLoaded", add);
+  });
+  // Ghost Light's scene partner on the web preview: headless Chromium has no speech recogniser, so
+  // the recorder brings a scripted one. A flow step {"mic": "the actor's line"} hands it the words,
+  // one every `ms`, as interim results and then one final, the way a browser recogniser reports a
+  // phrase; the app's own engine (mic.ts, the run) decides what they mean. Never in the iOS app.
+  await ctx.addInitScript(() => {
+    // Chromium has a webkitSpeechRecognition that needs Google's servers and a real microphone: replace it.
+    class ScriptedRecognition extends EventTarget {
+      constructor() { super(); this.lang = "en-US"; this.interimResults = true; this.continuous = true; this.maxAlternatives = 1; this.live = false; }
+      fire(type, extra = {}) { const ev = new Event(type); Object.assign(ev, extra); this.dispatchEvent(ev); const h = this["on" + type]; if (typeof h === "function") h.call(this, ev); }
+      start() { this.live = true; window.__micRec = this; setTimeout(() => { this.fire("start"); this.fire("audiostart"); }, 0); }
+      stop() { if (!this.live) return; this.live = false; setTimeout(() => { this.fire("audioend"); this.fire("end"); }, 0); }
+      abort() { if (!this.live) return; this.live = false; setTimeout(() => { this.fire("error", { error: "aborted", message: "" }); this.fire("end"); }, 0); }
+    }
+    window.webkitSpeechRecognition = ScriptedRecognition;
+    const result = (text, isFinal) => {
+      const list = [{ transcript: text, confidence: 0.95 }]; list.isFinal = isFinal;
+      return { resultIndex: 0, results: [list] };
+    };
+    window.__micSay = async (text, ms = 240) => {
+      const words = text.split(/\s+/).filter(Boolean);
+      for (let i = 1; i <= words.length; i++) {
+        window.__micRec?.live && window.__micRec.fire("result", result(words.slice(0, i).join(" "), false));
+        await new Promise((r) => setTimeout(r, ms));
+      }
+      window.__micRec?.live && window.__micRec.fire("result", result(words.join(" "), true));
+    };
   });
   // The camera's clock: when the page's camera stream opened. Chromium's FAKE_CAM file starts at its
   // first frame when the device opens, so a flow step with "cam": <s> lands on second <s> of the clip.
@@ -278,6 +306,11 @@ async function flow(file) {
     } else if (s.mark) events.push({ t: now(), mark: s.mark });
     // Ghost Light's Tape room on the web preview: hand the scripted ear words to "hear"
     // (tape-ear.web.ts), one every `ms`. The app's own cue rules decide what they mean.
+    else if (s.mic !== undefined) {
+      events.push({ t: now(), mic: s.mic });
+      await page.evaluate(([t, ms]) => window.__micSay?.(t, ms), [s.mic, s.ms ?? 240]);
+      events.push({ t: now(), heard: s.mic.split(" ").slice(-1)[0] });
+    }
     else if (s.say !== undefined) {
       events.push({ t: now(), say: s.say });
       await page.evaluate(([t, ms]) => window.__tapeSay?.(t, ms), [s.say, s.ms ?? 240]);

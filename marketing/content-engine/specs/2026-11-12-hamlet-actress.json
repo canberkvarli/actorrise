@@ -1,0 +1,139 @@
+{
+  "id": "2026-11-12-hamlet-actress",
+  "look": "noir",
+  "cut": "hard",
+  "music": {
+    "style": "bed",
+    "volume": 0.08,
+    "drop": "end"
+  },
+  "beats": [
+    {
+      "kind": "broll",
+      "seconds": 15.0,
+      "src": "reel/2026-11-12-hamlet-actress/actress.mp4",
+      "sound": 1.0,
+      "push": 0,
+      "dim": 0.1,
+      "at": "lower",
+      "lines": [
+        {
+          "text": "Your Hamlet cancelled.",
+          "accent": "cancelled.",
+          "at": 0,
+          "until": 1.5,
+          "size": 92
+        }
+      ],
+      "pip": {
+        "src": "reel/2026-11-12-hamlet-actress/card.mp4",
+        "rec": "public/reel/2026-11-12-hamlet-actress/app.mp4",
+        "width": 410,
+        "top": 56,
+        "right": 36,
+        "at": 1.5,
+        "radius": 30,
+        "crop": [
+          [
+            22,
+            96
+          ],
+          [
+            640,
+            900
+          ]
+        ],
+        "segments": [
+          {
+            "f": [
+              0,
+              5.0
+            ],
+            "r": 12.25
+          },
+          {
+            "f": [
+              5.0,
+              5.76
+            ],
+            "hold": 17.24
+          },
+          {
+            "f": [
+              5.76,
+              7.8
+            ],
+            "r": 17.27
+          },
+          {
+            "f": [
+              7.8,
+              9.74
+            ],
+            "r": 21.9
+          },
+          {
+            "f": [
+              9.74,
+              11.1
+            ],
+            "hold": 23.8
+          },
+          {
+            "f": [
+              11.1,
+              14.3
+            ],
+            "r": 36.0
+          },
+          {
+            "f": [
+              14.3,
+              15.0
+            ],
+            "r": 42.95
+          }
+        ]
+      },
+      "sfx": []
+    },
+    {
+      "kind": "end",
+      "seconds": 1.8,
+      "brand": "Ghost Light",
+      "line": "For when everyone else has gone home.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "footage": "Generated with Gemini Omni (gemini-omni-1.2-flash), one clip, one continuous take, both voices in the clip: a fictional actress playing Ophelia and Hamlet's lines from the phone's speaker. Labelled as AI on every platform and in the caption. Prompt attempt 2 of 3 (attempt 1 dropped words in her second line; attempt 3 was blocked by Gemini's content filter). Checked: Whisper medium.en reads every line word for word in order; her voice 175 to 200 Hz all the way, the phone voice 150 to 160 Hz with nothing under 300 Hz (a phone speaker).",
+    "clip_words": "Ophelia 0.00-5.58 (remembrances), phone Hamlet 5.86-7.70 (No, not I), Ophelia 7.86-9.90 (you know right well you did), phone Hamlet 11.22-12.48 (Get thee to a nunnery), 'Okay, again' 13.24-14.00, reaches for the phone 14.4-15.0",
+    "text": "William Shakespeare, Hamlet, Act 3 Scene 1, public domain. Ghost Light scene 844 (The Nunnery Scene), scene_lines 2, 3, 4 and 9; the film cuts Ophelia's line 4 after 'you did' and goes to 'Get thee to a nunnery'.",
+    "app": "Real Ghost Light scene partner run, web preview (ghostlight-web/serve.sh, dark theme), flow flows/scene-hamlet-actress.json: Begin as OPHELIA, her lines through the recorder's scripted mic paced like hers, Hamlet in the app's own voice (Fenrir), a real tap on Again where she reaches. The card is cut to her lines by scripts/card.py: her line is the cue (YOUR LINE, words underlined as heard) while she speaks, Hamlet's line lights while the phone speaks. The two holds are the app's frame left as it was when she stopped (the app keeps waiting for the rest of her line; the film moves on). Recording audio: Hamlet line 3 played at 17.27s, line 9 at 36.02s, Again tapped at about 43.3s.",
+    "feature": "scene-partner",
+    "why": "Canberk, 2026-11-08: scene films only voiced the partner, so half the scene was silence. This one shows a person acting the other part with Ghost Light as her partner."
+  },
+  "captions": {
+    "tiktok": "Your Hamlet cancelled. Rehearse the scene anyway: you play Ophelia, Ghost Light reads Hamlet. Built by a working actor. The actor is AI generated. #actorslife #actortok #hamlet #scenework #theatre",
+    "youtube_title": "Your Hamlet cancelled. Rehearse the scene anyway #shorts",
+    "youtube_description": "She plays Ophelia out loud, Ghost Light reads Hamlet from the phone and waits for her line. Built by a working actor, free on the App Store.\nThe actor is AI generated.\n#actorslife #hamlet #theatre #shakespeare",
+    "instagram": "Your Hamlet cancelled. Rehearse the scene anyway.\nShe plays Ophelia out loud. Ghost Light reads Hamlet from the phone and waits for her line.\nBuilt by a working actor. The actor is AI generated. Link in bio.\n#actorslife #actorsofinstagram #actortraining #hamlet #shakespeare"
+  },
+  "cover_ms": 9000,
+  "trypost": {
+    "status": "draft",
+    "group": "01a1bcdd-bdbc-7390-8ab1-d69e5fedbb92",
+    "instagram": "01a1bcdd-bdbd-7259-9f96-5fa798480b4f",
+    "youtube": "01a1bcdd-bdc6-705f-ab61-c79a5542fb74",
+    "tiktok": "01a1bcdd-c3cc-7237-9430-c89e51ae3f7f"
+  }
+}

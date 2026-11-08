@@ -1,0 +1,20 @@
+{
+  "start": "/rehearse/844",
+  "lead": 300,
+  "note": "Ghost Light scene partner, The Nunnery Scene (scene 844), Ophelia. Ophelia's lines go in through the recorder's scripted mic, paced like the actress's own lines (about 265 ms a word for 'remembrances', 225 for 'you know right well you did'); Hamlet is the app's own voice. Lines 5 to 8 are run fast (the film cuts from Ophelia's line 4 to Hamlet's 'Get thee to a nunnery'). Ends on a real tap on Again, where she reaches to tap the phone.",
+  "steps": [
+    {"mark": "sheet"},
+    {"click": "Begin as OPHELIA", "after": 3500},
+    {"mark": "run"},
+    {"mic": "Good my lord, how does your honour for this many a day?", "ms": 140, "after": 5200},
+    {"mark": "o2-say"},
+    {"mic": "My lord, I have remembrances of yours, that I have longed long to re-deliver. I pray you, now receive them.", "ms": 265, "after": 4200},
+    {"mark": "o4-say"},
+    {"mic": "My honour'd lord, you know right well you did, and with them words of so sweet breath composed as made the things more rich", "ms": 225, "after": 4500},
+    {"mic": "My lord?", "ms": 200, "after": 3000},
+    {"mic": "What means your lordship?", "ms": 200, "after": 300},
+    {"mark": "h9-wait", "after": 6500},
+    {"click": "Again", "after": 3500},
+    {"mark": "end"}
+  ]
+}

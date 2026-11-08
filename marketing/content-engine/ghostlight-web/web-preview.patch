@@ -1019,3 +1019,92 @@ index 0000000..3f6667d
 -- 
 2.43.0
 
+From 14f3da20c454247acf5e17dbf14369fc0c72adc4 Mon Sep 17 00:00:00 2001
+From: preview <preview@local>
+Date: Sun, 8 Nov 2026 20:17:41 +0000
+Subject: [PATCH] Web preview: partner lines load straight from their URL (no
+ file cache in a browser)
+
+---
+ src/rehearsal/native/loader.web.ts | 69 ++++++++++++++++++++++++++++++
+ 1 file changed, 69 insertions(+)
+ create mode 100644 src/rehearsal/native/loader.web.ts
+
+diff --git a/src/rehearsal/native/loader.web.ts b/src/rehearsal/native/loader.web.ts
+new file mode 100644
+index 0000000..0ead996
+--- /dev/null
++++ b/src/rehearsal/native/loader.web.ts
+@@ -0,0 +1,69 @@
++/**
++ * Web preview only (marketing recordings): the partner-line loader without a file cache.
++ * expo-file-system has no cache directory in a browser, so every line failed to load and the
++ * run said "A partner line could not load". Here the line plays straight from its URL; the
++ * order, polling and retries are the iOS loader's. The iOS build never loads this file
++ * (Metro picks loader.ts there).
++ */
++
++import { type LineSource, pollAudio } from '../../api/rehearsal';
++import type { LinePlayer } from './player';
++
++const POLL_MS = 250;
++/** A line is tried this many times, then it stays failed; the run tells the actor rather than spinning. */
++const MAX_ATTEMPTS = 3;
++
++export class LineLoader {
++  private order: number[] = [];
++  private sources = new Map<number, LineSource>();
++  private started = new Set<number>();
++  private attempts = new Map<number, number>();
++  private inflight = 0;
++  private stopped = false;
++  onReady: ((lineIndex: number) => void) | null = null;
++  onFailed: ((lineIndex: number, why: string) => void) | null = null;
++
++  constructor(private player: LinePlayer, private concurrency = 2) {}
++
++  set(lineIndex: number, src: LineSource) { this.sources.set(lineIndex, src); if (!this.order.includes(lineIndex)) this.order.push(lineIndex); }
++
++  /** Make sure `lineIndex` and the lines after it are moving. Called on every engine change. */
++  ahead(lineIndex: number) { this.pump(lineIndex); }
++
++  private pump(from = 0) {
++    const room = this.concurrency - this.inflight;
++    if (room <= 0 || this.stopped) return;
++    const pending = this.order.filter(i => i >= from && !this.started.has(i) && !this.player.has(i) && (this.attempts.get(i) ?? 0) < MAX_ATTEMPTS);
++    for (const i of pending.slice(0, room)) void this.load(i);
++  }
++
++  private async load(i: number): Promise<void> {
++    const src = this.sources.get(i);
++    if (!src || this.started.has(i) || this.player.has(i)) return;
++    this.started.add(i);
++    this.attempts.set(i, (this.attempts.get(i) ?? 0) + 1);
++    this.inflight++;
++    let decoded = false;
++    try {
++      let url = src.url;
++      while (!url && !this.stopped) {
++        await new Promise(r => setTimeout(r, POLL_MS));
++        url = await pollAudio(src.key);
++      }
++      if (!url) return; // stopped while polling
++      await this.player.load(i, url);
++      decoded = true;
++    } catch (e) {
++      this.started.delete(i);
++      this.onFailed?.(i, e instanceof Error ? e.message : String(e));
++    } finally {
++      this.inflight--;
++    }
++    if (decoded) { this.onReady?.(i); this.pump(i); }
++  }
++
++  stop() {
++    this.stopped = true;
++    for (const i of this.started) if (!this.player.has(i)) this.started.delete(i);
++  }
++}
+-- 
+2.43.0
+
