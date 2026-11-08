@@ -32,3 +32,5 @@ from app.models.rehearsal import PartnerAudio, RehearsalEvent, RehearsalRun  # n
 from app.models.shelf import ShelfScene  # noqa: F401
 
 from app.models.cue import CueConversation, CueMessage  # noqa: F401
+
+from app.models.monologue_reference import MonologueReference  # noqa: F401

@@ -51,6 +51,7 @@ export type UserEventName =
   | "calendar_feed_subscribed"
   | "class_link_self_made"
   | "class_link_copied"
+  | "reference_clicked"
   | "language_switched"
   | "studio_opened"
   | "studio_piece_chosen"

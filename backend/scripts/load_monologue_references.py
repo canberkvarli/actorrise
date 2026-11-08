@@ -25,6 +25,16 @@ Usage:
     uv run python -m scripts.load_monologue_references --csv path/to/sheet.csv --dry-run
     uv run python -m scripts.load_monologue_references --csv path/to/sheet.csv --write
     uv run python -m scripts.load_monologue_references --csv path/to/sheet.csv --report
+    uv run python -m scripts.load_monologue_references --csv path/to/sheet.csv --sql out.sql
+
+`--write` inserts into `monologue_references` (run
+scripts/add_monologue_references_table.py first). `--sql` writes the same
+inserts to a file instead, for a session that cannot open a database connection
+(run it through the Supabase SQL editor or MCP). Both skip a piece that is
+already there (same play, character and author).
+
+Notes may carry facts the columns do not: "teen; age 16; year 2017; source: <url>".
+Those are read into is_teen, character_age, year and source_url.
 """
 from __future__ import annotations
 
@@ -55,6 +65,9 @@ _WANTED = {
     "scene": "scene",
     "play genre": "genre",
     "notes": "notes",
+    "character age": "character_age",
+    "year": "year",
+    "source url": "source_url",
 }
 
 #: Where to send an actor who wants the real thing. Keyed by the publisher name
@@ -98,6 +111,9 @@ class Reference:
     scene: str = ""
     genre: str = ""
     notes: str = ""
+    character_age: str = ""
+    year: str = ""
+    source_url: str = ""
 
     @property
     def author(self) -> str:
@@ -110,6 +126,57 @@ class Reference:
         base = PUBLISHER_SITES.get(self.publisher.strip().casefold())
         return base + quote_plus(self.play_title) if base else None
 
+    def _note(self, pattern: str) -> str:
+        import re
+        m = re.search(pattern, self.notes or "", re.IGNORECASE)
+        return m.group(1).strip() if m else ""
+
+    @property
+    def is_teen(self) -> bool:
+        import re
+        return bool(re.search(r"(^|;)\s*teen\s*(;|$)", self.notes or "", re.IGNORECASE))
+
+    @property
+    def age(self) -> str:
+        return self.character_age or self._note(r"\bage\s+([^;]+)")
+
+    @property
+    def year_int(self) -> Optional[int]:
+        y = self.year or self._note(r"\byear\s+(\d{4})")
+        return int(y) if y.isdigit() and 1500 <= int(y) <= 2100 else None
+
+    @property
+    def source(self) -> str:
+        return self.source_url or self._note(r"source:\s*(\S+)").rstrip(";,")
+
+    @property
+    def gender(self) -> Optional[str]:
+        g = (self.character_gender or "").strip().casefold()
+        return g if g in ("female", "male", "any") else None
+
+    @property
+    def get_script_url(self) -> Optional[str]:
+        """The publisher's catalogue, or for a self-published piece the page it lives on."""
+        return self.purchase_url or (self.source or None)
+
+    def row(self) -> dict:
+        """The table row. Built from named fields only: there is no speech to leak."""
+        return {
+            "play_title": self.play_title.strip()[:300],
+            "character_name": self.character_name.strip()[:200],
+            "author": self.author[:200],
+            "publisher": self.publisher.strip()[:200] or None,
+            "character_gender": self.gender,
+            "character_age": (self.age or None) and self.age[:40],
+            "is_teen": self.is_teen,
+            "genre": (self.genre.strip().casefold() or None) and self.genre.strip().casefold()[:40],
+            "year": self.year_int,
+            "act": self.act.strip()[:20] or None,
+            "scene": self.scene.strip()[:20] or None,
+            "get_script_url": self.get_script_url,
+            "source_url": self.source or None,
+        }
+
     def problems(self) -> list[str]:
         out = []
         if not self.play_title.strip():
@@ -120,6 +187,8 @@ class Reference:
             out.append("no_author")
         if not self.publisher.strip():
             out.append("no_publisher")
+        if not self.get_script_url:
+            out.append("no_link")
         return out
 
 
@@ -191,12 +260,87 @@ def report(refs: list[Reference]) -> None:
             print(f"    {name}")
 
 
+_COLUMNS = (
+    "play_title", "character_name", "author", "publisher", "character_gender",
+    "character_age", "is_teen", "genre", "year", "act", "scene",
+    "get_script_url", "source_url",
+)
+
+_CONFLICT = "ON CONFLICT (lower(play_title), lower(character_name), lower(author)) DO NOTHING"
+
+_INSERT = (
+    f"INSERT INTO monologue_references ({', '.join(_COLUMNS)}) "
+    f"VALUES ({', '.join(':' + c for c in _COLUMNS)}) {_CONFLICT}"
+)
+
+
+def _sql_literal(v) -> str:
+    if v is None:
+        return "NULL"
+    if isinstance(v, bool):
+        return "TRUE" if v else "FALSE"
+    if isinstance(v, int):
+        return str(v)
+    return "'" + str(v).replace("'", "''") + "'"
+
+
+def to_sql(refs: list[Reference]) -> str:
+    """Plain INSERTs for the SQL editor. Same skip-if-present rule as --write."""
+    lines = []
+    for r in refs:
+        row = r.row()
+        values = ", ".join(_sql_literal(row[c]) for c in _COLUMNS)
+        lines.append(f"INSERT INTO monologue_references ({', '.join(_COLUMNS)}) VALUES ({values}) {_CONFLICT};")
+    return "\n".join(lines) + "\n"
+
+
+def _key(row: dict) -> tuple:
+    return (row["play_title"].casefold(), row["character_name"].casefold(), row["author"].casefold())
+
+
+def upload_rest(refs: list[Reference]) -> tuple[int, int]:
+    """Same rows as --write, through PostgREST. A cloud session reaches web
+    traffic only, so this is how it loads. Skips what is already there, by the
+    same play/character/author key the unique index uses."""
+    import json
+    import os
+    import urllib.request
+
+    base = os.environ["SUPABASE_URL"].rstrip("/") + "/rest/v1/monologue_references"
+    key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+    headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+
+    def call(url: str, body=None, extra=None):
+        req = urllib.request.Request(
+            url, data=None if body is None else json.dumps(body).encode(),
+            headers={**headers, **(extra or {})}, method="GET" if body is None else "POST",
+        )
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return json.loads(resp.read() or b"[]")
+
+    have = {
+        _key(r) for r in call(base + "?select=play_title,character_name,author&limit=100000")
+    }
+    fresh: dict[tuple, dict] = {}
+    for r in refs:
+        row = r.row()
+        if _key(row) not in have:
+            fresh.setdefault(_key(row), row)
+    rows = list(fresh.values())
+    for i in range(0, len(rows), 200):
+        call(base, rows[i:i + 200], {"Prefer": "return=minimal"})
+    return len(rows), len(refs) - len(rows)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--csv", required=True, type=Path)
     ap.add_argument("--report", action="store_true", help="Publisher/author breakdown")
     ap.add_argument("--dry-run", action="store_true", help="Report only (default)")
     ap.add_argument("--write", action="store_true", help="Persist to DB")
+    ap.add_argument("--sql", type=Path, help="Write the inserts to this .sql file instead")
+    ap.add_argument("--rest", action="store_true",
+                    help="Insert through Supabase REST (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY), for a cloud session")
     ap.add_argument("--limit", type=int, default=0)
     args = ap.parse_args()
 
@@ -214,7 +358,7 @@ def main() -> None:
     usable = [r for r in refs if not r.problems()]
     print(f"parsed {len(refs)} references, {len(usable)} complete")
 
-    if args.report or not args.write:
+    if args.report or not (args.write or args.sql or args.rest):
         report(refs)
 
     for r in usable[:5]:
@@ -227,15 +371,26 @@ def main() -> None:
         print(f"    {r.publisher}")
         print(f"    {r.purchase_url or '(no catalogue url for this publisher)'}")
 
-    if args.write:
-        print(
-            "\nWRITE path not implemented yet: needs a `monologue_references` table.\n"
-            "Deliberately NO `text` column on it, so there is nothing to serve by\n"
-            "accident. Model + migration is the next step; say go and I'll add it.",
-            file=sys.stderr,
-        )
-        sys.exit(3)
+    if args.rest:
+        added, skipped = upload_rest(usable)
+        print(f"\ninserted {added} new references over REST ({skipped} already there)")
 
+    if args.sql:
+        args.sql.write_text(to_sql(usable), encoding="utf-8")
+        print(f"\nwrote {len(usable)} inserts to {args.sql}")
+
+    if args.write:
+        from sqlalchemy import text as sql_text
+
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from app.core.database import engine
+
+        with engine.begin() as conn:
+            before = conn.execute(sql_text("SELECT count(*) FROM monologue_references")).scalar()
+            for r in usable:
+                conn.execute(sql_text(_INSERT), r.row())
+            after = conn.execute(sql_text("SELECT count(*) FROM monologue_references")).scalar()
+        print(f"\ninserted {after - before} new references ({len(usable) - (after - before)} already there)")
 
 if __name__ == "__main__":
     main()

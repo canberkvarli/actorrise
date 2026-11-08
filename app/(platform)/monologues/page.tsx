@@ -53,6 +53,7 @@ import { MonologueDetailContent } from "@/components/monologue/MonologueDetailCo
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueSpeech, matchMarkIsUseful } from "@/components/monologue/MonologueSpeech";
 import { ScreenStrip } from "@/components/search/ScreenStrip";
+import { ReferenceStrip, type InPrintReference } from "@/components/search/ReferenceStrip";
 import { constantFacts, constantFactsLabel } from "@/lib/resultFacts";
 import { SearchFiltersSheet, getDurationLabel } from "@/components/search/SearchFiltersSheet";
 import type { SearchFiltersState } from "@/components/search/SearchFiltersSheet";
@@ -310,6 +311,8 @@ function SearchContent() {
   const [broadened, setBroadened] = useState<{ relaxed: string[] } | null>(null);
   // Film and TV pieces for a Plays search the plays could not serve.
   const [fromScreen, setFromScreen] = useState<Monologue[]>([]);
+  // Published pieces the library only points at (CAN-24).
+  const [inPrint, setInPrint] = useState<InPrintReference[]>([]);
   // Constraints the backend parsed out of the free-text query, shown as
   // removable chips. Dismissing one adds its key to ignoredConstraintsRef and
   // re-runs; the ref (not state) so performSearch always reads the latest, and
@@ -611,6 +614,7 @@ function SearchContent() {
             setWeakMatch(Boolean(cached.weak_match));
             setClosestInLanguage(Boolean(cached.closest_in_language));
             setFromScreen(cached.from_screen ?? []);
+            setInPrint(cached.in_print ?? []);
           }
           // Restore typo correction banner from cache
           const correctionKey = `search_correction_${urlQuery}_${JSON.stringify(urlFilters)}_${initialMaxOverdone}`;
@@ -786,6 +790,7 @@ function SearchContent() {
     debug_timing?: DebugTiming | null;
     search_log_id?: number | null;
     from_screen?: Monologue[];
+    in_print?: InPrintReference[];
   };
 
   // Links a monologue open back to the search that produced it (?slid= on the
@@ -825,6 +830,7 @@ function SearchContent() {
       setWeakMatch(false);
       setBroadened(null);
       setFromScreen([]);
+      setInPrint([]);
       // A genuinely new query forgets any constraint chips the user dismissed;
       // a chip-removal re-run keeps the same query text, so its ignores persist.
       if (searchQuery !== lastParsedQueryRef.current) {
@@ -875,6 +881,7 @@ function SearchContent() {
         setBroadened(data.broadened ?? null);
         setParsedConstraints(data.parsed_constraints ?? null);
         setFromScreen(data.from_screen ?? []);
+        setInPrint(data.in_print ?? []);
       }
       setTotal(data.total);
       setPage(data.page);
@@ -900,6 +907,7 @@ function SearchContent() {
           weak_match: Boolean(data.weak_match),
           closest_in_language: Boolean(data.closest_in_language),
           from_screen: data.from_screen ?? [],
+          in_print: data.in_print ?? [],
         }));
         // Persist correction alongside the cached results so it survives URL-driven restores
         const correctionKey = `search_correction_${searchQuery}_${JSON.stringify(searchFilters)}_${effectiveMaxOverdone}`;
@@ -2721,6 +2729,9 @@ ${mono.character_age_range ? `${d("ageRange")}: ${mono.character_age_range}` : '
                         isModerator={!!user?.is_moderator}
                         onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
                       />
+                    )}
+                    {!showBookmarkedOnly && (
+                      <ReferenceStrip refs={inPrint} query={queryUsedForResults ?? ""} />
                     )}
                     {looserRelated.length > 0 && (
                       <>

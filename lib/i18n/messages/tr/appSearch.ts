@@ -264,6 +264,13 @@ export const appSearch: Widen<typeof en> = {
     direction: "(aynı istek, film ve diziden.)",
     more: "Film ve Dizi'de daha fazlası",
   },
+  appSearchReferenceStrip: {
+    aria: "Yayımlanmış oyunlarda",
+    direction: "(yayımlanmış oyunlarda da var. Metni edin.)",
+    in: "",
+    age: "{age} yaş",
+    getScript: "Metni edin",
+  },
   appSearchScript: {
     script: "Senaryo",
     googleSearch: "Google'da ara",

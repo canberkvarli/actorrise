@@ -139,6 +139,21 @@ class MonologueResponse(BaseModel):
         from_attributes = True
 
 
+class ReferenceResponse(BaseModel):
+    """A published piece we point at but do not hold (CAN-24). No speech, by design."""
+
+    id: int
+    play_title: str
+    character_name: str
+    author: str
+    publisher: Optional[str] = None
+    character_gender: Optional[str] = None
+    character_age: Optional[str] = None
+    genre: Optional[str] = None
+    year: Optional[int] = None
+    get_script_url: Optional[str] = None
+
+
 class SearchResponse(BaseModel):
     """Standardized search response with pagination metadata."""
 
@@ -158,6 +173,7 @@ class SearchResponse(BaseModel):
     search_log_id: Optional[int] = None  # search_logs row id; pass as ?slid= when opening a result (funnel analytics)
     from_screen: List[MonologueResponse] = []  # a few film/TV pieces under a Plays search the plays cannot serve (screen_strip.py)
     closest_in_language: bool = False  # Turkish UI: nothing matched, so these are the nearest Turkish pieces (the page offers the English library)
+    in_print: List[ReferenceResponse] = []  # published pieces we only point at, for asks the library is thin on (reference_strip.py)
 
 
 class LeadMagnetItem(BaseModel):
@@ -1006,6 +1022,28 @@ async def search_monologues(
                 logging.getLogger(__name__).warning("screen strip failed for q=%r", q, exc_info=True)
                 from_screen = []
 
+        # Published pieces we only point at (no speech held), for the asks the
+        # library is thinnest on: contemporary, teens, comedy, or a play by name.
+        in_print: list[ReferenceResponse] = []
+        try:
+            from app.services.search.reference_strip import (
+                find_references, should_offer_references,
+            )
+            ref_constraints = {
+                **(getattr(search_service, "_parsed_constraints", None) or {}),
+                **(filters or {}),
+            }
+            if should_offer_references(q=q, constraints=ref_constraints, page=page):
+                in_print = [
+                    ReferenceResponse.model_validate(r, from_attributes=True)
+                    for r in find_references(db, q=q or "", constraints=ref_constraints)
+                ]
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning("reference strip failed for q=%r", q, exc_info=True)
+            db.rollback()
+            in_print = []
+
         # Collect debug timing from search service (available for dev/admin)
         debug_timing = getattr(search_service, '_debug_timing', None)
         if debug_timing:
@@ -1101,6 +1139,7 @@ async def search_monologues(
             search_log_id=search_log_id,
             from_screen=from_screen,
             closest_in_language=closest_in_language,
+            in_print=in_print,
         )
     except HTTPException:
         raise  # Re-raise HTTP exceptions (e.g. from auth/rate-limiting) as-is

@@ -275,6 +275,13 @@ export const appSearch = {
     direction: "(the same ask, from film and TV.)",
     more: "More in Film & TV",
   },
+  appSearchReferenceStrip: {
+    aria: "In published plays",
+    direction: "(also in published plays. Grab the script.)",
+    in: "in",
+    age: "age {age}",
+    getScript: "Get the script",
+  },
   appSearchScript: {
     script: "Script",
     googleSearch: "Google Search",

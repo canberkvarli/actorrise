@@ -91,18 +91,20 @@ def _ensure_rls_tables() -> None:
     """Tables that must never exist without RLS: create them, RLS on, in one transaction,
     before create_all could make them bare. Idempotent. Two workers starting at once can
     race on CREATE; the loser logs and the winner's table stands."""
+    from app.models.monologue_reference import DDL as REFERENCES_DDL
     from app.models.studio import DDL as STUDIO_DDL
 
     if engine.dialect.name != "postgresql":
         return
-    try:
-        with engine.begin() as conn:
-            for stmt in STUDIO_DDL:
-                conn.execute(stmt)
-    except Exception as e:  # noqa: BLE001
-        import logging
+    for name, ddl in (("studio_roles", STUDIO_DDL), ("monologue_references", REFERENCES_DDL)):
+        try:
+            with engine.begin() as conn:
+                for stmt in ddl:
+                    conn.execute(stmt)
+        except Exception as e:  # noqa: BLE001
+            import logging
 
-        logging.getLogger("uvicorn.error").warning("studio_roles setup skipped: %s", e)
+            logging.getLogger("uvicorn.error").warning("%s setup skipped: %s", name, e)
 
 
 def _init_db() -> None:
