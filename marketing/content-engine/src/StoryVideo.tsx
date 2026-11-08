@@ -41,7 +41,7 @@ const F = { ...F_PAPER };
 const applyLook = (look: StoryLook) => {
   LOOK = look;
   Object.assign(C, C_PAPER, look === "marker" ? { paper: "#f7f5f0", ink: "#141414", inkSoft: "rgba(20,20,20,0.55)" } : {});
-  Object.assign(F, F_PAPER, look === "marker" ? { serif: "Montserrat", serifI: "Montserrat" } : {});
+  Object.assign(F, F_PAPER, {});
 };
 loadFont({ family: F.serif, url: staticFile("fonts/playfair.woff2"), weight: "600" });
 loadFont({ family: F.serifI, url: staticFile("fonts/playfair-italic.woff2"), weight: "400", style: "italic" });
@@ -89,7 +89,7 @@ export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Sta
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
-export type StoryVoice = { lines: { text: string; at: number; audio?: string; dur?: number }[]; volume?: number };
+export type StoryVoice = { lines: { text: string; at: number; audio?: string; dur?: number; words?: { w: string; s: number; e: number }[] }[]; volume?: number; subtitles?: boolean };
 export type StorySpec = { id: string; scenes: StoryScene[]; music?: StoryMusic; look?: StoryLook; voice?: StoryVoice };
 export const storyFrames = (s: StorySpec) =>
   s.scenes.reduce((n, sc) => n + Math.round(sc.seconds * FPS), 0);
@@ -1778,6 +1778,37 @@ const Thread: React.FC<{ slots: number; cam: number }> = ({ slots, cam }) => {
   );
 };
 
+
+/** Word by word captions for the narration (Canberk, 2026-11-08: drawn films need captions). Ink on a
+ *  soft paper pill above the bottom quarter, the spoken word in orange. Hidden on the end card. */
+const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
+  const f = useCurrentFrame();
+  const t = f / FPS;
+  if (t >= until) return null;
+  const dur = (l: StoryVoice["lines"][number]) => l.dur ?? (l.words?.length ? l.words[l.words.length - 1].e + 0.15 : l.text.split(" ").length * 0.36 + 0.4);
+  const line = lines.find((l) => t >= l.at - 0.05 && t <= l.at + dur(l) + 0.25);
+  if (!line) return null;
+  const lt = t - line.at;
+  const all = line.words?.length ? line.words : line.text.split(" ").map((w, i) => ({ w, s: i * 0.34, e: i * 0.34 + 0.3 }));
+  // Show the narration in short chunks (at most 6 words) so a long line never fills the screen.
+  const chunks: typeof all[] = [];
+  for (let i = 0; i < all.length; i += 6) chunks.push(all.slice(i, i + 6));
+  const chunk = chunks.find((c, i) => lt < (chunks[i + 1]?.[0].s ?? Infinity) - 0.02) ?? chunks[chunks.length - 1];
+  const op = interpolate(lt, [-0.05, 0.1, dur(line) + 0.05, dur(line) + 0.25], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return (
+    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", padding: "0 70px 330px", opacity: op, pointerEvents: "none" }}>
+      <div style={{ background: C.ink, borderRadius: 22, padding: "16px 28px", boxShadow: "0 8px 30px rgba(33,26,21,0.25)",
+        textAlign: "center", fontFamily: F.serif, fontWeight: 600, fontSize: 50, lineHeight: 1.2, color: "#fbf7f0", maxWidth: 920 }}>
+        {chunk.map((w, i) => {
+          const on = lt >= w.s - 0.02;
+          const now = on && lt <= w.e + 0.08;
+          return <span key={i} style={{ opacity: on ? 1 : 0.45, color: now ? "#f5a35c" : undefined, marginRight: 14, display: "inline-block" }}>{w.w}</span>;
+        })}
+      </div>
+    </AbsoluteFill>
+  );
+};
+
 export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
   applyLook(spec.look ?? "paper");
   const frame = useCurrentFrame();
@@ -1847,6 +1878,10 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
           </React.Fragment>
         );
       })}
+      {spec.voice?.lines?.length && spec.voice.subtitles !== false ? (
+        <StoryCaptions lines={spec.voice.lines}
+          until={spec.scenes[spec.scenes.length - 1]?.type === "end" ? spec.scenes.slice(0, -1).reduce((n, sc) => n + sc.seconds, 0) : 1e9} />
+      ) : null}
     </AbsoluteFill>
   );
 };

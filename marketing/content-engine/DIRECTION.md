@@ -3,6 +3,18 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-08: drawn films win, silent films step back (wins over everything below)
+
+Canberk, after week one's numbers: the drawn films do fine, the tram and silent one-shot films don't.
+- **Mix per week:** 3 drawn, 1 scene partner, 1 walkthrough or Tape room (the AI actor is fine), 1
+  wildcard, at most 1 silent real one-shot (and only with a problem-first hook, never mood alone).
+- **Drawn films have captions:** word by word narration captions are on by default (StoryVideo
+  StoryCaptions: a dark bar near the bottom, the spoken word in orange, hidden on the end card). Set
+  `"voice": {"subtitles": false}` only if a scene's own words would clash.
+- **The narrator is being recast:** George felt flat. Use the voice Canberk picks from the samples in
+  samples/voices/ (see the note there once he chooses); until then keep George but with v3 tags.
+- **House font everywhere, marker look included** (Montserrat removed from the marker look).
+
 ## 2026-11-06, 13:25: Tape room films are one continuous take (wins over everything below)
 
 Canberk on the actor-in-the-app film: "it looks amazing". Next version: no playback/recap scene after
