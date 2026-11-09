@@ -1,0 +1,317 @@
+{
+  "id": "2026-11-12-off-book-by-ten",
+  "look": "paper",
+  "music": {
+    "style": "bed",
+    "drop": "end",
+    "volume": 0.14
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "Eight o'clock. Two mugs out. And she cancels.",
+        "at": 0.3,
+        "say": "[deadpan] Eight o'clock. Two mugs out. [sighs] And she cancels.",
+        "audio": "voice/2026-11-12-off-book-by-ten/00.mp3",
+        "words": [
+          {
+            "w": "Eight",
+            "s": 0.133,
+            "e": 0.16
+          },
+          {
+            "w": "o'clock.",
+            "s": 0.2,
+            "e": 0.72
+          },
+          {
+            "w": "Two",
+            "s": 0.86,
+            "e": 1.28
+          },
+          {
+            "w": "mugs",
+            "s": 1.32,
+            "e": 1.6
+          },
+          {
+            "w": "out.",
+            "s": 1.68,
+            "e": 2.0
+          },
+          {
+            "w": "And",
+            "s": 2.465,
+            "e": 2.48
+          },
+          {
+            "w": "she",
+            "s": 2.52,
+            "e": 2.64
+          },
+          {
+            "w": "cancels.",
+            "s": 2.704,
+            "e": 3.36
+          }
+        ],
+        "dur": 3.51
+      },
+      {
+        "text": "So it reads her part. You go script, then just the cues, then nothing.",
+        "at": 6.3,
+        "say": "[conspiratorial] So it reads her part. [playful] You go script, then just the cues, [teasing] then nothing.",
+        "audio": "voice/2026-11-12-off-book-by-ten/01.mp3",
+        "words": [
+          {
+            "w": "So",
+            "s": 0.219,
+            "e": 0.24
+          },
+          {
+            "w": "it",
+            "s": 0.293,
+            "e": 0.4
+          },
+          {
+            "w": "reads",
+            "s": 0.453,
+            "e": 0.72
+          },
+          {
+            "w": "her",
+            "s": 0.76,
+            "e": 0.88
+          },
+          {
+            "w": "part.",
+            "s": 0.96,
+            "e": 1.36
+          },
+          {
+            "w": "You",
+            "s": 1.985,
+            "e": 2.0
+          },
+          {
+            "w": "go",
+            "s": 2.053,
+            "e": 2.16
+          },
+          {
+            "w": "script,",
+            "s": 2.24,
+            "e": 3.28
+          },
+          {
+            "w": "then",
+            "s": 3.312,
+            "e": 3.44
+          },
+          {
+            "w": "just",
+            "s": 3.488,
+            "e": 3.68
+          },
+          {
+            "w": "the",
+            "s": 3.72,
+            "e": 3.84
+          },
+          {
+            "w": "cues,",
+            "s": 3.968,
+            "e": 5.12
+          },
+          {
+            "w": "then",
+            "s": 5.389,
+            "e": 5.44
+          },
+          {
+            "w": "nothing.",
+            "s": 5.54,
+            "e": 6.32
+          }
+        ],
+        "dur": 6.47
+      },
+      {
+        "text": "Line? It feeds you the next few words.",
+        "at": 12.9,
+        "say": "[whispers] Line? [warmly] It feeds you the next few words.",
+        "audio": "voice/2026-11-12-off-book-by-ten/02.mp3",
+        "words": [
+          {
+            "w": "Line?",
+            "s": 0.528,
+            "e": 1.08
+          },
+          {
+            "w": "It",
+            "s": 1.653,
+            "e": 1.68
+          },
+          {
+            "w": "feeds",
+            "s": 1.747,
+            "e": 2.08
+          },
+          {
+            "w": "you",
+            "s": 2.14,
+            "e": 2.32
+          },
+          {
+            "w": "the",
+            "s": 2.36,
+            "e": 2.48
+          },
+          {
+            "w": "next",
+            "s": 2.544,
+            "e": 2.8
+          },
+          {
+            "w": "few",
+            "s": 2.86,
+            "e": 3.04
+          },
+          {
+            "w": "words.",
+            "s": 3.147,
+            "e": 3.76
+          }
+        ],
+        "dur": 3.91
+      },
+      {
+        "text": "Ten o'clock. Off book anyway.",
+        "at": 17.0,
+        "say": "[delighted] Ten o'clock. Off book anyway.",
+        "audio": "voice/2026-11-12-off-book-by-ten/03.mp3",
+        "words": [
+          {
+            "w": "Ten",
+            "s": 0.068,
+            "e": 0.08
+          },
+          {
+            "w": "o'clock.",
+            "s": 0.12,
+            "e": 0.56
+          },
+          {
+            "w": "Off",
+            "s": 0.76,
+            "e": 1.36
+          },
+          {
+            "w": "book",
+            "s": 1.408,
+            "e": 1.6
+          },
+          {
+            "w": "anyway.",
+            "s": 1.657,
+            "e": 2.0
+          }
+        ],
+        "dur": 2.15
+      },
+      {
+        "text": "ActorRise. Built by a working actor.",
+        "at": 21.4,
+        "say": "[warm and confident] ActorRise. Built by a working actor.",
+        "audio": "voice/2026-11-12-off-book-by-ten/04.mp3",
+        "words": [
+          {
+            "w": "ActorRise.",
+            "s": 0.311,
+            "e": 1.2
+          },
+          {
+            "w": "Built",
+            "s": 1.24,
+            "e": 1.44
+          },
+          {
+            "w": "by",
+            "s": 1.547,
+            "e": 1.76
+          },
+          {
+            "w": "a",
+            "s": 1.8,
+            "e": 1.84
+          },
+          {
+            "w": "working",
+            "s": 1.89,
+            "e": 2.24
+          },
+          {
+            "w": "actor.",
+            "s": 2.307,
+            "e": 2.8
+          }
+        ],
+        "dur": 2.95
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "type": "kitchen",
+      "seconds": 6.4,
+      "line": "She cancelled.",
+      "accent": "cancelled.",
+      "cue": "(rehearsal was at eight.)",
+      "text": "can't make it tonight, sorry",
+      "buzzAt": 92,
+      "slideAt": 150
+    },
+    {
+      "type": "book",
+      "seconds": 9.8,
+      "line": "Script. Cues. Off book.",
+      "accent": "Off book.",
+      "cuesAt": 116,
+      "offAt": 163,
+      "askAt": 208,
+      "ask": "line?",
+      "partner": "PARTNER",
+      "you": "YOU"
+    },
+    {
+      "type": "ten",
+      "seconds": 5.0,
+      "line": "Off book by ten.",
+      "accent": "ten.",
+      "stamp": "OFF BOOK",
+      "tickAt": 28
+    },
+    {
+      "type": "end",
+      "seconds": 3.6,
+      "brand": "ActorRise",
+      "tagline": "(she cancelled. you didn't.)",
+      "action": "actorrise.com",
+      "kicker": "(break a leg.)"
+    }
+  ],
+  "source": {
+    "feature": "off-book",
+    "app_check": "actorrise main: lib/rehearsal/book.ts, BOOKS = Script / Cues / Off book; partner lines always shown; Cues keeps the first words (CUE_WORDS 2); off book the words fill in as said; 'line' said out loud (or the Line! button) shows the next few words, marked as given. Ghost Light repo not reachable from this run, so the close is ActorRise (web) rather than Ghost Light.",
+    "data": "No monologue, title or quote on screen: the scene is drawn as word bars.",
+    "plan": "2026-11-12 (Callboard), series drawn-life, ideas inbox i1",
+    "motifs": "two-mugs-one-slides-away,text-bubble-cancel,script-cues-offbook-switch,line-whisper-gives-words,clock-958-to-ten-offbook-stamp"
+  },
+  "captions": {
+    "tiktok": "Partner bailed at eight. Off book by ten anyway. #actorslife #offbook #actortok #rehearsal #actors",
+    "youtube_title": "She cancelled. Still off book by ten. #shorts",
+    "youtube_description": "Script, then cues, then off book. Stuck? Say line and it feeds you the next words.\nBuilt by a working actor. actorrise.com\n#actorslife #rehearsal #actors #offbook",
+    "instagram": "She cancelled. You're still off book by ten.\n\nIt reads her part. You go script, then just the cues, then nothing. Stuck? Say line.\nBuilt by a working actor. Link in bio.\n\n#actorslife #offbook #rehearsal #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 5200
+}

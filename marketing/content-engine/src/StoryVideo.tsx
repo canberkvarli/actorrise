@@ -85,7 +85,7 @@ type Email = {
 type Lobby = { type: "lobby"; seconds: number; line: string; accent: string; cue?: string; page: string; bubble: string; sign?: string; count?: number };
 /** The panel from the actor's side: three tired faces, then one line lands and they wake up. */
 type Panel = { type: "panel"; seconds: number; line: string; accent: string; cue?: string; quote: string; wakeAt?: number };
-export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | End;
+export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -1220,7 +1220,7 @@ const EndScene: React.FC<{ s: End }> = ({ s }) => {
       </svg>
       {/* left side: icon + name */}
       <div style={{ position: "absolute", left: L + 60, top: Tt + 78, display: "flex", alignItems: "center", gap: 36 }}>
-        <div
+        {s.brand === "Ghost Light" && <div
           style={{
             width: 200,
             height: 200,
@@ -1231,11 +1231,18 @@ const EndScene: React.FC<{ s: End }> = ({ s }) => {
           }}
         >
           <Img src={staticFile("icon.png")} style={{ width: 200, height: 200 }} />
-        </div>
+        </div>}
         <div style={{ position: "relative" }}>
           <Rise at={18}>
-            <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 64, color: C.ink, lineHeight: 1 }}>Ghost</div>
-            <div style={{ fontFamily: F.serifI, fontStyle: "italic", fontSize: 64, color: C.orange, lineHeight: 1.05 }}>Light</div>
+            {/* Ghost Light, or a web brand ("ActorRise" splits into Actor / Rise), no app icon for the web */}
+            {(() => {
+              const b = s.brand === "Ghost Light" ? ["Ghost", "Light"] : s.brand.match(/^([A-Z][a-z]+)(.*)$/)?.slice(1, 3) ?? [s.brand, ""];
+              const sz = s.brand === "Ghost Light" ? 64 : 96;
+              return (<>
+                <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: sz, color: C.ink, lineHeight: 1 }}>{b[0]}</div>
+                <div style={{ fontFamily: F.serifI, fontStyle: "italic", fontSize: sz, color: C.orange, lineHeight: 1.05 }}>{b[1]}</div>
+              </>);
+            })()}
           </Rise>
         </div>
       </div>
@@ -1280,7 +1287,8 @@ const EndScene: React.FC<{ s: End }> = ({ s }) => {
       <AbsoluteFill style={{ alignItems: "center", paddingTop: B + 70 }}>
         <Rise at={58}>
           <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 56, color: C.ink }}>
-            {s.action.split(" on ")[0]} <span style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400, color: C.orange }}>on the App Store.</span>
+            {s.action.includes(" on ") ? (<>{s.action.split(" on ")[0]} <span style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400, color: C.orange }}>on the App Store.</span></>)
+              : (<span style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400, color: C.orange }}>{s.action}</span>)}
           </div>
         </Rise>
       </AbsoluteFill>
@@ -1696,6 +1704,271 @@ const RunsScene: React.FC<{ s: Runs }> = ({ s }) => {
   );
 };
 
+
+// ---------- 2026-11-12: the kitchen table, the cancelled partner, Script · Cues · Off book, ten o'clock ----------
+/** A mug in ink: body, handle, optional steam. (x, y) is the bottom centre. */
+const Mug: React.FC<{ x: number; y: number; start: number; steam?: number; flip?: boolean }> = ({ x, y, start, steam = 1, flip }) => {
+  const f = useCurrentFrame();
+  const s = flip ? -1 : 1;
+  const body = `M${x - 62} ${y - 150} L ${x + 62} ${y - 150} L ${x + 54} ${y - 10} C ${x + 52} ${y + 2}, ${x + 44} ${y + 6}, ${x + 34} ${y + 6} L ${x - 34} ${y + 6} C ${x - 44} ${y + 6}, ${x - 52} ${y + 2}, ${x - 54} ${y - 10} Z`;
+  const handle = `M${x + s * 60} ${y - 120} C ${x + s * 120} ${y - 124}, ${x + s * 118} ${y - 40}, ${x + s * 56} ${y - 44}`;
+  return (
+    <>
+      <Ink d={body} start={start} dur={14} w={6} fill="#fbf7ef" />
+      <Ink d={handle} start={start + 8} dur={8} w={6} />
+      {[0, 1].map((k) => {
+        const sx = x - 20 + k * 40;
+        const wob = Math.sin((f + k * 20) / 8) * 10;
+        const d = `M${sx} ${y - 172} C ${sx + 20 + wob} ${y - 200}, ${sx - 20 - wob} ${y - 230}, ${sx + wob * 0.5} ${y - 262}`;
+        return <path key={k} d={d} fill="none" stroke={C.inkSoft} strokeWidth={5} strokeLinecap="round" opacity={steam * prog(f, start + 16, start + 26) * (0.6 + 0.4 * Math.sin((f + k * 13) / 10))} />;
+      })}
+    </>
+  );
+};
+
+/** The script on the table: a few pages, slightly fanned. */
+const Pages: React.FC<{ x: number; y: number; start: number; label?: string }> = ({ x, y, start, label = "SCENE" }) => {
+  const f = useCurrentFrame();
+  const o = prog(f, start, start + 10);
+  return (
+    <g opacity={o} transform={`translate(0 ${(1 - o) * 20})`}>
+      {[-6, 3].map((r, k) => (
+        <g key={k} transform={`rotate(${r} ${x} ${y - 30})`}>
+          <path d={`M${x - 120} ${y - 26} L ${x + 120} ${y - 26} L ${x + 132} ${y + 2} L ${x - 132} ${y + 2} Z`} fill="#ffffff" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+        </g>
+      ))}
+      <path d={`M${x - 110} ${y - 30} L ${x + 110} ${y - 30} L ${x + 124} ${y} L ${x - 124} ${y} Z`} fill="#ffffff" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+      <text x={x} y={y - 8} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={20} letterSpacing={4} fill={C.ink}>{label}</text>
+    </g>
+  );
+};
+
+type Kitchen = { type: "kitchen"; seconds: number; line: string; accent: string; cue?: string; text: string; buzzAt?: number; slideAt?: number };
+const KitchenScene: React.FC<{ s: Kitchen }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const buzzAt = s.buzzAt ?? 66, slideAt = s.slideAt ?? 112;
+  const TY = 1010; // table top
+  const buzz = f >= buzzAt && f < buzzAt + 26 ? Math.sin(f * 2.6) * 7 * (f < buzzAt + 10 || f > buzzAt + 14 ? 1 : 0) : 0;
+  const bub = spring({ frame: f - (buzzAt + 6), fps, config: { damping: 11, mass: 0.6 } });
+  const slide = prog(f, slideAt, slideAt + 18);
+  const bx = 780 + slide * 520;
+  return (
+    <AbsoluteFill>
+      <Sfx name="cine/tap" at={18} vol={0.35} />
+      <Sfx name="boop_lo" at={buzzAt} vol={0.55} />
+      <Sfx name="boop_lo" at={buzzAt + 14} vol={0.55} />
+      <Sfx name="pop" at={buzzAt + 6} vol={0.55} />
+      <Sfx name="slide" at={slideAt} vol={0.5} />
+      {s.cue && <Sfx name="typing" at={slideAt + 22} frames={typeFrames(s.cue)} vol={0.4} />}
+      <Glow glow={0.35} y="44%" />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the pendant lamp over the table */}
+        <Ink d="M540 0 L 540 300" start={0} dur={8} w={4} color={C.inkSoft} />
+        <Ink d="M470 360 C 470 300, 610 300, 610 360 Z" start={4} dur={10} w={6} fill="#fbf7ef" />
+        <circle cx={540} cy={372} r={14} fill={C.orange} opacity={prog(f, 12, 18)} />
+        {/* the table */}
+        <Ink d={`M60 ${TY} L 1020 ${TY}`} start={2} dur={14} w={7} />
+        <Ink d={`M60 ${TY + 30} L 1020 ${TY + 30}`} start={8} dur={14} w={4} color={C.inkSoft} />
+        <Ink d={`M140 ${TY + 30} L 150 ${TY + 200} M940 ${TY + 30} L 930 ${TY + 200}`} start={12} dur={10} w={6} />
+        <Pages x={520} y={TY} start={22} label="SCENE 4" />
+        <Mug x={260} y={TY} start={14} />
+        <g transform={`translate(${bx - 780} 0) rotate(${slide * 6} 780 ${TY})`}>
+          <Mug x={780} y={TY} start={18} steam={1 - prog(f, slideAt - 10, slideAt)} flip />
+        </g>
+        {/* the phone face up on the table, buzzing */}
+        <g transform={`translate(${buzz} 0)`}>
+          <path d={`M600 ${TY - 4} L 720 ${TY - 4} L 734 ${TY - 26} L 586 ${TY - 26} Z`} fill={APP.bg} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" opacity={prog(f, 26, 32)} />
+          {f >= buzzAt && f < buzzAt + 26 && (
+            <path d={`M570 ${TY - 50} L 556 ${TY - 66} M750 ${TY - 50} L 764 ${TY - 66} M660 ${TY - 46} L 660 ${TY - 70}`} stroke={C.orange} strokeWidth={5} strokeLinecap="round" />
+          )}
+        </g>
+        {/* the text, in a bubble */}
+        <g transform={`translate(660 ${TY - 120}) scale(${Math.max(0, bub)}) translate(-660 ${-(TY - 120)})`} opacity={Math.min(1, Math.max(0, bub) * 1.4)}>
+          <path d={`M330 ${TY - 330} L 990 ${TY - 330} C 1012 ${TY - 330}, 1020 ${TY - 320}, 1020 ${TY - 300} L 1020 ${TY - 190} C 1020 ${TY - 170}, 1012 ${TY - 160}, 990 ${TY - 160} L 700 ${TY - 160} L 668 ${TY - 112} L 652 ${TY - 160} L 330 ${TY - 160} C 308 ${TY - 160}, 300 ${TY - 170}, 300 ${TY - 190} L 300 ${TY - 300} C 300 ${TY - 320}, 308 ${TY - 330}, 330 ${TY - 330} Z`} fill="#ffffff" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+          <text x={660} y={TY - 228} textAnchor="middle" fontFamily={F.type} fontStyle="italic" fontSize={46} fill={C.ink}>{s.text}</text>
+        </g>
+      </svg>
+      <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", paddingTop: 1240 }}>
+        <Rise at={buzzAt + 20}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={112} />
+        </Rise>
+        <div style={{ height: 18 }} />
+        {s.cue && <Cue text={s.cue} color={C.orange} at={slideAt + 22} />}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** The phone: the partner's line always shown, yours fades from Script to Cues to Off book; "line?" gives the next words. */
+type BookMode = { type: "book"; seconds: number; line: string; accent: string; cue?: string; cuesAt?: number; offAt?: number; askAt?: number; ask?: string; partner?: string; you?: string };
+const BookScene: React.FC<{ s: BookMode }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const cuesAt = s.cuesAt ?? 70, offAt = s.offAt ?? 110, askAt = s.askAt ?? 150;
+  const X = 300, Y = 250, W = 480, H = 900;
+  const body = `M${X + 64} ${Y} L ${X + W - 64} ${Y} C ${X + W - 20} ${Y}, ${X + W} ${Y + 20}, ${X + W} ${Y + 64} L ${X + W} ${Y + H - 64} C ${X + W} ${Y + H - 20}, ${X + W - 20} ${Y + H}, ${X + W - 64} ${Y + H} L ${X + 64} ${Y + H} C ${X + 20} ${Y + H}, ${X} ${Y + H - 20}, ${X} ${Y + H - 64} L ${X} ${Y + 64} C ${X} ${Y + 20}, ${X + 20} ${Y}, ${X + 64} ${Y} Z`;
+  const screen = prog(f, 4, 14);
+  const mode = f < cuesAt ? 0 : f < offAt ? 1 : 2;
+  // the pill under the active tab slides
+  const tabX = interpolate(prog(f, cuesAt, cuesAt + 8) + prog(f, offAt, offAt + 8), [0, 1, 2], [0, 1, 2]);
+  const lit = prog(f, 16, 24) * (1 - prog(f, cuesAt - 6, cuesAt));
+  const wave = (k: number) => 8 + Math.abs(Math.sin((f + k * 5) / 3)) * 20 * lit;
+  // your words: three rows of word widths (px). Cues keeps the first two words of the first row.
+  const rows = [[70, 46, 92, 58], [84, 40, 66, 96], [56, 88, 50]];
+  const flat = rows.flatMap((r, ri) => r.map((w, wi) => ({ w, ri, wi })));
+  const giveFrom = 0, giveN = 3; // "line?" gives the first three words
+  const giveAt = (k: number) => askAt + 12 + k * 5;
+  const sayAt = (k: number) => askAt + 36 + (k - giveN) * 4;
+  const ask = spring({ frame: f - askAt, fps, config: { damping: 11, mass: 0.6 } });
+  const sx = X + 20, sw = W - 40;
+  const TABS = ["Script", "Cues", "Off book"];
+  return (
+    <AbsoluteFill>
+      <Sfx name="cine/ping" at={16} vol={0.4} />
+      <Sfx name="cine/switch" at={cuesAt} vol={0.55} />
+      <Sfx name="cine/switch" at={offAt} vol={0.55} />
+      <Sfx name="pop" at={askAt} vol={0.45} />
+      {Array.from({ length: giveN }, (_, k) => <Sfx key={k} name="cine/plink" at={giveAt(k)} vol={0.4} />)}
+      <Sfx name="cine/toing" at={sayAt(flat.length - 1) + 4} vol={0.45} />
+      {s.cue && <Sfx name="typing" at={offAt + 10} frames={typeFrames(s.cue)} vol={0.4} />}
+      <Glow glow={0.5} y="36%" />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Ink d={body} start={0} dur={16} w={7} fill={PAPER_FILL} />
+      </svg>
+      <div style={{ position: "absolute", left: sx, top: Y + 20, width: sw, height: H - 40, borderRadius: 48, background: APP.bg, opacity: screen, overflow: "hidden" }}>
+        <div style={{ position: "absolute", left: sw / 2 - 52, top: 14, width: 104, height: 28, borderRadius: 14, background: "#000" }} />
+        {/* Script · Cues · Off book */}
+        <div style={{ position: "absolute", left: 26, right: 26, top: 72, height: 62, borderRadius: 31, border: `2px solid ${APP.line}` }}>
+          <div style={{ position: "absolute", top: 4, bottom: 4, left: `calc(4px + ${tabX} * (100% - 8px) / 3)`, width: "calc((100% - 8px) / 3)", borderRadius: 27, background: C.orange }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex" }}>
+            {TABS.map((t, k) => (
+              <div key={t} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F_PAPER.sans, fontWeight: 600, fontSize: 23, color: k === mode ? "#1b120c" : APP.dim, whiteSpace: "nowrap" }}>{t}</div>
+            ))}
+          </div>
+        </div>
+        <div style={{ position: "absolute", left: 30, right: 30, top: 178 }}>
+          {/* the partner's line: always shown, read aloud */}
+          <div style={{ borderRadius: 14, padding: "16px 16px", background: `rgba(242,207,58,${0.16 * lit})`, border: `2px solid rgba(242,207,58,${0.7 * lit})` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ fontFamily: F_PAPER.sans, fontWeight: 600, fontSize: 18, letterSpacing: 3, color: lit > 0.5 ? APP.yellow : APP.dim }}>{s.partner ?? "PARTNER"}</div>
+              <div style={{ display: "flex", gap: 4, alignItems: "center", height: 30 }}>
+                {[0, 1, 2, 3, 4].map((k) => <div key={k} style={{ width: 5, height: wave(k), borderRadius: 3, background: APP.yellow, opacity: lit }} />)}
+              </div>
+            </div>
+            {[0.94, 0.72].map((w, k) => <div key={k} style={{ height: 11, width: `${w * 100}%`, borderRadius: 5, background: "rgba(244,234,217,0.8)", marginTop: 14 }} />)}
+          </div>
+          {/* your line */}
+          <div style={{ padding: "34px 16px 0" }}>
+            <div style={{ fontFamily: F_PAPER.sans, fontWeight: 600, fontSize: 18, letterSpacing: 3, color: APP.cream }}>{s.you ?? "YOU"}</div>
+            {rows.map((r, ri) => (
+              <div key={ri} style={{ display: "flex", gap: 12, marginTop: 18 }}>
+                {r.map((w, wi) => {
+                  const k = flat.findIndex((q) => q.ri === ri && q.wi === wi);
+                  const given = k >= giveFrom && k < giveFrom + giveN && f >= giveAt(k);
+                  const said = k >= giveN && f >= sayAt(k);
+                  const shown = mode === 0 || (mode === 1 && ri === 0 && wi < 2) || given || said;
+                  const pop = given ? spring({ frame: f - giveAt(k), fps, config: { damping: 9, mass: 0.4 } }) : 1;
+                  return (
+                    <div key={wi} style={{ width: w * 1.15, height: 22, borderRadius: 6,
+                      background: given ? C.orange : shown ? "rgba(244,234,217,0.85)" : "transparent",
+                      border: shown || given ? "none" : `2px dashed ${APP.line}`,
+                      transform: `scale(${given ? 0.6 + 0.4 * pop : 1})` }} />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+          <div style={{ padding: "40px 16px 0", opacity: 0.55 }}>
+            <div style={{ fontFamily: F_PAPER.sans, fontWeight: 600, fontSize: 18, letterSpacing: 3, color: APP.dim }}>{s.partner ?? "PARTNER"}</div>
+            {[0.8, 0.6].map((w, k) => <div key={k} style={{ height: 11, width: `${w * 100}%`, borderRadius: 5, background: "rgba(244,234,217,0.55)", marginTop: 14 }} />)}
+          </div>
+        </div>
+      </div>
+      {/* the whisper, outside the phone */}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <g transform={`translate(190 690) scale(${Math.max(0, ask)}) translate(-190 -690)`} opacity={Math.min(1, Math.max(0, ask) * 1.4) * (1 - prog(f, askAt + 60, askAt + 72))}>
+          <path d="M80 600 C 60 600, 52 610, 52 630 L 52 700 C 52 720, 60 730, 80 730 L 220 730 L 282 778 L 250 730 L 270 730 C 290 730, 298 720, 298 700 L 298 630 C 298 610, 290 600, 270 600 Z" fill="#ffffff" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+          <text x={175} y={682} textAnchor="middle" fontFamily={F.type} fontStyle="italic" fontSize={50} fill={C.ink}>{s.ask ?? "line?"}</text>
+        </g>
+      </svg>
+      <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", paddingTop: 1230 }}>
+        <Rise at={cuesAt - 10}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={92} />
+        </Rise>
+        <div style={{ height: 14 }} />
+        {s.cue && <Cue text={s.cue} color={C.orange} at={offAt + 10} />}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** Back at the table at ten: one mug, the phone propped against it, the clock clicks over, a stamp on the script. */
+type Ten = { type: "ten"; seconds: number; line: string; accent: string; cue?: string; stamp?: string; tickAt?: number };
+const TenScene: React.FC<{ s: Ten }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const tickAt = s.tickAt ?? 34;
+  const TY = 1010, cx = 540, cy = 470, r = 190;
+  // 9:58, 9:59, 10:00: the minute hand clicks twice
+  const mins = 58 + (f >= tickAt - 16 ? 1 : 0) + (f >= tickAt ? 1 : 0);
+  const kick = (at: number) => (f >= at ? (1 - spring({ frame: f - at, fps, config: { damping: 7, mass: 0.4 } })) * 5 : 0);
+  const minDeg = mins * 6 + kick(tickAt - 16) + kick(tickAt);
+  const hourDeg = (9 + mins / 60) * 30;
+  const stamp = spring({ frame: f - (tickAt + 14), fps, config: { damping: 10, mass: 0.6 } });
+  const face = `M${cx} ${cy - r} C ${cx + r * 0.56} ${cy - r - 2}, ${cx + r + 2} ${cy - r * 0.56}, ${cx + r} ${cy} C ${cx + r - 2} ${cy + r * 0.56}, ${cx + r * 0.56} ${cy + r + 2}, ${cx} ${cy + r} C ${cx - r * 0.56} ${cy + r - 2}, ${cx - r - 2} ${cy + r * 0.56}, ${cx - r} ${cy} C ${cx - r + 2} ${cy - r * 0.56}, ${cx - r * 0.56} ${cy - r - 2}, ${cx} ${cy - r} Z`;
+  const ticks = Array.from({ length: 12 }, (_, k) => {
+    const a = (k * 30 * Math.PI) / 180;
+    const r0 = k % 3 === 0 ? r - 34 : r - 22;
+    return `M${cx + Math.sin(a) * r0} ${cy - Math.cos(a) * r0} L ${cx + Math.sin(a) * (r - 10)} ${cy - Math.cos(a) * (r - 10)}`;
+  }).join(" ");
+  const hand = (deg: number, len: number, w: number, col: string) => (
+    <path d={`M${cx} ${cy + 18} L ${cx} ${cy - len}`} stroke={col} strokeWidth={w} strokeLinecap="round" transform={`rotate(${deg} ${cx} ${cy})`} />
+  );
+  return (
+    <AbsoluteFill>
+      <Sfx name="cine/tick" at={tickAt - 16} vol={0.5} />
+      <Sfx name="cine/tick" at={tickAt} vol={0.55} />
+      <Sfx name="thud" at={tickAt + 15} vol={0.7} />
+      <Sfx name="cine/toing" at={tickAt + 18} vol={0.4} />
+      {s.cue && <Sfx name="typing" at={tickAt + 34} frames={typeFrames(s.cue)} vol={0.4} />}
+      <Glow glow={0.5} y="58%" />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Ink d={face} start={0} dur={16} w={7} fill="#fbf7ef" />
+        <Ink d={ticks} start={8} dur={10} w={5} />
+        <g opacity={prog(f, 10, 16)}>
+          {hand(hourDeg, r - 90, 12, C.orange)}
+          {hand(minDeg, r - 44, 7, C.ink)}
+          <circle cx={cx} cy={cy} r={13} fill={C.ink} />
+        </g>
+        <Ink d={`M60 ${TY} L 1020 ${TY}`} start={2} dur={12} w={7} />
+        <Ink d={`M60 ${TY + 30} L 1020 ${TY + 30}`} start={6} dur={12} w={4} color={C.inkSoft} />
+        <Mug x={300} y={TY} start={8} steam={0.5} />
+        {/* the phone propped against the mug, screen glowing */}
+        <g opacity={prog(f, 12, 20)} transform={`rotate(-10 430 ${TY})`}>
+          <rect x={380} y={TY - 236} width={124} height={232} rx={18} fill={APP.bg} stroke={C.ink} strokeWidth={5} />
+          <rect x={396} y={TY - 214} width={92} height={10} rx={5} fill={C.orange} />
+          <rect x={396} y={TY - 190} width={70} height={8} rx={4} fill="rgba(244,234,217,0.7)" />
+          <rect x={396} y={TY - 172} width={84} height={8} rx={4} fill="rgba(244,234,217,0.7)" />
+        </g>
+        <Pages x={720} y={TY} start={14} label="SCENE 4" />
+        {/* the stamp lands on the script */}
+        <g transform={`translate(720 ${TY - 110}) rotate(-10) scale(${f < tickAt + 14 ? 0 : 2 - stamp})`} opacity={f < tickAt + 14 ? 0 : Math.min(1, stamp * 1.5)}>
+          <rect x={-150} y={-46} width={300} height={92} rx={12} fill="rgba(251,247,239,0.9)" stroke={C.orange} strokeWidth={7} />
+          <text x={0} y={18} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={50} letterSpacing={5} fill={C.orange}>{s.stamp ?? "OFF BOOK"}</text>
+        </g>
+      </svg>
+      <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", paddingTop: 1240 }}>
+        <Rise at={tickAt + 6}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={112} />
+        </Rise>
+        <div style={{ height: 18 }} />
+        {s.cue && <Cue text={s.cue} color={C.orange} at={tickAt + 34} />}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 /** Pencil speed streaks that sweep across while the camera moves. */
 const Streaks: React.FC<{ seed: number }> = ({ seed }) => {
   const f = useCurrentFrame();
@@ -1845,6 +2118,9 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "inbox" ? <InboxScene s={sc} /> :
       sc.type === "bring" ? <BringScene s={sc} /> :
       sc.type === "runs" ? <RunsScene s={sc} /> :
+      sc.type === "kitchen" ? <KitchenScene s={sc} /> :
+      sc.type === "book" ? <BookScene s={sc} /> :
+      sc.type === "ten" ? <TenScene s={sc} /> :
       <EndScene s={sc} />;
   };
 
