@@ -119,6 +119,8 @@ type UpgradeModalViewedParams = {
   /** The gate that blocked them. Tells us which wall makes actors reach for a card. */
   feature: string;
   tier_current: string;
+  /** The wall's copy letter (WALL_VARIANT), on paywall_hit only. */
+  variant?: string;
 };
 
 /**
@@ -316,10 +318,13 @@ export function trackRehearsalError(params: RehearsalErrorParams) {
 // forget it. The older names keep firing so rows before 2026-09-29 still join.
 const here = () => (typeof window === "undefined" ? "" : window.location.pathname);
 
-export function trackUpgradeModalViewed(params: UpgradeModalViewedParams) {
+export function trackUpgradeModalViewed({ variant, ...params }: UpgradeModalViewedParams) {
   sendEvent("upgrade_modal_viewed", params);
   trackEvent("upgrade_modal_viewed", params);
-  trackEvent("paywall_hit", paywallProps(params.feature, "wall", params.tier_current, here()));
+  trackEvent(
+    "paywall_hit",
+    paywallProps(params.feature, "wall", params.tier_current, here(), variant),
+  );
 }
 
 export function trackTrialOfferShown({ variant, ...params }: TrialOfferShownParams) {

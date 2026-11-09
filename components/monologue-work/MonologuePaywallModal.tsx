@@ -7,6 +7,7 @@ import { PlusOffer } from "@/components/billing/PlusOffer";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
 import { trackUpgradeModalViewed } from "@/lib/analytics";
+import { WALL_VARIANT } from "@/lib/paywall/offer";
 import type { WallKind } from "@/lib/paywall/offer";
 import { useT } from "@/lib/i18n";
 
@@ -60,7 +61,7 @@ export function MonologuePaywallModal({
 
   useEffect(() => {
     if (!open) return;
-    trackUpgradeModalViewed({ feature, tier_current: currentTier });
+    trackUpgradeModalViewed({ feature, tier_current: currentTier, variant: WALL_VARIANT });
   }, [open, feature, currentTier]);
 
   // After a taste (or the reverse trial) the first thing to say is what they

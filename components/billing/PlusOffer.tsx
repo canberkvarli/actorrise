@@ -42,8 +42,8 @@ interface PlusOfferProps {
  * ticket: the same printed rows, label, dotted leader, figure, so the actor
  * who taps it lands on the same account set larger.
  *
- * One plan, by the year, priced by the month. The day the card is charged is
- * printed, because no email goes out before it (lib/paywall/offer.ts).
+ * One plan, month to month, the year one tap under it (lib/paywall/offer.ts).
+ * The day the card is charged is printed, because no email goes out before it (lib/paywall/offer.ts).
  *
  * Carries no theatre tokens of its own: every host already binds them.
  */
@@ -58,26 +58,29 @@ export function PlusOffer({ feature, lead, onDismiss, dismissLabel }: PlusOfferP
   const [now] = useState(() => new Date());
   // Links only: the words are built below in the reader's language.
   const links = plusOffer(feature, words, now);
-  const forYear = t("appAccountPlusOffer.forTheYear", { annual: PLUS_ANNUAL });
+  const thenMonthly = t("appAccountPlusOffer.thenMonthly", { monthly: PLUS_MONTHLY });
   const on = chargeDateIn(locale, now, words.days);
   const offer = {
     href: links.href,
-    monthlyHref: links.monthlyHref,
-    perMonth: PLUS_PER_MONTH_ON_ANNUAL,
-    perMonthNote: t("appAccountPlusOffer.perMonthNote", { annual: PLUS_ANNUAL }),
+    annualHref: links.annualHref,
+    perMonth: PLUS_MONTHLY,
+    perMonthNote: t("appAccountPlusOffer.perMonthNoteMonthly"),
     cta: words.tasted
-      ? t("appAccountPlusOffer.keepPlusYear", { annual: PLUS_ANNUAL })
+      ? t("appAccountPlusOffer.keepPlusMonth", { monthly: PLUS_MONTHLY })
       : t("appAccountTrial.cta", { short: words.short }),
     rows: (words.tasted
-      ? [[t("appAccountPlusOffer.today"), forYear]]
+      ? [[t("appAccountPlusOffer.today"), PLUS_MONTHLY]]
       : [
           [t("appAccountPlusOffer.today"), "$0"],
-          [on, forYear],
+          [on, thenMonthly],
         ]) as [string, string][],
     fine: words.tasted
       ? t("appAccountPlusOffer.fineTasted")
       : t("appAccountPlusOffer.fine", { date: on }),
-    monthlyLabel: t("appAccountPlusOffer.monthly", { monthly: PLUS_MONTHLY }),
+    annualLabel: t("appAccountPlusOffer.annual", {
+      annual: PLUS_ANNUAL,
+      perMonth: PLUS_PER_MONTH_ON_ANNUAL,
+    }),
   };
   const gains = [lead, ...GAIN_ORDER.filter((k) => k !== lead)];
 
@@ -114,16 +117,16 @@ export function PlusOffer({ feature, lead, onDismiss, dismissLabel }: PlusOfferP
         <Link
           href={offer.href}
           className="t-wall__cta"
-          onClick={() => trackPaywallCtaClicked(feature, "wall", tier, "annual")}
+          onClick={() => trackPaywallCtaClicked(feature, "wall", tier, "monthly")}
         >
           {offer.cta}
         </Link>
         <Link
-          href={offer.monthlyHref}
+          href={offer.annualHref}
           className="t-wall__quiet"
-          onClick={() => trackPaywallCtaClicked(feature, "wall", tier, "monthly")}
+          onClick={() => trackPaywallCtaClicked(feature, "wall", tier, "annual")}
         >
-          {offer.monthlyLabel}
+          {offer.annualLabel}
         </Link>
       </div>
 

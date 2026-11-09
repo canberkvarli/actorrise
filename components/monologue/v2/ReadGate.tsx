@@ -6,6 +6,7 @@ import { PlusOffer } from "@/components/billing/PlusOffer";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useTrialWords } from "@/hooks/useTrialWords";
 import { trackUpgradeModalViewed } from "@/lib/analytics";
+import { WALL_VARIANT } from "@/lib/paywall/offer";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -27,7 +28,7 @@ export function ReadGate({ feature = "monologue_read" }: { feature?: string }) {
   const t = useT();
 
   useEffect(() => {
-    trackUpgradeModalViewed({ feature, tier_current: currentTier });
+    trackUpgradeModalViewed({ feature, tier_current: currentTier, variant: WALL_VARIANT });
   }, [feature, currentTier]);
 
   return (

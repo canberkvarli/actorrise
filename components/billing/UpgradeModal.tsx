@@ -5,6 +5,7 @@ import { theatreFontVars } from "@/lib/fonts/theatre";
 import Link from "next/link";
 import { useEffect } from "react";
 import { PlusOffer } from "@/components/billing/PlusOffer";
+import { WALL_VARIANT } from "@/lib/paywall/offer";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useT } from "@/lib/i18n";
 import { useTrialText } from "@/components/billing/trialText";
@@ -49,7 +50,13 @@ export function UpgradeModal({
   // which is what decides where the next gate goes.
   useEffect(() => {
     if (!open) return;
-    trackUpgradeModalViewed({ feature, tier_current: currentTier });
+    // Plus actors see Pro, not the Plus offer, so only the free side carries
+    // the wall's copy letter.
+    trackUpgradeModalViewed({
+      feature,
+      tier_current: currentTier,
+      variant: currentTier === "plus" ? undefined : WALL_VARIANT,
+    });
   }, [open, feature, currentTier]);
 
   const isPlus = currentTier === "plus";

@@ -1,7 +1,13 @@
 /**
  * What a hard wall offers, as words and links. Pure: the caller owns the clock.
  *
- * Why the walls lead with the year (2026-10-31, last 30 days): the walls get
+ * The walls lead with the month again (2026-11-09, Canberk). Under the year-led
+ * wall below, clicks fell from about 1 in 5 who saw a wall to 1 in 21 in its
+ * first full week: "$99" printed a week out is a big decision for someone three
+ * pieces in, and $12 is a small one. The year stays one tap away. Read the
+ * change by WALL_VARIANT on paywall_hit.
+ *
+ * Why the walls led with the year before that (2026-10-31, last 30 days): the walls get
  * the clicks (rehearsal 6 of 29, read 3 of 18) but of 15 clicks only 2 finished
  * Stripe checkout, and trials themselves convert about 45%. So the wall's job
  * is to make the decision before the card form does: one plan, one price, the
@@ -54,20 +60,20 @@ export function plusGains(lead: WallKind): string[] {
 }
 
 export type PlusOffer = {
-  /** The annual checkout, the default. */
+  /** The month-to-month checkout, the default. */
   href: string;
-  /** Month to month, the quiet second option. */
-  monthlyHref: string;
+  /** By the year, the quiet second option. */
+  annualHref: string;
   cta: string;
-  /** "$8.25" */
+  /** "$12" */
   perMonth: string;
-  /** "a month, billed $99 a year" */
+  /** "a month, cancel any time" */
   perMonthNote: string;
   /** The printed account under the price: [label, figure]. */
   rows: [string, string][];
   /** One plain sentence on when money moves and how to stop it. */
   fine: string;
-  monthlyLabel: string;
+  annualLabel: string;
 };
 
 /** "November 7" */
@@ -76,6 +82,13 @@ export function chargeDate(now: Date, days: number): string {
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
 }
 
+/**
+ * Logged on paywall_hit from every hard wall, so the month-led wall can be
+ * read against the year-led one it replaced (those rows carry no variant).
+ * Change the words, change the letter.
+ */
+export const WALL_VARIANT = "wall_monthly_a";
+
 export function plusOffer(
   from: string,
   words: Pick<TrialWords, "days" | "tasted" | "short">,
@@ -83,36 +96,37 @@ export function plusOffer(
 ): PlusOffer {
   const gate = encodeURIComponent(from);
   const trial = words.tasted ? 0 : 1;
-  const href = `/checkout?tier=plus&period=annual&trial=${trial}&from=${gate}`;
-  const monthlyHref = `/checkout?tier=plus&period=monthly&trial=${trial}&from=${gate}`;
-  const perMonth = PLUS_PER_MONTH_ON_ANNUAL;
-  const perMonthNote = `a month, billed ${PLUS_ANNUAL} a year`;
+  const href = `/checkout?tier=plus&period=monthly&trial=${trial}&from=${gate}`;
+  const annualHref = `/checkout?tier=plus&period=annual&trial=${trial}&from=${gate}`;
+  const perMonth = PLUS_MONTHLY;
+  const perMonthNote = "a month, cancel any time";
+  const annualLabel = `or ${PLUS_ANNUAL} a year, ${PLUS_PER_MONTH_ON_ANNUAL} a month`;
 
   if (words.tasted) {
     return {
       href,
-      monthlyHref,
-      cta: `Keep Plus, ${PLUS_ANNUAL} a year`,
+      annualHref,
+      cta: `Keep Plus, ${PLUS_MONTHLY} a month`,
       perMonth,
       perMonthNote,
-      rows: [["Today", `${PLUS_ANNUAL} for the year`]],
+      rows: [["Today", PLUS_MONTHLY]],
       fine: "Cancel any time and it won't renew.",
-      monthlyLabel: `or ${PLUS_MONTHLY} month to month`,
+      annualLabel,
     };
   }
 
   const on = chargeDate(now, words.days);
   return {
     href,
-    monthlyHref,
+    annualHref,
     cta: `Start ${words.short}`,
     perMonth,
     perMonthNote,
     rows: [
       ["Today", "$0"],
-      [on, `${PLUS_ANNUAL} for the year`],
+      [on, `${PLUS_MONTHLY}, then monthly`],
     ],
     fine: `Card on file. Cancel before ${on} and you pay nothing.`,
-    monthlyLabel: `or ${PLUS_MONTHLY} month to month`,
+    annualLabel,
   };
 }

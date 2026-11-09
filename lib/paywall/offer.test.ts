@@ -6,14 +6,14 @@ import { chargeDate, plusGains, plusOffer, PLUS_GAINS, PLUS_PER_MONTH_ON_ANNUAL 
 const NOW = new Date("2026-10-31T12:00:00Z");
 
 describe("plusOffer", () => {
-  it("leads with the year, priced by the month", () => {
+  it("leads with the month, the year one tap under it", () => {
     const o = plusOffer("monologue_read", trialWords(7), NOW);
     expect(PLUS_PER_MONTH_ON_ANNUAL).toBe("$8.25");
-    expect(o.perMonth).toBe("$8.25");
-    expect(o.perMonthNote).toBe("a month, billed $99 a year");
-    expect(o.href).toBe("/checkout?tier=plus&period=annual&trial=1&from=monologue_read");
-    expect(o.monthlyHref).toBe("/checkout?tier=plus&period=monthly&trial=1&from=monologue_read");
-    expect(o.monthlyLabel).toBe("or $12 month to month");
+    expect(o.perMonth).toBe("$12");
+    expect(o.perMonthNote).toBe("a month, cancel any time");
+    expect(o.href).toBe("/checkout?tier=plus&period=monthly&trial=1&from=monologue_read");
+    expect(o.annualHref).toBe("/checkout?tier=plus&period=annual&trial=1&from=monologue_read");
+    expect(o.annualLabel).toBe("or $99 a year, $8.25 a month");
   });
 
   it("names the trial length from the server and the day money moves", () => {
@@ -21,7 +21,7 @@ describe("plusOffer", () => {
     expect(week.cta).toBe("Start 1 week free");
     expect(week.rows).toEqual([
       ["Today", "$0"],
-      ["November 7", "$99 for the year"],
+      ["November 7", "$12, then monthly"],
     ]);
     expect(week.fine).toContain("Cancel before November 7");
 
@@ -38,14 +38,14 @@ describe("plusOffer", () => {
   it("asks for the money straight after a taste, with no trial", () => {
     const o = plusOffer("monologue_read", trialWords(0, false, true, 7), NOW);
     expect(o.href).toContain("trial=0");
-    expect(o.monthlyHref).toContain("trial=0");
-    expect(o.rows).toEqual([["Today", "$99 for the year"]]);
+    expect(o.annualHref).toContain("trial=0");
+    expect(o.rows).toEqual([["Today", "$12"]]);
     expect(o.cta).not.toMatch(/free/i);
   });
 
   it("carries no dashes", () => {
     const o = plusOffer("x", trialWords(7), NOW);
-    const all = [o.cta, o.perMonthNote, o.fine, o.monthlyLabel, ...Object.values(PLUS_GAINS)].join(" ");
+    const all = [o.cta, o.perMonthNote, o.fine, o.annualLabel, ...Object.values(PLUS_GAINS)].join(" ");
     expect(all).not.toMatch(/[–—]/);
   });
 });
