@@ -180,6 +180,7 @@ export const marketing = {
     takeThis: "Take this one",
     featEveryMonologue: "Every monologue, start to finish",
     featReads: "{count} full monologues a month",
+    featReadsOne: "1 full monologue a month",
     featUnlimitedRehearsals: "Unlimited monologue rehearsals",
     featRehearsals: "{count} free rehearsals, then a week of Plus free, two if you finish a scene",
     featUnlimitedSearches: "Unlimited AI searches",

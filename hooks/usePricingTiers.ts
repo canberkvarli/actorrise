@@ -43,7 +43,7 @@ export const DEFAULT_PRICING_TIERS: PricingTier[] = [
     features: {
       ai_searches_per_month: 10,
       monologue_sessions: 2,
-      monologue_reads_per_month: 3,
+      monologue_reads_per_month: 1,
       bookmarks_limit: 10,
       recommendations: true,
       download_formats: ["pdf", "docx"],

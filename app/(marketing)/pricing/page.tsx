@@ -91,7 +91,11 @@ function getFeaturesList(tier: PricingTier, t: Translate): string[] {
   if (tier.name !== "free") {
     features.push(t("marketingPricing.featEveryMonologue"));
   } else if (reads && reads > 0) {
-    features.push(t("marketingPricing.featReads", { count: reads }));
+    features.push(
+      reads === 1
+        ? t("marketingPricing.featReadsOne")
+        : t("marketingPricing.featReads", { count: reads }),
+    );
   }
 
   // Monologue rehearsals — the core value

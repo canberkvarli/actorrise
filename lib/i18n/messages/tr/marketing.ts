@@ -182,6 +182,7 @@ export const marketing: Widen<typeof en> = {
     takeThis: "Bunu alıyorum",
     featEveryMonologue: "Her monolog, baştan sona",
     featReads: "Ayda {count} tam monolog",
+    featReadsOne: "Ayda 1 tam monolog",
     featUnlimitedRehearsals: "Sınırsız monolog provası",
     featRehearsals:
       "{count} ücretsiz prova, sonra bir hafta ücretsiz Plus, bir sahne bitirirsen iki hafta",

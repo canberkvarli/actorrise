@@ -213,8 +213,9 @@ class TestSeparateTrialsPerClient:
     """
 
     def test_each_client_has_its_own_limit(self):
-        # Equal since 2026-10-21 (web went 5 -> 3); the counts still do not pool.
-        assert free_read_limit(CLIENT_WEB) == 3
+        # Web 5 -> 3 on 2026-10-21, 3 -> 1 on 2026-11-09; the counts still do not pool
+        # (web is a month, Ghost Light a day).
+        assert free_read_limit(CLIENT_WEB) == 1
         assert free_read_limit(CLIENT_GHOSTLIGHT) == 1  # a day, since 2026-10-31
 
     def test_web_reads_do_not_spend_the_app_trial(self, db):

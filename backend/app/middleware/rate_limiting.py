@@ -403,9 +403,11 @@ def record_total_search(user_id: int, db: Session) -> None:
 CLIENT_WEB = "web"
 CLIENT_GHOSTLIGHT = "ghostlight"
 
-# 3 since 2026-10-21 (was 5), Canberk's call: five a month was most of what a
+# 1 since 2026-11-09 (was 3 from 2026-10-21, 5 before), Canberk's call: of 537 new
+# free actors in 30 days only 37 read 3 or more pieces, so the wall at 3 met
+# almost nobody; 63 read 2 or more. Before that: five a month was most of what a
 # free actor ever reads, so the wall rarely came up at all.
-FREE_MONOLOGUE_READ_LIMIT = 3
+FREE_MONOLOGUE_READ_LIMIT = 1
 # Ghost Light: 1 new piece a day since 2026-10-31 (was 3 a day from 10-28).
 # With tonight's speeches never counted, three a day plus tonight came to some
 # 35 pieces a week before any ask, and the app had no reason to be paid for.
