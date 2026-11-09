@@ -89,6 +89,52 @@ def voice_line(line, spec, idx, key, default):
     return True
 
 
+def voice_take(spec, key):
+    """Drawn films: the whole narration in ONE take (Canberk, 2026-11-09: line by line it lost energy and
+    left gaps). One ElevenLabs request for all lines, so the read keeps its pace and energy; the word
+    timings are split back per line for the captions, and the scenes are fitted to the lines."""
+    v = spec.get("voice") or {}
+    lines = v.get("lines") or []
+    if not spec.get("scenes") or not lines or v.get("continuous") is False:
+        return False
+    if v.get("take") and os.path.exists(os.path.join(ROOT, "public", v["take"])):
+        return False
+    vid = v.get("voice") or "narrator"
+    vid = (spec.get("voices") or {}).get(vid, VOICES.get(vid.lower(), vid))
+    lead = float(v.get("take_at", 0.3))
+    res = tts(" ".join((l.get("say") or l["text"]).strip() for l in lines), vid, key)
+    rel = f"voice/{spec['id']}/take.mp3"
+    path = os.path.join(ROOT, "public", rel)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    open(path, "wb").write(base64.b64decode(res["audio_base64"]))
+    words = words_from_alignment(res.get("normalized_alignment") or res.get("alignment"))
+    i = 0
+    for l in lines:
+        n = len(l["text"].split())
+        ws = words[i:i + n] or words[-1:]
+        i += n
+        s0 = ws[0]["s"]
+        l["at"] = round(lead + s0, 3)
+        l["words"] = [{"w": w["w"], "s": round(w["s"] - s0, 3), "e": round(w["e"] - s0, 3)} for w in ws]
+        l["dur"] = round(ws[-1]["e"] - s0 + 0.15, 3)
+        l.pop("audio", None)
+    v["take"], v["take_at"] = rel, lead
+    spec["voice"] = v
+    # Fit the scenes to the read: scene k starts as its line starts, so the picture follows the voice.
+    sc = spec["scenes"]
+    narrated = sc[:-1] if sc and sc[-1].get("type") == "end" and len(lines) == len(sc) - 1 else sc
+    if len(lines) == len(narrated):
+        for k, scene in enumerate(narrated):
+            start = 0 if k == 0 else lines[k]["at"] - 0.1
+            end = lines[k + 1]["at"] - 0.1 if k + 1 < len(lines) else lines[k]["at"] + lines[k]["dur"] + (0.5 if narrated is sc else 0.35)
+            scene["seconds"] = round(max(1.2, end - start), 2)
+        if narrated is not sc:
+            sc[-1]["seconds"] = sc[-1].get("seconds", 2.4)
+    else:
+        print(f"WARNING: {len(lines)} voice lines for {len(sc)} scenes; write one line per scene so the picture follows the voice", file=sys.stderr)
+    return True
+
+
 def main(spec_path):
     key = os.environ.get("ELEVENLABS_API_KEY") or (open(os.environ["ELEVENLABS_KEY_FILE"]).read().strip() if os.environ.get("ELEVENLABS_KEY_FILE") else "")
     if not key:
@@ -96,8 +142,11 @@ def main(spec_path):
         sys.exit(2)
     spec = json.load(open(spec_path))
     n, changed = 0, False
-    for line in (spec.get("voice") or {}).get("lines", []):
-        changed |= voice_line(line, spec, n, key, "narrator"); n += 1
+    if spec.get("scenes") and (spec.get("voice") or {}).get("continuous") is not False:
+        changed |= voice_take(spec, key)
+    else:
+        for line in (spec.get("voice") or {}).get("lines", []):
+            changed |= voice_line(line, spec, n, key, "narrator"); n += 1
     for b in spec.get("beats", []):
         if b.get("kind") != "scene":
             continue

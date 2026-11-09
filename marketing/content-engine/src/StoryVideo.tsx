@@ -89,7 +89,7 @@ export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Sta
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
-export type StoryVoice = { lines: { text: string; at: number; audio?: string; dur?: number; words?: { w: string; s: number; e: number }[] }[]; volume?: number; subtitles?: boolean };
+export type StoryVoice = { lines: { text: string; at: number; audio?: string; dur?: number; words?: { w: string; s: number; e: number }[] }[]; volume?: number; subtitles?: boolean; take?: string; take_at?: number };
 export type StorySpec = { id: string; scenes: StoryScene[]; music?: StoryMusic; look?: StoryLook; voice?: StoryVoice };
 export const storyFrames = (s: StorySpec) =>
   s.scenes.reduce((n, sc) => n + Math.round(sc.seconds * FPS), 0);
@@ -101,12 +101,22 @@ const prog = (f: number, a: number, b: number) =>
 
 const SilentCtx = React.createContext(false);
 /** A sound cue at a local frame. Skipped inside frozen pre-roll copies. */
+/** Mix (Canberk, 2026-11-09: music and effects sat on top of the voice). Effects play at SFX_GAIN, and at
+ *  half that while the narrator speaks; the music bed ducks to DUCK of its level under the voice. */
+const SceneStartCtx = React.createContext(0);
+const SFX_GAIN = 0.6;
+const DUCK = 0.35;
+const SpeechCtx = React.createContext<[number, number][]>([]);
+const speaking = (spans: [number, number][], f: number, pad = 6) => spans.some(([a, b]) => f >= a - pad && f <= b + pad);
 const Sfx: React.FC<{ name: string; at: number; vol?: number; frames?: number }> = ({ name, at, vol = 1, frames }) => {
   const silent = React.useContext(SilentCtx);
+  const spans = React.useContext(SpeechCtx);
+  const abs = React.useContext(SceneStartCtx) + at;
   if (silent) return null;
+  const g = SFX_GAIN * (speaking(spans, abs, 2) ? 0.5 : 1);
   return (
     <Sequence from={at} durationInFrames={frames} layout="none">
-      <Audio src={staticFile(`sfx/${name}.wav`)} volume={vol} />
+      <Audio src={staticFile(`sfx/${name}.wav`)} volume={vol * g} />
     </Sequence>
   );
 };
@@ -2124,10 +2134,26 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       <EndScene s={sc} />;
   };
 
+  const spans: [number, number][] = (spec.voice?.lines ?? []).map((l) => [Math.round(l.at * FPS), Math.round((l.at + (l.dur ?? 2)) * FPS)]);
+
   return (
+    <SpeechCtx.Provider value={spans}>
     <AbsoluteFill style={{ background: C.paper, overflow: "hidden" }}>
       <Paper />
-      {spec.music && <Audio src={staticFile(`music/${spec.id}.wav`)} volume={spec.music.volume ?? 0.42} />}
+      {spec.music && (
+        <Audio src={staticFile(`music/${spec.id}.wav`)}
+          volume={(f) => {
+            const base = spec.music!.volume ?? 0.42;
+            // smooth duck: look a few frames around f so the bed eases down and back up
+            let k = 0; for (let d = -6; d <= 6; d += 3) k = Math.max(k, speaking(spans, f + d, 0) ? 1 : 0);
+            return base * (k ? DUCK : 1);
+          }} />
+      )}
+      {spec.voice?.take && (
+        <Sequence from={Math.round((spec.voice.take_at ?? 0.3) * FPS)} layout="none">
+          <Audio src={staticFile(spec.voice.take)} volume={spec.voice?.volume ?? 1} />
+        </Sequence>
+      )}
       {(spec.voice?.lines ?? []).filter((l) => l.audio).map((l, i) => (
         <Sequence key={`vo${i}`} from={Math.round(l.at * FPS)} layout="none">
           <Audio src={staticFile(l.audio!)} volume={spec.voice?.volume ?? 1} />
@@ -2149,7 +2175,9 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
               from={i === 0 ? -PREROLL : moves[i] ? starts[i] - T : starts[i]}
               durationInFrames={frames + (moves[i] ? T : 0) + (i === 0 ? PREROLL : 0)}
             >
-              <AbsoluteFill style={{ transform: `translateX(${x}px)` }}>{renderScene(sc, i)}</AbsoluteFill>
+              <SceneStartCtx.Provider value={i === 0 ? -PREROLL : moves[i] ? starts[i] - T : starts[i]}>
+                <AbsoluteFill style={{ transform: `translateX(${x}px)` }}>{renderScene(sc, i)}</AbsoluteFill>
+              </SceneStartCtx.Provider>
             </Sequence>
           </React.Fragment>
         );
@@ -2159,5 +2187,6 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
           until={spec.scenes[spec.scenes.length - 1]?.type === "end" ? spec.scenes.slice(0, -1).reduce((n, sc) => n + sc.seconds, 0) : 1e9} />
       ) : null}
     </AbsoluteFill>
+    </SpeechCtx.Provider>
   );
 };

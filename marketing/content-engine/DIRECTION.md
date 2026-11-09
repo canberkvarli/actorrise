@@ -3,6 +3,23 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-09, evening: one take, a clean mix, Ghost Light closes (wins over everything below)
+
+Canberk on the off-book drawn film: the narration lost its flow and energy, the music and effects sat on
+the voice, and it closed on ActorRise though the feature is Ghost Light's.
+- **Narration is one take.** voice.py now voices all of a drawn film's lines in ONE request, so the read
+  keeps its pace and energy, then splits the word timings back per line and fits each scene to its line
+  (write one line per scene, the last line over the end card). Lines run straight into each other: no
+  gaps of seconds between them.
+- **Keep the energy up to the end.** Tags that lift: [playful], [conspiratorial], [excited], [delighted],
+  [upbeat], [mischievously]. Use [sighs], [whispers], [deadpan] only briefly and early. The last line is
+  always [upbeat], never [warmly] or [softly].
+- **The voice sits on top.** The music bed ducks to about a third under the narration and comes back in
+  the gaps; sound effects play at 60 percent and half that while the narrator speaks (StoryVideo DUCK and
+  SFX_GAIN). Keep the bed `volume` about 0.14.
+- **The end card says Ghost Light** (brand "Ghost Light", action "Free on the App Store") and so does the
+  spoken last line, for anything the iPhone app does. ActorRise only for actorrise.com-only features.
+
 ## 2026-11-08: drawn films win, silent films step back (wins over everything below)
 
 Canberk, after week one's numbers: the drawn films do fine, the tram and silent one-shot films don't.
