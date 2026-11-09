@@ -63,6 +63,11 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
   **Reina Hardy** (`--source reinahardy`): written but not run; her site's bot check
   refused the live page reads that day, and only about 3 pieces clear the gate.
 
+- **2026-11-09, Ian McWethy** (`--source mcwethy`, needs `--user-agent`): 8 pieces,
+  44566-44573, mostly teen (Molly Denholtz, Last Day of School). 5 more were refused by
+  the quality gate (`caps_residue`: his characters shout in capitals). Years for all six
+  plays are in `data/contemporary_play_years.json` from publisher and edition records.
+
 Asks rather than scrapes (permission emails): Monologue Blogger (terms forbid commercial
 use), Broadway Play Publishing (about 1,500 free audition pieces, 403 to our client),
 Don Zolidis (403), Arthur M. Jolly (PDFs, disallowed), Stage Partners (403).

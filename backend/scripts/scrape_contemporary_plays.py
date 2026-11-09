@@ -1178,7 +1178,131 @@ def extract_willis(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional[
     ), None
 
 
+# ── Ian McWethy ──────────────────────────────────────────────────────────────
+#
+# ianmcwethy.com/monologues/ — "the best monologues from my plays", one PDF
+# each, mostly high school characters. robots.txt disallows only /wp-admin/.
+# Verified 2026-11-09. The index names the piece and the play for every link:
+#
+#     PAIGE 1 from Molly Denholtz  <a href=".../molly-paige-mono-11.pdf">
+#
+# The PDFs come in three templates (a title page, a "From the play" line, a
+# screenplay shell with its placeholder fields left in), but all three put the
+# character's cue in capitals above each speech. The play's full title is taken
+# from the publisher's catalogue, not the index's shorthand ("Moly Denholtz").
+# The site answers 406 to a client without a browser-like user agent.
+
+_IM_INDEX = "https://ianmcwethy.com/monologues/"
+_IM_LINK = re.compile(
+    r'(?P<label>[A-Za-z][A-Za-z .\'’]{0,40}?)(?:\s+\d)?\s+from\s+(?P<play>[^<]{3,80}?)\s*'
+    r'(?:<[^>]+>\s*)*<a [^>]*href="(?P<href>https://ianmcwethy\.com/wp-content/uploads/[^"]+\.pdf)"',
+    re.S,
+)
+#: The index's shorthand -> the play's title as its publisher lists it.
+_IM_PLAYS = {
+    "molly denholtz": "The Incomplete Life & Random Death of Molly Denholtz",
+    "moly denholtz": "The Incomplete Life & Random Death of Molly Denholtz",
+    "last day of school": "Last Day of School",
+    "the internet is distract": "The Internet Is Distract--OH LOOK A KITTEN!",
+    "12 incompetent men (and women!)": "12 Incompetent Men (And Women!)",
+    "bad auditions by bad actors (full length version)": "Bad Auditions by Bad Actors (full-length)",
+    "superheroes": "Superheroes",
+}
+_IM_CUE_TAIL = re.compile(r"\s*\((?:cont[’']?d|CONT[’']?D)\)\s*$")
+
+
+def discover_mcwethy(url: str, html: str) -> list[Link]:
+    out: list[Link] = []
+    seen: set[str] = set()
+    for m in _IM_LINK.finditer(html):
+        href = m.group("href")
+        if href in seen:
+            continue
+        play = re.sub(r"[\s—–-]+$", "", unescape(_strip_tags(m.group("play")))).strip()
+        title = _IM_PLAYS.get(play.casefold())
+        if not title:
+            continue  # an unknown play has no verified year anyway
+        seen.add(href)
+        out.append(Link(url=href, character_name=unescape(m.group("label")).strip(), label=title))
+    return out
+
+
+def extract_mcwethy(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional[str]]:
+    """One speech from one of his PDFs: everything after the character's first cue."""
+    rows = _pdf_lines(blob)
+    if not rows:
+        return None, "empty_pdf"
+    # Paragraphs: a gap well above line spacing starts a new one. Line spacing in
+    # these files is 0-9pt, paragraph breaks 12pt and up.
+    paras: list[list[str]] = []
+    for text, gap in rows:
+        if not paras or gap > 10:
+            paras.append([text])
+        else:
+            paras[-1].append(text)
+
+    names = {w for w in re.split(r"\s+", link.character_name.upper()) if w}
+
+    def cue(line: str) -> Optional[str]:
+        """The speech on a cue line ('' when the cue stands alone), or None."""
+        bare = _IM_CUE_TAIL.sub("", line).strip()
+        if bare.isupper() and bare.split() and set(bare.split()) <= names:
+            return ""
+        inline = re.match(r"^([A-Z][A-Z ]{1,30})\.\s+(.+)$", line)
+        if inline and set(inline.group(1).split()) <= names:
+            return inline.group(2)
+        return None
+
+    speech: list[str] = []
+    started = False
+    for para in paras:
+        first = cue(para[0])
+        if first is not None:
+            started = True
+            body = " ".join(([first] if first else []) + para[1:]).strip()
+            if body:
+                speech.append(body)
+            continue
+        if not started:
+            continue
+        line = " ".join(para).strip()
+        if re.search(r"end of monologue", line, re.I):
+            break
+        if line.isupper() and len(line) <= 40:
+            return None, "two_speakers"
+        if speech:  # a stage direction between speeches stays, as one
+            speech.append(f"({line.rstrip('.')}.)")
+    while speech and speech[-1].startswith("("):
+        speech.pop()
+    if not speech:
+        return None, "no_cue"
+    return Parsed(
+        url=link.url,
+        play_title=link.label,
+        author="Ian McWethy",
+        character_name=link.character_name.title(),
+        text="\n\n".join(fit_excerpt(speech)),
+        genre="comedy" if link.label in (
+            "12 Incompetent Men (And Women!)", "Bad Auditions by Bad Actors (full-length)",
+            "Superheroes", "The Internet Is Distract--OH LOOK A KITTEN!",
+        ) else "drama",
+    ), None
+
+
 SOURCES: dict[str, Source] = {
+    "mcwethy": Source(
+        key="mcwethy",
+        name="Ian McWethy",
+        index_urls=[_IM_INDEX],
+        discover=discover_mcwethy,
+        extract=extract_mcwethy,
+        note=(
+            "The playwright's own free monologue PDFs from his plays, mostly high "
+            "school. VERIFIED 2026-11-09. robots.txt disallows only /wp-admin/. "
+            "Needs --user-agent (406 otherwise). Credit: play, playwright."
+        ),
+        delay=1.0,
+    ),
     "willis": Source(
         key="willis",
         name="Tristan B. Willis",
