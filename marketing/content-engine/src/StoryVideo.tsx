@@ -2145,7 +2145,8 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
           volume={(f) => {
             const base = spec.music!.volume ?? 0.42;
             // smooth duck: look a few frames around f so the bed eases down and back up
-            let k = 0; for (let d = -6; d <= 6; d += 3) k = Math.max(k, speaking(spans, f + d, 0) ? 1 : 0);
+            // and stays down before the first line: the bed's opening hit sat on a quiet first word (2026-11-09)
+            let k = spans.length && f < spans[0][0] ? 1 : 0; for (let d = -6; d <= 6; d += 3) k = Math.max(k, speaking(spans, f + d, 0) ? 1 : 0);
             return base * (k ? DUCK : 1);
           }} />
       )}

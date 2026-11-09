@@ -104,13 +104,19 @@ def build_music(spec_path):
         if sc["type"] == ("stage" if "stage" in types else "end"):
             break
         acc += round(sc["seconds"] * FPS)
-    prompt += f". Starts gentle, opens up after 3 seconds, a clear lift at {acc / FPS:.0f} seconds, ends cleanly on a final chord at {total_ms / 1000:.0f} seconds. No vocals."
+    # The track is asked for 4 seconds longer and cut sharp at the film's end (Canberk, 2026-11-04: sharp
+    # finish, no fade out). Asked to end on a chord at the film's length, it rang out to silence about two
+    # seconds early (2026-11-09, off-book-by-ten, three tries out of three).
+    prompt += f". Starts gentle, opens up after 3 seconds, a clear lift at {acc / FPS:.0f} seconds, keeps its full energy and keeps playing past {total_ms / 1000 + 3:.0f} seconds, no ending, no fade out. No vocals."
     os.makedirs(os.path.join(ROOT, "public", "music"), exist_ok=True)
     wav = os.path.join(ROOT, "public", "music", f"{spec['id']}.wav")
-    body = {"prompt": prompt, "music_length_ms": total_ms, "force_instrumental": True,
+    body = {"prompt": prompt, "music_length_ms": total_ms + 4000, "force_instrumental": True,
             "model_id": os.environ.get("ELEVENLABS_MUSIC_MODEL", "music_v1")}
     post("/music", body, wav + ".mp3")
-    to_wav(wav + ".mp3", wav, trim=False)
+    end = total_ms / 1000
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", wav + ".mp3", "-af",
+                    f"atrim=0:{end:.3f},afade=t=out:st={end - 0.05:.3f}:d=0.05", "-ar", "48000", "-ac", "2", wav], check=True)
+    os.remove(wav + ".mp3")
     print(wav, {"engine": "elevenlabs", "ms": total_ms})
 
 

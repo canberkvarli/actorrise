@@ -10,58 +10,285 @@
     "lines": [
       {
         "text": "Eight o'clock. Two mugs out. And she cancels.",
-        "at": 0.3,
-        "say": "[deadpan] Eight o'clock. Two mugs out. [frustrated] And she cancels."
+        "at": 0.433,
+        "say": "[deadpan] Eight o'clock. Two mugs out. [frustrated] And she cancels.",
+        "words": [
+          {
+            "w": "Eight",
+            "s": 0.0,
+            "e": 0.027
+          },
+          {
+            "w": "o'clock.",
+            "s": 0.067,
+            "e": 0.587
+          },
+          {
+            "w": "Two",
+            "s": 0.707,
+            "e": 1.067
+          },
+          {
+            "w": "mugs",
+            "s": 1.107,
+            "e": 1.387
+          },
+          {
+            "w": "out.",
+            "s": 1.467,
+            "e": 1.787
+          },
+          {
+            "w": "And",
+            "s": 2.575,
+            "e": 2.587
+          },
+          {
+            "w": "she",
+            "s": 2.627,
+            "e": 2.747
+          },
+          {
+            "w": "cancels.",
+            "s": 2.827,
+            "e": 3.627
+          }
+        ],
+        "dur": 3.777
       },
       {
         "text": "So it reads her part. You go script, then just the cues, then nothing.",
-        "at": 6.3,
-        "say": "[conspiratorial] So it reads her part. [playful] You go script, then just the cues, [excited] then nothing."
+        "at": 4.637,
+        "say": "[conspiratorial] So it reads her part. [playful] You go script, then just the cues, [excited] then nothing.",
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.011
+          },
+          {
+            "w": "it",
+            "s": 0.064,
+            "e": 0.171
+          },
+          {
+            "w": "reads",
+            "s": 0.211,
+            "e": 0.411
+          },
+          {
+            "w": "her",
+            "s": 0.451,
+            "e": 0.571
+          },
+          {
+            "w": "part.",
+            "s": 0.667,
+            "e": 1.131
+          },
+          {
+            "w": "You",
+            "s": 2.148,
+            "e": 2.193
+          },
+          {
+            "w": "go",
+            "s": 2.213,
+            "e": 2.253
+          },
+          {
+            "w": "script,",
+            "s": 2.356,
+            "e": 3.053
+          },
+          {
+            "w": "then",
+            "s": 3.149,
+            "e": 3.533
+          },
+          {
+            "w": "just",
+            "s": 3.597,
+            "e": 3.853
+          },
+          {
+            "w": "the",
+            "s": 3.873,
+            "e": 3.933
+          },
+          {
+            "w": "cues,",
+            "s": 4.045,
+            "e": 4.893
+          },
+          {
+            "w": "then",
+            "s": 5.101,
+            "e": 5.133
+          },
+          {
+            "w": "nothing.",
+            "s": 5.203,
+            "e": 5.773
+          }
+        ],
+        "dur": 5.923
       },
       {
         "text": "Line? It feeds you the next few words.",
-        "at": 12.9,
-        "say": "[mischievously] Line? [upbeat] It feeds you the next few words."
+        "at": 10.872,
+        "say": "[mischievously] Line? [upbeat] It feeds you the next few words.",
+        "words": [
+          {
+            "w": "Line?",
+            "s": 0.0,
+            "e": 0.48
+          },
+          {
+            "w": "It",
+            "s": 0.947,
+            "e": 0.96
+          },
+          {
+            "w": "feeds",
+            "s": 1.013,
+            "e": 1.28
+          },
+          {
+            "w": "you",
+            "s": 1.3,
+            "e": 1.36
+          },
+          {
+            "w": "the",
+            "s": 1.38,
+            "e": 1.44
+          },
+          {
+            "w": "next",
+            "s": 1.488,
+            "e": 1.68
+          },
+          {
+            "w": "few",
+            "s": 1.74,
+            "e": 1.92
+          },
+          {
+            "w": "words.",
+            "s": 2.0,
+            "e": 2.48
+          }
+        ],
+        "dur": 2.63
       },
       {
         "text": "Ten o'clock. Off book anyway.",
-        "at": 17.0,
-        "say": "[delighted] Ten o'clock. Off book anyway."
+        "at": 13.79,
+        "say": "[delighted] Ten o'clock. Off book anyway.",
+        "words": [
+          {
+            "w": "Ten",
+            "s": 0.0,
+            "e": 0.015
+          },
+          {
+            "w": "o'clock.",
+            "s": 0.095,
+            "e": 0.575
+          },
+          {
+            "w": "Off",
+            "s": 0.755,
+            "e": 1.295
+          },
+          {
+            "w": "book",
+            "s": 1.343,
+            "e": 1.535
+          },
+          {
+            "w": "anyway.",
+            "s": 1.592,
+            "e": 2.015
+          }
+        ],
+        "dur": 2.165
       },
       {
         "text": "Ghost Light. Built by a working actor.",
-        "at": 21.4,
-        "say": "[upbeat] Ghost Light. Built by a working actor."
+        "at": 16.319,
+        "say": "[upbeat] Ghost Light. Built by a working actor.",
+        "words": [
+          {
+            "w": "Ghost",
+            "s": 0.0,
+            "e": 0.05
+          },
+          {
+            "w": "Light.",
+            "s": 0.117,
+            "e": 0.77
+          },
+          {
+            "w": "Built",
+            "s": 0.823,
+            "e": 1.09
+          },
+          {
+            "w": "by",
+            "s": 1.17,
+            "e": 1.33
+          },
+          {
+            "w": "a",
+            "s": 1.37,
+            "e": 1.41
+          },
+          {
+            "w": "working",
+            "s": 1.46,
+            "e": 1.81
+          },
+          {
+            "w": "actor.",
+            "s": 1.903,
+            "e": 2.45
+          }
+        ],
+        "dur": 2.6
       }
     ],
-    "continuous": true
+    "continuous": true,
+    "take": "voice/2026-11-12-off-book-by-ten/take.mp3",
+    "take_at": 0.3
   },
   "scenes": [
     {
       "type": "kitchen",
-      "seconds": 6.4,
+      "seconds": 4.54,
       "line": "She cancelled.",
       "accent": "cancelled.",
       "cue": "(rehearsal was at eight.)",
       "text": "can't make it tonight, sorry",
       "buzzAt": 92,
-      "slideAt": 150
+      "slideAt": 140
     },
     {
       "type": "book",
-      "seconds": 9.8,
+      "seconds": 9.15,
       "line": "Script. Cues. Off book.",
       "accent": "Off book.",
-      "cuesAt": 116,
-      "offAt": 163,
-      "askAt": 208,
+      "cuesAt": 144,
+      "offAt": 179,
+      "askAt": 212,
       "ask": "line?",
       "partner": "PARTNER",
       "you": "YOU"
     },
     {
       "type": "ten",
-      "seconds": 5.0,
+      "seconds": 2.53,
       "line": "Off book by ten.",
       "accent": "ten.",
       "stamp": "OFF BOOK",
@@ -69,7 +296,7 @@
     },
     {
       "type": "end",
-      "seconds": 3.6,
+      "seconds": 3.2,
       "brand": "Ghost Light",
       "tagline": "(she cancelled. you didn't.)",
       "action": "Free on the App Store",
@@ -78,7 +305,7 @@
   ],
   "source": {
     "feature": "off-book",
-    "app_check": "actorrise main: lib/rehearsal/book.ts, BOOKS = Script / Cues / Off book; partner lines always shown; Cues keeps the first words (CUE_WORDS 2); off book the words fill in as said; 'line' said out loud (or the Line! button) shows the next few words, marked as given. Ghost Light repo not reachable from this run, so the close is ActorRise (web) rather than Ghost Light.",
+    "app_check": "actorrise main: lib/rehearsal/book.ts, BOOKS = Script / Cues / Off book; partner lines always shown; Cues keeps the first words (CUE_WORDS 2); off book the words fill in as said; 'line' said out loud (or the Line! button) shows the next few words, marked as given.",
     "data": "No monologue, title or quote on screen: the scene is drawn as word bars.",
     "plan": "2026-11-12 (Callboard), series drawn-life, ideas inbox i1",
     "motifs": "two-mugs-one-slides-away,text-bubble-cancel,script-cues-offbook-switch,line-whisper-gives-words,clock-958-to-ten-offbook-stamp"
