@@ -45,6 +45,15 @@ export default function SubmitMonologuePage() {
     notes: "",
   });
 
+  // /for-playwrights sends writers here with ?as=playwright: their own work,
+  // a link to where the play is sold, and their confirmation of the rights.
+  const [playwright, setPlaywright] = useState(false);
+  const [buyUrl, setBuyUrl] = useState("");
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  useEffect(() => {
+    setPlaywright(new URLSearchParams(window.location.search).get("as") === "playwright");
+  }, []);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -79,6 +88,12 @@ export default function SubmitMonologuePage() {
     if (!formData.author.trim()) {
       newErrors.author = t("appAuditionsSubmit.errAuthor");
     }
+    if (playwright && !rightsConfirmed) {
+      newErrors.rights = t("appAuditionsSubmit.errRights");
+    }
+    if (playwright && buyUrl.trim() && !/^https?:\/\//i.test(buyUrl.trim())) {
+      newErrors.buy_url = t("appAuditionsSubmit.errBuyUrl");
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -95,7 +110,12 @@ export default function SubmitMonologuePage() {
     setResult(null);
 
     try {
-      const response = await api.post<SubmissionResult>("/api/monologues/submit", formData);
+      const response = await api.post<SubmissionResult>("/api/monologues/submit", {
+        ...formData,
+        own_work: playwright,
+        rights_confirmed: playwright && rightsConfirmed,
+        buy_url: playwright ? buyUrl.trim() || null : null,
+      });
       setResult(response.data);
 
       // Clear form on success
@@ -150,10 +170,10 @@ export default function SubmitMonologuePage() {
           {t("appAuditionsSubmit.direction")}
         </p>
         <h1 className="font-brand mb-2 text-3xl font-semibold lg:text-4xl">
-          {t("appAuditionsSubmit.title")}
+          {playwright ? t("appAuditionsSubmit.playwrightTitle") : t("appAuditionsSubmit.title")}
         </h1>
         <p className="text-muted-foreground">
-          {t("appAuditionsSubmit.sub")}
+          {playwright ? t("appAuditionsSubmit.playwrightSub") : t("appAuditionsSubmit.sub")}
         </p>
       </motion.div>
 
@@ -318,6 +338,25 @@ export default function SubmitMonologuePage() {
                 {errors.author && <p className="text-sm text-red-500">{errors.author}</p>}
               </div>
 
+              {playwright && (
+                <div className="space-y-2">
+                  <Label htmlFor="buy_url">{t("appAuditionsSubmit.fieldBuyUrl")}</Label>
+                  <Input
+                    id="buy_url"
+                    type="url"
+                    placeholder="https://"
+                    value={buyUrl}
+                    onChange={(e) => {
+                      setBuyUrl(e.target.value);
+                      if (errors.buy_url) setErrors((prev) => ({ ...prev, buy_url: "" }));
+                    }}
+                    className={errors.buy_url ? "border-red-500" : ""}
+                  />
+                  <p className="text-xs text-muted-foreground">{t("appAuditionsSubmit.buyUrlHint")}</p>
+                  {errors.buy_url && <p className="text-sm text-red-500">{errors.buy_url}</p>}
+                </div>
+              )}
+
               {/* Monologue Text */}
               <div className="space-y-2">
                 <Label htmlFor="text">
@@ -368,6 +407,24 @@ export default function SubmitMonologuePage() {
                   <strong>{t("appAuditionsSubmit.copyrightLabel")}</strong>{t("appAuditionsSubmit.copyrightBody")}
                 </AlertDescription>
               </Alert>
+
+              {playwright && (
+                <div className="space-y-1">
+                  <label className="flex items-start gap-3 text-sm">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 accent-primary"
+                      checked={rightsConfirmed}
+                      onChange={(e) => {
+                        setRightsConfirmed(e.target.checked);
+                        if (errors.rights) setErrors((prev) => ({ ...prev, rights: "" }));
+                      }}
+                    />
+                    <span>{t("appAuditionsSubmit.rightsConfirm")}</span>
+                  </label>
+                  {errors.rights && <p className="text-sm text-red-500">{errors.rights}</p>}
+                </div>
+              )}
 
               {/* Submit Button */}
               <div className="flex items-center gap-4">

@@ -432,6 +432,13 @@ export const appAuditions = {
   },
   /** /submit-monologue. Example titles and names stay English: the library is English. */
   appAuditionsSubmit: {
+    playwrightTitle: "Put your monologues in front of actors",
+    playwrightSub: "Send me a monologue from your play. I read every one myself, and once it's in, actors find it in search with your name on it and a link to get the play.",
+    fieldBuyUrl: "Where actors can get the play",
+    buyUrlHint: "Your publisher's page or your own site. This is the link on every piece.",
+    rightsConfirm: "I wrote this play and hold the rights to it, and I'm giving ActorRise permission to show this monologue with my name and a link to the play. I can ask for it to come down any time, and it will, the same day.",
+    errRights: "Tick the box to confirm it's yours.",
+    errBuyUrl: "The link should start with https://",
     errTitle: "Title is required",
     errCharacter: "Character name is required",
     errText: "Monologue text is required",

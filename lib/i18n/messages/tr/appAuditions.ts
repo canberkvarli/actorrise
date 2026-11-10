@@ -429,6 +429,13 @@ export const appAuditions: Widen<typeof en> = {
     dropHere: "buraya bırak",
   },
   appAuditionsSubmit: {
+    playwrightTitle: "Monologlarını oyunculara ulaştır",
+    playwrightSub: "Oyunundan bir monolog gönder. Hepsini kendim okuyorum; eklendiğinde oyuncular onu aramada senin adınla ve oyuna giden bir bağlantıyla bulur.",
+    fieldBuyUrl: "Oyuncuların oyunu bulabileceği yer",
+    buyUrlHint: "Yayıncının sayfası ya da kendi siten. Her parçadaki bağlantı bu olur.",
+    rightsConfirm: "Bu oyunu ben yazdım ve haklarına sahibim; ActorRise'ın bu monoloğu adımla ve oyuna giden bir bağlantıyla göstermesine izin veriyorum. İstediğim an kaldırılmasını isteyebilirim, aynı gün kaldırılır.",
+    errRights: "Senin olduğunu onaylamak için kutuyu işaretle.",
+    errBuyUrl: "Bağlantı https:// ile başlamalı",
     errTitle: "Başlık gerekli",
     errCharacter: "Karakter adı gerekli",
     errText: "Monolog metni gerekli",
