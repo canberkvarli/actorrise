@@ -167,6 +167,7 @@ export const landing: Widen<typeof en> = {
   },
   landingFooter: {
     teachers: "Öğretmenler",
+    playwrights: "Oyun yazarları",
     sources: "Kaynaklar ve telif hakkı",
     privacy: "Gizlilik",
     terms: "Koşullar",

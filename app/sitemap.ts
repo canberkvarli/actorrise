@@ -52,6 +52,7 @@ import { getIndexableMonologues, monologueSlug } from "@/lib/monologueSeo";
       /* ── Content & info pages ───────────────────────────────── */
       { url: `${baseUrl}/about`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
       { url: `${baseUrl}/for-teachers`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${baseUrl}/for-playwrights`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.6 },
       { url: `${baseUrl}/guides`, lastModified: lastMod, changeFrequency: "weekly", priority: 0.7 },
       { url: `${baseUrl}/blog`, lastModified: lastMod, changeFrequency: "weekly", priority: 0.7 },
       ...BLOG_POSTS.map((p) => ({

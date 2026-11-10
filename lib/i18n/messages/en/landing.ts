@@ -159,6 +159,7 @@ export const landing = {
   },
   landingFooter: {
     teachers: "Teachers",
+    playwrights: "Playwrights",
     sources: "Sources & copyright",
     privacy: "Privacy",
     terms: "Terms",

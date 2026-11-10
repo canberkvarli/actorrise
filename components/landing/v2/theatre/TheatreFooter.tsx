@@ -13,6 +13,7 @@ const LINKS: { href: string; label: MessageKey }[] = [
   { href: "/pricing", label: "nav.pricing" },
   { href: "/for-students", label: "nav.students" },
   { href: "/for-teachers", label: "landingFooter.teachers" },
+  { href: "/for-playwrights", label: "landingFooter.playwrights" },
   { href: "/sources", label: "landingFooter.sources" },
   { href: "/privacy", label: "landingFooter.privacy" },
   { href: "/terms", label: "landingFooter.terms" },
