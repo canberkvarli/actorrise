@@ -316,6 +316,13 @@ def _monologue_to_response(
         # serving the other would defeat the guard entirely. The renderer falls
         # back to plain `text` when this is null.
         segments = None
+    # A takedown serves no words at all, not even the teaser: the holder asked
+    # for its text to stay on its own site. An actor who saved it still sees the
+    # play, the writer and the link out.
+    from app.services.search.semantic_search import TAKEN_DOWN
+    if getattr(m, "review_status", None) == TAKEN_DOWN:
+        body_text = ""
+        segments = None
 
     return MonologueResponse(
         id=cast(int, m.id),

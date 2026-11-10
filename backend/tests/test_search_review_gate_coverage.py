@@ -90,10 +90,10 @@ class ReviewGateCoverageTests(unittest.TestCase):
                         f"{module.__name__} calls exclude_hidden() but does not import it",
                     )
 
-    def test_the_gate_covers_all_four_retirement_statuses(self):
+    def test_the_gate_covers_all_five_retirement_statuses(self):
         self.assertEqual(
             semantic_search.HIDDEN_REVIEW_STATUSES,
-            frozenset({"pending", "too_short", "not_monologue", "duplicate"}),
+            frozenset({"pending", "too_short", "not_monologue", "duplicate", "taken_down"}),
         )
 
 

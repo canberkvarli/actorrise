@@ -164,9 +164,17 @@ FILM_TV_MIN_WORDS = 50
 #: Adding a status here is not optional bookkeeping: review_hides_from_search
 #: shows anything OUTSIDE this set, so a row marked with a status the set does
 #: not know about stays in search and the retirement silently does nothing.
+#:   'taken_down'    — the rights holder asked for its text to come off. Out of
+#:                     search, and no text is served anywhere, not even a
+#:                     teaser to an actor who saved it (see TAKEN_DOWN in
+#:                     api/monologues.py). Kept, not deleted, so a later yes
+#:                     brings it back. Never set without the holder's word.
 HIDDEN_REVIEW_STATUSES = frozenset(
-    {"pending", "too_short", "not_monologue", "duplicate"}
+    {"pending", "too_short", "not_monologue", "duplicate", "taken_down"}
 )
+
+#: A takedown, as its own name, so the API can refuse even a teaser.
+TAKEN_DOWN = "taken_down"
 
 #: Filters the UI sets on the actor's behalf rather than ones they chose. The
 #: Plays / Film & TV tab is always on, so treating source_type as a deliberate

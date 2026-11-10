@@ -120,3 +120,12 @@ class FindReferencesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TakedownTest(unittest.TestCase):
+    def test_taken_down_is_hidden_from_search(self):
+        from app.services.search.semantic_search import (
+            HIDDEN_REVIEW_STATUSES, TAKEN_DOWN, review_hides_from_search,
+        )
+        self.assertIn(TAKEN_DOWN, HIDDEN_REVIEW_STATUSES)
+        self.assertTrue(review_hides_from_search(TAKEN_DOWN))

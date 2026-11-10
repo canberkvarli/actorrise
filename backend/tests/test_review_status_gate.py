@@ -46,13 +46,13 @@ class RetirementStatusTests(unittest.TestCase):
             with self.subTest(status=status):
                 self.assertTrue(review_hides_from_search(status))
 
-    def test_the_set_is_exactly_these_four(self):
+    def test_the_set_is_exactly_these_five(self):
         # Pinned deliberately. review_hides_from_search shows anything OUTSIDE
         # this set, so marking rows with a status the set does not carry
         # retires nothing at all and does it silently.
         self.assertEqual(
             HIDDEN_REVIEW_STATUSES,
-            frozenset({"pending", "too_short", "not_monologue", "duplicate"}),
+            frozenset({"pending", "too_short", "not_monologue", "duplicate", "taken_down"}),
         )
 
     def test_only_pending_belongs_to_the_admin_queue(self):

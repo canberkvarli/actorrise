@@ -163,7 +163,11 @@ async def analyze_audition(
     monologue_body = None
     if monologue is not None:
         play = monologue.play
-        if may_serve_text(
+        from app.services.search.semantic_search import TAKEN_DOWN
+
+        if getattr(monologue, "review_status", None) == TAKEN_DOWN:
+            logger.info("audition: withholding text for taken-down monologue %s", monologue.id)
+        elif may_serve_text(
             getattr(play, "copyright_status", None),
             getattr(play, "license_type", None),
             word_count=monologue.word_count,
