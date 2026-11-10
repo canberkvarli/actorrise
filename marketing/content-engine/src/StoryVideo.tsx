@@ -85,7 +85,17 @@ type Email = {
 type Lobby = { type: "lobby"; seconds: number; line: string; accent: string; cue?: string; page: string; bubble: string; sign?: string; count?: number };
 /** The panel from the actor's side: three tired faces, then one line lands and they wake up. */
 type Panel = { type: "panel"; seconds: number; line: string; accent: string; cue?: string; quote: string; wakeAt?: number };
-export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | End;
+/** Real Ghost Light screenshots inside the drawn phone (Canberk, 2026-11-10: the how-to half should be
+ *  animated, with better transitions): each shot slides in, the camera pushes toward what matters, a
+ *  drawn finger taps with a ripple. Screens are real captures from the app, never mocked. */
+type Screens = {
+  type: "screens";
+  seconds: number;
+  line: string;
+  accent: string;
+  shots: { src: string; at: number; tap?: { x: number; y: number; at: number }; push?: { x: number; y: number; scale?: number } }[];
+};
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -979,6 +989,53 @@ const PhoneScene: React.FC<{ s: Phone; first: boolean }> = ({ s, first }) => {
         {s.tap && <TapFinger at={s.tap.at} x={s.tap.x} y={s.tap.y} />}
       </AbsoluteFill>
       {mode === "read" && <LiftedSheet s={s} at={sheetAt} />}
+    </AbsoluteFill>
+  );
+};
+
+
+const SHOT_H = Math.round(SW * 2.165); // iPhone screen proportions inside the drawn phone
+const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const up = first ? spring({ frame: f - 2, fps, config: { damping: 18 } }) : 1;
+  const zoom = first ? 1 + (ZOOM - 1) * spring({ frame: f - 14, fps, config: { damping: 22 } }) : ZOOM;
+  const shots = s.shots;
+  return (
+    <AbsoluteFill>
+      {first && <Sfx name="pop" at={6} vol={0.7} />}
+      {shots.map((sh, i) => (i > 0 ? <Sfx key={`sl${i}`} name="slide" at={sh.at} vol={0.35} /> : null))}
+      {shots.map((sh, i) => (sh.tap ? <Sfx key={`tp${i}`} name="boop_lo" at={sh.tap.at + 14} vol={0.55} /> : null))}
+      <Glow glow={0.6} y="72%" />
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 270 }}>
+        <Rise at={4}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+      <AbsoluteFill style={{ transform: `translateY(${(1 - up) * 800}px) scale(${zoom})`, transformOrigin: "540px 980px" }}>
+        <DrawnPhone start={first ? 0 : -100}>
+          {shots.map((sh, i) => {
+            const next = shots[i + 1];
+            if (f < sh.at - 1 || (next && f > next.at + 12)) return null;
+            const inP = i === 0 ? 1 : Easing.out(Easing.cubic)(prog(f, sh.at, sh.at + 12));
+            const outP = next ? Easing.in(Easing.cubic)(prog(f, next.at, next.at + 12)) : 0;
+            const end = next ? next.at : sh.at + 120;
+            const pz = sh.push ? interpolate(f, [sh.at + 8, end], [1, sh.push.scale ?? 1.18], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) }) : 1;
+            return (
+              <div key={i} style={{ position: "absolute", left: 0, top: 0, width: SW, height: SHOT_H,
+                transform: `translateX(${(1 - inP) * SW - outP * SW * 0.35}px)`, opacity: 1 - outP * 0.6,
+                boxShadow: i > 0 && inP < 1 ? "-20px 0 40px rgba(0,0,0,0.35)" : undefined }}>
+                <Img src={staticFile(sh.src)} style={{ width: SW, height: SHOT_H, objectFit: "cover",
+                  transform: `scale(${pz})`, transformOrigin: sh.push ? `${sh.push.x * 100}% ${sh.push.y * 100}%` : "50% 50%" }} />
+                {sh.tap && f >= sh.tap.at + 12 && f <= sh.tap.at + 40 && (() => {
+                  const r = prog(f, sh.tap!.at + 12, sh.tap!.at + 34);
+                  return <div style={{ position: "absolute", left: sh.tap!.x * SW - 60 * r, top: sh.tap!.y * SHOT_H - 60 * r, width: 120 * r, height: 120 * r,
+                    borderRadius: "50%", border: `5px solid ${C.orange}`, opacity: 1 - r }} />;
+                })()}
+              </div>
+            );
+          })}
+        </DrawnPhone>
+        {shots.map((sh, i) => (sh.tap ? <TapFinger key={`f${i}`} at={sh.tap.at} x={SX + sh.tap.x * SW} y={SY + sh.tap.y * SHOT_H} /> : null))}
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };
@@ -2352,7 +2409,8 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
     acc += Math.round(sc.seconds * FPS);
   }
   // Phone shots that follow another phone shot stay in place (screen swap), no camera move.
-  const moves = spec.scenes.map((sc, i) => i > 0 && !(sc.type === "phone" && spec.scenes[i - 1].type === "phone"));
+  const ph = (t?: string) => t === "phone" || t === "screens";
+  const moves = spec.scenes.map((sc, i) => i > 0 && !(ph(sc.type) && ph(spec.scenes[i - 1].type)));
   const slot: number[] = [];
   spec.scenes.forEach((_, i) => slot.push(i === 0 ? 0 : slot[i - 1] + (moves[i] ? 1 : 0)));
   let cam = 0;
@@ -2365,8 +2423,10 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
   const slots = slot[slot.length - 1] + 1;
 
   const renderScene = (sc: StoryScene, i: number) => {
-    const firstPhone = sc.type === "phone" && !(i > 0 && spec.scenes[i - 1].type === "phone");
-    return sc.type === "night" ? <NightScene s={sc} /> :
+    const phoneish = (t?: string) => t === "phone" || t === "screens";
+    const firstPhone = phoneish(sc.type) && !(i > 0 && phoneish(spec.scenes[i - 1].type));
+    return sc.type === "screens" ? <ScreensScene s={sc} first={firstPhone} /> :
+      sc.type === "night" ? <NightScene s={sc} /> :
       sc.type === "books" ? <BooksScene s={sc} /> :
       sc.type === "thinking" ? <ThinkingScene s={sc} /> :
       sc.type === "email" ? <EmailScene s={sc} /> :

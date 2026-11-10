@@ -182,6 +182,11 @@ def melody(rng, chord_tones, lo, hi, last):
 
 # ---------- styles ----------
 STYLES = {
+    # beat (Canberk, 2026-11-10: the ambient beds felt "too cloudy"; do what the other apps do, a beat).
+    # An upbeat, bright pop beat from the first bar: punchy kick, a clap/snap on 2 and 4, busy hats, a
+    # warm bass, plucked major chords on the off beats and a short marimba hook. Never a full song: it
+    # loops a 4 bar idea, ducks under the voice, and lands on the Earnest ending.
+    "beat": dict(bpm=100, swing=0.06, prog=[[60, 64, 67], [55, 59, 62], [57, 60, 64], [53, 57, 60]], bass=[36, 31, 33, 29]),
     "sunny": dict(bpm=84, swing=0.16, prog=[[55, 58, 62, 65], [52, 55, 58, 62], [53, 57, 60, 64], [50, 53, 57, 60]],
                   bass=[43, 36, 41, 38]),
     "pizzicato": dict(bpm=112, swing=0.0, prog=[[50, 53, 57], [50, 53, 57], [55, 58, 62], [57, 61, 64, 67]],
@@ -337,6 +342,27 @@ def compose(spec):
                 instr = str(rng.choice(["pizzicato_strings", "celesta", "vibraphone"]))
                 mx.note("lead", instr, note, at, beat * 1.5, 0.16 if instr != "pizzicato_strings" else 0.22, float(rng.uniform(-0.5, 0.5)))
 
+        elif style == "beat":
+            if b < bars_pre:
+                for x in (0, 1.75, 2.5):
+                    mx.add("drums", tb + x * beat, kick(), 0.62 if x == 0 else 0.48)
+                for x in (1, 3):
+                    mx.add("drums", tb + x * beat, snare(tight=True), 0.34, -0.08)
+                    mx.add("drums", tb + x * beat, snap(), 0.30, 0.12)
+                for k in range(8):
+                    mx.add("drums", tb + sw(k / 2) * beat, hat(), 0.30 if k % 2 else 0.20, 0.25)
+                if b % 2 == 1:  # a little 16th hat roll at the end of every other bar
+                    for k in range(4):
+                        mx.add("drums", tb + (3.5 + k * 0.125) * beat, hat(), 0.14 + 0.03 * k, 0.25)
+                mx.note("bass", "acoustic_bass", bs, tb, beat * 1.4, 0.5)
+                mx.note("bass", "acoustic_bass", bs + 12, tb + 1.5 * beat, beat * 0.5, 0.3)
+                mx.note("bass", "acoustic_bass", bs, tb + 2.5 * beat, beat * 1.0, 0.42)
+                for x in (0.5, 1.5, 2.5, 3.5):
+                    mx.chord("keys", "pizzicato_strings", [n + 12 for n in ch], tb + sw(x) * beat, beat * 0.35, 0.16)
+                if b % 2 == 0:  # the hook: four bright marimba notes from the chord
+                    for x, n in zip((0, 0.75, 1.5, 2.0), (ch[2] + 12, ch[1] + 12, ch[0] + 12, ch[1] + 12)):
+                        mx.note("lead", "marimba", n, tb + sw(x) * beat, beat * 0.6, 0.30, 0.2)
+
         elif style == "wood":
             if b < bars_pre:
                 mx.note("bass", "marimba", bs, tb, beat * 1.6, 0.42, -0.15)
@@ -396,7 +422,7 @@ def compose(spec):
         mx.add("fx", t_drop, kick(1.3), 0.9)
     if style in ("build", "pizzicato"):
         mx.note("fx", "timpani", S["bass"][bars_pre % 4] - 12 if S["bass"][bars_pre % 4] > 40 else S["bass"][bars_pre % 4], t_drop, 1.5, 0.6)
-    if style in ("wood", "pulse", "bed"):  # the knock the Ghost Light icon lands on (the Earnest ending, Canberk loves it)
+    if style in ("wood", "pulse", "bed", "beat"):  # the knock the Ghost Light icon lands on (the Earnest ending, Canberk loves it)
         mx.note("fx", "woodblock", 72, t_drop, 0.4, 0.4, 0)
         mx.note("fx", "kalimba", S["prog"][0][-1] + 12, t_drop + 0.55, 0.8, 0.22, 0.2)
         mx.note("fx", "kalimba", S["prog"][0][-1] + 19, t_drop + 1.1, 0.8, 0.2, -0.2)
@@ -406,7 +432,7 @@ def compose(spec):
     # too much shoosh). The drop keeps its riser.
     # Last chord rings out under the end card.
     mx.chord("keys", {"sunny": "electric_piano_1", "pizzicato": "orchestral_harp", "build": "acoustic_grand_piano",
-                      "festive": "music_box", "felt": "acoustic_grand_piano", "pulse": "celesta", "wood": "marimba", "bed": "marimba"}[style], [72, 79] if style == "pulse" else [60, 64, 67, 72] if style == "felt" else S["prog"][0], t_drop if style in ("wood", "pulse", "bed") else max(t_drop, total - 1.6), 1.8, 0.2 if style == "pulse" else 0.3)
+                      "festive": "music_box", "felt": "acoustic_grand_piano", "pulse": "celesta", "wood": "marimba", "bed": "marimba", "beat": "marimba"}[style], [72, 79] if style == "pulse" else [60, 64, 67, 72] if style == "felt" else S["prog"][0], t_drop if style in ("wood", "pulse", "bed", "beat") else max(t_drop, total - 1.6), 1.8, 0.2 if style == "pulse" else 0.3)
 
     # Bus processing: the intro is filtered and opens up on the drop.
     n = mx.n

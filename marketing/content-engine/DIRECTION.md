@@ -3,6 +3,27 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-10, afternoon: the story + how-to, done right (wins over everything below)
+
+Canberk on the first story + how-to film:
+- **Name things.** It said "a skull" instead of Hamlet. Never describe a famous play or character by a
+  prop or an image; say the name (Hamlet, Lady Macbeth, Ophelia). Read every narration line out loud in
+  your head and ask: would an actor know exactly what this means?
+- **Music: `"music": {"style": "beat"}`** for drawn and story + how-to films: an upbeat pop beat from the
+  first second (kick, claps, hats, bass, plucks, a marimba hook). No more ambient beds (`bed`, `wood`,
+  `pulse` felt "too cloudy"). It ducks under the voice and lands on the Ghost Light knock.
+- **One voice: George**, the Dora voice, for the whole film, story and how-to. No second voice.
+- **The how-to half is animated, inside the same drawn world** (not a raw screen recording cut on):
+  StoryVideo `screens` scenes show REAL Ghost Light screenshots (captured with the recorder from the
+  web preview, dark theme) in the drawn phone: each shot slides in, the camera pushes toward what
+  matters, a drawn finger taps with an orange ripple. Shot and tap `at` values are scene-local frames
+  (the first scene of a film also counts the preroll). Write one short headline per screens scene
+  ("Tap Search.", "Say it your way."). Real screens only, never mocked.
+- **The ending is the sharp Ghost Light card** (the ReelVideo end beat: dark, icon, "Ghost Light",
+  App Store), line "Built by a working actor." Render it as its own one-beat ReelVideo spec with
+  `"music": {"style": "beat"}` (just the knock and the bright notes) and join it after the story with
+  scripts/join.sh. Not the drawn ticket ending.
+
 ## 2026-11-10: the Dora format, story then how-to (wins over everything below)
 
 Canberk: the self tape example film (Callboard, generated actress, the intro) was bad: never make that
