@@ -22,7 +22,7 @@ import base64, json, os, re, sys, urllib.error, urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 API = "https://api.elevenlabs.io/v1"
-VOICES = {"narrator": "JBFqnCBsd6RMkjVDRZzb", "explainer": "TX3LPaxmHKxFdv7VOQHJ", "liam": "TX3LPaxmHKxFdv7VOQHJ", "george": "JBFqnCBsd6RMkjVDRZzb", "partner": "pFZP5JQG7iQjIQuC4Bku", "lily": "pFZP5JQG7iQjIQuC4Bku"}
+VOICES = {"narrator": "JBFqnCBsd6RMkjVDRZzb", "explainer": "JBFqnCBsd6RMkjVDRZzb", "liam": "TX3LPaxmHKxFdv7VOQHJ", "george": "JBFqnCBsd6RMkjVDRZzb", "partner": "pFZP5JQG7iQjIQuC4Bku", "lily": "pFZP5JQG7iQjIQuC4Bku"}
 # eleven_v3 acts: it reads audio tags like [amused], [warmly], [whispers], [sighs], [excited]
 # (Canberk, 2026-11-04: emotion and tone in every voice-over, never monotone).
 MODEL = os.environ.get("ELEVENLABS_TTS_MODEL", "eleven_v3")
