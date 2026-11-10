@@ -15,14 +15,14 @@ updated in place, so a re-render never pays twice; delete "audio" from a line to
 
 Needs ELEVENLABS_API_KEY and api.elevenlabs.io allowed. Exit code 2 = not available here (the
 film renders without voices, and the subtitles fall back to the beat text).
-Voices (ElevenLabs premade, commercial use on paid plans): narrator Liam (Canberk picked him from the samples on 2026-11-09), partner Lily. Override
+Voices (ElevenLabs premade, commercial use on paid plans): narrator George (the Dora film voice, Canberk 2026-11-10) with Liam as the second voice ("explainer"), partner Lily. Override
 per line with "voice": "<name or voice_id>", or per spec with "voices": {"narrator": id, "partner": id}.
 """
 import base64, json, os, re, sys, urllib.error, urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 API = "https://api.elevenlabs.io/v1"
-VOICES = {"narrator": "TX3LPaxmHKxFdv7VOQHJ", "liam": "TX3LPaxmHKxFdv7VOQHJ", "george": "JBFqnCBsd6RMkjVDRZzb", "partner": "pFZP5JQG7iQjIQuC4Bku", "lily": "pFZP5JQG7iQjIQuC4Bku"}
+VOICES = {"narrator": "JBFqnCBsd6RMkjVDRZzb", "explainer": "TX3LPaxmHKxFdv7VOQHJ", "liam": "TX3LPaxmHKxFdv7VOQHJ", "george": "JBFqnCBsd6RMkjVDRZzb", "partner": "pFZP5JQG7iQjIQuC4Bku", "lily": "pFZP5JQG7iQjIQuC4Bku"}
 # eleven_v3 acts: it reads audio tags like [amused], [warmly], [whispers], [sighs], [excited]
 # (Canberk, 2026-11-04: emotion and tone in every voice-over, never monotone).
 MODEL = os.environ.get("ELEVENLABS_TTS_MODEL", "eleven_v3")
@@ -97,28 +97,41 @@ def voice_take(spec, key):
     lines = v.get("lines") or []
     if not spec.get("scenes") or not lines or v.get("continuous") is False:
         return False
-    if v.get("take") and os.path.exists(os.path.join(ROOT, "public", v["take"])):
+    if v.get("takes") and all(os.path.exists(os.path.join(ROOT, "public", x["audio"])) for x in v["takes"]):
         return False
-    vid = v.get("voice") or "narrator"
-    vid = (spec.get("voices") or {}).get(vid, VOICES.get(vid.lower(), vid))
     lead = float(v.get("take_at", 0.3))
-    res = tts(" ".join((l.get("say") or l["text"]).strip() for l in lines), vid, key)
-    rel = f"voice/{spec['id']}/take.mp3"
-    path = os.path.join(ROOT, "public", rel)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    open(path, "wb").write(base64.b64decode(res["audio_base64"]))
-    words = words_from_alignment(res.get("normalized_alignment") or res.get("alignment"))
-    i = 0
+    # Two voices can trade lines (Canberk, 2026-11-10: "him and another one switching"): each run of
+    # consecutive lines in the same voice is one take; the runs follow each other with a short breath.
+    runs = []
     for l in lines:
-        n = len(l["text"].split())
-        ws = words[i:i + n] or words[-1:]
-        i += n
-        s0 = ws[0]["s"]
-        l["at"] = round(lead + s0, 3)
-        l["words"] = [{"w": w["w"], "s": round(w["s"] - s0, 3), "e": round(w["e"] - s0, 3)} for w in ws]
-        l["dur"] = round(ws[-1]["e"] - s0 + 0.15, 3)
-        l.pop("audio", None)
-    v["take"], v["take_at"] = rel, lead
+        who = l.get("voice") or v.get("voice") or "narrator"
+        if runs and runs[-1][0] == who:
+            runs[-1][1].append(l)
+        else:
+            runs.append([who, [l]])
+    t, takes = lead, []
+    for k, (who, group) in enumerate(runs):
+        vid = (spec.get("voices") or {}).get(who, VOICES.get(who.lower(), who))
+        res = tts(" ".join((l.get("say") or l["text"]).strip() for l in group), vid, key)
+        rel = f"voice/{spec['id']}/take{k:02d}.mp3"
+        path = os.path.join(ROOT, "public", rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        open(path, "wb").write(base64.b64decode(res["audio_base64"]))
+        words = words_from_alignment(res.get("normalized_alignment") or res.get("alignment"))
+        i = 0
+        for l in group:
+            n = len(l["text"].split())
+            ws = words[i:i + n] or words[-1:]
+            i += n
+            s0 = ws[0]["s"]
+            l["at"] = round(t + s0, 3)
+            l["words"] = [{"w": w["w"], "s": round(w["s"] - s0, 3), "e": round(w["e"] - s0, 3)} for w in ws]
+            l["dur"] = round(ws[-1]["e"] - s0 + 0.15, 3)
+            l.pop("audio", None)
+        takes.append({"audio": rel, "at": round(t, 3), "voice": who})
+        t += (words[-1]["e"] if words else 1.0) + 0.12
+    v["takes"], v["take_at"] = takes, lead
+    v.pop("take", None)
     spec["voice"] = v
     # Fit the scenes to the read: scene k starts as its line starts, so the picture follows the voice.
     sc = spec["scenes"]

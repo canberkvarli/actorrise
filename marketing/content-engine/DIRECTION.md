@@ -3,6 +3,24 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-10: the Dora format, story then how-to (wins over everything below)
+
+Canberk: the self tape example film (Callboard, generated actress, the intro) was bad: never make that
+kind again (no generated walkthrough actors, no Callboard/"tape due" intros). The film that worked best is
+the drawn Dora one ("Five actors in the lobby. Every single one brought Juliet... Up comes Dora"). So:
+- **Main format: STORY + HOW-TO, about 30 seconds.** Part 1, about 15s: a drawn story in the Dora style
+  (a funny, specific actor problem, new drawings, George narrating with acted tags). Part 2, about 15s: a
+  real Ghost Light walkthrough recorded from the app (dark theme, frame "full", zooms on what matters),
+  with the second voice (Liam, voice "explainer") saying exactly what to tap: "In Ghost Light, tap
+  Search, type what you need, pick one, read it." Then the Ghost Light end card (Earnest ending).
+  Render each part with render.sh (only part 2 has the end card), then scripts/join.sh out/<id>.mp4
+  part1.mp4 part2.mp4. Voice lines can carry "voice": "explainer" so George and Liam trade lines.
+- **George is the narrator again** (the Dora voice); Liam is the second voice. voice.py does both.
+- **Safe zones:** nothing important in the top 250px (status bar, account name, Reels/For You header),
+  the bottom 420px (caption, music, buttons) or the right 150px from y 900 down (like/comment column).
+  Run scripts/safezone.sh out/<id>.mp4 <times> and look at it before uploading; fix anything red.
+- At most 3 short captions on screen at once; the hook is the drawn story's first line, never a card.
+
 ## 2026-11-09, evening: one take, a clean mix, Ghost Light closes (wins over everything below)
 
 Canberk on the off-book drawn film: the narration lost its flow and energy, the music and effects sat on

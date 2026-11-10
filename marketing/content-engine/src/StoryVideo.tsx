@@ -89,7 +89,7 @@ export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Sta
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
-export type StoryVoice = { lines: { text: string; at: number; audio?: string; dur?: number; words?: { w: string; s: number; e: number }[] }[]; volume?: number; subtitles?: boolean; take?: string; take_at?: number };
+export type StoryVoice = { lines: { text: string; at: number; audio?: string; dur?: number; words?: { w: string; s: number; e: number }[] }[]; volume?: number; subtitles?: boolean; take?: string; take_at?: number; takes?: { audio: string; at: number; voice?: string }[] };
 export type StorySpec = { id: string; scenes: StoryScene[]; music?: StoryMusic; look?: StoryLook; voice?: StoryVoice };
 export const storyFrames = (s: StorySpec) =>
   s.scenes.reduce((n, sc) => n + Math.round(sc.seconds * FPS), 0);
@@ -546,7 +546,7 @@ const ThinkingScene: React.FC<{ s: Thinking }> = ({ s }) => {
         ))}
       </svg>
       <ThinkingActor start={8} />
-      <AbsoluteFill style={{ paddingTop: 70, alignItems: "center" }}>
+      <AbsoluteFill style={{ paddingTop: 270, alignItems: "center" }}>
         <Rise at={18}>
           <Headline text={s.line1} accent="" color={C.ink} size={92} />
         </Rise>
@@ -958,7 +958,7 @@ const PhoneScene: React.FC<{ s: Phone; first: boolean }> = ({ s, first }) => {
       {s.tap && <Sfx name="boop_lo" at={s.tap.at + 14} vol={0.7} />}
       {mode === "read" && <Sfx name="pencil_short" at={sheetAt + 26} vol={0.4} />}
       <Glow glow={0.6} y="72%" />
-      <AbsoluteFill style={{ alignItems: "center", paddingTop: 150 }}>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 270 }}>
         <Rise at={6}>
           <Headline text={s.line} accent={s.accent} color={C.ink} size={100} />
         </Rise>
@@ -1023,7 +1023,7 @@ const NotifyScene: React.FC<{ s: Notify }> = ({ s }) => {
       <Sfx name="boop_hi" at={tapAt + 14} vol={0.7} />
       {s.cue && <Sfx name="typing" at={tapAt + 20} frames={typeFrames(s.cue)} vol={0.45} />}
       <Glow glow={0.5} y="62%" />
-      <AbsoluteFill style={{ alignItems: "center", paddingTop: 150 }}>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 270 }}>
         <Rise at={6}>
           <Headline text={s.line} accent={s.accent} color={C.ink} size={104} />
         </Rise>
@@ -1151,7 +1151,7 @@ const StageScene: React.FC<{ s: Stage }> = ({ s }) => {
       </svg>
       <Actor start={14} />
       <CastingTable start={22} />
-      <AbsoluteFill style={{ paddingTop: 60, paddingLeft: 90 }}>
+      <AbsoluteFill style={{ paddingTop: 270, paddingLeft: 90 }}>
         <Rise at={30}>
           <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 92, color: C.ink, lineHeight: 1.1 }}>{s.time}</div>
         </Rise>
@@ -2079,7 +2079,7 @@ const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = (
   const chunk = chunks.find((c, i) => lt < (chunks[i + 1]?.[0].s ?? Infinity) - 0.02) ?? chunks[chunks.length - 1];
   const op = interpolate(lt, [-0.05, 0.1, dur(line) + 0.05, dur(line) + 0.25], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
-    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", padding: "0 70px 330px", opacity: op, pointerEvents: "none" }}>
+    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", padding: "0 70px 450px", opacity: op, pointerEvents: "none" }}>
       <div style={{ background: C.ink, borderRadius: 22, padding: "16px 28px", boxShadow: "0 8px 30px rgba(33,26,21,0.25)",
         textAlign: "center", fontFamily: F.serif, fontWeight: 600, fontSize: 50, lineHeight: 1.2, color: "#fbf7f0", maxWidth: 920 }}>
         {chunk.map((w, i) => {
@@ -2150,6 +2150,11 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
             return base * (k ? DUCK : 1);
           }} />
       )}
+      {(spec.voice?.takes ?? []).map((tk, i) => (
+        <Sequence key={`take${i}`} from={Math.round(tk.at * FPS)} layout="none">
+          <Audio src={staticFile(tk.audio)} volume={spec.voice?.volume ?? 1} />
+        </Sequence>
+      ))}
       {spec.voice?.take && (
         <Sequence from={Math.round((spec.voice.take_at ?? 0.3) * FPS)} layout="none">
           <Audio src={staticFile(spec.voice.take)} volume={spec.voice?.volume ?? 1} />

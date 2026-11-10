@@ -426,7 +426,7 @@ const SceneBeat: React.FC<{ b: Scene }> = ({ b }) => {
           <Words text={b.caption} accent={b.accent} color={fg} accentC={key} size={74} />
         </AbsoluteFill>
       )}
-      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", paddingTop: b.caption ? (L.letterbox ? 320 : 200) : 0, paddingBottom: 220 }}>
+      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", paddingTop: b.caption ? (L.letterbox ? 320 : 280) : 0, paddingBottom: 220 }}>
         {/* The play's name sits above the script page, not inside it (Canberk, 2026-11-04). */}
         {(b.title || b.play) && (
           <div style={{ width: 880, marginBottom: 30, textAlign: "center", opacity: page, transform: `translateY(${(1 - page) * 24}px)` }}>
