@@ -1816,8 +1816,20 @@ def _apply_list_wall(
     user,
     request,
     favorite_ids: set,
+    opening_only: bool = True,
 ) -> None:
     """Teaser every piece in a LIST that this reader has no allowance for.
+
+    ``opening_only`` (2026-11-09, Canberk): a free web reader gets only the
+    opening in a list even while a read is left. A card shows about 35 words
+    and nothing reads list text in full: the panel, /monologue/<id>, the studio
+    and /work all load the piece through the detail route, which is where a
+    read is counted and walled. Until then a free actor with their one read
+    still unspent got the whole speech of every search result in the payload,
+    which at a cap of 1 was every free actor. Not `paywalled`: they have a read
+    to spend, and the flag is what draws the wall. Pieces they have already
+    read stay whole. False on the actor's own shelf (saved, removed), whose
+    cuts are drawn on the text.
 
     In place, because the alternative is rebuilding every response object at
     four call sites. Costs two queries per request regardless of page size.
@@ -1857,9 +1869,15 @@ def _apply_list_wall(
 
         month = web_reads_this_month(int(user.id), db)
         reads_used = len(month)
-        if reads_used < limit:
-            return  # nothing to wall
         already_read = set(month[:limit])
+        if reads_used < limit:
+            if opening_only and limit >= 0:
+                for r in responses:
+                    if r.id in already_read:
+                        continue
+                    r.text = _teaser(r.text)
+                    r.text_segments = None
+            return  # a read is still left: nothing to wall
 
         for r in responses:
             if should_wall(
@@ -2295,7 +2313,7 @@ async def get_my_favorites(
         if f.monologue_id in mono_by_id
     ]
     _apply_list_wall(_out, db=db, user=current_user, request=request,
-                     favorite_ids={f.monologue_id for f in favorites})
+                     favorite_ids={f.monologue_id for f in favorites}, opening_only=False)
     return _out
 
 
@@ -2336,7 +2354,8 @@ async def get_recently_removed(
         for f in removed
         if f.monologue_id in monos
     ]
-    _apply_list_wall(_out, db=db, user=current_user, request=request, favorite_ids=set())
+    _apply_list_wall(_out, db=db, user=current_user, request=request, favorite_ids=set(),
+                     opening_only=False)
     return _out
 
 

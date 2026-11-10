@@ -60,3 +60,67 @@ def test_an_unlimited_sentinel_limit_never_walls():
     """free_read_limit returning -1 means no allowance is being enforced."""
     assert should_wall(monologue_id=1, reads_used=500, limit=-1,
                        unlimited=False, already_read=set()) is False
+
+
+# _apply_list_wall itself (2026-11-09): a list carries the opening only, even
+# while a free web reader still has a read left. The full text comes from the
+# detail route, where the read is counted and walled.
+
+from types import SimpleNamespace
+
+import pytest
+
+import app.api.monologues as mono_api
+
+LONG = " ".join(f"word{i}." for i in range(200))  # 200 short sentences
+
+
+def _resp(i):
+    return SimpleNamespace(id=i, text=LONG, text_segments=[{"line": 1}], paywalled=False)
+
+
+@pytest.fixture
+def free_web(monkeypatch):
+    def setup(read_ids, limit=1):
+        monkeypatch.setattr(mono_api, "_user_has_unlimited_reads", lambda *a, **k: False)
+        monkeypatch.setattr(mono_api, "free_read_limit", lambda client: limit)
+        monkeypatch.setattr(mono_api, "web_reads_this_month", lambda uid, db: list(read_ids))
+    return setup
+
+
+def _run(responses, **kw):
+    req = SimpleNamespace(headers={})
+    mono_api._apply_list_wall(responses, db=None, user=SimpleNamespace(id=1, email="a@b.c"),
+                              request=req, favorite_ids=set(), **kw)
+
+
+def test_a_free_reader_with_a_read_left_gets_only_openings(free_web):
+    free_web(read_ids=[])
+    rs = [_resp(1), _resp(2)]
+    _run(rs)
+    for r in rs:
+        assert len(r.text.split()) <= mono_api._TEASER_MAX_WORDS
+        assert r.text_segments is None
+        assert r.paywalled is False  # a read is left, so no wall is drawn
+
+
+def test_a_piece_already_read_stays_whole_in_a_list(free_web):
+    free_web(read_ids=[1])
+    rs = [_resp(1), _resp(2)]
+    _run(rs)
+    assert rs[0].text == LONG and rs[0].paywalled is False
+    assert rs[1].paywalled is True  # the one read is spent: the rest are walled
+
+
+def test_the_own_shelf_keeps_full_text_while_a_read_is_left(free_web):
+    free_web(read_ids=[])
+    rs = [_resp(1)]
+    _run(rs, opening_only=False)
+    assert rs[0].text == LONG
+
+
+def test_a_paying_reader_gets_full_text_in_a_list(monkeypatch):
+    monkeypatch.setattr(mono_api, "_user_has_unlimited_reads", lambda *a, **k: True)
+    rs = [_resp(1)]
+    _run(rs)
+    assert rs[0].text == LONG
