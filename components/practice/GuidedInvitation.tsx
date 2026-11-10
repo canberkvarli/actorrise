@@ -11,8 +11,8 @@ import { useT } from "@/lib/i18n";
 /**
  * The hub, for an actor who has never rehearsed.
  *
- * Not a description of ScenePartner: three short scenes, two parts each, and
- * one tap on a part starts it. The shelf, the walkthrough and the tour are all
+ * Not a description of ScenePartner: three short scenes, and one tap starts
+ * one as the part that speaks first. The shelf, the walkthrough and the tour are all
  * absent on this state; see lib/guided-invite.ts for who gets it.
  *
  * Until 2026-11-03 this was "Late" alone (Riley's "You're late." and Answer).

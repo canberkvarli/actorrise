@@ -19,7 +19,7 @@ from app.models.actor import Scene, UserScript
 
 # Must agree with the seed (scripts/seed_sample_script.py::seed_late) and with
 # lib/guided-scene.ts, which prints the opening line before a session exists.
-GUIDED_ACTOR = "ALEX"
+GUIDED_ACTOR = "ALEX"  # Late's part. Late is no longer offered; old links keep it.
 
 # The phone's three first scenes, one a key, found by title. Must agree with
 # the seed (scripts/seed_sample_script.py::GUIDED_THREE). Order is the order
@@ -60,6 +60,17 @@ def guided_key(db: Session, scene: Scene) -> str:
     script = db.get(UserScript, scene.user_script_id) if scene.user_script_id else None
     title = script.title if script is not None else None
     return next((key for key, t in GUIDED_KEYS if t == title), "late")
+
+
+def first_speaker(lines: list) -> Optional[str]:
+    """Who speaks line 0: the part a keyed guided scene is offered as.
+
+    Canberk, 2026-11-10: actors stalled when their first move was answering a
+    stranger (fight JO 7/14 finished, SAM 1/6; confession MARA 3/4, DEV 2/4),
+    so the picker offers only the part that speaks first. Read from the lines,
+    not a name, so it holds if a scene is reseeded. `lines` are RehearsalLines
+    (anything with `.character`)."""
+    return lines[0].character if lines else None
 
 
 def guided_script_of(db: Session, scene_id: int) -> Optional[UserScript]:

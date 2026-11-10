@@ -4,14 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import api from "@/lib/api";
-import { guidedRoute, titleCase, type GuidedChoice } from "@/lib/guided-scene";
+import { guidedRoute, openingPart, titleCase, type GuidedChoice } from "@/lib/guided-scene";
 import { fetchGuidedScenes, startGuidedScene, type GuidedDoor } from "@/lib/guided-start";
 import { useT } from "@/lib/i18n";
 
 /**
- * The three first scenes (a fight, a flirt, a confession), each with its two
- * parts. One tap on a part starts that scene as that part, straight onto the
- * actor's first line or the partner's cue; there is nothing to choose after.
+ * The three first scenes (a fight, a flirt, a confession), one tap each. The
+ * tap starts the scene as the part that speaks first (the server names it,
+ * `opens`), straight onto the actor's first line; there is nothing to choose
+ * after. Canberk, 2026-11-10: actors stalled when their first move was
+ * answering a stranger, so the answering part is no longer offered.
  *
  * Shared by the hub's invitation and the onboarding ending. `onLeaving` runs
  * just before the route changes (the onboarding card closes itself there).
@@ -69,24 +71,25 @@ export function GuidedChoices({ from, onLeaving }: { from: GuidedDoor; onLeaving
         <section key={scene.key} className="t-pick__scene" aria-labelledby={`pick-${scene.key}`}>
           <h3 id={`pick-${scene.key}`} className="t-pick__title">{scene.title}</h3>
           {scene.hook && <p className="t-pick__hook">{scene.hook}</p>}
-          <div className="t-pick__parts">
-            {scene.characters.map((c) => {
-              const mine = starting === `${scene.key}:${c.name}`;
-              return (
+          {(() => {
+            const part = openingPart(scene);
+            if (!part) return null;
+            const mine = starting === `${scene.key}:${part.name}`;
+            return (
+              <div className="t-pick__parts">
                 <button
-                  key={c.name}
                   type="button"
                   className="t-pick__part"
-                  onClick={() => pick(scene, c.name)}
+                  onClick={() => pick(scene, part.name)}
                   disabled={starting !== null}
-                  aria-label={t("appPracticeGuided.playAs", { name: titleCase(c.name), who: c.line ?? "" })}
+                  aria-label={t("appPracticeGuided.playAs", { name: titleCase(part.name), who: part.line ?? "" })}
                 >
-                  <span className="t-pick__name">{mine ? t("appPracticeGuided.oneMoment") : titleCase(c.name)}</span>
-                  {c.line && <span className="t-pick__who">{c.line}</span>}
+                  <span className="t-pick__name">{mine ? t("appPracticeGuided.oneMoment") : titleCase(part.name)}</span>
+                  {part.line && <span className="t-pick__who">{part.line}</span>}
                 </button>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })()}
         </section>
       ))}
       {failed && (

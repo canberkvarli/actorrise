@@ -17,13 +17,13 @@ from app.api.auth import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.middleware.burst_limiter import BurstLimiter
-from app.middleware.rate_limiting import require_scene_partner
+from app.middleware.rate_limiting import CLIENT_GHOSTLIGHT, normalise_client, require_scene_partner
 from app.models.actor import Scene, SceneLine, UserScript
 from app.models.rehearsal import PartnerAudio, RehearsalEvent, RehearsalRun
 from app.models.user import User
 from app.services import class_shelf
 from app.services.events import record_user_event
-from app.services.guided_scene import GUIDED_ACTOR, guided_key, guided_scene, guided_scenes, guided_script_of
+from app.services.guided_scene import GUIDED_ACTOR, first_speaker, guided_key, guided_scene, guided_scenes, guided_script_of
 from app.services.rehearsal import journal, partner_audio
 from app.services.rehearsal.access import assert_can_rehearse, can_direct_partner
 from app.services.rehearsal.contract import RehearsalLine, lines_for, same_character
@@ -416,6 +416,7 @@ class StartGuided(BaseModel):
 
 @router.post("/runs/guided")
 def start_guided_run(
+    request: Request,
     req: StartGuided | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -426,17 +427,27 @@ def start_guided_run(
     phone names one of the guided scenes and a part in it."""
     req = req or StartGuided()
     actor = GUIDED_ACTOR
+    lines: list[RehearsalLine] | None = None
     if req.scene_id is not None:
         if guided_script_of(db, req.scene_id) is None:
             raise HTTPException(status_code=404, detail="Not a guided scene")
         scene = db.get(Scene, req.scene_id)
         cast = [scene.character_1_name, scene.character_2_name]
         actor = next((c for c in cast if c and req.character and same_character(c, req.character)), None) or cast[0]
+        # A keyed scene starts as the part that speaks first, whatever was asked
+        # (2026-11-10). Not for Ghost Light yet: its current build plays the part
+        # it picked and ignores the one returned, so forcing it there would
+        # journal one part while the actor plays the other.
+        lines = lines_for(db, scene.id)
+        opener = first_speaker(lines)
+        is_phone = normalise_client(request.headers.get("x-client")) == CLIENT_GHOSTLIGHT
+        if opener and not is_phone and guided_key(db, scene) != "late":
+            actor = next((c for c in cast if c and same_character(c, opener)), opener)
     else:
         scene = guided_scene(db)
     if scene is None:
         raise HTTPException(status_code=404, detail="The guided scene is not seeded")
-    lines = lines_for(db, scene.id)
+    lines = lines if lines is not None else lines_for(db, scene.id)
     voices = default_voices(scene, lines, actor, _voicing(db, scene, lines).characters)
     for ch, v in req.voices.items():
         if voice_by_id(v) is not None and any(same_character(ch, c) for c in voices):
@@ -447,7 +458,7 @@ def start_guided_run(
     # computed from the meter, which this route deliberately does not touch.
     user.has_seen_first_rehearsal = True
     db.commit()
-    props: dict[str, Any] = {"platform": "web", "key": guided_key(db, scene)}
+    props: dict[str, Any] = {"platform": "web", "key": guided_key(db, scene), "character": actor}
     if req.door in GUIDED_DOORS:
         props["from"] = req.door
     record_user_event(user.id, "guided_scene_started", props)
@@ -570,6 +581,9 @@ def guided(db: Session = Depends(get_db), user: User = Depends(get_current_user)
             "scene_id": sc.id,
             "title": sc.title,
             "hook": sc.description,
+            # The one part the web offers: whoever speaks line 0. `characters`
+            # keeps both, since Ghost Light casts the partner's voice from it.
+            "opens": next((c for c in cast if same_character(c, first_speaker(lines) or "")), None),
             "characters": [
                 {
                     "name": c,

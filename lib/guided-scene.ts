@@ -20,7 +20,15 @@ export interface GuidedChoice {
   scene_id: number;
   title: string;
   hook: string | null;
+  /** The part that speaks line 0, the only one the web offers (2026-11-10). Absent from an older server. */
+  opens?: string | null;
   characters: GuidedPart[];
+}
+
+/** The one part a scene is offered as: whoever speaks first, or the first listed from an older server. */
+export function openingPart(scene: GuidedChoice): GuidedPart | null {
+  const opens = scene.opens?.toUpperCase();
+  return scene.characters.find((c) => c.name.toUpperCase() === opens) ?? scene.characters[0] ?? null;
 }
 
 /** "RILEY" as it reads in a sentence. */

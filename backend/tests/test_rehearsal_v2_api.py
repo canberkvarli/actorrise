@@ -220,7 +220,8 @@ class Api(unittest.TestCase):
         self.assertEqual((body["scene_id"], body["character"]), (self.scene.id, api.GUIDED_ACTOR))
         self.assertTrue(self.db.get(RehearsalRun, body["run_id"]).is_guided)
         api.assert_can_rehearse.assert_not_called()
-        api.record_user_event.assert_called_once_with(self.user.id, "guided_scene_started", {"platform": "web", "key": "late"})
+        api.record_user_event.assert_called_once_with(
+            self.user.id, "guided_scene_started", {"platform": "web", "key": "late", "character": api.GUIDED_ACTOR})
         with mock.patch.object(api, "guided_scene", return_value=None):
             self.assertEqual(self.client.post("/api/rehearsal/runs/guided").status_code, 404)
 
@@ -244,7 +245,9 @@ class Api(unittest.TestCase):
         from app.services.rehearsal.voices import VOICES
         seed_guided_three(self.db); self.db.commit()
         fight = self.db.query(Scene).filter(Scene.title == "A fight").one()
-        r = self.client.post("/api/rehearsal/runs/guided", json={"scene_id": fight.id, "character": "sam", "voices": {"JO": VOICES[1].id}})
+        # The phone (its current build plays the part it picked) still gets the part it asks for.
+        r = self.client.post("/api/rehearsal/runs/guided", headers={"X-Client": "ghostlight"},
+                             json={"scene_id": fight.id, "character": "sam", "voices": {"JO": VOICES[1].id}})
         self.assertEqual(r.status_code, 200, r.text)
         body = r.json()
         self.assertEqual((body["scene_id"], body["character"]), (fight.id, "SAM"))
@@ -256,6 +259,35 @@ class Api(unittest.TestCase):
         # A scene that is not guided is not a guided run, whoever asks.
         self.assertEqual(self.client.post("/api/rehearsal/runs/guided", json={"scene_id": self.scene.id}).status_code, 404)
 
+    def test_a_keyed_guided_scene_is_offered_and_started_as_its_first_speaker(self):
+        """Canberk, 2026-11-10: only the part that speaks first. Read from line 0."""
+        from scripts.seed_sample_script import seed_guided_three
+        seed_guided_three(self.db); self.db.commit()
+        body = self.client.get("/api/rehearsal/guided").json()
+        self.assertEqual({x["key"]: x["opens"] for x in body["scenes"]},
+                         {"fight": "JO", "flirt": "NOOR", "confession": "MARA"})
+        # Both parts stay listed: the phone casts the partner's voice from them.
+        self.assertEqual(len(body["scenes"][0]["characters"]), 2)
+        for x in body["scenes"]:
+            answering = next(c["name"] for c in x["characters"] if c["name"] != x["opens"])
+            r = self.client.post("/api/rehearsal/runs/guided", json={"scene_id": x["scene_id"], "character": answering, "from": "hub"})
+            self.assertEqual(r.status_code, 200, r.text)
+            self.assertEqual(r.json()["character"], x["opens"])
+            self.assertEqual(self.db.get(RehearsalRun, r.json()["run_id"]).character, x["opens"])
+
+    def test_the_first_speaker_follows_the_lines_not_a_name(self):
+        """Reseed a scene with the other part first and the opener moves with it."""
+        from scripts.seed_sample_script import seed_guided_three
+        seed_guided_three(self.db); self.db.commit()
+        fight = self.db.query(Scene).filter(Scene.title == "A fight").one()
+        rows = self.db.query(SceneLine).filter(SceneLine.scene_id == fight.id).order_by(SceneLine.line_order).all()
+        rows[0].line_order, rows[1].line_order = rows[1].line_order, rows[0].line_order
+        self.db.commit()
+        opens = next(x["opens"] for x in self.client.get("/api/rehearsal/guided").json()["scenes"] if x["key"] == "fight")
+        self.assertEqual(opens, "SAM")
+        r = self.client.post("/api/rehearsal/runs/guided", json={"scene_id": fight.id, "character": "JO"})
+        self.assertEqual(r.json()["character"], "SAM")
+
     def test_guided_scene_started_carries_the_scene_key_and_the_door(self):
         from scripts.seed_sample_script import seed_guided_three
         seed_guided_three(self.db); self.db.commit()
@@ -264,11 +296,12 @@ class Api(unittest.TestCase):
         r = self.client.post("/api/rehearsal/runs/guided", json={"scene_id": flirt.id, "character": "ELI", "from": "onboarding"})
         self.assertEqual(r.status_code, 200, r.text)
         api.record_user_event.assert_called_once_with(
-            self.user.id, "guided_scene_started", {"platform": "web", "key": "flirt", "from": "onboarding"})
+            self.user.id, "guided_scene_started", {"platform": "web", "key": "flirt", "character": "NOOR", "from": "onboarding"})
         # A door the web never sends is dropped, not stored.
         api.record_user_event.reset_mock()
         self.client.post("/api/rehearsal/runs/guided", json={"scene_id": flirt.id, "character": "ELI", "from": "<script>"})
-        api.record_user_event.assert_called_once_with(self.user.id, "guided_scene_started", {"platform": "web", "key": "flirt"})
+        api.record_user_event.assert_called_once_with(
+            self.user.id, "guided_scene_started", {"platform": "web", "key": "flirt", "character": "NOOR"})
 
     def test_guided_run_marks_the_first_rehearsal_seen(self):
         """What the old start-guided route did: the hub stops inviting because

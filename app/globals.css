@@ -11564,8 +11564,8 @@ label:hover > .aud-check[data-on="false"] {
 @media (prefers-reduced-motion: reduce) { .t-map__act-chev { transition: none; } }
 
 /* --- The three first scenes (components/practice/GuidedChoices.tsx) --------
-   Three scenes, two parts each. The scene is a plain block (not clickable, so
-   sharp); each part is a button (clickable, so rounded). */
+   Three scenes, one part each (the one that speaks first). The scene is a
+   plain block (not clickable, so sharp); the part is a button (rounded). */
 .t-pick-host { container-type: inline-size; width: 100%; }
 .t-pick {
   display: grid;
@@ -11578,7 +11578,6 @@ label:hover > .aud-check[data-on="false"] {
 }
 @container (min-width: 720px) {
   .t-pick { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .t-pick__parts { grid-template-columns: 1fr; }
 }
 .t-pick__scene {
   display: flex;
@@ -11604,7 +11603,7 @@ label:hover > .aud-check[data-on="false"] {
 }
 .t-pick__parts {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 8px;
   margin-top: 8px;
 }
