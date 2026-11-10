@@ -52,6 +52,10 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
 - **2026-11-05, YouthPLAYS** (`--source youthplays`): 85 teen and youth pieces,
   monologues 44319-44403. Undated plays carry a labelled floor year (see
   `date_youthplays.py`).
+  **Taken down 2026-11-10** at their request ("we want our text to stay on our
+  site", 2026-11-09): all 90 YouthPLAYS rows are `taken_down`, no text served. The
+  source is switched off. Listing with links is welcome and is in
+  `monologue_references`.
 
 - **2026-11-06, NYCastings** (`--source nycastings`): 24 pieces, 44404-44427. Posts with
   no author credit (most kids' "Jr." musicals) are skipped.

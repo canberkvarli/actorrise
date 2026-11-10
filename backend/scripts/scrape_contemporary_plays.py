@@ -1363,19 +1363,9 @@ SOURCES: dict[str, Source] = {
         ),
         delay=1.0,
     ),
-    "youthplays": Source(
-        key="youthplays",
-        name="YouthPLAYS",
-        index_urls=[_YP_INDEX],
-        discover=discover_youthplays,
-        extract=extract_youthplays,
-        note=(
-            "Publisher's own free monologue pages, whole speech in the HTML. "
-            "VERIFIED 2026-11-05. robots.txt allows /monologue/. Teen and youth "
-            "characters. Credit: play, playwright, YouthPLAYS."
-        ),
-        delay=1.0,
-    ),
+    # "youthplays" is OFF. YouthPLAYS asked on 2026-11-09 for its text to stay on
+    # its own site; its 90 pieces are `taken_down`. Listing with links is fine and
+    # lives in monologue_references. Do not add this source back without their yes.
     "dailyactor": Source(
         key="dailyactor",
         name="Daily Actor",
