@@ -93,13 +93,15 @@ type Screens = {
   seconds: number;
   line: string;
   accent: string;
-  shots: { src: string; at: number; tap?: { x: number; y: number; at: number }; push?: { x: number; y: number; scale?: number } }[];
+  shots: { src: string; at: number; tap?: { x: number; y: number; at: number }; push?: { x: number; y: number; scale?: number; from?: number };
+    /** move the shot up inside the phone by this share of its height, [from, to], so a low part (the tab bar) reaches the safe area */
+    pan?: [number, number] }[];
 };
 export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
-export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood"; drop?: string | number; volume?: number; seed?: string };
+export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
-export type StoryVoice = { lines: { text: string; at: number; audio?: string; dur?: number; words?: { w: string; s: number; e: number }[] }[]; volume?: number; subtitles?: boolean; take?: string; take_at?: number; takes?: { audio: string; at: number; voice?: string }[] };
+export type StoryVoice = { lines: { text: string; at: number; sub?: boolean; audio?: string; dur?: number; words?: { w: string; s: number; e: number }[] }[]; volume?: number; subtitles?: boolean; take?: string; take_at?: number; takes?: { audio: string; at: number; voice?: string }[] };
 export type StorySpec = { id: string; scenes: StoryScene[]; music?: StoryMusic; look?: StoryLook; voice?: StoryVoice };
 export const storyFrames = (s: StorySpec) =>
   s.scenes.reduce((n, sc) => n + Math.round(sc.seconds * FPS), 0);
@@ -1001,6 +1003,25 @@ const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) =>
   const up = first ? spring({ frame: f - 2, fps, config: { damping: 18 } }) : 1;
   const zoom = first ? 1 + (ZOOM - 1) * spring({ frame: f - 14, fps, config: { damping: 22 } }) : ZOOM;
   const shots = s.shots;
+  // The push zoom of shot i at frame g, and a tap point mapped through it (so finger and ripple land on
+  // the thing the push is moving toward, not where it sat before the zoom).
+  const pzAt = (i: number, g: number) => {
+    const sh = shots[i];
+    if (!sh.push) return 1;
+    const end = Math.max(sh.at + 9, shots[i + 1] ? shots[i + 1].at : sh.at + 120); // a held shot under a quick slide still needs a range
+    return interpolate(g, [sh.at + 8, end], [sh.push.from ?? 1, sh.push.scale ?? 1.18], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
+  };
+  const panAt = (i: number, g: number) => {
+    const sh = shots[i];
+    if (!sh.pan) return 0;
+    const end = shots[i + 1] ? shots[i + 1].at : sh.at + 120;
+    return interpolate(g, [sh.at + 4, Math.max(sh.at + 5, Math.min(end, sh.at + 26))], sh.pan, { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
+  };
+  const mapTap = (i: number) => {
+    const sh = shots[i], t = sh.tap!, k = pzAt(i, t.at + 12);
+    const ox = sh.push ? sh.push.x : 0.5, oy = sh.push ? sh.push.y : 0.5;
+    return { x: ox + (t.x - ox) * k, y: oy + (t.y - oy) * k - panAt(i, t.at + 12) };
+  };
   return (
     <AbsoluteFill>
       {first && <Sfx name="pop" at={6} vol={0.7} />}
@@ -1018,23 +1039,24 @@ const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) =>
             const inP = i === 0 ? 1 : Easing.out(Easing.cubic)(prog(f, sh.at, sh.at + 12));
             const outP = next ? Easing.in(Easing.cubic)(prog(f, next.at, next.at + 12)) : 0;
             const end = next ? next.at : sh.at + 120;
-            const pz = sh.push ? interpolate(f, [sh.at + 8, end], [1, sh.push.scale ?? 1.18], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) }) : 1;
+            const pz = pzAt(i, f); void end;
             return (
               <div key={i} style={{ position: "absolute", left: 0, top: 0, width: SW, height: SHOT_H,
                 transform: `translateX(${(1 - inP) * SW - outP * SW * 0.35}px)`, opacity: 1 - outP * 0.6,
                 boxShadow: i > 0 && inP < 1 ? "-20px 0 40px rgba(0,0,0,0.35)" : undefined }}>
                 <Img src={staticFile(sh.src)} style={{ width: SW, height: SHOT_H, objectFit: "cover",
-                  transform: `scale(${pz})`, transformOrigin: sh.push ? `${sh.push.x * 100}% ${sh.push.y * 100}%` : "50% 50%" }} />
+                  transform: `translateY(${-panAt(i, f) * SHOT_H}px) scale(${pz})`, transformOrigin: sh.push ? `${sh.push.x * 100}% ${sh.push.y * 100}%` : "50% 50%" }} />
                 {sh.tap && f >= sh.tap.at + 12 && f <= sh.tap.at + 40 && (() => {
                   const r = prog(f, sh.tap!.at + 12, sh.tap!.at + 34);
-                  return <div style={{ position: "absolute", left: sh.tap!.x * SW - 60 * r, top: sh.tap!.y * SHOT_H - 60 * r, width: 120 * r, height: 120 * r,
+                  const m = mapTap(i);
+                  return <div style={{ position: "absolute", left: m.x * SW - 60 * r, top: m.y * SHOT_H - 60 * r, width: 120 * r, height: 120 * r,
                     borderRadius: "50%", border: `5px solid ${C.orange}`, opacity: 1 - r }} />;
                 })()}
               </div>
             );
           })}
         </DrawnPhone>
-        {shots.map((sh, i) => (sh.tap ? <TapFinger key={`f${i}`} at={sh.tap.at} x={SX + sh.tap.x * SW} y={SY + sh.tap.y * SHOT_H} /> : null))}
+        {shots.map((sh, i) => (sh.tap ? <TapFinger key={`f${i}`} at={sh.tap.at} x={SX + mapTap(i).x * SW} y={SY + mapTap(i).y * SHOT_H} /> : null))}
       </AbsoluteFill>
     </AbsoluteFill>
   );
@@ -2376,7 +2398,8 @@ const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = (
   const t = f / FPS;
   if (t >= until) return null;
   const dur = (l: StoryVoice["lines"][number]) => l.dur ?? (l.words?.length ? l.words[l.words.length - 1].e + 0.15 : l.text.split(" ").length * 0.36 + 0.4);
-  const line = lines.find((l) => t >= l.at - 0.05 && t <= l.at + dur(l) + 0.25);
+  // A line with "sub": false has no captions (the app's own text is on screen: one text layer at a time).
+  const line = lines.find((l) => l.sub !== false && t >= l.at - 0.05 && t <= l.at + dur(l) + 0.25);
   if (!line) return null;
   const lt = t - line.at;
   const all = line.words?.length ? line.words : line.text.split(" ").map((w, i) => ({ w, s: i * 0.34, e: i * 0.34 + 0.3 }));

@@ -19,6 +19,7 @@
 //   {"wait": 1500}                          ms, or {"waitFor": "text that should appear"}
 //   {"scroll": 600}                         px, smooth
 //   {"mark": "results"}                     a named moment the edit can cut to
+//   {"shot": "results"}                     a still of the screen (out/rec/<flow>_shots/results.png)
 //   {"mic": "My lord, I have..."}          the scene partner's scripted microphone (the actor's line), one word every `ms`
 //   {"cam": 6.1, "say": "cut"}              timed on the camera's clock instead of the recording's:
 //                                           second 6.1 of the FAKE_CAM clip (it starts when the camera opens)
@@ -337,6 +338,14 @@ async function flow(file) {
       const steps = 24;
       for (let k = 0; k < steps; k++) { await page.mouse.wheel(0, s.scroll / steps); await sleep(16); }
     } else if (s.mark) events.push({ t: now(), mark: s.mark });
+    // {"shot": "results"}: a still of the screen right now, at device pixels (out/rec/<flow>_shots/<name>.png),
+    // for the StoryVideo `screens` scene (real Ghost Light screens animated in the drawn phone).
+    else if (s.shot) {
+      const dir = path.join(ROOT, "out", "rec", `${name}_shots`);
+      fs.mkdirSync(dir, { recursive: true });
+      await page.screenshot({ path: path.join(dir, `${s.shot}.png`) });
+      events.push({ t: now(), shot: s.shot });
+    }
     // Ghost Light's Tape room on the web preview: hand the scripted ear words to "hear"
     // (tape-ear.web.ts), one every `ms`. The app's own cue rules decide what they mean.
     else if (s.mic !== undefined) {

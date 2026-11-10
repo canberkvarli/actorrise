@@ -241,11 +241,16 @@ def compose(spec):
     moves = [i > 0 and not (types[i] == "phone" and types[i - 1] == "phone") for i in range(len(types))]
 
     drop = m.get("drop", "stage" if "stage" in types else "end")
-    di = drop if isinstance(drop, int) else (types.index(drop) if drop in types else len(types) - 1)
-    t_drop = starts[di]
+    # "after": no drop inside this part, the groove runs to the last frame (the first half of a film whose
+    # Ghost Light card is a separate render joined on after it; the knock lands there, not here).
+    di = drop if isinstance(drop, int) else len(types) if drop == "after" else (types.index(drop) if drop in types else len(types) - 1)
+    t_drop = starts[di] if di < len(types) else total
     bar0 = 240 / S["bpm"]
-    bars_pre = max(2, round(t_drop / bar0))
-    bar = t_drop / bars_pre
+    if t_drop < bar0 / 2:  # a one-beat end card: no bars before the drop, just the knock and the bright notes
+        bars_pre, bar = 0, bar0
+    else:
+        bars_pre = max(2, round(t_drop / bar0))
+        bar = t_drop / bars_pre
     beat = bar / 4
     n_bars = int(np.ceil(total / bar)) + 1
 

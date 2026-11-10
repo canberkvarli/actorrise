@@ -97,6 +97,10 @@ def build_music(spec_path):
     m = spec.get("music") or {}
     total_ms = sum(round(sc["seconds"] * FPS) for sc in spec["scenes"]) * 1000 // FPS
     types = [sc["type"] for sc in spec["scenes"]]
+    if not m.get("prompt") and m.get("style", "sunny") not in STYLE_PROMPTS:
+        # Our own styles (beat, bed, wood, pulse) are composed by make_music.py; never swap in a sunny track.
+        print(f"no ElevenLabs prompt for style {m.get('style')!r}; make_music.py composes it", file=sys.stderr)
+        sys.exit(2)
     prompt = m.get("prompt") or STYLE_PROMPTS.get(m.get("style", "sunny"), STYLE_PROMPTS["sunny"])
     # Tell it where the payoff is, so the lift lands near the right second.
     acc = 0

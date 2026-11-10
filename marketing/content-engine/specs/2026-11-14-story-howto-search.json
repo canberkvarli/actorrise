@@ -1,0 +1,611 @@
+{
+  "id": "2026-11-14-story-howto-search",
+  "look": "paper",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "Callback at ten tomorrow, and they want you funny.",
+        "say": "[excited] Callback at ten tomorrow, and they want you funny!",
+        "at": 0.629,
+        "words": [
+          {
+            "w": "Callback",
+            "s": 0.0,
+            "e": 0.071
+          },
+          {
+            "w": "at",
+            "s": 0.098,
+            "e": 0.151
+          },
+          {
+            "w": "ten",
+            "s": 0.211,
+            "e": 0.391
+          },
+          {
+            "w": "tomorrow,",
+            "s": 0.444,
+            "e": 1.191
+          },
+          {
+            "w": "and",
+            "s": 1.231,
+            "e": 1.351
+          },
+          {
+            "w": "they",
+            "s": 1.367,
+            "e": 1.431
+          },
+          {
+            "w": "want",
+            "s": 1.479,
+            "e": 1.671
+          },
+          {
+            "w": "you",
+            "s": 1.711,
+            "e": 1.831
+          },
+          {
+            "w": "funny!",
+            "s": 1.911,
+            "e": 2.391
+          }
+        ],
+        "dur": 2.541
+      },
+      {
+        "text": "So you open your folder. Lady Macbeth. Ophelia. Hamlet. Everybody dies.",
+        "say": "[playful] So you open your folder. Lady Macbeth. Ophelia. Hamlet. [laughs] Everybody dies!",
+        "at": 4.273,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.027
+          },
+          {
+            "w": "you",
+            "s": 0.067,
+            "e": 0.187
+          },
+          {
+            "w": "open",
+            "s": 0.251,
+            "e": 0.507
+          },
+          {
+            "w": "your",
+            "s": 0.523,
+            "e": 0.587
+          },
+          {
+            "w": "folder.",
+            "s": 0.656,
+            "e": 1.147
+          },
+          {
+            "w": "Lady",
+            "s": 1.307,
+            "e": 1.947
+          },
+          {
+            "w": "Macbeth.",
+            "s": 2.007,
+            "e": 2.587
+          },
+          {
+            "w": "Ophelia.",
+            "s": 2.827,
+            "e": 3.548
+          },
+          {
+            "w": "Hamlet.",
+            "s": 3.707,
+            "e": 4.787
+          },
+          {
+            "w": "Everybody",
+            "s": 5.443,
+            "e": 5.947
+          },
+          {
+            "w": "dies!",
+            "s": 6.075,
+            "e": 6.747
+          }
+        ],
+        "dur": 6.897
+      },
+      {
+        "text": "Not one laugh in the whole folder.",
+        "say": "[mischievously] Not one laugh in the whole folder.",
+        "at": 11.957,
+        "words": [
+          {
+            "w": "Not",
+            "s": 0.0,
+            "e": 0.024
+          },
+          {
+            "w": "one",
+            "s": 0.084,
+            "e": 0.264
+          },
+          {
+            "w": "laugh",
+            "s": 0.317,
+            "e": 0.584
+          },
+          {
+            "w": "in",
+            "s": 0.611,
+            "e": 0.664
+          },
+          {
+            "w": "the",
+            "s": 0.684,
+            "e": 0.744
+          },
+          {
+            "w": "whole",
+            "s": 0.784,
+            "e": 0.984
+          },
+          {
+            "w": "folder.",
+            "s": 1.053,
+            "e": 1.544
+          }
+        ],
+        "dur": 1.694
+      },
+      {
+        "text": "So open Ghost Light. Tap Search.",
+        "say": "[upbeat] So open Ghost Light. Tap Search.",
+        "sub": false,
+        "at": 14.434,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.027
+          },
+          {
+            "w": "open",
+            "s": 0.107,
+            "e": 0.427
+          },
+          {
+            "w": "Ghost",
+            "s": 0.494,
+            "e": 0.827
+          },
+          {
+            "w": "Light.",
+            "s": 0.88,
+            "e": 1.467
+          },
+          {
+            "w": "Tap",
+            "s": 1.547,
+            "e": 1.787
+          },
+          {
+            "w": "Search.",
+            "s": 1.856,
+            "e": 2.347
+          }
+        ],
+        "dur": 2.497
+      },
+      {
+        "text": "Say it your way. A funny monologue for a woman, two minutes.",
+        "say": "[playful] Say it your way. A funny monologue for a woman, two minutes.",
+        "sub": false,
+        "at": 17.711,
+        "words": [
+          {
+            "w": "Say",
+            "s": 0.0,
+            "e": 0.03
+          },
+          {
+            "w": "it",
+            "s": 0.083,
+            "e": 0.19
+          },
+          {
+            "w": "your",
+            "s": 0.222,
+            "e": 0.35
+          },
+          {
+            "w": "way.",
+            "s": 0.45,
+            "e": 0.83
+          },
+          {
+            "w": "A",
+            "s": 1.07,
+            "e": 1.31
+          },
+          {
+            "w": "funny",
+            "s": 1.363,
+            "e": 1.63
+          },
+          {
+            "w": "monologue",
+            "s": 1.67,
+            "e": 2.11
+          },
+          {
+            "w": "for",
+            "s": 2.15,
+            "e": 2.27
+          },
+          {
+            "w": "a",
+            "s": 2.31,
+            "e": 2.35
+          },
+          {
+            "w": "woman,",
+            "s": 2.417,
+            "e": 2.99
+          },
+          {
+            "w": "two",
+            "s": 3.03,
+            "e": 3.15
+          },
+          {
+            "w": "minutes.",
+            "s": 3.2,
+            "e": 3.71
+          }
+        ],
+        "dur": 3.86
+      },
+      {
+        "text": "Thirty real monologues, every one timed. Top pick, Mrs Millamant.",
+        "say": "[excited] Thirty real monologues, every one timed. Top pick, Mrs Millamant!",
+        "sub": false,
+        "at": 22.312,
+        "words": [
+          {
+            "w": "Thirty",
+            "s": 0.0,
+            "e": 0.069
+          },
+          {
+            "w": "real",
+            "s": 0.149,
+            "e": 0.469
+          },
+          {
+            "w": "monologues,",
+            "s": 0.529,
+            "e": 1.109
+          },
+          {
+            "w": "every",
+            "s": 1.162,
+            "e": 1.429
+          },
+          {
+            "w": "one",
+            "s": 1.489,
+            "e": 1.669
+          },
+          {
+            "w": "timed.",
+            "s": 1.762,
+            "e": 2.589
+          },
+          {
+            "w": "Top",
+            "s": 2.679,
+            "e": 2.949
+          },
+          {
+            "w": "pick,",
+            "s": 3.029,
+            "e": 3.589
+          },
+          {
+            "w": "Mrs",
+            "s": 3.649,
+            "e": 3.829
+          },
+          {
+            "w": "Millamant!",
+            "s": 3.909,
+            "e": 4.55
+          }
+        ],
+        "dur": 4.7
+      },
+      {
+        "text": "Open it. Start working.",
+        "say": "[delighted] Open it. Start working.",
+        "sub": false,
+        "at": 28.173,
+        "words": [
+          {
+            "w": "Open",
+            "s": 0.0,
+            "e": 0.048
+          },
+          {
+            "w": "it.",
+            "s": 0.128,
+            "e": 0.568
+          },
+          {
+            "w": "Start",
+            "s": 0.615,
+            "e": 0.848
+          },
+          {
+            "w": "working.",
+            "s": 0.908,
+            "e": 1.488
+          }
+        ],
+        "dur": 1.638
+      },
+      {
+        "text": "Ghost Light. Built by a working actor.",
+        "say": "[upbeat] Ghost Light. Built by a working actor.",
+        "sub": false,
+        "at": 30.714,
+        "words": [
+          {
+            "w": "Ghost",
+            "s": 0.0,
+            "e": 0.067
+          },
+          {
+            "w": "Light.",
+            "s": 0.12,
+            "e": 0.667
+          },
+          {
+            "w": "Built",
+            "s": 0.714,
+            "e": 0.947
+          },
+          {
+            "w": "by",
+            "s": 1.0,
+            "e": 1.107
+          },
+          {
+            "w": "a",
+            "s": 1.147,
+            "e": 1.187
+          },
+          {
+            "w": "working",
+            "s": 1.237,
+            "e": 1.587
+          },
+          {
+            "w": "actor.",
+            "s": 1.667,
+            "e": 2.147
+          }
+        ],
+        "dur": 2.297
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-14-story-howto-search/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3
+  },
+  "scenes": [
+    {
+      "type": "callback",
+      "seconds": 4.17,
+      "line": "Bring something funny.",
+      "accent": "funny.",
+      "from": "CASTING",
+      "subject": "Callback, tomorrow at ten",
+      "body": "bring something funny.\nabout two minutes.",
+      "mark": "funny"
+    },
+    {
+      "type": "folder",
+      "seconds": 7.68,
+      "line": "Everything you own dies.",
+      "accent": "dies.",
+      "stamp": "TRAGIC",
+      "every": 40,
+      "pages": [
+        {
+          "name": "LADY MACBETH",
+          "play": "Macbeth",
+          "quote": "out, damned spot!",
+          "icon": "blood"
+        },
+        {
+          "name": "OPHELIA",
+          "play": "Hamlet",
+          "quote": "o, woe is me",
+          "icon": "river"
+        },
+        {
+          "name": "HAMLET",
+          "play": "Hamlet",
+          "quote": "to be, or not to be",
+          "icon": "skull"
+        }
+      ],
+      "flips": [
+        60,
+        104,
+        130
+      ]
+    },
+    {
+      "type": "floor",
+      "seconds": 2.48,
+      "line": "Not one laugh.",
+      "accent": "laugh.",
+      "litAt": 50,
+      "stamp": "TRAGIC"
+    },
+    {
+      "type": "screens",
+      "seconds": 3.28,
+      "line": "Tap Search.",
+      "accent": "Search.",
+      "shots": [
+        {
+          "src": "story/2026-11-14-story-howto-search/book.png",
+          "at": 0,
+          "pan": [
+            0,
+            0.56
+          ],
+          "tap": {
+            "x": 0.171,
+            "y": 0.93,
+            "at": 70
+          }
+        },
+        {
+          "src": "story/2026-11-14-story-howto-search/search.png",
+          "at": 92
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 4.6,
+      "line": "Say it your way.",
+      "accent": "your way.",
+      "shots": [
+        {
+          "src": "story/2026-11-14-story-howto-search/search.png",
+          "at": 0
+        },
+        {
+          "src": "story/2026-11-14-story-howto-search/typed.png",
+          "at": 3,
+          "push": {
+            "x": 0.5,
+            "y": 0.31,
+            "scale": 1.3
+          },
+          "tap": {
+            "x": 0.856,
+            "y": 0.312,
+            "at": 90
+          }
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 5.86,
+      "line": "Thirty, all timed.",
+      "accent": "timed.",
+      "shots": [
+        {
+          "src": "story/2026-11-14-story-howto-search/typed.png",
+          "at": 0,
+          "push": {
+            "x": 0.5,
+            "y": 0.31,
+            "from": 1.3,
+            "scale": 1.3
+          }
+        },
+        {
+          "src": "story/2026-11-14-story-howto-search/results.png",
+          "at": 3,
+          "push": {
+            "x": 0.5,
+            "y": 0.2,
+            "from": 1.08,
+            "scale": 1.14
+          },
+          "tap": {
+            "x": 0.5,
+            "y": 0.38,
+            "at": 102
+          },
+          "pan": [
+            0,
+            0.1
+          ]
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 2.54,
+      "line": "Open it. Start working.",
+      "accent": "Start working.",
+      "shots": [
+        {
+          "src": "story/2026-11-14-story-howto-search/results.png",
+          "at": 0,
+          "push": {
+            "x": 0.5,
+            "y": 0.2,
+            "from": 1.14,
+            "scale": 1.14
+          },
+          "pan": [
+            0.1,
+            0.1
+          ]
+        },
+        {
+          "src": "story/2026-11-14-story-howto-search/open.png",
+          "at": 3,
+          "push": {
+            "x": 0.5,
+            "y": 0.35,
+            "scale": 1.15
+          },
+          "tap": {
+            "x": 0.46,
+            "y": 0.405,
+            "at": 19
+          },
+          "pan": [
+            0,
+            0.08
+          ]
+        }
+      ]
+    }
+  ],
+  "source": {
+    "story": "the callback asks for something funny; every speech in your folder is a tragedy (Lady Macbeth, Ophelia, Hamlet); Ghost Light search finds a funny one",
+    "quotes": "Shakespeare, verbatim: Macbeth 5.1 (Lady Macbeth: Out, damned spot!), Hamlet 3.1 (Ophelia: O, woe is me), Hamlet 3.1 (Hamlet: To be, or not to be). Public domain.",
+    "app": "Ghost Light web preview (ghostlight-web/serve.sh), dark theme, demo account, 2026-11-10",
+    "flow": "flows/search-say-it-your-way.json (shot steps -> public/story/2026-11-14-story-howto-search/*.png)",
+    "query": "a funny monologue for a woman, two minutes",
+    "results": "30 monologues; best pick Mrs Millamant, The Way of the World (Congreve, 1700), 1:14; then Clara, Sham (Tompkins). Public domain text on screen only (Congreve d. 1729).",
+    "remake_of": "2026-11-14-story-howto-search-part1 + part2 (Canberk 2026-11-10: name things, one voice, beat music, screens how-to, sharp Ghost Light card)",
+    "end_line_audio": "the last line (Ghost Light. Built by a working actor.) is in the one take; it is cut from take00 at 30.267s (the story's last frame) into voice/2026-11-14-story-howto-search-end/end.mp3 and plays over the end card"
+  }
+}

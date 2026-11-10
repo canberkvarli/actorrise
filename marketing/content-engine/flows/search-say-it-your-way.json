@@ -1,0 +1,66 @@
+{
+  "start": "/saves",
+  "lead": 600,
+  "steps": [
+    {
+      "wait": 1800
+    },
+    {
+      "shot": "book"
+    },
+    {
+      "click": {
+        "css": "a[href='/search']"
+      }
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "shot": "search"
+    },
+    {
+      "type": "a funny monologue for a woman, two minutes",
+      "into": {
+        "css": "input"
+      },
+      "delay": 30
+    },
+    {
+      "blur": true
+    },
+    {
+      "wait": 500
+    },
+    {
+      "shot": "typed"
+    },
+    {
+      "click": {
+        "css": "[aria-label='Search']"
+      }
+    },
+    {
+      "waitFor": "monologues."
+    },
+    {
+      "wait": 1800
+    },
+    {
+      "shot": "results"
+    },
+    {
+      "click": "Mrs Millamant"
+    },
+    {
+      "wait": 3200
+    },
+    {
+      "shot": "open"
+    },
+    {
+      "wait": 400
+    }
+  ],
+  "tail": 300
+}

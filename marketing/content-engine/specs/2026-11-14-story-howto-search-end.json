@@ -1,0 +1,81 @@
+{
+  "id": "2026-11-14-story-howto-search-end",
+  "look": "noir",
+  "cut": "hard",
+  "music": {
+    "style": "beat",
+    "volume": 0.2
+  },
+  "voice": {
+    "volume": 1,
+    "lines": [
+      {
+        "text": "Ghost Light. Built by a working actor.",
+        "say": "[upbeat] Ghost Light. Built by a working actor.",
+        "at": 0.0,
+        "sub": false,
+        "audio": "voice/2026-11-14-story-howto-search-end/end.mp3",
+        "words": [
+          {
+            "w": "Ghost",
+            "s": 0.147,
+            "e": 0.214
+          },
+          {
+            "w": "Light.",
+            "s": 0.267,
+            "e": 0.814
+          },
+          {
+            "w": "Built",
+            "s": 0.861,
+            "e": 1.094
+          },
+          {
+            "w": "by",
+            "s": 1.147,
+            "e": 1.254
+          },
+          {
+            "w": "a",
+            "s": 1.294,
+            "e": 1.334
+          },
+          {
+            "w": "working",
+            "s": 1.384,
+            "e": 1.734
+          },
+          {
+            "w": "actor.",
+            "s": 1.814,
+            "e": 2.294
+          }
+        ],
+        "dur": 2.444
+      }
+    ]
+  },
+  "beats": [
+    {
+      "kind": "end",
+      "seconds": 3.0,
+      "brand": "Ghost Light",
+      "line": "Built by a working actor.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "snap": true,
+      "sfx": [],
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "part_of": "2026-11-14-story-howto-search",
+    "why": "the sharp Ghost Light card (DIRECTION 2026-11-10 afternoon), joined after the story with scripts/join.sh"
+  }
+}
