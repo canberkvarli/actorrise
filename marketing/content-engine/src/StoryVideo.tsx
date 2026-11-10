@@ -85,7 +85,7 @@ type Email = {
 type Lobby = { type: "lobby"; seconds: number; line: string; accent: string; cue?: string; page: string; bubble: string; sign?: string; count?: number };
 /** The panel from the actor's side: three tired faces, then one line lands and they wake up. */
 type Panel = { type: "panel"; seconds: number; line: string; accent: string; cue?: string; quote: string; wakeAt?: number };
-export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | End;
+export type StoryScene = Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -2062,6 +2062,256 @@ const Thread: React.FC<{ slots: number; cam: number }> = ({ slots, cam }) => {
 };
 
 
+// ---------- the funny callback: a laptop email, a folder of tragedies, the floor (2026-11-14) ----------
+/** A drawn face that gets more desperate: panic 0..1 adds sweat drops, wide eyes and a wobbly mouth;
+ *  hope 0..1 turns it into a grin (lit by a phone). */
+const Face: React.FC<{ x: number; y: number; r?: number; panic?: number; hope?: number; tilt?: number; start?: number }> = ({ x, y, r = 78, panic = 0, hope = 0, tilt = 0, start = 0 }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const pop = spring({ frame: f - start, fps, config: { damping: 12, mass: 0.6 } });
+  if (f < start) return null;
+  const k = r / 78;
+  const eye = 6 + panic * 6 - hope * 1;
+  const drops = Math.round(panic * 3);
+  const shake = panic > 0.6 ? Math.sin(f * 1.9) * 3 * panic : 0;
+  return (
+    <g transform={`translate(${x + shake} ${y}) rotate(${tilt}) scale(${k * pop})`}>
+      <circle cx={0} cy={0} r={78} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} />
+      {/* hair */}
+      <path d="M-74 -18 C -70 -80, 60 -96, 76 -24 C 50 -52, -20 -60, -74 -18 Z" fill={C.ink} />
+      {/* brows: up in panic, relaxed in hope */}
+      <path d={`M-40 ${-26 - panic * 12} L -14 ${-30 - panic * 4 + hope * 4} M14 ${-30 - panic * 4 + hope * 4} L 40 ${-26 - panic * 12}`} stroke={C.ink} strokeWidth={6} strokeLinecap="round" />
+      <circle cx={-26} cy={-4} r={eye} fill={C.ink} />
+      <circle cx={26} cy={-4} r={eye} fill={C.ink} />
+      {hope > 0.5 ? (
+        <path d="M-30 26 C -14 52, 14 52, 30 26 Z" fill={C.ink} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+      ) : panic > 0.3 ? (
+        <path d={`M-28 38 C -18 ${28 + Math.sin(f / 2) * 4}, -8 ${46 - Math.sin(f / 2) * 4}, 0 36 C 8 ${28 + Math.sin(f / 2) * 4}, 18 ${46 - Math.sin(f / 2) * 4}, 28 36`} fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+      ) : (
+        <path d="M-22 30 C -8 40, 8 40, 22 30" fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+      )}
+      {Array.from({ length: drops }, (_, i) => {
+        const dy = ((f * 1.4 + i * 17) % 40);
+        return <path key={i} d={`M${86 + i * 16} ${-40 + i * 26 + dy} c -8 12, -8 22, 0 22 c 8 0, 8 -10, 0 -22 Z`} fill="#bfe3f2" stroke={C.ink} strokeWidth={3} />;
+      })}
+    </g>
+  );
+};
+
+/** The callback email arrives on a drawn laptop; the key word gets circled; you peek over the lid. */
+type Callback = { type: "callback"; seconds: number; line: string; accent: string; cue?: string; from: string; subject: string; body: string; mark?: string };
+const CallbackScene: React.FC<{ s: Callback }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const L = 190, R = 890, Tt = 600, B = 1040;
+  const ping = spring({ frame: f - 14, fps, config: { damping: 9, mass: 0.5 } });
+  const bodyAt = 30;
+  const lines = s.body.split("\n");
+  const shown = Math.max(0, Math.floor((f - bodyAt) / 0.7));
+  const bodyLen = s.body.replace(/\n/g, "").length;
+  const markAt = Math.round(bodyAt + bodyLen * 0.7 + 4);
+  let used = 0;
+  return (
+    <AbsoluteFill>
+      <Sfx name="chime" at={14} vol={0.7} />
+      <Sfx name="typing" at={bodyAt} frames={Math.ceil(bodyLen * 0.7)} vol={0.4} />
+      <Sfx name="pencil_short" at={markAt} vol={0.5} />
+      <Sfx name="cine/toing" at={markAt + 8} vol={0.45} />
+      {s.cue && <Sfx name="boop_hi" at={markAt + 18} vol={0.5} />}
+      <Glow glow={0.45} y="42%" />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the laptop: lid, screen, base on a desk */}
+        <Ink d={`M${L} ${Tt + 20} C ${L} ${Tt}, ${L + 10} ${Tt - 4}, ${L + 30} ${Tt - 4} L ${R - 30} ${Tt - 2} C ${R - 10} ${Tt - 2}, ${R} ${Tt + 8}, ${R} ${Tt + 26} L ${R + 2} ${B} L ${L - 2} ${B + 2} Z`} start={0} dur={20} w={6} fill="#fbf7ef" />
+        <Ink d={`M${L - 70} ${B + 2} L ${R + 70} ${B} L ${R + 30} ${B + 46} L ${L - 30} ${B + 48} Z`} start={10} dur={14} w={6} fill={PAPER_FILL} />
+        <Ink d={`M60 ${B + 50} C 380 ${B + 46}, 700 ${B + 54}, 1020 ${B + 48}`} start={14} dur={14} w={4} color={C.inkSoft} />
+        <Ink d={`M${L + 40} ${Tt + 150} C ${L + 260} ${Tt + 146}, ${R - 260} ${Tt + 154}, ${R - 40} ${Tt + 150}`} start={20} dur={10} w={3} color={C.inkSoft} />
+        <circle cx={R - 50} cy={Tt + 46} r={18 * ping} fill={C.orange} stroke={C.ink} strokeWidth={ping > 0.05 ? 4 : 0} />
+        {/* the circle around the key word */}
+        {s.mark && <Ink d="M628 802 C 678 776, 808 778, 824 820 C 838 862, 738 892, 668 886 C 598 880, 578 850, 600 822 C 614 806, 638 798, 668 794" start={markAt} dur={12} w={6} color={C.orange} />}
+        {/* you, peeking over the lid */}
+        <Face x={150} y={1180} r={78} panic={prog(f, markAt + 6, markAt + 30) * 0.75} start={markAt - 6} tilt={-8} />
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 280 }}>
+        <Rise at={8}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={104} />
+        </Rise>
+      </AbsoluteFill>
+      <div style={{ position: "absolute", left: L + 40, top: Tt + 30, width: R - L - 120 }}>
+        <Rise at={16}>
+          <div style={{ fontFamily: F.sans, fontWeight: 600, fontSize: 24, letterSpacing: 3, color: C.inkSoft }}>{s.from}</div>
+          <div style={{ fontFamily: F.serifI, fontStyle: "italic", fontSize: 44, color: C.ink, lineHeight: 1.15 }}>{s.subject}</div>
+        </Rise>
+      </div>
+      <div style={{ position: "absolute", left: L + 70, top: Tt + 200, width: R - L - 120 }}>
+        {lines.map((l, i) => {
+          const from = used;
+          used += l.length;
+          const vis = l.slice(0, Math.max(0, Math.min(l.length, shown - from)));
+          return (
+            <div key={i} style={{ fontFamily: F.type, fontStyle: "italic", fontSize: 58, color: C.ink, lineHeight: "92px", minHeight: 92 }}>{vis}</div>
+          );
+        })}
+      </div>
+      {s.cue && (
+        <div style={{ position: "absolute", left: 300, right: 60, top: 1210 }}>
+          <Cue text={s.cue} color={C.orange} at={markAt + 18} />
+        </div>
+      )}
+    </AbsoluteFill>
+  );
+};
+
+/** Your folder of speeches: the page flips, and flips, and every one gets a TRAGIC stamp. */
+type FolderPage = { name: string; play: string; quote: string; icon: "blood" | "river" | "skull" | "dagger" };
+type Folder = { type: "folder"; seconds: number; line: string; accent: string; cue?: string; pages: FolderPage[]; stamp?: string; every?: number; first?: number; flips?: number[] };
+const PageIcon: React.FC<{ icon: FolderPage["icon"]; x: number; y: number }> = ({ icon, x, y }) => (
+  <g transform={`translate(${x} ${y})`}>
+    {icon === "blood" && <g><path d="M0 -50 C -30 -6, -36 14, -36 26 C -36 48, -18 60, 0 60 C 18 60, 36 48, 36 26 C 36 14, 30 -6, 0 -50 Z" fill="#c8402a" stroke={C.ink} strokeWidth={5} /><path d="M54 30 c -8 12, -8 20, 0 20 c 8 0, 8 -8, 0 -20 Z" fill="#c8402a" stroke={C.ink} strokeWidth={4} /></g>}
+    {icon === "river" && <g><path d="M-80 30 C -60 14, -40 46, -20 30 C 0 14, 20 46, 40 30 C 60 14, 80 46, 100 30 M-80 60 C -60 44, -40 76, -20 60 C 0 44, 20 76, 40 60 C 60 44, 80 76, 100 60" fill="none" stroke="#3d7fa6" strokeWidth={6} strokeLinecap="round" /><circle cx={0} cy={-20} r={14} fill={C.orange} stroke={C.ink} strokeWidth={4} /><path d="M0 -6 L 0 22 M-16 -30 l -14 -10 M16 -30 l 14 -10" stroke={C.ink} strokeWidth={4} strokeLinecap="round" /></g>}
+    {icon === "skull" && <g><path d="M-42 10 C -50 -50, 50 -50, 42 10 C 40 26, 30 30, 26 36 L 26 52 L -26 52 L -26 36 C -30 30, -40 26, -42 10 Z" fill="#ffffff" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" /><circle cx={-16} cy={0} r={11} fill={C.ink} /><circle cx={16} cy={0} r={11} fill={C.ink} /><path d="M-10 52 L -10 40 M0 52 L 0 40 M10 52 L 10 40" stroke={C.ink} strokeWidth={4} /></g>}
+    {icon === "dagger" && <g><path d="M0 -60 L 12 20 L -12 20 Z" fill="#e8e3da" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" /><path d="M-34 20 L 34 20 M0 20 L 0 56" stroke={C.ink} strokeWidth={9} strokeLinecap="round" /></g>}
+  </g>
+);
+const FolderScene: React.FC<{ s: Folder }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const every = s.every ?? 44;
+  const first = s.first ?? 20;
+  const n = s.pages.length;
+  // page k is on top from flip k (frame first + k*every, or flips[k] to land on the spoken names)
+  const flipAt = (k: number) => s.flips?.[k] ?? first + k * every;
+  let cur = 0;
+  for (let k = 0; k < n; k++) if (f >= flipAt(k)) cur = k;
+  const fp = prog(f, flipAt(cur), flipAt(cur) + 10); // the page turning onto the right side
+  const X0 = 540, Y0 = 640, W = 360, H = 560; // spine at X0, right page X0..X0+W
+  const stamp = (k: number) => spring({ frame: f - (flipAt(k) + 14), fps, config: { damping: 10, mass: 0.5 } });
+  const pageBody = (p: FolderPage) => (
+    <g>
+      <rect x={0} y={0} width={W} height={H} rx={8} fill="#ffffff" stroke={C.ink} strokeWidth={5} />
+      <text x={W / 2} y={84} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={p.name.length > 10 ? 29 : 40} letterSpacing={2} fill={C.ink}>{p.name}</text>
+      <text x={W / 2} y={128} textAnchor="middle" fontFamily={F.serifI} fontStyle="italic" fontSize={30} fill={C.inkSoft}>{p.play}</text>
+      <path d={`M40 156 L ${W - 40} 156`} stroke={C.inkSoft} strokeWidth={3} />
+      <text x={W / 2} y={214} textAnchor="middle" fontFamily={F.type} fontStyle="italic" fontSize={32} fill={C.ink}>{p.quote}</text>
+      <PageIcon icon={p.icon} x={W / 2} y={350} />
+      <path d={`M50 460 L ${W - 60} 460 M50 496 L ${W - 110} 496`} stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" />
+    </g>
+  );
+  const prev = cur > 0 ? s.pages[cur - 1] : null;
+  const panic = Math.min(1, Math.max(0, (f - flipAt(0)) / Math.max(1, flipAt(n - 1) + 30 - flipAt(0))));
+  return (
+    <AbsoluteFill>
+      {s.pages.map((_, k) => (
+        <React.Fragment key={k}>
+          <Sfx name="toss" at={flipAt(k)} vol={0.45} />
+          <Sfx name="thud" at={flipAt(k) + 14} vol={0.55} />
+          <Sfx name={k === n - 1 ? "cine/pong" : "cine/plink"} at={flipAt(k) + 18} vol={0.4} />
+        </React.Fragment>
+      ))}
+      {s.cue && <Sfx name="typing" at={flipAt(n - 1) + 30} frames={typeFrames(s.cue)} vol={0.4} />}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the binder: covers, rings */}
+        <Ink d={`M${X0 - W - 26} ${Y0 - 20} L ${X0 + W + 26} ${Y0 - 20} L ${X0 + W + 26} ${Y0 + H + 22} L ${X0 - W - 26} ${Y0 + H + 22} Z`} start={0} dur={18} w={6} fill="rgba(232,121,43,0.22)" />
+        {/* left page: the back of the last one you turned */}
+        <g opacity={prog(f, 8, 16)} transform={`translate(${X0 - W} ${Y0})`}>
+          <rect x={0} y={0} width={W} height={H} rx={8} fill="#fbf7ef" stroke={C.ink} strokeWidth={5} />
+          {prev && <g opacity={0.35}><text x={W / 2} y={84} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={34} letterSpacing={3} fill={C.ink}>{prev.name}</text></g>}
+          {prev && (
+            <g transform={`translate(${W / 2} ${H / 2}) rotate(-12) scale(0.8)`} opacity={0.5}>
+              <rect x={-150} y={-44} width={300} height={88} rx={6} fill="none" stroke="#c8402a" strokeWidth={7} />
+              <text x={0} y={18} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={52} letterSpacing={8} fill="#c8402a">{s.stamp ?? "TRAGIC"}</text>
+            </g>
+          )}
+        </g>
+        {/* the right page: the current speech, turning in from the left */}
+        {f >= flipAt(0) && (
+          <g transform={`translate(${X0} ${Y0}) scale(${cur === 0 ? fp : Math.abs(2 * fp - 1) * (fp < 0.5 ? -1 : 1)} 1)`}>
+            {cur > 0 && fp < 0.5 ? <rect x={0} y={0} width={W} height={H} rx={8} fill="#fbf7ef" stroke={C.ink} strokeWidth={5} /> : pageBody(s.pages[cur])}
+            {(cur === 0 || fp >= 0.5) && (
+              <g transform={`translate(${W / 2} ${H - 150}) rotate(-12) scale(${1.8 - 0.8 * Math.min(1, stamp(cur))})`} opacity={Math.min(1, Math.max(0, stamp(cur)) * 1.6)}>
+                <rect x={-150} y={-44} width={300} height={88} rx={6} fill="rgba(255,255,255,0.6)" stroke="#c8402a" strokeWidth={7} />
+                <text x={0} y={18} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={52} letterSpacing={8} fill="#c8402a">{s.stamp ?? "TRAGIC"}</text>
+              </g>
+            )}
+          </g>
+        )}
+        {/* the rings on the spine */}
+        {[Y0 + 90, Y0 + H / 2, Y0 + H - 90].map((y, i) => (
+          <Ink key={i} d={`M${X0 - 26} ${y} C ${X0 - 26} ${y - 30}, ${X0 + 26} ${y - 30}, ${X0 + 26} ${y}`} start={10 + i * 2} dur={8} w={7} />
+        ))}
+        {/* you, getting more desperate with every page */}
+        <Face x={130} y={1160} r={78} panic={panic} start={6} tilt={6} />
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 280 }}>
+        <Rise at={10}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={104} />
+        </Rise>
+      </AbsoluteFill>
+      {s.cue && (
+        <div style={{ position: "absolute", left: 300, right: 60, top: 1250 }}>
+          <Cue text={s.cue} color={C.orange} at={flipAt(n - 1) + 30} />
+        </div>
+      )}
+    </AbsoluteFill>
+  );
+};
+
+/** On the floor among the tragedies; the phone comes up and lights your face. */
+type Floor = { type: "floor"; seconds: number; line: string; accent: string; cue?: string; litAt?: number; stamp?: string };
+const FloorScene: React.FC<{ s: Floor }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const litAt = s.litAt ?? 40;
+  const lift = spring({ frame: f - (litAt - 16), fps, config: { damping: 14 } });
+  const lit = prog(f, litAt, litAt + 10);
+  const FY = 1160;
+  const scattered = [
+    { x: 170, y: FY - 30, r: -18 }, { x: 830, y: FY - 20, r: 14 }, { x: 640, y: FY + 40, r: -6 }, { x: 300, y: FY + 60, r: 9 }, { x: 900, y: FY + 70, r: -22 },
+  ];
+  const px = 520, py = 760 + (1 - lift) * 260;
+  return (
+    <AbsoluteFill>
+      <Sfx name="thud" at={4} vol={0.5} />
+      <Sfx name="toss" at={8} vol={0.4} />
+      <Sfx name="boop_hi" at={litAt} vol={0.55} />
+      <Sfx name="cine/ping" at={litAt + 4} vol={0.5} />
+      {s.cue && <Sfx name="typing" at={litAt + 16} frames={typeFrames(s.cue)} vol={0.4} />}
+      {/* the phone's warm light on the dim room */}
+      <AbsoluteFill style={{ background: `rgba(33,26,21,${0.1 * (1 - lit)})` }} />
+      <AbsoluteFill style={{ background: `radial-gradient(circle 360px at ${px}px ${py + 40}px, rgba(232,121,43,${0.42 * lit}) 0%, rgba(232,121,43,0) 100%)` }} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Ink d={`M40 ${FY} C 380 ${FY - 4}, 700 ${FY + 6}, 1040 ${FY}`} start={0} dur={14} w={5} color={C.inkSoft} />
+        {scattered.map((p, i) => (
+          <g key={i} transform={`translate(${p.x} ${p.y}) rotate(${p.r})`} opacity={prog(f, 4 + i * 3, 10 + i * 3)}>
+            <rect x={-70} y={-46} width={140} height={92} rx={4} fill="#ffffff" stroke={C.ink} strokeWidth={4} />
+            <rect x={-54} y={-16} width={108} height={32} rx={3} fill="none" stroke="#c8402a" strokeWidth={4} />
+            <text x={0} y={9} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={20} letterSpacing={3} fill="#c8402a">{s.stamp ?? "TRAGIC"}</text>
+          </g>
+        ))}
+        {/* you, flat on your back: body, legs, the arm holding the phone up */}
+        <Ink d={`M400 ${FY - 70} C 520 ${FY - 80}, 640 ${FY - 70}, 740 ${FY - 64} L 900 ${FY - 110} M740 ${FY - 64} L 920 ${FY - 40}`} start={6} dur={18} w={8} />
+        <path d={`M440 ${FY - 74} L ${px - 10} ${py + 120}`} stroke={C.ink} strokeWidth={8} strokeLinecap="round" opacity={prog(f, litAt - 18, litAt - 12)} />
+        <g transform={`translate(${px} ${py})`} opacity={prog(f, litAt - 18, litAt - 12)}>
+          <rect x={-46} y={-6} width={92} height={170} rx={16} fill={APP.bg} stroke={C.ink} strokeWidth={6} />
+          <rect x={-36} y={6} width={72} height={146} rx={10} fill={lit > 0 ? `rgba(242,207,58,${0.25 + 0.6 * lit})` : APP.bg} />
+          {lit > 0.5 && <path d="M-22 48 L 22 48 M-22 74 L 14 74 M-22 100 L 18 100" stroke={APP.bg} strokeWidth={6} strokeLinecap="round" opacity={lit} />}
+          {lit > 0 && <path d="M-80 -30 L -100 -50 M80 -30 L 100 -50 M0 -40 L 0 -66" stroke={C.orange} strokeWidth={6} strokeLinecap="round" opacity={1 - prog(f, litAt + 10, litAt + 26)} />}
+        </g>
+        <Face x={330} y={FY - 96} r={82} panic={0.9 * (1 - lit)} hope={lit} tilt={-78 + lit * 18} start={2} />
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 280 }}>
+        <Rise at={Math.min(litAt + 4, 26)}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={104} />
+        </Rise>
+      </AbsoluteFill>
+      {s.cue && (
+        <div style={{ position: "absolute", left: 60, right: 60, top: 1240 }}>
+          <Cue text={s.cue} color={C.orange} at={litAt + 16} />
+        </div>
+      )}
+    </AbsoluteFill>
+  );
+};
+
 /** Word by word captions for the narration (Canberk, 2026-11-08: drawn films need captions). Ink on a
  *  soft paper pill above the bottom quarter, the spoken word in orange. Hidden on the end card. */
 const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
@@ -2079,9 +2329,9 @@ const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = (
   const chunk = chunks.find((c, i) => lt < (chunks[i + 1]?.[0].s ?? Infinity) - 0.02) ?? chunks[chunks.length - 1];
   const op = interpolate(lt, [-0.05, 0.1, dur(line) + 0.05, dur(line) + 0.25], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
-    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", padding: "0 70px 450px", opacity: op, pointerEvents: "none" }}>
+    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", padding: "0 170px 450px 80px", opacity: op, pointerEvents: "none" }}>
       <div style={{ background: C.ink, borderRadius: 22, padding: "16px 28px", boxShadow: "0 8px 30px rgba(33,26,21,0.25)",
-        textAlign: "center", fontFamily: F.serif, fontWeight: 600, fontSize: 50, lineHeight: 1.2, color: "#fbf7f0", maxWidth: 920 }}>
+        textAlign: "center", fontFamily: F.serif, fontWeight: 600, fontSize: 50, lineHeight: 1.2, color: "#fbf7f0", maxWidth: 830 }}>
         {chunk.map((w, i) => {
           const on = lt >= w.s - 0.02;
           const now = on && lt <= w.e + 0.08;
@@ -2131,6 +2381,9 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "kitchen" ? <KitchenScene s={sc} /> :
       sc.type === "book" ? <BookScene s={sc} /> :
       sc.type === "ten" ? <TenScene s={sc} /> :
+      sc.type === "callback" ? <CallbackScene s={sc} /> :
+      sc.type === "folder" ? <FolderScene s={sc} /> :
+      sc.type === "floor" ? <FloorScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

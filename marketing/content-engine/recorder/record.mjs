@@ -15,6 +15,7 @@
 //   {"click": "Search"}                    visible text, a role name, or {"css": "..."}
 //   {"type": "comedic, a girl around sixteen", "into": "Describe"}   placeholder, label or {"css"}
 //   {"press": "Enter"}
+//   {"blur": true}                          the typed field lets go of focus (keyboard away)
 //   {"wait": 1500}                          ms, or {"waitFor": "text that should appear"}
 //   {"scroll": 600}                         px, smooth
 //   {"mark": "results"}                     a named moment the edit can cut to
@@ -327,6 +328,8 @@ async function flow(file) {
       events.push({ t: now(), typing: s.type });
       await el.pressSequentially(s.type, { delay: s.delay ?? 55 });
     } else if (s.press) { await page.keyboard.press(s.press); events.push({ t: now(), press: s.press }); }
+    // {"blur": true}: put the keyboard away (the typed field loses focus) so a tap below it lands.
+    else if (s.blur) { await page.evaluate(() => document.activeElement && document.activeElement.blur()); events.push({ t: now(), blur: true }); }
     else if (s.wait) await sleep(s.wait);
     else if (s.waitFor) await page.getByText(s.waitFor, { exact: false }).first().waitFor({ timeout: 20000 }).catch(() => {});
     else if (s.scroll) {

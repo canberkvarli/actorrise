@@ -1,0 +1,107 @@
+{
+  "start": "/search",
+  "lead": 900,
+  "steps": [
+    {
+      "wait": 1500
+    },
+    {
+      "click": {
+        "css": "a[href='/saves']"
+      }
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "mark": "tab"
+    },
+    {
+      "click": {
+        "css": "a[href='/search']"
+      }
+    },
+    {
+      "wait": 900
+    },
+    {
+      "mark": "search"
+    },
+    {
+      "type": "a funny classical speech, under a minute",
+      "into": {
+        "css": "input"
+      },
+      "delay": 45
+    },
+    {
+      "blur": true
+    },
+    {
+      "wait": 500
+    },
+    {
+      "mark": "filters"
+    },
+    {
+      "click": {
+        "css": "[aria-label='More filters']"
+      }
+    },
+    {
+      "wait": 700
+    },
+    {
+      "click": "comedic"
+    },
+    {
+      "wait": 250
+    },
+    {
+      "click": "under 1 min"
+    },
+    {
+      "wait": 250
+    },
+    {
+      "click": "fresh"
+    },
+    {
+      "wait": 450
+    },
+    {
+      "click": "Done"
+    },
+    {
+      "mark": "searching"
+    },
+    {
+      "waitFor": "monologues."
+    },
+    {
+      "wait": 1400
+    },
+    {
+      "mark": "results"
+    },
+    {
+      "wait": 1600
+    },
+    {
+      "click": "Doolittle"
+    },
+    {
+      "mark": "open"
+    },
+    {
+      "wait": 3500
+    },
+    {
+      "mark": "read"
+    },
+    {
+      "wait": 2500
+    }
+  ],
+  "tail": 600
+}

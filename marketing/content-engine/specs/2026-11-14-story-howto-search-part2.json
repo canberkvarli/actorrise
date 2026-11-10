@@ -1,0 +1,979 @@
+{
+  "id": "2026-11-14-story-howto-search-part2",
+  "look": "noir",
+  "cut": "hard",
+  "music": {
+    "style": "bed",
+    "volume": 0.14,
+    "drop": "end"
+  },
+  "voice": {
+    "volume": 1,
+    "lines": [
+      {
+        "text": "Tap Search.",
+        "say": "[upbeat] Tap Search.",
+        "at": 0.0,
+        "voice": "explainer",
+        "sub": false,
+        "audio": "voice/2026-11-14-story-howto-search-part2/00.mp3",
+        "words": [
+          {
+            "w": "Tap",
+            "s": 0.275,
+            "e": 0.32
+          },
+          {
+            "w": "Search.",
+            "s": 0.389,
+            "e": 1.44
+          }
+        ],
+        "dur": 1.59
+      },
+      {
+        "text": "Type what you need, in your words.",
+        "say": "[excited] Type what you need, in your words.",
+        "at": 1.5,
+        "voice": "explainer",
+        "sub": false,
+        "audio": "voice/2026-11-14-story-howto-search-part2/01.mp3",
+        "words": [
+          {
+            "w": "Type",
+            "s": 0.202,
+            "e": 0.24
+          },
+          {
+            "w": "what",
+            "s": 0.272,
+            "e": 0.4
+          },
+          {
+            "w": "you",
+            "s": 0.44,
+            "e": 0.56
+          },
+          {
+            "w": "need,",
+            "s": 0.656,
+            "e": 1.2
+          },
+          {
+            "w": "in",
+            "s": 1.253,
+            "e": 1.36
+          },
+          {
+            "w": "your",
+            "s": 1.424,
+            "e": 1.68
+          },
+          {
+            "w": "words.",
+            "s": 1.787,
+            "e": 2.4
+          }
+        ],
+        "dur": 2.55
+      },
+      {
+        "text": "Funny. Under a minute. Fresh.",
+        "say": "[playful] Funny. Under a minute. Fresh.",
+        "at": 4.05,
+        "voice": "explainer",
+        "sub": false,
+        "audio": "voice/2026-11-14-story-howto-search-part2/02.mp3",
+        "words": [
+          {
+            "w": "Funny.",
+            "s": 0.333,
+            "e": 0.48
+          },
+          {
+            "w": "Under",
+            "s": 0.547,
+            "e": 0.88
+          },
+          {
+            "w": "a",
+            "s": 0.92,
+            "e": 0.96
+          },
+          {
+            "w": "minute.",
+            "s": 1.017,
+            "e": 1.44
+          },
+          {
+            "w": "Fresh.",
+            "s": 1.573,
+            "e": 2.32
+          }
+        ],
+        "dur": 2.47
+      },
+      {
+        "text": "Pick one nobody does.",
+        "say": "[conspiratorial] Pick one nobody does.",
+        "at": 6.6,
+        "voice": "explainer",
+        "sub": false,
+        "audio": "voice/2026-11-14-story-howto-search-part2/03.mp3",
+        "words": [
+          {
+            "w": "Pick",
+            "s": 0.208,
+            "e": 0.24
+          },
+          {
+            "w": "one",
+            "s": 0.32,
+            "e": 0.56
+          },
+          {
+            "w": "nobody",
+            "s": 0.651,
+            "e": 1.2
+          },
+          {
+            "w": "does.",
+            "s": 1.328,
+            "e": 1.92
+          }
+        ],
+        "dur": 2.07
+      },
+      {
+        "text": "And it's yours, timed and ready.",
+        "say": "[delighted] And it's yours, timed and ready.",
+        "at": 9.25,
+        "voice": "explainer",
+        "sub": false,
+        "audio": "voice/2026-11-14-story-howto-search-part2/04.mp3",
+        "words": [
+          {
+            "w": "And",
+            "s": 0.136,
+            "e": 0.16
+          },
+          {
+            "w": "it's",
+            "s": 0.187,
+            "e": 0.32
+          },
+          {
+            "w": "yours,",
+            "s": 0.44,
+            "e": 1.12
+          },
+          {
+            "w": "timed",
+            "s": 1.187,
+            "e": 1.52
+          },
+          {
+            "w": "and",
+            "s": 1.56,
+            "e": 1.68
+          },
+          {
+            "w": "ready.",
+            "s": 1.747,
+            "e": 2.16
+          }
+        ],
+        "dur": 2.31
+      },
+      {
+        "text": "Ghost Light.",
+        "say": "[upbeat] Ghost Light.",
+        "at": 13.0,
+        "voice": "explainer",
+        "sub": false,
+        "audio": "voice/2026-11-14-story-howto-search-part2/05.mp3",
+        "words": [
+          {
+            "w": "Ghost",
+            "s": 0.333,
+            "e": 0.4
+          },
+          {
+            "w": "Light.",
+            "s": 0.467,
+            "e": 1.36
+          }
+        ],
+        "dur": 1.51
+      }
+    ]
+  },
+  "beats": [
+    {
+      "kind": "screen",
+      "seconds": 0.75,
+      "src": "reel/2026-11-14-story-howto-search-part2/app.mp4",
+      "start": 5.45,
+      "frame": "full",
+      "bg": "ink",
+      "zoom": 1.0,
+      "sfx": [],
+      "events": [
+        {
+          "t": 2.838,
+          "tap": {
+            "x": 0.3903846153846154,
+            "y": 0.9300947867298578
+          },
+          "label": "a[href='/saves']"
+        },
+        {
+          "t": 5.352,
+          "mark": "tab"
+        },
+        {
+          "t": 5.787,
+          "tap": {
+            "x": 0.17115384615384616,
+            "y": 0.9300947867298578
+          },
+          "label": "a[href='/search']"
+        },
+        {
+          "t": 7.703,
+          "mark": "search"
+        },
+        {
+          "t": 8.334,
+          "tap": {
+            "x": 0.49615404177934697,
+            "y": 0.31399966416200753
+          },
+          "label": "field"
+        },
+        {
+          "t": 12.238,
+          "mark": "filters"
+        },
+        {
+          "t": 12.636,
+          "tap": {
+            "x": 0.6657051282051282,
+            "y": 0.45023696682464454
+          },
+          "label": "[aria-label='More filters']"
+        },
+        {
+          "t": 14.404,
+          "tap": {
+            "x": 0.17702323717948718,
+            "y": 0.6926651362559242
+          },
+          "label": "comedic"
+        },
+        {
+          "t": 15.721,
+          "tap": {
+            "x": 0.21955128205128205,
+            "y": 0.5007220082938388
+          },
+          "label": "under 1 min"
+        },
+        {
+          "t": 17.037,
+          "tap": {
+            "x": 0.17672275641025642,
+            "y": 0.7915987855450237
+          },
+          "label": "fresh"
+        },
+        {
+          "t": 18.554,
+          "tap": {
+            "x": 0.790244391025641,
+            "y": 0.9561611374407583
+          },
+          "label": "Done"
+        },
+        {
+          "t": 19.501,
+          "mark": "searching"
+        },
+        {
+          "t": 22.746,
+          "mark": "results"
+        },
+        {
+          "t": 25.106,
+          "tap": {
+            "x": 0.5,
+            "y": 0.3815165876777251
+          },
+          "label": "Doolittle"
+        },
+        {
+          "t": 25.815,
+          "mark": "open"
+        },
+        {
+          "t": 30.017,
+          "mark": "read"
+        },
+        {
+          "t": 28.3,
+          "focus": {
+            "x": 0.32,
+            "y": 0.29,
+            "zoom": 1.5,
+            "hold": 1.0
+          },
+          "mark": "time"
+        },
+        {
+          "t": 16.8,
+          "focus": {
+            "x": 0.35,
+            "y": 1.0,
+            "zoom": 1.4,
+            "hold": 2.2
+          },
+          "mark": "sheet"
+        },
+        {
+          "t": 29.6,
+          "focus": {
+            "x": 0.5,
+            "y": 0.98,
+            "zoom": 1.2,
+            "hold": 2.2
+          },
+          "mark": "text"
+        }
+      ]
+    },
+    {
+      "kind": "screen",
+      "seconds": 3.1,
+      "src": "reel/2026-11-14-story-howto-search-part2/app.mp4",
+      "start": 7.9,
+      "frame": "full",
+      "bg": "ink",
+      "zoom": 1.0,
+      "sfx": [],
+      "events": [
+        {
+          "t": 2.838,
+          "tap": {
+            "x": 0.3903846153846154,
+            "y": 0.9300947867298578
+          },
+          "label": "a[href='/saves']"
+        },
+        {
+          "t": 5.352,
+          "mark": "tab"
+        },
+        {
+          "t": 5.787,
+          "tap": {
+            "x": 0.17115384615384616,
+            "y": 0.9300947867298578
+          },
+          "label": "a[href='/search']"
+        },
+        {
+          "t": 7.703,
+          "mark": "search"
+        },
+        {
+          "t": 8.334,
+          "tap": {
+            "x": 0.49615404177934697,
+            "y": 0.31399966416200753
+          },
+          "label": "field"
+        },
+        {
+          "t": 12.238,
+          "mark": "filters"
+        },
+        {
+          "t": 12.636,
+          "tap": {
+            "x": 0.6657051282051282,
+            "y": 0.45023696682464454
+          },
+          "label": "[aria-label='More filters']"
+        },
+        {
+          "t": 14.404,
+          "tap": {
+            "x": 0.17702323717948718,
+            "y": 0.6926651362559242
+          },
+          "label": "comedic"
+        },
+        {
+          "t": 15.721,
+          "tap": {
+            "x": 0.21955128205128205,
+            "y": 0.5007220082938388
+          },
+          "label": "under 1 min"
+        },
+        {
+          "t": 17.037,
+          "tap": {
+            "x": 0.17672275641025642,
+            "y": 0.7915987855450237
+          },
+          "label": "fresh"
+        },
+        {
+          "t": 18.554,
+          "tap": {
+            "x": 0.790244391025641,
+            "y": 0.9561611374407583
+          },
+          "label": "Done"
+        },
+        {
+          "t": 19.501,
+          "mark": "searching"
+        },
+        {
+          "t": 22.746,
+          "mark": "results"
+        },
+        {
+          "t": 25.106,
+          "tap": {
+            "x": 0.5,
+            "y": 0.3815165876777251
+          },
+          "label": "Doolittle"
+        },
+        {
+          "t": 25.815,
+          "mark": "open"
+        },
+        {
+          "t": 30.017,
+          "mark": "read"
+        },
+        {
+          "t": 28.3,
+          "focus": {
+            "x": 0.32,
+            "y": 0.29,
+            "zoom": 1.5,
+            "hold": 1.0
+          },
+          "mark": "time"
+        },
+        {
+          "t": 16.8,
+          "focus": {
+            "x": 0.35,
+            "y": 1.0,
+            "zoom": 1.4,
+            "hold": 2.2
+          },
+          "mark": "sheet"
+        },
+        {
+          "t": 29.6,
+          "focus": {
+            "x": 0.5,
+            "y": 0.98,
+            "zoom": 1.2,
+            "hold": 2.2
+          },
+          "mark": "text"
+        }
+      ]
+    },
+    {
+      "kind": "screen",
+      "seconds": 2.3,
+      "src": "reel/2026-11-14-story-howto-search-part2/app.mp4",
+      "start": 16.6,
+      "frame": "full",
+      "bg": "ink",
+      "zoom": 1.0,
+      "sfx": [],
+      "events": [
+        {
+          "t": 2.838,
+          "tap": {
+            "x": 0.3903846153846154,
+            "y": 0.9300947867298578
+          },
+          "label": "a[href='/saves']"
+        },
+        {
+          "t": 5.352,
+          "mark": "tab"
+        },
+        {
+          "t": 5.787,
+          "tap": {
+            "x": 0.17115384615384616,
+            "y": 0.9300947867298578
+          },
+          "label": "a[href='/search']"
+        },
+        {
+          "t": 7.703,
+          "mark": "search"
+        },
+        {
+          "t": 8.334,
+          "tap": {
+            "x": 0.49615404177934697,
+            "y": 0.31399966416200753
+          },
+          "label": "field"
+        },
+        {
+          "t": 12.238,
+          "mark": "filters"
+        },
+        {
+          "t": 12.636,
+          "tap": {
+            "x": 0.6657051282051282,
+            "y": 0.45023696682464454
+          },
+          "label": "[aria-label='More filters']"
+        },
+        {
+          "t": 14.404,
+          "tap": {
+            "x": 0.17702323717948718,
+            "y": 0.6926651362559242
+          },
+          "label": "comedic"
+        },
+        {
+          "t": 15.721,
+          "tap": {
+            "x": 0.21955128205128205,
+            "y": 0.5007220082938388
+          },
+          "label": "under 1 min"
+        },
+        {
+          "t": 17.037,
+          "tap": {
+            "x": 0.17672275641025642,
+            "y": 0.7915987855450237
+          },
+          "label": "fresh"
+        },
+        {
+          "t": 18.554,
+          "tap": {
+            "x": 0.790244391025641,
+            "y": 0.9561611374407583
+          },
+          "label": "Done"
+        },
+        {
+          "t": 19.501,
+          "mark": "searching"
+        },
+        {
+          "t": 22.746,
+          "mark": "results"
+        },
+        {
+          "t": 25.106,
+          "tap": {
+            "x": 0.5,
+            "y": 0.3815165876777251
+          },
+          "label": "Doolittle"
+        },
+        {
+          "t": 25.815,
+          "mark": "open"
+        },
+        {
+          "t": 30.017,
+          "mark": "read"
+        },
+        {
+          "t": 28.3,
+          "focus": {
+            "x": 0.32,
+            "y": 0.29,
+            "zoom": 1.5,
+            "hold": 1.0
+          },
+          "mark": "time"
+        },
+        {
+          "t": 16.8,
+          "focus": {
+            "x": 0.35,
+            "y": 1.0,
+            "zoom": 1.4,
+            "hold": 2.2
+          },
+          "mark": "sheet"
+        },
+        {
+          "t": 29.6,
+          "focus": {
+            "x": 0.5,
+            "y": 0.98,
+            "zoom": 1.2,
+            "hold": 2.2
+          },
+          "mark": "text"
+        }
+      ]
+    },
+    {
+      "kind": "screen",
+      "seconds": 3.0,
+      "src": "reel/2026-11-14-story-howto-search-part2/app.mp4",
+      "start": 22.6,
+      "frame": "full",
+      "bg": "ink",
+      "zoom": 1.0,
+      "sfx": [],
+      "events": [
+        {
+          "t": 2.838,
+          "tap": {
+            "x": 0.3903846153846154,
+            "y": 0.9300947867298578
+          },
+          "label": "a[href='/saves']"
+        },
+        {
+          "t": 5.352,
+          "mark": "tab"
+        },
+        {
+          "t": 5.787,
+          "tap": {
+            "x": 0.17115384615384616,
+            "y": 0.9300947867298578
+          },
+          "label": "a[href='/search']"
+        },
+        {
+          "t": 7.703,
+          "mark": "search"
+        },
+        {
+          "t": 8.334,
+          "tap": {
+            "x": 0.49615404177934697,
+            "y": 0.31399966416200753
+          },
+          "label": "field"
+        },
+        {
+          "t": 12.238,
+          "mark": "filters"
+        },
+        {
+          "t": 12.636,
+          "tap": {
+            "x": 0.6657051282051282,
+            "y": 0.45023696682464454
+          },
+          "label": "[aria-label='More filters']"
+        },
+        {
+          "t": 14.404,
+          "tap": {
+            "x": 0.17702323717948718,
+            "y": 0.6926651362559242
+          },
+          "label": "comedic"
+        },
+        {
+          "t": 15.721,
+          "tap": {
+            "x": 0.21955128205128205,
+            "y": 0.5007220082938388
+          },
+          "label": "under 1 min"
+        },
+        {
+          "t": 17.037,
+          "tap": {
+            "x": 0.17672275641025642,
+            "y": 0.7915987855450237
+          },
+          "label": "fresh"
+        },
+        {
+          "t": 18.554,
+          "tap": {
+            "x": 0.790244391025641,
+            "y": 0.9561611374407583
+          },
+          "label": "Done"
+        },
+        {
+          "t": 19.501,
+          "mark": "searching"
+        },
+        {
+          "t": 22.746,
+          "mark": "results"
+        },
+        {
+          "t": 25.106,
+          "tap": {
+            "x": 0.5,
+            "y": 0.3815165876777251
+          },
+          "label": "Doolittle"
+        },
+        {
+          "t": 25.815,
+          "mark": "open"
+        },
+        {
+          "t": 30.017,
+          "mark": "read"
+        },
+        {
+          "t": 28.3,
+          "focus": {
+            "x": 0.32,
+            "y": 0.29,
+            "zoom": 1.5,
+            "hold": 1.0
+          },
+          "mark": "time"
+        },
+        {
+          "t": 16.8,
+          "focus": {
+            "x": 0.35,
+            "y": 1.0,
+            "zoom": 1.4,
+            "hold": 2.2
+          },
+          "mark": "sheet"
+        },
+        {
+          "t": 29.6,
+          "focus": {
+            "x": 0.5,
+            "y": 0.98,
+            "zoom": 1.2,
+            "hold": 2.2
+          },
+          "mark": "text"
+        }
+      ]
+    },
+    {
+      "kind": "screen",
+      "seconds": 3.8,
+      "src": "reel/2026-11-14-story-howto-search-part2/app.mp4",
+      "start": 27.9,
+      "frame": "full",
+      "bg": "ink",
+      "zoom": 1.0,
+      "sfx": [],
+      "events": [
+        {
+          "t": 2.838,
+          "tap": {
+            "x": 0.3903846153846154,
+            "y": 0.9300947867298578
+          },
+          "label": "a[href='/saves']"
+        },
+        {
+          "t": 5.352,
+          "mark": "tab"
+        },
+        {
+          "t": 5.787,
+          "tap": {
+            "x": 0.17115384615384616,
+            "y": 0.9300947867298578
+          },
+          "label": "a[href='/search']"
+        },
+        {
+          "t": 7.703,
+          "mark": "search"
+        },
+        {
+          "t": 8.334,
+          "tap": {
+            "x": 0.49615404177934697,
+            "y": 0.31399966416200753
+          },
+          "label": "field"
+        },
+        {
+          "t": 12.238,
+          "mark": "filters"
+        },
+        {
+          "t": 12.636,
+          "tap": {
+            "x": 0.6657051282051282,
+            "y": 0.45023696682464454
+          },
+          "label": "[aria-label='More filters']"
+        },
+        {
+          "t": 14.404,
+          "tap": {
+            "x": 0.17702323717948718,
+            "y": 0.6926651362559242
+          },
+          "label": "comedic"
+        },
+        {
+          "t": 15.721,
+          "tap": {
+            "x": 0.21955128205128205,
+            "y": 0.5007220082938388
+          },
+          "label": "under 1 min"
+        },
+        {
+          "t": 17.037,
+          "tap": {
+            "x": 0.17672275641025642,
+            "y": 0.7915987855450237
+          },
+          "label": "fresh"
+        },
+        {
+          "t": 18.554,
+          "tap": {
+            "x": 0.790244391025641,
+            "y": 0.9561611374407583
+          },
+          "label": "Done"
+        },
+        {
+          "t": 19.501,
+          "mark": "searching"
+        },
+        {
+          "t": 22.746,
+          "mark": "results"
+        },
+        {
+          "t": 25.106,
+          "tap": {
+            "x": 0.5,
+            "y": 0.3815165876777251
+          },
+          "label": "Doolittle"
+        },
+        {
+          "t": 25.815,
+          "mark": "open"
+        },
+        {
+          "t": 30.017,
+          "mark": "read"
+        },
+        {
+          "t": 28.3,
+          "focus": {
+            "x": 0.32,
+            "y": 0.29,
+            "zoom": 1.5,
+            "hold": 1.0
+          },
+          "mark": "time"
+        },
+        {
+          "t": 16.8,
+          "focus": {
+            "x": 0.35,
+            "y": 1.0,
+            "zoom": 1.4,
+            "hold": 2.2
+          },
+          "mark": "sheet"
+        },
+        {
+          "t": 29.6,
+          "focus": {
+            "x": 0.5,
+            "y": 0.98,
+            "zoom": 1.2,
+            "hold": 2.2
+          },
+          "mark": "text"
+        }
+      ]
+    },
+    {
+      "kind": "end",
+      "seconds": 1.8,
+      "brand": "Ghost Light",
+      "line": "For when everyone else has gone home.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "app": "Ghost Light web preview (ghostlight-web/serve.sh), dark, demo account",
+    "flow": "flows/search-funny-under-a-minute.json",
+    "query": "a funny classical speech, under a minute; filters comedic, under 1 min, fresh",
+    "picked": {
+      "id": 23750,
+      "character": "Doolittle",
+      "play": "Pygmalion",
+      "author": "George Bernard Shaw",
+      "year": 1912,
+      "secs": 50,
+      "overdone": 0,
+      "tone": "comedic"
+    },
+    "public_domain": "Shaw d. 1950, Pygmalion published 1913 (US public domain, pre 1929). The top results on screen (Doolittle, Jeanne/Pailleron 1885, Fre/Shirley 1637) are all public domain plays.",
+    "why_this_query": "'funny, under a minute' alone puts film and TV pieces (The Comedian, Community) at the top even in the Plays house: results.tsx never sends source_type=play. Film text cannot go on screen, so the typed words say classical.",
+    "segments": [
+      [
+        5.45,
+        0.75
+      ],
+      [
+        7.9,
+        3.1
+      ],
+      [
+        16.6,
+        2.3
+      ],
+      [
+        22.6,
+        3.0
+      ],
+      [
+        27.9,
+        3.8
+      ]
+    ]
+  }
+}
