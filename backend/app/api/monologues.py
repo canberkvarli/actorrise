@@ -57,7 +57,7 @@ from app.services.search.scene_intent import detect_two_person_scene_intent
 from app.services.search.recommender import Recommender
 from app.services.search.semantic_search import MIN_RELEVANCE_TO_SHOW, STRONG_COSINE_SIM, SemanticSearch
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter(prefix="/api/monologues", tags=["monologues"])
@@ -2989,6 +2989,10 @@ class MonologueSubmissionRequest(BaseModel):
     play_title: str
     author: str
     notes: Optional[str] = None  # Optional context about source, rights, etc.
+    # /for-playwrights: the writer's own work. rights_confirmed is the permission.
+    own_work: bool = False
+    rights_confirmed: bool = False
+    buy_url: Optional[str] = Field(None, max_length=500)
 
 
 class SubmissionStatusResponse(BaseModel):
@@ -3038,6 +3042,16 @@ async def submit_monologue_for_review(
     from app.models.moderation import ModerationLog, MonologueSubmission
     from app.services.ai.content_moderation import ContentModerator
 
+    buy_url = (submission.buy_url or "").strip() or None
+    if submission.own_work:
+        if not submission.rights_confirmed:
+            raise HTTPException(
+                status_code=400,
+                detail="Please confirm you wrote this and hold the rights to it.",
+            )
+        if buy_url and not buy_url.startswith(("http://", "https://")):
+            raise HTTPException(status_code=400, detail="The link should start with https://")
+
     try:
         # Create submission record
         sub = MonologueSubmission(
@@ -3048,7 +3062,10 @@ async def submit_monologue_for_review(
             submitted_play_title=submission.play_title,
             submitted_author=submission.author,
             user_notes=submission.notes,
-            status='pending'
+            status='pending',
+            is_own_work=bool(submission.own_work),
+            buy_url=buy_url if submission.own_work else None,
+            rights_confirmed_at=datetime.utcnow() if submission.own_work else None,
         )
         db.add(sub)
         db.flush()  # Get submission ID
@@ -3086,6 +3103,11 @@ async def submit_monologue_for_review(
         db.add(log)
 
         recommendation = moderation_result['recommendation']
+        # A writer's own published play reads as "copyrighted" to the AI, which is
+        # exactly the point. Canberk reads every one: never auto-approved, never
+        # auto-rejected.
+        if submission.own_work:
+            recommendation = 'manual_review'
 
         if recommendation == 'auto_approve':
             # Auto-approve: update status and timestamp (full approval flow can be extended via admin)

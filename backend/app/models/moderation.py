@@ -51,6 +51,13 @@ class MonologueSubmission(Base):
     submitted_author = Column(String, nullable=False)
     user_notes = Column(Text, nullable=True)  # Optional context from user
 
+    # A playwright submitting their own work (/for-playwrights). The confirmation
+    # is the written permission: an approved own-work piece goes in `licensed`,
+    # linked to where the play is sold. Removed the same day if the writer asks.
+    is_own_work = Column(Boolean, nullable=False, default=False, server_default=sql_text("false"))
+    buy_url = Column(Text, nullable=True)
+    rights_confirmed_at = Column(DateTime(timezone=True), nullable=True)
+
     # Moderation status: pending, ai_review, manual_review, approved, rejected
     status = Column(String, default="pending", nullable=False, index=True)
 

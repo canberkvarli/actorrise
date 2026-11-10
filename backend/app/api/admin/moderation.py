@@ -361,6 +361,7 @@ async def approve_submission(
             Play.author == submission.submitted_author
         ).first()
 
+        own_work = bool(getattr(submission, "is_own_work", False))
         if not play:
             play = Play(
                 title=submission.submitted_play_title,
@@ -368,9 +369,12 @@ async def approve_submission(
                 year_written=None,
                 genre='User Submitted',
                 category='contemporary',
-                copyright_status='user_uploaded',
-                license_type='user_content',
-                source_url=None,
+                # The writer's own piece, with their confirmation on file, is a
+                # licensed work linked to where it is sold. Anything else stays
+                # user content.
+                copyright_status='copyrighted' if own_work else 'user_uploaded',
+                license_type='licensed' if own_work else 'user_content',
+                source_url=(getattr(submission, "buy_url", None) or None) if own_work else None,
                 full_text=None,
                 text_format='plain'
             )
