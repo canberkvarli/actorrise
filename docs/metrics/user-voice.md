@@ -219,3 +219,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** studio teacher, class link sent 2026-10-18, nobody joined yet
 **They said:** "Thank you. I will use it today. And again just to be clear two person “scenes” are not in the database, just monologues?"
 **Heard as:** could not find the feature (scenes come from an uploaded script in ScenePartner, there is no scene library to browse)
+
+## 2026-11-10
+
+**Replying to:** a first email to a play publisher asking to host its free teen monologues
+**Account:** publisher, not an ActorRise user
+**They said:** "Thank you. While we appreciate the kind words, at this time we want our text to stay on our site. You are welcome, however, to list monologues with links."
+**Heard as:** content gap stays open (contemporary teens); text declined, a title and character list with links to their site is allowed
