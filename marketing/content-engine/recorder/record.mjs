@@ -77,6 +77,30 @@ async function open() {
   });
   const host = new URL(BASE).hostname;
   await ctx.addCookies([{ name: "NEXT_LOCALE", value: "en", domain: host, path: "/" }]);
+  // MOCK_AUDITIONS=<file.json>: the demo account's Board for this recording only, answered in the
+  // browser so nothing is written to the real database. Each entry is an Audition as the API returns
+  // it; "due_in_hours" sets due_at/when relative to now. PATCH merges into the in-memory copy, so
+  // marking a tape sent still clears the Callboard line the way the real server would.
+  if (process.env.MOCK_AUDITIONS) {
+    const mock = JSON.parse(fs.readFileSync(process.env.MOCK_AUDITIONS, "utf8")).map((a) => {
+      const out = { ...a };
+      if (a.due_in_hours !== undefined) {
+        const d = new Date(Date.now() + a.due_in_hours * 3600_000); d.setMinutes(0, 0, 0);
+        out.due_at = out.when = d.toISOString(); delete out.due_in_hours;
+      }
+      return out;
+    });
+    await ctx.route(/\/api\/auditions(\/\d+)?(\?.*)?$/, async (route) => {
+      const req = route.request();
+      const m = new URL(req.url()).pathname.match(/\/api\/auditions\/(\d+)$/);
+      const json = (body) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+      if (!m) return req.method() === "GET" ? json(mock) : route.fulfill({ status: 405 });
+      const a = mock.find((x) => x.id === Number(m[1]));
+      if (!a) return route.fulfill({ status: 404 });
+      if (req.method() === "PATCH") Object.assign(a, req.postDataJSON() || {});
+      return json(a);
+    });
+  }
   // Web-only artefacts that never show on the phone (Canberk, 2026-11-04): the browser's focus box
   // around a typed field, the tap flash, and react-native-web turning the lamp's soft shadow into a
   // square box-shadow behind the logo. Hide them and give the lamp its glow back as a drop-shadow.
@@ -271,13 +295,19 @@ async function flow(file) {
   const now = () => (Date.now() - t0) / 1000;
   await sleep(spec.lead ?? 700);
 
-  const camAt = await page.evaluate(() => window.__camAt || null);
+  // The camera can open at the start (a flow that starts in the Tape room) or mid flow (a tap
+  // that opens it): a "cam" step waits up to 8s for it and then keeps that clock.
+  let camAt = await page.evaluate(() => window.__camAt || null);
   if (camAt) events.push({ t: (camAt - t0) / 1000, mark: "camera-open" });
   for (const s of spec.steps) {
     // "at": run this step at a fixed second of the recording (so cues land under a voice-over).
     if (s.at !== undefined) await sleep(Math.max(0, s.at * 1000 - (Date.now() - t0)));
     // "cam": the same on the camera clip's clock, so the scripted ear lands on the actor's words.
     if (s.cam !== undefined) {
+      for (let i = 0; !camAt && i < 80; i++) {
+        camAt = await page.evaluate(() => window.__camAt || null);
+        if (camAt) events.push({ t: (camAt - t0) / 1000, mark: "camera-open" }); else await sleep(100);
+      }
       if (!camAt) throw new Error('"cam" step but the page never opened a camera');
       await sleep(Math.max(0, camAt + s.cam * 1000 - Date.now()));
     }

@@ -1,0 +1,27 @@
+[
+  {
+    "id": 9101,
+    "project": "Midsummer",
+    "role": "Helena",
+    "kind": "self_tape",
+    "status": "scheduled",
+    "starts_at": null,
+    "due_in_hours": 16,
+    "tz": "America/New_York",
+    "location": null,
+    "casting": null,
+    "material_raw": "One Shakespeare speech, under a minute",
+    "bring": null,
+    "tape_link": null,
+    "notes": null,
+    "reminders_on": true,
+    "reminder_moments": ["prep", "eve", "after"],
+    "scope": "upcoming",
+    "created_at": "2026-11-09T15:00:00Z",
+    "after_notes": null,
+    "bring_list": [],
+    "callback_id": null,
+    "pieces": [{"id": 1, "monologue_id": 540, "scene_id": null, "used": false, "title": null, "character": "Helena", "play_title": "A Midsummer Night's Dream"}],
+    "assist": null
+  }
+]

@@ -1,0 +1,77 @@
+{
+  "start": "/",
+  "lead": 300,
+  "note": "Self tape example, start to finish. MOCK_AUDITIONS=flows/tape-self-tape-example.auditions.json puts one self tape due today on the demo Board (answered in the browser, nothing written to the database). FAKE_CAM = Pexels 36931662 at 720x1280/30 with its first frame held 3s in front and the last held 2.2s after, so clip second c is camera second 3 + c. The actress's voice (ElevenLabs Sarah, one take) starts at camera second 1.698: action 2.18, line one 3.30-6.03, line two 6.15-9.15, cut 11.56. Ear words land on those.",
+  "steps": [
+    {
+      "wait": 1600
+    },
+    {
+      "mark": "home"
+    },
+    {
+      "click": {
+        "css": "[aria-label^=\"Callboard\"]"
+      }
+    },
+    {
+      "wait": 1700
+    },
+    {
+      "mark": "callboard"
+    },
+    {
+      "click": {
+        "css": "[aria-label^=\"Midsummer.\"]"
+      }
+    },
+    {
+      "mark": "to-tape"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "cam": 0.6,
+      "mark": "ready"
+    },
+    {
+      "cam": 2.2,
+      "say": "action",
+      "ms": 300,
+      "after": 0
+    },
+    {
+      "mark": "heard-action"
+    },
+    {
+      "cam": 3.3,
+      "say": "O I am out of breath in this fond chase",
+      "ms": 300,
+      "after": 0
+    },
+    {
+      "cam": 6.15,
+      "say": "The more my prayer the lesser is my grace",
+      "ms": 330,
+      "after": 0
+    },
+    {
+      "mark": "line-done"
+    },
+    {
+      "cam": 11.6,
+      "say": "cut",
+      "ms": 300,
+      "after": 0
+    },
+    {
+      "mark": "heard-cut"
+    },
+    {
+      "cam": 14.6,
+      "mark": "end"
+    }
+  ],
+  "tail": 200
+}
