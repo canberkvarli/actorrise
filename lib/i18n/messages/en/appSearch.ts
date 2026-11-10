@@ -277,10 +277,12 @@ export const appSearch = {
   },
   appSearchReferenceStrip: {
     aria: "In published plays",
-    direction: "(also in published plays. Grab the script.)",
+    direction: "(also in published plays. Grab the piece where they keep it, then paste it here to work on it.)",
     in: "in",
     age: "age {age}",
     getScript: "Get the script",
+    pasteHere: "Paste it here",
+    pasteDescription: "Got the piece? Paste it in and it lands in your library, ready to run, cut and memorize. Only you can see it.",
   },
   appSearchScript: {
     script: "Script",

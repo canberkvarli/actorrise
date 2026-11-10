@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,13 +15,20 @@ import { Upload, Loader2 } from "lucide-react";
 interface MonologueUploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
+  /** Called with the new piece's id when the API returns one. */
+  onSuccess?: (monologueId?: number) => void;
+  /** Fields known before the actor types, e.g. from a published piece we point at. */
+  prefill?: Partial<MonologueUploadData>;
+  /** Replaces the dialog's description line. */
+  description?: string;
 }
 
 export function MonologueUploadModal({
   open,
   onOpenChange,
   onSuccess,
+  prefill,
+  description,
 }: MonologueUploadModalProps) {
   const t = useT();
   const [isLoading, setIsLoading] = useState(false);
@@ -37,6 +44,11 @@ export function MonologueUploadModal({
     notes: "",
   });
 
+  // A prefilled open starts from what we already know about the piece.
+  useEffect(() => {
+    if (open && prefill) setFormData((f) => ({ ...f, ...prefill }));
+  }, [open, prefill]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -48,7 +60,7 @@ export function MonologueUploadModal({
     setIsLoading(true);
 
     try {
-      await uploadMonologue(formData);
+      const res = await uploadMonologue(formData);
       toast.success(t("appAuditionsUploadMono.success"));
 
       // Reset form
@@ -65,7 +77,7 @@ export function MonologueUploadModal({
       });
 
       onOpenChange(false);
-      onSuccess?.();
+      onSuccess?.((res?.data as { id?: number } | undefined)?.id);
     } catch (error: any) {
       console.error("Upload error:", error);
       toast.error(error?.response?.data?.detail || t("appAuditionsUploadMono.failed"));
@@ -80,7 +92,7 @@ export function MonologueUploadModal({
         <DialogHeader>
           <DialogTitle>{t("appAuditionsUploadMono.title")}</DialogTitle>
           <DialogDescription>
-            {t("appAuditionsUploadMono.description")}
+            {description ?? t("appAuditionsUploadMono.description")}
           </DialogDescription>
         </DialogHeader>
 

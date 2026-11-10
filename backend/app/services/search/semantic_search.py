@@ -276,13 +276,21 @@ def exclude_hidden(query, languages=None):
     It also applies the language gate: the request's library language
     (services/library_language), English outside a request, so every caller is
     covered without changing it.
+
+    And it keeps actors' own uploads out of everyone else's library. A pasted
+    piece is that actor's copy of someone else's play, often one whose
+    publisher asked us not to host its text (YouthPLAYS, 2026-11-09); it lives
+    in the uploader's saves, never in search, recommendations or Tonight.
     """
     return language_gate(
         query.filter(
             or_(
                 Monologue.review_status.is_(None),
                 Monologue.review_status.notin_(tuple(HIDDEN_REVIEW_STATUSES)),
-            )
+            ),
+            ~Monologue.play_id.in_(
+                select(Play.id).where(Play.copyright_status == "user_uploaded")
+            ),
         ),
         languages,
     )

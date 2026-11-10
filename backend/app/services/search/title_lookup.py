@@ -166,6 +166,12 @@ _SAFE_SINGLE_WORDS = {
 }
 
 
+
+def _is_upload(m) -> bool:
+    """An actor's own pasted piece: theirs alone, never in anyone's search."""
+    play = getattr(m, "play", None)
+    return getattr(play, "copyright_status", None) == "user_uploaded"
+
 def _normalize(text: str) -> str:
     # Collapse apostrophes rather than splitting on them, so a contraction folds
     # to one token the way people type it: "Long Day's Journey" and "long days
@@ -688,7 +694,8 @@ def _lookup_over_plays(db, title_norm: Optional[str], filters: dict,
 
     # Language gate (CAN-19): English only unless the request was widened.
     keep = [m for m in rows if not review_hides_from_search(m.review_status)
-            and not language_hides(m, languages)]
+            and not language_hides(m, languages)
+            and not _is_upload(m)]
     keep.sort(
         key=lambda m: (
             -(m.quality_score if m.quality_score is not None else -1.0),
@@ -1193,7 +1200,8 @@ def find_character_monologues(db, names: list, filters: Optional[dict] = None,
 
     # Language gate (CAN-19): English only unless the request was widened.
     keep = [m for m in rows if not review_hides_from_search(m.review_status)
-            and not language_hides(m, languages)]
+            and not language_hides(m, languages)
+            and not _is_upload(m)]
     keep.sort(
         key=lambda m: (-(m.quality_score if m.quality_score is not None else -1.0), m.id)
     )

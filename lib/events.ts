@@ -52,6 +52,8 @@ export type UserEventName =
   | "class_link_self_made"
   | "class_link_copied"
   | "reference_clicked"
+  | "reference_paste_opened"
+  | "reference_pasted"
   | "language_switched"
   | "studio_opened"
   | "studio_piece_chosen"

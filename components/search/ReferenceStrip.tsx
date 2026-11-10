@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { IconExternalLink } from "@tabler/icons-react";
 import { useT } from "@/lib/i18n";
 import { trackEvent } from "@/lib/events";
+import { MonologueUploadModal } from "@/components/upload/MonologueUploadModal";
 
 export type InPrintReference = {
   id: number;
@@ -23,6 +26,11 @@ export type InPrintReference = {
  * almost all in copyright, so for the asks the library is thinnest on we say
  * who speaks it, in which play, and where to get the script. No speech is
  * shown because none is held.
+ *
+ * The way back in is "Paste it here": the actor reads the piece where its
+ * publisher keeps it, pastes it into their own library, and works on it here
+ * with everything else. Their upload is theirs; the publisher's text stays on
+ * the publisher's site.
  */
 export function ReferenceStrip({
   refs,
@@ -32,6 +40,8 @@ export function ReferenceStrip({
   query: string;
 }) {
   const t = useT();
+  const router = useRouter();
+  const [pasting, setPasting] = useState<InPrintReference | null>(null);
   if (refs.length === 0) return null;
   return (
     <section aria-label={t("appSearchReferenceStrip.aria")} className="mt-8 mb-4 border-t border-border pt-3">
@@ -69,24 +79,57 @@ export function ReferenceStrip({
                   </div>
                 )}
               </div>
-              {r.get_script_url && (
-                <a
-                  href={r.get_script_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() =>
-                    trackEvent("reference_clicked", { reference_id: r.id, query: query.slice(0, 120) })
-                  }
-                  className="inline-flex items-center gap-1 rounded-md text-sm text-primary underline-offset-4 hover:underline"
+              <div className="flex items-center gap-4">
+                {r.get_script_url && (
+                  <a
+                    href={r.get_script_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() =>
+                      trackEvent("reference_clicked", { reference_id: r.id, query: query.slice(0, 120) })
+                    }
+                    className="inline-flex items-center gap-1 rounded-md text-sm text-primary underline-offset-4 hover:underline"
+                  >
+                    {t("appSearchReferenceStrip.getScript")}
+                    <IconExternalLink size={14} aria-hidden />
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    trackEvent("reference_paste_opened", { reference_id: r.id });
+                    setPasting(r);
+                  }}
+                  className="rounded-md text-sm text-foreground underline-offset-4 hover:underline"
                 >
-                  {t("appSearchReferenceStrip.getScript")}
-                  <IconExternalLink size={14} aria-hidden />
-                </a>
-              )}
+                  {t("appSearchReferenceStrip.pasteHere")}
+                </button>
+              </div>
             </li>
           );
         })}
       </ul>
+      <MonologueUploadModal
+        open={pasting !== null}
+        onOpenChange={(open) => !open && setPasting(null)}
+        description={t("appSearchReferenceStrip.pasteDescription")}
+        prefill={
+          pasting
+            ? {
+                title: `${pasting.character_name}, ${pasting.play_title}`,
+                character_name: pasting.character_name,
+                play_title: pasting.play_title,
+                author: pasting.author,
+                character_gender: pasting.character_gender?.toLowerCase() || undefined,
+                character_age_range: pasting.character_age || undefined,
+              }
+            : undefined
+        }
+        onSuccess={(id) => {
+          trackEvent("reference_pasted", { reference_id: pasting?.id ?? null, monologue_id: id ?? null });
+          if (id) router.push(`/monologue/${id}`);
+        }}
+      />
     </section>
   );
 }

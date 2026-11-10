@@ -270,6 +270,8 @@ export const appSearch: Widen<typeof en> = {
     in: "",
     age: "{age} yaş",
     getScript: "Metni edin",
+    pasteHere: "Buraya yapıştır",
+    pasteDescription: "Metin elinde mi? Yapıştır, kendi kütüphanene eklensin. Sadece sen görürsün.",
   },
   appSearchScript: {
     script: "Senaryo",

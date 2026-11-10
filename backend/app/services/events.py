@@ -71,6 +71,8 @@ CLIENT_EVENT_NAMES = frozenset(
         "onboarding_picks_kept",  # {count} picks favourited silently on the way to the scene
         "onboarding_question_skipped",  # {step, key, variant}: skip skips one question since 2026-10-02
         "search_box_focused",  # once per /monologues mount
+        "reference_paste_opened",  # {reference_id}: opened "Paste it here" on a reference
+        "reference_pasted",  # {reference_id, monologue_id}: pasted it into their library
         "reference_clicked",  # {reference_id, query}: "Get the script" on a published piece we only point at (CAN-24)
         # Collection depth: 167 favorites, 2 cuts, 2 notes, 13 memorized. These
         # split "never found the feature" from "found it, didn't want it".

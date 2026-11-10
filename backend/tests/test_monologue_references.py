@@ -129,3 +129,25 @@ class TakedownTest(unittest.TestCase):
         )
         self.assertIn(TAKEN_DOWN, HIDDEN_REVIEW_STATUSES)
         self.assertTrue(review_hides_from_search(TAKEN_DOWN))
+
+
+class UploadsStayPrivateTest(unittest.TestCase):
+    def test_exclude_hidden_drops_uploads(self):
+        from app.models.actor import FilmTvReference, Monologue, Play
+        from app.services.search.semantic_search import exclude_hidden
+
+        db, saved = memory_db([FilmTvReference, Play, Monologue])
+        try:
+            common = dict(genre="drama", category="contemporary", language="en", source_type="play")
+            pub = Play(title="Library Play", author="A", copyright_status="public_domain", **common)
+            mine = Play(title="My Paste", author="B", copyright_status="user_uploaded", **common)
+            db.add_all([pub, mine]); db.flush()
+            for play in (pub, mine):
+                db.add(Monologue(play_id=play.id, title="t", character_name="C", text="word " * 120,
+                                 word_count=120, estimated_duration_seconds=48))
+            db.commit()
+            seen = {m.play_id for m in exclude_hidden(db.query(Monologue)).all()}
+            self.assertEqual(seen, {pub.id})
+        finally:
+            db.close()
+            restore(saved)
