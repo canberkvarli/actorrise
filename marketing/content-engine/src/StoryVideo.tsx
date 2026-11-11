@@ -97,7 +97,7 @@ type Screens = {
     /** move the shot up inside the phone by this share of its height, [from, to], so a low part (the tab bar) reaches the safe area */
     pan?: [number, number] }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -2391,6 +2391,206 @@ const FloorScene: React.FC<{ s: Floor }> = ({ s }) => {
   );
 };
 
+
+// ---------- my inner monologue at every audition (2026-11-15) ----------
+/** A thought cloud that pops: a rounded bubble with one or two lines, little circles trailing to the head. */
+const Cloud: React.FC<{ x: number; y: number; w: number; h?: number; at: number; text: string; size?: number; hot?: boolean; to?: [number, number] }> = ({ x, y, w, h = 150, at, text, size = 44, hot, to }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  if (f < at) return null;
+  const pop = spring({ frame: f - at, fps, config: { damping: 9, mass: 0.5 } });
+  const lines = text.split("\n");
+  const wob = Math.sin((f + x) / 9) * 4;
+  return (
+    <g>
+      {to && [0.5, 0.74].map((t, i) => {
+        const bx = x + (to[0] - x) * t, by = y + (to[1] - y) * t;
+        return <circle key={i} cx={bx} cy={by} r={(16 - i * 6) * Math.min(1, pop)} fill="#ffffff" stroke={C.ink} strokeWidth={4} />;
+      })}
+      <g transform={`translate(${x} ${y + wob}) scale(${pop})`}>
+        <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={h / 2} fill={hot ? HL : "#ffffff"} stroke={C.ink} strokeWidth={6} />
+        {lines.map((l, i) => (
+          <text key={i} x={0} y={(i - (lines.length - 1) / 2) * (size * 1.16) + size * 0.34} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={size} fill={C.ink}>{l}</text>
+        ))}
+      </g>
+    </g>
+  );
+};
+
+/** The audition room: one casting person behind a table says the line; you stand on your mark, smiling,
+ *  and a thought leaks out. `calm` is the same room the next day: the thought is a good one. */
+type Ready = { type: "ready"; seconds: number; line: string; accent: string; say: string; thought: string; calm?: boolean; sayAt?: number; thinkAt?: number };
+const ReadyScene: React.FC<{ s: Ready }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const sayAt = s.sayAt ?? 24, thinkAt = s.thinkAt ?? 80;
+  const say = spring({ frame: f - sayAt, fps, config: { damping: 11, mass: 0.5 } });
+  const panic = s.calm ? 0 : prog(f, thinkAt - 12, thinkAt + 24) * 0.85;
+  const hope = s.calm ? prog(f, thinkAt - 8, thinkAt + 4) : 0;
+  const talk = f > sayAt && f < sayAt + 40 ? Math.abs(Math.sin(f / 2.2)) : 0;
+  const sayLines = s.say.split("\n");
+  const AX = 770, AY = 830;
+  return (
+    <AbsoluteFill>
+      <Sfx name="pop" at={sayAt} vol={0.6} />
+      <Sfx name={s.calm ? "cine/ping" : "cine/toing"} at={thinkAt} vol={0.5} />
+      {!s.calm && <Sfx name="cine/heartbeat" at={thinkAt + 8} vol={0.5} />}
+      <Glow glow={0.4} y="48%" />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the floor and your mark, a taped X */}
+        <Ink d="M60 1290 C 380 1284, 700 1296, 1020 1288" start={0} dur={14} w={4} color={C.inkSoft} />
+        <Ink d={`M${AX - 44} 1262 L ${AX + 44} 1310 M${AX + 44} 1262 L ${AX - 44} 1310`} start={8} dur={10} w={9} color={C.orange} />
+        {/* the casting person: body, head, bun, glasses, a pen */}
+        <Ink d="M150 1090 C 150 1010, 190 982, 256 978 C 322 982, 362 1010, 362 1090" start={2} dur={14} w={6} fill="rgba(20,20,20,0.07)" />
+        <circle cx={256} cy={912} r={66} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} opacity={prog(f, 4, 10)} />
+        <g opacity={prog(f, 8, 14)}>
+          <path d="M194 900 C 196 846, 316 846, 320 900 C 290 868, 224 868, 194 900 Z" fill={C.ink} />
+          <circle cx={256} cy={836} r={24} fill={C.ink} />
+          <circle cx={234} cy={912} r={19} fill="none" stroke={C.ink} strokeWidth={5} />
+          <circle cx={280} cy={912} r={19} fill="none" stroke={C.ink} strokeWidth={5} />
+          <path d="M253 912 L 261 912" stroke={C.ink} strokeWidth={5} />
+          <circle cx={234} cy={913} r={5} fill={C.ink} />
+          <circle cx={280} cy={913} r={5} fill={C.ink} />
+          <ellipse cx={257} cy={950} rx={12} ry={3 + talk * 9} fill={C.ink} />
+        </g>
+        {/* the table, a clipboard, a paper cup */}
+        <Ink d="M60 1092 C 200 1086, 340 1096, 470 1090 L 464 1130 C 340 1136, 200 1132, 66 1134 Z" start={0} dur={16} w={6} fill={PAPER_FILL} />
+        <Ink d="M100 1134 L 100 1286 M430 1132 L 430 1286" start={8} dur={10} w={6} />
+        <Ink d="M300 1088 L 312 1030 L 392 1036 L 386 1090" start={12} dur={10} w={5} fill="#ffffff" />
+        <Ink d="M324 1050 L 372 1054 M322 1068 L 366 1071" start={18} dur={8} w={3} color={C.inkSoft} />
+        <Ink d="M120 1090 L 124 1044 L 164 1044 L 168 1090" start={14} dur={8} w={5} fill="rgba(232,121,43,0.4)" />
+        {/* you: body, stiff arms, legs, on the mark */}
+        <Ink d={`M${AX} ${AY + 92} L ${AX} ${AY + 112} C ${AX - 62} ${AY + 122}, ${AX - 84} ${AY + 160}, ${AX - 88} ${AY + 216} L ${AX - 92} ${AY + 330} L ${AX + 92} ${AY + 330} L ${AX + 88} ${AY + 216} C ${AX + 84} ${AY + 160}, ${AX + 62} ${AY + 122}, ${AX} ${AY + 112}`} start={10} dur={16} w={6} fill="rgba(232,121,43,0.35)" />
+        <Ink d={`M${AX - 84} ${AY + 170} C ${AX - 122} ${AY + 230}, ${AX - 124} ${AY + 290}, ${AX - 112} ${AY + 340} M${AX + 84} ${AY + 170} C ${AX + 122} ${AY + 230}, ${AX + 124} ${AY + 290}, ${AX + 112} ${AY + 340}`} start={18} dur={10} w={6} />
+        <Ink d={`M${AX - 44} ${AY + 330} L ${AX - 46} ${AY + 440} L ${AX - 70} ${AY + 450} M${AX + 44} ${AY + 330} L ${AX + 46} ${AY + 440} L ${AX + 70} ${AY + 450}`} start={22} dur={10} w={6} />
+        <Face x={AX} y={AY} r={94} panic={panic} hope={hope} start={12} />
+        {/* what the panel says */}
+        <g transform={`translate(300 640) scale(${say})`} opacity={Math.min(1, say * 1.5)}>
+          <path d="M-220 -84 C -120 -100, 120 -100, 220 -84 C 250 -78, 256 -50, 254 0 C 252 54, 246 78, 220 84 C 120 96, 20 96, -10 92 L -40 150 L -56 92 C -120 94, -180 92, -220 84 C -248 78, -254 54, -256 0 C -254 -50, -250 -78, -220 -84 Z" fill="#ffffff" stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+          {sayLines.map((l, i) => (
+            <text key={i} x={0} y={(i - (sayLines.length - 1) / 2) * 60 + 16} textAnchor="middle" fontFamily={F.type} fontStyle="italic" fontSize={52} fill={C.ink}>{l}</text>
+          ))}
+        </g>
+        {/* what you think */}
+        <Cloud x={775} y={590} w={350} h={s.thought.includes("\n") ? 150 : 124} at={thinkAt} text={s.thought} size={46} hot={s.calm} to={[AX + 10, AY - 60]} />
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={92} />
+        </Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** The spiral: your head in the middle, and one thought after another pops out around it. */
+type Spiral = { type: "spiral"; seconds: number; line: string; accent: string; thoughts: string[]; at?: number[] };
+const SPIRAL_D = (() => {
+  let d = "";
+  for (let i = 0; i <= 150; i++) {
+    const th = i * 0.21, r = 150 + i * 1.9;
+    d += `${i ? "L" : "M"}${(Math.cos(th) * r).toFixed(1)} ${(Math.sin(th) * r).toFixed(1)} `;
+  }
+  return d;
+})();
+const SpiralScene: React.FC<{ s: Spiral }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const HX = 540, HY = 900;
+  const at = (k: number) => s.at?.[k] ?? 30 + k * 38;
+  const n = s.thoughts.length;
+  const spots = [
+    { x: 300, y: 610, w: 430 }, { x: 772, y: 700, w: 396 }, { x: 270, y: 1085, w: 420 }, { x: 650, y: 1228, w: 520 },
+  ];
+  const panic = Math.min(1, 0.35 + 0.65 * prog(f, at(0), at(n - 1) + 10));
+  return (
+    <AbsoluteFill>
+      {s.thoughts.map((_, k) => (
+        <React.Fragment key={k}>
+          <Sfx name="pop" at={at(k)} vol={0.6} />
+          <Sfx name={k === n - 1 ? "cine/pong" : k % 2 ? "boop_hi" : "boop_lo"} at={at(k) + 4} vol={0.45} />
+        </React.Fragment>
+      ))}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <g transform={`translate(${HX} ${HY}) rotate(${-f * 2.4})`} opacity={0.5 * prog(f, 6, 30)}>
+          <path d={SPIRAL_D} fill="none" stroke={C.inkSoft} strokeWidth={5} strokeLinecap="round" strokeDasharray="26 16" />
+        </g>
+        {s.thoughts.map((t, k) => {
+          const p = spots[k % spots.length];
+          return <Cloud key={k} x={p.x} y={p.y} w={p.w} at={at(k)} text={t} hot={k === n - 1} to={[HX + (p.x < HX ? -70 : 70), HY + (p.y < HY ? -90 : 90)]} />;
+        })}
+        <Face x={HX} y={HY} r={128} panic={panic} start={2} />
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={8}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={92} />
+        </Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** Rewind: a cassette spins backwards, the day card flips to the night before, and you are calm. */
+type Rewind = { type: "rewind"; seconds: number; line: string; accent: string; from: string; to: string; flipAt?: number };
+const RewindScene: React.FC<{ s: Rewind }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const flipAt = s.flipAt ?? 50;
+  const fp = prog(f, flipAt, flipAt + 12);
+  const after = fp >= 0.5;
+  const spin = -f * (after ? 4 : 22);
+  const lit = prog(f, flipAt + 16, flipAt + 26);
+  const blink = 0.55 + 0.45 * Math.sin(f / 2.5);
+  const Reel: React.FC<{ x: number }> = ({ x }) => (
+    <g transform={`translate(${x} 720)`}>
+      <circle r={58} fill="#ffffff" stroke={C.ink} strokeWidth={6} />
+      <g transform={`rotate(${spin})`}>
+        {[0, 120, 240].map((a) => <path key={a} d="M0 -18 L 0 -50" transform={`rotate(${a})`} stroke={C.ink} strokeWidth={8} strokeLinecap="round" />)}
+        <circle r={16} fill={C.ink} />
+      </g>
+    </g>
+  );
+  return (
+    <AbsoluteFill>
+      <Sfx name="slide" at={6} vol={0.5} />
+      <Sfx name="slide" at={22} vol={0.45} />
+      <Sfx name="cine/switch" at={flipAt} vol={0.5} />
+      <Sfx name="cine/ping" at={flipAt + 16} vol={0.5} />
+      <AbsoluteFill style={{ background: `radial-gradient(circle 330px at 690px 1210px, rgba(232,121,43,${0.36 * lit}) 0%, rgba(232,121,43,0) 100%)` }} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the cassette */}
+        <Ink d="M270 570 L 810 570 C 826 570, 836 580, 836 596 L 836 846 C 836 862, 826 872, 810 872 L 270 872 C 254 872, 244 862, 244 846 L 244 596 C 244 580, 254 570, 270 570 Z" start={0} dur={16} w={6} fill={PAPER_FILL} />
+        <Ink d="M300 620 L 780 620 L 780 812 L 300 812 Z" start={6} dur={12} w={4} fill="rgba(232,121,43,0.2)" />
+        <g opacity={prog(f, 10, 16)}>
+          <Reel x={420} />
+          <Reel x={660} />
+          <rect x={488} y={690} width={104} height={60} rx={8} fill="#ffffff" stroke={C.ink} strokeWidth={5} />
+          {/* the rewind arrows */}
+          <g transform="translate(540 938)" opacity={after ? 0.25 : blink}>
+            <path d="M-6 -34 L -62 0 L -6 34 Z M62 -34 L 6 0 L 62 34 Z" fill={C.orange} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+          </g>
+          {!after && [0, 1, 2].map((i) => <path key={i} d={`M${880 + i * 34} ${650 + i * 50} l ${60 - ((f * 9 + i * 20) % 60)} 0`} stroke={C.inkSoft} strokeWidth={5} strokeLinecap="round" />)}
+        </g>
+        {/* the day card flips */}
+        <g transform={`translate(540 1050) scale(1 ${Math.abs(2 * fp - 1)})`} opacity={prog(f, 12, 18)}>
+          <rect x={-250} y={-52} width={500} height={104} rx={8} fill={after ? HL : "#ffffff"} stroke={C.ink} strokeWidth={6} />
+          <text x={0} y={16} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={44} letterSpacing={3} fill={C.ink}>{after ? s.to : s.from}</text>
+        </g>
+        {/* you, and the phone that lights up */}
+        <Face x={470} y={1215} r={76} panic={after ? 0 : 0.8} hope={after ? prog(f, flipAt + 14, flipAt + 22) : 0} start={14} />
+        <g transform={`translate(690 1210) rotate(8)`} opacity={prog(f, flipAt + 8, flipAt + 14)}>
+          <rect x={-44} y={-78} width={88} height={160} rx={16} fill={APP.bg} stroke={C.ink} strokeWidth={6} />
+          <rect x={-34} y={-66} width={68} height={136} rx={10} fill={lit > 0 ? `rgba(242,207,58,${0.25 + 0.6 * lit})` : APP.bg} />
+          {lit > 0 && <path d="M-74 -100 L -92 -122 M74 -100 L 92 -122 M0 -108 L 0 -136" stroke={C.orange} strokeWidth={6} strokeLinecap="round" opacity={1 - prog(f, flipAt + 26, flipAt + 44)} />}
+        </g>
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={8}>
+          <Headline text={s.line} accent={s.accent} color={C.ink} size={92} />
+        </Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 /** Word by word captions for the narration (Canberk, 2026-11-08: drawn films need captions). Ink on a
  *  soft paper pill above the bottom quarter, the spoken word in orange. Hidden on the end card. */
 const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
@@ -2467,6 +2667,9 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "callback" ? <CallbackScene s={sc} /> :
       sc.type === "folder" ? <FolderScene s={sc} /> :
       sc.type === "floor" ? <FloorScene s={sc} /> :
+      sc.type === "ready" ? <ReadyScene s={sc} /> :
+      sc.type === "spiral" ? <SpiralScene s={sc} /> :
+      sc.type === "rewind" ? <RewindScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

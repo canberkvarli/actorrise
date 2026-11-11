@@ -1,0 +1,81 @@
+{
+  "id": "2026-11-15-inner-monologue-end",
+  "look": "noir",
+  "cut": "hard",
+  "music": {
+    "style": "beat",
+    "volume": 0.2
+  },
+  "voice": {
+    "volume": 1,
+    "lines": [
+      {
+        "text": "Ghost Light. Built by a working actor.",
+        "say": "[upbeat] Ghost Light. Built by a working actor.",
+        "at": 0.0,
+        "sub": false,
+        "audio": "voice/2026-11-15-inner-monologue-end/end.mp3",
+        "words": [
+          {
+            "w": "Ghost",
+            "s": 0.15,
+            "e": 0.396
+          },
+          {
+            "w": "Light.",
+            "s": 0.454,
+            "e": 1.022
+          },
+          {
+            "w": "Built",
+            "s": 1.068,
+            "e": 1.3
+          },
+          {
+            "w": "by",
+            "s": 1.347,
+            "e": 1.44
+          },
+          {
+            "w": "a",
+            "s": 1.474,
+            "e": 1.509
+          },
+          {
+            "w": "working",
+            "s": 1.553,
+            "e": 1.857
+          },
+          {
+            "w": "actor.",
+            "s": 1.927,
+            "e": 2.344
+          }
+        ],
+        "dur": 2.474
+      }
+    ]
+  },
+  "beats": [
+    {
+      "kind": "end",
+      "seconds": 3.0,
+      "brand": "Ghost Light",
+      "line": "Built by a working actor.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "snap": true,
+      "sfx": [],
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "part_of": "2026-11-15-inner-monologue",
+    "why": "the sharp Ghost Light card (DIRECTION 2026-11-10 afternoon), joined after the story with scripts/join.sh"
+  }
+}

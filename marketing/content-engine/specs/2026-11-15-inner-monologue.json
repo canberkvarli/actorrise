@@ -1,0 +1,678 @@
+{
+  "id": "2026-11-15-inner-monologue",
+  "look": "marker",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "They say, whenever you're ready. Here's my inner monologue.",
+        "say": "[deadpan] They say, whenever you're ready. [playful] Here's my inner monologue.",
+        "at": 0.476,
+        "words": [
+          {
+            "w": "They",
+            "s": 0.0,
+            "e": 0.033
+          },
+          {
+            "w": "say,",
+            "s": 0.103,
+            "e": 0.52
+          },
+          {
+            "w": "whenever",
+            "s": 0.543,
+            "e": 0.729
+          },
+          {
+            "w": "you're",
+            "s": 0.746,
+            "e": 0.868
+          },
+          {
+            "w": "ready.",
+            "s": 0.914,
+            "e": 1.216
+          },
+          {
+            "w": "Here's",
+            "s": 2.162,
+            "e": 2.259
+          },
+          {
+            "w": "my",
+            "s": 2.305,
+            "e": 2.398
+          },
+          {
+            "w": "inner",
+            "s": 2.433,
+            "e": 2.607
+          },
+          {
+            "w": "monologue.",
+            "s": 2.642,
+            "e": 3.442
+          }
+        ],
+        "dur": 3.572
+      },
+      {
+        "text": "Did I warm up? Is this the right piece? Why did I pick Juliet? Everyone picks Juliet!",
+        "say": "[panicking, fast] Did I warm up? Is this the right piece? Why did I pick Juliet? [excited] Everyone picks Juliet!",
+        "at": 4.387,
+        "words": [
+          {
+            "w": "Did",
+            "s": 0.0,
+            "e": 0.017
+          },
+          {
+            "w": "I",
+            "s": 0.052,
+            "e": 0.087
+          },
+          {
+            "w": "warm",
+            "s": 0.129,
+            "e": 0.296
+          },
+          {
+            "w": "up?",
+            "s": 0.365,
+            "e": 0.783
+          },
+          {
+            "w": "Is",
+            "s": 0.876,
+            "e": 1.061
+          },
+          {
+            "w": "this",
+            "s": 1.103,
+            "e": 1.27
+          },
+          {
+            "w": "the",
+            "s": 1.287,
+            "e": 1.339
+          },
+          {
+            "w": "right",
+            "s": 1.374,
+            "e": 1.548
+          },
+          {
+            "w": "piece?",
+            "s": 1.606,
+            "e": 1.897
+          },
+          {
+            "w": "Why",
+            "s": 2.087,
+            "e": 2.661
+          },
+          {
+            "w": "did",
+            "s": 2.696,
+            "e": 2.8
+          },
+          {
+            "w": "I",
+            "s": 2.87,
+            "e": 2.939
+          },
+          {
+            "w": "pick",
+            "s": 2.967,
+            "e": 3.078
+          },
+          {
+            "w": "Juliet?",
+            "s": 3.157,
+            "e": 3.948
+          },
+          {
+            "w": "Everyone",
+            "s": 4.313,
+            "e": 4.684
+          },
+          {
+            "w": "picks",
+            "s": 4.73,
+            "e": 4.963
+          },
+          {
+            "w": "Juliet!",
+            "s": 5.032,
+            "e": 5.519
+          }
+        ],
+        "dur": 5.65
+      },
+      {
+        "text": "So rewind to the night before. This time, you open Ghost Light.",
+        "say": "[conspiratorial] So rewind to the night before. [upbeat] This time, you open Ghost Light.",
+        "at": 10.834,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.185
+          },
+          {
+            "w": "rewind",
+            "s": 0.245,
+            "e": 0.603
+          },
+          {
+            "w": "to",
+            "s": 0.649,
+            "e": 0.742
+          },
+          {
+            "w": "the",
+            "s": 0.759,
+            "e": 0.811
+          },
+          {
+            "w": "night",
+            "s": 0.846,
+            "e": 1.02
+          },
+          {
+            "w": "before.",
+            "s": 1.09,
+            "e": 1.855
+          },
+          {
+            "w": "This",
+            "s": 2.249,
+            "e": 2.416
+          },
+          {
+            "w": "time,",
+            "s": 2.457,
+            "e": 2.694
+          },
+          {
+            "w": "you",
+            "s": 2.763,
+            "e": 2.972
+          },
+          {
+            "w": "open",
+            "s": 3.042,
+            "e": 3.32
+          },
+          {
+            "w": "Ghost",
+            "s": 3.378,
+            "e": 3.668
+          },
+          {
+            "w": "Light.",
+            "s": 3.714,
+            "e": 4.224
+          }
+        ],
+        "dur": 4.355
+      },
+      {
+        "text": "Tap Search, and say what you need.",
+        "say": "[upbeat] Tap Search, and say what you need.",
+        "at": 15.493,
+        "sub": false,
+        "words": [
+          {
+            "w": "Tap",
+            "s": 0.0,
+            "e": 0.052
+          },
+          {
+            "w": "Search,",
+            "s": 0.112,
+            "e": 0.574
+          },
+          {
+            "w": "and",
+            "s": 0.6,
+            "e": 0.678
+          },
+          {
+            "w": "say",
+            "s": 0.73,
+            "e": 0.887
+          },
+          {
+            "w": "what",
+            "s": 0.915,
+            "e": 1.026
+          },
+          {
+            "w": "you",
+            "s": 1.043,
+            "e": 1.096
+          },
+          {
+            "w": "need.",
+            "s": 1.165,
+            "e": 1.513
+          }
+        ],
+        "dur": 1.643
+      },
+      {
+        "text": "Something funny, from an old play, that nobody else brings.",
+        "say": "[playful] Something funny, from an old play, that nobody else brings.",
+        "at": 18.041,
+        "sub": false,
+        "words": [
+          {
+            "w": "Something",
+            "s": 0.0,
+            "e": 0.078
+          },
+          {
+            "w": "funny,",
+            "s": 0.137,
+            "e": 0.565
+          },
+          {
+            "w": "from",
+            "s": 0.593,
+            "e": 0.704
+          },
+          {
+            "w": "an",
+            "s": 0.728,
+            "e": 0.774
+          },
+          {
+            "w": "old",
+            "s": 0.826,
+            "e": 0.983
+          },
+          {
+            "w": "play,",
+            "s": 1.052,
+            "e": 1.4
+          },
+          {
+            "w": "that",
+            "s": 1.442,
+            "e": 1.609
+          },
+          {
+            "w": "nobody",
+            "s": 1.658,
+            "e": 1.957
+          },
+          {
+            "w": "else",
+            "s": 1.984,
+            "e": 2.096
+          },
+          {
+            "w": "brings.",
+            "s": 2.165,
+            "e": 3.035
+          }
+        ],
+        "dur": 3.165
+      },
+      {
+        "text": "Thirty monologues, every one timed. Top pick, Hirst, from The Ghost of Jerry Bundler.",
+        "say": "[excited] Thirty monologues, every one timed. Top pick, Hirst, from The Ghost of Jerry Bundler!",
+        "at": 21.728,
+        "sub": false,
+        "words": [
+          {
+            "w": "Thirty",
+            "s": 0.0,
+            "e": 0.079
+          },
+          {
+            "w": "monologues,",
+            "s": 0.131,
+            "e": 0.844
+          },
+          {
+            "w": "every",
+            "s": 0.879,
+            "e": 1.053
+          },
+          {
+            "w": "one",
+            "s": 1.105,
+            "e": 1.262
+          },
+          {
+            "w": "timed.",
+            "s": 1.343,
+            "e": 2.166
+          },
+          {
+            "w": "Top",
+            "s": 2.27,
+            "e": 2.583
+          },
+          {
+            "w": "pick,",
+            "s": 2.639,
+            "e": 2.931
+          },
+          {
+            "w": "Hirst,",
+            "s": 3.036,
+            "e": 3.488
+          },
+          {
+            "w": "from",
+            "s": 3.53,
+            "e": 3.697
+          },
+          {
+            "w": "The",
+            "s": 3.714,
+            "e": 3.766
+          },
+          {
+            "w": "Ghost",
+            "s": 3.812,
+            "e": 4.044
+          },
+          {
+            "w": "of",
+            "s": 4.068,
+            "e": 4.114
+          },
+          {
+            "w": "Jerry",
+            "s": 4.16,
+            "e": 4.392
+          },
+          {
+            "w": "Bundler!",
+            "s": 4.448,
+            "e": 4.949
+          }
+        ],
+        "dur": 5.079
+      },
+      {
+        "text": "Now when they say whenever you're ready, you are.",
+        "say": "[delighted] Now when they say whenever you're ready, you are.",
+        "at": 27.694,
+        "words": [
+          {
+            "w": "Now",
+            "s": 0.0,
+            "e": 0.026
+          },
+          {
+            "w": "when",
+            "s": 0.054,
+            "e": 0.165
+          },
+          {
+            "w": "they",
+            "s": 0.193,
+            "e": 0.304
+          },
+          {
+            "w": "say",
+            "s": 0.374,
+            "e": 0.583
+          },
+          {
+            "w": "whenever",
+            "s": 0.614,
+            "e": 0.861
+          },
+          {
+            "w": "you're",
+            "s": 0.896,
+            "e": 1.174
+          },
+          {
+            "w": "ready,",
+            "s": 1.203,
+            "e": 1.417
+          },
+          {
+            "w": "you",
+            "s": 1.487,
+            "e": 1.696
+          },
+          {
+            "w": "are.",
+            "s": 1.765,
+            "e": 2.009
+          }
+        ],
+        "dur": 2.139
+      },
+      {
+        "text": "Ghost Light. Built by a working actor.",
+        "say": "[upbeat] Ghost Light. Built by a working actor.",
+        "at": 30.674,
+        "sub": false,
+        "words": [
+          {
+            "w": "Ghost",
+            "s": 0.0,
+            "e": 0.246
+          },
+          {
+            "w": "Light.",
+            "s": 0.304,
+            "e": 0.872
+          },
+          {
+            "w": "Built",
+            "s": 0.918,
+            "e": 1.15
+          },
+          {
+            "w": "by",
+            "s": 1.197,
+            "e": 1.29
+          },
+          {
+            "w": "a",
+            "s": 1.324,
+            "e": 1.359
+          },
+          {
+            "w": "working",
+            "s": 1.403,
+            "e": 1.707
+          },
+          {
+            "w": "actor.",
+            "s": 1.777,
+            "e": 2.194
+          }
+        ],
+        "dur": 2.324
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-15-inner-monologue/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3
+  },
+  "scenes": [
+    {
+      "type": "ready",
+      "seconds": 4.3,
+      "line": "My inner monologue.",
+      "accent": "inner monologue.",
+      "say": "Whenever\nyou're ready.",
+      "thought": "Am I, though?",
+      "sayAt": 89,
+      "thinkAt": 137
+    },
+    {
+      "type": "spiral",
+      "seconds": 6.4333,
+      "line": "At every audition.",
+      "accent": "every",
+      "thoughts": [
+        "Did I warm up?",
+        "Is this the\nright piece?",
+        "Why did I\npick Juliet?",
+        "Everyone picks Juliet."
+      ],
+      "at": [
+        23,
+        49,
+        85,
+        152
+      ]
+    },
+    {
+      "type": "rewind",
+      "seconds": 4.6667,
+      "line": "The night before.",
+      "accent": "night before.",
+      "from": "AUDITION DAY",
+      "to": "THE NIGHT BEFORE",
+      "flipAt": 46
+    },
+    {
+      "type": "screens",
+      "seconds": 2.5333,
+      "line": "Tap Search.",
+      "accent": "Search.",
+      "shots": [
+        {
+          "src": "story/2026-11-15-inner-monologue/book.png",
+          "at": 0,
+          "pan": [
+            0,
+            0.56
+          ],
+          "tap": {
+            "x": 0.171,
+            "y": 0.93,
+            "at": 32
+          }
+        },
+        {
+          "src": "story/2026-11-15-inner-monologue/search.png",
+          "at": 58
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 3.7,
+      "line": "Say what you need.",
+      "accent": "you need.",
+      "shots": [
+        {
+          "src": "story/2026-11-15-inner-monologue/search.png",
+          "at": 0
+        },
+        {
+          "src": "story/2026-11-15-inner-monologue/typed.png",
+          "at": 3,
+          "push": {
+            "x": 0.5,
+            "y": 0.31,
+            "scale": 1.3
+          },
+          "tap": {
+            "x": 0.856,
+            "y": 0.312,
+            "at": 81
+          }
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 5.9667,
+      "line": "One nobody brings.",
+      "accent": "nobody brings.",
+      "shots": [
+        {
+          "src": "story/2026-11-15-inner-monologue/typed.png",
+          "at": 0,
+          "push": {
+            "x": 0.5,
+            "y": 0.31,
+            "from": 1.3,
+            "scale": 1.3
+          }
+        },
+        {
+          "src": "story/2026-11-15-inner-monologue/results.png",
+          "at": 3,
+          "push": {
+            "x": 0.5,
+            "y": 0.2,
+            "from": 1.08,
+            "scale": 1.14
+          },
+          "pan": [
+            0,
+            0.1
+          ],
+          "tap": {
+            "x": 0.5,
+            "y": 0.38,
+            "at": 80
+          }
+        },
+        {
+          "src": "story/2026-11-15-inner-monologue/open.png",
+          "at": 108,
+          "push": {
+            "x": 0.5,
+            "y": 0.3,
+            "scale": 1.12
+          }
+        }
+      ]
+    },
+    {
+      "type": "ready",
+      "seconds": 2.9667,
+      "line": "This time, you are.",
+      "accent": "you are.",
+      "say": "Whenever\nyou're ready.",
+      "thought": "I am.",
+      "calm": true,
+      "sayAt": 39,
+      "thinkAt": 67
+    }
+  ],
+  "captions": {
+    "tiktok": "My inner monologue at every audition. The fix happens the night before. #actorslife #audition #monologue #actortok #actors",
+    "youtube_title": "What is your inner monologue at an audition? #shorts",
+    "youtube_description": "Did I warm up? Is this the right piece? Why did I pick Juliet?\nFind the one nobody else brings the night before, with Ghost Light. Built by a working actor.\n#actorslife #audition #monologue #acting",
+    "instagram": "\"Whenever you're ready.\" My inner monologue: 1. Did I warm up? 2. Is this the right piece? 3. Why did I pick Juliet? The night before, describe what you need in Ghost Light and bring the one nobody else brings. Built by a working actor. Link in bio. #actorslife #audition #monologue #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 9700,
+  "source": {
+    "plan": "Callboard row 2026-11-15 (wildcard, backstage, marker): my inner monologue at every audition (idea i21)",
+    "app": "Ghost Light web preview (ghostlight-web/serve.sh), dark theme, demo account, 2026-11-11",
+    "flow": "flows/search-inner-monologue.json (shot steps -> public/story/2026-11-15-inner-monologue/*.png)",
+    "query": "something funny from an old play that nobody else brings, under two minutes",
+    "results": "30 monologues; best pick Hirst, The Ghost of Jerry Bundler (W. W. Jacobs and Charles Rock, 1908), 1:02; then Philo (The Dramatic Values in Plautus, 1918) and Daniel (The Country School). Public domain text only in the result cards.",
+    "note": "the search screen carries the app's own Tonight's speech card (one line of a contemporary piece), same as the 11-14 film; it sits in the bottom zone",
+    "voice": "George, one take, sped up 1.15x with atempo (the raw read ran 37s); original kept as take00.orig.mp3 locally, not committed",
+    "end": "specs/2026-11-15-inner-monologue-end.json, joined with scripts/join.sh; the end line is cut from the take"
+  }
+}
