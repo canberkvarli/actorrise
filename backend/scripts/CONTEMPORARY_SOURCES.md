@@ -72,6 +72,18 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
   the quality gate (`caps_residue`: his characters shout in capitals). Years for all six
   plays are in `data/contemporary_play_years.json` from publisher and edition records.
 
+- **2026-11-11, Kristen Doherty** (`--source doherty`): 16 pieces, 44574-44589, mostly teen
+  (TEEN, Bully!, Shakespeare Bachelor, Queens). Her plays have no published premiere year,
+  so `year_written` is a floor from each PDF's creation date (2022, two at 2026). Two more
+  were refused by the gate (direction-heavy).
+  **Jane Cafarella** (`--source cafarella`): 38 standalone monologues for women,
+  44590-44627, free on her site with full credit. Each piece is its own work, so its year
+  is the date of the post that published it (`Parsed.year`, not the title-keyed years file,
+  because titles like "The Gift" would collide). 3 more were the same speeches under a
+  second title and were refused as duplicates.
+  **Audrey Cefaly**: tried and dropped. Her Gulf PDF extracts with hidden characters inside
+  words, and her two HTML pieces fail the gate (capitals and directions).
+
 Asks rather than scrapes (permission emails): Monologue Blogger (terms forbid commercial
 use), Broadway Play Publishing (about 1,500 free audition pieces, 403 to our client),
 Don Zolidis (403), Arthur M. Jolly (PDFs, disallowed), Stage Partners (403).

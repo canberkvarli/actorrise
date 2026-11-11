@@ -164,6 +164,12 @@ class Parsed:
     text: str
     #: `plays.genre`. A musical's book scene is `musical`, so a filter can find it.
     genre: str = "drama"
+    #: A year the SOURCE dates for this one piece (the writer's own dated post,
+    #: the copyright line on the piece). Used only when the title is not in the
+    #: years file. It exists for standalone monologues with generic titles
+    #: ("The Gift", "Sorry"): keying those in the title-only years file would hand
+    #: their year to any later play that shares the name, the H-20 failure.
+    year: Optional[int] = None
 
     def source_url_ok(self) -> bool:
         """An excerpt with no route back to the original is not attributable."""
@@ -1289,7 +1295,301 @@ def extract_mcwethy(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional
     ), None
 
 
+# ── PDFs whose stage directions are set in italics ───────────────────────────
+
+def _pdf_styled_lines(blob: bytes) -> list[tuple[str, float, bool]]:
+    """``(text, gap_above, italic)`` per line. Italic means most of its letters
+    are in an italic face: how Doherty and Cafarella mark stage directions."""
+    import pdfplumber
+
+    rows: list[tuple[str, float, bool]] = []
+    with pdfplumber.open(io.BytesIO(blob)) as pdf:
+        for page in pdf.pages:
+            words = page.extract_words(extra_attrs=["fontname"])
+            previous_bottom = None
+            for ln in page.extract_text_lines() or []:
+                top, bottom = float(ln["top"]), float(ln["bottom"])
+                mine = sorted(
+                    (w for w in words
+                     if float(w["top"]) >= top - 1 and float(w["bottom"]) <= bottom + 1),
+                    key=lambda w: float(w["x0"]),
+                )
+                if not mine:
+                    continue
+                # A tab stop (a cue set in its own column, "CAM    There was a
+                # kid...") is a wide jump between words: keep it as "\t".
+                text = mine[0]["text"]
+                for prev, w in zip(mine, mine[1:]):
+                    text += ("\t" if float(w["x0"]) - float(prev["x1"]) > 12 else " ") + w["text"]
+                text = re.sub(r"[\u200b-\u200d\ufeff]", "", text).strip()
+                if not text:
+                    continue
+                italic = sum(
+                    len(w["text"]) for w in mine if re.search(r"italic|oblique", w["fontname"], re.I)
+                ) > sum(len(w["text"]) for w in mine) / 2
+                gap = 0.0 if previous_bottom is None else top - previous_bottom
+                previous_bottom = bottom
+                rows.append((text, gap, italic))
+    return rows
+
+
+def _speech_from_styled(rows: list[tuple[str, float, bool]]) -> list[str]:
+    """Lines -> paragraphs. Roman lines run together; an italic line is a
+    direction, kept in parentheses inside the paragraph it interrupts."""
+    paras: list[list[str]] = []
+    for text, gap, italic in rows:
+        piece = text
+        if italic and not text.startswith("("):
+            piece = f"({text.rstrip('.')}.)"
+        if not paras or gap > 10:
+            paras.append([piece])
+        else:
+            paras[-1].append(piece)
+    out = [re.sub(r"\s+", " ", " ".join(p)).strip() for p in paras]
+    out = [re.sub(r"\s+([.,!?;:)])", r"\1", re.sub(r"\(\s+", "(", p)) for p in out]
+    out = [p for p in out if p]
+    while out and out[-1].startswith("(") and out[-1].endswith(")"):
+        out.pop()  # a closing direction alone ("She takes the photo.") is not speech
+    return out
+
+
+#: Contact lines and page numbers at the foot of these PDFs.
+_FOOTER = re.compile(r"(@|https?://|www\.|^\+?\d[\d ]{6,}$|^\d{1,2}$|^©|free use on the condition)", re.I)
+
+
+# ── Kristen Doherty ──────────────────────────────────────────────────────────
+#
+# kristendoherty.com.au/monologues-by-kristen-doherty: free PDF monologues from
+# her published plays (Australian Plays Transform), mostly teen. robots.txt
+# allows every page to every agent except a list of SEO bots. Verified
+# 2026-11-11. Each PDF:
+#
+#     PIECE TITLE
+#     From PLAY - https://apt.org.au/product/...   (or a scene line, or a setup)
+#     CHARACTER                                    (or "CHARACTER:" with speech)
+#     ...speech, directions in italics...
+#     contact line
+#
+# No premiere year is published for any of her plays (not on APT, not in her
+# interviews), so the year is a FLOOR: the PDF's own creation date, i.e. the
+# piece existed in that year. Every file is dated 2022 or 2026. Era banding only.
+
+_KD_INDEX = "https://www.kristendoherty.com.au/monologues-by-kristen-doherty"
+_KD_PDF = re.compile(r'https://www\.kristendoherty\.com\.au/_files/ugd/[0-9a-f_]+\.pdf')
+#: The From-line's play -> the play as its publisher lists it.
+_KD_PLAYS = {
+    "teen": "TEEN",
+    "bully!": "Bully!",
+    "shakespeare bachelor": "Shakespeare Bachelor",
+    "the dream": "The Dream",
+    "the grove: a gothic mystery": "The Grove: A Gothic Mystery",
+    "grace": "Grace Under Pressure",
+    "queens": "Queens",
+}
+#: Her shortened cues in Queens -> the queen's name.
+_KD_CUES = {"JANE S": "JANE SEYMOUR", "KATHRYN H": "KATHRYN HOWARD"}
+#: Comedies, from the genre her own index page gives each piece.
+_KD_COMIC = {"CONFUSED", "POACHED PEARS", "SHAKESPEARE BACHELOR"}
+
+
+def discover_doherty(url: str, html: str) -> list[Link]:
+    out, seen = [], set()
+    for href in _KD_PDF.findall(html):
+        if href not in seen:
+            seen.add(href)
+            out.append(Link(url=href, character_name=href, label=href))
+    return out
+
+
+def _pdf_year(blob: bytes) -> Optional[int]:
+    m = re.search(rb"/CreationDate\s*\(D:(\d{4})", blob)
+    return int(m.group(1)) if m else None
+
+
+def _is_cue(line: str) -> Optional[tuple[str, str]]:
+    """``(character, speech on the same line)`` for a cue line, else None."""
+    if "\t" in line:
+        head, rest = line.split("\t", 1)
+        head = head.strip().rstrip(":")
+        if head and head.upper() == head and re.fullmatch(r"[A-Z][A-Z'’ .\-]{0,30}", head):
+            return head.strip(" ."), rest.replace("\t", " ").strip()
+        return None
+    m = re.match(r"^([A-Z][A-Z'’ .\-]{1,30}?):?\s*$", line)
+    if m and line.upper() == line:
+        return m.group(1).strip(" ."), ""
+    m = re.match(r"^([A-Z][A-Z'’ .\-]{1,30}?):\s+(.+)$", line)
+    if m:
+        return m.group(1).strip(), m.group(2)
+    return None
+
+
+def extract_doherty(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional[str]]:
+    rows = _pdf_styled_lines(blob)
+    if len(rows) < 3:
+        return None, "empty_pdf"
+    piece = rows[0][0].strip()
+    play = None
+    cue_at = None
+    for i, (text, _, italic) in enumerate(rows[1:8], 1):
+        if play is None and text.startswith("From "):
+            name = re.split(r"\s+[-–]\s*|\s+https?://|:\s*$", text[5:].strip(), 1)[0].strip(" -–:")
+            if name.casefold().startswith("scene"):
+                name = piece  # Queens: "From Scene 14. Henry Condemns Anne Boleyn."
+            play = _KD_PLAYS.get(name.casefold())
+            if play is None and ":" in text:
+                play = _KD_PLAYS.get(text[5:].split(":")[0].strip().casefold())
+            continue
+        if not italic and _is_cue(text):
+            cue_at = i
+            break
+    if play is None:
+        play = _KD_PLAYS.get(piece.casefold())
+    if play is None:
+        return None, "unknown_play"
+    if cue_at is None:
+        return None, "no_cue"
+    character, inline = _is_cue(rows[cue_at][0])
+    character = _KD_CUES.get(character, character)
+    body = ([(inline, 0.0, False)] if inline else []) + [
+        r for r in rows[cue_at + 1:] if not _FOOTER.search(r[0])]
+    speech = _speech_from_styled(body)
+    if not speech:
+        return None, "no_speech"
+    comic = piece.upper() in _KD_COMIC or (play == "The Dream" and character.upper() == "NICK")
+    return Parsed(
+        url=link.url,
+        play_title=play,
+        author="Kristen Doherty",
+        character_name=character.title(),
+        text="\n\n".join(fit_excerpt(speech)),
+        genre="comedy" if comic else "drama",
+        year=_pdf_year(blob),
+    ), None
+
+
+# ── Jane Cafarella ───────────────────────────────────────────────────────────
+#
+# janecafarella.com.au: standalone audition monologues for women, posted free
+# "on the condition that the author is fully credited and notified". robots.txt
+# allows all. Verified 2026-11-11. Each PDF:
+#
+#     TITLE
+#     A two-minute monologue
+#     By JANE CAFARELLA
+#     Drama                                   (sometimes "Comedy – 90 seconds")
+#     NAME, age, tells her sister about...    (italic setup)
+#     ...speech, directions in italics...
+#     155 words / contact / free-use line
+#
+# Each piece is its own work, so the play title is the piece's title and the
+# year is the date of the post that first published it. The "more free
+# monologues" page repeats the 2023 set and is not read.
+
+_JC_PAGES = {
+    "https://janecafarella.com.au/2023/08/28/turning-points-free-monologues-about-key-moments-in-the-lives-of-women/": 2023,
+    "https://janecafarella.com.au/2024/03/27/new-monologues-for-women-over-40/": 2024,
+    "https://janecafarella.com.au/2023/05/08/six-free-monologues-for-older-women/": 2023,
+}
+_JC_PDF = re.compile(r'https://janecafarella\.com\.au/wp-content/uploads/[^"\'\s]+\.pdf')
+_JC_SEEN: set[str] = set()
+_SMALL_WORDS = {"a", "an", "and", "at", "for", "in", "of", "on", "or", "the", "to"}
+
+
+def _title_case(s: str) -> str:
+    """'I DON’T' -> 'I Don’t', 'THE ADDICT 1' -> 'The Addict 1'."""
+    words = s.lower().split()
+    return " ".join(
+        w if i and w in _SMALL_WORDS else w[:1].upper() + w[1:]
+        for i, w in enumerate(words)
+    )
+
+
+def discover_cafarella(url: str, html: str) -> list[Link]:
+    year = _JC_PAGES.get(url)
+    out, seen = [], set()
+    for href in _JC_PDF.findall(html):
+        # Ten-minute and one-act plays are linked from the same posts.
+        if href in seen or re.search(r"-PLAY|ONE-ACT", href, re.I):
+            continue
+        seen.add(href)
+        out.append(Link(url=href, character_name=href, label=str(year or "")))
+    return out
+
+
+def extract_cafarella(link: Link, blob: bytes) -> tuple[Optional[Parsed], Optional[str]]:
+    rows = _pdf_styled_lines(blob)
+    end = next((i for i, r in enumerate(rows)
+                if re.match(r"^\d+\s+(spoken\s+)?words\b", r[0], re.I) or _FOOTER.search(r[0])
+                and not re.match(r"^\d{1,2}$", r[0])), len(rows))
+    rows = [r for r in rows[:end] if not re.match(r"^\d{1,2}$", r[0])]
+    by = next((i for i, r in enumerate(rows[:6]) if re.match(r"^by\s+jane\s+cafarella", r[0], re.I)), None)
+    if by is None or by == 0:
+        return None, "no_byline"
+    title = re.sub(r"^\d+\s+", "", rows[0][0]).strip()
+    rest = rows[by + 1:]
+    genre = "drama"
+    while rest and not rest[0][2] and re.match(
+            r"^(drama|comedy|drama/comedy)\b", rest[0][0], re.I):
+        if rest[0][0].lower().startswith("comedy"):
+            genre = "comedy"
+        rest = rest[1:]
+    setup = []
+    while rest and rest[0][2]:
+        setup.append(rest[0][0])
+        rest = rest[1:]
+    if not setup and rest:  # a setup set in roman: the first sentence naming her
+        setup, rest = [rest[0][0]], rest[1:]
+    setup_text = " ".join(setup)
+    m = re.match(r"^([A-Z][A-Z'’\-]+(?:\s[A-Z][A-Z'’\-]+)?)\b", setup_text) or \
+        re.match(r"^([A-Z][a-z]+)[’']s\b", setup_text)
+    if not m:
+        return None, "no_character"
+    speech = _speech_from_styled([(t, 0.0, it) for t, _, it in rest])
+    if not speech:
+        return None, "no_speech"
+    key = title.casefold()
+    if key in _JC_SEEN:
+        return None, "listed_twice"
+    _JC_SEEN.add(key)
+    # One flowing paragraph: her lines are beats, not paragraphs.
+    text = f"({setup_text.rstrip('.')}.) " + " ".join(speech)
+    return Parsed(
+        url=link.url,
+        play_title=_title_case(title),
+        author="Jane Cafarella",
+        character_name=m.group(1).title(),
+        text="\n\n".join(fit_excerpt([text])),
+        genre=genre,
+        year=int(link.label) if link.label.isdigit() else None,
+    ), None
+
+
 SOURCES: dict[str, Source] = {
+    "doherty": Source(
+        key="doherty",
+        name="Kristen Doherty",
+        index_urls=[_KD_INDEX],
+        discover=discover_doherty,
+        extract=extract_doherty,
+        note=(
+            "The playwright's own free monologue PDFs from her published plays, "
+            "mostly teen. VERIFIED 2026-11-11. robots.txt allows the pages. Years "
+            "are floors from each PDF's creation date."
+        ),
+        delay=1.0,
+    ),
+    "cafarella": Source(
+        key="cafarella",
+        name="Jane Cafarella",
+        index_urls=list(_JC_PAGES),
+        discover=discover_cafarella,
+        extract=extract_cafarella,
+        note=(
+            "The writer's own free audition monologues for women, free with full "
+            "credit. VERIFIED 2026-11-11. robots.txt allows all. Year is the post date."
+        ),
+        delay=1.0,
+    ),
     "mcwethy": Source(
         key="mcwethy",
         name="Ian McWethy",
@@ -1434,6 +1734,8 @@ def evaluate(parsed: Parsed, years: dict[str, int]) -> Row:
     spoken = strip_artifacts(to_display_text(display))
     word_count = len(spoken.split())
     year, category = era_fields(parsed.play_title, years)
+    if year is None and parsed.year is not None:
+        year, category = era_fields("_piece_", {"_piece_": parsed.year})
 
     reasons: list[str] = []
 
