@@ -316,6 +316,9 @@ async function flow(file) {
     if (s.goto) { await page.goto(BASE + s.goto, { waitUntil: "networkidle" }).catch(() => {}); events.push({ t: now(), goto: s.goto }); }
     else if (s.click !== undefined) {
       const el = locate(page, s.click);
+      // {"click": "A file on this phone", "file": "out/sides/x.txt"}: the tap opens the phone's file
+      // picker; the recorder answers it with this file (the sides), the way an actor would pick one.
+      if (s.file) page.once("filechooser", (fc) => fc.setFiles(path.resolve(ROOT, s.file)).catch(() => {}));
       await el.scrollIntoViewIfNeeded().catch(() => {});
       const b = await el.boundingBox();
       if (b) events.push({ t: now(), tap: { x: (b.x + b.width / 2) / VIEW.width, y: (b.y + b.height / 2) / VIEW.height }, label: String(s.click.css || s.click) });

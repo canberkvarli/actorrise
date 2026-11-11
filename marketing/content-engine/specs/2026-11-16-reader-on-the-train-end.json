@@ -1,0 +1,81 @@
+{
+  "id": "2026-11-16-reader-on-the-train-end",
+  "look": "noir",
+  "cut": "hard",
+  "music": {
+    "style": "beat",
+    "volume": 0.2
+  },
+  "voice": {
+    "volume": 1,
+    "lines": [
+      {
+        "text": "Ghost Light. Built by a working actor.",
+        "say": "[upbeat] Ghost Light. Built by a working actor.",
+        "at": 0.0,
+        "sub": false,
+        "audio": "voice/2026-11-16-reader-on-the-train-end/end.mp3",
+        "words": [
+          {
+            "w": "Ghost",
+            "s": 0.15,
+            "e": 0.208
+          },
+          {
+            "w": "Light.",
+            "s": 0.254,
+            "e": 0.556
+          },
+          {
+            "w": "Built",
+            "s": 0.649,
+            "e": 1.113
+          },
+          {
+            "w": "by",
+            "s": 1.159,
+            "e": 1.252
+          },
+          {
+            "w": "a",
+            "s": 1.287,
+            "e": 1.321
+          },
+          {
+            "w": "working",
+            "s": 1.373,
+            "e": 1.739
+          },
+          {
+            "w": "actor.",
+            "s": 1.797,
+            "e": 2.226
+          }
+        ],
+        "dur": 2.356
+      }
+    ]
+  },
+  "beats": [
+    {
+      "kind": "end",
+      "seconds": 3.0,
+      "brand": "Ghost Light",
+      "line": "Built by a working actor.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "snap": true,
+      "sfx": [],
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "part_of": "2026-11-16-reader-on-the-train",
+    "why": "the sharp Ghost Light card (DIRECTION 2026-11-10 afternoon), joined after the story with scripts/join.sh"
+  }
+}

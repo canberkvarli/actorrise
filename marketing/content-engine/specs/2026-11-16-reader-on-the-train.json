@@ -1,0 +1,673 @@
+{
+  "id": "2026-11-16-reader-on-the-train",
+  "look": "paper",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "Audition in twenty minutes. Your reader is stuck on the train.",
+        "say": "[urgent] Audition in twenty minutes. [deadpan] Your reader is stuck on the train.",
+        "at": 0.47,
+        "words": [
+          {
+            "w": "Audition",
+            "s": 0.0,
+            "e": 0.248
+          },
+          {
+            "w": "in",
+            "s": 0.271,
+            "e": 0.317
+          },
+          {
+            "w": "twenty",
+            "s": 0.357,
+            "e": 0.596
+          },
+          {
+            "w": "minutes.",
+            "s": 0.648,
+            "e": 1.083
+          },
+          {
+            "w": "Your",
+            "s": 2.091,
+            "e": 2.129
+          },
+          {
+            "w": "reader",
+            "s": 2.169,
+            "e": 2.407
+          },
+          {
+            "w": "is",
+            "s": 2.453,
+            "e": 2.546
+          },
+          {
+            "w": "stuck",
+            "s": 2.581,
+            "e": 2.755
+          },
+          {
+            "w": "on",
+            "s": 2.801,
+            "e": 2.894
+          },
+          {
+            "w": "the",
+            "s": 2.911,
+            "e": 2.963
+          },
+          {
+            "w": "train.",
+            "s": 3.033,
+            "e": 3.903
+          }
+        ],
+        "dur": 4.033
+      },
+      {
+        "text": "Train stopped. So sorry. Can't read with you.",
+        "say": "[sheepish] Train stopped. So sorry. Can't read with you.",
+        "at": 5.126,
+        "words": [
+          {
+            "w": "Train",
+            "s": 0.0,
+            "e": 0.046
+          },
+          {
+            "w": "stopped.",
+            "s": 0.098,
+            "e": 0.672
+          },
+          {
+            "w": "So",
+            "s": 0.742,
+            "e": 0.881
+          },
+          {
+            "w": "sorry.",
+            "s": 0.95,
+            "e": 1.437
+          },
+          {
+            "w": "Can't",
+            "s": 1.472,
+            "e": 1.646
+          },
+          {
+            "w": "read",
+            "s": 1.688,
+            "e": 1.855
+          },
+          {
+            "w": "with",
+            "s": 1.883,
+            "e": 1.994
+          },
+          {
+            "w": "you.",
+            "s": 2.029,
+            "e": 2.203
+          }
+        ],
+        "dur": 2.333
+      },
+      {
+        "text": "It's Chekhov's The Bear. You're Mrs. Popov, and your Smirnov isn't coming! So you open Ghost Light.",
+        "say": "[panicking] It's Chekhov's The Bear. You're Mrs. Popov, and your Smirnov isn't coming! [conspiratorial] So you open Ghost Light.",
+        "at": 8.279,
+        "words": [
+          {
+            "w": "It's",
+            "s": 0.0,
+            "e": 0.093
+          },
+          {
+            "w": "Chekhov's",
+            "s": 0.128,
+            "e": 0.51
+          },
+          {
+            "w": "The",
+            "s": 0.528,
+            "e": 0.58
+          },
+          {
+            "w": "Bear.",
+            "s": 0.663,
+            "e": 1.276
+          },
+          {
+            "w": "You're",
+            "s": 1.345,
+            "e": 1.623
+          },
+          {
+            "w": "Mrs.",
+            "s": 1.676,
+            "e": 1.902
+          },
+          {
+            "w": "Popov,",
+            "s": 1.954,
+            "e": 2.319
+          },
+          {
+            "w": "and",
+            "s": 2.371,
+            "e": 2.528
+          },
+          {
+            "w": "your",
+            "s": 2.556,
+            "e": 2.667
+          },
+          {
+            "w": "Smirnov",
+            "s": 2.737,
+            "e": 3.154
+          },
+          {
+            "w": "isn't",
+            "s": 3.189,
+            "e": 3.363
+          },
+          {
+            "w": "coming!",
+            "s": 3.412,
+            "e": 3.78
+          },
+          {
+            "w": "So",
+            "s": 4.675,
+            "e": 4.684
+          },
+          {
+            "w": "you",
+            "s": 4.719,
+            "e": 4.823
+          },
+          {
+            "w": "open",
+            "s": 4.893,
+            "e": 5.171
+          },
+          {
+            "w": "Ghost",
+            "s": 5.23,
+            "e": 5.519
+          },
+          {
+            "w": "Light.",
+            "s": 5.565,
+            "e": 5.867
+          }
+        ],
+        "dur": 5.997
+      },
+      {
+        "text": "Tap Scene, then Add sides.",
+        "say": "[upbeat] Tap Scene, then Add sides.",
+        "at": 14.803,
+        "sub": false,
+        "words": [
+          {
+            "w": "Tap",
+            "s": 0.0,
+            "e": 0.039
+          },
+          {
+            "w": "Scene,",
+            "s": 0.097,
+            "e": 0.457
+          },
+          {
+            "w": "then",
+            "s": 0.512,
+            "e": 0.735
+          },
+          {
+            "w": "Add",
+            "s": 0.787,
+            "e": 0.943
+          },
+          {
+            "w": "sides.",
+            "s": 1.037,
+            "e": 1.813
+          }
+        ],
+        "dur": 1.943
+      },
+      {
+        "text": "Choose a file on this phone, the sides casting sent you.",
+        "say": "[playful] Choose a file on this phone, the sides casting sent you.",
+        "at": 17.093,
+        "sub": false,
+        "words": [
+          {
+            "w": "Choose",
+            "s": 0.0,
+            "e": 0.044
+          },
+          {
+            "w": "a",
+            "s": 0.079,
+            "e": 0.114
+          },
+          {
+            "w": "file",
+            "s": 0.183,
+            "e": 0.462
+          },
+          {
+            "w": "on",
+            "s": 0.485,
+            "e": 0.531
+          },
+          {
+            "w": "this",
+            "s": 0.559,
+            "e": 0.67
+          },
+          {
+            "w": "phone,",
+            "s": 0.74,
+            "e": 1.227
+          },
+          {
+            "w": "the",
+            "s": 1.262,
+            "e": 1.366
+          },
+          {
+            "w": "sides",
+            "s": 1.424,
+            "e": 1.714
+          },
+          {
+            "w": "casting",
+            "s": 1.766,
+            "e": 2.131
+          },
+          {
+            "w": "sent",
+            "s": 2.187,
+            "e": 2.41
+          },
+          {
+            "w": "you.",
+            "s": 2.462,
+            "e": 3.105
+          }
+        ],
+        "dur": 3.236
+      },
+      {
+        "text": "It reads the scene and finds the cast. You're Mrs. Popov, so Ghost Light reads Smirnov, out loud!",
+        "say": "[excited] It reads the scene and finds the cast. You're Mrs. Popov, so Ghost Light reads Smirnov, out loud!",
+        "at": 20.714,
+        "sub": false,
+        "words": [
+          {
+            "w": "It",
+            "s": 0.0,
+            "e": 0.046
+          },
+          {
+            "w": "reads",
+            "s": 0.092,
+            "e": 0.324
+          },
+          {
+            "w": "the",
+            "s": 0.359,
+            "e": 0.463
+          },
+          {
+            "w": "scene",
+            "s": 0.51,
+            "e": 0.742
+          },
+          {
+            "w": "and",
+            "s": 0.759,
+            "e": 0.811
+          },
+          {
+            "w": "finds",
+            "s": 0.87,
+            "e": 1.159
+          },
+          {
+            "w": "the",
+            "s": 1.177,
+            "e": 1.229
+          },
+          {
+            "w": "cast.",
+            "s": 1.326,
+            "e": 2.098
+          },
+          {
+            "w": "You're",
+            "s": 2.194,
+            "e": 2.55
+          },
+          {
+            "w": "Mrs.",
+            "s": 2.62,
+            "e": 2.898
+          },
+          {
+            "w": "Popov,",
+            "s": 2.95,
+            "e": 3.316
+          },
+          {
+            "w": "so",
+            "s": 3.409,
+            "e": 3.594
+          },
+          {
+            "w": "Ghost",
+            "s": 3.64,
+            "e": 3.872
+          },
+          {
+            "w": "Light",
+            "s": 3.907,
+            "e": 4.081
+          },
+          {
+            "w": "reads",
+            "s": 4.127,
+            "e": 4.359
+          },
+          {
+            "w": "Smirnov,",
+            "s": 4.429,
+            "e": 5.09
+          },
+          {
+            "w": "out",
+            "s": 5.133,
+            "e": 5.263
+          },
+          {
+            "w": "loud!",
+            "s": 5.347,
+            "e": 6.098
+          }
+        ],
+        "dur": 6.229
+      },
+      {
+        "text": "Twenty minutes to go, and your reader is right here.",
+        "say": "[delighted] Twenty minutes to go, and your reader is right here.",
+        "at": 27.394,
+        "words": [
+          {
+            "w": "Twenty",
+            "s": 0.0,
+            "e": 0.044
+          },
+          {
+            "w": "minutes",
+            "s": 0.088,
+            "e": 0.392
+          },
+          {
+            "w": "to",
+            "s": 0.416,
+            "e": 0.462
+          },
+          {
+            "w": "go,",
+            "s": 0.577,
+            "e": 0.949
+          },
+          {
+            "w": "and",
+            "s": 0.983,
+            "e": 1.088
+          },
+          {
+            "w": "your",
+            "s": 1.116,
+            "e": 1.227
+          },
+          {
+            "w": "reader",
+            "s": 1.267,
+            "e": 1.505
+          },
+          {
+            "w": "is",
+            "s": 1.551,
+            "e": 1.644
+          },
+          {
+            "w": "right",
+            "s": 1.679,
+            "e": 1.853
+          },
+          {
+            "w": "here.",
+            "s": 1.909,
+            "e": 2.201
+          }
+        ],
+        "dur": 2.331
+      },
+      {
+        "text": "Ghost Light. Built by a working actor.",
+        "say": "[upbeat] Ghost Light. Built by a working actor.",
+        "at": 30.719,
+        "sub": false,
+        "words": [
+          {
+            "w": "Ghost",
+            "s": 0.0,
+            "e": 0.058
+          },
+          {
+            "w": "Light.",
+            "s": 0.104,
+            "e": 0.406
+          },
+          {
+            "w": "Built",
+            "s": 0.499,
+            "e": 0.963
+          },
+          {
+            "w": "by",
+            "s": 1.009,
+            "e": 1.102
+          },
+          {
+            "w": "a",
+            "s": 1.137,
+            "e": 1.171
+          },
+          {
+            "w": "working",
+            "s": 1.223,
+            "e": 1.589
+          },
+          {
+            "w": "actor.",
+            "s": 1.647,
+            "e": 2.076
+          }
+        ],
+        "dur": 2.206
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-16-reader-on-the-train/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3
+  },
+  "scenes": [
+    {
+      "type": "cafe",
+      "seconds": 5.026,
+      "line": "Audition at three.",
+      "accent": "three.",
+      "sign": "AUDITIONS",
+      "at": "3:00",
+      "page": "THE BEAR"
+    },
+    {
+      "type": "train",
+      "seconds": 3.153,
+      "line": "Your reader's train.",
+      "accent": "train.",
+      "text": "train stopped. so sorry,\ncan't read with you",
+      "flag": "AUDITION",
+      "stopAt": 40,
+      "textAt": 50
+    },
+    {
+      "type": "chair",
+      "seconds": 6.524,
+      "line": "Nobody to read Smirnov.",
+      "accent": "Smirnov.",
+      "tag": "SMIRNOV",
+      "page": "THE BEAR"
+    },
+    {
+      "type": "screens",
+      "seconds": 2.29,
+      "line": "Tap Scene.",
+      "accent": "Scene.",
+      "shots": [
+        {
+          "src": "story/2026-11-16-reader-on-the-train/book.png",
+          "at": 0,
+          "pan": [
+            0.3,
+            0.56
+          ],
+          "tap": {
+            "x": 0.61,
+            "y": 0.93,
+            "at": 28
+          }
+        },
+        {
+          "src": "story/2026-11-16-reader-on-the-train/scene.png",
+          "at": 52,
+          "pan": [
+            0.3,
+            0.3
+          ],
+          "tap": {
+            "x": 0.5,
+            "y": 0.618,
+            "at": 62
+          }
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 3.621,
+      "line": "Bring your sides.",
+      "accent": "sides.",
+      "shots": [
+        {
+          "src": "story/2026-11-16-reader-on-the-train/scene.png",
+          "at": 0,
+          "pan": [
+            0.3,
+            0.3
+          ]
+        },
+        {
+          "src": "story/2026-11-16-reader-on-the-train/sides.png",
+          "at": 3,
+          "push": {
+            "x": 0.5,
+            "y": 0.3,
+            "scale": 1.1
+          },
+          "tap": {
+            "x": 0.5,
+            "y": 0.307,
+            "at": 40
+          }
+        },
+        {
+          "src": "story/2026-11-16-reader-on-the-train/reading.png",
+          "at": 72
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 6.68,
+      "line": "Pick your part.",
+      "accent": "your part.",
+      "shots": [
+        {
+          "src": "story/2026-11-16-reader-on-the-train/reading.png",
+          "at": 0
+        },
+        {
+          "src": "story/2026-11-16-reader-on-the-train/cast.png",
+          "at": 50,
+          "pan": [
+            0.3,
+            0.54
+          ],
+          "tap": {
+            "x": 0.5,
+            "y": 0.954,
+            "at": 150
+          }
+        }
+      ]
+    },
+    {
+      "type": "chair",
+      "seconds": 3.325,
+      "line": "Your reader is here.",
+      "accent": "here.",
+      "tag": "SMIRNOV",
+      "page": "THE BEAR",
+      "calm": true
+    }
+  ],
+  "captions": {
+    "tiktok": "Audition in twenty minutes and your reader is stuck on a train? Ghost Light reads the other part. #actorslife #audition #actortok #actors #scenepartner",
+    "youtube_title": "Your reader is stuck on the train. Now what? #shorts",
+    "youtube_description": "Bring your sides to Ghost Light, pick your part, and it reads the other one out loud.\nBuilt by a working actor.\n#actorslife #audition #scenepartner #acting",
+    "instagram": "Audition at three. It is 2:40. Your reader just texted: train stopped.\nOpen Ghost Light, tap Scene, add the sides casting sent you, and pick your part. It reads the other one.\nBuilt by a working actor. Link in bio.\n#actorslife #audition #scenepartner #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 10800,
+  "source": {
+    "plan": "Callboard row 2026-11-16 (storyhowto, story-howto, paper): audition in twenty minutes, the reader is stuck on the train; bring your sides",
+    "app": "Ghost Light web preview (ghostlight-web/serve.sh), dark theme, demo account, 2026-11-11",
+    "flow": "flows/sides-reader-on-the-train.json (shot steps -> public/story/2026-11-16-reader-on-the-train/*.png)",
+    "sides": "flows/sides/The_Bear_sides.txt: Chekhov, The Bear, the Mrs. Popov and Smirnov exchange from 'How dare you speak to me so?' to 'Very well.', text as stored in plays.id 144 (The Boor, Hilmar Baukhage translation, Samuel French 1915, Gutenberg 36984), public domain; stage directions in brackets, Luka's entrance left out",
+    "app_result": "the app read the file and made the scene 'Confrontation Over Debt' in The Bear: MRS. POPOV (you, 9 lines), SMIRNOV read by Fenrir, 'Begin as MRS. POPOV'. The uploaded script stays on the demo account's shelf.",
+    "not_shown": "the run itself (your line lit, Smirnov read aloud): on 2026-11-11 every partner line failed with 'This line could not be synthesised' (partner_audio: Gemini 402, prepayment credits depleted), so the run screen carried an error note and was left out rather than cropped",
+    "preview": "web-preview.patch gained one web-only commit: a picked file goes up as a multipart form (a browser has no file system uploader); the recorder gained a 'file' option on click steps",
+    "voice": "George, one take, sped up 1.15x with atempo (the raw read ran 37.4s); original kept as take00.orig.mp3 locally, not committed",
+    "end": "specs/2026-11-16-reader-on-the-train-end.json, joined with scripts/join.sh; the end line is cut from the take"
+  }
+}

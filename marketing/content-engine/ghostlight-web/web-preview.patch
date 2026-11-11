@@ -1,7 +1,7 @@
-From 0ec65d708a7a9ab21ae741f819946a3f0190e657 Mon Sep 17 00:00:00 2001
+From 7ad690a493f9807deb5bec1cd2bb63fbb1dea870 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 3 Nov 2026 10:21:34 +0300
-Subject: [PATCH 1/4] Web preview for marketing recordings: the real screens in
+Subject: [PATCH 1/6] Web preview for marketing recordings: the real screens in
  a browser at phone size
 
 Branch only, never main. Adds react-native-web, react-dom and @expo/metro-runtime, and
@@ -724,10 +724,10 @@ index 0000000..4856578
 2.43.0
 
 
-From aabe4a0a3439222254a1d5f44a52c84fabbe9dba Mon Sep 17 00:00:00 2001
+From 72bc98477edc4e8644ef52a126a746069f5a0219 Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Wed, 4 Nov 2026 06:55:59 +0000
-Subject: [PATCH 2/4] Web preview: no screenshot listener on web
+Subject: [PATCH 2/6] Web preview: no screenshot listener on web
  (PrivacyShield)
 
 ---
@@ -762,10 +762,10 @@ index 5928487..4709fb8 100644
 2.43.0
 
 
-From 6cf59430608f2b54d0810cdef10e7f399c60617d Mon Sep 17 00:00:00 2001
+From 73b39efaf8e2f5a534d0d8a7f2a069cdabd2007a Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Thu, 5 Nov 2026 15:36:20 +0000
-Subject: [PATCH 3/4] Web preview: the tape room rolls in a browser (scripted
+Subject: [PATCH 3/6] Web preview: the tape room rolls in a browser (scripted
  ear, camera record waits for cut)
 
 ---
@@ -877,10 +877,10 @@ index 0000000..6d02a56
 2.43.0
 
 
-From cefc9e8963da5b602b0683c1b6b4e4c3d06486e1 Mon Sep 17 00:00:00 2001
+From 730d0eff00559f6f7ec2bd248e1ce858960796d1 Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Thu, 5 Nov 2026 22:53:12 +0000
-Subject: [PATCH 4/4] Web preview: the tape room plays the take back
+Subject: [PATCH 4/6] Web preview: the tape room plays the take back
  (MediaRecorder camera, takes in memory, video plays on mount)
 
 ---
@@ -1019,11 +1019,12 @@ index 0000000..3f6667d
 -- 
 2.43.0
 
-From 14f3da20c454247acf5e17dbf14369fc0c72adc4 Mon Sep 17 00:00:00 2001
+
+From 7745f40c656ad34ac893a1948b71ab8aab128568 Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Sun, 8 Nov 2026 20:17:41 +0000
-Subject: [PATCH] Web preview: partner lines load straight from their URL (no
- file cache in a browser)
+Subject: [PATCH 5/6] Web preview: partner lines load straight from their URL
+ (no file cache in a browser)
 
 ---
  src/rehearsal/native/loader.web.ts | 69 ++++++++++++++++++++++++++++++
@@ -1105,6 +1106,47 @@ index 0000000..0ead996
 +    for (const i of this.started) if (!this.player.has(i)) this.started.delete(i);
 +  }
 +}
+-- 
+2.43.0
+
+
+From 9edb5423e99629bfe38e0f858f1956cbf32b9927 Mon Sep 17 00:00:00 2001
+From: preview <preview@local>
+Date: Wed, 11 Nov 2026 06:55:01 +0000
+Subject: [PATCH 6/6] Web preview: sides from a file go up as a multipart form
+ (a browser has no file system uploader)
+
+---
+ src/api/rehearsal.ts | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/src/api/rehearsal.ts b/src/api/rehearsal.ts
+index 2f3560a..43e5a0b 100644
+--- a/src/api/rehearsal.ts
++++ b/src/api/rehearsal.ts
+@@ -346,6 +346,22 @@ export async function uploadScriptBackground(
+   source: { uri: string; name: string; mimeType?: string } | { text: string; name: string },
+   title?: string,
+ ): Promise<ScriptDetail> {
++  // Web preview only (marketing recordings): a browser has no file system uploader, so the picked
++  // file (a blob: URL from the browser's own picker) goes up as an ordinary multipart form.
++  if (typeof document !== 'undefined') {
++    const form = new FormData();
++    const blob = 'text' in source ? new Blob([source.text], { type: 'text/plain' }) : await (await globalThis.fetch(source.uri)).blob();
++    form.append('file', blob, source.name);
++    if (title) form.append('title', title);
++    const r = await globalThis.fetch(`${API_URL}/api/scripts/upload-background`, { method: 'POST', headers: await authHeaders(), body: form });
++    const body = await r.text();
++    if (!r.ok) {
++      let detail = `upload failed (${r.status})`;
++      try { const j = JSON.parse(body) as { detail?: string | { message?: string } }; if (typeof j.detail === 'string') detail = j.detail; else if (j.detail?.message) detail = j.detail.message; } catch { /* no body */ }
++      throw new RehearsalApiError(r.status, detail, null);
++    }
++    return JSON.parse(body) as ScriptDetail;
++  }
+   let uri: string;
+   let mimeType: string;
+   if ('text' in source) {
 -- 
 2.43.0
 

@@ -97,7 +97,7 @@ type Screens = {
     /** move the shot up inside the phone by this share of its height, [from, to], so a low part (the tab bar) reaches the safe area */
     pan?: [number, number] }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -2591,6 +2591,185 @@ const RewindScene: React.FC<{ s: Rewind }> = ({ s }) => {
   );
 };
 
+// ---------- the reader is stuck on the train (2026-11-16) ----------
+/** A café across the street from the audition: the wall clock at 2:40, the building with its sign in the
+ *  window, your sides and a coffee on the table. */
+type Cafe = { type: "cafe"; seconds: number; line: string; accent: string; sign?: string; at?: string; page?: string };
+const CafeScene: React.FC<{ s: Cafe }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const CX = 810, CY = 700, R = 104;
+  const tick = Math.floor(f / 15);
+  const minA = 240 + tick * 1.2, hourA = 80;
+  const hand = (a: number, len: number) => `M${CX} ${CY} L ${CX + len * Math.sin((a * Math.PI) / 180)} ${CY - len * Math.cos((a * Math.PI) / 180)}`;
+  const steam = (x: number, k: number) => `M${x} 1118 c ${-14 + Math.sin((f + k) / 7) * 8} -22, ${14 + Math.sin((f + k) / 9) * 8} -40, 0 -64`;
+  return (
+    <AbsoluteFill>
+      <Sfx name="cine/tick" at={PREROLL + 6} vol={0.5} />
+      <Sfx name="cine/tick" at={PREROLL + 36} vol={0.5} />
+      <Sfx name="boop_lo" at={PREROLL + 20} vol={0.5} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the window, and the audition building across the street */}
+        <Ink d="M120 560 L 660 560 L 660 990 L 120 990 Z" start={0} dur={18} w={7} fill="rgba(232,121,43,0.08)" />
+        <Ink d="M390 562 L 390 988 M122 760 L 658 760" start={10} dur={12} w={4} color={C.inkSoft} />
+        <g opacity={prog(f, 12, 22)}>
+          <path d="M200 988 L 200 640 L 580 640 L 580 988" fill={PAPER_FILL} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+          <path d="M180 640 L 390 590 L 600 640 Z" fill={PAPER_FILL} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+          <rect x={240} y={676} width={300} height={62} fill={C.orange} stroke={C.ink} strokeWidth={5} />
+          <text x={390} y={720} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={38} letterSpacing={4} fill="#fff">{s.sign ?? "AUDITIONS"}</text>
+          <path d="M340 988 L 340 840 C 340 800, 440 800, 440 840 L 440 988" fill="rgba(33,26,21,0.12)" stroke={C.ink} strokeWidth={5} />
+          <rect x={236} y={800} width={70} height={90} fill="none" stroke={C.ink} strokeWidth={4} />
+          <rect x={474} y={800} width={70} height={90} fill="none" stroke={C.ink} strokeWidth={4} />
+          <rect x={352} y={770} width={76} height={40} fill="#ffffff" stroke={C.ink} strokeWidth={4} />
+          <text x={390} y={800} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={28} fill={C.ink}>{s.at ?? "3:00"}</text>
+        </g>
+        {/* the wall clock: twenty to three */}
+        <Ink d={`M${CX} ${CY} m -${R} 0 a ${R} ${R} 0 1 0 ${R * 2} 0 a ${R} ${R} 0 1 0 -${R * 2} 0`} start={6} dur={16} w={7} fill="#ffffff" />
+        <g opacity={prog(f, 16, 22)}>
+          {[0, 90, 180, 270].map((a) => <path key={a} d={`M${CX} ${CY - R + 12} L ${CX} ${CY - R + 30}`} transform={`rotate(${a} ${CX} ${CY})`} stroke={C.ink} strokeWidth={6} strokeLinecap="round" />)}
+          <path d={hand(hourA, 52)} stroke={C.ink} strokeWidth={10} strokeLinecap="round" />
+          <path d={hand(minA, 80)} stroke={C.orange} strokeWidth={7} strokeLinecap="round" />
+          <circle cx={CX} cy={CY} r={9} fill={C.ink} />
+          <text x={CX} y={CY + R + 62} textAnchor="middle" fontFamily={F.serif} fontWeight={600} fontSize={56} fill={C.ink}>2:40</text>
+        </g>
+        {/* you at the table, coffee, the sides */}
+        <Ink d="M330 1236 C 330 1170, 420 1150, 500 1150 C 580 1150, 670 1170, 670 1236" start={14} dur={12} w={6} fill="rgba(232,121,43,0.35)" />
+        <Face x={500} y={1078} r={78} panic={0.25 + 0.4 * prog(f, PREROLL + 30, PREROLL + 70)} start={12} />
+        <Ink d="M90 1236 C 380 1228, 700 1242, 990 1234" start={2} dur={16} w={8} />
+        <Ink d="M130 1238 L 150 1420 M950 1236 L 930 1420" start={12} dur={10} w={6} color={C.inkSoft} />
+        <Ink d="M196 1150 L 204 1228 L 276 1228 L 284 1150 Z M284 1168 c 40 0, 40 44, -4 44" start={18} dur={10} w={5} fill="#ffffff" />
+        <path d={steam(224, 0)} fill="none" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" opacity={prog(f, 26, 34)} />
+        <path d={steam(256, 30)} fill="none" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" opacity={prog(f, 26, 34)} />
+        <g transform="translate(790 1186) rotate(-7)" opacity={prog(f, 20, 28)}>
+          <rect x={-104} y={-62} width={208} height={112} fill="#ffffff" stroke={C.ink} strokeWidth={5} />
+          <text x={0} y={-22} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={26} letterSpacing={2} fill={C.ink}>{s.page ?? "THE BEAR"}</text>
+          <path d="M-80 0 L 80 0 M-80 20 L 60 20 M-80 38 L 72 38" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" />
+        </g>
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** The little train stops between stations; the reader's text floats up out of it. */
+type Train = { type: "train"; seconds: number; line: string; accent: string; text: string; stopAt?: number; textAt?: number; flag?: string };
+const TrainScene: React.FC<{ s: Train }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const stopAt = s.stopAt ?? 30, textAt = s.textAt ?? 44;
+  const TY = 1130;
+  const roll = interpolate(f, [0, stopAt], [-520, 130], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
+  const jolt = f >= stopAt && f < stopAt + 10 ? Math.sin((f - stopAt) * 1.6) * (10 - (f - stopAt)) * 0.8 : 0;
+  const pop = spring({ frame: f - textAt, fps, config: { damping: 11, mass: 0.5 } });
+  const lines = s.text.split("\n");
+  const wheel = (x: number) => <circle cx={x} cy={TY - 22} r={22} fill="#ffffff" stroke={C.ink} strokeWidth={6} />;
+  const blink = 0.5 + 0.5 * Math.sin(f / 3);
+  return (
+    <AbsoluteFill>
+      <Sfx name="cine/tick" at={4} vol={0.4} />
+      <Sfx name="cine/tick" at={14} vol={0.4} />
+      <Sfx name="thud" at={stopAt} vol={0.6} />
+      <Sfx name="cine/toing" at={stopAt + 4} vol={0.4} />
+      <Sfx name="pop" at={textAt} vol={0.6} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the track, and the stop it never reaches */}
+        <Ink d={`M40 ${TY} C 360 ${TY - 4}, 700 ${TY + 4}, 1040 ${TY}`} start={0} dur={14} w={7} />
+        {Array.from({ length: 13 }, (_, i) => <path key={i} d={`M${70 + i * 78} ${TY + 4} l -10 26`} stroke={C.inkSoft} strokeWidth={5} strokeLinecap="round" opacity={prog(f, 4 + i, 8 + i)} />)}
+        <g opacity={prog(f, 8, 16)}>
+          <path d={`M880 ${TY} L 880 ${TY - 250}`} stroke={C.ink} strokeWidth={7} strokeLinecap="round" />
+          <path d={`M880 ${TY - 250} L 720 ${TY - 250} L 700 ${TY - 212} L 720 ${TY - 174} L 880 ${TY - 174} Z`} fill={C.orange} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+          <text x={796} y={TY - 198} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={30} letterSpacing={2} fill="#fff">{s.flag ?? "AUDITION"}</text>
+        </g>
+        {/* the train: an engine and one car, your reader at the window */}
+        <g transform={`translate(${roll + jolt} 0)`}>
+          <rect x={0} y={TY - 190} width={250} height={150} rx={18} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} />
+          <rect x={266} y={TY - 190} width={250} height={150} rx={18} fill="rgba(232,121,43,0.3)" stroke={C.ink} strokeWidth={6} />
+          <path d={`M250 ${TY - 100} L 266 ${TY - 100}`} stroke={C.ink} strokeWidth={8} />
+          <path d={`M516 ${TY - 150} L 560 ${TY - 150} C 590 ${TY - 150}, 600 ${TY - 110}, 600 ${TY - 40} L 516 ${TY - 40}`} fill="rgba(232,121,43,0.3)" stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+          {[30, 140].map((x) => <rect key={x} x={x} y={TY - 164} width={84} height={66} rx={8} fill="#ffffff" stroke={C.ink} strokeWidth={5} />)}
+          {[296, 406].map((x) => <rect key={x} x={x} y={TY - 164} width={84} height={66} rx={8} fill="#ffffff" stroke={C.ink} strokeWidth={5} />)}
+          <Face x={338} y={TY - 128} r={27} panic={f > stopAt ? 0.7 : 0} start={0} />
+          {wheel(56)}{wheel(194)}{wheel(322)}{wheel(460)}{wheel(560)}
+          {f > stopAt && <text x={616} y={TY - 180} fontFamily={F.serif} fontWeight={600} fontSize={96} fill={C.orange} opacity={blink}>!</text>}
+          {f <= stopAt && [0, 1, 2].map((i) => <path key={i} d={`M${-30 - i * 34} ${TY - 150 + i * 44} l -60 0`} stroke={C.inkSoft} strokeWidth={5} strokeLinecap="round" />)}
+        </g>
+        {/* the text from the train */}
+        <g transform={`translate(520 730) scale(${pop})`} opacity={Math.min(1, pop * 1.5)}>
+          <path d="M-400 -120 C -200 -134, 200 -134, 400 -120 C 430 -114, 436 -70, 434 0 C 432 76, 426 108, 400 114 C 200 126, -30 126, -70 122 L -110 196 L -128 122 C -240 124, -330 122, -400 114 C -428 108, -434 76, -436 0 C -434 -70, -430 -114, -400 -120 Z" fill="#ffffff" stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+          {lines.map((l, i) => (
+            <text key={i} x={0} y={(i - (lines.length - 1) / 2) * 66 + 16} textAnchor="middle" fontFamily={F.type} fontStyle="italic" fontSize={54} fill={C.ink}>{l}</text>
+          ))}
+        </g>
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** The chair across the table, with the part's name on it and nobody in it; your sides shake.
+ *  `calm` is the same table a minute later: the phone sits on the chair and reads the part. */
+type Chair = { type: "chair"; seconds: number; line: string; accent: string; tag: string; page?: string; calm?: boolean };
+const ChairScene: React.FC<{ s: Chair }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const shake = s.calm ? 0 : Math.sin(f * 1.7) * 5 * prog(f, 16, 40);
+  const lit = s.calm ? spring({ frame: f - 12, fps, config: { damping: 12 } }) : 0;
+  const TY = 1200, KX = 760;
+  const wave = (i: number) => 0.25 + 0.75 * Math.abs(Math.sin(f / 4 + i * 1.3));
+  return (
+    <AbsoluteFill>
+      {!s.calm && <Sfx name="cine/heartbeat" at={14} vol={0.5} />}
+      {!s.calm && <Sfx name="cine/toing" at={8} vol={0.4} />}
+      {s.calm && <Sfx name="cine/ping" at={12} vol={0.5} />}
+      {s.calm && <Sfx name="boop_hi" at={20} vol={0.5} />}
+      <AbsoluteFill style={{ background: `radial-gradient(circle 300px at ${KX}px 1010px, rgba(232,121,43,${0.34 * lit}) 0%, rgba(232,121,43,0) 100%)` }} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the chair */}
+        <Ink d={`M${KX - 90} ${TY + 180} L ${KX - 90} 800 C ${KX - 90} 770, ${KX + 90} 770, ${KX + 90} 800 L ${KX + 90} ${TY + 180}`} start={0} dur={16} w={8} />
+        <Ink d={`M${KX - 88} 880 L ${KX + 88} 880 M${KX - 88} 960 L ${KX + 88} 960`} start={10} dur={10} w={6} color={C.inkSoft} />
+        <Ink d={`M${KX - 110} 1090 L ${KX + 110} 1090 L ${KX + 110} 1118 L ${KX - 110} 1118 Z`} start={8} dur={10} w={6} fill={PAPER_FILL} />
+        {/* the name tag on the chair */}
+        <g transform={`translate(${KX} 820) rotate(${-4 + Math.sin(f / 14) * 2})`} opacity={prog(f, 12, 20)}>
+          <path d="M-40 -34 L 0 -66 L 40 -34" fill="none" stroke={C.ink} strokeWidth={4} />
+          <rect x={-128} y={-34} width={256} height={76} rx={6} fill="#ffffff" stroke={C.ink} strokeWidth={5} />
+          <text x={0} y={18} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={42} letterSpacing={3} fill={C.ink}>{s.tag}</text>
+        </g>
+        {s.calm ? (
+          <g transform={`translate(${KX} 1004)`} opacity={Math.min(1, lit * 1.4)}>
+            <rect x={-50} y={-90} width={100} height={178} rx={18} fill={APP.bg} stroke={C.ink} strokeWidth={6} />
+            <rect x={-38} y={-76} width={76} height={150} rx={10} fill={`rgba(242,207,58,${0.3 + 0.55 * lit})`} />
+            {[0, 1, 2, 3, 4].map((i) => <rect key={i} x={-28 + i * 13} y={-wave(i) * 30} width={7} height={wave(i) * 60} rx={3} fill={APP.bg} />)}
+            {[0, 1].map((i) => <path key={i} d={`M${-84 - i * 30} ${-40 - i * 16} C ${-110 - i * 34} -10, ${-110 - i * 34} 20, ${-84 - i * 30} ${50 + i * 16}`} fill="none" stroke={C.orange} strokeWidth={6} strokeLinecap="round" opacity={wave(i + 2)} />)}
+          </g>
+        ) : (
+          <g opacity={prog(f, 18, 30)}>
+            <circle cx={KX} cy={985} r={58} fill="none" stroke={C.inkSoft} strokeWidth={5} strokeDasharray="14 12" />
+            <text x={KX} y={1012} textAnchor="middle" fontFamily={F.serif} fontWeight={600} fontSize={78} fill={C.inkSoft}>?</text>
+          </g>
+        )}
+        {/* the table between you */}
+        <Ink d={`M150 ${TY} C 380 ${TY - 6}, 640 ${TY + 6}, 900 ${TY}`} start={2} dur={14} w={8} />
+        <Ink d={`M210 ${TY + 2} L 226 ${TY + 200} M840 ${TY + 2} L 824 ${TY + 200}`} start={10} dur={10} w={6} color={C.inkSoft} />
+        {/* you, and the sides in your hand */}
+        <Ink d={`M150 ${TY - 4} C 150 ${TY - 80}, 230 ${TY - 104}, 300 ${TY - 104} C 370 ${TY - 104}, 450 ${TY - 80}, 450 ${TY - 4}`} start={8} dur={12} w={6} fill="rgba(232,121,43,0.35)" />
+        <Face x={300} y={1014} r={84} panic={s.calm ? 0 : 0.85 * prog(f, 10, 30)} hope={s.calm ? prog(f, 14, 24) : 0} start={6} />
+        <g transform={`translate(${498 + shake} ${1120 + shake * 0.6}) rotate(${8 + shake * 1.4})`} opacity={prog(f, 14, 22)}>
+          <rect x={-74} y={-92} width={148} height={184} fill="#ffffff" stroke={C.ink} strokeWidth={5} />
+          <text x={0} y={-52} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={22} letterSpacing={1.5} fill={C.ink}>{s.page ?? "THE BEAR"}</text>
+          <path d="M-54 -22 L 54 -22 M-54 2 L 40 2 M-54 26 L 50 26 M-54 50 L 30 50" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" />
+          {!s.calm && [0, 1].map((i) => <path key={i} d={`M${92 + i * 18} ${-70 + i * 60} l 16 -8`} stroke={C.ink} strokeWidth={4} strokeLinecap="round" opacity={0.5 + 0.5 * Math.sin(f + i)} />)}
+        </g>
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 /** Word by word captions for the narration (Canberk, 2026-11-08: drawn films need captions). Ink on a
  *  soft paper pill above the bottom quarter, the spoken word in orange. Hidden on the end card. */
 const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
@@ -2670,6 +2849,9 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "ready" ? <ReadyScene s={sc} /> :
       sc.type === "spiral" ? <SpiralScene s={sc} /> :
       sc.type === "rewind" ? <RewindScene s={sc} /> :
+      sc.type === "cafe" ? <CafeScene s={sc} /> :
+      sc.type === "train" ? <TrainScene s={sc} /> :
+      sc.type === "chair" ? <ChairScene s={sc} /> :
       <EndScene s={sc} />;
   };
 
