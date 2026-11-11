@@ -219,3 +219,25 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** studio teacher, class link sent 2026-10-18, nobody joined yet
 **They said:** "Thank you. I will use it today. And again just to be clear two person “scenes” are not in the database, just monologues?"
 **Heard as:** could not find the feature (scenes come from an uploaded script in ScenePartner, there is no scene library to browse)
+
+## 2026-11-11
+
+**Replying to:** search note (Yellowjackets)
+**Account:** free actor, searched for a piece for someone else
+**They said:** "Oh hey! Thank you. I was looking for my wife- for an audition for lord of the flies"
+**Heard as:** content gap, Lord of the Flies (copyrighted novel and stage version, cannot come in)
+
+**Replying to:** playwright ask (contemporary teen play)
+**Account:** none, playwright
+**They said:** "I'm interested. I presume actors will be required to name the playwright when slating? Is there anything else I need to know?"
+**Heard as:** happy, wants credit at the slate
+
+**Replying to:** playwright ask (contemporary teen play)
+**Account:** none, playwright
+**They said:** "Thank you reaching out, Canberk. I would love to. What needs to happen on my end?"
+**Heard as:** happy, needs the steps
+
+**Replying to:** playwright ask (contemporary teen play)
+**Account:** none, playwright
+**They said:** "It sounds like a cool and very useful idea. Unfortunately, I don't write monologues. Best of luck!"
+**Heard as:** did not understand what it does (a speech from a full play counts), filed as no
