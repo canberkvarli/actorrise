@@ -9,507 +9,597 @@
   "voice": {
     "lines": [
       {
-        "text": "Audition in twenty minutes. Your reader is stuck on the train.",
-        "say": "[urgent] Audition in twenty minutes. [deadpan] Your reader is stuck on the train.",
-        "at": 0.47,
+        "text": "Your audition is in twenty minutes, and your reader is stuck on the train.",
+        "say": "[amused] Your audition is in twenty minutes, and your reader is stuck on the train.",
+        "at": 0.383,
         "words": [
           {
-            "w": "Audition",
-            "s": 0.0,
-            "e": 0.248
-          },
-          {
-            "w": "in",
-            "s": 0.271,
-            "e": 0.317
-          },
-          {
-            "w": "twenty",
-            "s": 0.357,
-            "e": 0.596
-          },
-          {
-            "w": "minutes.",
-            "s": 0.648,
-            "e": 1.083
-          },
-          {
             "w": "Your",
-            "s": 2.091,
-            "e": 2.129
+            "s": 0.0,
+            "e": 0.056
           },
           {
-            "w": "reader",
-            "s": 2.169,
-            "e": 2.407
+            "w": "audition",
+            "s": 0.102,
+            "e": 0.473
           },
           {
             "w": "is",
-            "s": 2.453,
-            "e": 2.546
+            "s": 0.497,
+            "e": 0.543
+          },
+          {
+            "w": "in",
+            "s": 0.566,
+            "e": 0.612
+          },
+          {
+            "w": "twenty",
+            "s": 0.662,
+            "e": 0.96
+          },
+          {
+            "w": "minutes,",
+            "s": 1.012,
+            "e": 1.447
+          },
+          {
+            "w": "and",
+            "s": 1.482,
+            "e": 1.586
+          },
+          {
+            "w": "your",
+            "s": 1.614,
+            "e": 1.725
+          },
+          {
+            "w": "reader",
+            "s": 1.765,
+            "e": 2.003
+          },
+          {
+            "w": "is",
+            "s": 2.05,
+            "e": 2.143
           },
           {
             "w": "stuck",
-            "s": 2.581,
-            "e": 2.755
+            "s": 2.177,
+            "e": 2.351
           },
           {
             "w": "on",
-            "s": 2.801,
-            "e": 2.894
+            "s": 2.375,
+            "e": 2.421
           },
           {
             "w": "the",
-            "s": 2.911,
-            "e": 2.963
+            "s": 2.438,
+            "e": 2.49
           },
           {
             "w": "train.",
-            "s": 3.033,
-            "e": 3.903
+            "s": 2.571,
+            "e": 2.977
           }
         ],
-        "dur": 4.033
+        "dur": 3.108
       },
       {
-        "text": "Train stopped. So sorry. Can't read with you.",
-        "say": "[sheepish] Train stopped. So sorry. Can't read with you.",
-        "at": 5.126,
+        "text": "The text just says the train stopped, they're so sorry, and they can't read with you.",
+        "say": "The text just says the train stopped, they're so sorry, and they can't read with you.",
+        "at": 3.57,
         "words": [
           {
-            "w": "Train",
+            "w": "The",
             "s": 0.0,
-            "e": 0.046
+            "e": 0.626
           },
           {
-            "w": "stopped.",
-            "s": 0.098,
-            "e": 0.672
+            "w": "text",
+            "s": 0.71,
+            "e": 1.043
           },
           {
-            "w": "So",
-            "s": 0.742,
-            "e": 0.881
+            "w": "just",
+            "s": 1.099,
+            "e": 1.322
           },
           {
-            "w": "sorry.",
-            "s": 0.95,
-            "e": 1.437
+            "w": "says",
+            "s": 1.363,
+            "e": 1.53
           },
           {
-            "w": "Can't",
-            "s": 1.472,
-            "e": 1.646
+            "w": "the",
+            "s": 1.548,
+            "e": 1.6
+          },
+          {
+            "w": "train",
+            "s": 1.646,
+            "e": 1.878
+          },
+          {
+            "w": "stopped,",
+            "s": 1.939,
+            "e": 2.504
+          },
+          {
+            "w": "they're",
+            "s": 2.518,
+            "e": 2.643
+          },
+          {
+            "w": "so",
+            "s": 2.713,
+            "e": 2.852
+          },
+          {
+            "w": "sorry,",
+            "s": 2.91,
+            "e": 3.478
+          },
+          {
+            "w": "and",
+            "s": 3.496,
+            "e": 3.548
+          },
+          {
+            "w": "they",
+            "s": 3.576,
+            "e": 3.687
+          },
+          {
+            "w": "can't",
+            "s": 3.739,
+            "e": 3.965
           },
           {
             "w": "read",
-            "s": 1.688,
-            "e": 1.855
+            "s": 4.007,
+            "e": 4.174
           },
           {
             "w": "with",
-            "s": 1.883,
-            "e": 1.994
+            "s": 4.202,
+            "e": 4.313
           },
           {
             "w": "you.",
-            "s": 2.029,
-            "e": 2.203
+            "s": 4.365,
+            "e": 4.591
           }
         ],
-        "dur": 2.333
+        "dur": 4.722
       },
       {
-        "text": "It's Chekhov's The Bear. You're Mrs. Popov, and your Smirnov isn't coming! So you open Ghost Light.",
-        "say": "[panicking] It's Chekhov's The Bear. You're Mrs. Popov, and your Smirnov isn't coming! [conspiratorial] So you open Ghost Light.",
-        "at": 8.279,
+        "text": "It's Chekhov's The Bear, you're Mrs. Popov, and your Smirnov isn't coming, so you open Ghost Light.",
+        "say": "[playful] It's Chekhov's The Bear, you're Mrs. Popov, and your Smirnov isn't coming, so you open Ghost Light.",
+        "at": 9.123,
         "words": [
           {
             "w": "It's",
             "s": 0.0,
-            "e": 0.093
+            "e": 0.081
           },
           {
             "w": "Chekhov's",
-            "s": 0.128,
-            "e": 0.51
+            "s": 0.133,
+            "e": 0.498
           },
           {
             "w": "The",
-            "s": 0.528,
-            "e": 0.58
+            "s": 0.516,
+            "e": 0.568
           },
           {
-            "w": "Bear.",
-            "s": 0.663,
-            "e": 1.276
+            "w": "Bear,",
+            "s": 0.637,
+            "e": 1.263
           },
           {
-            "w": "You're",
-            "s": 1.345,
-            "e": 1.623
+            "w": "you're",
+            "s": 1.298,
+            "e": 1.472
           },
           {
             "w": "Mrs.",
-            "s": 1.676,
-            "e": 1.902
+            "s": 1.524,
+            "e": 1.75
           },
           {
             "w": "Popov,",
-            "s": 1.954,
-            "e": 2.319
+            "s": 1.82,
+            "e": 2.342
           },
           {
             "w": "and",
-            "s": 2.371,
-            "e": 2.528
+            "s": 2.385,
+            "e": 2.516
           },
           {
             "w": "your",
-            "s": 2.556,
-            "e": 2.667
+            "s": 2.543,
+            "e": 2.655
           },
           {
             "w": "Smirnov",
-            "s": 2.737,
-            "e": 3.154
+            "s": 2.701,
+            "e": 3.072
           },
           {
             "w": "isn't",
-            "s": 3.189,
-            "e": 3.363
+            "s": 3.124,
+            "e": 3.35
           },
           {
-            "w": "coming!",
-            "s": 3.412,
-            "e": 3.78
+            "w": "coming,",
+            "s": 3.4,
+            "e": 3.977
           },
           {
-            "w": "So",
-            "s": 4.675,
-            "e": 4.684
+            "w": "so",
+            "s": 4.023,
+            "e": 4.116
           },
           {
             "w": "you",
-            "s": 4.719,
-            "e": 4.823
+            "s": 4.15,
+            "e": 4.255
           },
           {
             "w": "open",
-            "s": 4.893,
-            "e": 5.171
+            "s": 4.324,
+            "e": 4.603
           },
           {
             "w": "Ghost",
-            "s": 5.23,
-            "e": 5.519
+            "s": 4.649,
+            "e": 4.881
           },
           {
             "w": "Light.",
-            "s": 5.565,
-            "e": 5.867
+            "s": 4.939,
+            "e": 5.681
           }
         ],
-        "dur": 5.997
+        "dur": 5.811
       },
       {
-        "text": "Tap Scene, then Add sides.",
-        "say": "[upbeat] Tap Scene, then Add sides.",
-        "at": 14.803,
+        "text": "You tap Scene, then Add sides.",
+        "say": "[upbeat] You tap Scene, then Add sides.",
         "sub": false,
+        "at": 15.278,
         "words": [
           {
-            "w": "Tap",
+            "w": "You",
             "s": 0.0,
-            "e": 0.039
+            "e": 0.052
+          },
+          {
+            "w": "tap",
+            "s": 0.122,
+            "e": 0.33
           },
           {
             "w": "Scene,",
-            "s": 0.097,
-            "e": 0.457
+            "s": 0.4,
+            "e": 0.817
           },
           {
             "w": "then",
-            "s": 0.512,
-            "e": 0.735
+            "s": 0.873,
+            "e": 1.096
           },
           {
             "w": "Add",
-            "s": 0.787,
-            "e": 0.943
+            "s": 1.165,
+            "e": 1.374
           },
           {
             "w": "sides.",
-            "s": 1.037,
-            "e": 1.813
+            "s": 1.455,
+            "e": 1.93
           }
         ],
-        "dur": 1.943
+        "dur": 2.061
       },
       {
-        "text": "Choose a file on this phone, the sides casting sent you.",
-        "say": "[playful] Choose a file on this phone, the sides casting sent you.",
-        "at": 17.093,
+        "text": "Then you choose a file on this phone, the sides that casting sent you.",
+        "say": "[upbeat] Then you choose a file on this phone, the sides that casting sent you.",
         "sub": false,
+        "at": 17.867,
         "words": [
           {
-            "w": "Choose",
+            "w": "Then",
             "s": 0.0,
-            "e": 0.044
+            "e": 0.037
+          },
+          {
+            "w": "you",
+            "s": 0.072,
+            "e": 0.177
+          },
+          {
+            "w": "choose",
+            "s": 0.217,
+            "e": 0.455
           },
           {
             "w": "a",
-            "s": 0.079,
-            "e": 0.114
+            "s": 0.49,
+            "e": 0.524
           },
           {
             "w": "file",
-            "s": 0.183,
-            "e": 0.462
+            "s": 0.594,
+            "e": 0.872
           },
           {
             "w": "on",
-            "s": 0.485,
-            "e": 0.531
+            "s": 0.896,
+            "e": 0.942
           },
           {
             "w": "this",
-            "s": 0.559,
-            "e": 0.67
+            "s": 0.97,
+            "e": 1.081
           },
           {
             "w": "phone,",
-            "s": 0.74,
-            "e": 1.227
+            "s": 1.139,
+            "e": 1.498
           },
           {
             "w": "the",
-            "s": 1.262,
-            "e": 1.366
+            "s": 1.585,
+            "e": 1.846
           },
           {
             "w": "sides",
-            "s": 1.424,
-            "e": 1.714
+            "s": 1.916,
+            "e": 2.263
+          },
+          {
+            "w": "that",
+            "s": 2.291,
+            "e": 2.403
           },
           {
             "w": "casting",
-            "s": 1.766,
-            "e": 2.131
+            "s": 2.455,
+            "e": 2.82
           },
           {
             "w": "sent",
-            "s": 2.187,
-            "e": 2.41
+            "s": 2.876,
+            "e": 3.098
           },
           {
             "w": "you.",
-            "s": 2.462,
-            "e": 3.105
+            "s": 3.133,
+            "e": 3.307
           }
         ],
-        "dur": 3.236
+        "dur": 3.437
       },
       {
-        "text": "It reads the scene and finds the cast. You're Mrs. Popov, so Ghost Light reads Smirnov, out loud!",
-        "say": "[excited] It reads the scene and finds the cast. You're Mrs. Popov, so Ghost Light reads Smirnov, out loud!",
-        "at": 20.714,
+        "text": "It reads the scene and finds the cast, and since you're Mrs. Popov, Ghost Light reads Smirnov out loud.",
+        "say": "[excited] It reads the scene and finds the cast, and since you're Mrs. Popov, Ghost Light reads Smirnov out loud.",
         "sub": false,
+        "at": 21.994,
         "words": [
           {
             "w": "It",
             "s": 0.0,
-            "e": 0.046
+            "e": 0.016
           },
           {
             "w": "reads",
-            "s": 0.092,
-            "e": 0.324
+            "s": 0.074,
+            "e": 0.363
           },
           {
             "w": "the",
-            "s": 0.359,
-            "e": 0.463
+            "s": 0.381,
+            "e": 0.433
           },
           {
             "w": "scene",
-            "s": 0.51,
-            "e": 0.742
+            "s": 0.503,
+            "e": 0.85
           },
           {
             "w": "and",
-            "s": 0.759,
-            "e": 0.811
+            "s": 0.885,
+            "e": 0.99
           },
           {
             "w": "finds",
-            "s": 0.87,
-            "e": 1.159
+            "s": 1.048,
+            "e": 1.337
           },
           {
             "w": "the",
-            "s": 1.177,
-            "e": 1.229
+            "s": 1.355,
+            "e": 1.407
           },
           {
-            "w": "cast.",
-            "s": 1.326,
-            "e": 2.098
-          },
-          {
-            "w": "You're",
-            "s": 2.194,
-            "e": 2.55
-          },
-          {
-            "w": "Mrs.",
-            "s": 2.62,
-            "e": 2.898
-          },
-          {
-            "w": "Popov,",
-            "s": 2.95,
-            "e": 3.316
-          },
-          {
-            "w": "so",
-            "s": 3.409,
-            "e": 3.594
-          },
-          {
-            "w": "Ghost",
-            "s": 3.64,
-            "e": 3.872
-          },
-          {
-            "w": "Light",
-            "s": 3.907,
-            "e": 4.081
-          },
-          {
-            "w": "reads",
-            "s": 4.127,
-            "e": 4.359
-          },
-          {
-            "w": "Smirnov,",
-            "s": 4.429,
-            "e": 5.09
-          },
-          {
-            "w": "out",
-            "s": 5.133,
-            "e": 5.263
-          },
-          {
-            "w": "loud!",
-            "s": 5.347,
-            "e": 6.098
-          }
-        ],
-        "dur": 6.229
-      },
-      {
-        "text": "Twenty minutes to go, and your reader is right here.",
-        "say": "[delighted] Twenty minutes to go, and your reader is right here.",
-        "at": 27.394,
-        "words": [
-          {
-            "w": "Twenty",
-            "s": 0.0,
-            "e": 0.044
-          },
-          {
-            "w": "minutes",
-            "s": 0.088,
-            "e": 0.392
-          },
-          {
-            "w": "to",
-            "s": 0.416,
-            "e": 0.462
-          },
-          {
-            "w": "go,",
-            "s": 0.577,
-            "e": 0.949
+            "w": "cast,",
+            "s": 1.504,
+            "e": 2.172
           },
           {
             "w": "and",
-            "s": 0.983,
-            "e": 1.088
+            "s": 2.207,
+            "e": 2.311
+          },
+          {
+            "w": "since",
+            "s": 2.357,
+            "e": 2.59
+          },
+          {
+            "w": "you're",
+            "s": 2.607,
+            "e": 2.729
+          },
+          {
+            "w": "Mrs.",
+            "s": 2.781,
+            "e": 3.007
+          },
+          {
+            "w": "Popov,",
+            "s": 3.059,
+            "e": 3.424
+          },
+          {
+            "w": "Ghost",
+            "s": 3.517,
+            "e": 3.981
+          },
+          {
+            "w": "Light",
+            "s": 4.016,
+            "e": 4.19
+          },
+          {
+            "w": "reads",
+            "s": 4.248,
+            "e": 4.537
+          },
+          {
+            "w": "Smirnov",
+            "s": 4.583,
+            "e": 5.024
+          },
+          {
+            "w": "out",
+            "s": 5.077,
+            "e": 5.233
+          },
+          {
+            "w": "loud.",
+            "s": 5.317,
+            "e": 5.72
+          }
+        ],
+        "dur": 5.85
+      },
+      {
+        "text": "So with twenty minutes to go, your reader is right here.",
+        "say": "[delighted] So with twenty minutes to go, your reader is right here.",
+        "at": 28.664,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.023
+          },
+          {
+            "w": "with",
+            "s": 0.051,
+            "e": 0.163
+          },
+          {
+            "w": "twenty",
+            "s": 0.203,
+            "e": 0.441
+          },
+          {
+            "w": "minutes",
+            "s": 0.484,
+            "e": 0.789
+          },
+          {
+            "w": "to",
+            "s": 0.812,
+            "e": 0.858
+          },
+          {
+            "w": "go,",
+            "s": 0.974,
+            "e": 1.206
           },
           {
             "w": "your",
-            "s": 1.116,
-            "e": 1.227
+            "s": 1.276,
+            "e": 1.554
           },
           {
             "w": "reader",
-            "s": 1.267,
-            "e": 1.505
+            "s": 1.594,
+            "e": 1.832
           },
           {
             "w": "is",
-            "s": 1.551,
-            "e": 1.644
+            "s": 1.902,
+            "e": 2.041
           },
           {
             "w": "right",
-            "s": 1.679,
-            "e": 1.853
+            "s": 2.087,
+            "e": 2.319
           },
           {
             "w": "here.",
-            "s": 1.909,
-            "e": 2.201
+            "s": 2.375,
+            "e": 2.667
           }
         ],
-        "dur": 2.331
+        "dur": 2.797
       },
       {
-        "text": "Ghost Light. Built by a working actor.",
-        "say": "[upbeat] Ghost Light. Built by a working actor.",
-        "at": 30.719,
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
         "sub": false,
+        "at": 32.198,
         "words": [
           {
-            "w": "Ghost",
+            "w": "That's",
             "s": 0.0,
-            "e": 0.058
+            "e": 0.181
+          },
+          {
+            "w": "Ghost",
+            "s": 0.227,
+            "e": 0.459
           },
           {
             "w": "Light.",
-            "s": 0.104,
-            "e": 0.406
+            "s": 0.505,
+            "e": 0.807
           },
           {
             "w": "Built",
-            "s": 0.499,
-            "e": 0.963
+            "s": 0.888,
+            "e": 1.294
           },
           {
             "w": "by",
-            "s": 1.009,
-            "e": 1.102
+            "s": 1.34,
+            "e": 1.433
           },
           {
             "w": "a",
-            "s": 1.137,
-            "e": 1.171
+            "s": 1.503,
+            "e": 1.572
           },
           {
             "w": "working",
-            "s": 1.223,
-            "e": 1.589
+            "s": 1.616,
+            "e": 1.92
           },
           {
             "w": "actor.",
-            "s": 1.647,
-            "e": 2.076
+            "s": 1.978,
+            "e": 2.407
           }
         ],
-        "dur": 2.206
+        "dur": 2.537
       }
     ],
     "takes": [
@@ -519,12 +609,13 @@
         "voice": "narrator"
       }
     ],
-    "take_at": 0.3
+    "take_at": 0.3,
+    "speed": 1.15
   },
   "scenes": [
     {
       "type": "cafe",
-      "seconds": 5.026,
+      "seconds": 3.47,
       "line": "Audition at three.",
       "accent": "three.",
       "sign": "AUDITIONS",
@@ -533,7 +624,7 @@
     },
     {
       "type": "train",
-      "seconds": 3.153,
+      "seconds": 5.553,
       "line": "Your reader's train.",
       "accent": "train.",
       "text": "train stopped. so sorry,\ncan't read with you",
@@ -543,7 +634,7 @@
     },
     {
       "type": "chair",
-      "seconds": 6.524,
+      "seconds": 6.155,
       "line": "Nobody to read Smirnov.",
       "accent": "Smirnov.",
       "tag": "SMIRNOV",
@@ -551,7 +642,7 @@
     },
     {
       "type": "screens",
-      "seconds": 2.29,
+      "seconds": 2.589,
       "line": "Tap Scene.",
       "accent": "Scene.",
       "shots": [
@@ -585,7 +676,7 @@
     },
     {
       "type": "screens",
-      "seconds": 3.621,
+      "seconds": 4.127,
       "line": "Bring your sides.",
       "accent": "sides.",
       "shots": [
@@ -619,7 +710,7 @@
     },
     {
       "type": "screens",
-      "seconds": 6.68,
+      "seconds": 6.67,
       "line": "Pick your part.",
       "accent": "your part.",
       "shots": [
@@ -644,7 +735,7 @@
     },
     {
       "type": "chair",
-      "seconds": 3.325,
+      "seconds": 3.484,
       "line": "Your reader is here.",
       "accent": "here.",
       "tag": "SMIRNOV",
@@ -667,7 +758,7 @@
     "app_result": "the app read the file and made the scene 'Confrontation Over Debt' in The Bear: MRS. POPOV (you, 9 lines), SMIRNOV read by Fenrir, 'Begin as MRS. POPOV'. The uploaded script stays on the demo account's shelf.",
     "not_shown": "the run itself (your line lit, Smirnov read aloud): on 2026-11-11 every partner line failed with 'This line could not be synthesised' (partner_audio: Gemini 402, prepayment credits depleted), so the run screen carried an error note and was left out rather than cropped",
     "preview": "web-preview.patch gained one web-only commit: a picked file goes up as a multipart form (a browser has no file system uploader); the recorder gained a 'file' option on click steps",
-    "voice": "George, one take, sped up 1.15x with atempo (the raw read ran 37.4s); original kept as take00.orig.mp3 locally, not committed",
+    "voice": "George, one take at stability 0.5, listened back with Scribe; sped up with fit_take.py; original kept as take00.orig.mp3 locally, not committed. Narration rewritten 2026-11-12 as one flowing telling (DIRECTION 2026-11-12)",
     "end": "specs/2026-11-16-reader-on-the-train-end.json, joined with scripts/join.sh; the end line is cut from the take"
   }
 }

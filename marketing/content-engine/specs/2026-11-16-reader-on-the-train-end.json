@@ -10,49 +10,54 @@
     "volume": 1,
     "lines": [
       {
-        "text": "Ghost Light. Built by a working actor.",
-        "say": "[upbeat] Ghost Light. Built by a working actor.",
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
         "at": 0.0,
         "sub": false,
         "audio": "voice/2026-11-16-reader-on-the-train-end/end.mp3",
         "words": [
           {
-            "w": "Ghost",
+            "w": "That's",
             "s": 0.15,
-            "e": 0.208
+            "e": 0.331
+          },
+          {
+            "w": "Ghost",
+            "s": 0.377,
+            "e": 0.609
           },
           {
             "w": "Light.",
-            "s": 0.254,
-            "e": 0.556
+            "s": 0.655,
+            "e": 0.957
           },
           {
             "w": "Built",
-            "s": 0.649,
-            "e": 1.113
+            "s": 1.038,
+            "e": 1.444
           },
           {
             "w": "by",
-            "s": 1.159,
-            "e": 1.252
+            "s": 1.49,
+            "e": 1.583
           },
           {
             "w": "a",
-            "s": 1.287,
-            "e": 1.321
+            "s": 1.653,
+            "e": 1.722
           },
           {
             "w": "working",
-            "s": 1.373,
-            "e": 1.739
+            "s": 1.766,
+            "e": 2.07
           },
           {
             "w": "actor.",
-            "s": 1.797,
-            "e": 2.226
+            "s": 2.128,
+            "e": 2.557
           }
         ],
-        "dur": 2.356
+        "dur": 2.687
       }
     ]
   },
