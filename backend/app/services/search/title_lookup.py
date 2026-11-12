@@ -782,6 +782,10 @@ _catalogue_cache: Optional[Dict[str, tuple]] = None
 _catalogue_squashed_cache: Dict[str, tuple] = {}
 _catalogue_numeric_cache: Dict[str, tuple] = {}
 _catalogue_head_cache: Dict[str, tuple] = {}
+#: normalised title -> the words of its author's name, and every such word.
+#: Lets "medea euripides" drop the playwright and find Medea, and only Medea.
+_catalogue_title_authors: Dict[str, set] = {}
+_catalogue_author_words: set = set()
 _catalogue_loaded_at: float = 0.0
 
 # Character-name lookup, sibling to the title catalogue. Naming a CHARACTER is
@@ -836,6 +840,23 @@ def _title_head(title: str) -> str:
     return _normalise_title(_SUBTITLE_SPLIT.split(title, 1)[0])
 
 
+#: Not a name: what an author field holds when nobody is credited, or a
+#: credit's own wording.
+_NOT_AUTHOR_WORDS = {"unknown", "anonymous", "various", "translated", "translator",
+                     "edited", "editor", "adapted", "with", "from", "after"}
+
+
+def _author_words(author) -> set:
+    """The words of an author's name worth matching: 'Euripides' ->
+    {'euripides'}, 'William Shakespeare' -> {'william', 'shakespeare'}.
+    Initials and short words are left out, so 'G. K. Chesterton' gives only
+    'chesterton'."""
+    if not author:
+        return set()
+    return {w for w in _normalize(str(author)).split()
+            if len(w) >= 4 and w not in _NOT_AUTHOR_WORDS}
+
+
 def _load_catalogue(db) -> Dict[str, tuple]:
     """normalised title -> (title, source_type), for plays that have monologues.
 
@@ -845,6 +866,7 @@ def _load_catalogue(db) -> Dict[str, tuple]:
     """
     global _catalogue_cache, _catalogue_squashed_cache, _catalogue_numeric_cache
     global _catalogue_head_cache, _catalogue_loaded_at
+    global _catalogue_title_authors, _catalogue_author_words
     now = time.time()
     if _catalogue_cache is not None and now - _catalogue_loaded_at < _CATALOGUE_TTL_SECONDS:
         return _catalogue_cache
@@ -852,7 +874,7 @@ def _load_catalogue(db) -> Dict[str, tuple]:
 
     rows = db.execute(
         sa_text(
-            "SELECT DISTINCT p.title, COALESCE(p.source_type, 'play') "
+            "SELECT DISTINCT p.title, COALESCE(p.source_type, 'play'), p.author "
             "FROM plays p WHERE EXISTS "
             "(SELECT 1 FROM monologues m WHERE m.play_id = p.id)"
         )
@@ -864,8 +886,14 @@ def _load_catalogue(db) -> Dict[str, tuple]:
     head_groups: Dict[str, list] = {}
     collisions: set[str] = set()
     numeric_collisions: set[str] = set()
-    for title, source_type in rows:
+    title_authors: Dict[str, set] = {}
+    for row in rows:
+        title, source_type = row[0], row[1]
+        author = row[2] if len(row) > 2 else None
         n = _normalise_title(title)
+        words = _author_words(author)
+        if words and len(n) >= _MIN_TITLE_CHARS:
+            title_authors.setdefault(n, set()).update(words)
         if len(n) >= _MIN_TITLE_CHARS and n not in catalogue:
             catalogue[n] = (title, source_type)
         # Secondary, space-insensitive index. A key that two different titles
@@ -926,6 +954,8 @@ def _load_catalogue(db) -> Dict[str, tuple]:
             label = _SUBTITLE_SPLIT.split(group[0][0], 1)[0].strip()
             heads[h] = (label, group[0][1])
     _catalogue_head_cache = heads
+    _catalogue_title_authors = title_authors
+    _catalogue_author_words = set().union(*title_authors.values()) if title_authors else set()
     _catalogue_cache = catalogue
     _catalogue_squashed_cache = squashed
     _catalogue_numeric_cache = numeric
@@ -937,7 +967,10 @@ def reset_catalogue_cache() -> None:
     """Drop the cached title + character lists (tests, and after an ingest run)."""
     global _catalogue_cache, _catalogue_squashed_cache, _catalogue_numeric_cache
     global _catalogue_head_cache, _catalogue_loaded_at
+    global _catalogue_title_authors, _catalogue_author_words
     global _character_cache, _character_loaded_at
+    _catalogue_title_authors = {}
+    _catalogue_author_words = set()
     _catalogue_cache = None
     _catalogue_squashed_cache = {}
     _catalogue_numeric_cache = {}
@@ -1362,7 +1395,39 @@ def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
         return hit
     plain = _POSSESSIVE.sub("", query)
     if plain != query:
-        return _detect_catalogue_title_once(db, plain)
+        hit = _detect_catalogue_title_once(db, plain)
+        if hit:
+            return hit
+    return _title_without_its_author(db, plain)
+
+
+def _title_without_its_author(db, query: str) -> Optional[Dict[str, str]]:
+    """'medea euripides' -> Medea: the playwright's name dropped, the title kept.
+
+    Accepted only when every word dropped belongs to THAT title's author, so a
+    name can never steer the search to someone else's play: 'shakespeare
+    monologue for women' does not become a lookup for a title called 'Women'.
+    """
+    if db is None or len(_normalise_title(query)) < _MIN_TITLE_CHARS:
+        return None
+    try:
+        _load_catalogue(db)
+    except Exception:
+        return None
+    if not _catalogue_author_words:
+        return None
+    words = _normalise_title(query).split()
+    dropped = {w for w in words if w in _catalogue_author_words}
+    if not dropped:
+        return None
+    rest = " ".join(w for w in words if w not in dropped)
+    if not rest:
+        return None
+    hit = _detect_catalogue_title_once(db, rest)
+    if not hit:
+        return None
+    if dropped <= _catalogue_title_authors.get(_normalise_title(hit["title"]), set()):
+        return hit
     return None
 
 
