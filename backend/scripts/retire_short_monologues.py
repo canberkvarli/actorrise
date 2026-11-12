@@ -71,14 +71,14 @@ def _targets(db):
     rows = (
         db.query(
             Monologue.id, Monologue.word_count, Monologue.review_status,
-            Play.source_type,
+            Play.source_type, Play.genre,
         )
         .join(Play, Play.id == Monologue.play_id)
         .filter(Monologue.review_status.is_(None))
         .order_by(Monologue.id)
         .all()
     )
-    return [r for r in rows if (r.word_count or 0) < min_words_for_source(r.source_type)]
+    return [r for r in rows if (r.word_count or 0) < min_words_for_source(r.source_type, r.genre)]
 
 
 def restore(path: Path) -> None:

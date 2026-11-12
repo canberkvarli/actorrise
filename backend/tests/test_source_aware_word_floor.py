@@ -47,3 +47,11 @@ def test_the_two_scripts_cannot_disagree():
             retires = wc < floor
             ungates = wc >= floor
             assert retires != ungates
+
+
+def test_a_musical_has_its_own_shorter_floor():
+    """A spoken moment in a musical runs 60 to 100 words; the genre decides."""
+    from app.services.extraction.monologue_quality import MUSICAL_MIN_WORDS
+    assert min_words_for_source("play", "musical") == MUSICAL_MIN_WORDS == 60
+    assert min_words_for_source("play", "drama") == DEFAULT_MIN_WORDS
+    assert min_words_for_source("play") == DEFAULT_MIN_WORDS

@@ -57,9 +57,18 @@ SCREEN_MIN_WORDS = 75
 _SOURCE_MIN_WORDS = {"film": SCREEN_MIN_WORDS, "tv": SCREEN_MIN_WORDS}
 
 
-def min_words_for_source(source_type: str | None) -> int:
-    """Word floor for a piece from `source_type`. Unknown sources get the
-    stage floor, which is the stricter of the two."""
+#: A spoken moment in a musical is short by nature: the song carries the rest.
+#: Audition packets for musicals give speeches of 60 to 100 words, about 25 to
+#: 40 seconds, and that is what an actor is asked to bring (Canberk, 2026-11-12).
+#: Keyed on the play's genre, because a musical is `source_type='play'`.
+MUSICAL_MIN_WORDS = 60
+
+
+def min_words_for_source(source_type: str | None, genre: str | None = None) -> int:
+    """Word floor for a piece from `source_type` (and `genre`, for musicals).
+    Unknown sources get the stage floor, which is the strictest."""
+    if (genre or "").strip().lower() == "musical":
+        return MUSICAL_MIN_WORDS
     return _SOURCE_MIN_WORDS.get((source_type or "").strip().lower(), DEFAULT_MIN_WORDS)
 
 # A speaker label in transcript form: line begins with an ALL-CAPS name

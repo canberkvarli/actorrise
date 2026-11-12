@@ -49,6 +49,7 @@ backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from app.services.extraction.monologue_quality import (
+    MUSICAL_MIN_WORDS,
     assess_monologue_quality,
     strip_artifacts,
     to_display_text,
@@ -70,6 +71,11 @@ LICENSE_TYPE = LICENSE_FAIR_USE
 #: actors ask for one-minute pieces by name and Daily Actor files dozens of them:
 #: 150 threw away 38 of its 182 stage pieces. Film and TV already use 100.
 MIN_WORDS = 100
+
+def floor_for(genre: str) -> int:
+    """The word floor for a piece: 60 for a musical's spoken moment, else 100."""
+    return MUSICAL_MIN_WORDS if genre == "musical" else MIN_WORDS
+
 
 #: Ceiling is NOT a local number. It is the fair-use bound from the licensing
 #: module, so the legal ceiling and the extraction ceiling cannot drift apart.
@@ -1740,7 +1746,7 @@ def evaluate(parsed: Parsed, years: dict[str, int]) -> Row:
         reasons.append("public_domain_era")
 
     verdict = assess_monologue_quality(
-        display, spoken=spoken, min_words=MIN_WORDS, max_words=MAX_WORDS
+        display, spoken=spoken, min_words=floor_for(parsed.genre), max_words=MAX_WORDS
     )
     if not verdict.ok:
         reasons.extend(verdict.reasons)
@@ -1794,7 +1800,7 @@ def write_via_rest(kept: list[Row], parsed_by_url: dict[str, Parsed]) -> None:
                 copyright_status=COPYRIGHT_STATUS, license_type=LICENSE_TYPE,
                 source_url=parsed.url, year_written=row.year_written,
                 category=row.category, genre=parsed.genre,
-                min_words=MIN_WORDS, max_words=MAX_WORDS,
+                min_words=floor_for(parsed.genre), max_words=MAX_WORDS,
                 analyzer=analyzer, embed=generate_embeddings_batch, rejected=seen,
             )
         except Exception as e:  # one bad row must not stop the batch
@@ -2084,7 +2090,7 @@ def main() -> None:
                 year_written=row.year_written,
                 category=row.category,
                 genre=parsed.genre,
-                min_words=MIN_WORDS,
+                min_words=floor_for(parsed.genre),
                 max_words=MAX_WORDS,
                 apply=True,
                 analyzer=analyzer,

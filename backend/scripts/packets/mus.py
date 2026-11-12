@@ -28,7 +28,8 @@ SOLO=re.compile(r"^(?P<c>[A-Z][A-Za-z .’'/&\-]{1,28})(?:\s*\([^)]{0,40}\))?:?$
 out=[]
 for f,(title,author,year,url) in SHOWS.items():
     if not os.path.exists(f): print("missing",f); continue
-    lines=[l.strip() for l in open(f,errors="replace").read().replace("\x0c","\n").split("\n")]
+    lines=[l.replace("\u200b","").strip() for l in open(f,errors="replace").read().replace("\x0c","\n").split("\n")]
+    lines=[re.sub(r"^([A-Z][A-Za-z .]{1,24}?)-\[[^\]]*\]\.?\s*",r"\1: ",l) for l in lines]
     cur=None; n=0
     for l in lines:
         m=CUE.match(l); s=SOLO.match(l) if not m else None
@@ -42,7 +43,10 @@ for f,(title,author,year,url) in SHOWS.items():
 pieces=[]
 for p in out:
     paras=[" ".join(x for x in para if x).strip() for para in p.pop("paras")]; paras=[x for x in paras if x]
-    p["text"]="\n\n".join(paras)
+    p["text"]=re.sub(r"^(\((Kid|Small kid|Host|read this)[^)]*\)\s*)+","","\n\n".join(paras)).strip()
+    p["text"]=re.sub(r"^Rock of Ages Youth Edition Monologues\s*","",p["text"])
+    p["character"]=re.sub(r"\s+(Monologue|Monolog|Scene)$","",p["character"]).strip()
+    if p["character"] in {"From The Authors","Frequently Asked Questions","Synopsis","Rehearsals","Chicago","Dance Auditions For Chicago","Mr. Lemberg"}: continue
     if len(p["text"].split())>=60: pieces.append(p)
 json.dump({"source":"musical audition packets, 2026-11-12","source_url":"","pieces":pieces},open("man/musicals.json","w"),ensure_ascii=False,indent=1)
 print(len(pieces), sum(len(p["text"].split())>=100 for p in pieces))
