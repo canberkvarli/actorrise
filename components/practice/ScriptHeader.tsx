@@ -8,6 +8,7 @@ import {
   IconPlus,
   IconRefresh,
   IconListCheck,
+  IconSitemap,
 } from "@tabler/icons-react";
 
 import { PlayCover } from "@/components/monologue/PlayCover";
@@ -30,6 +31,8 @@ interface ScriptHeaderProps {
   onEdit: () => void;
   onAddByHand: () => void;
   onRedo: () => void;
+  /** Absent when there is no map to edit (nothing built, or still reading). */
+  onEditMap?: () => void;
 }
 
 /**
@@ -57,6 +60,7 @@ export function ScriptHeader({
   onEdit,
   onAddByHand,
   onRedo,
+  onEditMap,
 }: ScriptHeaderProps) {
   const t = useT();
   const genres = script.genres?.length ? script.genres : script.genre ? [script.genre] : [];
@@ -144,6 +148,16 @@ export function ScriptHeader({
                   <IconPlus className="h-3.5 w-3.5" />
                   {t("appPracticeScriptHeader.addByHand")}
                 </button>
+                {onEditMap && (
+                  <button
+                    type="button"
+                    onClick={onEditMap}
+                    className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
+                  >
+                    <IconSitemap className="h-3.5 w-3.5" />
+                    {t("appPracticeScriptHeader.editMap")}
+                  </button>
+                )}
                 {/* Redo was gated on having scenes once, which hid it from the
                     script that needed it most: one that came back with
                     nothing. It re-cuts from the stored text, so it is offered

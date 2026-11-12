@@ -29,6 +29,7 @@ import { EditScriptDetailsModal } from "@/components/practice/EditScriptDetailsM
 import { AddSceneToScriptModal } from "@/components/scenepartner/AddSceneToScriptModal";
 import { useUpload } from "@/components/practice/UploadProvider";
 import { ScriptHeader } from "@/components/practice/ScriptHeader";
+import { EditScriptMapModal } from "@/components/practice/EditScriptMapModal";
 import { FIRST_OPEN_ROW_ID, ScriptMap } from "@/components/practice/ScriptMap";
 import { ShareAsk, ShareRowAction } from "@/components/practice/ShareScene";
 import { ClassShareSwitch } from "@/components/practice/ClassShelf";
@@ -61,6 +62,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
 
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [redoing, setRedoing] = useState(false);
   /* The scene being opened. Holds for one beat so the room can take its light
      off everything else first — see `openScene`. */
@@ -259,6 +261,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
         onEdit={() => setEditOpen(true)}
         onAddByHand={() => setAddOpen(true)}
         onRedo={requestRedo}
+        onEditMap={canManage && !isProcessing && scenes.length > 0 ? () => setMapOpen(true) : undefined}
       />
 
       <div className="mt-8 min-w-0 sm:mt-10">
@@ -319,6 +322,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
       {canManage && (
         <>
           <EditScriptDetailsModal open={editOpen} onOpenChange={setEditOpen} script={script} />
+          <EditScriptMapModal open={mapOpen} onOpenChange={setMapOpen} scriptId={script.id} scenes={scenes} />
           <AddSceneToScriptModal
             open={addOpen}
             onOpenChange={setAddOpen}
