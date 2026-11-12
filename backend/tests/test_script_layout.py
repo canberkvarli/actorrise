@@ -58,3 +58,30 @@ def test_clean_act():
     assert clean_act("  Episode  2:  Fallout ") == "Episode 2: Fallout"
     assert clean_act("   ") is None
     assert clean_act(None) is None
+
+
+def test_reset_puts_back_the_heading_the_name_and_the_order():
+    from app.services.script_layout import remember_title, reset_layout
+
+    a = _scene(1, "Episode 1", "Scene 1")
+    a.title = "Scene 1"
+    b = _scene(2, "Episode 1", "Scene 2")
+    b.title = "Scene 2"
+    apply_layout([a, b], [{"id": 2, "act": "Episode 2"}, {"id": 1, "act": "Episode 1"}])
+    remember_title(b, "The kitchen")
+    remember_title(b, "The kitchen, again")
+    assert (b.act, b.title, b.script_order) == ("Episode 2", "The kitchen, again", 0)
+
+    assert reset_layout([a, b]) == 2
+    assert (b.act, b.scene_number, b.title, b.script_order) == ("Episode 1", "Scene 2", "Scene 2", None)
+    assert a.script_order is None
+    assert "read_heading" not in b.original_snapshot and "read_title" not in b.original_snapshot
+
+
+def test_reset_of_an_untouched_map_changes_nothing():
+    from app.services.script_layout import reset_layout
+
+    a = _scene(1, "Act 1", "Scene 1")
+    a.title = "Scene 1"
+    assert reset_layout([a]) == 0
+    assert (a.act, a.title) == ("Act 1", "Scene 1")

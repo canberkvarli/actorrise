@@ -65,3 +65,42 @@ def read_heading(scene) -> Optional[tuple]:
     if not isinstance(head, dict):
         return None
     return head.get("act"), head.get("scene_number")
+
+
+def remember_title(scene, title: str) -> None:
+    """Rename a scene, keeping the name it was read with the first time, so
+    the map can be put back the way it was read."""
+    if title == scene.title:
+        return
+    snap = dict(scene.original_snapshot) if isinstance(scene.original_snapshot, dict) else {}
+    if "read_title" not in snap:
+        snap["read_title"] = scene.title
+        scene.original_snapshot = snap
+    scene.title = title
+
+
+def reset_layout(scenes: Sequence) -> int:
+    """The map as it was read: every scene back under the heading and with
+    the name the reader gave it, and the order back to the order they were
+    built in. Lines, line edits and runs are not touched. A deleted scene is
+    gone; choosing more scenes builds it again. Returns how many scenes
+    changed."""
+    changed = 0
+    for scene in scenes:
+        touched = scene.script_order is not None
+        snap = dict(scene.original_snapshot) if isinstance(scene.original_snapshot, dict) else None
+        if snap is not None:
+            head = snap.pop("read_heading", None)
+            if isinstance(head, dict):
+                scene.act = head.get("act")
+                scene.scene_number = head.get("scene_number")
+                touched = True
+            title = snap.pop("read_title", None)
+            if isinstance(title, str) and title.strip():
+                scene.title = title
+                touched = True
+            if touched:
+                scene.original_snapshot = snap
+        scene.script_order = None
+        changed += 1 if touched else 0
+    return changed

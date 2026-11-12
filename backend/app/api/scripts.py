@@ -2027,6 +2027,29 @@ async def set_script_layout(
     )
 
 
+@router.post("/{script_id}/layout/reset", response_model=UserScriptDetailResponse)
+async def reset_script_layout(
+    script_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Put the map back the way the script was read: names, headings and
+    order. Lines and runs stay; deleted scenes stay deleted."""
+    from app.services.script_layout import reset_layout
+
+    script = _owned_script(db, script_id, current_user)
+    if script.processing_status in ("processing", "pending"):
+        raise HTTPException(status_code=409, detail="That script is still being read. Try again in a moment.")
+    scenes = db.query(Scene).filter(Scene.user_script_id == script.id).order_by(Scene.id.asc()).all()
+    reset_layout(scenes)
+    db.commit()
+    db.refresh(script)
+    return UserScriptDetailResponse(
+        **UserScriptResponse.model_validate(script).model_dump(),
+        scenes=[SceneInScriptResponse.model_validate(sc) for sc in scenes],
+    )
+
+
 @router.patch("/{script_id}/scenes/{scene_id}", response_model=dict)
 async def update_scene(
     script_id: int,
@@ -2059,7 +2082,8 @@ async def update_scene(
         title = " ".join(update.title.split())
         if not title:
             raise HTTPException(status_code=400, detail="A scene needs a name.")
-        scene.title = title[:200]
+        from app.services.script_layout import remember_title
+        remember_title(scene, title[:200])
     if update.description is not None:
         scene.description = update.description
     if update.character_1_name is not None:
