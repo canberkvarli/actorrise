@@ -241,3 +241,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** none, playwright
 **They said:** "It sounds like a cool and very useful idea. Unfortunately, I don't write monologues. Best of luck!"
 **Heard as:** did not understand what it does (a speech from a full play counts), filed as no
+
+## 2026-11-12
+
+**Replying to:** playwright ask (contemporary teen play), second reply after a no
+**Account:** none, playwright
+**They said:** "look what i found! i wrote this as i was working on my newest play ... i ultimately did not include it in the script so i forgot about it. let me know if it's something you'd like to use."
+**Heard as:** happy, a no turned into a yes once she found a standalone piece; sent a monologue as a PDF
