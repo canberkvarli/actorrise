@@ -327,6 +327,10 @@ class Scene(Base):
     title = Column(String, nullable=False)  # "Romeo & Juliet Balcony Scene"
     act = Column(String, nullable=True)  # "Act 2"
     scene_number = Column(String, nullable=True)  # "Scene 2"
+    # Where a scene of an actor's own script sits, as the actor arranged it
+    # (services/script_layout.py). NULL until they do; then scenes read in
+    # this order. scripts/add_scene_script_order.sql.
+    script_order = Column(Integer, nullable=True)
     description = Column(Text, nullable=True)  # Brief description of what happens
 
     # Characters

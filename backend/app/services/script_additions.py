@@ -74,11 +74,20 @@ def scene_key(act: Optional[str], scene_number: Optional[str]) -> Optional[Tuple
 
 
 def built_keys(scenes: Iterable) -> Set[Tuple[str, str]]:
+    from app.services.script_layout import read_heading
+
     keys = set()
     for scene in scenes:
         key = scene_key(getattr(scene, "act", None), getattr(scene, "scene_number", None))
         if key:
             keys.add(key)
+        # Refiled by the actor under another heading: the reader's own heading
+        # still names it in a fresh read (services/script_layout.py).
+        first = read_heading(scene)
+        if first:
+            key = scene_key(*first)
+            if key:
+                keys.add(key)
     return keys
 
 

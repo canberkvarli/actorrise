@@ -1714,7 +1714,7 @@ async def get_script(
         raise HTTPException(status_code=404, detail="Script not found")
 
     # Get scenes
-    scenes = db.query(Scene).filter(Scene.user_script_id == script_id).all()
+    scenes = db.query(Scene).filter(Scene.user_script_id == script_id).order_by(*_script_scene_order()).all()
 
     return UserScriptDetailResponse(
         **UserScriptResponse.model_validate(script).model_dump(),
@@ -1982,6 +1982,49 @@ def _destroy_script(db: Session, script) -> None:
 # Scene Editing within Scripts
 # ============================================================================
 
+def _script_scene_order():
+    """How a script's scenes are listed: as the actor arranged them, and the
+    ones built since (no place yet) after, in the order they were built."""
+    return (Scene.script_order.asc().nullslast(), Scene.id.asc())
+
+
+class LayoutEntry(BaseModel):
+    id: int
+    act: Optional[str] = Field(None, max_length=200)
+
+
+class ScriptLayoutRequest(BaseModel):
+    scenes: List[LayoutEntry] = Field(..., max_length=500)
+
+
+@router.put("/{script_id}/layout", response_model=UserScriptDetailResponse)
+async def set_script_layout(
+    script_id: int,
+    body: ScriptLayoutRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """The actor's own map of a script: every scene in the order they want,
+    each under the act or episode they say. Fixes what the reader got wrong.
+    Titles go through the scene PATCH, deletes through the scene DELETE."""
+    from app.services.script_layout import LayoutError, apply_layout
+
+    script = _owned_script(db, script_id, current_user)
+    if script.processing_status in ("processing", "pending"):
+        raise HTTPException(status_code=409, detail="That script is still being read. Try again in a moment.")
+    scenes = db.query(Scene).filter(Scene.user_script_id == script.id).all()
+    try:
+        ordered = apply_layout(scenes, [e.model_dump() for e in body.scenes])
+    except LayoutError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    db.commit()
+    db.refresh(script)
+    return UserScriptDetailResponse(
+        **UserScriptResponse.model_validate(script).model_dump(),
+        scenes=[SceneInScriptResponse.model_validate(sc) for sc in ordered],
+    )
+
+
 @router.patch("/{script_id}/scenes/{scene_id}", response_model=dict)
 async def update_scene(
     script_id: int,
@@ -2011,7 +2054,10 @@ async def update_scene(
 
     # Update fields
     if update.title is not None:
-        scene.title = update.title
+        title = " ".join(update.title.split())
+        if not title:
+            raise HTTPException(status_code=400, detail="A scene needs a name.")
+        scene.title = title[:200]
     if update.description is not None:
         scene.description = update.description
     if update.character_1_name is not None:
@@ -3313,7 +3359,7 @@ async def reextract_script(
     db.commit()
     db.refresh(user_script)
 
-    scenes = db.query(Scene).filter(Scene.user_script_id == script_id).all()
+    scenes = db.query(Scene).filter(Scene.user_script_id == script_id).order_by(*_script_scene_order()).all()
     return UserScriptDetailResponse(
         **UserScriptResponse.model_validate(user_script).model_dump(),
         scenes=[SceneInScriptResponse.model_validate(s) for s in scenes],
