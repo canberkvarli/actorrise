@@ -107,6 +107,8 @@ class SceneInScriptResponse(BaseModel):
     estimated_duration_seconds: int
     act: Optional[str] = None
     scene_number: Optional[str] = None
+    # Where the actor put it (PUT /layout); null until they arrange the script.
+    script_order: Optional[int] = None
 
     class Config:
         from_attributes = True

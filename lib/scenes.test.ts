@@ -40,3 +40,17 @@ describe("groupScenesByAct", () => {
     ]);
   });
 });
+
+describe("groupScenesByAct on an arranged script", () => {
+  const s = (id: number, act: string | null, script_order: number | null): Scene => ({
+    id, title: `S${id}`, character_1_name: "A", character_2_name: "B", line_count: 1, estimated_duration_seconds: 60,
+    act, scene_number: null, script_order,
+  });
+  it("keeps the actor's order and headings where they first come", () => {
+    const groups = groupScenesByAct([s(1, "Act 2", 1), s(2, "Act 1", 0), s(3, "act  2", 2), s(4, "Act 1", null)]);
+    expect(groups.map((g) => [g.act, g.scenes.map((x) => x.id)])).toEqual([
+      ["Act 1", [2, 4]],
+      ["Act 2", [1, 3]],
+    ]);
+  });
+});

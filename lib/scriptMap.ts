@@ -11,7 +11,7 @@
  * how many more a plan may tick) are tested without a browser.
  */
 
-import { actRank, sceneRank, type Scene } from "./scenes";
+import { actRank, inArrangedOrder, isArranged, sceneRank, type Scene } from "./scenes";
 
 /** One row of the map `/api/scripts/scan` and `/scene-map` return. */
 export type ScannedScene = {
@@ -75,6 +75,7 @@ export function mergeSceneMap(
   built: number[],
   scenes: Scene[],
 ): MapGroup[] {
+  if (isArranged(scenes)) return mergeArranged(scan, built, scenes);
   const builtRows = new Set(built);
   const unclaimed = new Map<string, Scene[]>();
   // Built scenes with no heading. The server marks an unheaded row built only
@@ -149,6 +150,58 @@ export function mergeSceneMap(
   });
   ranked.sort((a, b) => a.rank - b.rank || a.i - b.i);
   return ranked.map((r) => r.group);
+}
+
+/**
+ * The map of a script the actor has arranged (the app's "edit the map"). The
+ * built scenes are the frame, in the actor's order under the actor's headings,
+ * with no play-order sort over them. Each unbuilt row of the read joins the
+ * end of the act with its heading, or an act of its own at the bottom, in the
+ * order the read has them.
+ *
+ * A row the server marks built is drawn once, as its scene. A scene the actor
+ * moved under another heading is still marked built by its old heading (the
+ * server keeps it, services/script_layout.py), so its row is not offered again.
+ */
+function mergeArranged(scan: ScannedScene[], built: number[], scenes: Scene[]): MapGroup[] {
+  const builtRows = new Set(built);
+  const byKey = new Map<string, ScannedScene>();
+  for (const row of scan) {
+    if (!builtRows.has(row.index)) continue;
+    const key = sceneKey(row.act_label, row.scene_label);
+    if (key && !byKey.has(key)) byKey.set(key, row);
+  }
+
+  const groups: MapGroup[] = [];
+  const groupFor = (act: string | null): MapGroup => {
+    const want = norm(act);
+    let group = groups.find((g) => norm(g.act) === want);
+    if (!group) {
+      group = { act, rows: [], builtCount: 0 };
+      groups.push(group);
+    }
+    return group;
+  };
+
+  for (const scene of inArrangedOrder(scenes)) {
+    const group = groupFor(scene.act?.trim() || null);
+    const key = sceneKey(scene.act, scene.scene_number);
+    const row = key ? byKey.get(key) ?? null : null;
+    if (key && row) byKey.delete(key);
+    group.rows.push({ kind: "built", key: `s${scene.id}`, scene, scan: row });
+    group.builtCount += 1;
+  }
+
+  for (const row of scan) {
+    if (builtRows.has(row.index)) continue;
+    groupFor(row.act_label).rows.push({
+      kind: "open",
+      key: `r${row.index}`,
+      scan: row,
+      locked: isSolo(row) ? "solo" : null,
+    });
+  }
+  return groups;
 }
 
 /** Every row in the map, flat, in the order it is drawn. */

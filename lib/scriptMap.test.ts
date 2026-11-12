@@ -147,3 +147,50 @@ describe("tick allowance", () => {
     expect(picked.size).toBe(30);
   });
 });
+
+describe("mergeSceneMap on a script the actor arranged", () => {
+  const placed = (id: number, act: string | null, scene_number: string | null, script_order: number | null): Scene => ({
+    ...scene(id, act, scene_number),
+    script_order,
+  });
+
+  it("follows the actor's order, not play order", () => {
+    const scan = [row(0, "Episode 1", "Scene 1"), row(1, "Episode 1", "Scene 2"), row(2, "Episode 2", "Scene 1")];
+    const scenes = [
+      placed(10, "Episode 1", "Scene 1", 2),
+      placed(11, "Episode 1", "Scene 2", 1),
+      placed(12, "Episode 2", "Scene 1", 0),
+    ];
+    const groups = mergeSceneMap(scan, [0, 1, 2], scenes);
+    expect(groups.map((g) => g.act)).toEqual(["Episode 2", "Episode 1"]);
+    expect(groups[1].rows.map((r) => r.key)).toEqual(["s11", "s10"]);
+    expect(groups.flatMap((g) => g.rows).every((r) => r.kind === "built" && r.scan)).toBe(true);
+  });
+
+  it("a refiled scene is drawn once, under its new heading", () => {
+    // Scene 2 was read under Episode 1 and moved to Episode 2; the server still marks row 1 built.
+    const scan = [row(0, "Episode 1", "Scene 1"), row(1, "Episode 1", "Scene 2"), row(2, "Episode 2", "Scene 3")];
+    const scenes = [placed(10, "Episode 1", "Scene 1", 0), placed(11, "Episode 2", "Scene 2", 1)];
+    const groups = mergeSceneMap(scan, [0, 1], scenes);
+    expect(groups.map((g) => [g.act, g.rows.map((r) => r.key)])).toEqual([
+      ["Episode 1", ["s10"]],
+      ["Episode 2", ["s11", "r2"]],
+    ]);
+  });
+
+  it("an unbuilt row joins its act, or a new one at the bottom", () => {
+    const scan = [row(0, "Act 1", "Scene 1"), row(1, "Act 1", "Scene 2"), row(2, "Act 3", "Scene 1")];
+    const scenes = [placed(10, "Act 1", "Scene 1", 0)];
+    const groups = mergeSceneMap(scan, [0], scenes);
+    expect(groups.map((g) => [g.act, g.rows.map((r) => r.key)])).toEqual([
+      ["Act 1", ["s10", "r1"]],
+      ["Act 3", ["r2"]],
+    ]);
+  });
+
+  it("a scene built after the arranging comes after the arranged ones", () => {
+    const scenes = [placed(20, null, null, null), placed(10, null, null, 0)];
+    const groups = mergeSceneMap([], [], scenes);
+    expect(groups[0].rows.map((r) => r.key)).toEqual(["s10", "s20"]);
+  });
+});

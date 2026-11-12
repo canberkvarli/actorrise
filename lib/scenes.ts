@@ -16,6 +16,9 @@ export interface Scene {
   estimated_duration_seconds: number;
   act?: string | null;
   scene_number?: string | null;
+  /** Where the actor put it in their own map (the app's "edit the map",
+   *  PUT /api/scripts/{id}/layout). Null until they arrange the script. */
+  script_order?: number | null;
   /** Reserved for the AI line check: true when it could not vouch for this
    *  scene's lines. Not sent by the API yet; the script map shows a quiet mark
    *  when it is. */
@@ -61,6 +64,7 @@ export interface ActGroup {
  * collapse to a single unlabeled group.
  */
 export function groupScenesByAct(scenes: Scene[]): ActGroup[] {
+  if (isArranged(scenes)) return groupAsArranged(scenes);
   const hasActs = scenes.some((s) => s.act);
   if (!hasActs) {
     return [{ act: null, scenes }];
@@ -79,6 +83,44 @@ export function groupScenesByAct(scenes: Scene[]): ActGroup[] {
       act: key === "__none__" ? null : key,
       scenes: actMap.get(key)!.sort((a, b) => sceneRank(a.scene_number) - sceneRank(b.scene_number)),
     }));
+}
+
+/** True once the actor has put this script's scenes in an order of their own. */
+export function isArranged(scenes: Pick<Scene, "script_order">[]): boolean {
+  return scenes.some((s) => s.script_order != null);
+}
+
+/**
+ * The scenes in the actor's order: arranged ones by their place, any built
+ * since after them in the order they were built (by id), as the API lists them.
+ */
+export function inArrangedOrder<T extends Pick<Scene, "id" | "script_order">>(scenes: T[]): T[] {
+  return [...scenes].sort(
+    (a, b) =>
+      (a.script_order ?? Number.MAX_SAFE_INTEGER) - (b.script_order ?? Number.MAX_SAFE_INTEGER) || a.id - b.id,
+  );
+}
+
+const normAct = (act: string | null | undefined) => (act ?? "").toLowerCase().split(/\s+/).filter(Boolean).join(" ");
+
+/**
+ * An arranged script grouped as the actor arranged it: each heading where it
+ * first comes, scenes in their order, no play-order sort over the top (the
+ * actor's order is the point). A scene built later under an act already there
+ * joins that act.
+ */
+export function groupAsArranged(scenes: Scene[]): ActGroup[] {
+  const groups: ActGroup[] = [];
+  for (const scene of inArrangedOrder(scenes)) {
+    const act = scene.act?.trim() || null;
+    let group = groups.find((g) => normAct(g.act) === normAct(act));
+    if (!group) {
+      group = { act, scenes: [] };
+      groups.push(group);
+    }
+    group.scenes.push(scene);
+  }
+  return groups;
 }
 
 /** "2 min" / "45 sec" from a seconds estimate. */
