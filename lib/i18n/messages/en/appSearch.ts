@@ -13,6 +13,8 @@ export const appSearch = {
     faultLine: "That one didn't come back. Nothing is lost — run it again.",
     faultRetry: "Try it again",
     paywallDir: "(the house lights come up.)",
+    findPlusTitle: "That was your free Find for me this month.",
+    findPlusBody: "Plus runs it whenever you want, with pieces picked for your type that you haven't come across yet.",
     paywallTitle: "That's your free searches for the month.",
     paywallBody: "Plus keeps the search open, as many as it takes to find the piece.",
     gibberishTitle: "We couldn't understand that search",
@@ -227,6 +229,7 @@ export const appSearch = {
     male: "Male",
     nonBinary: "Non-binary",
     under2: "Under 2 min",
+    notOverdone: "Not overdone",
     allFilters: "All filters",
   },
   appSearchChips: {

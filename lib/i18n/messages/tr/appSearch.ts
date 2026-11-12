@@ -19,6 +19,8 @@ export const appSearch: Widen<typeof en> = {
     faultLine: "Bu sefer cevap gelmedi. Hiçbir şey kaybolmadı, bir daha dene.",
     faultRetry: "Bir daha dene",
     paywallDir: "(salon ışıkları yanıyor.)",
+    findPlusTitle: "Bu ayki ücretsiz Benim için bul hakkını kullandın.",
+    findPlusBody: "Plus ile istediğin zaman çalıştırırsın: tipine göre seçilmiş, henüz karşılaşmadığın parçalar.",
     paywallTitle: "Bu ayki ücretsiz aramaların bitti.",
     paywallBody: "Plus ile arama açık kalır, parçayı bulana kadar istediğin kadar ara.",
     gibberishTitle: "Bu aramayı anlayamadık",
@@ -219,6 +221,7 @@ export const appSearch: Widen<typeof en> = {
     male: "Erkek",
     nonBinary: "Non-binary",
     under2: "2 dk altı",
+    notOverdone: "Çok oynanmamış",
     allFilters: "Tüm filtreler",
   },
   appSearchChips: {

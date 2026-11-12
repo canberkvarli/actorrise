@@ -266,6 +266,7 @@ function SearchContent() {
   const [editMonologueId, setEditMonologueId] = useState<number | null>(null);
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
   const [showProfileCompleteModal, setShowProfileCompleteModal] = useState(false);
+  const [findForMePlus, setFindForMePlus] = useState(false);
 
   // Debug overlay toggle: Ctrl+Shift+D or Cmd+Shift+D (dev mode or admin/moderator only)
   useEffect(() => {
@@ -1135,7 +1136,7 @@ function SearchContent() {
 
     try {
       const response = await api.get<Monologue[]>(
-        `/api/monologues/recommendations?limit=20${onScreen ? "&source_type=film,tv" : ""}`,
+        `/api/monologues/recommendations?limit=20&find=1${onScreen ? "&source_type=film,tv" : ""}`,
       );
       if (onScreen) {
         setFilmTvResults(response.data);
@@ -1174,7 +1175,16 @@ function SearchContent() {
         // ignore
       }
     } catch (error) {
-      const err = error as { response?: { status?: number }; message?: string };
+      const err = error as {
+        response?: { status?: number; data?: { detail?: { error?: string } } };
+        message?: string;
+      };
+      // Find for me is Plus after one free press a month (the server counts).
+      // Their earlier results stay on screen; the offer opens over them.
+      if (err?.response?.status === 403 && err.response.data?.detail?.error === "find_for_me_plus") {
+        setFindForMePlus(true);
+        return;
+      }
       const isProfileError =
         err?.response?.status === 400 ||
         (typeof err?.message === "string" && /profile|complete your profile|actor profile not found/i.test(err.message));
@@ -2178,6 +2188,8 @@ ${mono.character_age_range ? `${d("ageRange")}: ${mono.character_age_range}` : '
                 }
               }}
               activeFilterCount={activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
+              maxOverdoneScore={maxOverdoneScore}
+              onMaxOverdoneScoreChange={setMaxOverdoneScore}
             />
           </div>
         </div>
@@ -2271,6 +2283,15 @@ ${mono.character_age_range ? `${d("ageRange")}: ${mono.character_age_range}` : '
             </button>
           </div>
         )}
+        <MonologuePaywallModal
+          open={findForMePlus}
+          onOpenChange={setFindForMePlus}
+          feature="find_for_me"
+          lead="search"
+          dir={t("appSearchPage.paywallDir")}
+          title={trialWords.tasted ? trialWords.overTitle : t("appSearchPage.findPlusTitle")}
+          description={trialWords.tasted ? trialWords.overBody : t("appSearchPage.findPlusBody")}
+        />
         <MonologuePaywallModal
           open={!!searchUpgradeUrl}
           onOpenChange={(o) => { if (!o) { setSearchUpgradeUrl(null); setSearchError(null); } }}

@@ -1,8 +1,11 @@
 "use client";
 
 import type React from "react";
+import { useState } from "react";
 
 import { IconAdjustments } from "@tabler/icons-react";
+import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
+import { useSubscription } from "@/hooks/useSubscription";
 import type { SearchFiltersState } from "@/components/search/SearchFiltersSheet";
 import type { SourceTagKind } from "@/components/search/SourceTag";
 import { useT, type MessageKey } from "@/lib/i18n";
@@ -85,7 +88,15 @@ interface QuickFilterChipsProps {
   activeFilterCount?: number;
   /** Rendered as the first item INSIDE the scroll row (phones put Find for me here). */
   leading?: React.ReactNode;
+  /** The originality cap (max_overdone_score). With both set, a "Not overdone"
+   *  chip leads the row: the Plus search tool shown where every searcher
+   *  already looks, instead of only inside All filters (2026-11-12). */
+  maxOverdoneScore?: number;
+  onMaxOverdoneScoreChange?: (value: number) => void;
 }
+
+/** The freshness the chip switches on: "Fresh picks" in FreshnessToggle. */
+const FRESH = 0.3;
 
 export function QuickFilterChips({
   filters,
@@ -95,8 +106,17 @@ export function QuickFilterChips({
   mode = "plays",
   onOpenFilters,
   activeFilterCount = 0,
+  maxOverdoneScore,
+  onMaxOverdoneScoreChange,
 }: QuickFilterChipsProps) {
   const t = useT();
+  const { subscription } = useSubscription();
+  // Locked only once the subscription has loaded and says free, so nothing
+  // flashes for Plus. The server ignores the cap for free accounts either way.
+  const freshLocked = subscription?.tier_name === "free";
+  const [freshAsk, setFreshAsk] = useState(false);
+  const showFresh = maxOverdoneScore !== undefined && !!onMaxOverdoneScoreChange;
+  const freshOn = showFresh && (maxOverdoneScore as number) <= FRESH;
   const groups = GROUPS.filter((g) => {
     if (g.key === "category" && hideCategory) return false;
     return !g.mode || g.mode === mode;
@@ -116,6 +136,29 @@ export function QuickFilterChips({
         }}
       >
         {leading}
+        {showFresh && (
+          <button
+            type="button"
+            onClick={() =>
+              freshLocked
+                ? setFreshAsk(true)
+                : onMaxOverdoneScoreChange!(freshOn ? 1 : FRESH)
+            }
+            aria-pressed={freshOn}
+            className="inline-flex min-h-[44px] shrink-0 cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-transform hover:-translate-y-0.5 hover:-rotate-1 md:min-h-9"
+            style={{
+              transitionTimingFunction: "var(--t-spring)",
+              border: `1.5px solid ${freshOn ? "var(--t-text)" : "var(--t-line-light)"}`,
+              background: freshOn ? "var(--t-text)" : "transparent",
+              color: freshOn ? "var(--t-on-text)" : "var(--t-muted-dark-2)",
+            }}
+          >
+            {t("appSearchQuick.notOverdone")}
+            {freshLocked && (
+              <span className="text-[10px] font-bold uppercase tracking-wide text-primary">Plus</span>
+            )}
+          </button>
+        )}
         {groups.flatMap((group) =>
           group.options.map((opt) => {
             const isActive = filters[group.key as keyof SearchFiltersState] === opt.value;
@@ -172,6 +215,16 @@ export function QuickFilterChips({
           </button>
         )}
       </div>
+      {showFresh && (
+        <MonologuePaywallModal
+          open={freshAsk}
+          onOpenChange={setFreshAsk}
+          feature="filter_originality"
+          lead="search"
+          title={t("appSearchFreshness.paywallTitle")}
+          description={t("appSearchFreshness.paywallBody")}
+        />
+      )}
       {/* Right-edge fade — mobile only — signals "more filters this way". */}
       <div
         className="pointer-events-none absolute bottom-1 right-0 top-0 w-8 sm:hidden"

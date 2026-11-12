@@ -1333,6 +1333,50 @@ async def search_demo(
     return DemoSearchResponse(results=results, corrected_query=corrected_for_demo)
 
 
+#: Free presses of Find for me per calendar month (UTC). Plus is unlimited.
+FREE_FIND_FOR_ME_PER_MONTH = 1
+_FIND_FOR_ME_EVENT = "find_for_me_used"
+
+
+def find_for_me_used_this_month(db: Session, user_id: int) -> int:
+    """Presses of Find for me this calendar month, counted from user_events.
+    Fails open (0): a counting error must not take the button away."""
+    from datetime import datetime, timezone
+
+    from sqlalchemy import func
+
+    from app.models.user_event import UserEvent
+
+    now = datetime.now(timezone.utc)
+    start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+    try:
+        return int(
+            db.query(func.count(UserEvent.id))
+            .filter(
+                UserEvent.user_id == user_id,
+                UserEvent.event_name == _FIND_FOR_ME_EVENT,
+                UserEvent.created_at >= start,
+            )
+            .scalar()
+            or 0
+        )
+    except Exception:
+        db.rollback()
+        return 0
+
+
+def record_find_for_me(db: Session, user_id: int) -> None:
+    """One press spent. On the request's own session: a second connection
+    inside a request jams the pool. Never raises."""
+    from app.models.user_event import UserEvent
+
+    try:
+        db.add(UserEvent(user_id=user_id, event_name=_FIND_FOR_ME_EVENT, properties={}))
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
 @router.get("/recommendations", response_model=List[MonologueResponse])
 async def get_recommendations(
     request: Request,
@@ -1342,6 +1386,7 @@ async def get_recommendations(
         None,
         description="Limit to a shelf: 'play', or 'film,tv'. Comma-separated for multiple.",
     ),
+    find: bool = Query(False, description="The Find for me button, metered on free accounts"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -1355,6 +1400,25 @@ async def get_recommendations(
             status_code=400,
             detail="Actor profile not found. Please complete your profile first."
         )
+
+    # Find for me is a Plus tool (2026-11-12, Canberk): a free account gets
+    # FREE_FIND_FOR_ME_PER_MONTH presses a month, then the offer. Only the
+    # button sends find=1; the dashboard and the For you shelves read the
+    # same recommender and stay free.
+    metered = find and not _user_has_unlimited_reads(
+        int(current_user.id), db, getattr(current_user, "email", None)
+    )
+    if metered:
+        used = find_for_me_used_this_month(db, int(current_user.id))
+        if used >= FREE_FIND_FOR_ME_PER_MONTH:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "find_for_me_plus",
+                    "used": used,
+                    "limit": FREE_FIND_FOR_ME_PER_MONTH,
+                },
+            )
 
     # Get recommendations (fast=True skips semantic search for quicker dashboard load)
     recommender = Recommender(db)
@@ -1378,6 +1442,8 @@ async def get_recommendations(
     ]
     _apply_list_wall(_out, db=db, user=current_user, request=request,
                      favorite_ids=favorite_ids)
+    if metered and _out:
+        record_find_for_me(db, int(current_user.id))
     return _out
 
 

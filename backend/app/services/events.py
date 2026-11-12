@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 SERVER_EVENT_NAMES = frozenset(
     {
         "signup_completed",  # users row created with a real email (auth.get_current_user)
+        "find_for_me_used",  # a free account pressed Find for me (metered, 1 a month)
         "onboarding_completed",  # has_completed_profile_onboarding flipped false -> true
         "first_search_submitted",  # the user's first search_logs row
         "trial_ended",  # {subscription_id, outcome: converted|cancelled|past_due|...}
