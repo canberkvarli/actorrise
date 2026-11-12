@@ -25,6 +25,10 @@ Canberk on the reader-on-the-train film ("good videos, really"), two fixes:
 bottom off the frame). The `screens` scene now keeps the screen at true size; the camera only glides the
 phone up or down so the part that matters is in view, and `push` marks that spot with a soft spotlight and
 an orange ring. Don't scale screenshots any other way either.
+Later the same day: the phone in a `screens` scene is drawn WHOLE at true iPhone proportions (the screen is
+exactly one screenshot tall, never a long phone with a dark band), lifted up into view; no glide, no `pan`
+scrolling, no crop inside the app. The hand and the tap ring do the pointing. Capture screenshots at the
+phone viewport (1170x2532), never full page.
 
 ## 2026-11-10, afternoon: the story + how-to, done right (wins over everything below)
 

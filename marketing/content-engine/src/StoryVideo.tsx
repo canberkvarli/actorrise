@@ -685,11 +685,13 @@ const APP = {
   line: "rgba(244,234,217,0.22)",
 };
 const PX = 220, PY = 755, PW = 640, PH = 1500, PI = 22;
+const PH0 = PH;
 const SX = PX + PI, SY = PY + PI, SW = PW - PI * 2;
 
-const DrawnPhone: React.FC<{ start: number; children?: React.ReactNode; whole?: boolean }> = ({ start, children, whole }) => {
+const DrawnPhone: React.FC<{ start: number; children?: React.ReactNode; whole?: boolean; h?: number }> = ({ start, children, whole, h }) => {
   const f = useCurrentFrame();
   // whole: the bottom is drawn too (the phone is seen entire when it turns on its side); otherwise it runs off the frame.
+  const PH = h ?? PH0;
   const body = whole ? `M${PX + 96} ${PY} L ${PX + PW - 96} ${PY} C ${PX + PW - 30} ${PY}, ${PX + PW} ${PY + 30}, ${PX + PW} ${PY + 96} L ${PX + PW} ${PY + PH - 96} C ${PX + PW} ${PY + PH - 30}, ${PX + PW - 30} ${PY + PH}, ${PX + PW - 96} ${PY + PH} L ${PX + 96} ${PY + PH} C ${PX + 30} ${PY + PH}, ${PX} ${PY + PH - 30}, ${PX} ${PY + PH - 96} L ${PX} ${PY + 96} C ${PX} ${PY + 30}, ${PX + 30} ${PY}, ${PX + 96} ${PY} Z` : `M${PX + 96} ${PY} L ${PX + PW - 96} ${PY} C ${PX + PW - 30} ${PY}, ${PX + PW} ${PY + 30}, ${PX + PW} ${PY + 96} L ${PX + PW} ${PY + PH} L ${PX} ${PY + PH} L ${PX} ${PY + 96} C ${PX} ${PY + 30}, ${PX + 30} ${PY}, ${PX + 96} ${PY} Z`;
   const screenOn = prog(f, start + 10, start + 22);
   return (
@@ -1024,22 +1026,18 @@ const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) =>
   // size and the camera only glides up or down so the part that matters sits in view; `push` now marks
   // that spot with a soft spotlight and an orange ring instead of a zoom.
   const side = s.turn === undefined ? 0 : s.turn <= 0 ? 1 : spring({ frame: f - s.turn, fps, config: { damping: 16, mass: 0.9 } });
-  const PCX = PX + PW / 2, PCY = PY + PH / 2;
-  const lookY = (i: number) => {
-    if (i < 0) return 0;
-    const sh = shots[i];
-    const fy = sh.push ? sh.push.y : sh.tap ? sh.tap.y : 0.3;
-    return Math.max(-360, Math.min(0, 1050 - (SY + fy * SHOT_H)));
-  };
-  let cur = 0;
-  shots.forEach((sh, i) => { if (f >= sh.at) cur = i; });
-  const glide = Easing.inOut(Easing.cubic)(prog(f, shots[cur].at, shots[cur].at + 18));
-  const camY = (cur === 0 ? lookY(0) : lookY(cur - 1) + (lookY(cur) - lookY(cur - 1)) * glide) * (1 - side);
-  const camT = `translateY(${(1 - up) * 800 + camY + side * (664 - PCY)}px) rotate(${side * 90}deg) scale(${interpolate(side, [0, 1], [1, 0.675])})`;
+  const PCX = PX + PW / 2;
+  // Canberk, 2026-11-12: the screen is exactly one iPhone screen tall (never a long phone, never a crop
+  // or zoom inside the app). The whole phone is drawn, at true proportions, and moved up into view; the
+  // hand and the tap ring do the pointing.
+  const HN = SHOT_H + PI * 2, K = 0.82, PCYn = PY + HN / 2;
+  const kk = interpolate(side, [0, 1], [K, 0.675]);
+  const ty = (1 - side) * (440 - (PCYn - K * HN / 2)) + side * (664 - PCYn);
+  const camT = `translateY(${(1 - up) * 900 + ty}px) rotate(${side * 90}deg) scale(${kk})`;
   const pzAt = (_i: number, _g: number) => 1;
   const panAt = (i: number, g: number) => {
     const sh = shots[i];
-    if (!sh.pan) return 0;
+    if (!sh.pan || true) return 0; // never scroll inside a real screen (Canberk, 2026-11-12)
     const end = shots[i + 1] ? shots[i + 1].at : sh.at + 120;
     return interpolate(g, [sh.at + 4, Math.max(sh.at + 5, Math.min(end, sh.at + 26))], sh.pan, { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
   };
@@ -1068,8 +1066,8 @@ const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) =>
           </AbsoluteFill>
         );
       })}
-      <AbsoluteFill style={{ transform: camT, transformOrigin: `${PCX}px ${PCY}px` }}>
-        <DrawnPhone start={first ? 0 : -100} whole={s.turn !== undefined}>
+      <AbsoluteFill style={{ transform: camT, transformOrigin: `${PCX}px ${PCYn}px` }}>
+        <DrawnPhone start={first ? 0 : -100} whole h={HN}>
           {shots.map((sh, i) => {
             const next = shots[i + 1];
             if (f < sh.at - 1 || (next && f > next.at + 12)) return null;
@@ -1079,11 +1077,11 @@ const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) =>
             const end = next ? next.at : sh.at + 120;
             void end;
             return (
-              <div key={i} style={{ position: "absolute", left: 0, top: 0, width: SW, height: SHOT_H + (PH - PI * 2 - SHOT_H) * side,
+              <div key={i} style={{ position: "absolute", left: 0, top: 0, width: SW, height: SHOT_H,
                 transform: `translateX(${(1 - inP) * SW - (next?.fade ? 0 : outP * SW * 0.35)}px)`, opacity: sh.fade ? inP0 : next?.fade ? 1 : 1 - outP * 0.6,
                 boxShadow: i > 0 && inP < 1 ? "-20px 0 40px rgba(0,0,0,0.35)" : undefined }}>
-                <Img src={staticFile(sh.src)} style={{ width: SW, height: SHOT_H + (PH - PI * 2 - SHOT_H) * side, objectFit: "cover",
-                  transform: `translateY(${-panAt(i, f) * SHOT_H}px)`, objectPosition: "top" }} />
+                <Img src={staticFile(sh.src)} style={{ width: SW, height: SHOT_H, objectFit: "cover",
+                  objectPosition: "top" }} />
                 {sh.push && f >= sh.at + 6 && (() => {
                   const a = Easing.out(Easing.cubic)(prog(f, sh.at + 6, sh.at + 20)) * (next ? 1 - prog(f, next.at, next.at + 8) : 1);
                   const ring = spring({ frame: f - sh.at - 8, fps, config: { damping: 12, mass: 0.7 } });
