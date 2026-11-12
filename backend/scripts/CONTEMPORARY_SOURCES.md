@@ -87,6 +87,21 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
   **Audrey Cefaly**: tried and dropped. Her Gulf PDF extracts with hidden characters inside
   words, and her two HTML pieces fail the gate (capitals and directions).
 
+- **2026-11-12, packets and archives** (`scripts/ingest_monologue_manifest.py`, splitters in
+  `scripts/packets/`): 469 pieces, monologues 44628-45096.
+  - School and drama-college audition packets plus the Take 2 studio page: 154 (NIDA, Laine,
+    Dawson, Seattle Children's Theatre, VCA, Village Theatre, Charter Arts, Cab Calloway,
+    Newark Arts, Lakeside HS). 50 more were already in the library.
+  - Tumblr archives (themonologuearchive, fuckyeahgreatmonologues, monologue-database): 202,
+    capped at ten per play.
+  - We Are Actors: 58 (28 already in). Shea's teen library: 13 (9 already in).
+  - Musical audition packets: 42, on the 60-word musical floor (`MUSICAL_MIN_WORDS`).
+  Left out on purpose: Harry Potter and the Cursed Child, Hamilton (lyrics), "Jr"/"Kids"
+  school editions (MTI's text; MTI blocks AI crawlers), and any writer on the deny list in
+  `packets/combine.py`. Years for these plays are editor's knowledge, marked unverified.
+  Not done: three school collections (two Drive/Docs sets, a Texas school site, about 85
+  pieces) and a 251-page scanned binder that needs proofreading.
+
 Asks rather than scrapes (permission emails): Monologue Blogger (terms forbid commercial
 use), Broadway Play Publishing (about 1,500 free audition pieces, 403 to our client),
 Don Zolidis (403), Arthur M. Jolly (PDFs, disallowed), Stage Partners (403).
