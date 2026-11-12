@@ -97,6 +97,7 @@ KNOWN_TITLES: Dict[str, str] = {
     "Dead Poets Society": "film",
     "La La Land": "film",
     "One Flew Over the Cuckoo's Nest": "film",
+    "Poor Things": "film",
     # Contemporary plays (in copyright, commonly audition-searched)
     "Girls Like That": "play",
     "The Wolves": "play",
@@ -145,6 +146,9 @@ TITLE_ALIASES: Dict[str, str] = {
     "katniss": "The Hunger Games",
     "nurse ratched": "One Flew Over the Cuckoo's Nest",
     "nurse ratchet": "One Flew Over the Cuckoo's Nest",
+    # Filed as plain "Bella" in three plays, and "Baxter" is in none of her
+    # pieces, so no rule can tell which Bella is meant (2026-11-12).
+    "bella baxter": "Poor Things",
     "alison cooper": "Ghosts",
     "ghosts uk": "Ghosts",
     "wednesday addams": "Wednesday",
@@ -1398,7 +1402,119 @@ def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
         hit = _detect_catalogue_title_once(db, plain)
         if hit:
             return hit
-    return _title_without_its_author(db, plain)
+    hit = _title_without_its_author(db, plain)
+    if hit:
+        return hit
+    return _title_with_typos_fixed(db, plain)
+
+
+#: A misspelt word is corrected only when it is at least this long, so short
+#: words ("out", "war", "dogs") are never touched.
+_MIN_TYPO_WORD = 5
+#: At most this many words corrected in one query.
+_MAX_TYPO_WORDS = 2
+_title_words_cache: tuple = (None, frozenset())
+
+
+def _one_edit_apart(a: str, b: str) -> bool:
+    """True when a and b differ by exactly one insertion, deletion,
+    substitution or swap of two neighbouring letters ("halet"/"hamlet",
+    "hamlte"/"hamlet", "ceasar"/"caesar")."""
+    if a == b or abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        diff = [i for i in range(len(a)) if a[i] != b[i]]
+        if len(diff) == 1:
+            return True
+        return (
+            len(diff) == 2
+            and diff[1] == diff[0] + 1
+            and a[diff[0]] == b[diff[1]]
+            and a[diff[1]] == b[diff[0]]
+        )
+    if len(a) > len(b):
+        a, b = b, a
+    i = 0
+    while i < len(a) and a[i] == b[i]:
+        i += 1
+    return a[i:] == b[i + 1:]
+
+
+def _title_words(catalogue: Dict[str, tuple]) -> frozenset:
+    """Every word of a title we carry, worth correcting toward. Cached per
+    catalogue load."""
+    global _title_words_cache
+    if _title_words_cache[0] is catalogue:
+        return _title_words_cache[1]
+    words = frozenset(
+        w for key in catalogue for w in key.split()
+        if len(w) >= _MIN_TYPO_WORD - 1 and w not in _TITLE_FILLER
+    )
+    _title_words_cache = (catalogue, words)
+    return words
+
+
+def _words_in_library_text(db, words: list) -> set:
+    """The words of `words` that occur in monologue text (corpus_terms).
+    Raises on failure; the caller treats that as "do not correct"."""
+    from sqlalchemy import text as sa_text
+
+    rows = db.execute(
+        sa_text("SELECT term FROM corpus_terms WHERE term = ANY(:t)"), {"t": list(words)}
+    ).fetchall()
+    return {str(r[0]) for r in rows}
+
+
+def _title_with_typos_fixed(db, query: str) -> Optional[Dict[str, str]]:
+    """'halet' -> Hamlet, 'yellojackets' -> Yellowjackets, 'sweeny todd' ->
+    Sweeney Todd: a title typed one letter off.
+
+    Conservative on every side. A word is corrected only when it is long
+    (_MIN_TYPO_WORD), is not itself a word of any title we carry, appears
+    nowhere in the library's text (corpus_terms, so 'grief' is never read as
+    a typo), and sits one edit from exactly ONE title word. The corrected
+    query must then name a title through the ordinary lookup, so a correction
+    that leads nowhere changes nothing.
+    """
+    if db is None or len(_normalise_title(query)) < _MIN_TITLE_CHARS:
+        return None
+    try:
+        catalogue = _load_catalogue(db)
+    except Exception:
+        return None
+    vocab = _title_words(catalogue)
+    if not vocab:
+        return None
+    words = _normalise_title(query).split()
+    suspects = [
+        w for w in dict.fromkeys(words)
+        if len(w) >= _MIN_TYPO_WORD and w not in vocab and w not in _TITLE_FILLER
+        and w.isalpha()
+    ]
+    if not suspects or len(suspects) > _MAX_TYPO_WORDS:
+        return None
+    try:
+        real = _words_in_library_text(db, suspects)
+    except Exception:
+        return None
+    if not real:
+        # An empty answer is only trusted when the table is built: without
+        # it every word would look like a typo.
+        from app.services.search.grounding import _corpus_terms_populated
+
+        if not _corpus_terms_populated(db):
+            return None
+    fixes: Dict[str, str] = {}
+    for w in suspects:
+        if w in real:
+            continue
+        near = [v for v in vocab if _one_edit_apart(w, v)]
+        if len(near) == 1:
+            fixes[w] = near[0]
+    if not fixes:
+        return None
+    corrected = " ".join(fixes.get(w, w) for w in words)
+    return _detect_catalogue_title_once(db, corrected)
 
 
 def _title_without_its_author(db, query: str) -> Optional[Dict[str, str]]:
