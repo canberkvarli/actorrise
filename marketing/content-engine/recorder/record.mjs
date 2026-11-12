@@ -324,6 +324,24 @@ async function flow(file) {
       if (b) events.push({ t: now(), tap: { x: (b.x + b.width / 2) / VIEW.width, y: (b.y + b.height / 2) / VIEW.height }, label: String(s.click.css || s.click) });
       await sleep(250);
       await el.tap().catch(() => el.click());
+    }
+    // {"hold": "Tape yourself", "ms": 800}: press and hold (a long press), the way a thumb rests on a
+    // tab. Sent as a real touch so the app's own long press timer decides.
+    else if (s.hold !== undefined) {
+      const el = locate(page, s.hold);
+      const b = await el.boundingBox();
+      if (!b) throw new Error(`hold: nothing to hold for ${JSON.stringify(s.hold)}`);
+      const x = b.x + b.width / 2, y = b.y + b.height / 2;
+      events.push({ t: now(), tap: { x: x / VIEW.width, y: y / VIEW.height }, hold: s.ms ?? 800, label: String(s.hold.css || s.hold) });
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+      await sleep(s.ms ?? 800);
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    }
+    // {"turn": -90}: Ghost Light's Tape room on the web preview follows the phone's orientation sensor;
+    // a browser has none, so the recorder says which way the phone is held (0 upright, -90 or 90 sideways).
+    else if (s.turn !== undefined) {
+      events.push({ t: now(), turn: s.turn });
+      await page.evaluate((d) => window.__tapeTurn?.(d), s.turn);
     } else if (s.type !== undefined) {
       const el = field(page, s.into);
       const b = await el.boundingBox();

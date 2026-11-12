@@ -1,0 +1,723 @@
+{
+  "id": "2026-11-17-hold-the-tape-tab",
+  "look": "midnight",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "You were ready. Your phone was not. Nina, from The Seagull, finally landed, right there in your hallway.",
+        "say": "[conspiratorial] You were ready. [deadpan] Your phone was not. [excited] Nina, from The Seagull, finally landed, right there in your hallway.",
+        "at": 0.477,
+        "words": [
+          {
+            "w": "You",
+            "s": 0.0,
+            "e": 0.02
+          },
+          {
+            "w": "were",
+            "s": 0.046,
+            "e": 0.151
+          },
+          {
+            "w": "ready.",
+            "s": 0.206,
+            "e": 0.544
+          },
+          {
+            "w": "Your",
+            "s": 1.298,
+            "e": 1.333
+          },
+          {
+            "w": "phone",
+            "s": 1.388,
+            "e": 1.661
+          },
+          {
+            "w": "was",
+            "s": 1.693,
+            "e": 1.792
+          },
+          {
+            "w": "not.",
+            "s": 1.874,
+            "e": 2.185
+          },
+          {
+            "w": "Nina,",
+            "s": 3.161,
+            "e": 3.436
+          },
+          {
+            "w": "from",
+            "s": 3.449,
+            "e": 3.502
+          },
+          {
+            "w": "The",
+            "s": 3.534,
+            "e": 3.633
+          },
+          {
+            "w": "Seagull,",
+            "s": 3.676,
+            "e": 4.321
+          },
+          {
+            "w": "finally",
+            "s": 4.358,
+            "e": 4.616
+          },
+          {
+            "w": "landed,",
+            "s": 4.673,
+            "e": 5.011
+          },
+          {
+            "w": "right",
+            "s": 5.098,
+            "e": 5.534
+          },
+          {
+            "w": "there",
+            "s": 5.578,
+            "e": 5.797
+          },
+          {
+            "w": "in",
+            "s": 5.819,
+            "e": 5.862
+          },
+          {
+            "w": "your",
+            "s": 5.889,
+            "e": 5.993
+          },
+          {
+            "w": "hallway.",
+            "s": 6.051,
+            "e": 6.518
+          }
+        ],
+        "dur": 6.641
+      },
+      {
+        "text": "So you grab your phone to tape it. Unlock. Swipe. Wrong app. Camera. Flip it. And the feeling floats right out the window.",
+        "say": "[playful] So you grab your phone to tape it. [rushed] Unlock. Swipe. Wrong app! Camera. Flip it. [sighs] And the feeling floats right out the window.",
+        "at": 7.771,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.011
+          },
+          {
+            "w": "you",
+            "s": 0.043,
+            "e": 0.142
+          },
+          {
+            "w": "grab",
+            "s": 0.181,
+            "e": 0.339
+          },
+          {
+            "w": "your",
+            "s": 0.365,
+            "e": 0.47
+          },
+          {
+            "w": "phone",
+            "s": 0.513,
+            "e": 0.732
+          },
+          {
+            "w": "to",
+            "s": 0.775,
+            "e": 0.863
+          },
+          {
+            "w": "tape",
+            "s": 0.902,
+            "e": 1.06
+          },
+          {
+            "w": "it.",
+            "s": 1.125,
+            "e": 1.322
+          },
+          {
+            "w": "Unlock.",
+            "s": 1.972,
+            "e": 2.178
+          },
+          {
+            "w": "Swipe.",
+            "s": 2.254,
+            "e": 2.702
+          },
+          {
+            "w": "Wrong",
+            "s": 2.779,
+            "e": 3.161
+          },
+          {
+            "w": "app!",
+            "s": 3.227,
+            "e": 3.752
+          },
+          {
+            "w": "Camera.",
+            "s": 3.798,
+            "e": 4.145
+          },
+          {
+            "w": "Flip",
+            "s": 4.211,
+            "e": 4.473
+          },
+          {
+            "w": "it.",
+            "s": 4.539,
+            "e": 5.096
+          },
+          {
+            "w": "And",
+            "s": 5.998,
+            "e": 6.047
+          },
+          {
+            "w": "the",
+            "s": 6.063,
+            "e": 6.112
+          },
+          {
+            "w": "feeling",
+            "s": 6.153,
+            "e": 6.44
+          },
+          {
+            "w": "floats",
+            "s": 6.487,
+            "e": 6.768
+          },
+          {
+            "w": "right",
+            "s": 6.801,
+            "e": 6.965
+          },
+          {
+            "w": "out",
+            "s": 7.014,
+            "e": 7.161
+          },
+          {
+            "w": "the",
+            "s": 7.178,
+            "e": 7.227
+          },
+          {
+            "w": "window.",
+            "s": 7.274,
+            "e": 7.62
+          }
+        ],
+        "dur": 7.743
+      },
+      {
+        "text": "Gone. So you open Ghost Light.",
+        "say": "[deadpan] Gone. [mischievously] So you open Ghost Light.",
+        "at": 16.375,
+        "words": [
+          {
+            "w": "Gone.",
+            "s": 0.0,
+            "e": 0.066
+          },
+          {
+            "w": "So",
+            "s": 1.1,
+            "e": 1.115
+          },
+          {
+            "w": "you",
+            "s": 1.148,
+            "e": 1.246
+          },
+          {
+            "w": "open",
+            "s": 1.298,
+            "e": 1.508
+          },
+          {
+            "w": "Ghost",
+            "s": 1.563,
+            "e": 1.836
+          },
+          {
+            "w": "Light.",
+            "s": 1.88,
+            "e": 2.328
+          }
+        ],
+        "dur": 2.451
+      },
+      {
+        "text": "Hold the Tape tab.",
+        "say": "[upbeat] Hold the Tape tab.",
+        "at": 19.09,
+        "sub": false,
+        "words": [
+          {
+            "w": "Hold",
+            "s": 0.0,
+            "e": 0.039
+          },
+          {
+            "w": "the",
+            "s": 0.056,
+            "e": 0.105
+          },
+          {
+            "w": "Tape",
+            "s": 0.157,
+            "e": 0.367
+          },
+          {
+            "w": "tab.",
+            "s": 0.449,
+            "e": 1.023
+          }
+        ],
+        "dur": 1.146
+      },
+      {
+        "text": "You're in the Tape room. Turn on the camera.",
+        "say": "[playful] You're in the Tape room. Turn on the camera.",
+        "at": 20.494,
+        "sub": false,
+        "words": [
+          {
+            "w": "You're",
+            "s": 0.0,
+            "e": 0.078
+          },
+          {
+            "w": "in",
+            "s": 0.1,
+            "e": 0.143
+          },
+          {
+            "w": "the",
+            "s": 0.16,
+            "e": 0.209
+          },
+          {
+            "w": "Tape",
+            "s": 0.261,
+            "e": 0.471
+          },
+          {
+            "w": "room.",
+            "s": 0.524,
+            "e": 0.963
+          },
+          {
+            "w": "Turn",
+            "s": 1.009,
+            "e": 1.193
+          },
+          {
+            "w": "on",
+            "s": 1.236,
+            "e": 1.324
+          },
+          {
+            "w": "the",
+            "s": 1.34,
+            "e": 1.389
+          },
+          {
+            "w": "camera.",
+            "s": 1.446,
+            "e": 2.012
+          }
+        ],
+        "dur": 2.135
+      },
+      {
+        "text": "Turn it sideways, like casting wants. Say action, and it rolls. Say cut, and the take lands in Tapes.",
+        "say": "[excited] Turn it sideways, like casting wants. Say action, and it rolls! Say cut, and the take lands in Tapes.",
+        "at": 22.893,
+        "sub": false,
+        "words": [
+          {
+            "w": "Turn",
+            "s": 0.0,
+            "e": 0.039
+          },
+          {
+            "w": "it",
+            "s": 0.061,
+            "e": 0.105
+          },
+          {
+            "w": "sideways,",
+            "s": 0.17,
+            "e": 0.761
+          },
+          {
+            "w": "like",
+            "s": 0.787,
+            "e": 0.892
+          },
+          {
+            "w": "casting",
+            "s": 0.949,
+            "e": 1.351
+          },
+          {
+            "w": "wants.",
+            "s": 1.416,
+            "e": 2.138
+          },
+          {
+            "w": "Say",
+            "s": 2.236,
+            "e": 2.531
+          },
+          {
+            "w": "action,",
+            "s": 2.597,
+            "e": 3.056
+          },
+          {
+            "w": "and",
+            "s": 3.072,
+            "e": 3.121
+          },
+          {
+            "w": "it",
+            "s": 3.165,
+            "e": 3.252
+          },
+          {
+            "w": "rolls!",
+            "s": 3.318,
+            "e": 3.711
+          },
+          {
+            "w": "Say",
+            "s": 3.875,
+            "e": 4.367
+          },
+          {
+            "w": "cut,",
+            "s": 4.466,
+            "e": 4.859
+          },
+          {
+            "w": "and",
+            "s": 4.884,
+            "e": 4.957
+          },
+          {
+            "w": "the",
+            "s": 4.974,
+            "e": 5.023
+          },
+          {
+            "w": "take",
+            "s": 5.075,
+            "e": 5.285
+          },
+          {
+            "w": "lands",
+            "s": 5.329,
+            "e": 5.548
+          },
+          {
+            "w": "in",
+            "s": 5.57,
+            "e": 5.613
+          },
+          {
+            "w": "Tapes.",
+            "s": 5.679,
+            "e": 6.466
+          }
+        ],
+        "dur": 6.589
+      },
+      {
+        "text": "Next time it lands, you're already rolling.",
+        "say": "[delighted] Next time it lands, you're already rolling.",
+        "at": 29.91,
+        "words": [
+          {
+            "w": "Next",
+            "s": 0.0,
+            "e": 0.039
+          },
+          {
+            "w": "time",
+            "s": 0.079,
+            "e": 0.236
+          },
+          {
+            "w": "it",
+            "s": 0.258,
+            "e": 0.302
+          },
+          {
+            "w": "lands,",
+            "s": 0.367,
+            "e": 0.761
+          },
+          {
+            "w": "you're",
+            "s": 0.793,
+            "e": 1.056
+          },
+          {
+            "w": "already",
+            "s": 1.076,
+            "e": 1.22
+          },
+          {
+            "w": "rolling.",
+            "s": 1.277,
+            "e": 1.744
+          }
+        ],
+        "dur": 1.867
+      },
+      {
+        "text": "Ghost Light. Built by a working actor.",
+        "say": "[upbeat] Ghost Light. Built by a working actor.",
+        "at": 32.662,
+        "sub": false,
+        "words": [
+          {
+            "w": "Ghost",
+            "s": 0.0,
+            "e": 0.041
+          },
+          {
+            "w": "Light.",
+            "s": 0.096,
+            "e": 0.37
+          },
+          {
+            "w": "Built",
+            "s": 0.457,
+            "e": 0.893
+          },
+          {
+            "w": "by",
+            "s": 0.937,
+            "e": 1.025
+          },
+          {
+            "w": "a",
+            "s": 1.09,
+            "e": 1.156
+          },
+          {
+            "w": "working",
+            "s": 1.197,
+            "e": 1.484
+          },
+          {
+            "w": "actor.",
+            "s": 1.549,
+            "e": 2.008
+          }
+        ],
+        "dur": 2.131
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-17-hold-the-tape-tab/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.22
+  },
+  "scenes": [
+    {
+      "type": "hall",
+      "seconds": 7.671,
+      "line": "It finally landed.",
+      "accent": "landed.",
+      "page": "THE SEAGULL",
+      "sparkAt": 66
+    },
+    {
+      "type": "fumble",
+      "seconds": 8.604,
+      "line": "Quick, tape it.",
+      "accent": "tape it.",
+      "steps": [
+        "unlock",
+        "swipe",
+        "wrong app",
+        "camera",
+        "flip it"
+      ],
+      "at": [
+        62,
+        71,
+        86,
+        117,
+        129
+      ]
+    },
+    {
+      "type": "gone",
+      "seconds": 1.915,
+      "line": "Gone.",
+      "accent": "Gone.",
+      "outAt": 11
+    },
+    {
+      "type": "screens",
+      "seconds": 2.204,
+      "line": "Hold Tape.",
+      "accent": "Tape.",
+      "shots": [
+        {
+          "src": "story/2026-11-17-hold-the-tape-tab/search.png",
+          "at": 0,
+          "pan": [
+            0.3,
+            0.56
+          ],
+          "tap": {
+            "x": 0.829,
+            "y": 0.93,
+            "at": 26,
+            "hold": 16
+          }
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 2.399,
+      "line": "The Tape room.",
+      "accent": "Tape room.",
+      "shots": [
+        {
+          "src": "story/2026-11-17-hold-the-tape-tab/search.png",
+          "at": 0,
+          "pan": [
+            0.56,
+            0.56
+          ]
+        },
+        {
+          "src": "story/2026-11-17-hold-the-tape-tab/room.png",
+          "at": 3,
+          "pan": [
+            0.3,
+            0.5
+          ],
+          "tap": {
+            "x": 0.5,
+            "y": 0.914,
+            "at": 28
+          }
+        },
+        {
+          "src": "story/2026-11-17-hold-the-tape-tab/camup.png",
+          "at": 58,
+          "pan": [
+            0.5,
+            0.5
+          ]
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 7.017,
+      "line": "Turn it sideways.",
+      "accent": "sideways.",
+      "turn": 8,
+      "shots": [
+        {
+          "src": "story/2026-11-17-hold-the-tape-tab/camup.png",
+          "at": 0,
+          "pan": [
+            0.5,
+            0
+          ]
+        },
+        {
+          "src": "story/2026-11-17-hold-the-tape-tab/side.png",
+          "at": 16,
+          "fade": true
+        },
+        {
+          "src": "story/2026-11-17-hold-the-tape-tab/rolling2.png",
+          "at": 99,
+          "fade": true
+        },
+        {
+          "src": "story/2026-11-17-hold-the-tape-tab/after2.png",
+          "at": 156,
+          "fade": true
+        }
+      ],
+      "cues": [
+        {
+          "text": "action",
+          "at": 82,
+          "until": 130
+        },
+        {
+          "text": "cut",
+          "at": 138,
+          "until": 211
+        }
+      ]
+    },
+    {
+      "type": "hall",
+      "seconds": 2.702,
+      "line": "Already rolling.",
+      "accent": "rolling.",
+      "calm": true,
+      "sparkAt": 10
+    }
+  ],
+  "captions": {
+    "tiktok": "The scene finally landed and your phone was five taps behind. Hold the Tape tab in Ghost Light and your self tape is rolling. #selftape #actorslife #audition #actortok #actors",
+    "youtube_title": "Why does a self tape take five taps to start? #shorts",
+    "youtube_description": "Hold the Tape tab in Ghost Light and you are in the Tape room. Turn the phone sideways, say action and it rolls, say cut and the take lands in Tapes.\nBuilt by a working actor.\n#selftape #actorslife #audition #acting",
+    "instagram": "You were ready. Your phone was not.\nA self tape in Ghost Light, start to finish:\n1. Hold the Tape tab.\n2. Turn the phone sideways.\n3. Say action. Say cut.\nBuilt by a working actor. Link in bio.\n#selftape #actorslife #audition #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 2000,
+  "source": {
+    "plan": "Callboard row 2026-11-17 (storyhowto, story-howto, midnight): holding the Tape tab goes straight to the Tape room; the room works sideways with the hints on their own strip",
+    "app": "Ghost Light web preview (ghostlight-web/serve.sh), dark theme, demo account, main as of 2026-11-12 06:49 UTC",
+    "checked": "src/components/TabBar.tsx TapeButton: a tap opens /tapes, onLongPress opens /tape/[id] on the piece last taped, or last read, or none. app/tape/[id].tsx: the hint '(turn it sideways for casting.)' upright; turned, the hints sit on their own strip; action rolls, cut stops, the Tapes button shows 1.",
+    "flow": "flows/tape-hold-the-tab.json, run twice: FAKE_CAM upright for camup.png, FAKE_CAM on its side for side/rolling2/after2.png. The recorder gained 'hold' (a real long press by touch) and 'turn' steps.",
+    "preview": "web-preview.patch gained one web-only commit: window.__tapeTurn(deg) stands in for the phone's orientation sensor (a browser has none); the room's own layout does the rest.",
+    "first_time": "holding the tab opened the Tape room's first-time page ('Say action. Act. Say cut.' and 'Turn on the camera') because the demo browser had never opened the camera; it is shown as it came up. A returning actor lands on the camera at once.",
+    "not_shown": "the take in the Tape page's 'Your takes': the web preview keeps takes in memory, so the page reloaded empty. The Tapes button's count of 1 after 'cut' is the proof on screen. The app says the take lands in Tapes (not the Book), so the film says Tapes.",
+    "footage": "Pexels 6958105 ('Angry woman talking', kaboompics.com), 2048x1080, as the Tape room's camera. Real stock person, never a user, never quoted; no sound used.",
+    "story": "Nina from Chekhov's The Seagull named in the narration and on the drawn page (title only, no text).",
+    "voice": "George, one take, sped up 1.22x with scripts/fit_take.py (the raw read ran 42s); AI voice, labelled on every platform",
+    "end": "specs/2026-11-17-hold-the-tape-tab-end.json, joined with scripts/join.sh; the end line is cut from the take"
+  }
+}

@@ -1,0 +1,11 @@
+{"start":"/search","lead":300,
+ "note":"Holding the Tape tab goes straight to the Tape room (TabBar.tsx TapeButton onLongPress). FAKE_CAM=/tmp/cam/side.y4m: Pexels 6958105 turned on its side, because the room is then turned with {turn: -90} the way the phone's orientation sensor turns it. Run once with up.y4m for the upright shot (camup), once with side.y4m for the rest.",
+ "steps":[
+ {"wait":1500},{"shot":"search"},
+ {"hold":"Tape yourself","ms":900},{"wait":2500},{"shot":"room"},
+ {"click":"Turn on the camera"},{"wait":4000},{"shot":"camup"},
+ {"turn":-90},{"wait":1500},{"shot":"side"},
+ {"say":"action","ms":300},{"wait":1200},{"shot":"rolling1"},{"wait":2500},{"shot":"rolling2"},
+ {"say":"cut","ms":300},{"wait":250},{"shot":"cut1"},{"wait":500},{"shot":"cut2"},{"wait":700},{"shot":"cut3"},{"wait":1500},{"shot":"after"},{"wait":2500},{"shot":"after2"},
+ {"goto":"/tapes"},{"wait":2500},{"shot":"tapes"}
+],"tail":300}

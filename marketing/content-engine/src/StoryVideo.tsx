@@ -33,14 +33,21 @@ const C_PAPER = {
 const C = { ...C_PAPER };
 /** Drawn looks. paper: warm paper, serif, orange italic key word. marker: off white, black sans,
  * a yellow highlighter swipe behind the key word (same idea as the reel's marker look). */
-export type StoryLook = "paper" | "marker";
+export type StoryLook = "paper" | "marker" | "midnight";
 const HL = "#ffe15a";
+// Fills for drawn shapes and pages; the look sets them (dark shapes on the midnight sheet).
+let PAPER_FILL = "#f8f4ec";
+let PAGE = "#ffffff";
 let LOOK: StoryLook = "paper";
 const F_PAPER = { serif: "Playfair", serifI: "PlayfairItalic", type: "CourierPrime", sans: "Montserrat" };
 const F = { ...F_PAPER };
 const applyLook = (look: StoryLook) => {
   LOOK = look;
-  Object.assign(C, C_PAPER, look === "marker" ? { paper: "#f7f5f0", ink: "#141414", inkSoft: "rgba(20,20,20,0.55)" } : {});
+  Object.assign(C, C_PAPER, look === "marker" ? { paper: "#f7f5f0", ink: "#141414", inkSoft: "rgba(20,20,20,0.55)" }
+    // midnight (2026-11-17): the reel's midnight look for drawn films. Deep blue black sheet, cream ink, warm amber key word.
+    : look === "midnight" ? { paper: "#0d1020", ink: "#f3efe6", inkSoft: "rgba(243,239,230,0.55)", orange: "#f2b75b" } : {});
+  PAPER_FILL = look === "midnight" ? "#1a2038" : "#f8f4ec";
+  PAGE = look === "midnight" ? "#262d4a" : "#ffffff";
   Object.assign(F, F_PAPER, {});
 };
 loadFont({ family: F.serif, url: staticFile("fonts/playfair.woff2"), weight: "600" });
@@ -93,11 +100,17 @@ type Screens = {
   seconds: number;
   line: string;
   accent: string;
-  shots: { src: string; at: number; tap?: { x: number; y: number; at: number }; push?: { x: number; y: number; scale?: number; from?: number };
+  shots: { src: string; at: number; tap?: { x: number; y: number; at: number; hold?: number }; push?: { x: number; y: number; scale?: number; from?: number };
     /** move the shot up inside the phone by this share of its height, [from, to], so a low part (the tab bar) reaches the safe area */
-    pan?: [number, number] }[];
+    pan?: [number, number];
+    /** cross fade in instead of sliding in (a shot that changes while the phone turns) */
+    fade?: boolean }[];
+  /** the drawn phone turns on its side at this scene frame (0 = it is already sideways), the way the actor turns it for casting */
+  turn?: number;
+  /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
+  cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -218,7 +231,9 @@ const Cue: React.FC<{ text: string; color: string; at?: number }> = ({ text, col
 const Paper: React.FC = () => (
   <AbsoluteFill
     style={{
-      background: LOOK === "marker"
+      background: LOOK === "midnight"
+        ? `radial-gradient(ellipse 90% 70% at 50% 40%, #171c36 0%, ${C.paper} 62%, #070914 100%)`
+        : LOOK === "marker"
         ? `radial-gradient(ellipse 90% 70% at 50% 40%, #fbfaf6 0%, ${C.paper} 65%, #ecebe6 100%)`
         : `radial-gradient(ellipse 90% 70% at 50% 40%, #f7f2e8 0%, ${C.paper} 60%, #e9e1d2 100%)`,
     }}
@@ -238,7 +253,7 @@ const Glow: React.FC<{ glow?: number; y?: string }> = ({ glow = 1, y = "55%" }) 
 };
 
 // ---------- scenes ----------
-const PAPER_FILL = "#f8f4ec";
+
 
 const NightScene: React.FC<{ s: Night }> = ({ s }) => {
   const f = useCurrentFrame();
@@ -357,12 +372,13 @@ const HoldingHand: React.FC<{ start: number }> = ({ start }) => {
 };
 
 /** A right index finger that reaches in from the lower right and taps. */
-const TapFinger: React.FC<{ at: number; x: number; y: number }> = ({ at, x, y }) => {
+/** `hold` keeps the finger down that many frames longer (a long press), with a second ripple. */
+const TapFinger: React.FC<{ at: number; x: number; y: number; hold?: number }> = ({ at, x, y, hold = 0 }) => {
   const f = useCurrentFrame();
   if (f < at) return null;
   const inP = prog(f, at, at + 12);
-  const press = interpolate(f, [at + 12, at + 16, at + 22], [0, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const outP = prog(f, at + 30, at + 44);
+  const press = interpolate(f, [at + 12, at + 16, at + 16.01 + hold, at + 22 + hold], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const outP = prog(f, at + 30 + hold, at + 44 + hold);
   const away = (1 - inP) + outP;
   // finger direction (toward the wrist) and its normal
   const dx = 0.387, dy = 0.922, nx = 0.922, ny = -0.387;
@@ -671,13 +687,14 @@ const APP = {
 const PX = 220, PY = 755, PW = 640, PH = 1500, PI = 22;
 const SX = PX + PI, SY = PY + PI, SW = PW - PI * 2;
 
-const DrawnPhone: React.FC<{ start: number; children?: React.ReactNode }> = ({ start, children }) => {
+const DrawnPhone: React.FC<{ start: number; children?: React.ReactNode; whole?: boolean }> = ({ start, children, whole }) => {
   const f = useCurrentFrame();
-  const body = `M${PX + 96} ${PY} L ${PX + PW - 96} ${PY} C ${PX + PW - 30} ${PY}, ${PX + PW} ${PY + 30}, ${PX + PW} ${PY + 96} L ${PX + PW} ${PY + PH} L ${PX} ${PY + PH} L ${PX} ${PY + 96} C ${PX} ${PY + 30}, ${PX + 30} ${PY}, ${PX + 96} ${PY} Z`;
+  // whole: the bottom is drawn too (the phone is seen entire when it turns on its side); otherwise it runs off the frame.
+  const body = whole ? `M${PX + 96} ${PY} L ${PX + PW - 96} ${PY} C ${PX + PW - 30} ${PY}, ${PX + PW} ${PY + 30}, ${PX + PW} ${PY + 96} L ${PX + PW} ${PY + PH - 96} C ${PX + PW} ${PY + PH - 30}, ${PX + PW - 30} ${PY + PH}, ${PX + PW - 96} ${PY + PH} L ${PX + 96} ${PY + PH} C ${PX + 30} ${PY + PH}, ${PX} ${PY + PH - 30}, ${PX} ${PY + PH - 96} L ${PX} ${PY + 96} C ${PX} ${PY + 30}, ${PX + 30} ${PY}, ${PX + 96} ${PY} Z` : `M${PX + 96} ${PY} L ${PX + PW - 96} ${PY} C ${PX + PW - 30} ${PY}, ${PX + PW} ${PY + 30}, ${PX + PW} ${PY + 96} L ${PX + PW} ${PY + PH} L ${PX} ${PY + PH} L ${PX} ${PY + 96} C ${PX} ${PY + 30}, ${PX + 30} ${PY}, ${PX + 96} ${PY} Z`;
   const screenOn = prog(f, start + 10, start + 22);
   return (
     <>
-      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0, overflow: "visible" }}>
         <Ink d={body} start={start} dur={18} w={7} fill={PAPER_FILL} />
       </svg>
       <div
@@ -686,7 +703,7 @@ const DrawnPhone: React.FC<{ start: number; children?: React.ReactNode }> = ({ s
           left: SX,
           top: SY,
           width: SW,
-          height: PH,
+          height: whole ? PH - PI * 2 : PH,
           borderRadius: 78,
           background: APP.bg,
           opacity: screenOn,
@@ -1003,6 +1020,10 @@ const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) =>
   const up = first ? spring({ frame: f - 2, fps, config: { damping: 18 } }) : 1;
   const zoom = first ? 1 + (ZOOM - 1) * spring({ frame: f - 14, fps, config: { damping: 22 } }) : ZOOM;
   const shots = s.shots;
+  // Sideways (2026-11-17): the phone turns clockwise about its own centre and shrinks to fit the frame's width.
+  const side = s.turn === undefined ? 0 : s.turn <= 0 ? 1 : spring({ frame: f - s.turn, fps, config: { damping: 16, mass: 0.9 } });
+  const PCX = PX + PW / 2, PCY = PY + PH / 2;
+  const camT = `translateY(${(1 - up) * 800 + interpolate(side, [0, 1], [(PCY - 980) * (zoom - 1), 664 - PCY])}px) rotate(${side * 90}deg) scale(${interpolate(side, [0, 1], [zoom, 0.675])})`;
   // The push zoom of shot i at frame g, and a tap point mapped through it (so finger and ripple land on
   // the thing the push is moving toward, not where it sat before the zoom).
   const pzAt = (i: number, g: number) => {
@@ -1031,23 +1052,37 @@ const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) =>
       <AbsoluteFill style={{ alignItems: "center", paddingTop: 270 }}>
         <Rise at={4}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
       </AbsoluteFill>
-      <AbsoluteFill style={{ transform: `translateY(${(1 - up) * 800}px) scale(${zoom})`, transformOrigin: "540px 980px" }}>
-        <DrawnPhone start={first ? 0 : -100}>
+      {s.turn !== undefined && s.turn > 0 && <Sfx name="slide" at={s.turn} vol={0.5} />}
+      {(s.cues ?? []).map((cu, i) => <Sfx key={`cu${i}`} name="cine/ping" at={cu.at} vol={0.5} />)}
+      {(s.cues ?? []).map((cu, i) => {
+        if (f < cu.at || f > (cu.until ?? cu.at + 45)) return null;
+        const pop = spring({ frame: f - cu.at, fps, config: { damping: 11, mass: 0.6 } });
+        return (
+          <AbsoluteFill key={`cw${i}`} style={{ alignItems: "center", paddingTop: 965 }}>
+            <div style={{ fontFamily: F.serifI, fontStyle: "italic", fontSize: 150, lineHeight: 1, color: C.orange, transform: `scale(${0.6 + 0.4 * pop}) rotate(-3deg)`, opacity: Math.min(1, pop * 1.5) }}>{cu.text}</div>
+          </AbsoluteFill>
+        );
+      })}
+      <AbsoluteFill style={{ transform: camT, transformOrigin: `${PCX}px ${PCY}px` }}>
+        <DrawnPhone start={first ? 0 : -100} whole={s.turn !== undefined}>
           {shots.map((sh, i) => {
             const next = shots[i + 1];
             if (f < sh.at - 1 || (next && f > next.at + 12)) return null;
-            const inP = i === 0 ? 1 : Easing.out(Easing.cubic)(prog(f, sh.at, sh.at + 12));
+            const inP0 = i === 0 ? 1 : Easing.out(Easing.cubic)(prog(f, sh.at, sh.at + 12));
+            const inP = sh.fade ? 1 : inP0;
             const outP = next ? Easing.in(Easing.cubic)(prog(f, next.at, next.at + 12)) : 0;
             const end = next ? next.at : sh.at + 120;
             const pz = pzAt(i, f); void end;
             return (
-              <div key={i} style={{ position: "absolute", left: 0, top: 0, width: SW, height: SHOT_H,
-                transform: `translateX(${(1 - inP) * SW - outP * SW * 0.35}px)`, opacity: 1 - outP * 0.6,
+              <div key={i} style={{ position: "absolute", left: 0, top: 0, width: SW, height: SHOT_H + (PH - PI * 2 - SHOT_H) * side,
+                transform: `translateX(${(1 - inP) * SW - (next?.fade ? 0 : outP * SW * 0.35)}px)`, opacity: sh.fade ? inP0 : next?.fade ? 1 : 1 - outP * 0.6,
                 boxShadow: i > 0 && inP < 1 ? "-20px 0 40px rgba(0,0,0,0.35)" : undefined }}>
-                <Img src={staticFile(sh.src)} style={{ width: SW, height: SHOT_H, objectFit: "cover",
+                <Img src={staticFile(sh.src)} style={{ width: SW, height: SHOT_H + (PH - PI * 2 - SHOT_H) * side, objectFit: "cover",
                   transform: `translateY(${-panAt(i, f) * SHOT_H}px) scale(${pz})`, transformOrigin: sh.push ? `${sh.push.x * 100}% ${sh.push.y * 100}%` : "50% 50%" }} />
-                {sh.tap && f >= sh.tap.at + 12 && f <= sh.tap.at + 40 && (() => {
-                  const r = prog(f, sh.tap!.at + 12, sh.tap!.at + 34);
+                {sh.tap && f >= sh.tap.at + 12 && f <= sh.tap.at + 40 + (sh.tap.hold ?? 0) && (() => {
+                  // a held finger ripples twice
+                  const h2 = sh.tap!.hold && f > sh.tap!.at + 34 ? sh.tap!.hold - 6 : 0;
+                  const r = prog(f, sh.tap!.at + 12 + h2, sh.tap!.at + 34 + h2);
                   const m = mapTap(i);
                   return <div style={{ position: "absolute", left: m.x * SW - 60 * r, top: m.y * SHOT_H - 60 * r, width: 120 * r, height: 120 * r,
                     borderRadius: "50%", border: `5px solid ${C.orange}`, opacity: 1 - r }} />;
@@ -1056,7 +1091,7 @@ const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) =>
             );
           })}
         </DrawnPhone>
-        {shots.map((sh, i) => (sh.tap ? <TapFinger key={`f${i}`} at={sh.tap.at} x={SX + mapTap(i).x * SW} y={SY + mapTap(i).y * SHOT_H} /> : null))}
+        {shots.map((sh, i) => (sh.tap ? <TapFinger key={`f${i}`} at={sh.tap.at} hold={sh.tap.hold} x={SX + mapTap(i).x * SW} y={SY + mapTap(i).y * SHOT_H} /> : null))}
       </AbsoluteFill>
     </AbsoluteFill>
   );
@@ -2157,7 +2192,7 @@ const Face: React.FC<{ x: number; y: number; r?: number; panic?: number; hope?: 
     <g transform={`translate(${x + shake} ${y}) rotate(${tilt}) scale(${k * pop})`}>
       <circle cx={0} cy={0} r={78} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} />
       {/* hair */}
-      <path d="M-74 -18 C -70 -80, 60 -96, 76 -24 C 50 -52, -20 -60, -74 -18 Z" fill={C.ink} />
+      <path d="M-74 -18 C -70 -80, 60 -96, 76 -24 C 50 -52, -20 -60, -74 -18 Z" fill={LOOK === "midnight" ? "#b9823f" : C.ink} />
       {/* brows: up in panic, relaxed in hope */}
       <path d={`M-40 ${-26 - panic * 12} L -14 ${-30 - panic * 4 + hope * 4} M14 ${-30 - panic * 4 + hope * 4} L 40 ${-26 - panic * 12}`} stroke={C.ink} strokeWidth={6} strokeLinecap="round" />
       <circle cx={-26} cy={-4} r={eye} fill={C.ink} />
@@ -2770,6 +2805,211 @@ const ChairScene: React.FC<{ s: Chair }> = ({ s }) => {
   );
 };
 
+
+// ---------- the spark and the phone that was not ready (2026-11-17, the Tape tab held) ----------
+/** A four point spark: the feeling of a scene finally landing. */
+const sparkD = (R: number, r = R * 0.2) => `M0 ${-R} Q ${r} ${-r} ${R} 0 Q ${r} ${r} 0 ${R} Q ${-r} ${r} ${-R} 0 Q ${-r} ${-r} 0 ${-R} Z`;
+const Spark: React.FC<{ x: number; y: number; k?: number; at?: number; ghost?: boolean }> = ({ x, y, k = 1, at = 0, ghost }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const pop = spring({ frame: f - at, fps, config: { damping: 9, mass: 0.5 } });
+  if (f < at) return null;
+  const pulse = 1 + 0.1 * Math.sin(f / 4);
+  if (ghost) return (
+    <g transform={`translate(${x} ${y}) scale(${k * pop})`}>
+      <path d={sparkD(70)} fill="none" stroke={C.inkSoft} strokeWidth={5} strokeDasharray="12 12" strokeLinejoin="round" />
+    </g>
+  );
+  return (
+    <g transform={`translate(${x} ${y}) scale(${k * pop * pulse}) rotate(${Math.sin(f / 9) * 8})`}>
+      <circle r={120} fill={C.orange} opacity={0.14 + 0.06 * Math.sin(f / 5)} />
+      <path d={sparkD(70)} fill={C.orange} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+      {[[-96, -70, 16], [100, -54, 12], [84, 82, 14]].map(([sx, sy, sr], i) => (
+        <path key={i} transform={`translate(${sx} ${sy})`} d={sparkD(sr)} fill={C.orange} opacity={0.4 + 0.6 * Math.abs(Math.sin(f / 6 + i * 2))} />
+      ))}
+    </g>
+  );
+};
+/** A drawn face with nothing left in it: sad brows, heavy lids, a small frown. */
+const FlatFace: React.FC<{ x: number; y: number; r?: number; start?: number }> = ({ x, y, r = 84, start = 0 }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const pop = spring({ frame: f - start, fps, config: { damping: 12, mass: 0.6 } });
+  if (f < start) return null;
+  const sag = 4 * Math.sin(f / 16);
+  return (
+    <g transform={`translate(${x} ${y + sag}) rotate(-7) scale(${(r / 78) * pop})`}>
+      <circle cx={0} cy={0} r={78} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} />
+      <path d="M-74 -18 C -70 -80, 60 -96, 76 -24 C 50 -52, -20 -60, -74 -18 Z" fill={LOOK === "midnight" ? "#b9823f" : C.ink} />
+      <path d="M-42 -20 L -16 -32 M16 -32 L 42 -20" stroke={C.ink} strokeWidth={6} strokeLinecap="round" />
+      <path d="M-36 -2 C -30 6, -20 6, -14 -2 M14 -2 C 20 6, 30 6, 36 -2" fill="none" stroke={C.ink} strokeWidth={6} strokeLinecap="round" />
+      <path d="M-20 42 C -8 30, 8 30, 20 42" fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+    </g>
+  );
+};
+/** A night window; stars inside it. */
+const NightWindow: React.FC<{ x: number; y: number; w: number; h: number; start?: number }> = ({ x, y, w, h, start = 0 }) => {
+  const f = useCurrentFrame();
+  return (
+    <>
+      <Ink d={`M${x} ${y} L ${x + w} ${y} L ${x + w} ${y + h} L ${x} ${y + h} Z`} start={start} dur={16} w={7} fill={LOOK === "midnight" ? "#05070f" : "rgba(33,26,21,0.12)"} />
+      <Ink d={`M${x + w / 2} ${y + 2} L ${x + w / 2} ${y + h - 2} M${x + 2} ${y + h / 2} L ${x + w - 2} ${y + h / 2}`} start={start + 8} dur={10} w={4} color={C.inkSoft} />
+      <Ink d={`M${x - 22} ${y + h + 4} L ${x + w + 22} ${y + h + 4}`} start={start + 6} dur={8} w={8} />
+      {[[0.2, 0.22], [0.72, 0.16], [0.3, 0.7], [0.82, 0.62]].map(([a, b], i) => (
+        <circle key={i} cx={x + w * a} cy={y + h * b} r={4} fill={C.ink} opacity={prog(f, start + 14, start + 20) * (0.35 + 0.5 * Math.abs(Math.sin(f / 11 + i)))} />
+      ))}
+    </>
+  );
+};
+
+/** The hallway, one lamp, and the scene finally lands: a spark over your head. calm: it is caught, the phone is rolling. */
+type Hall = { type: "hall"; seconds: number; line: string; accent: string; page?: string; calm?: boolean; sparkAt?: number };
+const HallScene: React.FC<{ s: Hall }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const FY = 1400, LX = 836;
+  const sparkAt = s.sparkAt ?? 26;
+  const lit = 0.85 + 0.15 * Math.sin(f / 13);
+  const rec = Math.floor(f / 12) % 2 === 0;
+  return (
+    <AbsoluteFill>
+      <Sfx name="cine/switch" at={8} vol={0.4} />
+      <Sfx name="cine/ping" at={sparkAt} vol={0.6} />
+      {s.calm && <Sfx name="boop_hi" at={sparkAt + 10} vol={0.5} />}
+      <AbsoluteFill style={{ background: `radial-gradient(circle 520px at ${LX}px 900px, rgba(242,183,91,${0.26 * lit * prog(f, 8, 18)}) 0%, rgba(242,183,91,0) 100%)` }} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the hallway: the floor, a door, the skirting running away */}
+        <Ink d={`M50 ${FY} C 380 ${FY - 8}, 700 ${FY + 8}, 1030 ${FY}`} start={0} dur={16} w={8} />
+        <Ink d={`M96 ${FY - 2} L 96 800 L 316 800 L 316 ${FY - 2}`} start={4} dur={16} w={7} fill={PAPER_FILL} />
+        <Ink d="M130 850 L 282 850 L 282 1060 L 130 1060 Z M130 1110 L 282 1110 L 282 1340 L 130 1340 Z" start={14} dur={12} w={4} color={C.inkSoft} />
+        <circle cx={290} cy={1088} r={10} fill={C.ink} opacity={prog(f, 18, 24)} />
+        {/* the one lamp */}
+        <Ink d={`M${LX} ${FY - 2} L ${LX} 900 M${LX - 56} ${FY - 2} L ${LX + 56} ${FY - 2}`} start={6} dur={12} w={7} />
+        <Ink d={`M${LX - 84} 900 L ${LX + 84} 900 L ${LX + 52} 770 L ${LX - 52} 770 Z`} start={10} dur={12} w={7} fill={`rgba(242,183,91,${0.55 * lit})`} />
+        {/* you, mid speech, the pages in your hand */}
+        <Ink d={`M410 ${FY - 4} C 410 1250, 470 1180, 550 1180 C 630 1180, 690 1250, 690 ${FY - 4}`} start={10} dur={12} w={6} fill="rgba(232,121,43,0.35)" />
+        <Face x={550} y={1082} r={86} hope={prog(f, sparkAt, sparkAt + 10)} start={8} />
+        {!s.calm && (
+          <g transform={`translate(726 1262) rotate(${9 + Math.sin(f / 10) * 3})`} opacity={prog(f, 14, 22)}>
+            <rect x={-84} y={-98} width={168} height={196} fill={PAGE} stroke={C.ink} strokeWidth={5} />
+            <text x={0} y={-56} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={22} letterSpacing={1.5} fill={C.ink}>{s.page ?? "THE SEAGULL"}</text>
+            <path d="M-60 -24 L 60 -24 M-60 2 L 44 2 M-60 28 L 54 28 M-60 54 L 30 54" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" />
+          </g>
+        )}
+        {s.calm && (
+          <g opacity={prog(f, 6, 14)}>
+            {/* the phone on its side, on a stack of plays, rolling */}
+            <path d={`M196 ${FY - 4} L 196 ${FY - 44} L 396 ${FY - 44} L 396 ${FY - 4} M210 ${FY - 44} L 210 ${FY - 84} L 384 ${FY - 84} L 384 ${FY - 44}`} fill={PAPER_FILL} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+            <rect x={186} y={FY - 216} width={224} height={126} rx={18} fill={APP.bg} stroke={C.ink} strokeWidth={6} />
+            <circle cx={214} cy={FY - 188} r={9} fill="#e5484d" opacity={rec ? 1 : 0.25} />
+            <circle cx={384} cy={FY - 153} r={15} fill="none" stroke="#f4ead9" strokeWidth={4} />
+            <circle cx={384} cy={FY - 153} r={8} fill="#e5484d" />
+            <circle cx={290} cy={FY - 160} r={22} fill="none" stroke="rgba(244,234,217,0.7)" strokeWidth={4} />
+            <path d={`M262 ${FY - 108} C 262 ${FY - 132}, 318 ${FY - 132}, 318 ${FY - 108}`} fill="none" stroke="rgba(244,234,217,0.7)" strokeWidth={4} />
+          </g>
+        )}
+        <Spark x={550} y={886} at={sparkAt} />
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** You grab the phone: unlock, swipe, the wrong app, the camera, flip it. The spark floats out of the window. */
+type Fumble = { type: "fumble"; seconds: number; line: string; accent: string; steps: string[]; at?: number[] };
+const FumbleIcon: React.FC<{ k: number }> = ({ k }) => {
+  const st = { fill: "none", stroke: APP.cream, strokeWidth: 9, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  return k === 0 ? (<g><rect x={-46} y={-10} width={92} height={74} rx={10} {...st} /><path d="M-28 -10 L -28 -34 C -28 -72, 28 -72, 28 -34 L 28 -10" {...st} /></g>)
+    : k === 1 ? (<g><path d="M-70 20 L 60 20 M26 -14 L 62 20 L 26 54" {...st} /><path d="M-70 -30 L -10 -30" {...st} opacity={0.4} /></g>)
+    : k === 2 ? (<g><rect x={-52} y={-66} width={104} height={132} rx={12} {...st} /><path d="M-30 -40 L 30 -40 M-30 -6 L -22 -6 M-4 -6 L 4 -6 M22 -6 L 30 -6 M-30 26 L -22 26 M-4 26 L 4 26 M22 26 L 30 26" {...st} strokeWidth={8} /><path d="M-74 -86 L 74 86 M74 -86 L -74 86" stroke="#e5484d" strokeWidth={12} strokeLinecap="round" /></g>)
+    : k === 3 ? (<g><path d="M-70 -36 L -34 -36 L -20 -58 L 20 -58 L 34 -36 L 70 -36 L 70 52 L -70 52 Z" {...st} /><circle cx={0} cy={8} r={26} {...st} /></g>)
+    : (<g><path d="M-58 -10 C -50 -62, 30 -70, 56 -30 M56 -62 L 58 -28 L 24 -30" {...st} /><path d="M58 14 C 50 66, -30 74, -56 34 M-56 66 L -58 32 L -24 34" {...st} /></g>);
+};
+const FumbleScene: React.FC<{ s: Fumble }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const total = Math.round(s.seconds * FPS);
+  const n = s.steps.length;
+  const ats = s.at ?? s.steps.map((_, i) => 14 + Math.round(((total - 50) * i) / n));
+  let k = -1; ats.forEach((a, i) => { if (f >= a) k = i; });
+  const since = k >= 0 ? f - ats[k] : 0;
+  const pop = k >= 0 ? spring({ frame: since, fps, config: { damping: 10, mass: 0.5 } }) : 0;
+  const shake = Math.sin(f * 1.5) * 5;
+  // the spark drifts off, up and out through the window
+  const d = Easing.inOut(Easing.cubic)(prog(f, 16, total - 6));
+  const sx = interpolate(d, [0, 1], [250, 800]), sy = interpolate(d, [0, 0.5, 1], [820, 640, 716]) + Math.sin(f / 7) * 14;
+  const PXc = 610, PYc = 1104;
+  return (
+    <AbsoluteFill>
+      {ats.map((a, i) => <Sfx key={i} name={i === 2 ? "thud" : "cine/tap"} at={a} vol={i === 2 ? 0.5 : 0.6} />)}
+      <Sfx name="cine/toing" at={ats[2] + 4} vol={0.35} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <NightWindow x={650} y={580} w={300} h={290} start={0} />
+        {/* you, eyes on the phone */}
+        <Ink d="M96 1400 C 96 1220, 160 1150, 250 1150 C 340 1150, 404 1220, 404 1400" start={6} dur={12} w={6} fill="rgba(232,121,43,0.35)" />
+        <Face x={250} y={1052} r={84} panic={0.2 + 0.75 * prog(f, 20, total - 20)} tilt={8} start={4} />
+        {/* the phone, in two hands */}
+        <g transform={`translate(${PXc + shake} ${PYc}) rotate(${-4 + shake * 0.5})`} opacity={prog(f, 6, 14)}>
+          <rect x={-170} y={-270} width={340} height={540} rx={46} fill={APP.bg} stroke={C.ink} strokeWidth={7} />
+          <rect x={-44} y={-250} width={88} height={24} rx={12} fill="#000" />
+          {k >= 0 && (
+            <g transform={`scale(${0.7 + 0.3 * pop})`} opacity={Math.min(1, pop * 1.6)}>
+              <g transform="translate(0 -40) scale(1.25)"><FumbleIcon k={k} /></g>
+              <text x={0} y={130} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={50} fill={k === 2 ? "#e5484d" : APP.cream}>{s.steps[k]}</text>
+            </g>
+          )}
+          {s.steps.map((_, i) => <circle key={i} cx={(i - (n - 1) / 2) * 30} cy={222} r={7} fill={i <= k ? APP.yellow : "rgba(244,234,217,0.25)"} />)}
+          {/* thumbs */}
+          <path d="M-196 150 C -150 120, -110 150, -120 200 C -130 240, -180 250, -210 230" fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" transform={`rotate(${Math.sin(f * 0.9) * 6} -170 200)`} />
+          <path d="M196 90 C 150 60, 110 90, 120 140 C 130 180, 180 190, 210 170" fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" transform={`rotate(${Math.cos(f * 1.1) * 7} 170 140)`} />
+        </g>
+        <Spark x={sx} y={sy} k={interpolate(d, [0, 0.75, 1], [0.9, 0.7, 0.18])} at={0} />
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** The camera is finally open. The spark is not: it is a dot in the night, and then it is not there. */
+type Gone = { type: "gone"; seconds: number; line: string; accent: string; outAt?: number };
+const GoneScene: React.FC<{ s: Gone }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const outAt = s.outAt ?? 34;
+  const far = 1 - prog(f, outAt, outAt + 10);
+  return (
+    <AbsoluteFill>
+      <Sfx name="cine/pong" at={8} vol={0.45} />
+      <Sfx name="cine/plink" at={outAt} vol={0.4} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <NightWindow x={560} y={600} w={380} h={420} start={0} />
+        {/* the spark, far off, going out */}
+        <g transform={`translate(${800 + f * 0.5} ${760 - f * 0.6})`} opacity={far}>
+          <path d={sparkD(20 - Math.min(10, f / 5))} fill={C.orange} />
+        </g>
+        {/* where it was */}
+        <Spark x={300} y={900} at={10} ghost />
+        <Ink d="M150 1400 C 150 1240, 214 1196, 300 1196 C 386 1196, 450 1240, 450 1400" start={4} dur={12} w={6} fill="rgba(232,121,43,0.35)" />
+        <FlatFace x={300} y={1104} r={86} start={4} />
+        {/* the phone, camera open at last, hanging from one hand */}
+        <g transform={`translate(600 1290) rotate(${24 + Math.sin(f / 12) * 4})`} opacity={prog(f, 10, 18)}>
+          <rect x={-74} y={-128} width={148} height={256} rx={24} fill={APP.bg} stroke={C.ink} strokeWidth={6} />
+          <g transform="translate(0 -6) scale(0.62)"><FumbleIcon k={3} /></g>
+          <circle cx={0} cy={92} r={15} fill="none" stroke={APP.cream} strokeWidth={4} />
+        </g>
+        <Ink d="M50 1400 C 380 1392, 700 1408, 1030 1400" start={0} dur={16} w={8} />
+        {/* a sigh */}
+        {[0, 1, 2].map((i) => <path key={i} d={`M${410 + i * 34} ${1150 - i * 12} q 14 -10 28 0`} fill="none" stroke={C.inkSoft} strokeWidth={5} strokeLinecap="round" opacity={prog(f, 20 + i * 5, 26 + i * 5) * (1 - prog(f, 44 + i * 5, 54 + i * 5))} />)}
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 /** Word by word captions for the narration (Canberk, 2026-11-08: drawn films need captions). Ink on a
  *  soft paper pill above the bottom quarter, the spoken word in orange. Hidden on the end card. */
 const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
@@ -2789,7 +3029,7 @@ const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = (
   const op = interpolate(lt, [-0.05, 0.1, dur(line) + 0.05, dur(line) + 0.25], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
     <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", padding: "0 170px 450px 80px", opacity: op, pointerEvents: "none" }}>
-      <div style={{ background: C.ink, borderRadius: 22, padding: "16px 28px", boxShadow: "0 8px 30px rgba(33,26,21,0.25)",
+      <div style={{ background: LOOK === "midnight" ? "#05070f" : C.ink, border: LOOK === "midnight" ? "2px solid rgba(243,239,230,0.28)" : undefined, borderRadius: 22, padding: "16px 28px", boxShadow: "0 8px 30px rgba(33,26,21,0.25)",
         textAlign: "center", fontFamily: F.serif, fontWeight: 600, fontSize: 50, lineHeight: 1.2, color: "#fbf7f0", maxWidth: 830 }}>
         {chunk.map((w, i) => {
           const on = lt >= w.s - 0.02;
@@ -2852,6 +3092,9 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "cafe" ? <CafeScene s={sc} /> :
       sc.type === "train" ? <TrainScene s={sc} /> :
       sc.type === "chair" ? <ChairScene s={sc} /> :
+      sc.type === "hall" ? <HallScene s={sc} /> :
+      sc.type === "fumble" ? <FumbleScene s={sc} /> :
+      sc.type === "gone" ? <GoneScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

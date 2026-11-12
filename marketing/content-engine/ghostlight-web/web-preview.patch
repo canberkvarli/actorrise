@@ -1,7 +1,7 @@
-From 7ad690a493f9807deb5bec1cd2bb63fbb1dea870 Mon Sep 17 00:00:00 2001
+From fff4b7bda6705eb2d4216610f1500a24312d556c Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 3 Nov 2026 10:21:34 +0300
-Subject: [PATCH 1/6] Web preview for marketing recordings: the real screens in
+Subject: [PATCH 1/7] Web preview for marketing recordings: the real screens in
  a browser at phone size
 
 Branch only, never main. Adds react-native-web, react-dom and @expo/metro-runtime, and
@@ -724,10 +724,10 @@ index 0000000..4856578
 2.43.0
 
 
-From 72bc98477edc4e8644ef52a126a746069f5a0219 Mon Sep 17 00:00:00 2001
+From 2300fe5690811f4a27b3a02e3c486cbe59d5500a Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Wed, 4 Nov 2026 06:55:59 +0000
-Subject: [PATCH 2/6] Web preview: no screenshot listener on web
+Subject: [PATCH 2/7] Web preview: no screenshot listener on web
  (PrivacyShield)
 
 ---
@@ -762,10 +762,10 @@ index 5928487..4709fb8 100644
 2.43.0
 
 
-From 73b39efaf8e2f5a534d0d8a7f2a069cdabd2007a Mon Sep 17 00:00:00 2001
+From 3e38e04ece3372deebc0eb0f639a73d431ab1cc7 Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Thu, 5 Nov 2026 15:36:20 +0000
-Subject: [PATCH 3/6] Web preview: the tape room rolls in a browser (scripted
+Subject: [PATCH 3/7] Web preview: the tape room rolls in a browser (scripted
  ear, camera record waits for cut)
 
 ---
@@ -877,10 +877,10 @@ index 0000000..6d02a56
 2.43.0
 
 
-From 730d0eff00559f6f7ec2bd248e1ce858960796d1 Mon Sep 17 00:00:00 2001
+From 73bc8f8e0c285df385c8ec9a5bc48f335407377f Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Thu, 5 Nov 2026 22:53:12 +0000
-Subject: [PATCH 4/6] Web preview: the tape room plays the take back
+Subject: [PATCH 4/7] Web preview: the tape room plays the take back
  (MediaRecorder camera, takes in memory, video plays on mount)
 
 ---
@@ -1020,10 +1020,10 @@ index 0000000..3f6667d
 2.43.0
 
 
-From 7745f40c656ad34ac893a1948b71ab8aab128568 Mon Sep 17 00:00:00 2001
+From 8995c42fb5b47180d09f796a5b98585fa7a02725 Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Sun, 8 Nov 2026 20:17:41 +0000
-Subject: [PATCH 5/6] Web preview: partner lines load straight from their URL
+Subject: [PATCH 5/7] Web preview: partner lines load straight from their URL
  (no file cache in a browser)
 
 ---
@@ -1110,10 +1110,10 @@ index 0000000..0ead996
 2.43.0
 
 
-From 9edb5423e99629bfe38e0f858f1956cbf32b9927 Mon Sep 17 00:00:00 2001
+From 788910564b3dea0053acc9fd74fdd53c5d22ffc3 Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Wed, 11 Nov 2026 06:55:01 +0000
-Subject: [PATCH 6/6] Web preview: sides from a file go up as a multipart form
+Subject: [PATCH 6/7] Web preview: sides from a file go up as a multipart form
  (a browser has no file system uploader)
 
 ---
@@ -1147,6 +1147,34 @@ index 2f3560a..43e5a0b 100644
    let uri: string;
    let mimeType: string;
    if ('text' in source) {
+-- 
+2.43.0
+
+
+From 17ed92b80f00c7445dc3ff9ee90b8660a610b0d3 Mon Sep 17 00:00:00 2001
+From: preview <preview@local>
+Date: Thu, 12 Nov 2026 06:50:41 +0000
+Subject: [PATCH 7/7] Web preview: the recorder turns the tape room (a browser
+ has no orientation sensor)
+
+---
+ app/tape/[id].tsx | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/app/tape/[id].tsx b/app/tape/[id].tsx
+index a058c06..b988728 100644
+--- a/app/tape/[id].tsx
++++ b/app/tape/[id].tsx
+@@ -209,6 +209,9 @@ export default function TapeRoom() {
+   const [turn, setTurn] = useState(0); // degrees the room's chrome is turned, to follow the phone
+   const turnRef = useRef(0);
+   turnRef.current = turn;
++  // Web preview only (marketing recordings): a browser has no orientation sensor, so the recorder
++  // says which way the phone is held (window.__tapeTurn(-90)); the room then turns itself as on the phone.
++  useEffect(() => { if (typeof document !== 'undefined') (window as unknown as { __tapeTurn?: (d: number) => void }).__tapeTurn = (d: number) => setTurn(d); }, []);
+   const [count, setCount] = useState(3);
+   const [elapsed, setElapsed] = useState(0);
+   const [takes, setTakes] = useState<Take[]>([]);
 -- 
 2.43.0
 
