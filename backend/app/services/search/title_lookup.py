@@ -753,6 +753,7 @@ _TITLE_FILLER = {
     "monologue", "monologues", "audition", "auditioning", "auditions", "scene",
     "scenes", "from", "in", "for", "the", "a", "an", "piece", "speech",
     "play", "show", "film", "movie", "series", "tv", "musical", "my", "me",
+    "soliloquy", "soliloquies", "speeches",
 }
 
 # A title may only be matched as a phrase *inside* a longer query when it is
@@ -1347,6 +1348,26 @@ def strip_trailing_words(query: str) -> list:
 
 def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
     """Return {"title", "medium"} when the query names a title we actually carry.
+
+    Tried as typed first, then with each possessive dropped. Apostrophes fold
+    INTO the word ("Doll's" -> "dolls"), which is right for titles that carry
+    one ("The Queen's Gambit", "Who's Afraid of Virginia Woolf") and wrong for
+    an actor's possessive: "medea's monologues" became "medeas" and missed
+    the 41 Medea pieces (2026-11-12 brief), "hamlet's soliloquy" missed
+    Hamlet. The as-typed pass runs first, so a title with its own apostrophe
+    still wins.
+    """
+    hit = _detect_catalogue_title_once(db, query)
+    if hit or not query:
+        return hit
+    plain = _POSSESSIVE.sub("", query)
+    if plain != query:
+        return _detect_catalogue_title_once(db, plain)
+    return None
+
+
+def _detect_catalogue_title_once(db, query: str) -> Optional[Dict[str, str]]:
+    """detect_catalogue_title for one spelling of the query.
 
     detect_title_lookup() only knows the curated dictionary, so titles the
     library really holds went undetected: "queen's gambit" scored 0.307 against
