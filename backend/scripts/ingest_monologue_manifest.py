@@ -75,18 +75,31 @@ def main() -> None:
     ap.add_argument("manifest")
     ap.add_argument("--write-rest", action="store_true")
     ap.add_argument("--show-rejected", action="store_true")
+    ap.add_argument("--max-per-play", type=int, default=12,
+                    help="Most pieces to take from one play in one manifest. An "
+                         "excerpt policy that took thirty speeches from one play "
+                         "would be taking the play.")
     args = ap.parse_args()
 
     parsed, skipped = load(args.manifest)
     years = scp.load_years()
     rows = [scp.evaluate(p, years) for p in parsed]
-    kept = [r for r in rows if r.ok]
+    kept, per_play, capped = [], Counter(), 0
+    for r in rows:
+        if not r.ok:
+            continue
+        per_play[r.play_title.casefold()] += 1
+        if per_play[r.play_title.casefold()] > args.max_per_play:
+            capped += 1
+            continue
+        kept.append(r)
     reasons: Counter = Counter()
     for r in rows:
         for reason in r.reasons:
             reasons[reason] += 1
     print(f"{len(parsed)} pieces ({sum(skipped.values())} skipped: {dict(skipped)})")
-    print(f"would insert: {len(kept)}; rejected: {len(rows) - len(kept)} {dict(reasons)}")
+    print(f"would insert: {len(kept)}; over the per-play cap: {capped}; "
+          f"rejected by the gate: {sum(1 for r in rows if not r.ok)} {dict(reasons)}")
     if args.show_rejected:
         for r in rows:
             if not r.ok:
