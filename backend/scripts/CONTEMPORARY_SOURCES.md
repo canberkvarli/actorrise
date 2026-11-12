@@ -63,7 +63,10 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
   20 more were the same speeches NYCastings carries and were refused as duplicates.
 
 - **2026-11-06, Jonathan Dorf** (`--source dorf`): 25 pieces, mostly teen; 11 more were
-  YouthPLAYS speeches already stored. **Tristan B. Willis** (`--source willis`): 4 pieces.
+  YouthPLAYS speeches already stored. **Taken down 2026-11-12**: he is the playwright who
+  answered for YouthPLAYS, so his own site's 20 pieces (5 more sat on YouthPLAYS play
+  rows) are `taken_down` with the rest and the source is switched off. Before ingesting
+  from any source, search Gmail and `contact_log` for its domain: an answer may be in. **Tristan B. Willis** (`--source willis`): 4 pieces.
   **Reina Hardy** (`--source reinahardy`): written but not run; her site's bot check
   refused the live page reads that day, and only about 3 pieces clear the gate.
 

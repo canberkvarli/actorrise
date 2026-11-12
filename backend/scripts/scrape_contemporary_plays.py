@@ -1627,18 +1627,9 @@ SOURCES: dict[str, Source] = {
         ),
         delay=1.0,
     ),
-    "dorf": Source(
-        key="dorf",
-        name="Jonathan Dorf",
-        index_urls=[_JD_INDEX],
-        discover=discover_dorf,
-        extract=extract_dorf,
-        note=(
-            "The playwright's own free monologues from his plays, mostly teen. "
-            "VERIFIED 2026-11-06. robots.txt allows the public site to ClaudeBot by name."
-        ),
-        delay=1.0,
-    ),
+    # "dorf" is OFF, for the same reason as "youthplays" below: Jonathan Dorf is
+    # the playwright who asked (for YouthPLAYS, 2026-11-09) that the text stay on
+    # his own site. His 20 pieces from jonathandorf.com are `taken_down` too.
     "szymkowicz": Source(
         key="szymkowicz",
         name="Adam Szymkowicz (his blog)",
