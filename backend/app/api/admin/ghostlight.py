@@ -25,9 +25,15 @@ from app.services import app_store_connect
 router = APIRouter(prefix="/api/admin", tags=["admin", "ghostlight"])
 
 # App Store list prices for the Monologues tier, in dollars: what the actor
-# pays, so it sits on the same basis as the web MRR figure.
-MONTHLY_PRICE = 4.99
-ANNUAL_PRICE = 29.99
+# pays, so it sits on the same basis as the web MRR figure. Version 1.1 moved
+# new buyers to new products at $9.99 / $59.99 (the ".v2" ids); the first
+# subscribers stay on the old products at $4.99 / $29.99 for as long as they
+# renew. Each subscriber is valued at what they actually pay (_monthly_values).
+MONTHLY_PRICE = 9.99
+ANNUAL_PRICE = 59.99
+LEGACY_MONTHLY_PRICE = 4.99
+LEGACY_ANNUAL_PRICE = 29.99
+LEGACY_PRODUCTS = {"ghostlight_monologues_monthly", "ghostlight_monologues_annual"}
 
 
 def _in_trial(sub: UserSubscription) -> bool:
@@ -41,10 +47,68 @@ def _in_trial(sub: UserSubscription) -> bool:
     return end > datetime.now(timezone.utc)
 
 
-def _monthly_value(billing_period: str | None) -> float:
-    if billing_period == "annual":
-        return round(ANNUAL_PRICE / 12, 2)
-    return MONTHLY_PRICE
+def _is_annual_product(product_id: str) -> bool:
+    p = (product_id or "").lower()
+    return "annual" in p or "yearly" in p
+
+
+def _list_price(product_id: str | None, billing_period: str | None) -> tuple[float, bool]:
+    """(price, annual) at list price for a product. No product known means a
+    subscriber from before the webhook recorded products, so the old prices."""
+    annual = _is_annual_product(product_id) if product_id else billing_period == "annual"
+    legacy = not product_id or product_id in LEGACY_PRODUCTS
+    if annual:
+        return (LEGACY_ANNUAL_PRICE if legacy else ANNUAL_PRICE), True
+    return (LEGACY_MONTHLY_PRICE if legacy else MONTHLY_PRICE), False
+
+
+def _paid_prices(db: Session, user_ids: list[int]) -> dict[int, tuple[float, bool, str]]:
+    """user_id -> (price in USD, annual?, product) from their newest PRODUCTION
+    App Store event. The USD price Apple reported on a purchase or renewal wins
+    (it carries the country price: a UK annual came through at $40.10); with
+    none, the product id says which price list they are on."""
+    if not user_ids:
+        return {}
+    rows = (
+        db.query(UserEvent.user_id, UserEvent.properties)
+        .filter(
+            UserEvent.event_name == "app_subscription_event",
+            UserEvent.user_id.in_(user_ids),
+        )
+        .order_by(desc(UserEvent.created_at))
+        .all()
+    )
+    out: dict[int, tuple[float, bool, str]] = {}
+    product_of: dict[int, str] = {}
+    for uid, props in rows:
+        p = props or {}
+        if p.get("environment") == "SANDBOX":
+            continue
+        product = str(p.get("product_id") or "")
+        if uid not in product_of and product:
+            product_of[uid] = product
+        if uid in out:
+            continue
+        try:
+            price = float(p.get("price") or 0)
+        except (TypeError, ValueError):
+            price = 0.0
+        if price > 0 and product:
+            out[uid] = (price, _is_annual_product(product), product)
+    for uid, product in product_of.items():
+        if uid not in out:
+            price, annual = _list_price(product, None)
+            out[uid] = (price, annual, product)
+    return out
+
+
+def _monthly_value(paid: tuple[float, bool, str] | None, billing_period: str | None) -> float:
+    """What a subscriber brings in a month: their real price, a yearly one / 12."""
+    if paid is None:
+        price, annual = _list_price(None, billing_period)
+    else:
+        price, annual = paid[0], paid[1]
+    return round(price / 12, 2) if annual else round(price, 2)
 
 
 def _store_section(db: Session) -> dict:
@@ -104,6 +168,7 @@ def ghostlight_overview(db: Session = Depends(get_db), _=Depends(require_moderat
     active_paid = 0
     in_trial = 0
     mrr = 0.0
+    paid = _paid_prices(db, [int(sub.user_id) for sub, _ in subs])
     for sub, user in subs:
         on_tier = monologues is not None and sub.tier_id == monologues.id
         trialing = on_tier and sub.status == "active" and _in_trial(sub)
@@ -111,7 +176,7 @@ def ghostlight_overview(db: Session = Depends(get_db), _=Depends(require_moderat
             in_trial += 1
         elif on_tier and sub.status == "active":
             active_paid += 1
-            mrr += _monthly_value(sub.billing_period)
+            mrr += _monthly_value(paid.get(int(sub.user_id)), sub.billing_period)
         rows.append(
             {
                 "user_id": user.id,
@@ -195,16 +260,20 @@ def app_revenue(db: Session = Depends(get_db), _=Depends(require_moderator)):
     paying = 0
     cash = 0.0
     amortised = 0.0
+    paid = _paid_prices(db, [int(sub.user_id) for sub in subs])
     for sub in subs:
         if not (monologues and sub.tier_id == monologues.id and sub.status == "active"):
             continue
         if _in_trial(sub):
             continue  # a free week is not money
         paying += 1
-        if sub.billing_period == "annual":
-            amortised += ANNUAL_PRICE / 12
+        known = paid.get(int(sub.user_id))
+        value = _monthly_value(known, sub.billing_period)
+        annual = known[1] if known else sub.billing_period == "annual"
+        if annual:
+            amortised += value
         else:
-            cash += MONTHLY_PRICE
+            cash += value
     since = date.today() - timedelta(days=30)
     proceeds = (
         db.query(AppStoreDaily.proceeds_usd)

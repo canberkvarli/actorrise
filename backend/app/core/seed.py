@@ -62,7 +62,7 @@ def canonical_tiers() -> list[PricingTier]:
         # through the App Store via RevenueCat, NOT Stripe, so it carries no
         # Stripe price ids and is granted/revoked by the RevenueCat webhook.
         # It buys everything the iOS app gates: unlimited full monologue reads
-        # (free is 3, lifetime), unlimited saves, and since 1.1 the scene
+        # (free is 1 new piece a day since 2026-10-31), unlimited saves, and since 1.1 the scene
         # partner on the same terms as Plus (the phone's reader is the reason
         # the price went up). Sits between Free and Plus (spec §4 #4).
         PricingTier(

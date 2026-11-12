@@ -258,7 +258,7 @@ export default function GhostLightAdminPage() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
         <Stat label="Paying" value={money.active_paid} hint="trials not counted" />
         <Stat label="In a free trial" value={money.in_trial ?? 0} hint="$0 until it converts" />
-        <Stat label="MRR at list price" value={usd(money.mrr_list_price)} hint="paying only; $4.99 monthly, $29.99 a year" />
+        <Stat label="MRR" value={usd(money.mrr_list_price)} hint="paying only, each at what they pay: $4.99 / $29.99 early, $9.99 / $59.99 since 1.1" />
         <Stat label="Cancelling" value={money.cancelling} hint="access until period end" />
         <Stat label="Past due" value={money.past_due} />
         <Stat label="Expired" value={money.expired} />
