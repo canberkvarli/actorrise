@@ -26,11 +26,68 @@ VOICES = {"narrator": "JBFqnCBsd6RMkjVDRZzb", "explainer": "JBFqnCBsd6RMkjVDRZzb
 # eleven_v3 acts: it reads audio tags like [amused], [warmly], [whispers], [sighs], [excited]
 # (Canberk, 2026-11-04: emotion and tone in every voice-over, never monotone).
 MODEL = os.environ.get("ELEVENLABS_TTS_MODEL", "eleven_v3")
+# v3 stability: 0.0 "Creative" acts the most but stutters and slurs ("gggghost light", Canberk 2026-11-12);
+# 0.5 "Natural" keeps the acting and articulates. Articulation is the key in every video.
+STABILITY = float(os.environ.get("ELEVENLABS_STABILITY", "0.5"))
+
+
+def clean_words(text):
+    """The words a listener should hear: tags removed, lowercased, punctuation stripped."""
+    text = re.sub(r"\[[^\]]*\]", " ", text)
+    return [w for w in re.sub(r"[^a-z0-9' ]", " ", text.lower().replace("-", " ")).split() if w]
+
+
+def listen(audio, key):
+    """Transcribe a take with ElevenLabs Scribe, so a stutter or a swallowed word is caught by ear."""
+    b = "----gl" + os.urandom(8).hex()
+    body = (f"--{b}\r\nContent-Disposition: form-data; name=\"model_id\"\r\n\r\nscribe_v1\r\n"
+            f"--{b}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"take.mp3\"\r\n"
+            f"Content-Type: audio/mpeg\r\n\r\n").encode() + audio + f"\r\n--{b}--\r\n".encode()
+    req = urllib.request.Request(f"{API}/speech-to-text", data=body, method="POST",
+                                 headers={"xi-api-key": key, "Content-Type": f"multipart/form-data; boundary={b}"})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return json.load(r).get("text", "")
+    except Exception as e:
+        print(f"listen check skipped (speech-to-text failed: {e})", file=sys.stderr)
+        return None
+
+
+def take_score(heard, expected):
+    """1.0 is a clean read. Stutters (g-ghost, ggghost, a doubled word) and swallowed words lower it."""
+    import difflib
+    heard = re.sub(r"\([^)]*\)", " ", heard)  # Scribe writes acted sounds as (laughs)
+    fix = lambda t: re.sub(r"ghost\s*light", "ghost light", t, flags=re.I)
+    heard, expected = fix(heard), fix(expected)
+    h, x = clean_words(heard), clean_words(expected)
+    score = difflib.SequenceMatcher(None, h, x).ratio()
+    stutter = bool(re.search(r"\b(\w{1,3})-\1", heard.lower())) or bool(re.search(r"\b([a-z])\1{2,}", heard.lower()))
+    doubled = any(h[i] == h[i + 1] and not any(x[j] == x[j + 1] == h[i] for j in range(len(x) - 1)) for i in range(len(h) - 1))
+    return score - (0.3 if stutter else 0) - (0.15 if doubled else 0)
+
+
+def clean_take(text, voice_id, key, tries=4):
+    """Say it, listen back, and say it again when the read stutters or drops words. Keeps the best take."""
+    best, best_score = None, -1.0
+    for n in range(tries):
+        res = tts(text, voice_id, key)
+        heard = listen(base64.b64decode(res["audio_base64"]), key)
+        if heard is None:
+            return res
+        sc = take_score(heard, text)
+        print(f"take {n + 1}: {sc:.2f} heard: {heard[:160]}", file=sys.stderr)
+        if sc > best_score:
+            best, best_score = res, sc
+        if sc >= 0.93:
+            break
+    if best_score < 0.93:
+        print(f"WARNING: best take scored {best_score:.2f}; listen to it before it ships", file=sys.stderr)
+    return best
 
 
 def tts(text, voice_id, key, settings=None):
     body = {"text": text, "model_id": MODEL,
-            "voice_settings": settings or ({"stability": 0.0, "similarity_boost": 0.8} if MODEL.startswith("eleven_v3")
+            "voice_settings": settings or ({"stability": STABILITY, "similarity_boost": 0.8} if MODEL.startswith("eleven_v3")
                                            else {"stability": 0.3, "similarity_boost": 0.8, "style": 0.6, "use_speaker_boost": True})}
     req = urllib.request.Request(f"{API}/text-to-speech/{voice_id}/with-timestamps?output_format=mp3_44100_128",
                                  data=json.dumps(body).encode(), method="POST",
@@ -112,7 +169,7 @@ def voice_take(spec, key):
     t, takes = lead, []
     for k, (who, group) in enumerate(runs):
         vid = (spec.get("voices") or {}).get(who, VOICES.get(who.lower(), who))
-        res = tts(" ".join((l.get("say") or l["text"]).strip() for l in group), vid, key)
+        res = clean_take(" ".join((l.get("say") or l["text"]).strip() for l in group), vid, key)
         rel = f"voice/{spec['id']}/take{k:02d}.mp3"
         path = os.path.join(ROOT, "public", rel)
         os.makedirs(os.path.dirname(path), exist_ok=True)

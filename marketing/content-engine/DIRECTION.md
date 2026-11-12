@@ -3,6 +3,29 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-12: articulation is the key, and real screens are never zoomed (wins over everything below)
+
+Canberk on the reader-on-the-train film ("good videos, really"), two fixes:
+
+**The voice: articulation is the key in every video.**
+- It stuttered "gggghost light". Cause: v3 at stability 0.0 ("Creative"). voice.py now uses 0.5 ("Natural")
+  and LISTENS to every take (ElevenLabs speech to text): a stutter, a doubled word or a dropped word gets
+  re-read, up to four times, best take kept. If the run prints "best take scored", listen and fix the line.
+- One flowing telling, like someone telling a friend what happened, not a list of stops. Write the
+  narration as connected sentences ("and", "so", "but", commas carry it on), not clipped fragments.
+- One tag per line at most, at the start, and tags that move the same way (amused, then warmer), never a
+  jolt like [panicking] then [conspiratorial] inside one line. No stacked exclamation marks.
+- Endings drop. A sentence lands DOWN on its last word: "built by a working ac-tor." with the "tor"
+  falling, not pitched up. End lines with a period, never "!" or "?", and give the closer its own short
+  sentence: "[warmly] Ghost Light. Built by a working actor."
+- Never open a line with "Ghost Light" straight after a tag; the hard G is where it stutters. Lead in
+  with a word ("So you open Ghost Light.", "That's Ghost Light.") or let the end card carry the name.
+
+**Real screens are never zoomed.** Scaling a screenshot broke the app's layout (blown up, cropped, the
+bottom off the frame). The `screens` scene now keeps the screen at true size; the camera only glides the
+phone up or down so the part that matters is in view, and `push` marks that spot with a soft spotlight and
+an orange ring. Don't scale screenshots any other way either.
+
 ## 2026-11-10, afternoon: the story + how-to, done right (wins over everything below)
 
 Canberk on the first story + how-to film:

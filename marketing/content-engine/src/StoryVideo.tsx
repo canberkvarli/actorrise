@@ -1018,20 +1018,25 @@ const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) =>
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const up = first ? spring({ frame: f - 2, fps, config: { damping: 18 } }) : 1;
-  const zoom = first ? 1 + (ZOOM - 1) * spring({ frame: f - 14, fps, config: { damping: 22 } }) : ZOOM;
   const shots = s.shots;
-  // Sideways (2026-11-17): the phone turns clockwise about its own centre and shrinks to fit the frame's width.
+  // Canberk, 2026-11-12: zooming into a screenshot broke the app's own layout (cropped, blown up, the
+  // bottom of the screen off the frame). So real screens are NEVER scaled. The phone stays at its true
+  // size and the camera only glides up or down so the part that matters sits in view; `push` now marks
+  // that spot with a soft spotlight and an orange ring instead of a zoom.
   const side = s.turn === undefined ? 0 : s.turn <= 0 ? 1 : spring({ frame: f - s.turn, fps, config: { damping: 16, mass: 0.9 } });
   const PCX = PX + PW / 2, PCY = PY + PH / 2;
-  const camT = `translateY(${(1 - up) * 800 + interpolate(side, [0, 1], [(PCY - 980) * (zoom - 1), 664 - PCY])}px) rotate(${side * 90}deg) scale(${interpolate(side, [0, 1], [zoom, 0.675])})`;
-  // The push zoom of shot i at frame g, and a tap point mapped through it (so finger and ripple land on
-  // the thing the push is moving toward, not where it sat before the zoom).
-  const pzAt = (i: number, g: number) => {
+  const lookY = (i: number) => {
+    if (i < 0) return 0;
     const sh = shots[i];
-    if (!sh.push) return 1;
-    const end = Math.max(sh.at + 9, shots[i + 1] ? shots[i + 1].at : sh.at + 120); // a held shot under a quick slide still needs a range
-    return interpolate(g, [sh.at + 8, end], [sh.push.from ?? 1, sh.push.scale ?? 1.18], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) });
+    const fy = sh.push ? sh.push.y : sh.tap ? sh.tap.y : 0.3;
+    return Math.max(-360, Math.min(0, 1050 - (SY + fy * SHOT_H)));
   };
+  let cur = 0;
+  shots.forEach((sh, i) => { if (f >= sh.at) cur = i; });
+  const glide = Easing.inOut(Easing.cubic)(prog(f, shots[cur].at, shots[cur].at + 18));
+  const camY = (cur === 0 ? lookY(0) : lookY(cur - 1) + (lookY(cur) - lookY(cur - 1)) * glide) * (1 - side);
+  const camT = `translateY(${(1 - up) * 800 + camY + side * (664 - PCY)}px) rotate(${side * 90}deg) scale(${interpolate(side, [0, 1], [1, 0.675])})`;
+  const pzAt = (_i: number, _g: number) => 1;
   const panAt = (i: number, g: number) => {
     const sh = shots[i];
     if (!sh.pan) return 0;
@@ -1072,13 +1077,26 @@ const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) =>
             const inP = sh.fade ? 1 : inP0;
             const outP = next ? Easing.in(Easing.cubic)(prog(f, next.at, next.at + 12)) : 0;
             const end = next ? next.at : sh.at + 120;
-            const pz = pzAt(i, f); void end;
+            void end;
             return (
               <div key={i} style={{ position: "absolute", left: 0, top: 0, width: SW, height: SHOT_H + (PH - PI * 2 - SHOT_H) * side,
                 transform: `translateX(${(1 - inP) * SW - (next?.fade ? 0 : outP * SW * 0.35)}px)`, opacity: sh.fade ? inP0 : next?.fade ? 1 : 1 - outP * 0.6,
                 boxShadow: i > 0 && inP < 1 ? "-20px 0 40px rgba(0,0,0,0.35)" : undefined }}>
                 <Img src={staticFile(sh.src)} style={{ width: SW, height: SHOT_H + (PH - PI * 2 - SHOT_H) * side, objectFit: "cover",
-                  transform: `translateY(${-panAt(i, f) * SHOT_H}px) scale(${pz})`, transformOrigin: sh.push ? `${sh.push.x * 100}% ${sh.push.y * 100}%` : "50% 50%" }} />
+                  transform: `translateY(${-panAt(i, f) * SHOT_H}px)`, objectPosition: "top" }} />
+                {sh.push && f >= sh.at + 6 && (() => {
+                  const a = Easing.out(Easing.cubic)(prog(f, sh.at + 6, sh.at + 20)) * (next ? 1 - prog(f, next.at, next.at + 8) : 1);
+                  const ring = spring({ frame: f - sh.at - 8, fps, config: { damping: 12, mass: 0.7 } });
+                  const cx = sh.push!.x * SW, cy = sh.push!.y * SHOT_H;
+                  return (
+                    <>
+                      <div style={{ position: "absolute", inset: 0, opacity: a,
+                        background: `radial-gradient(circle at ${cx}px ${cy}px, rgba(0,0,0,0) 120px, rgba(0,0,0,0.5) 200px)` }} />
+                      <div style={{ position: "absolute", left: cx - 125, top: cy - 125, width: 250, height: 250, borderRadius: "50%",
+                        border: `6px solid ${C.orange}`, opacity: a, transform: `scale(${0.7 + 0.3 * ring})`, boxShadow: `0 0 30px ${C.orange}66` }} />
+                    </>
+                  );
+                })()}
                 {sh.tap && f >= sh.tap.at + 12 && f <= sh.tap.at + 40 + (sh.tap.hold ?? 0) && (() => {
                   // a held finger ripples twice
                   const h2 = sh.tap!.hold && f > sh.tap!.at + 34 ? sh.tap!.hold - 6 : 0;
