@@ -99,8 +99,12 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
   Left out on purpose: Harry Potter and the Cursed Child, Hamilton (lyrics), "Jr"/"Kids"
   school editions (MTI's text; MTI blocks AI crawlers), and any writer on the deny list in
   `packets/combine.py`. Years for these plays are editor's knowledge, marked unverified.
-  Not done: three school collections (two Drive/Docs sets, a Texas school site, about 85
-  pieces) and a 251-page scanned binder that needs proofreading.
+- **2026-11-13, school collections and the scanned binder**: 78 pieces, 45097-45174.
+  - Two school Google Docs sets and a school site page: 51 (19 already in).
+  - Lakeside HS monologue binder (251-page scan): 27 (13 already in). Its own text layer is
+    doubled and scrambled on half the pages, so every page was re-read from the image with
+    Tesseract (`packets/morgue.py`). Only pages that name a play AND a playwright were used.
+    OCR slips are possible in these 27; fix on sight.
 
 Asks rather than scrapes (permission emails): Monologue Blogger (terms forbid commercial
 use), Broadway Play Publishing (about 1,500 free audition pieces, 403 to our client),
