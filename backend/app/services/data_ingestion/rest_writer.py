@@ -186,7 +186,23 @@ def ingest_monologue_rest(
         report.duplicates = 1
         return report
 
+    analysis = analyzer.analyze_monologue(
+        text=display, character=character, play_title=play_title, author=author,
+    )
+    vectors = embed([display], model="text-embedding-3-large", dimensions=1536)
+    vector = vectors[0] if vectors else None
+    if not vector:
+        report.refused = "no embedding"
+        return report
+    # Near-identical, or the same speech in another cut, anywhere in the library.
+    if rest.duplicate_of(display, vector):
+        report.duplicates = 1
+        return report
+
     # --- play: get or create, rights rule identical to ingest_monologue ------
+    # After the analyser and the embedding, not before: a run whose OpenAI
+    # calls fail (no credits, 2026-11-12) must not leave empty play rows that
+    # make `library_check` say a title is in the library.
     found = rest.get(
         "plays", select="id,copyright_status,license_type,year_written",
         title=f"eq.{play_title}", author=f"eq.{author}", limit="1",
@@ -210,19 +226,6 @@ def ingest_monologue_rest(
         })[0]["id"]
         report.play_created = True
     report.play_id = play_id
-
-    analysis = analyzer.analyze_monologue(
-        text=display, character=character, play_title=play_title, author=author,
-    )
-    vectors = embed([display], model="text-embedding-3-large", dimensions=1536)
-    vector = vectors[0] if vectors else None
-    if not vector:
-        report.refused = "no embedding"
-        return report
-    # Near-identical, or the same speech in another cut, anywhere in the library.
-    if rest.duplicate_of(display, vector):
-        report.duplicates = 1
-        return report
 
     meta = resolve_metadata({}, analysis)
     row = {
