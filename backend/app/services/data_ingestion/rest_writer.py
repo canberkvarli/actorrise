@@ -123,6 +123,7 @@ def ingest_monologue_rest(
     analyzer: Any,
     embed: Callable,
     rejected: Optional[set[str]] = None,
+    provided: Optional[dict] = None,
 ) -> IngestReport:
     """Store ONE already-extracted speech through PostgREST. Always writes.
 
@@ -227,7 +228,9 @@ def ingest_monologue_rest(
         report.play_created = True
     report.play_id = play_id
 
-    meta = resolve_metadata({}, analysis)
+    # What the SOURCE states (a publisher's "Age: Teen", "Gender: Female") wins
+    # over what the analyser infers, when it normalises to a value we can query.
+    meta = resolve_metadata(provided or {}, analysis)
     row = {
         "play_id": play_id,
         "title": f"{character}, {play_title}",

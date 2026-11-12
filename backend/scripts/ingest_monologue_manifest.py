@@ -66,6 +66,7 @@ def load(path: str) -> tuple[list[scp.Parsed], Counter]:
             url=url, play_title=title, author=author, character_name=character,
             text="\n\n".join(scp.fit_excerpt(paras)),
             genre=p.get("genre", "drama"), year=p.get("year"),
+            meta=p.get("meta") or {},
         ))
     return out, skipped
 

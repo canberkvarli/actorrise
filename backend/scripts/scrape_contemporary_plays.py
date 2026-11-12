@@ -176,6 +176,8 @@ class Parsed:
     #: ("The Gift", "Sorry"): keying those in the title-only years file would hand
     #: their year to any later play that shares the name, the H-20 failure.
     year: Optional[int] = None
+    #: Metadata the source itself states (`character_age_range`, `character_gender`).
+    meta: dict = field(default_factory=dict)
 
     def source_url_ok(self) -> bool:
         """An excerpt with no route back to the original is not attributable."""
@@ -1802,6 +1804,7 @@ def write_via_rest(kept: list[Row], parsed_by_url: dict[str, Parsed]) -> None:
                 category=row.category, genre=parsed.genre,
                 min_words=floor_for(parsed.genre), max_words=MAX_WORDS,
                 analyzer=analyzer, embed=generate_embeddings_batch, rejected=seen,
+                provided=parsed.meta,
             )
         except Exception as e:  # one bad row must not stop the batch
             outcomes[f"error:{type(e).__name__}"] = outcomes.get(f"error:{type(e).__name__}", 0) + 1
