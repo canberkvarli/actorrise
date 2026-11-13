@@ -19,12 +19,12 @@ for f in glob.glob("pk/bpp/pages/*.html"):
     body=parts[2]; body=body[body.find("</div>")+6:]
     end=re.search(r'<div style="border-top|<div class="(?:share|post-|related)|</div>\s*</div>\s*</div>',body)
     body=body[:end.start()] if end else body[:8000]
-    paras=[clean(p) for p in re.findall(r"<p[^>]*>(.*?)</p>",body,re.S)]
+    paras=["\n".join(x for x in (clean(l) for l in re.split(r"<br\s*/?>",p)) if x) for p in re.findall(r"<p[^>]*>(.*?)</p>",body,re.S)]
     paras=[p for p in paras if p]
     if not paras: bad["nopara"]=bad.get("nopara",0)+1; continue
     paras[0]=re.sub(r"^"+re.escape(char)+r"\s*:\s*","",paras[0],flags=re.I)
     pieces.append({"play_title":title.strip(),"author":author,"character":char.strip(),"text":"\n\n".join(paras),
-                   "url":play.group(1) if play else u,"_page":u,"_age":meta.get("age",""),"_genre":meta.get("genre","")})
+                   "url":play.group(1) if play else u,"_page":u,"_age":meta.get("age",""),"_genre":meta.get("genre",""),"_gender":meta.get("gender","")})
 print(len(pieces),bad)
 json.dump(pieces,open("pk/bpp/pieces.json","w"),ensure_ascii=False)
 if "--years" in sys.argv:
@@ -32,12 +32,21 @@ if "--years" in sys.argv:
     yf="pk/bpp/years.json"; Y=json.load(open(yf)) if os.path.exists(yf) else {}
     for pu in sorted({p["url"] for p in pieces if "/the-plays/" in p["url"]}):
         if pu in Y: continue
-        try:
-            t=s.get(pu,timeout=30).text
-        except Exception: continue
+        t=None
+        for attempt in range(4):
+            try:
+                r=s.get(pu,timeout=40)
+            except Exception:
+                time.sleep(60); continue
+            if r.status_code==200 and "One moment" not in r.text[:3000] and len(r.text)>5000:
+                t=r.text; break
+            if r.status_code==404: break
+            print("wait page or",r.status_code,"- backing off",flush=True); time.sleep(120)
+        time.sleep(8)
+        if t is None: continue
         t=re.sub(r"\s+"," ",html.unescape(re.sub(r"<script.*?</script>|<style.*?</style>|<[^>]+>"," ",t,flags=re.S)))
         fp=re.search(r"(?:first produced|first presented|premiered|world premiere|originally produced|first performed|was produced)[^.]{0,220}?\b(19[2-9]\d|20[0-2]\d)\b",t,re.I)
         pd=re.search(r"Publication Date \d{1,2}/\d{1,2}/(\d{4})",t)
         Y[pu]={"first":int(fp.group(1)) if fp else None,"pub":int(pd.group(1)) if pd else None}
-        json.dump(Y,open(yf,"w")); time.sleep(1)
+        json.dump(Y,open(yf,"w"))
     print("plays",len(Y),"with first-produced",sum(1 for v in Y.values() if v["first"]),"with pub only",sum(1 for v in Y.values() if not v["first"] and v["pub"]),"none",sum(1 for v in Y.values() if not v["first"] and not v["pub"]))

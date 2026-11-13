@@ -106,8 +106,18 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
     Tesseract (`packets/morgue.py`). Only pages that name a play AND a playwright were used.
     OCR slips are possible in these 27; fix on sight.
 
+- **2026-11-13, Broadway Play Publishing** (`packets/bpp_fetch.py`, `bpp_parse.py`,
+  `bpp_build.py`): 965 pieces, monologues 45175-46139, from 545 plays. These are the audition
+  monologues the publisher posts on its own site, one page each; robots.txt allows them and
+  the pages were read at one every 8 seconds. Each row links to the play's page there. The
+  year is the play page's "first produced" year, else its publication year (a floor). The
+  publisher's Teen and Young Adult labels and stated gender are kept over the analyser's.
+  Left out: 221 new English versions of classic plays (Chekhov, Molière, Euripides; not what
+  an actor means by contemporary), 33 filed under a collection title instead of the play,
+  302 refused by the quality gate, 20 already in the library.
+
 Asks rather than scrapes (permission emails): Monologue Blogger (terms forbid commercial
-use), Broadway Play Publishing (about 1,500 free audition pieces, 403 to our client),
+use),
 Don Zolidis (403), Arthur M. Jolly (PDFs, disallowed), Stage Partners (403).
 
 All were written from a cloud session with `--write-rest`, which goes through
