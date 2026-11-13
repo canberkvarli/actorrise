@@ -1,0 +1,359 @@
+{
+  "id": "2026-11-18-lavinia-captain",
+  "look": "cinema",
+  "cut": "hard",
+  "voices": {
+    "partner": "JBFqnCBsd6RMkjVDRZzb"
+  },
+  "beats": [
+    {
+      "kind": "title",
+      "seconds": 2.4,
+      "text": "Your scene partner quit.",
+      "accent": "quit",
+      "sub": "The Captain did not.",
+      "bg": "ink",
+      "sfx": [
+        {
+          "name": "click",
+          "at": 0.3,
+          "vol": 0.35
+        }
+      ]
+    },
+    {
+      "kind": "scene",
+      "seconds": 22.35,
+      "play": "Androcles and the Lion",
+      "title": "Lavinia and the Captain",
+      "bg": "ink",
+      "start": 0.6,
+      "voice_you": true,
+      "names": {
+        "PARTNER": "THE CAPTAIN",
+        "YOU": "LAVINIA"
+      },
+      "lines": [
+        {
+          "who": "PARTNER",
+          "text": "A martyr, Lavinia, is a fool. Your death will prove nothing.",
+          "say": "[dry, official] A martyr, Lavinia, is a fool. Your death will prove nothing.",
+          "audio": "voice/2026-11-18-lavinia-captain/00.mp3",
+          "words": [
+            {
+              "w": "A",
+              "s": 0.4,
+              "e": 0.507
+            },
+            {
+              "w": "martyr,",
+              "s": 0.537,
+              "e": 0.76
+            },
+            {
+              "w": "Lavinia,",
+              "s": 0.78,
+              "e": 1.52
+            },
+            {
+              "w": "is",
+              "s": 1.547,
+              "e": 1.6
+            },
+            {
+              "w": "a",
+              "s": 1.74,
+              "e": 1.88
+            },
+            {
+              "w": "fool.",
+              "s": 1.936,
+              "e": 2.64
+            },
+            {
+              "w": "Your",
+              "s": 2.736,
+              "e": 3.12
+            },
+            {
+              "w": "death",
+              "s": 3.173,
+              "e": 3.44
+            },
+            {
+              "w": "will",
+              "s": 3.488,
+              "e": 3.68
+            },
+            {
+              "w": "prove",
+              "s": 3.72,
+              "e": 3.92
+            },
+            {
+              "w": "nothing.",
+              "s": 3.98,
+              "e": 4.4
+            }
+          ],
+          "dur": 4.55
+        },
+        {
+          "who": "YOU",
+          "voice": "lily",
+          "text": "Then why kill me?",
+          "say": "[quiet, level, a challenge] Then why kill me?",
+          "audio": "voice/2026-11-18-lavinia-captain/01.mp3",
+          "words": [
+            {
+              "w": "Then",
+              "s": 0.362,
+              "e": 0.4
+            },
+            {
+              "w": "why",
+              "s": 0.54,
+              "e": 0.96
+            },
+            {
+              "w": "kill",
+              "s": 1.088,
+              "e": 1.6
+            },
+            {
+              "w": "me?",
+              "s": 1.68,
+              "e": 2.0
+            }
+          ],
+          "dur": 2.15
+        },
+        {
+          "who": "PARTNER",
+          "text": "I mean that truth, if there be any truth, needs no martyrs.",
+          "say": "[caught out, stiffly] I mean that truth, if there be any truth, needs no martyrs.",
+          "audio": "voice/2026-11-18-lavinia-captain/02.mp3",
+          "words": [
+            {
+              "w": "I",
+              "s": 0.34,
+              "e": 0.36
+            },
+            {
+              "w": "mean",
+              "s": 0.368,
+              "e": 0.4
+            },
+            {
+              "w": "that",
+              "s": 0.448,
+              "e": 0.64
+            },
+            {
+              "w": "truth,",
+              "s": 0.72,
+              "e": 1.44
+            },
+            {
+              "w": "if",
+              "s": 1.493,
+              "e": 1.6
+            },
+            {
+              "w": "there",
+              "s": 1.64,
+              "e": 1.84
+            },
+            {
+              "w": "be",
+              "s": 1.893,
+              "e": 2.0
+            },
+            {
+              "w": "any",
+              "s": 2.04,
+              "e": 2.16
+            },
+            {
+              "w": "truth,",
+              "s": 2.24,
+              "e": 3.0
+            },
+            {
+              "w": "needs",
+              "s": 3.06,
+              "e": 3.36
+            },
+            {
+              "w": "no",
+              "s": 3.44,
+              "e": 3.6
+            },
+            {
+              "w": "martyrs.",
+              "s": 3.667,
+              "e": 4.32
+            }
+          ],
+          "dur": 4.47
+        },
+        {
+          "who": "YOU",
+          "voice": "lily",
+          "text": "No; but my faith, like your sword, needs testing. Can you test your sword except by staking your life on it?",
+          "say": "[warm, with growing conviction] No; but my faith, like your sword, needs testing. Can you test your sword except by staking your life on it?",
+          "audio": "voice/2026-11-18-lavinia-captain/03.mp3",
+          "words": [
+            {
+              "w": "No;",
+              "s": 0.587,
+              "e": 0.64
+            },
+            {
+              "w": "but",
+              "s": 0.74,
+              "e": 1.04
+            },
+            {
+              "w": "my",
+              "s": 1.147,
+              "e": 1.36
+            },
+            {
+              "w": "faith,",
+              "s": 1.427,
+              "e": 1.84
+            },
+            {
+              "w": "like",
+              "s": 1.904,
+              "e": 2.16
+            },
+            {
+              "w": "your",
+              "s": 2.192,
+              "e": 2.32
+            },
+            {
+              "w": "sword,",
+              "s": 2.413,
+              "e": 3.16
+            },
+            {
+              "w": "needs",
+              "s": 3.207,
+              "e": 3.44
+            },
+            {
+              "w": "testing.",
+              "s": 3.52,
+              "e": 4.52
+            },
+            {
+              "w": "Can",
+              "s": 4.63,
+              "e": 4.96
+            },
+            {
+              "w": "you",
+              "s": 4.98,
+              "e": 5.04
+            },
+            {
+              "w": "test",
+              "s": 5.104,
+              "e": 5.36
+            },
+            {
+              "w": "your",
+              "s": 5.392,
+              "e": 5.52
+            },
+            {
+              "w": "sword",
+              "s": 5.6,
+              "e": 6.0
+            },
+            {
+              "w": "except",
+              "s": 6.069,
+              "e": 6.48
+            },
+            {
+              "w": "by",
+              "s": 6.56,
+              "e": 6.72
+            },
+            {
+              "w": "staking",
+              "s": 6.8,
+              "e": 7.36
+            },
+            {
+              "w": "your",
+              "s": 7.392,
+              "e": 7.52
+            },
+            {
+              "w": "life",
+              "s": 7.6,
+              "e": 7.92
+            },
+            {
+              "w": "on",
+              "s": 7.973,
+              "e": 8.08
+            },
+            {
+              "w": "it?",
+              "s": 8.16,
+              "e": 8.48
+            }
+          ],
+          "dur": 8.63
+        }
+      ]
+    },
+    {
+      "kind": "end",
+      "seconds": 1.8,
+      "brand": "Ghost Light",
+      "line": "Built by a working actor.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "sfx": [],
+      "snap": true,
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "music": {
+    "style": "bed",
+    "volume": 0.12,
+    "drop": "end"
+  },
+  "source": {
+    "text": "George Bernard Shaw, Androcles and the Lion (1912), public domain. Lines as stored in ActorRise scene 1012 (Lavinia Challenges the Captain's Beliefs, play 3489), scene_lines 3 to 6, contiguous, checked on the day.",
+    "feature": "scenes",
+    "board": "Callboard plan 2026-11-18: format scene, series scene-reads, look cinema.",
+    "why": "The plan asked for a generated actor playing Lavinia out loud. Gemini Omni answered 402 (prepayment credits depleted) on 2026-11-13, so there is no generated actor: the scene is on the script page with both parts heard, the Captain as the partner (George) and Lavinia's lines voiced (Lily) so no half of the scene is silent."
+  },
+  "captions": {
+    "tiktok": "Who reads the Captain when your scene partner quits? Ghost Light does. Voices are AI generated. #actorslife #actortok #scenework #theatre #shaw",
+    "youtube_title": "Your scene partner quit. The Captain did not. #shorts",
+    "youtube_description": "Lavinia and the Captain from Shaw's Androcles and the Lion. Ghost Light reads the Captain and waits for your line.\nBoth voices are AI generated. Built by a working actor, free on the App Store.\n#actorslife #scenework #theatre #georgebernardshaw",
+    "instagram": "Your scene partner quit. The Captain did not.\nThe play: Androcles and the Lion, by Shaw.\nYour part: Lavinia.\nThe Captain: Ghost Light, out loud, waiting for your line.\nBoth voices here are AI generated. Built by a working actor. Link in bio.\n#actorslife #actorsofinstagram #actortraining #scenework #theatre"
+  },
+  "cover_ms": 12000,
+  "trypost": {
+    "status": "draft",
+    "group": "01a1d3b1-670b-723f-b2d5-e2c54be061c7",
+    "tiktok": "01a1d3b1-670c-7056-b628-7d900ed63aec",
+    "youtube": "01a1d3b1-6716-7150-a826-952fd3325dea",
+    "instagram": "01a1d3b1-671d-71d5-ad70-79c0f1b0916b"
+  }
+}
