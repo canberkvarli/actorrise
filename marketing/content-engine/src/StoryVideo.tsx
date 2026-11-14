@@ -373,60 +373,65 @@ const HoldingHand: React.FC<{ start: number }> = ({ start }) => {
 
 /** A right index finger that reaches in from the lower right and taps. */
 /** `hold` keeps the finger down that many frames longer (a long press), with a second ripple. */
-const TapFinger: React.FC<{ at: number; x: number; y: number; hold?: number }> = ({ at, x, y, hold = 0 }) => {
+type FTap = { at: number; x: number; y: number; hold?: number };
+/** ONE drawn finger for a run of taps (Canberk, 2026-11-15: overlapping fingers read as a stutter, "multiple
+ *  fingers"). Taps close together share the same finger: it presses, then glides to the next spot instead of
+ *  leaving while a second one arrives. Only taps far apart (over 70 frames) let it go and come back. */
+const FingerTrack: React.FC<{ taps: FTap[]; ring?: boolean }> = ({ taps, ring = true }) => {
   const f = useCurrentFrame();
-  if (f < at) return null;
-  const inP = prog(f, at, at + 12);
-  const press = interpolate(f, [at + 12, at + 16, at + 16.01 + hold, at + 22 + hold], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const outP = prog(f, at + 30 + hold, at + 44 + hold);
-  const away = (1 - inP) + outP;
-  // finger direction (toward the wrist) and its normal
+  const ts = [...taps].sort((p, q) => p.at - q.at);
+  if (!ts.length || f < ts[0].at) return null;
+  // arrive A (= at + 12, when the ripple fires), hold the press to P, then glide on
+  const A: number[] = [], P: number[] = [];
+  ts.forEach((t, k) => {
+    const a0 = t.at + 12;
+    A.push(k > 0 ? Math.max(a0, P[k - 1] + 6) : a0);
+    P.push(A[k] + 8 + (t.hold ?? 0));
+  });
+  const stays = (k: number) => k + 1 < ts.length && ts[k + 1].at - ts[k].at <= 70;
+  let k = 0;
+  for (let j = 0; j < ts.length; j++) if (f >= (j === 0 || !stays(j - 1) ? ts[j].at : P[j - 1])) k = j;
+  const ease = Easing.inOut(Easing.cubic);
+  let x = ts[k].x, y = ts[k].y, away = 0;
+  const entering = k === 0 || !stays(k - 1);
+  if (entering && f < A[k]) away = 1 - Easing.out(Easing.cubic)(prog(f, ts[k].at, A[k]));
+  if (!entering && f < A[k]) {
+    const g = ease(prog(f, P[k - 1], A[k]));
+    x = ts[k - 1].x + (ts[k].x - ts[k - 1].x) * g;
+    y = ts[k - 1].y + (ts[k].y - ts[k - 1].y) * g;
+  }
+  if (!stays(k) && f > P[k] + 8) away = Easing.in(Easing.cubic)(prog(f, P[k] + 8, P[k] + 22));
+  if (away >= 1 && f > P[k]) return null;
+  const press = interpolate(f, [A[k] - 4, A[k], P[k] - 2, P[k] + 3], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // the finger is drawn once at the origin and moved as a whole, so it never redraws or doubles
   const dx = 0.387, dy = 0.922, nx = 0.922, ny = -0.387;
-  const P = (cx: number, cy: number, along: number, side: number) =>
-    `${(cx + dx * along + nx * side).toFixed(1)} ${(cy + dy * along + ny * side).toFixed(1)}`;
-  const tx = x, ty = y + 8;
-  const d = [
-    `M${P(tx, ty, 0, -34)}`,
-    `C ${P(tx, ty, -46, -34)}, ${P(tx, ty, -46, 34)}, ${P(tx, ty, 0, 34)}`,
-    `L ${P(tx, ty, 380, 38)}`,
-    `C ${P(tx, ty, 400, 110)}, ${P(tx, ty, 470, 170)}, ${P(tx, ty, 540, 160)}`,
-    `L ${P(tx, ty, 900, 260)}`,
-    `L ${P(tx, ty, 900, -60)}`,
-    `L ${P(tx, ty, 420, -40)}`,
-    "Z",
-  ].join(" ");
-  const nail = `M${P(tx, ty, 10, -20)} C ${P(tx, ty, -18, -18)}, ${P(tx, ty, -18, 18)}, ${P(tx, ty, 10, 20)}`;
-  const crease1 = `M${P(tx, ty, 150, -30)} C ${P(tx, ty, 156, -10)}, ${P(tx, ty, 156, 10)}, ${P(tx, ty, 150, 30)}`;
-  const crease2 = `M${P(tx, ty, 300, -32)} C ${P(tx, ty, 306, -10)}, ${P(tx, ty, 306, 12)}, ${P(tx, ty, 300, 34)}`;
-  const curled = `M${P(tx, ty, 400, 60)} C ${P(tx, ty, 420, 120)}, ${P(tx, ty, 470, 150)}, ${P(tx, ty, 520, 150)}`;
+  const Q = (along: number, side: number) => `${(dx * along + nx * side).toFixed(1)} ${(dy * along + ny * side).toFixed(1)}`;
+  const d = [`M${Q(0, -34)}`, `C ${Q(-46, -34)}, ${Q(-46, 34)}, ${Q(0, 34)}`, `L ${Q(380, 38)}`,
+    `C ${Q(400, 110)}, ${Q(470, 170)}, ${Q(540, 160)}`, `L ${Q(900, 260)}`, `L ${Q(900, -60)}`, `L ${Q(420, -40)}`, "Z"].join(" ");
+  const nail = `M${Q(10, -20)} C ${Q(-18, -18)}, ${Q(-18, 18)}, ${Q(10, 20)}`;
+  const crease1 = `M${Q(150, -30)} C ${Q(156, -10)}, ${Q(156, 10)}, ${Q(150, 30)}`;
+  const crease2 = `M${Q(300, -32)} C ${Q(306, -10)}, ${Q(306, 12)}, ${Q(300, 34)}`;
+  const curled = `M${Q(400, 60)} C ${Q(420, 120)}, ${Q(470, 150)}, ${Q(520, 150)}`;
+  const rp = prog(f, A[k] + 2, A[k] + 18);
   return (
     <>
-      <div
-        style={{
-          position: "absolute",
-          left: x - 70,
-          top: y - 70,
-          width: 140,
-          height: 140,
-          borderRadius: "50%",
-          border: `4px solid ${C.orange}`,
-          opacity: press > 0 || f > at + 16 ? 1 - prog(f, at + 14, at + 30) : 0,
-          transform: `scale(${0.4 + prog(f, at + 14, at + 30)})`,
-        }}
-      />
-      <svg
-        viewBox="0 0 1080 1920"
-        style={{ position: "absolute", inset: 0, transform: `translate(${away * 380}px, ${away * 700 - press * 10}px)` }}
-      >
-        <path d={d} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
-        <path d={nail} fill="none" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" />
-        <path d={crease1} fill="none" stroke={C.inkSoft} strokeWidth={3} strokeLinecap="round" />
-        <path d={crease2} fill="none" stroke={C.inkSoft} strokeWidth={3} strokeLinecap="round" />
-        <path d={curled} fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+      {ring && f >= A[k] && rp < 1 && (
+        <div style={{ position: "absolute", left: ts[k].x - 70, top: ts[k].y - 70, width: 140, height: 140, borderRadius: "50%",
+          border: `4px solid ${C.orange}`, opacity: 1 - rp, transform: `scale(${0.4 + rp})` }} />
+      )}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0, overflow: "visible" }}>
+        <g transform={`translate(${(x + away * 380).toFixed(1)} ${(y + 8 + away * 700 - press * 10).toFixed(1)})`}>
+          <path d={d} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+          <path d={nail} fill="none" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" />
+          <path d={crease1} fill="none" stroke={C.inkSoft} strokeWidth={3} strokeLinecap="round" />
+          <path d={crease2} fill="none" stroke={C.inkSoft} strokeWidth={3} strokeLinecap="round" />
+          <path d={curled} fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+        </g>
       </svg>
     </>
   );
 };
+const TapFinger: React.FC<FTap> = (t) => <FingerTrack taps={[t]} />;
 
 // ---------- the thinking actor at the pin board (original character) ----------
 const SKIN = "#a8704c";
@@ -1107,7 +1112,7 @@ const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) =>
             );
           })}
         </DrawnPhone>
-        {shots.map((sh, i) => (sh.tap ? <TapFinger key={`f${i}`} at={sh.tap.at} hold={sh.tap.hold} x={SX + mapTap(i).x * SW} y={SY + mapTap(i).y * SHOT_H} /> : null))}
+        <FingerTrack ring={false} taps={shots.flatMap((sh, i) => (sh.tap ? [{ at: sh.tap.at, hold: sh.tap.hold, x: SX + mapTap(i).x * SW, y: SY + mapTap(i).y * SHOT_H }] : []))} />
       </AbsoluteFill>
     </AbsoluteFill>
   );
