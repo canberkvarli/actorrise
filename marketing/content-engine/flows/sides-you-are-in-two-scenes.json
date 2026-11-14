@@ -1,0 +1,224 @@
+{
+ "start": "/search",
+ "lead": 600,
+ "steps": [
+  {
+   "wait": 1500
+  },
+  {
+   "goto": "/saves"
+  },
+  {
+   "wait": 1800
+  },
+  {
+   "shot": "book"
+  },
+  {
+   "click": {
+    "css": "a[href='/rehearse']"
+   }
+  },
+  {
+   "wait": 2500
+  },
+  {
+   "shot": "scene"
+  },
+  {
+   "click": "Add sides"
+  },
+  {
+   "wait": 1500
+  },
+  {
+   "shot": "sides"
+  },
+  {
+   "click": "A file on this phone",
+   "file": "flows/sides/The_Rivals.txt"
+  },
+  {
+   "waitFor": "tick the scenes"
+  },
+  {
+   "wait": 1500
+  },
+  {
+   "shot": "map0"
+  },
+  {
+   "click": {
+    "css": "[role=checkbox] >> nth=0"
+   }
+  },
+  {
+   "wait": 500
+  },
+  {
+   "shot": "map1"
+  },
+  {
+   "click": {
+    "css": "[role=checkbox] >> nth=1"
+   }
+  },
+  {
+   "wait": 500
+  },
+  {
+   "shot": "map2"
+  },
+  {
+   "click": {
+    "css": "[role=checkbox] >> nth=3"
+   }
+  },
+  {
+   "wait": 500
+  },
+  {
+   "shot": "map3"
+  },
+  {
+   "scroll": 900
+  },
+  {
+   "wait": 900
+  },
+  {
+   "shot": "mapbuild"
+  },
+  {
+   "click": "Build 2 scenes"
+  },
+  {
+   "wait": 500
+  },
+  {
+   "shot": "sending"
+  },
+  {
+   "wait": 2500
+  },
+  {
+   "shot": "reading0"
+  },
+  {
+   "wait": 2500
+  },
+  {
+   "shot": "reading1"
+  },
+  {
+   "wait": 2500
+  },
+  {
+   "shot": "reading2"
+  },
+  {
+   "wait": 2500
+  },
+  {
+   "shot": "reading3"
+  },
+  {
+   "wait": 2500
+  },
+  {
+   "shot": "reading4"
+  },
+  {
+   "wait": 2500
+  },
+  {
+   "shot": "reading5"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after0"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after1"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after2"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after3"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after4"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after5"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after6"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after7"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after8"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after9"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after10"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after11"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after12"
+  },
+  {
+   "wait": 15000
+  },
+  {
+   "shot": "after13"
+  }
+ ],
+ "tail": 300,
+ "note": "The file step answers the phone's file picker with the whole play. Ghost Light scans it first and lists the scenes; the first buildable scene comes ticked, so it is unticked and Lucy's two are ticked. The same file sent twice opens at once."
+}

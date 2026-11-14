@@ -1,32 +1,37 @@
-From fff4b7bda6705eb2d4216610f1500a24312d556c Mon Sep 17 00:00:00 2001
-From: Claude <noreply@anthropic.com>
-Date: Tue, 3 Nov 2026 10:21:34 +0300
-Subject: [PATCH 1/7] Web preview for marketing recordings: the real screens in
- a browser at phone size
+From 4777d64d26c64448ca9fc0e11c79c4f80bd72df7 Mon Sep 17 00:00:00 2001
+From: preview <preview@local>
+Date: Sat, 14 Nov 2026 07:24:42 +0000
+Subject: [PATCH] Web preview for marketing recordings: the real screens in a
+ browser at phone size
 
-Branch only, never main. Adds react-native-web, react-dom and @expo/metro-runtime, and
-the smallest web-only changes for `expo export --platform web` to build and render:
-a web resolver in metro.config.js (Uniwind 1.11's missing InputAccessoryView, and a web
-entry that loads Skia's CanvasKit first), offline.web.ts in place of expo-sqlite, and no
-anonymous sign-in on web. scripts/web-preview.sh builds and serves it with /api passed
-through to the real API. The iOS bundle is unchanged.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01EFXvs3f7YjmQkfWVrLdj8m
+Regenerated 2026-11-14 against Ghost Light main 50a1c23 as one commit (the seven earlier ones folded together).
+The sides upload shim moved into sendFile and sendable, because scan, upload-background, scene-map and
+add-scenes now all go through them.
 ---
- README.md                      |  21 +++
- metro.config.js                |  42 +++++-
- package-lock.json              | 261 +++++++++++++++++++++++++++++----
- package.json                   |   3 +
- scripts/web-preview-server.mjs |  81 ++++++++++
- scripts/web-preview.sh         |  17 +++
- src/lib/offline.web.ts         |  16 ++
- src/lib/session.ts             |   6 +-
- web-preview/entry.js           |   9 ++
- 9 files changed, 426 insertions(+), 30 deletions(-)
+ README.md                            |  21 +++
+ app/tape/[id].tsx                    |   3 +
+ metro.config.js                      |  42 ++++-
+ package-lock.json                    | 262 ++++++++++++++++++++++++---
+ package.json                         |   3 +
+ scripts/web-preview-camera.mjs       |  43 +++++
+ scripts/web-preview-server.mjs       |  81 +++++++++
+ scripts/web-preview.sh               |  18 ++
+ src/api/rehearsal.ts                 |  15 ++
+ src/components/PrivacyShield.tsx     |   8 +-
+ src/lib/offline.web.ts               |  16 ++
+ src/lib/session.ts                   |   6 +-
+ src/lib/takes.web.ts                 |  60 ++++++
+ src/rehearsal/native/loader.web.ts   |  69 +++++++
+ src/rehearsal/native/tape-ear.web.ts |  55 ++++++
+ web-preview/entry.js                 |   9 +
+ 16 files changed, 680 insertions(+), 31 deletions(-)
+ create mode 100644 scripts/web-preview-camera.mjs
  create mode 100644 scripts/web-preview-server.mjs
  create mode 100755 scripts/web-preview.sh
  create mode 100644 src/lib/offline.web.ts
+ create mode 100644 src/lib/takes.web.ts
+ create mode 100644 src/rehearsal/native/loader.web.ts
+ create mode 100644 src/rehearsal/native/tape-ear.web.ts
  create mode 100644 web-preview/entry.js
 
 diff --git a/README.md b/README.md
@@ -58,6 +63,20 @@ index 3748a9a..57357f0 100644
 +  unreachable). Haptics, tilt and the microphone do nothing useful in a browser; untested.
 +- `/api` goes through the local server to api.actorrise.com, because the API does not allow a
 +  localhost origin.
+diff --git a/app/tape/[id].tsx b/app/tape/[id].tsx
+index c15f7af..e77f3a7 100644
+--- a/app/tape/[id].tsx
++++ b/app/tape/[id].tsx
+@@ -211,6 +211,9 @@ export default function TapeRoom() {
+   const [turn, setTurn] = useState(0); // degrees the room's chrome is turned, to follow the phone
+   const turnRef = useRef(0);
+   turnRef.current = turn;
++  // Web preview only (marketing recordings): a browser has no orientation sensor, so the recorder
++  // says which way the phone is held (window.__tapeTurn(-90)); the room then turns itself as on the phone.
++  useEffect(() => { if (typeof document !== 'undefined') (window as unknown as { __tapeTurn?: (d: number) => void }).__tapeTurn = (d: number) => setTurn(d); }, []);
+   const [count, setCount] = useState(3);
+   const [elapsed, setElapsed] = useState(0);
+   const [takes, setTakes] = useState<Take[]>([]);
 diff --git a/metro.config.js b/metro.config.js
 index c87360c..8a86862 100644
 --- a/metro.config.js
@@ -114,10 +133,18 @@ index c87360c..8a86862 100644
 +
 +module.exports = uniwindConfig;
 diff --git a/package-lock.json b/package-lock.json
-index 76e379a..a09ed4c 100644
+index 0d9c760..654b664 100644
 --- a/package-lock.json
 +++ b/package-lock.json
-@@ -14,6 +14,7 @@
+@@ -7,6 +7,7 @@
+     "": {
+       "name": "ghostlight",
+       "version": "0.1.0",
++      "hasInstallScript": true,
+       "dependencies": {
+         "@bacons/apple-targets": "^5.0.0",
+         "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
+@@ -14,6 +15,7 @@
          "@expo-google-fonts/instrument-serif": "^0.4.1",
          "@expo-google-fonts/montserrat": "^0.4.2",
          "@expo-google-fonts/playfair-display": "^0.4.2",
@@ -125,7 +152,7 @@ index 76e379a..a09ed4c 100644
          "@expo/vector-icons": "^15.0.2",
          "@react-native-async-storage/async-storage": "2.2.0",
          "@react-native-community/datetimepicker": "9.1.0",
-@@ -61,6 +62,7 @@
+@@ -61,6 +63,7 @@
          "expo-web-browser": "~57.0.2",
          "posthog-react-native": "^4.66.3",
          "react": "19.2.3",
@@ -133,7 +160,7 @@ index 76e379a..a09ed4c 100644
          "react-native": "0.86.2",
          "react-native-gesture-handler": "~2.32.0",
          "react-native-purchases": "^10.7.2",
-@@ -68,6 +70,7 @@
+@@ -68,6 +71,7 @@
          "react-native-safe-area-context": "~5.7.0",
          "react-native-screens": "~4.26.0",
          "react-native-url-polyfill": "^4.0.0",
@@ -141,37 +168,37 @@ index 76e379a..a09ed4c 100644
          "react-native-worklets": "0.10.1",
          "tailwindcss": "^4.3.3",
          "uniwind": "^1.11.0"
-@@ -2275,9 +2278,9 @@
+@@ -2276,9 +2280,9 @@
        }
      },
      "node_modules/@expo/log-box": {
 -      "version": "57.0.3",
 -      "resolved": "https://registry.npmjs.org/@expo/log-box/-/log-box-57.0.3.tgz",
 -      "integrity": "sha512-qv/cMliNax6es07Un/4IGJIcs4PUuhTKKTrJZX/0X2YRcOT5cqm/QicibZwTIbiZWi1i8P4YBRQTfFT2B17giw==",
-+      "version": "57.0.4",
-+      "resolved": "https://registry.npmjs.org/@expo/log-box/-/log-box-57.0.4.tgz",
-+      "integrity": "sha512-IxwS9s1L2muj8mj8AQSuiy7u8OFJdc02NRFo2me/Tj6DiaeG5SREqmpBE4rQpR2cadqSg5jl8Qab8Cjie616dg==",
++      "version": "57.0.5",
++      "resolved": "https://registry.npmjs.org/@expo/log-box/-/log-box-57.0.5.tgz",
++      "integrity": "sha512-tXg/remL9gGMr7ZWVbvXBjNfif3rb2l2mNpU4j5XmDPKa9HRbontRGGOy32aErSKq2KLrDyKZkc2iKVVSWo0ow==",
        "license": "MIT",
        "dependencies": {
          "@expo/dom-webview": "^57.0.1",
-@@ -2327,6 +2330,31 @@
+@@ -2328,6 +2332,31 @@
          "walker": "^1.0.8"
        }
      },
 +    "node_modules/@expo/metro-runtime": {
-+      "version": "57.0.17",
-+      "resolved": "https://registry.npmjs.org/@expo/metro-runtime/-/metro-runtime-57.0.17.tgz",
-+      "integrity": "sha512-fiWYLaMDV8hoIpyPztRFPhGbHCHWlVfRTac3jZV7tP+fYCpo1QmgsuL23ubnoWqDZhFuRDNk+hQ4y21DMmxEFA==",
++      "version": "57.0.18",
++      "resolved": "https://registry.npmjs.org/@expo/metro-runtime/-/metro-runtime-57.0.18.tgz",
++      "integrity": "sha512-cboe2TTHAKHRw/d6/BJi7KPqic1D+P+JbgkqzwMOd+MTWJzqN2ASTDOJQUaVShfgW7cwaidq/AswdIlMA0IYMQ==",
 +      "license": "MIT",
 +      "dependencies": {
-+        "@expo/log-box": "^57.0.4",
++        "@expo/log-box": "^57.0.5",
 +        "anser": "^1.4.9",
 +        "pretty-format": "^29.7.0",
 +        "stacktrace-parser": "^0.1.10",
 +        "whatwg-fetch": "^3.0.0"
 +      },
 +      "peerDependencies": {
-+        "@expo/log-box": "^57.0.4",
++        "@expo/log-box": "^57.0.5",
 +        "expo": "*",
 +        "react": "*",
 +        "react-dom": "*",
@@ -186,7 +213,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/@expo/osascript": {
        "version": "2.7.1",
        "resolved": "https://registry.npmjs.org/@expo/osascript/-/osascript-2.7.1.tgz",
-@@ -5570,6 +5598,15 @@
+@@ -5628,6 +5657,15 @@
          "url": "https://opencollective.com/core-js"
        }
      },
@@ -202,7 +229,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/cross-spawn": {
        "version": "7.0.6",
        "resolved": "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz",
-@@ -5584,6 +5621,15 @@
+@@ -5642,6 +5680,15 @@
          "node": ">= 8"
        }
      },
@@ -218,7 +245,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/csstype": {
        "version": "3.2.3",
        "resolved": "https://registry.npmjs.org/csstype/-/csstype-3.2.3.tgz",
-@@ -6434,31 +6480,6 @@
+@@ -6548,31 +6595,6 @@
          }
        }
      },
@@ -250,7 +277,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/expo-router/node_modules/@expo/ui": {
        "version": "57.0.12",
        "resolved": "https://registry.npmjs.org/@expo/ui/-/ui-57.0.12.tgz",
-@@ -7131,6 +7152,62 @@
+@@ -7245,6 +7267,62 @@
          "bser": "2.1.1"
        }
      },
@@ -313,7 +340,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/fdir": {
        "version": "6.5.0",
        "resolved": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz",
-@@ -7457,6 +7534,12 @@
+@@ -7674,6 +7752,12 @@
          "node": ">= 14"
        }
      },
@@ -326,7 +353,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/iceberg-js": {
        "version": "0.8.1",
        "resolved": "https://registry.npmjs.org/iceberg-js/-/iceberg-js-0.8.1.tgz",
-@@ -7494,6 +7577,15 @@
+@@ -7711,6 +7795,15 @@
        "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==",
        "license": "ISC"
      },
@@ -342,7 +369,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/invariant": {
        "version": "2.2.4",
        "resolved": "https://registry.npmjs.org/invariant/-/invariant-2.2.4.tgz",
-@@ -8656,6 +8748,26 @@
+@@ -8953,6 +9046,26 @@
          "url": "https://opencollective.com/express"
        }
      },
@@ -369,7 +396,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/node-forge": {
        "version": "1.4.0",
        "resolved": "https://registry.npmjs.org/node-forge/-/node-forge-1.4.0.tgz",
-@@ -8713,6 +8825,15 @@
+@@ -9010,6 +9123,15 @@
          "node": "^20.19.4 || ^22.13.0 || ^24.3.0 || >= 25.0.0"
        }
      },
@@ -382,10 +409,10 @@ index 76e379a..a09ed4c 100644
 +        "node": ">=0.10.0"
 +      }
 +    },
-     "node_modules/on-finished": {
-       "version": "2.3.0",
-       "resolved": "https://registry.npmjs.org/on-finished/-/on-finished-2.3.0.tgz",
-@@ -9108,6 +9229,12 @@
+     "node_modules/object-keys": {
+       "version": "1.1.1",
+       "resolved": "https://registry.npmjs.org/object-keys/-/object-keys-1.1.1.tgz",
+@@ -9461,6 +9583,12 @@
          "node": "^10 || ^12 || >=14"
        }
      },
@@ -398,7 +425,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/posthog-react-native": {
        "version": "4.66.3",
        "resolved": "https://registry.npmjs.org/posthog-react-native/-/posthog-react-native-4.66.3.tgz",
-@@ -9289,6 +9416,18 @@
+@@ -9642,6 +9770,18 @@
          "ws": "^7"
        }
      },
@@ -417,7 +444,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/react-fast-compare": {
        "version": "3.2.2",
        "resolved": "https://registry.npmjs.org/react-fast-compare/-/react-fast-compare-3.2.2.tgz",
-@@ -9512,6 +9651,38 @@
+@@ -9865,6 +10005,38 @@
          "react-native": "*"
        }
      },
@@ -456,9 +483,9 @@ index 76e379a..a09ed4c 100644
      "node_modules/react-native-worklets": {
        "version": "0.10.1",
        "resolved": "https://registry.npmjs.org/react-native-worklets/-/react-native-worklets-0.10.1.tgz",
-@@ -10010,6 +10181,12 @@
-       "integrity": "sha512-qepMx2JxAa5jjfzxG79yPPq+8BuFToHd1hm7kI+Z4zAq1ftQiP7HcxMhDDItrbtwVeLg/cY2JnKnrcFkmiswNA==",
-       "license": "MIT"
+@@ -10381,6 +10553,12 @@
+         "node": ">= 0.4"
+       }
      },
 +    "node_modules/setimmediate": {
 +      "version": "1.0.5",
@@ -469,7 +496,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/setprototypeof": {
        "version": "1.2.0",
        "resolved": "https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.2.0.tgz",
-@@ -10303,6 +10480,12 @@
+@@ -10684,6 +10862,12 @@
        "integrity": "sha512-0MP/Cxx5SzeeZ10p/bZI0S6MpgD+yxAhi1BOQ34jgnMXsCq3j1t6tQnZu+KdlL7dvJTLT3g9xN8tl10TqgFMcg==",
        "license": "MIT"
      },
@@ -482,7 +509,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/supports-color": {
        "version": "7.2.0",
        "resolved": "https://registry.npmjs.org/supports-color/-/supports-color-7.2.0.tgz",
-@@ -10522,6 +10705,12 @@
+@@ -10913,6 +11097,12 @@
        "integrity": "sha512-FWAPzCIHZHnrE/5/w9MPk0kK25hSQSH2IKhYh9PyjS3SG/+IEMvlwIHbhz+oF7xl54I+ueZlVnMjyzdSwLmAwA==",
        "license": "MIT"
      },
@@ -495,7 +522,7 @@ index 76e379a..a09ed4c 100644
      "node_modules/tslib": {
        "version": "2.8.1",
        "resolved": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
-@@ -11258,12 +11447,28 @@
+@@ -11659,12 +11849,28 @@
          "defaults": "^1.0.3"
        }
      },
@@ -525,10 +552,10 @@ index 76e379a..a09ed4c 100644
        "version": "0.1.2",
        "resolved": "https://registry.npmjs.org/whatwg-url-minimum/-/whatwg-url-minimum-0.1.2.tgz",
 diff --git a/package.json b/package.json
-index 7b07225..a6aa28a 100644
+index 57926e0..21baa1f 100644
 --- a/package.json
 +++ b/package.json
-@@ -20,6 +20,7 @@
+@@ -21,6 +21,7 @@
      "@expo-google-fonts/instrument-serif": "^0.4.1",
      "@expo-google-fonts/montserrat": "^0.4.2",
      "@expo-google-fonts/playfair-display": "^0.4.2",
@@ -536,7 +563,7 @@ index 7b07225..a6aa28a 100644
      "@expo/vector-icons": "^15.0.2",
      "@react-native-async-storage/async-storage": "2.2.0",
      "@react-native-community/datetimepicker": "9.1.0",
-@@ -67,6 +68,7 @@
+@@ -68,6 +69,7 @@
      "expo-web-browser": "~57.0.2",
      "posthog-react-native": "^4.66.3",
      "react": "19.2.3",
@@ -544,7 +571,7 @@ index 7b07225..a6aa28a 100644
      "react-native": "0.86.2",
      "react-native-gesture-handler": "~2.32.0",
      "react-native-purchases": "^10.7.2",
-@@ -74,6 +76,7 @@
+@@ -75,6 +77,7 @@
      "react-native-safe-area-context": "~5.7.0",
      "react-native-screens": "~4.26.0",
      "react-native-url-polyfill": "^4.0.0",
@@ -552,6 +579,55 @@ index 7b07225..a6aa28a 100644
      "react-native-worklets": "0.10.1",
      "tailwindcss": "^4.3.3",
      "uniwind": "^1.11.0"
+diff --git a/scripts/web-preview-camera.mjs b/scripts/web-preview-camera.mjs
+new file mode 100644
+index 0000000..20bb538
+--- /dev/null
++++ b/scripts/web-preview-camera.mjs
+@@ -0,0 +1,43 @@
++// Web preview only: expo-camera's web build cannot record. For marketing recordings, record()
++// films the camera's own stream with MediaRecorder until stopRecording(), and hands back a
++// blob: URL, so the room plays the take straight back the way the phone does.
++// Idempotent; touches node_modules only, never the app.
++import fs from 'node:fs';
++const f = 'node_modules/expo-camera/build/ExpoCamera.web.js';
++let s = fs.readFileSync(f, 'utf8');
++const REC = `return new Promise((res) => {
++                const stream = video.current?.srcObject;
++                if (!stream || typeof MediaRecorder === 'undefined') { globalThis.__previewStop = () => res({ uri: '' }); return; }
++                const mr = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 8000000 });
++                const chunks = [];
++                mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
++                mr.onstop = () => res({ uri: URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })) });
++                globalThis.__previewStop = () => { if (mr.state !== 'inactive') mr.stop(); };
++                mr.start(200);
++            });`;
++if (!s.includes('MediaRecorder(stream')) {
++  s = s.replace("console.warn('stopRecording is not supported on web.');",
++    "globalThis.__previewStop?.(); globalThis.__previewStop = undefined;");
++  s = s.replace("console.warn('record is not supported on web.');\n            return { uri: '' };", REC);
++  // an older run of this shim: upgrade it in place
++  s = s.replace("return new Promise((res) => { globalThis.__previewStop = () => res({ uri: '' }); });", REC);
++  if (!s.includes('MediaRecorder(stream')) throw new Error('expo-camera web build changed; update web-preview-camera.mjs');
++  fs.writeFileSync(f, s);
++}
++console.log('camera record shim on (MediaRecorder)');
++
++// expo-video's web player drops a play() made before its <video> mounts (the review calls
++// play() in the player's setup), so the take would sit on its first frame. Remember the ask
++// and play on mount, as the native player does.
++const v = 'node_modules/expo-video/build/VideoPlayer.web.js';
++let w = fs.readFileSync(v, 'utf8');
++if (!w.includes('__wantPlay')) {
++  w = w.replace('this._synchronizeWithFirstVideo(video);\n    }',
++    'this._synchronizeWithFirstVideo(video);\n        if (this.__wantPlay) { this.__wantPlay = false; video.play().catch(() => {}); }\n    }');
++  w = w.replace('play() {\n        this._mountedVideos.forEach((video) => {\n            video.play();\n        });\n    }',
++    'play() {\n        if (this._mountedVideos.size === 0) this.__wantPlay = true;\n        this._mountedVideos.forEach((video) => {\n            video.play();\n        });\n    }');
++  w = w.replace('pause() {\n', 'pause() {\n        this.__wantPlay = false;\n');
++  if ((w.match(/__wantPlay/g) || []).length < 4) throw new Error('expo-video web build changed; update web-preview-camera.mjs');
++  fs.writeFileSync(v, w);
++}
++console.log('video play-on-mount shim on');
 diff --git a/scripts/web-preview-server.mjs b/scripts/web-preview-server.mjs
 new file mode 100644
 index 0000000..4779dc7
@@ -641,10 +717,10 @@ index 0000000..4779dc7
 +);
 diff --git a/scripts/web-preview.sh b/scripts/web-preview.sh
 new file mode 100755
-index 0000000..2aafe1d
+index 0000000..803dd25
 --- /dev/null
 +++ b/scripts/web-preview.sh
-@@ -0,0 +1,17 @@
+@@ -0,0 +1,18 @@
 +#!/usr/bin/env bash
 +# Web preview of Ghost Light, for marketing screen recordings only. Not a product.
 +# Builds the web export into dist/ and serves it on a port, with /api passed through
@@ -655,6 +731,7 @@ index 0000000..2aafe1d
 +cd "$(dirname "$0")/.."
 +PORT="${1:-8099}"
 +
++node scripts/web-preview-camera.mjs
 +env -u EXPO_NO_DOTENV EXPO_PUBLIC_API_URL="http://127.0.0.1:${PORT}" \
 +  npx expo export --platform web --clear
 +# Skia on web loads CanvasKit's wasm from the site root.
@@ -662,6 +739,63 @@ index 0000000..2aafe1d
 +
 +# NODE_USE_ENV_PROXY lets Node's fetch use HTTPS_PROXY where one is set (cloud sessions).
 +NODE_USE_ENV_PROXY=1 exec node scripts/web-preview-server.mjs "$PORT" dist
+diff --git a/src/api/rehearsal.ts b/src/api/rehearsal.ts
+index 6f671b4..62badd3 100644
+--- a/src/api/rehearsal.ts
++++ b/src/api/rehearsal.ts
+@@ -355,6 +355,10 @@ export type SidesSource = { uri: string; name: string; mimeType?: string } | { t
+ 
+ /** Pasted text is written to a file first, so every door sends a file. */
+ export function sendable(source: SidesSource): Sendable {
++  // Web preview only (marketing recordings): a browser has no cache folder, so pasted text rides a blob: URL.
++  if ('text' in source && typeof document !== 'undefined') {
++    return { uri: URL.createObjectURL(new Blob([source.text], { type: 'text/plain' })), name: source.name, mimeType: 'text/plain' };
++  }
+   if ('text' in source) {
+     const f = new File(Paths.cache, `paste-${Date.now()}-${source.name}`);
+     f.write(source.text);
+@@ -382,6 +386,17 @@ function refusal(status: number, body: string): RehearsalApiError {
+  * as a path and streams it. React Native's fetch refuses a file part.
+  */
+ async function sendFile<T>(path: string, file: Sendable, parameters: Record<string, string> = {}): Promise<T> {
++  // Web preview only (marketing recordings): a browser has no file system uploader, so the picked
++  // file (a blob: URL from the browser's own picker) goes up as an ordinary multipart form.
++  if (typeof document !== 'undefined') {
++    const form = new FormData();
++    form.append('file', await (await globalThis.fetch(file.uri)).blob(), file.name);
++    for (const [k, v] of Object.entries(parameters)) form.append(k, v);
++    const r = await globalThis.fetch(`${API_URL}${path}`, { method: 'POST', headers: await authHeaders(), body: form });
++    const body = await r.text();
++    if (!r.ok) throw refusal(r.status, body);
++    return JSON.parse(body) as T;
++  }
+   const res = await FileSystem.uploadAsync(`${API_URL}${path}`, file.uri, {
+     httpMethod: 'POST',
+     uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+diff --git a/src/components/PrivacyShield.tsx b/src/components/PrivacyShield.tsx
+index 5928487..4709fb8 100644
+--- a/src/components/PrivacyShield.tsx
++++ b/src/components/PrivacyShield.tsx
+@@ -1,5 +1,5 @@
+ import { useEffect, useRef, useState } from 'react';
+-import { AppState, StyleSheet, Text, View } from 'react-native';
++import { AppState, Platform, StyleSheet, Text, View } from 'react-native';
+ import { BlurView } from 'expo-blur';
+ import { addScreenshotListener } from 'expo-screen-capture';
+ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+@@ -22,6 +22,12 @@ import { useTheme } from '../theme/ThemeContext';
+  * best-effort layer, and a nice touch on both.
+  */
+ export function PrivacyShield() {
++  // Web preview: expo-screen-capture has no web listener, and a browser has no app switcher.
++  if (Platform.OS === 'web') return null;
++  return <PrivacyShieldNative />;
++}
++
++function PrivacyShieldNative() {
+   const { colors: c } = useTheme();
+   const [backgrounded, setBackgrounded] = useState(false);
+   const [shot, setShot] = useState(false);
 diff --git a/src/lib/offline.web.ts b/src/lib/offline.web.ts
 new file mode 100644
 index 0000000..e61da18
@@ -705,251 +839,6 @@ index dfa94d2..8106fb8 100644
    const { data, error } = await supabase.auth.signInAnonymously();
    if (error) {
      if (error.code === 'anonymous_provider_disabled') {
-diff --git a/web-preview/entry.js b/web-preview/entry.js
-new file mode 100644
-index 0000000..4856578
---- /dev/null
-+++ b/web-preview/entry.js
-@@ -0,0 +1,9 @@
-+// Web preview entry (branch web-preview, marketing recordings only). metro.config.js
-+// points the web bundle here instead of expo-router/entry. Skia on web needs CanvasKit
-+// on the global before any Skia module runs, so load it first, then start the app.
-+// canvaskit.wasm is copied into dist/ by scripts/web-preview.sh. Native never loads this.
-+import { LoadSkiaWeb } from '@shopify/react-native-skia/lib/module/web';
-+
-+LoadSkiaWeb({ locateFile: (file) => `/${file}` }).then(() => {
-+  require('expo-router/entry');
-+});
--- 
-2.43.0
-
-
-From 2300fe5690811f4a27b3a02e3c486cbe59d5500a Mon Sep 17 00:00:00 2001
-From: preview <preview@local>
-Date: Wed, 4 Nov 2026 06:55:59 +0000
-Subject: [PATCH 2/7] Web preview: no screenshot listener on web
- (PrivacyShield)
-
----
- src/components/PrivacyShield.tsx | 8 +++++++-
- 1 file changed, 7 insertions(+), 1 deletion(-)
-
-diff --git a/src/components/PrivacyShield.tsx b/src/components/PrivacyShield.tsx
-index 5928487..4709fb8 100644
---- a/src/components/PrivacyShield.tsx
-+++ b/src/components/PrivacyShield.tsx
-@@ -1,5 +1,5 @@
- import { useEffect, useRef, useState } from 'react';
--import { AppState, StyleSheet, Text, View } from 'react-native';
-+import { AppState, Platform, StyleSheet, Text, View } from 'react-native';
- import { BlurView } from 'expo-blur';
- import { addScreenshotListener } from 'expo-screen-capture';
- import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-@@ -22,6 +22,12 @@ import { useTheme } from '../theme/ThemeContext';
-  * best-effort layer, and a nice touch on both.
-  */
- export function PrivacyShield() {
-+  // Web preview: expo-screen-capture has no web listener, and a browser has no app switcher.
-+  if (Platform.OS === 'web') return null;
-+  return <PrivacyShieldNative />;
-+}
-+
-+function PrivacyShieldNative() {
-   const { colors: c } = useTheme();
-   const [backgrounded, setBackgrounded] = useState(false);
-   const [shot, setShot] = useState(false);
--- 
-2.43.0
-
-
-From 3e38e04ece3372deebc0eb0f639a73d431ab1cc7 Mon Sep 17 00:00:00 2001
-From: preview <preview@local>
-Date: Thu, 5 Nov 2026 15:36:20 +0000
-Subject: [PATCH 3/7] Web preview: the tape room rolls in a browser (scripted
- ear, camera record waits for cut)
-
----
- scripts/web-preview-camera.mjs       | 18 +++++++++
- scripts/web-preview.sh               |  1 +
- src/rehearsal/native/tape-ear.web.ts | 55 ++++++++++++++++++++++++++++
- 3 files changed, 74 insertions(+)
- create mode 100644 scripts/web-preview-camera.mjs
- create mode 100644 src/rehearsal/native/tape-ear.web.ts
-
-diff --git a/scripts/web-preview-camera.mjs b/scripts/web-preview-camera.mjs
-new file mode 100644
-index 0000000..57ec42e
---- /dev/null
-+++ b/scripts/web-preview-camera.mjs
-@@ -0,0 +1,18 @@
-+// Web preview only: expo-camera's web build cannot record, so a take ends the moment it rolls.
-+// For marketing recordings, make record() wait until stopRecording() (no file is written; the
-+// room goes back to ready after "cut"). Idempotent; touches node_modules only, never the app.
-+import fs from 'node:fs';
-+const f = 'node_modules/expo-camera/build/ExpoCamera.web.js';
-+let s = fs.readFileSync(f, 'utf8');
-+if (!s.includes('__previewStop')) {
-+  s = s.replace(
-+    "console.warn('stopRecording is not supported on web.');",
-+    "globalThis.__previewStop?.(); globalThis.__previewStop = undefined;",
-+  ).replace(
-+    "console.warn('record is not supported on web.');\n            return { uri: '' };",
-+    "return new Promise((res) => { globalThis.__previewStop = () => res({ uri: '' }); });",
-+  );
-+  if (!s.includes('__previewStop = () =>')) throw new Error('expo-camera web build changed; update web-preview-camera.mjs');
-+  fs.writeFileSync(f, s);
-+}
-+console.log('camera record shim on');
-diff --git a/scripts/web-preview.sh b/scripts/web-preview.sh
-index 2aafe1d..803dd25 100755
---- a/scripts/web-preview.sh
-+++ b/scripts/web-preview.sh
-@@ -8,6 +8,7 @@ set -euo pipefail
- cd "$(dirname "$0")/.."
- PORT="${1:-8099}"
- 
-+node scripts/web-preview-camera.mjs
- env -u EXPO_NO_DOTENV EXPO_PUBLIC_API_URL="http://127.0.0.1:${PORT}" \
-   npx expo export --platform web --clear
- # Skia on web loads CanvasKit's wasm from the site root.
-diff --git a/src/rehearsal/native/tape-ear.web.ts b/src/rehearsal/native/tape-ear.web.ts
-new file mode 100644
-index 0000000..6d02a56
---- /dev/null
-+++ b/src/rehearsal/native/tape-ear.web.ts
-@@ -0,0 +1,55 @@
-+/**
-+ * Web preview only (marketing recordings): the tape room's ear without a microphone.
-+ *
-+ * A browser has no on-device recogniser, so this ear "hears" what the recorder hands it:
-+ * window.__tapeSay("and action") delivers those words one by one, as Apple's recogniser
-+ * would, and everything after that is the real room: tape-cues.ts decides whether a word is
-+ * a cue or a line, live-read.ts moves the piece under the lens. The iOS build never loads
-+ * this file (Metro picks tape-ear.ts there).
-+ */
-+import { tokenize } from '../word-match';
-+import type { Heard } from '../tape-cues';
-+import type { TapeEarCallbacks } from './tape-ear';
-+
-+export type { TapeEarCallbacks };
-+
-+declare global {
-+  interface Window { __tapeSay?: (text: string, msPerWord?: number) => Promise<void>; __tapeEarReady?: boolean }
-+}
-+
-+export class TapeEar {
-+  private words: string[] = [];
-+  private at: number[] = [];
-+  private base = 0;
-+  private listening = false;
-+  constructor(private cb: TapeEarCallbacks) {}
-+
-+  static available(): boolean { return true; }
-+  static speakerOut() {}
-+  static async permission(): Promise<boolean> { return true; }
-+
-+  attach() {
-+    window.__tapeSay = async (text: string, msPerWord = 260) => {
-+      for (const w of tokenize(text)) {
-+        if (!this.listening) return;
-+        this.words.push(w);
-+        this.at.push(Date.now());
-+        this.cb.onLevel?.(0.7);
-+        this.emit();
-+        await new Promise((r) => setTimeout(r, msPerWord));
-+      }
-+      this.cb.onLevel?.(0.1);
-+    };
-+    window.__tapeEarReady = true;
-+  }
-+  prime(_script: string[]) {}
-+  listen() { this.listening = true; this.words = []; this.at = []; this.base = 0; }
-+  reset() { this.base = this.words.length; this.emit(); }
-+  refresh() {}
-+  stop() { this.listening = false; }
-+  detach() { this.stop(); window.__tapeEarReady = false; }
-+  private emit() {
-+    const h: Heard = { words: this.words.slice(this.base), at: this.at.slice(this.base) };
-+    this.cb.onHeard(h);
-+  }
-+}
--- 
-2.43.0
-
-
-From 73bc8f8e0c285df385c8ec9a5bc48f335407377f Mon Sep 17 00:00:00 2001
-From: preview <preview@local>
-Date: Thu, 5 Nov 2026 22:53:12 +0000
-Subject: [PATCH 4/7] Web preview: the tape room plays the take back
- (MediaRecorder camera, takes in memory, video plays on mount)
-
----
- scripts/web-preview-camera.mjs | 51 +++++++++++++++++++++--------
- src/lib/takes.web.ts           | 60 ++++++++++++++++++++++++++++++++++
- 2 files changed, 98 insertions(+), 13 deletions(-)
- create mode 100644 src/lib/takes.web.ts
-
-diff --git a/scripts/web-preview-camera.mjs b/scripts/web-preview-camera.mjs
-index 57ec42e..20bb538 100644
---- a/scripts/web-preview-camera.mjs
-+++ b/scripts/web-preview-camera.mjs
-@@ -1,18 +1,43 @@
--// Web preview only: expo-camera's web build cannot record, so a take ends the moment it rolls.
--// For marketing recordings, make record() wait until stopRecording() (no file is written; the
--// room goes back to ready after "cut"). Idempotent; touches node_modules only, never the app.
-+// Web preview only: expo-camera's web build cannot record. For marketing recordings, record()
-+// films the camera's own stream with MediaRecorder until stopRecording(), and hands back a
-+// blob: URL, so the room plays the take straight back the way the phone does.
-+// Idempotent; touches node_modules only, never the app.
- import fs from 'node:fs';
- const f = 'node_modules/expo-camera/build/ExpoCamera.web.js';
- let s = fs.readFileSync(f, 'utf8');
--if (!s.includes('__previewStop')) {
--  s = s.replace(
--    "console.warn('stopRecording is not supported on web.');",
--    "globalThis.__previewStop?.(); globalThis.__previewStop = undefined;",
--  ).replace(
--    "console.warn('record is not supported on web.');\n            return { uri: '' };",
--    "return new Promise((res) => { globalThis.__previewStop = () => res({ uri: '' }); });",
--  );
--  if (!s.includes('__previewStop = () =>')) throw new Error('expo-camera web build changed; update web-preview-camera.mjs');
-+const REC = `return new Promise((res) => {
-+                const stream = video.current?.srcObject;
-+                if (!stream || typeof MediaRecorder === 'undefined') { globalThis.__previewStop = () => res({ uri: '' }); return; }
-+                const mr = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 8000000 });
-+                const chunks = [];
-+                mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-+                mr.onstop = () => res({ uri: URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })) });
-+                globalThis.__previewStop = () => { if (mr.state !== 'inactive') mr.stop(); };
-+                mr.start(200);
-+            });`;
-+if (!s.includes('MediaRecorder(stream')) {
-+  s = s.replace("console.warn('stopRecording is not supported on web.');",
-+    "globalThis.__previewStop?.(); globalThis.__previewStop = undefined;");
-+  s = s.replace("console.warn('record is not supported on web.');\n            return { uri: '' };", REC);
-+  // an older run of this shim: upgrade it in place
-+  s = s.replace("return new Promise((res) => { globalThis.__previewStop = () => res({ uri: '' }); });", REC);
-+  if (!s.includes('MediaRecorder(stream')) throw new Error('expo-camera web build changed; update web-preview-camera.mjs');
-   fs.writeFileSync(f, s);
- }
--console.log('camera record shim on');
-+console.log('camera record shim on (MediaRecorder)');
-+
-+// expo-video's web player drops a play() made before its <video> mounts (the review calls
-+// play() in the player's setup), so the take would sit on its first frame. Remember the ask
-+// and play on mount, as the native player does.
-+const v = 'node_modules/expo-video/build/VideoPlayer.web.js';
-+let w = fs.readFileSync(v, 'utf8');
-+if (!w.includes('__wantPlay')) {
-+  w = w.replace('this._synchronizeWithFirstVideo(video);\n    }',
-+    'this._synchronizeWithFirstVideo(video);\n        if (this.__wantPlay) { this.__wantPlay = false; video.play().catch(() => {}); }\n    }');
-+  w = w.replace('play() {\n        this._mountedVideos.forEach((video) => {\n            video.play();\n        });\n    }',
-+    'play() {\n        if (this._mountedVideos.size === 0) this.__wantPlay = true;\n        this._mountedVideos.forEach((video) => {\n            video.play();\n        });\n    }');
-+  w = w.replace('pause() {\n', 'pause() {\n        this.__wantPlay = false;\n');
-+  if ((w.match(/__wantPlay/g) || []).length < 4) throw new Error('expo-video web build changed; update web-preview-camera.mjs');
-+  fs.writeFileSync(v, w);
-+}
-+console.log('video play-on-mount shim on');
 diff --git a/src/lib/takes.web.ts b/src/lib/takes.web.ts
 new file mode 100644
 index 0000000..3f6667d
@@ -1016,21 +905,6 @@ index 0000000..3f6667d
 +  shelf.find((t) => t.id === id && takeFile(t).delete());
 +  shelf = shelf.filter((t) => t.id !== id);
 +}
--- 
-2.43.0
-
-
-From 8995c42fb5b47180d09f796a5b98585fa7a02725 Mon Sep 17 00:00:00 2001
-From: preview <preview@local>
-Date: Sun, 8 Nov 2026 20:17:41 +0000
-Subject: [PATCH 5/7] Web preview: partner lines load straight from their URL
- (no file cache in a browser)
-
----
- src/rehearsal/native/loader.web.ts | 69 ++++++++++++++++++++++++++++++
- 1 file changed, 69 insertions(+)
- create mode 100644 src/rehearsal/native/loader.web.ts
-
 diff --git a/src/rehearsal/native/loader.web.ts b/src/rehearsal/native/loader.web.ts
 new file mode 100644
 index 0000000..0ead996
@@ -1106,75 +980,82 @@ index 0000000..0ead996
 +    for (const i of this.started) if (!this.player.has(i)) this.started.delete(i);
 +  }
 +}
--- 
-2.43.0
-
-
-From 788910564b3dea0053acc9fd74fdd53c5d22ffc3 Mon Sep 17 00:00:00 2001
-From: preview <preview@local>
-Date: Wed, 11 Nov 2026 06:55:01 +0000
-Subject: [PATCH 6/7] Web preview: sides from a file go up as a multipart form
- (a browser has no file system uploader)
-
----
- src/api/rehearsal.ts | 16 ++++++++++++++++
- 1 file changed, 16 insertions(+)
-
-diff --git a/src/api/rehearsal.ts b/src/api/rehearsal.ts
-index 2f3560a..43e5a0b 100644
---- a/src/api/rehearsal.ts
-+++ b/src/api/rehearsal.ts
-@@ -346,6 +346,22 @@ export async function uploadScriptBackground(
-   source: { uri: string; name: string; mimeType?: string } | { text: string; name: string },
-   title?: string,
- ): Promise<ScriptDetail> {
-+  // Web preview only (marketing recordings): a browser has no file system uploader, so the picked
-+  // file (a blob: URL from the browser's own picker) goes up as an ordinary multipart form.
-+  if (typeof document !== 'undefined') {
-+    const form = new FormData();
-+    const blob = 'text' in source ? new Blob([source.text], { type: 'text/plain' }) : await (await globalThis.fetch(source.uri)).blob();
-+    form.append('file', blob, source.name);
-+    if (title) form.append('title', title);
-+    const r = await globalThis.fetch(`${API_URL}/api/scripts/upload-background`, { method: 'POST', headers: await authHeaders(), body: form });
-+    const body = await r.text();
-+    if (!r.ok) {
-+      let detail = `upload failed (${r.status})`;
-+      try { const j = JSON.parse(body) as { detail?: string | { message?: string } }; if (typeof j.detail === 'string') detail = j.detail; else if (j.detail?.message) detail = j.detail.message; } catch { /* no body */ }
-+      throw new RehearsalApiError(r.status, detail, null);
-+    }
-+    return JSON.parse(body) as ScriptDetail;
+diff --git a/src/rehearsal/native/tape-ear.web.ts b/src/rehearsal/native/tape-ear.web.ts
+new file mode 100644
+index 0000000..6d02a56
+--- /dev/null
++++ b/src/rehearsal/native/tape-ear.web.ts
+@@ -0,0 +1,55 @@
++/**
++ * Web preview only (marketing recordings): the tape room's ear without a microphone.
++ *
++ * A browser has no on-device recogniser, so this ear "hears" what the recorder hands it:
++ * window.__tapeSay("and action") delivers those words one by one, as Apple's recogniser
++ * would, and everything after that is the real room: tape-cues.ts decides whether a word is
++ * a cue or a line, live-read.ts moves the piece under the lens. The iOS build never loads
++ * this file (Metro picks tape-ear.ts there).
++ */
++import { tokenize } from '../word-match';
++import type { Heard } from '../tape-cues';
++import type { TapeEarCallbacks } from './tape-ear';
++
++export type { TapeEarCallbacks };
++
++declare global {
++  interface Window { __tapeSay?: (text: string, msPerWord?: number) => Promise<void>; __tapeEarReady?: boolean }
++}
++
++export class TapeEar {
++  private words: string[] = [];
++  private at: number[] = [];
++  private base = 0;
++  private listening = false;
++  constructor(private cb: TapeEarCallbacks) {}
++
++  static available(): boolean { return true; }
++  static speakerOut() {}
++  static async permission(): Promise<boolean> { return true; }
++
++  attach() {
++    window.__tapeSay = async (text: string, msPerWord = 260) => {
++      for (const w of tokenize(text)) {
++        if (!this.listening) return;
++        this.words.push(w);
++        this.at.push(Date.now());
++        this.cb.onLevel?.(0.7);
++        this.emit();
++        await new Promise((r) => setTimeout(r, msPerWord));
++      }
++      this.cb.onLevel?.(0.1);
++    };
++    window.__tapeEarReady = true;
 +  }
-   let uri: string;
-   let mimeType: string;
-   if ('text' in source) {
--- 
-2.43.0
-
-
-From 17ed92b80f00c7445dc3ff9ee90b8660a610b0d3 Mon Sep 17 00:00:00 2001
-From: preview <preview@local>
-Date: Thu, 12 Nov 2026 06:50:41 +0000
-Subject: [PATCH 7/7] Web preview: the recorder turns the tape room (a browser
- has no orientation sensor)
-
----
- app/tape/[id].tsx | 3 +++
- 1 file changed, 3 insertions(+)
-
-diff --git a/app/tape/[id].tsx b/app/tape/[id].tsx
-index a058c06..b988728 100644
---- a/app/tape/[id].tsx
-+++ b/app/tape/[id].tsx
-@@ -209,6 +209,9 @@ export default function TapeRoom() {
-   const [turn, setTurn] = useState(0); // degrees the room's chrome is turned, to follow the phone
-   const turnRef = useRef(0);
-   turnRef.current = turn;
-+  // Web preview only (marketing recordings): a browser has no orientation sensor, so the recorder
-+  // says which way the phone is held (window.__tapeTurn(-90)); the room then turns itself as on the phone.
-+  useEffect(() => { if (typeof document !== 'undefined') (window as unknown as { __tapeTurn?: (d: number) => void }).__tapeTurn = (d: number) => setTurn(d); }, []);
-   const [count, setCount] = useState(3);
-   const [elapsed, setElapsed] = useState(0);
-   const [takes, setTakes] = useState<Take[]>([]);
++  prime(_script: string[]) {}
++  listen() { this.listening = true; this.words = []; this.at = []; this.base = 0; }
++  reset() { this.base = this.words.length; this.emit(); }
++  refresh() {}
++  stop() { this.listening = false; }
++  detach() { this.stop(); window.__tapeEarReady = false; }
++  private emit() {
++    const h: Heard = { words: this.words.slice(this.base), at: this.at.slice(this.base) };
++    this.cb.onHeard(h);
++  }
++}
+diff --git a/web-preview/entry.js b/web-preview/entry.js
+new file mode 100644
+index 0000000..4856578
+--- /dev/null
++++ b/web-preview/entry.js
+@@ -0,0 +1,9 @@
++// Web preview entry (branch web-preview, marketing recordings only). metro.config.js
++// points the web bundle here instead of expo-router/entry. Skia on web needs CanvasKit
++// on the global before any Skia module runs, so load it first, then start the app.
++// canvaskit.wasm is copied into dist/ by scripts/web-preview.sh. Native never loads this.
++import { LoadSkiaWeb } from '@shopify/react-native-skia/lib/module/web';
++
++LoadSkiaWeb({ locateFile: (file) => `/${file}` }).then(() => {
++  require('expo-router/entry');
++});
 -- 
 2.43.0
 

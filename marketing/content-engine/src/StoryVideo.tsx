@@ -110,7 +110,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -3028,6 +3028,195 @@ const GoneScene: React.FC<{ s: Gone }> = ({ s }) => {
 
 /** Word by word captions for the narration (Canberk, 2026-11-08: drawn films need captions). Ink on a
  *  soft paper pill above the bottom quarter, the spoken word in orange. Hidden on the end card. */
+
+// ---------- the read-through, the dry highlighter, the pages in the air (2026-11-19, bring your sides: scan and map) ----------
+/** The first read-through: the whole script lands on the table with a thud, and you are in very little of it.
+ *  `calm` is the same table after: the big script shut, your few scenes in a slim, lit set of pages. */
+type Thud = { type: "thud"; seconds: number; line: string; accent: string; title: string; pages: string; tent?: string; slim?: string; calm?: boolean; /** scene frame the script lands on (the first scene of a film starts 62 frames in) */ landAt?: number };
+const ThudScene: React.FC<{ s: Thud }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const TY = 1180, BX = 600, BW = 380, BH = 132;
+  const LAND = s.landAt ?? 10;
+  const drop = s.calm ? 1 : spring({ frame: f - (LAND - 8), fps, config: { damping: 9, mass: 0.7, stiffness: 160 } });
+  const y = TY - BH - (1 - drop) * 620;
+  const squash = s.calm ? 0 : Math.max(0, 1 - Math.abs(f - LAND - 2) / 5) * 0.08;
+  const lit = s.calm ? spring({ frame: f - 10, fps, config: { damping: 12 } }) : 0;
+  const dust = s.calm ? 0 : prog(f, LAND, LAND + 22);
+  return (
+    <AbsoluteFill>
+      {!s.calm && <Sfx name="thud" at={LAND} vol={0.9} />}
+      {!s.calm && <Sfx name="cine/toing" at={LAND + 16} vol={0.35} />}
+      {s.calm && <Sfx name="cine/ping" at={10} vol={0.5} />}
+      {s.calm && <Sfx name="boop_hi" at={18} vol={0.5} />}
+      <AbsoluteFill style={{ background: `radial-gradient(circle 280px at 330px 1070px, rgba(232,121,43,${0.36 * lit}) 0%, rgba(232,121,43,0) 100%)` }} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the read-through table */}
+        <Ink d={`M90 ${TY} C 360 ${TY - 8}, 700 ${TY + 8}, 990 ${TY}`} start={0} dur={14} w={8} />
+        <Ink d={`M170 ${TY + 2} L 190 ${TY + 210} M910 ${TY + 2} L 890 ${TY + 210}`} start={8} dur={10} w={6} color={C.inkSoft} />
+        {/* you, behind the table */}
+        <Ink d={`M150 ${TY - 4} C 150 ${TY - 86}, 240 ${TY - 110}, 320 ${TY - 110} C 400 ${TY - 110}, 490 ${TY - 86}, 490 ${TY - 4}`} start={4} dur={12} w={6} fill="rgba(232,121,43,0.35)" />
+        <Face x={320} y={TY - 200} r={88} panic={s.calm ? 0 : 0.8 * prog(f, LAND + 4, LAND + 26)} hope={s.calm ? prog(f, 12, 22) : 0} start={4} />
+        {/* the name tent */}
+        {s.tent && !s.calm && (
+          <g transform={`translate(330 ${TY - 2})`} opacity={prog(f, 6, 14)}>
+            <path d="M-78 0 L -62 -62 L 62 -62 L 78 0 Z" fill="#ffffff" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+            <text x={0} y={-18} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={36} letterSpacing={3} fill={C.ink}>{s.tent}</text>
+          </g>
+        )}
+        {/* the script: a brick of pages */}
+        <g transform={`translate(${s.calm ? BX + 30 : BX} ${y + BH * squash}) scale(${1 + squash} ${1 - squash})`} opacity={s.calm ? 0.55 : 1}>
+          <path d={`M0 0 L 46 -40 L ${BW + 46} -40 L ${BW} 0 Z`} fill="#ffffff" stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+          <rect x={0} y={0} width={BW} height={BH} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} />
+          <path d={`M${BW} 0 L ${BW + 46} -40 L ${BW + 46} ${BH - 40} L ${BW} ${BH} Z`} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+          {Array.from({ length: 9 }, (_, i) => <path key={i} d={`M8 ${13 * (i + 1)} L ${BW - 8} ${13 * (i + 1)}`} stroke={C.inkSoft} strokeWidth={3} />)}
+          <text x={BW / 2 + 22} y={-10} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={26} letterSpacing={4} fill={C.ink} transform="skewX(-48)" style={{ transformOrigin: `${BW / 2 + 22}px -10px` }}>{s.title}</text>
+        </g>
+        {/* how many pages */}
+        {!s.calm && (
+          <g transform={`translate(${BX + BW - 150} ${TY - BH - 170}) rotate(7) scale(${spring({ frame: f - LAND - 6, fps, config: { damping: 9, mass: 0.5 } })})`}>
+            <rect x={-122} y={-46} width={244} height={92} rx={8} fill={HL} stroke={C.ink} strokeWidth={6} />
+            <text x={0} y={16} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={50} fill={C.ink}>{s.pages}</text>
+          </g>
+        )}
+        {/* dust off the table */}
+        {!s.calm && dust > 0 && dust < 1 && [-1, 1].map((d) => [0, 1, 2].map((i) => (
+          <circle key={`${d}${i}`} cx={BX + BW / 2 + d * (BW / 2 + 30 + dust * (50 + i * 34))} cy={TY - 14 - dust * (20 + i * 22)} r={(16 - i * 3) * (1 - dust * 0.4)} fill="none" stroke={C.inkSoft} strokeWidth={4} opacity={1 - dust} />
+        )))}
+        {/* after: your scenes, slim and lit */}
+        {s.calm && (
+          <g transform={`translate(560 ${TY - 96}) rotate(${-6 + Math.sin(f / 16) * 1.5}) scale(${0.6 + 0.4 * lit})`} opacity={Math.min(1, lit * 1.5)}>
+            <rect x={-96} y={-124} width={192} height={236} fill="#ffffff" stroke={C.ink} strokeWidth={4} transform="rotate(5)" />
+            <rect x={-96} y={-124} width={192} height={236} fill="#ffffff" stroke={C.ink} strokeWidth={6} />
+            <text x={0} y={-70} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={34} letterSpacing={3} fill={C.ink}>{s.tent ?? ""}</text>
+            <text x={0} y={-28} textAnchor="middle" fontFamily={F.serifI} fontStyle="italic" fontSize={30} fill={C.orange}>{s.slim ?? ""}</text>
+            <path d="M-66 6 L 66 6 M-66 32 L 44 32 M-66 58 L 58 58 M-66 84 L 26 84" stroke={C.inkSoft} strokeWidth={5} strokeLinecap="round" />
+          </g>
+        )}
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** Hunting for your lines with a highlighter: the pages flip, one name gets the yellow, and the pen runs dry halfway. */
+type Dry = { type: "dry"; seconds: number; line: string; accent: string; names: string[]; mine: string; head?: string; dryAt?: number };
+const DryScene: React.FC<{ s: Dry }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const PXL = 250, PYT = 640, PWD = 580, PHT = 640, ROW = 74;
+  const dryAt = s.dryAt ?? 62;
+  const flips = Math.min(46, 3 + Math.floor(prog(f, 8, dryAt + 30) * 44));
+  const rows = s.names.slice(0, 7);
+  const mineIdx = rows.map((n, i) => (n === s.mine ? i : -1)).filter((i) => i >= 0);
+  // the pen works through the rows that are yours: the first swipe is full, the second dies halfway
+  const seg = (k: number) => prog(f, 22 + k * 26, 40 + k * 26);
+  const cur = seg(1) > 0 ? 1 : 0;
+  const rowY = (i: number) => PYT + 150 + i * ROW;
+  const penRow = mineIdx[Math.min(cur, mineIdx.length - 1)] ?? 0;
+  const penP = seg(cur);
+  const scratch = f > dryAt ? Math.sin(f * 1.6) * 26 : 0;
+  const penX = PXL + 150 + penP * (cur === 1 ? 200 : 370) + scratch;
+  const penY = rowY(penRow) - 6;
+  return (
+    <AbsoluteFill>
+      <Sfx name="pencil_long" at={22} vol={0.5} />
+      <Sfx name="pencil_short" at={48} vol={0.5} />
+      <Sfx name="cine/toing" at={dryAt} vol={0.45} />
+      <Sfx name="pencil_short" at={dryAt + 12} vol={0.35} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the pages behind */}
+        <rect x={PXL + 18} y={PYT + 14} width={PWD} height={PHT} fill="#ffffff" stroke={C.inkSoft} strokeWidth={4} />
+        <rect x={PXL + 9} y={PYT + 7} width={PWD} height={PHT} fill="#ffffff" stroke={C.inkSoft} strokeWidth={4} />
+        <Ink d={`M${PXL} ${PYT} L ${PXL + PWD} ${PYT} L ${PXL + PWD} ${PYT + PHT} L ${PXL} ${PYT + PHT} Z`} start={0} dur={14} w={6} fill="#ffffff" />
+        <g opacity={prog(f, 6, 16)}>
+          <text x={PXL + 40} y={PYT + 70} fontFamily={F.sans} fontWeight={600} fontSize={30} letterSpacing={4} fill={C.ink}>{s.head ?? ""}</text>
+          <text x={PXL + PWD - 40} y={PYT + 70} textAnchor="end" fontFamily={F.sans} fontWeight={600} fontSize={30} fill={C.inkSoft}>{`p. ${flips}`}</text>
+          <path d={`M${PXL + 40} ${PYT + 92} L ${PXL + PWD - 40} ${PYT + 92}`} stroke={C.inkSoft} strokeWidth={3} />
+          {rows.map((n, i) => {
+            const k = mineIdx.indexOf(i);
+            const p = k < 0 ? 0 : seg(k);
+            const full = k === 0;
+            return (
+              <g key={i}>
+                {k >= 0 && p > 0 && (full ? (
+                  <rect x={PXL + 32} y={rowY(i) - 34} width={(PWD - 64) * p} height={48} fill={HL} opacity={0.9} />
+                ) : (
+                  <>
+                    <rect x={PXL + 32} y={rowY(i) - 34} width={Math.min(150, 330 * p)} height={48} fill={HL} opacity={0.75} />
+                    {p > 0.45 && [0, 1, 2, 3].map((j) => <path key={j} d={`M${PXL + 190 + j * 34} ${rowY(i) - 26 + (j % 2) * 18} l 24 ${j % 2 ? -8 : 8}`} stroke={HL} strokeWidth={7} strokeLinecap="round" opacity={Math.max(0, 0.8 - j * 0.22) * prog(f, dryAt - 10 + j * 3, dryAt + j * 3)} />)}
+                  </>
+                ))}
+                <text x={PXL + 40} y={rowY(i)} fontFamily={F.sans} fontWeight={600} fontSize={30} letterSpacing={2} fill={n === s.mine ? C.ink : C.inkSoft}>{n}</text>
+                <path d={`M${PXL + 250} ${rowY(i) - 10} L ${PXL + PWD - 50 - ((i * 53) % 120)} ${rowY(i) - 10}`} stroke={C.inkSoft} strokeWidth={6} strokeLinecap="round" opacity={0.6} />
+              </g>
+            );
+          })}
+        </g>
+        {/* the highlighter */}
+        {f >= 16 && (
+          <g transform={`translate(${penX} ${penY}) rotate(${38 + (f > dryAt ? Math.sin(f * 1.6) * 5 : 0)})`} opacity={prog(f, 16, 22)}>
+            <path d="M-10 0 L 10 0 L 16 -34 L -16 -34 Z" fill={f > dryAt ? "#e9e2c4" : HL} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+            <rect x={-30} y={-250} width={60} height={216} rx={12} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} />
+            <rect x={-30} y={-110} width={60} height={46} fill={HL} stroke={C.ink} strokeWidth={5} />
+          </g>
+        )}
+        {/* dry */}
+        {f > dryAt + 4 && [0, 1, 2].map((i) => <path key={i} d={`M${penX + 70 + i * 26} ${penY - 70 - i * 30} l 22 -14`} stroke={C.ink} strokeWidth={5} strokeLinecap="round" opacity={0.4 + 0.6 * Math.abs(Math.sin(f / 3 + i))} />)}
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** The director moves a scene and your marked pages go up in the air, out of order. */
+type Scatter = { type: "scatter"; seconds: number; line: string; accent: string; say: string; labels: string[]; goAt?: number };
+const ScatterScene: React.FC<{ s: Scatter }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const goAt = s.goAt ?? 34;
+  const CX = 560, CY = 1150;
+  const spots: [number, number, number][] = [[-330, -280, -24], [-70, -340, 14], [210, -330, 32], [330, -150, -18], [-360, -90, 20], [120, -200, -36]];
+  return (
+    <AbsoluteFill>
+      <Sfx name="pop" at={8} vol={0.6} />
+      <Sfx name="toss" at={goAt} vol={0.8} />
+      <Sfx name="slide" at={goAt + 6} vol={0.4} />
+      <Sfx name="cine/toing" at={goAt + 14} vol={0.4} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the director, off to the side, and what they said */}
+        <Cloud x={400} y={625} w={600} h={160} at={8} text={s.say} size={42} hot />
+        {/* you */}
+        <Ink d={`M${CX - 170} ${CY + 180} C ${CX - 170} ${CY + 90}, ${CX - 80} ${CY + 64}, ${CX} ${CY + 64} C ${CX + 80} ${CY + 64}, ${CX + 170} ${CY + 90}, ${CX + 170} ${CY + 180}`} start={2} dur={12} w={6} fill="rgba(232,121,43,0.35)" />
+        <Face x={CX} y={CY} r={92} panic={0.9 * prog(f, goAt - 4, goAt + 14)} start={4} />
+        {/* the pages */}
+        {s.labels.slice(0, 6).map((lab, i) => {
+          const sp = spots[i];
+          const go = spring({ frame: f - goAt - i * 2, fps, config: { damping: 13, mass: 0.8 } });
+          const drift = Math.max(0, f - goAt - 14);
+          const x = CX + 150 + (sp[0] - 150) * go + Math.sin((f + i * 20) / 11) * 14 * go;
+          const y = CY + 120 + (sp[1] - 120) * go + drift * 0.9 + Math.cos((f + i * 31) / 13) * 12 * go;
+          const rot = 6 + (sp[2] - 6) * go + Math.sin((f + i * 17) / 9) * 12 * go;
+          return (
+            <g key={i} transform={`translate(${x} ${y}) rotate(${rot})`} opacity={prog(f, 4, 12)}>
+              <rect x={-66} y={-84} width={132} height={168} fill="#ffffff" stroke={C.ink} strokeWidth={5} />
+              <text x={0} y={-44} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={24} letterSpacing={2} fill={C.ink}>{lab}</text>
+              <rect x={-48} y={-22} width={74} height={18} fill={HL} opacity={i % 2 ? 0.9 : 0} />
+              <path d="M-48 -12 L 48 -12 M-48 12 L 34 12 M-48 36 L 44 36 M-48 60 L 20 60" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" />
+            </g>
+          );
+        })}
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
   const f = useCurrentFrame();
   const t = f / FPS;
@@ -3111,6 +3300,9 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "hall" ? <HallScene s={sc} /> :
       sc.type === "fumble" ? <FumbleScene s={sc} /> :
       sc.type === "gone" ? <GoneScene s={sc} /> :
+      sc.type === "thud" ? <ThudScene s={sc} /> :
+      sc.type === "dry" ? <DryScene s={sc} /> :
+      sc.type === "scatter" ? <ScatterScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

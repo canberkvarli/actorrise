@@ -1,0 +1,781 @@
+{
+  "id": "2026-11-19-you-are-in-two-scenes",
+  "look": "paper",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "A hundred and twelve pages, and you're in two scenes.",
+        "say": "[amused] A hundred and twelve pages, and you're in two scenes.",
+        "at": 0.425,
+        "words": [
+          {
+            "w": "A",
+            "s": 0.0,
+            "e": 0.008
+          },
+          {
+            "w": "hundred",
+            "s": 0.042,
+            "e": 0.275
+          },
+          {
+            "w": "and",
+            "s": 0.308,
+            "e": 0.408
+          },
+          {
+            "w": "twelve",
+            "s": 0.437,
+            "e": 0.608
+          },
+          {
+            "w": "pages,",
+            "s": 0.698,
+            "e": 1.142
+          },
+          {
+            "w": "and",
+            "s": 1.192,
+            "e": 1.342
+          },
+          {
+            "w": "you're",
+            "s": 1.375,
+            "e": 1.542
+          },
+          {
+            "w": "in",
+            "s": 1.564,
+            "e": 1.608
+          },
+          {
+            "w": "two",
+            "s": 1.675,
+            "e": 1.875
+          },
+          {
+            "w": "scenes.",
+            "s": 1.942,
+            "e": 2.408
+          }
+        ],
+        "dur": 2.533
+      },
+      {
+        "text": "It's Sheridan's The Rivals, you're Lucy, the maid, and your highlighter dies before you find her.",
+        "say": "It's Sheridan's The Rivals, you're Lucy, the maid, and your highlighter dies before you find her.",
+        "at": 3.056,
+        "words": [
+          {
+            "w": "It's",
+            "s": 0.0,
+            "e": 0.511
+          },
+          {
+            "w": "Sheridan's",
+            "s": 0.548,
+            "e": 0.978
+          },
+          {
+            "w": "The",
+            "s": 0.994,
+            "e": 1.044
+          },
+          {
+            "w": "Rivals,",
+            "s": 1.111,
+            "e": 1.644
+          },
+          {
+            "w": "you're",
+            "s": 1.728,
+            "e": 2.044
+          },
+          {
+            "w": "Lucy,",
+            "s": 2.111,
+            "e": 2.411
+          },
+          {
+            "w": "the",
+            "s": 2.419,
+            "e": 2.444
+          },
+          {
+            "w": "maid,",
+            "s": 2.511,
+            "e": 2.844
+          },
+          {
+            "w": "and",
+            "s": 2.911,
+            "e": 3.111
+          },
+          {
+            "w": "your",
+            "s": 3.138,
+            "e": 3.244
+          },
+          {
+            "w": "highlighter",
+            "s": 3.291,
+            "e": 3.778
+          },
+          {
+            "w": "dies",
+            "s": 3.844,
+            "e": 4.111
+          },
+          {
+            "w": "before",
+            "s": 4.149,
+            "e": 4.378
+          },
+          {
+            "w": "you",
+            "s": 4.428,
+            "e": 4.578
+          },
+          {
+            "w": "find",
+            "s": 4.631,
+            "e": 4.844
+          },
+          {
+            "w": "her.",
+            "s": 4.878,
+            "e": 5.111
+          }
+        ],
+        "dur": 5.236
+      },
+      {
+        "text": "Then the director moves the letter scene to Act One, so you open Ghost Light.",
+        "say": "[playful] Then the director moves the letter scene to Act One, so you open Ghost Light.",
+        "at": 9.073,
+        "words": [
+          {
+            "w": "Then",
+            "s": 0.0,
+            "e": 0.027
+          },
+          {
+            "w": "the",
+            "s": 0.043,
+            "e": 0.093
+          },
+          {
+            "w": "director",
+            "s": 0.138,
+            "e": 0.493
+          },
+          {
+            "w": "moves",
+            "s": 0.538,
+            "e": 0.76
+          },
+          {
+            "w": "the",
+            "s": 0.777,
+            "e": 0.827
+          },
+          {
+            "w": "letter",
+            "s": 0.865,
+            "e": 1.093
+          },
+          {
+            "w": "scene",
+            "s": 1.137,
+            "e": 1.36
+          },
+          {
+            "w": "to",
+            "s": 1.383,
+            "e": 1.427
+          },
+          {
+            "w": "Act",
+            "s": 1.477,
+            "e": 1.627
+          },
+          {
+            "w": "One,",
+            "s": 1.71,
+            "e": 2.227
+          },
+          {
+            "w": "so",
+            "s": 2.271,
+            "e": 2.36
+          },
+          {
+            "w": "you",
+            "s": 2.377,
+            "e": 2.427
+          },
+          {
+            "w": "open",
+            "s": 2.493,
+            "e": 2.76
+          },
+          {
+            "w": "Ghost",
+            "s": 2.804,
+            "e": 3.027
+          },
+          {
+            "w": "Light.",
+            "s": 3.071,
+            "e": 3.36
+          }
+        ],
+        "dur": 3.485
+      },
+      {
+        "text": "You tap Scene, then Add sides, and choose the whole script.",
+        "say": "[upbeat] You tap Scene, then Add sides, and choose the whole script.",
+        "at": 13.154,
+        "sub": false,
+        "words": [
+          {
+            "w": "You",
+            "s": 0.0,
+            "e": 0.013
+          },
+          {
+            "w": "tap",
+            "s": 0.079,
+            "e": 0.279
+          },
+          {
+            "w": "Scene,",
+            "s": 0.346,
+            "e": 0.846
+          },
+          {
+            "w": "then",
+            "s": 0.879,
+            "e": 1.013
+          },
+          {
+            "w": "Add",
+            "s": 1.079,
+            "e": 1.279
+          },
+          {
+            "w": "sides,",
+            "s": 1.346,
+            "e": 1.746
+          },
+          {
+            "w": "and",
+            "s": 1.829,
+            "e": 2.079
+          },
+          {
+            "w": "choose",
+            "s": 2.118,
+            "e": 2.346
+          },
+          {
+            "w": "the",
+            "s": 2.363,
+            "e": 2.413
+          },
+          {
+            "w": "whole",
+            "s": 2.446,
+            "e": 2.612
+          },
+          {
+            "w": "script.",
+            "s": 2.67,
+            "e": 3.079
+          }
+        ],
+        "dur": 3.204
+      },
+      {
+        "text": "It lists every scene, so you tick only Lucy's two and build just those.",
+        "say": "[excited] It lists every scene, so you tick only Lucy's two and build just those.",
+        "at": 16.956,
+        "sub": false,
+        "words": [
+          {
+            "w": "It",
+            "s": 0.0,
+            "e": 0.011
+          },
+          {
+            "w": "lists",
+            "s": 0.067,
+            "e": 0.344
+          },
+          {
+            "w": "every",
+            "s": 0.388,
+            "e": 0.611
+          },
+          {
+            "w": "scene,",
+            "s": 0.677,
+            "e": 1.211
+          },
+          {
+            "w": "so",
+            "s": 1.255,
+            "e": 1.344
+          },
+          {
+            "w": "you",
+            "s": 1.361,
+            "e": 1.411
+          },
+          {
+            "w": "tick",
+            "s": 1.464,
+            "e": 1.677
+          },
+          {
+            "w": "only",
+            "s": 1.718,
+            "e": 1.878
+          },
+          {
+            "w": "Lucy's",
+            "s": 1.944,
+            "e": 2.278
+          },
+          {
+            "w": "two",
+            "s": 2.361,
+            "e": 2.611
+          },
+          {
+            "w": "and",
+            "s": 2.694,
+            "e": 2.944
+          },
+          {
+            "w": "build",
+            "s": 2.988,
+            "e": 3.211
+          },
+          {
+            "w": "just",
+            "s": 3.264,
+            "e": 3.478
+          },
+          {
+            "w": "those.",
+            "s": 3.555,
+            "e": 4.244
+          }
+        ],
+        "dur": 4.369
+      },
+      {
+        "text": "And when a scene moves, tap its pencil and move it under Act One.",
+        "say": "[upbeat] And when a scene moves, tap its pencil and move it under Act One.",
+        "at": 21.554,
+        "sub": false,
+        "words": [
+          {
+            "w": "And",
+            "s": 0.0,
+            "e": 0.013
+          },
+          {
+            "w": "when",
+            "s": 0.053,
+            "e": 0.213
+          },
+          {
+            "w": "a",
+            "s": 0.246,
+            "e": 0.279
+          },
+          {
+            "w": "scene",
+            "s": 0.323,
+            "e": 0.546
+          },
+          {
+            "w": "moves,",
+            "s": 0.602,
+            "e": 1.079
+          },
+          {
+            "w": "tap",
+            "s": 1.129,
+            "e": 1.279
+          },
+          {
+            "w": "its",
+            "s": 1.312,
+            "e": 1.413
+          },
+          {
+            "w": "pencil",
+            "s": 1.47,
+            "e": 1.812
+          },
+          {
+            "w": "and",
+            "s": 1.879,
+            "e": 2.079
+          },
+          {
+            "w": "move",
+            "s": 2.119,
+            "e": 2.279
+          },
+          {
+            "w": "it",
+            "s": 2.323,
+            "e": 2.413
+          },
+          {
+            "w": "under",
+            "s": 2.457,
+            "e": 2.679
+          },
+          {
+            "w": "Act",
+            "s": 2.729,
+            "e": 2.879
+          },
+          {
+            "w": "One.",
+            "s": 2.979,
+            "e": 3.346
+          }
+        ],
+        "dur": 3.471
+      },
+      {
+        "text": "So Lucy's two scenes are ready to run.",
+        "say": "[delighted] So Lucy's two scenes are ready to run.",
+        "at": 25.811,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.022
+          },
+          {
+            "w": "Lucy's",
+            "s": 0.089,
+            "e": 0.423
+          },
+          {
+            "w": "two",
+            "s": 0.456,
+            "e": 0.556
+          },
+          {
+            "w": "scenes",
+            "s": 0.603,
+            "e": 0.889
+          },
+          {
+            "w": "are",
+            "s": 0.922,
+            "e": 1.023
+          },
+          {
+            "w": "ready",
+            "s": 1.045,
+            "e": 1.156
+          },
+          {
+            "w": "to",
+            "s": 1.2,
+            "e": 1.289
+          },
+          {
+            "w": "run.",
+            "s": 1.373,
+            "e": 1.689
+          }
+        ],
+        "dur": 1.814
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 28.264,
+        "sub": false,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.173
+          },
+          {
+            "w": "Ghost",
+            "s": 0.218,
+            "e": 0.44
+          },
+          {
+            "w": "Light.",
+            "s": 0.484,
+            "e": 0.773
+          },
+          {
+            "w": "Built",
+            "s": 0.851,
+            "e": 1.24
+          },
+          {
+            "w": "by",
+            "s": 1.307,
+            "e": 1.44
+          },
+          {
+            "w": "a",
+            "s": 1.473,
+            "e": 1.507
+          },
+          {
+            "w": "working",
+            "s": 1.548,
+            "e": 1.84
+          },
+          {
+            "w": "actor.",
+            "s": 1.896,
+            "e": 2.307
+          }
+        ],
+        "dur": 2.432
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-19-you-are-in-two-scenes/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.2
+  },
+  "scenes": [
+    {
+      "type": "thud",
+      "seconds": 2.956,
+      "line": "112 pages. Two scenes.",
+      "accent": "Two scenes.",
+      "title": "THE RIVALS",
+      "pages": "112 pp.",
+      "tent": "LUCY",
+      "landAt": 72
+    },
+    {
+      "type": "dry",
+      "seconds": 6.017,
+      "line": "Hunting for Lucy.",
+      "accent": "Lucy.",
+      "head": "THE RIVALS",
+      "names": [
+        "FAG",
+        "LUCY",
+        "ABSOLUTE",
+        "FAULKLAND",
+        "LYDIA",
+        "LUCY",
+        "JULIA"
+      ],
+      "mine": "LUCY"
+    },
+    {
+      "type": "scatter",
+      "seconds": 4.081,
+      "line": "Now it's in Act One.",
+      "accent": "Act One.",
+      "say": "The letter scene?\nAct One now.",
+      "labels": [
+        "ACT II",
+        "p. 31",
+        "ACT I",
+        "p. 47",
+        "ACT II",
+        "p. 12"
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 3.802,
+      "line": "Add the script.",
+      "accent": "script.",
+      "shots": [
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/book.png",
+          "at": 0,
+          "tap": {
+            "x": 0.61,
+            "y": 0.93,
+            "at": 8
+          }
+        },
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/scene.png",
+          "at": 30,
+          "tap": {
+            "x": 0.5,
+            "y": 0.403,
+            "at": 34
+          }
+        },
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/sides.png",
+          "at": 62,
+          "tap": {
+            "x": 0.5,
+            "y": 0.307,
+            "at": 68
+          }
+        },
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/map1.png",
+          "at": 98
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 4.598,
+      "line": "Tick only yours.",
+      "accent": "yours.",
+      "shots": [
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/map1.png",
+          "at": 0,
+          "tap": {
+            "x": 0.2,
+            "y": 0.3,
+            "at": 36
+          }
+        },
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/map2.png",
+          "at": 52,
+          "fade": true,
+          "tap": {
+            "x": 0.2,
+            "y": 0.43,
+            "at": 56
+          }
+        },
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/map3.png",
+          "at": 72,
+          "fade": true
+        },
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/mapbuild.png",
+          "at": 84,
+          "fade": true,
+          "tap": {
+            "x": 0.26,
+            "y": 0.878,
+            "at": 90
+          }
+        },
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/reading2.png",
+          "at": 114
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 4.257,
+      "line": "Move a scene.",
+      "accent": "Move",
+      "shots": [
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/e-map.png",
+          "at": 0,
+          "tap": {
+            "x": 0.818,
+            "y": 0.441,
+            "at": 30
+          }
+        },
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/e-sheet.png",
+          "at": 48,
+          "fade": true,
+          "tap": {
+            "x": 0.5,
+            "y": 0.829,
+            "at": 52
+          }
+        },
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/e-move.png",
+          "at": 70,
+          "fade": true,
+          "tap": {
+            "x": 0.3,
+            "y": 0.706,
+            "at": 74
+          }
+        },
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/e-moved.png",
+          "at": 92,
+          "fade": true,
+          "tap": {
+            "x": 0.21,
+            "y": 0.585,
+            "at": 96
+          }
+        },
+        {
+          "src": "story/2026-11-19-you-are-in-two-scenes/e-saved.png",
+          "at": 114
+        }
+      ]
+    },
+    {
+      "type": "thud",
+      "seconds": 2.403,
+      "line": "Just your scenes.",
+      "accent": "your",
+      "title": "THE RIVALS",
+      "pages": "112 pp.",
+      "tent": "LUCY",
+      "slim": "2 scenes",
+      "calm": true
+    }
+  ],
+  "captions": {
+    "tiktok": "112 pages and you're in two scenes. Ghost Light scans the script and builds only yours. #actorslife #actortok #rehearsal #theatre #actors",
+    "youtube_title": "112 pages. You're in two scenes. #shorts",
+    "youtube_description": "Bring the whole script to Ghost Light. It lists every scene, you tick only yours, and it builds just those.\nA scene moved to another act? Tap its pencil and move it. Built by a working actor.\n#actorslife #rehearsal #theatre #acting",
+    "instagram": "First read-through of The Rivals. 112 pages. You play Lucy, and Lucy is in two scenes.\n1. Open Ghost Light, tap Scene, add the whole script.\n2. It lists every scene. Tick only yours.\n3. A scene moves to Act One? Tap its pencil and move it.\nBuilt by a working actor. Link in bio.\n#actorslife #rehearsal #theatre #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 1800,
+  "source": {
+    "plan": "Callboard row 2026-11-19 (storyhowto, story-howto, paper): bring your sides scans the file first, tick only your scenes; the script's map moves a scene to another act",
+    "app": "Ghost Light web preview (ghostlight-web/serve.sh) at main 50a1c23, dark theme, demo account, 2026-11-14; app/sides.tsx and app/edit-map.tsx read first",
+    "flows": "flows/sides-you-are-in-two-scenes.json (scan, tick, build) then flows/sides-move-the-letter-scene.json (the map); shots -> public/story/2026-11-19-you-are-in-two-scenes/*.png. mapbuild.png (the map scrolled to its Build button) was captured by a second scan of the same file with the same three taps, nothing built",
+    "script": "flows/sides/The_Rivals.txt: Sheridan, The Rivals (1775), Acts I to V as stored in plays.id 234 (Gutenberg 24761), public domain; preface, prologue and epilogue left out",
+    "checked": "the board said four scenes; the scan found 14 scenes and Lucy speaks in two (Act 1 Scene 2, 18 speeches; Act 2 Scene 2, 19 speeches, where she hands Sir Lucius the letter), so the hook says two. 112 pages is the drawn script in the story, not a number from the app",
+    "app_result": "the map listed 14 scenes under ACT 1 to ACT 5; Act 1 Scene 2 and Act 2 Scene 2 ticked, 'Build 2 scenes', read in about 80 seconds into THE RIVALS, 2 scenes ('Lydia's Literary Pursuits', 'Rivalry and Romantic Schemes'). In the map the pencil on the second scene, Move to another act, Act 1, Save: both scenes now sit under ACT 1 on the demo shelf ('reset the map to how it was read' puts it back)",
+    "not_shown": "dragging by the handle (the pencil's Move to another act is shown instead); the per scene pencil in the Scene room (the map is opened from the script row's pencil); the run itself",
+    "preview": "web-preview.patch regenerated against Ghost Light main as one commit: the multipart shim now lives in sendFile and sendable (scan, upload-background, scene-map, add-scenes all use them)",
+    "voice": "George, one take at stability 0.5, listened back with Scribe (0.97); sped up 1.2x with fit_take.py; take00.orig.mp3 kept locally, not committed",
+    "new_scene_types": "thud (read-through table, the script lands; calm = your slim pages), dry (highlighter runs dry), scatter (pages in the air)",
+    "end": "specs/2026-11-19-you-are-in-two-scenes-end.json, joined with scripts/join.sh; the end line is cut from the take"
+  }
+}

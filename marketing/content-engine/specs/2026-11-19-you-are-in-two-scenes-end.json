@@ -1,0 +1,86 @@
+{
+  "id": "2026-11-19-you-are-in-two-scenes-end",
+  "look": "noir",
+  "cut": "hard",
+  "music": {
+    "style": "beat",
+    "volume": 0.2
+  },
+  "voice": {
+    "volume": 1,
+    "lines": [
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 0.0,
+        "sub": false,
+        "audio": "voice/2026-11-19-you-are-in-two-scenes-end/end.mp3",
+        "dur": 2.582,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.15,
+            "e": 0.323
+          },
+          {
+            "w": "Ghost",
+            "s": 0.368,
+            "e": 0.59
+          },
+          {
+            "w": "Light.",
+            "s": 0.634,
+            "e": 0.923
+          },
+          {
+            "w": "Built",
+            "s": 1.001,
+            "e": 1.39
+          },
+          {
+            "w": "by",
+            "s": 1.457,
+            "e": 1.59
+          },
+          {
+            "w": "a",
+            "s": 1.623,
+            "e": 1.657
+          },
+          {
+            "w": "working",
+            "s": 1.698,
+            "e": 1.99
+          },
+          {
+            "w": "actor.",
+            "s": 2.046,
+            "e": 2.457
+          }
+        ]
+      }
+    ]
+  },
+  "beats": [
+    {
+      "kind": "end",
+      "seconds": 3.0,
+      "brand": "Ghost Light",
+      "line": "Built by a working actor.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "snap": true,
+      "sfx": [],
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "part_of": "2026-11-19-you-are-in-two-scenes",
+    "why": "the sharp Ghost Light card (DIRECTION 2026-11-10 afternoon), joined after the story with scripts/join.sh"
+  }
+}

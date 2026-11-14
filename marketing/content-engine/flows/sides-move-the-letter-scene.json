@@ -1,0 +1,31 @@
+{
+ "start": "/search",
+ "lead": 600,
+ "steps": [
+  {"wait": 1200},
+  {"goto": "/rehearse"},
+  {"wait": 2500},
+  {"shot": "shelf"},
+  {"click": {"css": "div[dir=auto]:text-is(\"THE RIVALS\")"}},
+  {"wait": 1500},
+  {"shot": "open"},
+  {"click": {"css": "[aria-label=\"Edit the map of THE RIVALS\"] >> nth=0"}},
+  {"wait": 2500},
+  {"shot": "map"},
+  {"click": {"css": "[aria-label^=\"Edit Rivalry\"]"}},
+  {"wait": 1300},
+  {"shot": "sheet"},
+  {"click": "Move to another act"},
+  {"wait": 1500},
+  {"shot": "move"},
+  {"click": {"css": "div[dir=auto]:text-is(\"Act 1\")"}},
+  {"wait": 1500},
+  {"shot": "moved"},
+  {"click": "Save"},
+  {"wait": 3000},
+  {"shot": "saved"},
+  {"wait": 300}
+ ],
+ "tail": 300,
+ "note": "Run after flows/sides-you-are-in-two-scenes.json has built THE RIVALS on the demo shelf. The shelf row is tapped by its exact text: a plain 'THE RIVALS' text match lands on the hidden swipe Delete button. The move is saved on the demo account; '(reset the map to how it was read.)' puts it back."
+}
