@@ -8,7 +8,6 @@ from datetime import date, datetime, timedelta, timezone
 from typing import List, Literal, Optional, cast
 
 from app.api.auth import get_current_user, get_current_user_optional
-from app.api.public import record_demo_search
 from app.middleware.rate_limiting import (
     CLIENT_GHOSTLIGHT,
     CLIENT_WEB,
@@ -40,8 +39,7 @@ from app.services.library_language import (TURKISH_LANGUAGES, current_languages,
                                            languages_for_locale)
 from app.services.search.semantic_search import exclude_hidden, language_clause
 from app.services.search.originality import originality_cap
-from app.services.search.query_optimizer import (correct_query_typos,
-                                                 is_filter_only_query,
+from app.services.search.query_optimizer import (is_filter_only_query,
                                                  validate_query)
 from app.services.search.acronym import collapse_dotted_acronyms
 from app.services.search.attribute_fallback import attribute_search
@@ -190,45 +188,6 @@ class LeadMagnetItem(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class DemoSearchResult(BaseModel):
-    """Teaser-only fields for landing page demo search. No full text, no auth required."""
-
-    id: int
-    character_name: str
-    play_title: str
-    author: str
-    scene_description: Optional[str] = None
-    estimated_duration_seconds: int
-    relevance_score: Optional[float] = None
-    match_type: Optional[str] = None
-    text_excerpt: Optional[str] = None  # First ~220 chars for card preview
-
-    class Config:
-        from_attributes = True
-
-
-class DemoSearchResponse(BaseModel):
-    """Response for GET /search-demo (unauthenticated)."""
-
-    results: List[DemoSearchResult]
-    corrected_query: Optional[str] = None
-
-
-# Rate limit for demo search: 1 request per IP per 5 minutes (in-memory).
-DEMO_SEARCH_RATE_LIMIT_SECONDS = 300
-_demo_search_last_request: dict[str, float] = {}
-
-
-def _get_client_ip(request: Request) -> str:
-    """Client IP for rate limiting; respect X-Forwarded-For when behind a proxy."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    if request.client:
-        return request.client.host or "unknown"
-    return "unknown"
 
 
 class PlayResponse(BaseModel):
@@ -1230,126 +1189,6 @@ async def request_content(
         user_id=cast(int, current_user.id),
     )
     return {"status": "ok"}
-
-
-@router.get("/search-demo", response_model=DemoSearchResponse)
-async def search_demo(
-    request: Request,
-    q: Optional[str] = Query(None, max_length=500, description="Search query"),
-    db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
-):
-    """
-    Unauthenticated demo search for the landing page. Returns up to 3 teaser results.
-    Rate limited: 1 request per IP per 5 minutes. Superusers (SUPERUSER_EMAILS) bypass the limit.
-    In development/local, any logged-in user bypasses the limit (so developers can test freely).
-    """
-    if not q or not q.strip():
-        raise HTTPException(status_code=400, detail="Search query is required.")
-
-    is_superuser = False
-    if settings.superuser_emails and current_user and current_user.email:
-        emails = [e.strip().lower() for e in settings.superuser_emails.split(",") if e.strip()]
-        is_superuser = current_user.email.lower() in emails
-    # In development, any authenticated user can bypass (developer testing)
-    dev_bypass = settings.environment in ("development", "local") and current_user is not None
-
-    if not is_superuser and not dev_bypass:
-        client_ip = _get_client_ip(request)
-        now = time.time()
-        if client_ip in _demo_search_last_request:
-            last = _demo_search_last_request[client_ip]
-            if now - last < DEMO_SEARCH_RATE_LIMIT_SECONDS:
-                raise HTTPException(
-                    status_code=429,
-                    detail="Demo limit reached. Sign up to search anytime.",
-                )
-        _demo_search_last_request[client_ip] = now
-
-    search_q, _was_corrected, show_banner = correct_query_typos(q.strip())
-    corrected_for_demo: Optional[str] = search_q if show_banner else None
-
-    search_service = SemanticSearch(db)
-    # Request more results so landing gets same diversity as full search (then return top 5)
-    all_results_with_scores, quote_match_types = search_service.search(
-        search_q,
-        limit=10,
-        filters={},
-        user_id=None,
-        actor_profile=None,
-    )
-
-    def _excerpt(text: Optional[str], max_len: int = 220) -> Optional[str]:
-        if not text or not text.strip():
-            return None
-        cleaned = text.strip().replace("\n", " ")[: max_len + 20]
-        if len(cleaned) > max_len:
-            last_space = cleaned.rfind(" ", 0, max_len)
-            cut = last_space if last_space > max_len // 2 else max_len
-            return cleaned[:cut].strip() + "…"
-        return cleaned.strip() or None
-
-    def _guarded_excerpt(m) -> Optional[str]:
-        """The rights guard, on the one path that was not going through it.
-
-        `DemoSearchResult` is its own model, so it never touched the shared
-        MonologueResponse builder where `may_serve_text` lives — this endpoint
-        is unauthenticated and feeds the public landing page, and it was
-        emitting excerpts of works with no recorded rights basis. The 246
-        scraped previews of copyrighted contemporary plays (Bean, Churchill,
-        Davis) average 32 words, so `_excerpt` was returning the whole stored
-        text of a living writer's monologue to anyone who searched.
-
-        Falls back to the same short teaser the guarded path uses, rather than
-        to nothing: the result still appears, it just stops carrying the words.
-        """
-        play = m.play
-        if not may_serve_text(
-            getattr(play, "copyright_status", None),
-            getattr(play, "license_type", None),
-            word_count=cast(Optional[int], m.word_count),
-        ):
-            return _teaser(cast(str, m.text), lines=1)
-        return _excerpt(m.text)
-
-    results = [
-        DemoSearchResult(
-            id=cast(int, m.id),
-            character_name=cast(str, m.character_name),
-            play_title=cast(str, m.play.title),
-            author=cast(str, m.play.author),
-            scene_description=cast(Optional[str], m.scene_description),
-            estimated_duration_seconds=cast(int, m.estimated_duration_seconds),
-            relevance_score=score if score > 0 else None,
-            match_type=quote_match_types.get(cast(int, m.id)),
-            text_excerpt=_guarded_excerpt(m),
-        )
-        for m, score in all_results_with_scores[:5]
-    ]
-
-    if results:
-        record_demo_search()
-
-    # Log demo search for analytics
-    try:
-        from app.models.search_log import SearchLog
-        from app.services.search.query_type import classify_query
-        all_result_ids = [int(m.id) for m, _ in all_results_with_scores[:5]]
-        db.add(SearchLog(
-            query=q.strip(),
-            filters_used=None,
-            results_count=len(results),
-            result_ids=all_result_ids,
-            user_id=int(current_user.id) if current_user else None,
-            source="demo",
-            query_type=classify_query(q, db=db),
-            match_strategy="vector",  # demo runs the semantic path only
-        ))
-        db.commit()
-    except Exception:
-        db.rollback()
-
-    return DemoSearchResponse(results=results, corrected_query=corrected_for_demo)
 
 
 #: Free presses of Find for me per calendar month (UTC). Plus is unlimited.
