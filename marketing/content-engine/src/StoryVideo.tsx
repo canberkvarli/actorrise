@@ -110,7 +110,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -3222,6 +3222,206 @@ const ScatterScene: React.FC<{ s: Scatter }> = ({ s }) => {
   );
 };
 
+// ---------- the tally sheet, the snapped pencil, the fresh ink (2026-11-20, nobody brings that one: Benedick) ----------
+/** The casting director, seen over the top of the sheet: glasses, tired lines for eyes, then wide awake. */
+const Caster: React.FC<{ x: number; y: number; awake: number; start?: number; k?: number }> = ({ x, y, awake, start = 0, k = 1 }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  if (f < start) return null;
+  const pop = spring({ frame: f - start, fps, config: { damping: 13, mass: 0.6 } });
+  const lift = awake * 22;
+  return (
+    <g transform={`translate(${x} ${y - lift}) scale(${k * pop}) rotate(${(1 - awake) * 7})`}>
+      <path d="M-128 196 C -128 96, -60 78, 0 78 C 60 78, 128 96, 128 196 Z" fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+      <circle cx={0} cy={0} r={86} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} />
+      <path d="M-84 -20 C -92 -74, -40 -104, 8 -98 C 52 -96, 86 -66, 84 -22 C 60 -56, 20 -70, -20 -62 C -48 -58, -70 -44, -84 -20 Z" fill={LOOK === "midnight" ? "#8f95b8" : C.ink} />
+      <path d={`M-46 ${-34 - awake * 16} L -14 ${-38 - awake * 12} M14 ${-38 - awake * 12} L 46 ${-34 - awake * 16}`} stroke={C.ink} strokeWidth={6} strokeLinecap="round" />
+      <circle cx={-30} cy={-4} r={25} fill="none" stroke={C.ink} strokeWidth={5} />
+      <circle cx={30} cy={-4} r={25} fill="none" stroke={C.ink} strokeWidth={5} />
+      <path d="M-5 -6 L 5 -6" stroke={C.ink} strokeWidth={5} />
+      {awake < 0.5 ? (
+        <path d="M-42 -2 L -18 -2 M18 -2 L 42 -2" stroke={C.ink} strokeWidth={6} strokeLinecap="round" />
+      ) : (
+        <g><circle cx={-30} cy={-6} r={6 + awake * 5} fill={C.ink} /><circle cx={30} cy={-6} r={6 + awake * 5} fill={C.ink} /></g>
+      )}
+      {awake < 0.5 ? (
+        <path d="M-20 44 C -8 36, 8 36, 20 44" fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+      ) : (
+        <ellipse cx={0} cy={44} rx={13} ry={9 + awake * 7} fill={C.ink} />
+      )}
+    </g>
+  );
+};
+/** Tally marks in fives: four strokes and a slash. `n` marks are down so far. */
+const TallyMarks: React.FC<{ x: number; y: number; n: number; per?: number; color?: string }> = ({ x, y, n, per = 3, color = C.ink }) => (
+  <g>
+    {Array.from({ length: n }, (_, i) => {
+      const g = Math.floor(i / 5), j = i % 5, row = Math.floor(g / per), col = g % per;
+      const gx = x + col * 176, gy = y + row * 104;
+      return j < 4
+        ? <path key={i} d={`M${gx + j * 26} ${gy} l ${(i % 3) - 1} 66`} stroke={color} strokeWidth={7} strokeLinecap="round" />
+        : <path key={i} d={`M${gx - 16} ${gy + 54} L ${gx + 96} ${gy + 10}`} stroke={color} strokeWidth={7} strokeLinecap="round" />;
+    })}
+  </g>
+);
+const SheetBoard: React.FC<{ x: number; y: number; w: number; h: number; head: string; start?: number; children?: React.ReactNode }> = ({ x, y, w, h, head, start = 0, children }) => {
+  const f = useCurrentFrame();
+  return (
+    <g>
+      <Ink d={`M${x} ${y} L ${x + w} ${y} L ${x + w} ${y + h} L ${x} ${y + h} Z`} start={start} dur={14} w={6} fill={PAGE} />
+      <g opacity={prog(f, start + 6, start + 14)}>
+        <rect x={x + w / 2 - 90} y={y - 30} width={180} height={56} rx={10} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} />
+        <text x={x + 44} y={y + 96} fontFamily={F.sans} fontWeight={600} fontSize={32} letterSpacing={5} fill={C.inkSoft}>{head}</text>
+        <path d={`M${x + 44} ${y + 120} L ${x + w - 44} ${y + 120}`} stroke={C.inkSoft} strokeWidth={3} />
+        {children}
+      </g>
+    </g>
+  );
+};
+/** The casting director's tally sheet: one name, ticked again and again. */
+type Tally = { type: "tally"; seconds: number; line: string; accent: string; head: string; name: string; marks?: number; from?: number; every?: number };
+const TallyScene: React.FC<{ s: Tally }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const X = 170, Y = 610, W = 720, H = 640;
+  const total = s.marks ?? 23, from = s.from ?? 20, every = s.every ?? 5;
+  const n = Math.max(0, Math.min(total, Math.floor((f - from) / every) + 1));
+  const g = Math.floor(Math.max(0, n - 1) / 5), j = Math.max(0, n - 1) % 5;
+  const px = X + 70 + (g % 3) * 176 + j * 26, py = Y + 300 + Math.floor(g / 3) * 104 + 66;
+  return (
+    <AbsoluteFill>
+      {Array.from({ length: total }, (_, i) => (i % 2 === 0 ? <Sfx key={i} name="cine/tick" at={from + i * every} vol={0.3} /> : null))}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <SheetBoard x={X} y={Y} w={W} h={H} head={s.head}>
+          <text x={X + 44} y={Y + 220} fontFamily={F.sans} fontWeight={600} fontSize={84} letterSpacing={6} fill={C.orange}>{s.name}</text>
+          <TallyMarks x={X + 70} y={Y + 300} n={n} />
+        </SheetBoard>
+        {f >= from - 6 && (
+          <g transform={`translate(${px + 8} ${py + 4}) rotate(${142 + Math.sin(f / 1.6) * 4})`} opacity={prog(f, from - 6, from)}>
+            <path d="M0 0 L -13 -40 L 13 -40 Z" fill={PAPER_FILL} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+            <rect x={-13} y={-270} width={26} height={230} fill={C.orange} stroke={C.ink} strokeWidth={5} />
+            <rect x={-13} y={-300} width={26} height={30} fill="#d9898a" stroke={C.ink} strokeWidth={5} />
+          </g>
+        )}
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+/** One more walks in saying the same name; one more tick, and the pencil snaps. */
+type Snap = { type: "snap"; seconds: number; line: string; accent: string; say: string; inAt?: number; snapAt?: number };
+const SnapScene: React.FC<{ s: Snap }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const inAt = s.inAt ?? 40, snapAt = s.snapAt ?? 110;
+  const open = prog(f, inAt - 14, inAt);
+  const walk = spring({ frame: f - inAt, fps, config: { damping: 14 } });
+  const sn = f >= snapAt ? spring({ frame: f - snapAt, fps, config: { damping: 8, mass: 0.5 } }) : 0;
+  const press = prog(f, snapAt - 26, snapAt);
+  const DX = 700, DY = 640;
+  return (
+    <AbsoluteFill>
+      <Sfx name="cine/click" at={inAt - 14} vol={0.6} />
+      <Sfx name="pop" at={inAt + 12} vol={0.6} />
+      <Sfx name="pencil_short" at={snapAt - 24} vol={0.6} />
+      <Sfx name="cine/impact" at={snapAt} vol={0.5} />
+      <Sfx name="cine/toing" at={snapAt + 6} vol={0.5} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the door, and one more of him */}
+        <Ink d={`M${DX} ${DY + 440} L ${DX} ${DY} L ${DX + 210} ${DY} L ${DX + 210} ${DY + 440}`} start={0} dur={14} w={6} />
+        <path d={`M${DX} ${DY} L ${DX + 210 - open * 150} ${DY + open * 26} L ${DX + 210 - open * 150} ${DY + 440 + open * 22} L ${DX} ${DY + 440} Z`} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" opacity={prog(f, 8, 16)} />
+        {f >= inAt && (
+          <g transform={`translate(${(1 - walk) * 90} 0)`} opacity={Math.min(1, walk * 1.4)}>
+            <path d={`M${DX + 40} ${DY + 440} C ${DX + 40} ${DY + 300}, ${DX + 80} ${DY + 270}, ${DX + 130} ${DY + 270} C ${DX + 180} ${DY + 270}, ${DX + 220} ${DY + 300}, ${DX + 220} ${DY + 440} Z`} fill="rgba(232,121,43,0.35)" stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+            <Face x={DX + 130} y={DY + 190} r={70} hope={1} start={inAt} />
+          </g>
+        )}
+        {f >= inAt + 12 && (() => {
+          const bp = spring({ frame: f - inAt - 12, fps, config: { damping: 9, mass: 0.5 } });
+          return (
+            <g transform={`translate(${DX - 70} ${DY + 20 + Math.sin(f / 9) * 4}) scale(${bp})`}>
+              <rect x={-190} y={-62} width={380} height={124} rx={62} fill={PAGE} stroke={C.ink} strokeWidth={6} />
+              <path d="M110 58 L 150 104 L 150 56 Z" fill={PAGE} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+              <text x={0} y={18} textAnchor="middle" fontFamily={F.serifI} fontStyle="italic" fontSize={58} fill={C.orange}>{s.say}</text>
+            </g>
+          );
+        })()}
+        {/* the casting director and the desk */}
+        <Caster x={300} y={930} awake={0} start={4} />
+        <Ink d={`M80 1140 C 300 1132, 520 1148, 640 1140`} start={2} dur={14} w={8} />
+        {/* the pencil: pressed down, then in two */}
+        <g transform={`translate(${560 + sn * 30} ${1120 + press * 6}) rotate(${-32 + sn * 26})`}>
+          <path d="M0 0 L -13 -40 L 13 -40 Z" fill={PAPER_FILL} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+          <rect x={-13} y={-150} width={26} height={110} fill={C.orange} stroke={C.ink} strokeWidth={5} />
+        </g>
+        <g transform={`translate(${560 - 80 + sn * 16} ${1120 - 128 - sn * 120 + press * 6}) rotate(${-32 - sn * 52})`}>
+          <rect x={-13} y={-130} width={26} height={130} fill={C.orange} stroke={C.ink} strokeWidth={5} />
+          <rect x={-13} y={-160} width={26} height={30} fill="#d9898a" stroke={C.ink} strokeWidth={5} />
+        </g>
+        {f >= snapAt && f < snapAt + 20 && [0, 1, 2, 3, 4].map((i) => {
+          const a = -150 + i * 34, r0 = 34 + sn * 20, r1 = 74 + sn * 40;
+          return <path key={i} d={`M${500 + Math.cos(a * Math.PI / 180) * r0} ${985 + Math.sin(a * Math.PI / 180) * r0} L ${500 + Math.cos(a * Math.PI / 180) * r1} ${985 + Math.sin(a * Math.PI / 180) * r1}`} stroke={C.orange} strokeWidth={7} strokeLinecap="round" opacity={1 - prog(f, snapAt + 6, snapAt + 20)} />;
+        })}
+        {f >= snapAt + 2 && (
+          <text x={560} y={1290} textAnchor="middle" fontFamily={F.serifI} fontStyle="italic" fontSize={96} fill={C.orange} transform={`rotate(-6 560 1290) scale(1)`} opacity={Math.min(1, sn * 1.5)}>snap.</text>
+        )}
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+/** The next name goes down in fresh ink, and the casting director looks up. */
+type Fresh = { type: "fresh"; seconds: number; line: string; accent: string; head: string; old: string; name: string; from: string; writeAt?: number; fromAt?: number; upAt?: number };
+const FreshScene: React.FC<{ s: Fresh }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const X = 150, Y = 590, W = 780, H = 470;
+  const wAt = s.writeAt ?? 40, fAt = s.fromAt ?? wAt + 60, upAt = s.upAt ?? fAt + 40;
+  const n = Math.max(0, Math.min(s.name.length, Math.floor((f - wAt) / 2)));
+  const up = f >= upAt ? spring({ frame: f - upAt, fps, config: { damping: 10, mass: 0.6 } }) : 0;
+  const glint = 0.5 + 0.5 * Math.sin(f / 5);
+  return (
+    <AbsoluteFill>
+      <Sfx name="pencil_long" at={wAt} vol={0.6} />
+      <Sfx name="cine/ping" at={wAt + s.name.length * 2 + 4} vol={0.5} />
+      <Sfx name="pencil_short" at={fAt} vol={0.4} />
+      <Sfx name="boop_hi" at={upAt} vol={0.6} />
+      <AbsoluteFill style={{ background: `radial-gradient(circle 330px at 540px ${Y + 300}px, rgba(242,183,91,${0.2 * prog(f, wAt, wAt + 40)}) 0%, rgba(242,183,91,0) 100%)` }} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <SheetBoard x={X} y={Y} w={W} h={H} head={s.head}>
+          <text x={X + 44} y={Y + 186} fontFamily={F.sans} fontWeight={600} fontSize={40} letterSpacing={4} fill={C.inkSoft}>{s.old}</text>
+          <g opacity={0.55}><TallyMarks x={X + 330} y={Y + 142} n={15} per={3} color={C.inkSoft} /></g>
+          <path d={`M${X + 44} ${Y + 236} L ${X + W - 44} ${Y + 236}`} stroke={C.inkSoft} strokeWidth={3} />
+          <text x={X + 44} y={Y + 336} fontFamily={F.serifI} fontStyle="italic" fontSize={86} fill={C.orange}>{s.name.slice(0, n)}</text>
+          <text x={X + 48} y={Y + 410} fontFamily={F.sans} fontWeight={600} fontSize={38} letterSpacing={3} fill={C.ink} opacity={prog(f, fAt, fAt + 12)}>{s.from}</text>
+          {n >= s.name.length && [0, 1, 2].map((i) => (
+            <path key={i} d={`M${X + W - 96 + i * 22} ${Y + 262 - i * 16} l 0 -22 M${X + W - 107 + i * 22} ${Y + 251 - i * 16} l 22 0`} stroke={C.orange} strokeWidth={5} strokeLinecap="round" opacity={0.3 + 0.7 * Math.abs(Math.sin(f / 6 + i))} />
+          ))}
+        </SheetBoard>
+        {/* the pen */}
+        {f >= wAt - 8 && n < s.name.length && (
+          <g transform={`translate(${X + 56 + (n / s.name.length) * 640} ${Y + 340}) rotate(${30 + Math.sin(f / 1.5) * 3})`} opacity={prog(f, wAt - 8, wAt)}>
+            <path d="M0 0 L -12 -44 L 12 -44 Z" fill={C.orange} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+            <rect x={-15} y={-250} width={30} height={206} rx={8} fill={PAPER_FILL} stroke={C.ink} strokeWidth={5} />
+          </g>
+        )}
+        <circle cx={X + 60} cy={Y + 350} r={6 + glint * 3} fill={C.orange} opacity={n > 0 ? 0.8 : 0} />
+        {/* the casting director, over the bottom edge of the sheet */}
+        <Caster x={540} y={1172 + (1 - up) * 22} awake={up} start={6} k={0.8} />
+        {up > 0.3 && [-1, 1].map((d) => [0, 1].map((i) => (
+          <path key={`${d}${i}`} d={`M${540 + d * (118 + i * 34)} ${1086 - i * 32} l ${d * 26} -20`} stroke={C.orange} strokeWidth={6} strokeLinecap="round" opacity={Math.min(1, up)} />
+        )))}
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
   const f = useCurrentFrame();
   const t = f / FPS;
@@ -3308,6 +3508,9 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "thud" ? <ThudScene s={sc} /> :
       sc.type === "dry" ? <DryScene s={sc} /> :
       sc.type === "scatter" ? <ScatterScene s={sc} /> :
+      sc.type === "tally" ? <TallyScene s={sc} /> :
+      sc.type === "snap" ? <SnapScene s={sc} /> :
+      sc.type === "fresh" ? <FreshScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

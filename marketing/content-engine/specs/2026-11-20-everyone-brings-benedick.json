@@ -1,0 +1,610 @@
+{
+  "id": "2026-11-20-everyone-brings-benedick",
+  "look": "midnight",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "Everyone brings Benedick. Bring this. The casting director has ticked Benedick, from Much Ado About Nothing, all morning.",
+        "say": "[wry] Everyone brings Benedick. Bring this. The casting director has ticked Benedick, from Much Ado About Nothing, all morning.",
+        "at": 0.657,
+        "words": [
+          {
+            "w": "Everyone",
+            "s": 0.0,
+            "e": 0.102
+          },
+          {
+            "w": "brings",
+            "s": 0.139,
+            "e": 0.364
+          },
+          {
+            "w": "Benedick.",
+            "s": 0.407,
+            "e": 0.987
+          },
+          {
+            "w": "Bring",
+            "s": 1.025,
+            "e": 1.216
+          },
+          {
+            "w": "this.",
+            "s": 1.282,
+            "e": 2.003
+          },
+          {
+            "w": "The",
+            "s": 2.118,
+            "e": 2.462
+          },
+          {
+            "w": "casting",
+            "s": 2.511,
+            "e": 2.856
+          },
+          {
+            "w": "director",
+            "s": 2.892,
+            "e": 3.184
+          },
+          {
+            "w": "has",
+            "s": 3.216,
+            "e": 3.316
+          },
+          {
+            "w": "ticked",
+            "s": 3.367,
+            "e": 3.643
+          },
+          {
+            "w": "Benedick,",
+            "s": 3.708,
+            "e": 4.331
+          },
+          {
+            "w": "from",
+            "s": 4.364,
+            "e": 4.495
+          },
+          {
+            "w": "Much",
+            "s": 4.548,
+            "e": 4.757
+          },
+          {
+            "w": "Ado",
+            "s": 4.824,
+            "e": 5.02
+          },
+          {
+            "w": "About",
+            "s": 5.052,
+            "e": 5.216
+          },
+          {
+            "w": "Nothing,",
+            "s": 5.266,
+            "e": 5.611
+          },
+          {
+            "w": "all",
+            "s": 5.692,
+            "e": 5.938
+          },
+          {
+            "w": "morning.",
+            "s": 5.979,
+            "e": 6.397
+          }
+        ],
+        "dur": 6.52
+      },
+      {
+        "text": "Then one more walks in and says Benedick, so the tick goes down, and the pencil snaps.",
+        "say": "[amused] Then one more walks in and says Benedick, so the tick goes down, and the pencil snaps.",
+        "at": 7.946,
+        "words": [
+          {
+            "w": "Then",
+            "s": 0.0,
+            "e": 0.026
+          },
+          {
+            "w": "one",
+            "s": 0.075,
+            "e": 0.224
+          },
+          {
+            "w": "more",
+            "s": 0.275,
+            "e": 0.485
+          },
+          {
+            "w": "walks",
+            "s": 0.529,
+            "e": 0.748
+          },
+          {
+            "w": "in",
+            "s": 0.813,
+            "e": 0.944
+          },
+          {
+            "w": "and",
+            "s": 0.978,
+            "e": 1.075
+          },
+          {
+            "w": "says",
+            "s": 1.115,
+            "e": 1.272
+          },
+          {
+            "w": "Benedick,",
+            "s": 1.348,
+            "e": 2.125
+          },
+          {
+            "w": "so",
+            "s": 2.212,
+            "e": 2.387
+          },
+          {
+            "w": "the",
+            "s": 2.403,
+            "e": 2.452
+          },
+          {
+            "w": "tick",
+            "s": 2.505,
+            "e": 2.715
+          },
+          {
+            "w": "goes",
+            "s": 2.754,
+            "e": 2.911
+          },
+          {
+            "w": "down,",
+            "s": 2.977,
+            "e": 3.37
+          },
+          {
+            "w": "and",
+            "s": 3.402,
+            "e": 3.502
+          },
+          {
+            "w": "the",
+            "s": 3.518,
+            "e": 3.567
+          },
+          {
+            "w": "pencil",
+            "s": 3.614,
+            "e": 3.895
+          },
+          {
+            "w": "snaps.",
+            "s": 3.961,
+            "e": 4.42
+          }
+        ],
+        "dur": 4.543
+      },
+      {
+        "text": "But the next name goes down in fresh ink, Charles Devereaux, from an old one act comedy called Under a Veil, and the casting director finally looks up.",
+        "say": "[playful] But the next name goes down in fresh ink, Charles Devereaux, from an old one act comedy called Under a Veil, and the casting director finally looks up.",
+        "at": 13.14,
+        "words": [
+          {
+            "w": "But",
+            "s": 0.0,
+            "e": 0.012
+          },
+          {
+            "w": "the",
+            "s": 0.028,
+            "e": 0.078
+          },
+          {
+            "w": "next",
+            "s": 0.13,
+            "e": 0.34
+          },
+          {
+            "w": "name",
+            "s": 0.393,
+            "e": 0.602
+          },
+          {
+            "w": "goes",
+            "s": 0.642,
+            "e": 0.799
+          },
+          {
+            "w": "down",
+            "s": 0.839,
+            "e": 0.997
+          },
+          {
+            "w": "in",
+            "s": 1.039,
+            "e": 1.127
+          },
+          {
+            "w": "fresh",
+            "s": 1.182,
+            "e": 1.454
+          },
+          {
+            "w": "ink,",
+            "s": 1.52,
+            "e": 2.111
+          },
+          {
+            "w": "Charles",
+            "s": 2.16,
+            "e": 2.505
+          },
+          {
+            "w": "Devereaux,",
+            "s": 2.548,
+            "e": 3.225
+          },
+          {
+            "w": "from",
+            "s": 3.252,
+            "e": 3.357
+          },
+          {
+            "w": "an",
+            "s": 3.4,
+            "e": 3.488
+          },
+          {
+            "w": "old",
+            "s": 3.553,
+            "e": 3.75
+          },
+          {
+            "w": "one",
+            "s": 3.783,
+            "e": 3.881
+          },
+          {
+            "w": "act",
+            "s": 3.93,
+            "e": 4.078
+          },
+          {
+            "w": "comedy",
+            "s": 4.134,
+            "e": 4.47
+          },
+          {
+            "w": "called",
+            "s": 4.508,
+            "e": 4.734
+          },
+          {
+            "w": "Under",
+            "s": 4.789,
+            "e": 5.061
+          },
+          {
+            "w": "a",
+            "s": 5.094,
+            "e": 5.127
+          },
+          {
+            "w": "Veil,",
+            "s": 5.193,
+            "e": 5.586
+          },
+          {
+            "w": "and",
+            "s": 5.684,
+            "e": 5.979
+          },
+          {
+            "w": "the",
+            "s": 5.996,
+            "e": 6.045
+          },
+          {
+            "w": "casting",
+            "s": 6.094,
+            "e": 6.438
+          },
+          {
+            "w": "director",
+            "s": 6.483,
+            "e": 6.832
+          },
+          {
+            "w": "finally",
+            "s": 6.873,
+            "e": 7.16
+          },
+          {
+            "w": "looks",
+            "s": 7.203,
+            "e": 7.422
+          },
+          {
+            "w": "up.",
+            "s": 7.51,
+            "e": 7.75
+          }
+        ],
+        "dur": 7.873
+      },
+      {
+        "text": "So you open Ghost Light, type his name, and up come his speeches, funny, about a minute, and hardly anyone brings them.",
+        "say": "[upbeat] So you open Ghost Light, type his name, and up come his speeches, funny, about a minute, and hardly anyone brings them.",
+        "at": 21.851,
+        "sub": false,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.021
+          },
+          {
+            "w": "you",
+            "s": 0.055,
+            "e": 0.153
+          },
+          {
+            "w": "open",
+            "s": 0.206,
+            "e": 0.416
+          },
+          {
+            "w": "Ghost",
+            "s": 0.459,
+            "e": 0.678
+          },
+          {
+            "w": "Light,",
+            "s": 0.721,
+            "e": 1.006
+          },
+          {
+            "w": "type",
+            "s": 1.084,
+            "e": 1.399
+          },
+          {
+            "w": "his",
+            "s": 1.432,
+            "e": 1.53
+          },
+          {
+            "w": "name,",
+            "s": 1.583,
+            "e": 1.858
+          },
+          {
+            "w": "and",
+            "s": 1.924,
+            "e": 2.12
+          },
+          {
+            "w": "up",
+            "s": 2.186,
+            "e": 2.317
+          },
+          {
+            "w": "come",
+            "s": 2.343,
+            "e": 2.448
+          },
+          {
+            "w": "his",
+            "s": 2.481,
+            "e": 2.58
+          },
+          {
+            "w": "speeches,",
+            "s": 2.63,
+            "e": 3.366
+          },
+          {
+            "w": "funny,",
+            "s": 3.421,
+            "e": 3.924
+          },
+          {
+            "w": "about",
+            "s": 3.961,
+            "e": 4.153
+          },
+          {
+            "w": "a",
+            "s": 4.186,
+            "e": 4.219
+          },
+          {
+            "w": "minute,",
+            "s": 4.257,
+            "e": 4.809
+          },
+          {
+            "w": "and",
+            "s": 4.843,
+            "e": 4.94
+          },
+          {
+            "w": "hardly",
+            "s": 4.978,
+            "e": 5.202
+          },
+          {
+            "w": "anyone",
+            "s": 5.259,
+            "e": 5.597
+          },
+          {
+            "w": "brings",
+            "s": 5.634,
+            "e": 5.858
+          },
+          {
+            "w": "them.",
+            "s": 5.898,
+            "e": 6.186
+          }
+        ],
+        "dur": 6.309
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 28.995,
+        "sub": false,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.092
+          },
+          {
+            "w": "Ghost",
+            "s": 0.134,
+            "e": 0.354
+          },
+          {
+            "w": "Light.",
+            "s": 0.398,
+            "e": 0.681
+          },
+          {
+            "w": "Built",
+            "s": 0.78,
+            "e": 1.272
+          },
+          {
+            "w": "by",
+            "s": 1.338,
+            "e": 1.469
+          },
+          {
+            "w": "a",
+            "s": 1.502,
+            "e": 1.534
+          },
+          {
+            "w": "working",
+            "s": 1.575,
+            "e": 1.862
+          },
+          {
+            "w": "actor.",
+            "s": 1.928,
+            "e": 2.321
+          }
+        ],
+        "dur": 2.444
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-20-everyone-brings-benedick/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.22
+  },
+  "scenes": [
+    {
+      "type": "tally",
+      "seconds": 7.846,
+      "line": "Everyone brings Benedick.",
+      "accent": "Benedick.",
+      "head": "AUDITIONS · TODAY",
+      "name": "BENEDICK",
+      "from": 30,
+      "every": 9,
+      "marks": 23
+    },
+    {
+      "type": "snap",
+      "seconds": 5.194,
+      "line": "One more Benedick.",
+      "accent": "One more",
+      "say": "Benedick.",
+      "inAt": 44,
+      "snapAt": 138
+    },
+    {
+      "type": "fresh",
+      "seconds": 8.711,
+      "line": "Then, fresh ink.",
+      "accent": "fresh ink.",
+      "head": "AUDITIONS · TODAY",
+      "old": "BENEDICK",
+      "name": "Charles Devereaux",
+      "from": "UNDER A VEIL · a one act comedy",
+      "writeAt": 80,
+      "fromAt": 165,
+      "upAt": 238
+    },
+    {
+      "type": "screens",
+      "seconds": 7.094,
+      "line": "Type his name.",
+      "accent": "his name.",
+      "shots": [
+        {
+          "src": "story/2026-11-20-everyone-brings-benedick/search.png",
+          "at": 0
+        },
+        {
+          "src": "story/2026-11-20-everyone-brings-benedick/typed.png",
+          "at": 60,
+          "fade": true,
+          "tap": {
+            "x": 0.856,
+            "y": 0.312,
+            "at": 78
+          }
+        },
+        {
+          "src": "story/2026-11-20-everyone-brings-benedick/results.png",
+          "at": 100
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "tiktok": "Everyone brings Benedick. Bring Charles Devereaux, from Under a Veil. #actorslife #monologue #audition #actortok #actors",
+    "youtube_title": "Tired of Benedick? Bring this monologue instead. #shorts",
+    "youtube_description": "Charles Devereaux, from the one act comedy Under a Veil. Funny, about a minute, and hardly anyone brings him.\nType his name in Ghost Light. Built by a working actor.\n#monologue #audition #actorslife #comedicmonologue",
+    "instagram": "Everyone brings Benedick. Bring this.\n\nCharles Devereaux, from an old one act comedy called Under a Veil. Funny, about a minute, and the panel has not heard it six times today.\nType his name in Ghost Light, built by a working actor. Link in bio.\n\n#actorslife #monologue #audition #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 20500,
+  "source": {
+    "plan": "Callboard row 2026-11-20 (drawn, nobody-brings, midnight): everyone brings Benedick, the pencil snaps, Charles Devereaux in fresh ink",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "checked": "2026-11-15: plays.id 3131 'Under a Veil: A Comedietta in One Act' (Sir Randal Roberts), public_domain; Charles Devereaux has 6 monologues, all overdone 0: 37068 (2:12), 37069 (0:42), 37071 (1:01), 37072 (0:59, comedic), 37074 (1:21, comedic), 37075 (1:03, comedic). Benedick, Much Ado About Nothing: overdone 0.6 on every piece",
+    "changed_from_plan": "the board asked for the 81 second piece and the search 'funny, under a minute and a half'. That search returns film pieces first (film text may not go on screen) and not Charles Devereaux, so the glimpse types his name, which brings his speeches up. 37074 carries a dated 'savages in Africa' passage, so the film names no single speech and says 'about a minute' (37072 and 37071)",
+    "app": "Ghost Light web preview (ghostlight-web/serve.sh), dark theme, demo account, 2026-11-15",
+    "flow": "flows/search-everyone-brings-benedick.json (shots -> public/story/2026-11-20-everyone-brings-benedick/*.png); results: 30 monologues, the first three cards are Charles Devereaux, public domain text only",
+    "voice": "George, one take at stability 0.5, Scribe 0.99; sped up 1.22x with fit_take.py",
+    "new_scene_types": "tally (the casting director's tally sheet), snap (one more walks in, the pencil snaps), fresh (the next name in fresh ink, the casting director looks up)",
+    "motifs": "tally-sheet-benedick,pencil-snaps,fresh-ink-name,casting-director-glasses-looks-up",
+    "end": "specs/2026-11-20-everyone-brings-benedick-end.json, joined with scripts/join.sh; the end line is cut from the take",
+    "feature": "overdone"
+  }
+}
