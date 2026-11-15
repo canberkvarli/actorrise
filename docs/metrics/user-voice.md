@@ -260,6 +260,7 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** free; details not in today's brief
 **They said:** "I was seeking a 30 second comedic monologue for SETC, but I had decided to go for a singing only audition. However, that doesn't mean my hunt for Monologues is over. In fact, it's the farthest thing from. I'm seeking to build a monologue repertoire similar to a vocal one to better shape my acting skills. If you have any suggestions, please let me know!"
 **Heard as:** happy, and a feature ask in disguise: a singer wants a monologue book built the way a vocal book is (contrasting pieces by type), not one search at a time
+
 **Replying to:** search note ("an activist, a young woman")
 **Account:** signed up 2026-11-15, free, read allowance spent the same day
 **They said:** "I'm auditioning for Hair at my university. I'm looking for it to be around a minute (maybe a little shorter), from a play, and action-centered so not telling a story but talking to someone."
