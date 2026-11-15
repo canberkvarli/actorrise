@@ -71,7 +71,9 @@ class Rest:
         return self._call("GET", f"{table}?{urllib.parse.urlencode(params)}") or []
 
     def post(self, table: str, body: Any) -> list[dict]:
-        return self._call("POST", table, body) or []
+        # Only the id comes back. A monologue row carries its 1536-number
+        # embedding, and echoing every inserted row costs egress for nothing.
+        return self._call("POST", f"{table}?select=id", body) or []
 
     def patch(self, table: str, body: dict, **params: str) -> list[dict]:
         return self._call("PATCH", f"{table}?{urllib.parse.urlencode(params)}", body) or []
