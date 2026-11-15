@@ -43,6 +43,7 @@ from app.services.search.originality import originality_cap
 from app.services.search.query_optimizer import (correct_query_typos,
                                                  is_filter_only_query,
                                                  validate_query)
+from app.services.search.acronym import collapse_dotted_acronyms
 from app.services.search.attribute_fallback import attribute_search
 from app.services.search.title_lookup import (compute_content_gap,
                                               detect_catalogue_character,
@@ -784,6 +785,24 @@ async def search_monologues(
             # intent first: a piece the corpus tagged differently is easier to
             # live with than the wrong era. Gender is never given up -- casting
             # is not a preference.
+            # An acronym typed with its dots ("W.A.S.P." found nothing where
+            # "WASP" found three): try once without them before giving up any
+            # of the actor's filters. See services/search/acronym.py.
+            if not all_results_with_scores and search_q:
+                _undotted = collapse_dotted_acronyms(search_q)
+                if _undotted != search_q:
+                    _rows, _ = search_service.search(
+                        _undotted,
+                        limit=fetch_limit,
+                        filters=filters,
+                        user_id=cast(int, current_user.id),
+                        actor_profile=actor_profile_for_search,
+                    )
+                    if _rows:
+                        all_results_with_scores = _rows
+                        has_scores = True
+                        match_strategy = "acronym_undotted"
+
             if not all_results_with_scores and search_q:
                 from app.services.search.empty_page_retry import retry_keys
 
