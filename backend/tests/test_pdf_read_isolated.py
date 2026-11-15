@@ -35,7 +35,16 @@ SCRIPT = textwrap.dedent(
 def test_child_read_matches_inline_and_falls_back(tmp_path):
     script = tmp_path / "check.py"
     script.write_text(SCRIPT)
-    env = {"PATH": "/usr/bin:/bin", "PYTHONPATH": str(BACKEND)}
+    # The child imports app.core.config, which refuses to load without a
+    # Postgres DATABASE_URL. It never connects, so it gets a placeholder. This
+    # used to pass only where a backend/.env filled the gap (the laptop) and
+    # failed in cloud sessions, which have none. load_dotenv() does not override
+    # a variable already set, so the production URL never reaches this test.
+    env = {
+        "PATH": "/usr/bin:/bin",
+        "PYTHONPATH": str(BACKEND),
+        "DATABASE_URL": "postgresql://test:test@127.0.0.1:1/test",
+    }
     out = subprocess.run(
         [sys.executable, str(script)], cwd=BACKEND, env=env,
         capture_output=True, text=True, timeout=120,
