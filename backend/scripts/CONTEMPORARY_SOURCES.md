@@ -121,7 +121,11 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
   Allan Knee musical (IP Theater, 10), Mamma Mia! (Harlingen CISD, Sophie only: the other
   speeches are under 60 words or for two characters). Lines the packets give to another
   character are cut; Benny's speech is word for word the end of Nicely's and was left out.
-  Visible musical pieces: 108, past the 100 the musical tag needs.
+  Visible musical pieces: 108, past the 100 the musical tag needs (111 once Noah's Ark,
+  The Musical, filed as `youth`, was refiled as `musical` the same day).
+  Fences had 16 pieces across sources, over the 12-per-play cap: Troy's four shortest
+  (44270, 44274, 44279, 44280) are hidden as `pending`, so every character keeps a piece.
+  Adam Szymkowicz: asked by email the same day whether his 109 blog pieces may stay.
   The two Madagascar: A Musical Adventure Jr. pieces from the Seattle Children's Theatre
   packet (44778, 44780) are hidden as `pending` with the reason recorded: a Jr. edition is
   on the deny list whatever packet carries it.
