@@ -92,7 +92,7 @@ export const content = {
       "Being fresh isn’t about being obscure for its own sake. It’s about walking in with something that fits you and lets casting actually see you. A few things that help:",
     tip1Title: "Use the Overdone filter.",
     tip1Body:
-      "ActorRise flags pieces that get used constantly, so you can skip them on purpose. Start from the {link}.",
+      "Ghost Light flags pieces that get used constantly, so you can skip them on purpose. Start from the {link}.",
     tip1Link: "monologue finder",
     tip2Title: "Search by what fits you, not what’s famous.",
     tip2Body:
@@ -111,7 +111,7 @@ export const content = {
     title: "Guides & tutorials for {em}.",
     titleEm: "actors",
     lede:
-      "Short videos on getting the most out of ActorRise, from finding the right monologue to rehearsing with ScenePartner. More are on the way.",
+      "Short videos on getting the most out of Ghost Light, from finding the right monologue to rehearsing with ScenePartner. More are on the way.",
     tryIt: "Ready to try it yourself? Start from the {finder} or rehearse with {partner}.",
     finderLink: "monologue finder",
     play: "Play {title}",
@@ -122,10 +122,10 @@ export const content = {
   contentPrivacy: {
     direction: "(the fine print.)",
     title: "Privacy Policy",
-    updated: "Last updated: October 29, 2026",
+    updated: "Last updated: November 16, 2026",
     s1Title: "1. Introduction",
     s1Body:
-      "ActorRise (\"we,\" \"us,\" or \"our\") operates the website and platform at actorrise.com and our mobile applications, including Ghost Light: Monologues for iOS (together, the \"Service\"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Service. By accessing or using the Service, you agree to this Privacy Policy. If you do not agree, please do not use the Service.",
+      "Ghost Light (\"we,\" \"us,\" or \"our\") operates the website and platform at ghostlight.actor and our mobile applications, including Ghost Light: Monologues for iOS (together, the \"Service\"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Service. By accessing or using the Service, you agree to this Privacy Policy. If you do not agree, please do not use the Service.",
     s2Title: "2. Information We Collect",
     s2Intro: "We collect information that you provide directly and information we obtain automatically:",
     s2AccountLabel: "Account information:",
@@ -170,7 +170,7 @@ export const content = {
       "If you sign in with Google or Apple, those providers share with us the information you consent to (e.g., email, name) in accordance with their policies.",
     s5WebPayLabel: "Payments on the web:",
     s5WebPay:
-      "Stripe or another payment processor for subscriptions bought on actorrise.com. Payment data is handled by them; we do not store full payment card details.",
+      "Stripe or another payment processor for subscriptions bought on ghostlight.actor. Payment data is handled by them; we do not store full payment card details.",
     s5IosPayLabel: "Payments in our iOS app:",
     s5IosPay:
       "Subscriptions bought inside Ghost Light: Monologues are processed by Apple through in-app purchase. Apple does not share your payment details with us. We use RevenueCat to record which subscription you hold and to keep it in sync across your devices; it receives a pseudonymous identifier for your account, your purchase and receipt history, and basic device and app-version data. We never receive your card number.",
@@ -182,7 +182,7 @@ export const content = {
       "What you type to Cue is sent to Anthropic to write Cue’s reply, under API terms that do not allow training on it. Your conversations with Cue are stored in your account, and Canberk reads them when Cue passes a question to him. Do not type anything into Cue you would not put in an email to us.",
     s5WebAnalyticsLabel: "Website analytics:",
     s5WebAnalytics:
-      "actorrise.com uses Google Analytics to count visits, pages viewed and which features are used, with a pseudonymous identifier. It does not receive your email address or the words you search for.",
+      "ghostlight.actor uses Google Analytics to count visits, pages viewed and which features are used, with a pseudonymous identifier. It does not receive your email address or the words you search for.",
     s5AppAnalyticsLabel: "Product analytics in our iOS app:",
     s5AppAnalyticsA:
       "Ghost Light: Monologues uses PostHog so we can see which parts of the app earn their place and where people get stuck. It receives events describing what happened — that a search was run, that a monologue was opened, that the subscription screen appeared — together with a pseudonymous identifier, your device type and the app version.",
@@ -192,7 +192,7 @@ export const content = {
       "If you sign in, these events are associated with your account identifier and never with your email address.",
     s5FeedLabel: "Community feed (the callboard).",
     s5Feed:
-      "ActorRise includes a community activity feed visible to other signed-in users. It can show your first name, city, and profile photo alongside activity such as joining, reading, saving, or rehearsing a particular monologue. It never shows the text of your searches: raw search queries are not stored in the feed at all, and a search appears only as a general description (for example, “searched for a comedic monologue”). You can turn this off at any time using “Hide my activity” on the callboard, which also hides your past activity, not just future activity. A logged-out preview of the feed shows only a first initial and no photo.",
+      "Ghost Light includes a community activity feed visible to other signed-in users. It can show your first name, city, and profile photo alongside activity such as joining, reading, saving, or rehearsing a particular monologue. It never shows the text of your searches: raw search queries are not stored in the feed at all, and a search appears only as a general description (for example, “searched for a comedic monologue”). You can turn this off at any time using “Hide my activity” on the callboard, which also hides your past activity, not just future activity. A logged-out preview of the feed shows only a first initial and no photo.",
     s5NoSell:
       "We do not sell your personal information. We may disclose your information if required by law, to protect our rights or safety, or in connection with a merger, sale, or transfer of assets (with notice where required).",
     s6Title: "6. Voice, Video, and Script Content",
@@ -200,7 +200,7 @@ export const content = {
       "Several features work by sending what you record or upload to our AI provider. This section sets out exactly what leaves your device, where it goes, and what is kept. If you never use these features, none of it applies to you.",
     s6VoiceLabel: "Your voice during rehearsal.",
     s6Voice:
-      "When you rehearse a scene or monologue and speak your lines, short audio clips are captured by your browser or app and sent to our transcription provider (OpenAI Whisper) to be turned into text, so the scene partner knows when you have finished a line. The audio file is deleted as soon as the text comes back. We do not store your recordings, we do not keep them in our database, and no one at ActorRise listens to them.",
+      "When you rehearse a scene or monologue and speak your lines, short audio clips are captured by your browser or app and sent to our transcription provider (OpenAI Whisper) to be turned into text, so the scene partner knows when you have finished a line. The audio file is deleted as soon as the text comes back. We do not store your recordings, we do not keep them in our database, and no one at Ghost Light listens to them.",
     s6PartnerLabel: "The scene partner’s voice.",
     s6Partner:
       "The other character’s lines are spoken using a synthetic voice generated from the script text by our provider. This is generated audio, not a recording of a person.",
@@ -241,9 +241,9 @@ export const content = {
       "We implement technical and organizational measures to protect your data against unauthorized access, loss, or alteration. No method of transmission or storage is 100% secure; we cannot guarantee absolute security and you use the Service at your own risk in that regard.",
     s11Title: "11. Ages",
     s11Body:
-      "ActorRise is for people aged 13 and older. Students aged 13 to 17 use it through their school or acting class, with their teacher. We do not knowingly collect personal data from children under 13. If you believe a child under 13 has an account, contact us and we will delete it promptly.",
+      "Ghost Light is for people aged 13 and older. Students aged 13 to 17 use it through their school or acting class, with their teacher. We do not knowingly collect personal data from children under 13. If you believe a child under 13 has an account, contact us and we will delete it promptly.",
     s12Title: "12. Schools, Teachers and Students",
-    s12Intro: "When a teacher brings a class to ActorRise through a class link:",
+    s12Intro: "When a teacher brings a class to Ghost Light through a class link:",
     s12GivesLabel: "What a student gives us:",
     s12Gives:
       "the email they sign up with (usually their school address), their name if their sign-in provides it, and what they do in the Service: searches, saved pieces and rehearsals.",
@@ -274,13 +274,13 @@ export const content = {
   contentTerms: {
     direction: "(the house rules.)",
     title: "Terms of Service",
-    updated: "Last updated: August 2026",
+    updated: "Last updated: November 16, 2026",
     s1Title: "1. Acceptance of Terms",
     s1Body:
-      "These Terms of Service (\"Terms\") are a binding agreement between you and ActorRise (\"we,\" \"us,\" or \"our\") governing your access to and use of the website and platform at actorrise.com, our mobile applications including Ghost Light: Monologues for iOS, and related services (together, the \"Service\"). By creating an account, signing in, or otherwise using the Service, you agree to these Terms and our Privacy Policy. If you do not agree, you must not use the Service.",
+      "These Terms of Service (\"Terms\") are a binding agreement between you and Ghost Light (\"we,\" \"us,\" or \"our\") governing your access to and use of the website and platform at ghostlight.actor, our mobile applications including Ghost Light: Monologues for iOS, and related services (together, the \"Service\"). By creating an account, signing in, or otherwise using the Service, you agree to these Terms and our Privacy Policy. If you do not agree, you must not use the Service.",
     s2Title: "2. Description of the Service",
     s2Body:
-      "ActorRise provides tools for actors, including monologue search and discovery, profile management, AI-powered recommendations, scene partner and coaching features, and related content and functionality. We may add, change, or discontinue features at any time. The Service is provided \"as is\" subject to the disclaimers and limitations in these Terms.",
+      "Ghost Light provides tools for actors, including monologue search and discovery, profile management, AI-powered recommendations, scene partner and coaching features, and related content and functionality. We may add, change, or discontinue features at any time. The Service is provided \"as is\" subject to the disclaimers and limitations in these Terms.",
     s3Title: "3. Eligibility and Account",
     s3Body:
       "You must be at least 16 years old (or the age of majority in your jurisdiction, if higher) and able to form a binding contract to use the Service. You are responsible for maintaining the confidentiality of your account credentials and for all activity under your account. You must provide accurate and complete information and update it as needed. We may suspend or terminate your account if you breach these Terms or for other reasons we deem necessary.",
@@ -317,7 +317,7 @@ export const content = {
     s6SourcesLink: "Sources & copyright",
     s6FilmLabel: "Film and television reference:",
     s6Film:
-      "Film and television reference entries contain only factual metadata (character name, source title, thematic descriptions, and links) and do not include copyrighted script text. Links to third-party script sources are provided for convenience only; ActorRise is not responsible for third-party content.",
+      "Film and television reference entries contain only factual metadata (character name, source title, thematic descriptions, and links) and do not include copyrighted script text. Links to third-party script sources are provided for convenience only; Ghost Light is not responsible for third-party content.",
     s6YoursLabel: "Your content:",
     s6Yours:
       "You retain ownership of content you upload (e.g., headshots, profile text). You grant us a non-exclusive, royalty-free, worldwide license to use, store, display, and process that content as needed to provide and improve the Service and as described in our Privacy Policy. You represent that you have the rights to grant this license and that your content does not violate these Terms or any third-party rights.",
@@ -337,7 +337,7 @@ export const content = {
       "OUR TOTAL LIABILITY FOR ANY CLAIMS ARISING FROM OR RELATED TO THESE TERMS OR THE SERVICE SHALL NOT EXCEED THE GREATER OF (A) THE AMOUNT YOU PAID US IN THE TWELVE (12) MONTHS BEFORE THE CLAIM AROSE, OR (B) ONE HUNDRED U.S. DOLLARS (USD $100). SOME JURISDICTIONS DO NOT ALLOW THE EXCLUSION OR LIMITATION OF CERTAIN DAMAGES; IN SUCH CASES, THE ABOVE LIMITATIONS MAY NOT APPLY TO YOU TO THAT EXTENT.",
     s9Title: "9. Indemnification",
     s9Body:
-      "You agree to indemnify, defend, and hold harmless ActorRise and its affiliates, officers, directors, employees, and agents from and against any claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising out of or related to (a) your use of the Service, (b) your content or conduct, (c) your violation of these Terms or any law, or (d) your violation of any third-party rights. We reserve the right to assume exclusive defense and control of any matter subject to indemnification by you; you will cooperate with us in that defense.",
+      "You agree to indemnify, defend, and hold harmless Ghost Light and its affiliates, officers, directors, employees, and agents from and against any claims, damages, losses, liabilities, costs, and expenses (including reasonable attorneys' fees) arising out of or related to (a) your use of the Service, (b) your content or conduct, (c) your violation of these Terms or any law, or (d) your violation of any third-party rights. We reserve the right to assume exclusive defense and control of any matter subject to indemnification by you; you will cooperate with us in that defense.",
     s10Title: "10. Termination",
     s10Body:
       "You may stop using the Service and close your account at any time. We may suspend or terminate your access to the Service, with or without notice, for any reason, including breach of these Terms. Upon termination, your right to use the Service ceases. Provisions that by their nature should survive (including disclaimers, limitation of liability, indemnification, and governing law) will survive termination.",
@@ -346,14 +346,14 @@ export const content = {
       "These Terms are governed by the laws of the State of Delaware, United States, without regard to conflict of law principles. Any dispute arising from or related to these Terms or the Service shall be resolved exclusively in the state or federal courts located in Delaware, and you consent to personal jurisdiction there. You waive any right to a jury trial and any right to participate in a class or representative action to the extent permitted by applicable law.",
     s12Title: "12. General",
     s12p1:
-      "These Terms, together with our Privacy Policy and any other policies we reference, constitute the entire agreement between you and ActorRise regarding the Service. Our failure to enforce any right or provision does not waive that right or provision. If any provision is held invalid or unenforceable, the remaining provisions remain in effect. We may assign our rights and obligations under these Terms; you may not assign without our prior written consent.",
+      "These Terms, together with our Privacy Policy and any other policies we reference, constitute the entire agreement between you and Ghost Light regarding the Service. Our failure to enforce any right or provision does not waive that right or provision. If any provision is held invalid or unenforceable, the remaining provisions remain in effect. We may assign our rights and obligations under these Terms; you may not assign without our prior written consent.",
     s12p2:
       "We may modify these Terms at any time. We will post the updated Terms on this page and update the \"Last updated\" date. Material changes may be communicated via email or in-product notice where required. Your continued use of the Service after the effective date of changes constitutes acceptance of the revised Terms.",
     s13Title: "13. Contact",
     s13Body: "For questions about these Terms, please contact us via our {link}.",
     s14Title: "14. DMCA Notice",
     s14Body:
-      "If you believe content on ActorRise infringes your copyright, contact us at {email} with: (1) identification of the copyrighted work; (2) identification of the allegedly infringing material and its URL; (3) your contact information; (4) a statement of good faith belief that the use is not authorized by the copyright owner; and (5) your electronic or physical signature. We will investigate and remove infringing content where appropriate.",
+      "If you believe content on Ghost Light infringes your copyright, contact us at {email} with: (1) identification of the copyrighted work; (2) identification of the allegedly infringing material and its URL; (3) your contact information; (4) a statement of good faith belief that the use is not authorized by the copyright owner; and (5) your electronic or physical signature. We will investigate and remove infringing content where appropriate.",
     privacyLink: "Privacy Policy",
   },
 };

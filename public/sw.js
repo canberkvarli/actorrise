@@ -3,7 +3,7 @@
    every cache whose key is not this one, so a new name is the only thing that
    clears what a previous worker stored — and the name had never changed since
    the worker shipped, which meant the purge could never fire. */
-const CACHE_NAME = "actorrise-v2";
+const CACHE_NAME = "actorrise-v3"; // v3: Ghost Light icons (2026-11-16)
 const OFFLINE_URL = "/offline.html";
 
 // App shell assets to precache. Keep this list to things we know exist in /public.

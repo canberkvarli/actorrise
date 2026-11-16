@@ -172,7 +172,7 @@ export default function Settings() {
 
           <Group label="GHOST LIGHT" />
           <Row label={L('Help & legal', 'Yardım ve yasal')} onPress={onHelp} busy={busy === 'restore'} />
-          <Row label={L('What is ActorRise?', 'ActorRise nedir?')} onPress={() => { track('app_about_actorrise', { from: 'settings', visited: false }); setAbout(true); }} />
+          <Row label={L('Ghost Light on the web', 'Webde Ghost Light')} onPress={() => { track('app_about_actorrise', { from: 'settings', visited: false }); setAbout(true); }} />
           <Row label={L('Rate Ghost Light', 'Ghost Light\'ı değerlendir')} onPress={() => { track('app_review_prompted', { from: 'settings' }); void rateGhostLight({ inApp: false }); }} last />
 
           {/* From the maker: a note, and two doors. */}

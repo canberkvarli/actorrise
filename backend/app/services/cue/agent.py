@@ -23,7 +23,7 @@ from app.models.feedback import ResultFeedback
 from app.models.user import User
 from app.services.cue import caps, guard, tools
 from sqlalchemy.orm import Session
-from app.core.brand import BRAND_NAME
+from app.core.brand import BRAND_NAME, SITE_DOMAIN
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +139,7 @@ def _email_handoff(user: User, conv: CueConversation, reason: str, summary: str)
           <p style="font-size:16px; line-height:1.5; margin:0 0 16px;">{html.escape(summary)}</p>
           <p style="color:#666; font-size:13px; margin:0 0 16px;">{html.escape(user.email or "")}</p>
           <div style="font-size:14px; line-height:1.5; border-left:3px solid #CB4B00; padding-left:12px;">{lines}</div>
-          <p style="color:#999; font-size:12px; margin:16px 0 0;">actorrise.com/admin/cue?c={conv.id}</p>
+          <p style="color:#999; font-size:12px; margin:16px 0 0;">{SITE_DOMAIN}/admin/cue?c={conv.id}</p>
         </div>"""
         ResendEmailClient().send_email(
             to="canberk@actorrise.com",

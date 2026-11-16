@@ -35,8 +35,8 @@ export type Plan = 'annual' | 'monthly';
 
 // Same pair the Account screen links to. Kept as literals so nothing here
 // pulls a screen module in.
-export const TERMS_URL = 'https://actorrise.com/terms';
-export const PRIVACY_URL = 'https://actorrise.com/privacy';
+export const TERMS_URL = 'https://ghostlight.actor/terms';
+export const PRIVACY_URL = 'https://ghostlight.actor/privacy';
 
 const FALLBACK_ANNUAL = '$59.99';
 const FALLBACK_MONTHLY = '$9.99';

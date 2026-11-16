@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from app.core.brand import BRAND_NAME, site_url
+from app.core.brand import BRAND_NAME, SITE_DOMAIN, site_url
 
 
 def library_claim(monologue_count: Optional[int] = None) -> str:
@@ -242,8 +242,8 @@ class EmailTemplates:
             "2. The full monologue library, no limit on what you can read",
             "3. Save what you find so it's there next time",
             "",
-            "Start wherever makes sense: actorrise.com/practice to bring in a script, "
-            "or actorrise.com/monologues to go through the library.",
+            f"Start wherever makes sense: {SITE_DOMAIN}/practice to bring in a script, "
+            f"or {SITE_DOMAIN}/monologues to go through the library.",
         ]
         if expires_label:
             lines += [
@@ -259,7 +259,7 @@ class EmailTemplates:
             "",
             "Canberk",
             "Founder | Actor",
-            "actorrise.com",
+            SITE_DOMAIN,
         ]
         return "\n".join(lines)
 
@@ -538,13 +538,13 @@ class EmailTemplates:
             "2. Upload scripts and rehearse scenes with an AI scene partner",
             "3. Build your actor profile page",
             "",
-            "Head to actorrise.com/dashboard and start exploring.",
+            f"Head to {SITE_DOMAIN}/dashboard and start exploring.",
             "",
             "If you have feedback, questions, or ideas, just reply to this email. I read everything.",
             "",
             "Canberk",
             f"Founder, {BRAND_NAME}",
-            "actorrise.com",
+            SITE_DOMAIN,
         ])
 
     # Restored after f1585d85: retiring the founder offer also deleted these
@@ -565,13 +565,13 @@ class EmailTemplates:
         lines += [
             "",
             "Want to practice a scene? Try our sample script or upload your own and start rehearsing with AI Scene Partner.",
-            "Try it: actorrise.com/dashboard",
+            f"Try it: {SITE_DOMAIN}/dashboard",
             "",
             "I'd love your feedback on Scene Partner - just reply to this email. I read everything.",
             "",
             "Canberk",
             f"Founder, {BRAND_NAME}",
-            "actorrise.com",
+            SITE_DOMAIN,
         ]
         return "\n".join(lines)
 

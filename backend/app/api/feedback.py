@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import verify_supabase_token
 from app.models.user import User
+from app.core.brand import SITE_DOMAIN
 
 router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 security_optional = HTTPBearer(auto_error=False)
@@ -117,7 +118,7 @@ def _send_negative_feedback_email(
             <p style="color:#CB4B00; font-weight:600; margin:0 0 12px;">negative feedback · {ctx_label}</p>
             <blockquote style="margin:0 0 16px; padding:12px 16px; border-left:3px solid #CB4B00; background:#faf6f2; font-size:16px; line-height:1.5;">{safe}</blockquote>
             <p style="color:#666; font-size:13px; margin:0;">from {who}</p>
-            <p style="color:#999; font-size:12px; margin:16px 0 0;">see all in admin → actorrise.com/admin/feedback</p>
+            <p style="color:#999; font-size:12px; margin:16px 0 0;">see all in admin → {SITE_DOMAIN}/admin/feedback</p>
         </div>
         """
         client.send_email(

@@ -100,7 +100,7 @@ export const seo: Widen<typeof en> = {
     real1:
       `${BRAND.name} monolog uydurmaz. Yapay zekâ yazıda değil, aramada. Her sonuç bir oyundan, filmden ya da dizi senaryosundan gerçek bir parça, yani prova ettiğin metni seçmeciler de tanır. Bir parça fazla oynanmaya başladığında çok oynananlar filtresi onu işaretler, böylece o gün üç kişinin daha okuduğu monolog yerine taze bir şey getirirsin.`,
     real2:
-      "ActorRise’ı ben bir oyuncu olduğum için yaptım. Doğru monoloğu bulmak, provaya ayırmayı tercih edeceğim saatlerimi yiyordu.",
+      "Ghost Light’ı ben bir oyuncu olduğum için yaptım. Doğru monoloğu bulmak, provaya ayırmayı tercih edeceğim saatlerimi yiyordu.",
     builtTitle: "Oyuncular, öğrenciler ve koçlar için",
     built:
       "İster profesyonel bir seçmeye, ister bir {college} hazırlan, ister bir {teacher} olarak sınıf çalıştır, bulucu hep aynı şekilde çalışır. Parçanı seçtikten sonra onu {scenePartner} ile sesli çalış; diğer replikleri o okur, sen de istediğin zaman çalışırsın. Tarza ve süreye göre seçilmiş {audition} da göz atabilirsin.",
@@ -217,7 +217,7 @@ export const seo: Widen<typeof en> = {
     realTitle: "Yapay zekâ repliği değil, gerçek parçalar",
     real1:
       "Her monolog yayımlanmış bir oyundan ya da lisanslı bir kaynaktan geliyor, hiçbirini bir model uydurmadı. Yapay zekâ aramada, yani prova ettiğin metni seçmeciler de tanır. Parçanı seçtikten sonra onu {scenePartner} ile sesli çalış.",
-    real2: "Ben bir oyuncuyum ve ActorRise’ı arama kısmı bir akşam yerine birkaç dakika sürsün diye yaptım.",
+    real2: "Ben bir oyuncuyum ve Ghost Light’ı arama kısmı bir akşam yerine birkaç dakika sürsün diye yaptım.",
     faq: {
       q1: "İyi bir seçme monoloğu nasıl olur?",
       a1: "Tipine ve role uyan, süre sınırının içinde kalan ve seçmecilerin o gün on kez duymadığı bir parça. Arama ve çok oynananlar filtresi üçünde de yardımcı olur.",
@@ -256,8 +256,8 @@ export const seo: Widen<typeof en> = {
     q1: "Seçme için iyi bir dramatik monolog nasıl olur?",
     a1: "İyi bir dramatik monologda net bir risk, duyguda bir kırılma ve oynayacağın bir şey vardır. Baştan sona sadece hüzünlü olan parçalardan kaçın. Karakterin bir şey istediği ve onu almak için aktif olarak uğraştığı bir monolog ara.",
     q2: "Çok oynanmamış bir dramatik monoloğu nasıl bulurum?",
-    a2: "ActorRise’ta, seçmecilerin durmadan gördüğü monologları işaretleyen bir çok oynananlar filtresi var. İhtiyacın olanı ara, sonra filtreyi aç; tona hâlâ uyan taze parçalar öne çıksın.",
-    q3: "Dramatik monoloğumu ActorRise’ta prova edebilir miyim?",
+    a2: "Ghost Light’ta, seçmecilerin durmadan gördüğü monologları işaretleyen bir çok oynananlar filtresi var. İhtiyacın olanı ara, sonra filtreyi aç; tona hâlâ uyan taze parçalar öne çıksın.",
+    q3: "Dramatik monoloğumu Ghost Light’ta prova edebilir miyim?",
     a3: "Evet. {link} ile sahneleri ve monologları, diğer replikleri yapay zekâ okurken prova edebilirsin. Herhangi bir monoloğu kaydet ve doğrudan uygulamada çalış.",
   },
 
@@ -269,12 +269,12 @@ export const seo: Widen<typeof en> = {
     searchBtn: "Erkekler için monologlarda ara",
     also: "Kategoriye göre göz at: {dramatic}, {shakespeare} ya da {contemporary}.",
     q1: "Erkekler için çok oynanmamış iyi monologlar hangileri?",
-    a1: "ActorRise’taki çok oynananlar filtresi, seçmecilerin durmadan gördüğü parçaları işaretler. İhtiyacın olanı ara, filtreyi aç; seçmenin tonuna hâlâ uyan taze parçalar gelsin.",
+    a1: "Ghost Light’taki çok oynananlar filtresi, seçmecilerin durmadan gördüğü parçaları işaretler. İhtiyacın olanı ara, filtreyi aç; seçmenin tonuna hâlâ uyan taze parçalar gelsin.",
     q2: "Komik mi, dramatik mi monolog yapmalıyım?",
     a2: "Projenin tonuna uy. Seçme bir şey belirtmiyorsa, aralığını hangisi daha iyi gösteriyorsa onu seç. Bazı oyuncular her birinden bir tane hazır tutar. İkisini de arayıp kütüphanene kaydedebilirsin.",
     q3: "Monoloğumu yapay zekâyla çalışabilir miyim?",
     a3: "Evet. {link} ile sahneleri ve monologları, diğer rolleri yapay zekâ okurken baştan sona çalışabilirsin. Sahne partneri aramana gerek yok.",
-    a3Link: "ActorRise’ın prova aracı",
+    a3Link: "Ghost Light’ın prova aracı",
   },
 
   seoWomen: {
@@ -288,7 +288,7 @@ export const seo: Widen<typeof en> = {
     a1: "Oyunun tonuna uy. Bir komedi için seçmeye giriyorsan komik bir parça getir. Rol tanımında belirli bir yaş aralığı ya da tip geçiyorsa onu ara. Çok oynananlar filtresi, seçmecilerin bin kez duyduğu parçalardan uzak durmana yardım eder.",
     q2: "Monologları yaş aralığına göre filtreleyebilir miyim?",
     a2: "Evet. Yaş aralığını aramanda anlat, mesela \"20’lerinde bir kadın için monolog\" ya da \"yaşça büyük kadın, 50’ler, ciddi.\" Yapay zekâ doğal dili anlar, açılır menülerden seçim yapman gerekmez.",
-    q3: "ActorRise’ta monolog prova edebilir miyim?",
+    q3: "Ghost Light’ta monolog prova edebilir miyim?",
     a3: "Evet. Herhangi bir monoloğu kaydet ve {link} ile prova et; diğer replikleri sesli okur, sen de tek başına çalışırsın.",
   },
 
@@ -302,7 +302,7 @@ export const seo: Widen<typeof en> = {
     a1: "Role bağlı. Dram için Hamlet, Macbeth ve Othello’da güçlü seçenekler var. Komedi için Twelfth Night, A Midsummer Night's Dream ya da Much Ado About Nothing’i dene. En iyi seçme monoloğu, seçmesine girdiğin oyunun tonuna uyandır. Tona ve karakter tipine göre filtrelemek için aramayı kullan.",
     q2: "Seçme için bir Shakespeare monoloğu ne kadar uzun olmalı?",
     a2: "Seçmelerin çoğu 1 ila 2 dakika ister. Bu kabaca 15 ila 25 dize eder. İlanda bir şey belirtilmemişse 90 saniyenin altını hedefle. Aramada süreye göre filtreleyebilirsin.",
-    q3: "ActorRise’ta Shakespeare monologlarının tam metni var mı?",
+    q3: "Ghost Light’ta Shakespeare monologlarının tam metni var mı?",
     a3: "Evet. Shakespeare’in eserleri kamu malı, bu yüzden okuyabileceğin, kaydedebileceğin ve {link} ile prova edebileceğin tam monolog metinlerini koyuyoruz. Metinler İngilizce, oyunların orijinal dilinde.",
   },
 
@@ -342,13 +342,13 @@ export const seo: Widen<typeof en> = {
       "Tam metni oku, kaynağa bak ve parçanın bağlamından kopunca da kendi başına durduğundan emin ol. Anlaşılması için bütün oyun gerekiyorsa aramaya devam et.",
     s4Title: "4. Sayfadan kopana kadar prova et",
     s4p:
-      "Parçayı bulmak işin yarısı. O artık seninse, ezberleyip bedenine oturana kadar sesli çalış. ActorRise’ta bir monoloğu bulduğun anda prova edebilirsin: bir spot ışığı sesini satır satır takip eder, böylece odaya girmeden çok önce metni sayfadan koparırsın.",
+      "Parçayı bulmak işin yarısı. O artık seninse, ezberleyip bedenine oturana kadar sesli çalış. Ghost Light’ta bir monoloğu bulduğun anda prova edebilirsin: bir spot ışığı sesini satır satır takip eder, böylece odaya girmeden çok önce metni sayfadan koparırsın.",
     browseTitle: "İhtiyacına göre göz at",
     faq: {
       q1: "Bana uyan bir monoloğu nasıl bulurum?",
       a1: `Seçmenin istediğiyle başla (süre, ton, modern ya da klasik), sonra yaş aralığına ve tipine göre daralt. Bunu düz bir dille anlat ve antolojileri karıştırmak yerine gerçek bir arşivde ara. ${BRAND.name} tonuna, süresine ve tipine uyan parçaları saniyeler içinde sıralar.`,
       q2: "Ücretsiz monologu nerede bulabilirim?",
-      a2: "ActorRise’ta ücretsiz bir katman var ve denemek için kredi kartı gerekmiyor. Yayımlanmış gerçek monologları hemen arayıp okuyabilirsin; ücretli planlar yapay zekâyla sınırsız prova açar.",
+      a2: "Ghost Light’ta ücretsiz bir katman var ve denemek için kredi kartı gerekmiyor. Yayımlanmış gerçek monologları hemen arayıp okuyabilirsin; ücretli planlar yapay zekâyla sınırsız prova açar.",
       q3: "Bir seçme monoloğu ne kadar uzun olmalı?",
       a3: "İlanda aksi yazmıyorsa seçmelerin çoğu 60 saniye ile 2 dakika arası ister. Süreni her zaman sesli okuyarak tut ve kısaltmanı isterlerse diye daha kısa bir versiyonu hazır tut.",
       q4: "Çok oynanmış bir monologdan nasıl kaçınırım?",
@@ -375,7 +375,7 @@ export const seo: Widen<typeof en> = {
     b3: "{strong}: çok oynananlar filtresi, tipine uygun eşleştirme ve seçme metni çalışma; odaya hazır girersin.",
     learnSp: "ScenePartner’ı tanı",
     looking: "Malzeme mi arıyorsun? {finder} aracını dene, {audition} sayfasına göz at ya da {women} ve {men} sayfalarını keşfet.",
-    q1: "ActorRise’ı kullanmak ücretsiz mi?",
+    q1: "Ghost Light’ı kullanmak ücretsiz mi?",
     a1: "Evet. Ücretsiz katman monolog aramasına ve sınırlı ScenePartner seanslarına erişim verir. Kredi kartı gerekmez. Ücretli planların ayrıntıları için {pricing} bak.",
     q2: "Bir arkadaşla prova etmekten farkı ne?",
     a2: "İhtiyacın olduğu her an orada. Randevu yok, rica minnet yok. ScenePartner replikleri her seferinde aynı tutarlılıkla okur; ezber çalışmak ve seçimlerini gerçek bir sahne partnerine götürmeden önce denemek için birebir.",
@@ -408,7 +408,7 @@ export const seo: Widen<typeof en> = {
     mode1:
       "Belirli bir seçmeye hazırlanırken Audition Mode seçenekleri tipine ve role göre daraltır, çok oynananlar filtresi de seçmecilerin durmadan duyduğu parçaları işaretler; sen de onların duymadığı bir şey getirirsin.",
     mode2:
-      "ActorRise’ı ben bir oyuncu olduğum için yaptım. İşi benim yerime yapmaya çalışan değil, zanaate saygı duyan hazırlık araçları istedim.",
+      "Ghost Light’ı ben bir oyuncu olduğum için yaptım. İşi benim yerime yapmaya çalışan değil, zanaate saygı duyan hazırlık araçları istedim.",
     faq: {
       q1: `${BRAND.name} monologları yapay zekâyla mı yazıyor?`,
       a1: "Hayır. Yapay zekâ yazıda değil, aramada ve provada. Her monolog yayımlanmış gerçek bir parça, yani getirdiğin şeyi seçmeciler tanıyabilir.",
@@ -473,11 +473,11 @@ export const seo: Widen<typeof en> = {
     rehearseThisFree: "Bunu ücretsiz prova et",
     findMore: "Daha fazla monolog bul",
     copyrightFilm:
-      "Bu parça telif hakkı süren bir filmden, bu yüzden tam metni burada yayımlanmıyor. Repliklerin kendi kopyasını getirip ActorRise’ta prova edebilirsin.",
+      "Bu parça telif hakkı süren bir filmden, bu yüzden tam metni burada yayımlanmıyor. Repliklerin kendi kopyasını getirip Ghost Light’ta prova edebilirsin.",
     copyrightTv:
-      "Bu parça telif hakkı süren bir diziden, bu yüzden tam metni burada yayımlanmıyor. Repliklerin kendi kopyasını getirip ActorRise’ta prova edebilirsin.",
+      "Bu parça telif hakkı süren bir diziden, bu yüzden tam metni burada yayımlanmıyor. Repliklerin kendi kopyasını getirip Ghost Light’ta prova edebilirsin.",
     copyrightWork:
-      "Bu parça telif hakkı süren bir eserden, bu yüzden tam metni burada yayımlanmıyor. Repliklerin kendi kopyasını getirip ActorRise’ta prova edebilirsin.",
+      "Bu parça telif hakkı süren bir eserden, bu yüzden tam metni burada yayımlanmıyor. Repliklerin kendi kopyasını getirip Ghost Light’ta prova edebilirsin.",
     about: "Bu parça hakkında",
     ageUp: "{age} ve üzeri",
     lenMin: "{mm}:{ss} dk",
@@ -611,7 +611,7 @@ export const seo: Widen<typeof en> = {
       title: "Kadın için 2 dakikadan kısa {em} monolog",
       titleEm: "komik",
       lede:
-        "En sık gördüğümüz aramalardan biri. ActorRise’ta kadınlar için binlerce komik monolog var ve süreye, tona ve tarza göre filtreleyebilirsin. Ya da sadece neye ihtiyacın olduğunu düz bir dille anlat.",
+        "En sık gördüğümüz aramalardan biri. Ghost Light’ta kadınlar için binlerce komik monolog var ve süreye, tona ve tarza göre filtreleyebilirsin. Ya da sadece neye ihtiyacın olduğunu düz bir dille anlat.",
     },
     dramaticContemporary: {
       title: "{em} bir oyundan dramatik monolog",

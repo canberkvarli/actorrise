@@ -91,7 +91,7 @@ export const appSearch: Widen<typeof en> = {
     sceneDescription: "Sahne açıklaması",
     monologue: "Monolog",
     stageDirections: "Sahne direktifleri",
-    downloadedFrom: "ActorRise'tan indirildi",
+    downloadedFrom: "Ghost Light'tan indirildi",
   },
   appSearchFilterLabels: {
     gender: "Cinsiyet",

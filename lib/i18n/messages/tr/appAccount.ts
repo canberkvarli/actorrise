@@ -232,7 +232,7 @@ export const appAccount: Widen<typeof en> = {
     thisWill: "Bu işlem:",
     will1: "Tüm metinlerini, sahnelerini ve kayıtlarını kalıcı olarak siler",
     will2: "Aboneliğini hemen iptal eder (iade yok)",
-    will3: "ActorRise’ın tüm özelliklerine erişimini hemen kaldırır",
+    will3: "Ghost Light’ın tüm özelliklerine erişimini hemen kaldırır",
     will4: "Geri alınamaz",
     confirmSubscription:
       "Aboneliğimin hemen iptal edileceğini ve erişimimi kaybedeceğimi anlıyorum",

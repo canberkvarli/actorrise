@@ -97,7 +97,7 @@ class CheckoutAbandoned(Fixture):
     def test_the_link_goes_back_to_the_checkout_and_is_counted(self):
         self._event(self._user("due@x.com"), "checkout_started", 3)
         (person,) = triggered.select_candidates(self.db, "checkout_abandoned", now=NOW)
-        self.assertEqual(person["link"], "https://actorrise.com/trial?e=checkout_abandoned")
+        self.assertEqual(person["link"], "https://ghostlight.actor/trial?e=checkout_abandoned")
         self.assertEqual(person["span"], "a week")
 
 

@@ -9,14 +9,14 @@ import { track } from '../lib/analytics';
 import { useTheme } from '../theme/ThemeContext';
 import { monologueRoomsShown, useL, useLocale } from '../i18n';
 
-const SITE = 'https://actorrise.com';
+const SITE = 'https://ghostlight.actor';
 
 /**
- * "What is ActorRise?", behind a question rather than on the page. The name
- * turns up on the sign-in sheet and in Account, and someone who found Ghost
- * Light in the App Store has no reason to know it: this says what it is, what
- * is there, and that the account is one account. The wordmark is the site's
- * own, in the colour the scheme asks for.
+ * "Ghost Light on the web", behind a question rather than on the page. Until
+ * 2026-11-16 the site was ActorRise, a second name this sheet had to explain;
+ * now it is one product, so it says what the bigger screen adds and that the
+ * account is one account. File and event names (app_about_actorrise) stay so
+ * the analytics read across the change.
  */
 export function AboutActorRiseSheet({
   open,
@@ -54,15 +54,15 @@ export function AboutActorRiseSheet({
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <StageDirection>{L('(what is actorrise.)', '(actorrise nedir.)')}</StageDirection>
+            <StageDirection>{L('(on the web.)', '(webde.)')}</StageDirection>
             <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel={L('Close', 'Kapat')}>
               <Ionicons name="close" size={22} color={c.mutedForeground} />
             </Pressable>
           </View>
 
           <Image
-            source={c.isLight ? require('../../assets/actorrise-wordmark-dark.png') : require('../../assets/actorrise-wordmark-light.png')}
-            accessibilityLabel="ActorRise"
+            source={c.isLight ? require('../../assets/ghostlight-wordmark-dark.png') : require('../../assets/ghostlight-wordmark-light.png')}
+            accessibilityLabel="Ghost Light"
             resizeMode="contain"
             style={{ marginTop: 10, marginLeft: -14, width: 220, height: 66 }}
           />
@@ -77,9 +77,9 @@ export function AboutActorRiseSheet({
               color: c.foreground,
             }}
           >
-            {L("The actor's site.", 'Oyuncunun sitesi.')}{' '}
+            {L('The same stage.', 'Aynı sahne.')}{' '}
             <Text style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', color: c.accentText }}>
-              {L('Ghost Light is its phone.', 'Ghost Light da telefonu.')}
+              {L('On a bigger screen.', 'Daha büyük bir ekranda.')}
             </Text>
           </Text>
 
@@ -108,7 +108,7 @@ export function AboutActorRiseSheet({
           </Text>
 
           <View style={{ marginTop: 18 }}>
-            <PrimaryPill label={L('Visit actorrise.com', "actorrise.com'a git")} onPress={visit} height={50} block haptic="medium" />
+            <PrimaryPill label={L('Open ghostlight.actor', "ghostlight.actor'e git")} onPress={visit} height={50} block haptic="medium" />
           </View>
         </Animated.View>
       </Animated.View>

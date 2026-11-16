@@ -184,7 +184,7 @@ export default function Auth() {
             </Text>
           )}
           <StageDirection numberOfLines={2} style={{ marginTop: 8 }}>
-            {emailOnly ? L('(an actorrise account works here too: same address, same password.)', '(actorrise hesabın burada da çalışır: aynı adres, aynı şifre.)') : L('(sign in to save. nothing you did is lost.)', '(kaydetmek için giriş yap. yaptığın hiçbir şey kaybolmaz.)')}
+            {emailOnly ? L('(an account from the website works here too: same address, same password.)', '(web sitesindeki hesabın burada da çalışır: aynı adres, aynı şifre.)') : L('(sign in to save. nothing you did is lost.)', '(kaydetmek için giriş yap. yaptığın hiçbir şey kaybolmaz.)')}
           </StageDirection>
 
           {/* The two slabs. Apple's is the one its guidelines require to be the prominent one. */}
@@ -262,7 +262,7 @@ export default function Auth() {
           {creating ? (
             <StageDirection style={{ marginTop: 14, textAlign: 'right' }}>{L('(this address, that password. your saves come with you.)', '(bu adres, o şifre. kaydettiklerin seninle gelir.)')}</StageDirection>
           ) : !emailOnly ? (
-            <StageDirection numberOfLines={2} style={{ marginTop: 14 }}>{L('(have an actorrise account? the same email and password work here.)', '(actorrise hesabın var mı? aynı e-posta ve şifre burada da çalışır.)')}</StageDirection>
+            <StageDirection numberOfLines={2} style={{ marginTop: 14 }}>{L('(signed up on the website? the same email and password work here.)', '(web sitesinden mi kaydoldun? aynı e-posta ve şifre burada da çalışır.)')}</StageDirection>
           ) : null}
 
           {error ? (
@@ -276,16 +276,16 @@ export default function Auth() {
             </Animated.Text>
           ) : null}
 
-          {/* The name above means nothing to someone who found the app on its own. */}
+          {/* The website is the same product on a bigger screen; this says so. */}
           <Pressable
             onPress={() => { track('app_about_actorrise', { from: 'auth', visited: false }); setAbout(true); }}
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel={L('What is ActorRise?', 'ActorRise nedir?')}
+            accessibilityLabel={L('Ghost Light on the web', 'Webde Ghost Light')}
             style={{ marginTop: 'auto', paddingTop: 28, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6 }}
           >
             <Ionicons name="help-circle-outline" size={15} color={c.mutedForeground} />
-            <StageDirection>{L('(what is actorrise?)', '(actorrise nedir?)')}</StageDirection>
+            <StageDirection>{L('(ghost light on the web.)', '(webde ghost light.)')}</StageDirection>
           </Pressable>
         </ScrollView>
       </SafeAreaView>

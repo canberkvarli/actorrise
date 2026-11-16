@@ -28,6 +28,7 @@ from app.models.billing import PricingTier, UserSubscription
 from app.models.class_link import ClassLink, ClassLinkInvite, ClassLinkJoin
 from app.models.user import User
 from app.services.email.school_address import is_district_address
+from app.core.brand import SITE_DOMAIN
 
 ADMIN_EMAIL = "canberk@actorrise.com"
 logger = logging.getLogger(__name__)
@@ -353,7 +354,7 @@ def _tell_founder_full(link: ClassLink) -> None:
             to=ADMIN_EMAIL,
             subject=f"Class link full: {link.code} is turning students away",
             html=(
-                f"<p>actorrise.com/join/{link.code} has given out all {link.max_uses} of its grants, and a student"
+                f"<p>{SITE_DOMAIN}/join/{link.code} has given out all {link.max_uses} of its grants, and a student"
                 " just joined and got nothing. Everyone after them will too.</p>"
                 f"<p>Raise the cap: <code>UPDATE class_links SET max_uses = {link.max_uses * 2} WHERE code ="
                 f" '{link.code}';</code> then grant the students marked full (the 2026-10-27 Gilroy fix is the"
@@ -377,7 +378,7 @@ def _tell_founder(link: ClassLink, user: User) -> None:
             to=ADMIN_EMAIL,
             subject=f"A teacher made a class link: {link.code}",
             html=(
-                f"<p>{user.email} (user {user.id}) made actorrise.com/join/{link.code}"
+                f"<p>{user.email} (user {user.id}) made {SITE_DOMAIN}/join/{link.code}"
                 f" for {link.school_label or 'no school given'}.</p><p>{state}</p>"
                 f"<p>Up to {link.max_uses} students, {link.days} days each. Switch it off with"
                 f" <code>class_link.py off {link.code}</code>.</p>"

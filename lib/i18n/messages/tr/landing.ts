@@ -120,11 +120,11 @@ export const landing: Widen<typeof en> = {
     videoDirection: "(doksan saniye. nasıl çalıştığını izle.)",
     videoTitle: `Doksan saniyede ${BRAND.name}`,
     videoPlay: "Doksan saniyelik tanıtımı oynat",
-    founderAlt: "Canberk Varli, ActorRise’ın kurucusu",
+    founderAlt: "Canberk Varli, Ghost Light’ın kurucusu",
     founderTag: "(kurucu. o da bir oyuncu.)",
     noteDirection: "(perde arkasından.)",
     noteA:
-      "Ben de oyuncuyum. ActorRise’ı, seçmelerden önceki akşamlarımı parça çalışarak değil parça arayarak geçirdiğim için yaptım. Şimdi açıyorum, aradığımı bir arkadaşıma anlatır gibi yazıyorum, bir dakika sonra provadayım. ",
+      "Ben de oyuncuyum. Ghost Light’ı, seçmelerden önceki akşamlarımı parça çalışarak değil parça arayarak geçirdiğim için yaptım. Şimdi açıyorum, aradığımı bir arkadaşıma anlatır gibi yazıyorum, bir dakika sonra provadayım. ",
     noteB: "Mesele bu kadar.",
     founderRole: `· kurucu, ${BRAND.name}`,
     talk: "(konuşmak istersen beni her yerde bulabilirsin. cevap veririm.)",

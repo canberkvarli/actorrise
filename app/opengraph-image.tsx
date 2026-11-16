@@ -5,14 +5,15 @@ export const alt = `${BRAND.name} - Find the monologue. In seconds.`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Logo: use your deployed origin so the OG generator can fetch it. Ensure public/logo.png exists.
+// Logo: the Ghost Light lamp, fetched from the deployed origin. (It pointed at a
+// public/logo.png that never existed, so every preview drew a broken image.)
 const siteUrl = SITE_URL;
-const logoUrl = `${siteUrl}/logo.png`;
+const logoUrl = `${siteUrl}/transparent_logo.png`;
 
 // Optional: drop a pre-made 1200×630 image at public/og-image.png and we can serve that instead.
 // Primary (landing hero keyword): oklch(0.58 0.18 45) ≈ #e07a0d
 const primary = "#e07a0d";
-const background = "#171717";
+const background = "#130b08"; // the app's stage black, never flat black
 const cardBg = "rgba(38, 38, 38, 0.6)";
 const border = "rgba(255,255,255,0.08)";
 const muted = "#a1a1aa";

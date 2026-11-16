@@ -91,7 +91,7 @@ export const appShell: Widen<typeof en> = {
   appShellClass: {
     title: "Sınıfın",
     notTeacher:
-      "Bu sayfa öğretmen hesapları için. Ders veriyorsan ve sınıfının ActorRise'da olmasını istiyorsan canberk@actorrise.com adresine yaz, seni ben kurarım.",
+      "Bu sayfa öğretmen hesapları için. Ders veriyorsan ve sınıfının Ghost Light'ta olmasını istiyorsan canberk@actorrise.com adresine yaz, seni ben kurarım.",
     failed: "Yüklenmedi. Sayfayı yenile ya da canberk@actorrise.com adresine yaz, bakayım.",
     emptyBefore: "Bağlantından henüz kimse katılmadı. Bağlantın ",
     emptyLink: "kütüphanede",
@@ -154,8 +154,8 @@ export const appShell: Widen<typeof en> = {
     agoM: "{n} dk önce",
     agoH: "{n} sa önce",
     agoD: "{n} gün önce",
-    lineJoined: "ActorRise'a katıldı",
-    lineJoinedFrom: "ActorRise'a katıldı ({city})",
+    lineJoined: "Ghost Light'a katıldı",
+    lineJoinedFrom: "Ghost Light'a katıldı ({city})",
     lineSearching: "{who}{piece} arıyor",
     linePiece: "bir monolog",
     linePieceTone: "{tone} bir monolog",

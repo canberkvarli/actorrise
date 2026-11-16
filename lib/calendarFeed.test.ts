@@ -28,8 +28,8 @@ describe("feed urls", () => {
     const u = new URL(subscribeUrl("outlook", FEED));
     expect(u.origin + u.pathname).toBe("https://outlook.live.com/calendar/0/addfromweb");
     expect(u.searchParams.get("url")).toBe(FEED);
-    expect(u.searchParams.get("name")).toBe("ActorRise auditions");
-    expect(subscribeUrl("outlook", FEED)).toContain("&name=ActorRise%20auditions");
+    expect(u.searchParams.get("name")).toBe("Ghost Light auditions");
+    expect(subscribeUrl("outlook", FEED)).toContain("&name=Ghost%20Light%20auditions");
   });
 });
 

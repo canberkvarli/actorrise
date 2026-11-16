@@ -108,7 +108,7 @@ class SelectTests(unittest.TestCase):
         with mock.patch.object(lifecycle, "_search_anchor", lambda db, uid: lifecycle.search_anchor_from_query("hamlet")):
             (p,) = lifecycle.select_candidates(self.db, "day3")
             self.assertEqual(p["anchor"], "search")
-            self.assertEqual(p["link"], "https://actorrise.com/monologues?q=hamlet")
+            self.assertEqual(p["link"], "https://ghostlight.actor/monologues?q=hamlet")
         (p,) = lifecycle.select_candidates(self.db, "day3")
         self.assertEqual(p["anchor"], "none")
         self.assertEqual(p["user_id"], u.id)
@@ -162,14 +162,14 @@ class SelectTests(unittest.TestCase):
         self.assertEqual(len(sent), 1)
         self.assertEqual(sent[0]["to"], "r@x.com")
         self.assertEqual(sent[0]["subject"], "try one search")
-        self.assertIn("actorrise.com/monologues", sent[0]["plain_text"])
+        self.assertIn("ghostlight.actor/monologues", sent[0]["plain_text"])
 
 
 class SearchAnchorTests(unittest.TestCase):
     def test_normalises_and_truncates(self):
         a = lifecycle.search_anchor_from_query("  angry   \n monologue  ")
         self.assertEqual(a["query"], "angry monologue")
-        self.assertEqual(a["link"], "https://actorrise.com/monologues?q=angry%20monologue")
+        self.assertEqual(a["link"], "https://ghostlight.actor/monologues?q=angry%20monologue")
         self.assertIsNone(lifecycle.search_anchor_from_query("hi"))
         self.assertIsNone(lifecycle.search_anchor_from_query(None))
         self.assertEqual(len(lifecycle.search_anchor_from_query("x" * 500)["query"]), lifecycle.MAX_QUERY_LEN)

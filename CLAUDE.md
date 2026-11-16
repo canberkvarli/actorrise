@@ -99,9 +99,9 @@ moved into this repo with its history (`git subtree`) at **`apps/mobile/`**; the
 - Both apps share one backend, one Supabase project and one `user_subscriptions` table.
 - **The name and site live in one place:** `lib/brand.ts` (`BRAND.name`, `BRAND.domain`,
   `SITE_URL`) and `backend/app/core/brand.py` (`BRAND_NAME`, `site_url()`); email templates say
-  `{{ brand }}`, Cue's prompt files `{brand}`. New copy never types "ActorRise" or the domain.
-  Typed by hand on purpose: the legal pages (`content.ts`), testimonials, and Turkish strings
-  with a suffix (`ActorRise’ta`, `’ı`, `’ın`, `’a`, `’tan`: Ghost Light takes different ones).
+  `{{ brand }}`, Cue's prompt files `{brand}`. New copy never types the name or the domain.
+  Typed by hand on purpose: the legal pages (`content.ts`), testimonials (real words), and
+  Turkish strings with a suffix (Ghost Light’ta, ’ı, ’ın, ’a, ’tan, ’taki: never ’da/’dan).
   Never brand: `api.actorrise.com`, the `X-ActorRise-Locale` header, storage keys, bot names.
 - **One tier, Plus (2026-11-16).** An App Store purchase grants Plus, the same Plus as Stripe
   (`RC_GRANT_TIER` in `api/webhooks.py`), so paying in either place unlocks both. The old app
@@ -323,7 +323,7 @@ actorrise.com/join/<code> is on the student month by themselves, no addresses
 to collect. A teacher who already has comped Plus gets their link in the
 follow-up or check-in. The FIRST email to a teacher still carries no link: it
 offers Plus and asks for a reply. The Gmail connector wraps URLs, so the link is
-written out and highlighted instead, `<span style="background-color:#fff2a8;font-weight:bold;padding:2px 4px">actorrise<span>.</span>com/join/<code></span>` (Canberk, 2026-10-25: he does not want to
+written out and highlighted instead, `<span style="background-color:#fff2a8;font-weight:bold;padding:2px 4px">ghostlight<span>.</span>actor/join/<code></span>` (Canberk, 2026-10-25: he does not want to
 paste them by hand). It reads as text, not a link. `class_link.py list` shows who joined.
 Ticking "student" at signup gives nobody anything, on purpose.
 
@@ -345,7 +345,7 @@ setting the fields by hand.
 ## Brand
 
 - Primary `#CB4B00`, hover `#B03000`
-- Domain: actorrise.com
+- Domain: ghostlight.actor (actorrise.com 301-redirects there; email is still @actorrise.com)
 - IG: @canberk.varli | X: @canberkvarli | Email: canberk@actorrise.com
 
 ## Never autonomously

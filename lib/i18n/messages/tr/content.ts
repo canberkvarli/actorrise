@@ -203,7 +203,7 @@ export const content: Widen<typeof en> = {
       h1: "{em} monologları, karaktere göre",
       direction: "(east highland.)",
       intro:
-        "Rue'nun onu, Jules'un sekizi, Ali'nin on biri ve yanlarında Maddy, Cal, Nate ve Leslie. Euphoria, ActorRise'da en çok aranan dizilerden biri ve insanların geldiği konuşmalar bunlar, karaktere göre listelendi. Metin telifli; bu yüzden her kayıt parçayı adlandırıyor, gerisini arama açıyor.",
+        "Rue'nun onu, Jules'un sekizi, Ali'nin on biri ve yanlarında Maddy, Cal, Nate ve Leslie. Euphoria, Ghost Light'ta en çok aranan dizilerden biri ve insanların geldiği konuşmalar bunlar, karaktere göre listelendi. Metin telifli; bu yüzden her kayıt parçayı adlandırıyor, gerisini arama açıyor.",
     },
     "yellowjackets-monologues": {
       title: "Yellowjackets monologları: Shauna, Misty, Natalie ve Jackie",
@@ -316,7 +316,7 @@ export const content: Widen<typeof en> = {
       em: "Midnight Mass",
       h1: "{em} monologları, karaktere göre",
       direction: "(crockett adası.)",
-      intro: `Diziden elli yedi konuşma; ActorRise'daki diziler arasında en çok konuşma bunda. Father Paul'ün on altısı, Bev'in on ikisi, Erin'in on biri ve Riley'nin dokuzu, yanlarında Leeza ve Mildred ile. ${COPYRIGHT_TAIL}`,
+      intro: `Diziden elli yedi konuşma; Ghost Light'taki diziler arasında en çok konuşma bunda. Father Paul'ün on altısı, Bev'in on ikisi, Erin'in on biri ve Riley'nin dokuzu, yanlarında Leeza ve Mildred ile. ${COPYRIGHT_TAIL}`,
     },
     "breaking-bad-monologues": {
       title: "Breaking Bad monologları: Jesse, Walt, Saul ve Skyler",
@@ -501,7 +501,7 @@ export const content: Widen<typeof en> = {
       "Taze olmak, sırf olsun diye bilinmedik olmak değildir. Sana uyan ve seçmecilerin seni gerçekten görmesini sağlayan bir şeyle odaya girmektir. İşe yarayan birkaç şey:",
     tip1Title: "Çok oynananlar filtresini kullan.",
     tip1Body:
-      "ActorRise sürekli kullanılan parçaları işaretler, böylece onları bilerek atlayabilirsin. {link} ile başla.",
+      "Ghost Light sürekli kullanılan parçaları işaretler, böylece onları bilerek atlayabilirsin. {link} ile başla.",
     tip1Link: "Monolog bulucu",
     tip2Title: "Ünlü olana değil, sana uyana göre ara.",
     tip2Body:
@@ -520,7 +520,7 @@ export const content: Widen<typeof en> = {
     title: "{em} için rehberler ve eğitimler.",
     titleEm: "Oyuncular",
     lede:
-      "ActorRise'dan en iyi şekilde yararlanmak üzerine kısa videolar: doğru monoloğu bulmaktan ScenePartner ile prova etmeye kadar. Yenileri yolda.",
+      "Ghost Light'tan en iyi şekilde yararlanmak üzerine kısa videolar: doğru monoloğu bulmaktan ScenePartner ile prova etmeye kadar. Yenileri yolda.",
     tryIt: "Kendin denemeye hazır mısın? {finder} ile başla ya da {partner} ile prova et.",
     finderLink: "monolog bulucu",
     play: "{title} videosunu oynat",
@@ -537,10 +537,10 @@ export const content: Widen<typeof en> = {
   contentPrivacy: {
     direction: "(küçük harflerle yazılanlar.)",
     title: "Gizlilik Politikası",
-    updated: "Son güncelleme: 29 Ekim 2026",
+    updated: "Son güncelleme: 16 Kasım 2026",
     s1Title: "1. Giriş",
     s1Body:
-      "ActorRise (“biz” veya “bizim”), actorrise.com adresindeki web sitesini ve platformu ve iOS için Ghost Light: Monologues dahil mobil uygulamalarımızı (birlikte “Hizmet”) işletir. Bu Gizlilik Politikası, Hizmetimizi kullandığında bilgilerini nasıl topladığımızı, kullandığımızı, paylaştığımızı ve koruduğumuzu açıklar. Hizmete erişerek veya Hizmeti kullanarak bu Gizlilik Politikasını kabul etmiş olursun. Kabul etmiyorsan lütfen Hizmeti kullanma.",
+      "Ghost Light (“biz” veya “bizim”), ghostlight.actor adresindeki web sitesini ve platformu ve iOS için Ghost Light: Monologues dahil mobil uygulamalarımızı (birlikte “Hizmet”) işletir. Bu Gizlilik Politikası, Hizmetimizi kullandığında bilgilerini nasıl topladığımızı, kullandığımızı, paylaştığımızı ve koruduğumuzu açıklar. Hizmete erişerek veya Hizmeti kullanarak bu Gizlilik Politikasını kabul etmiş olursun. Kabul etmiyorsan lütfen Hizmeti kullanma.",
     s2Title: "2. Topladığımız Bilgiler",
     s2Intro: "Doğrudan bize verdiğin bilgileri ve otomatik olarak edindiğimiz bilgileri toplarız:",
     s2AccountLabel: "Hesap bilgileri:",
@@ -585,7 +585,7 @@ export const content: Widen<typeof en> = {
       "Google veya Apple ile giriş yaparsan bu sağlayıcılar, kendi politikaları doğrultusunda paylaşılmasına onay verdiğin bilgileri (ör. e-posta, ad) bizimle paylaşır.",
     s5WebPayLabel: "Web üzerinden ödemeler:",
     s5WebPay:
-      "actorrise.com üzerinden alınan abonelikler için Stripe veya başka bir ödeme işlemcisi. Ödeme verilerini onlar işler; ödeme kartının tam bilgilerini saklamayız.",
+      "ghostlight.actor üzerinden alınan abonelikler için Stripe veya başka bir ödeme işlemcisi. Ödeme verilerini onlar işler; ödeme kartının tam bilgilerini saklamayız.",
     s5IosPayLabel: "iOS uygulamamızdaki ödemeler:",
     s5IosPay:
       "Ghost Light: Monologues içinden alınan abonelikler, Apple tarafından uygulama içi satın alma yoluyla işlenir. Apple ödeme bilgilerini bizimle paylaşmaz. Hangi aboneliğe sahip olduğunu kaydetmek ve bunu cihazların arasında eşit tutmak için RevenueCat kullanırız; RevenueCat, hesabın için takma adlı bir tanımlayıcıyı, satın alma ve makbuz geçmişini, temel cihaz ve uygulama sürümü verilerini alır. Kart numaran hiçbir zaman bize ulaşmaz.",
@@ -597,7 +597,7 @@ export const content: Widen<typeof en> = {
       "Cue'ya yazdıkların, Cue'nun yanıtını yazması için Anthropic'e gönderilir; bu, o içerikle model eğitilmesine izin vermeyen API koşulları altında olur. Cue ile yaptığın konuşmalar hesabında saklanır ve Cue bir soruyu Canberk'e ilettiğinde Canberk bu konuşmaları okur. Bize e-postayla yazmayacağın hiçbir şeyi Cue'ya yazma.",
     s5WebAnalyticsLabel: "Web sitesi analizi:",
     s5WebAnalytics:
-      "actorrise.com, ziyaretleri, görüntülenen sayfaları ve hangi özelliklerin kullanıldığını takma adlı bir tanımlayıcıyla saymak için Google Analytics kullanır. Google Analytics e-posta adresini veya aradığın kelimeleri almaz.",
+      "ghostlight.actor, ziyaretleri, görüntülenen sayfaları ve hangi özelliklerin kullanıldığını takma adlı bir tanımlayıcıyla saymak için Google Analytics kullanır. Google Analytics e-posta adresini veya aradığın kelimeleri almaz.",
     s5AppAnalyticsLabel: "iOS uygulamamızda ürün analizi:",
     s5AppAnalyticsA:
       "Ghost Light: Monologues, uygulamanın hangi bölümlerinin işe yaradığını ve insanların nerede takıldığını görebilmemiz için PostHog kullanır. PostHog, ne olduğunu anlatan olayları (bir arama yapıldığını, bir monoloğun açıldığını, abonelik ekranının göründüğünü) takma adlı bir tanımlayıcı, cihaz türün ve uygulama sürümüyle birlikte alır.",
@@ -606,7 +606,7 @@ export const content: Widen<typeof en> = {
       "Giriş yaparsan bu olaylar hesap tanımlayıcınla ilişkilendirilir, e-posta adresinle asla ilişkilendirilmez.",
     s5FeedLabel: "Topluluk akışı (Duyuru Panosu).",
     s5Feed:
-      "ActorRise, giriş yapmış diğer kullanıcıların görebildiği bir topluluk etkinlik akışı içerir. Bu akışta adın, şehrin ve profil fotoğrafın; katılma, belirli bir monoloğu okuma, kaydetme veya prova etme gibi etkinliklerle birlikte görünebilir. Aramalarının metni asla görünmez: ham arama sorguları akışta hiç saklanmaz ve bir arama yalnızca genel bir açıklama olarak görünür (örneğin “komik bir monolog aradı”). Bunu istediğin zaman Duyuru Panosu'ndaki “Etkinliğimi gizle” seçeneğiyle kapatabilirsin; bu yalnızca gelecekteki değil, geçmişteki etkinliğini de gizler. Akışın oturum açmamış ziyaretçilere gösterilen önizlemesinde yalnızca adının baş harfi görünür, fotoğraf görünmez.",
+      "Ghost Light, giriş yapmış diğer kullanıcıların görebildiği bir topluluk etkinlik akışı içerir. Bu akışta adın, şehrin ve profil fotoğrafın; katılma, belirli bir monoloğu okuma, kaydetme veya prova etme gibi etkinliklerle birlikte görünebilir. Aramalarının metni asla görünmez: ham arama sorguları akışta hiç saklanmaz ve bir arama yalnızca genel bir açıklama olarak görünür (örneğin “komik bir monolog aradı”). Bunu istediğin zaman Duyuru Panosu'ndaki “Etkinliğimi gizle” seçeneğiyle kapatabilirsin; bu yalnızca gelecekteki değil, geçmişteki etkinliğini de gizler. Akışın oturum açmamış ziyaretçilere gösterilen önizlemesinde yalnızca adının baş harfi görünür, fotoğraf görünmez.",
     s5NoSell:
       "Kişisel bilgilerini satmayız. Kanunen gerekli olduğunda, haklarımızı veya güvenliğimizi korumak için ya da bir birleşme, satış veya varlık devri kapsamında (gerektiğinde bildirimde bulunarak) bilgilerini açıklayabiliriz.",
     s6Title: "6. Ses, Video ve Senaryo İçeriği",
@@ -614,7 +614,7 @@ export const content: Widen<typeof en> = {
       "Bazı özellikler, kaydettiğin veya yüklediğin şeyi yapay zekâ sağlayıcımıza göndererek çalışır. Bu bölüm cihazından tam olarak neyin çıktığını, nereye gittiğini ve neyin saklandığını açıklar. Bu özellikleri hiç kullanmazsan bunların hiçbiri seni ilgilendirmez.",
     s6VoiceLabel: "Prova sırasında sesin.",
     s6Voice:
-      "Bir sahneyi veya monoloğu prova edip repliklerini söylediğinde, tarayıcın veya uygulama kısa ses kayıtları alır ve bunlar metne dönüştürülmek üzere transkripsiyon sağlayıcımıza (OpenAI Whisper) gönderilir; böylece sahne partneri bir repliği ne zaman bitirdiğini bilir. Metin geri gelir gelmez ses dosyası silinir. Kayıtlarını saklamayız, veritabanımızda tutmayız ve ActorRise'da kimse onları dinlemez.",
+      "Bir sahneyi veya monoloğu prova edip repliklerini söylediğinde, tarayıcın veya uygulama kısa ses kayıtları alır ve bunlar metne dönüştürülmek üzere transkripsiyon sağlayıcımıza (OpenAI Whisper) gönderilir; böylece sahne partneri bir repliği ne zaman bitirdiğini bilir. Metin geri gelir gelmez ses dosyası silinir. Kayıtlarını saklamayız, veritabanımızda tutmayız ve Ghost Light'ta kimse onları dinlemez.",
     s6PartnerLabel: "Sahne partnerinin sesi.",
     s6Partner:
       "Diğer karakterin replikleri, sağlayıcımızın senaryo metninden ürettiği sentetik bir sesle okunur. Bu, bir insanın kaydı değil, üretilmiş bir sestir.",
@@ -655,9 +655,9 @@ export const content: Widen<typeof en> = {
       "Verilerini yetkisiz erişime, kayba veya değiştirilmeye karşı korumak için teknik ve idari tedbirler uygularız. Hiçbir iletim veya depolama yöntemi %100 güvenli değildir; mutlak güvenliği garanti edemeyiz ve bu açıdan Hizmeti kullanmanın riski sana aittir.",
     s11Title: "11. Yaş",
     s11Body:
-      "ActorRise 13 yaş ve üzerindeki kişiler içindir. 13 ile 17 yaş arasındaki öğrenciler ActorRise'ı okulları veya oyunculuk dersleri aracılığıyla, öğretmenleriyle birlikte kullanır. 13 yaşından küçük çocuklardan bilerek kişisel veri toplamayız. 13 yaşından küçük bir çocuğun hesabı olduğunu düşünüyorsan bize ulaş, hesabı derhal sileriz.",
+      "Ghost Light 13 yaş ve üzerindeki kişiler içindir. 13 ile 17 yaş arasındaki öğrenciler Ghost Light'ı okulları veya oyunculuk dersleri aracılığıyla, öğretmenleriyle birlikte kullanır. 13 yaşından küçük çocuklardan bilerek kişisel veri toplamayız. 13 yaşından küçük bir çocuğun hesabı olduğunu düşünüyorsan bize ulaş, hesabı derhal sileriz.",
     s12Title: "12. Okullar, Öğretmenler ve Öğrenciler",
-    s12Intro: "Bir öğretmen bir sınıfı sınıf bağlantısıyla ActorRise'a getirdiğinde:",
+    s12Intro: "Bir öğretmen bir sınıfı sınıf bağlantısıyla Ghost Light'a getirdiğinde:",
     s12GivesLabel: "Bir öğrencinin bize verdikleri:",
     s12Gives:
       "kaydolurken kullandığı e-posta (genellikle okul adresi), giriş sağlayıcısı veriyorsa adı ve Hizmette yaptıkları: aramalar, kaydedilen parçalar ve provalar.",
@@ -688,13 +688,13 @@ export const content: Widen<typeof en> = {
   contentTerms: {
     direction: "(evin kuralları.)",
     title: "Hizmet Koşulları",
-    updated: "Son güncelleme: Ağustos 2026",
+    updated: "Son güncelleme: 16 Kasım 2026",
     s1Title: "1. Koşulların Kabulü",
     s1Body:
-      "Bu Hizmet Koşulları (“Koşullar”), actorrise.com adresindeki web sitesine ve platforma, iOS için Ghost Light: Monologues dahil mobil uygulamalarımıza ve ilgili hizmetlere (birlikte “Hizmet”) erişimini ve bunları kullanımını düzenleyen, seninle ActorRise (“biz” veya “bizim”) arasında bağlayıcı bir sözleşmedir. Hesap oluşturarak, giriş yaparak veya Hizmeti başka bir şekilde kullanarak bu Koşulları ve Gizlilik Politikamızı kabul etmiş olursun. Kabul etmiyorsan Hizmeti kullanmamalısın.",
+      "Bu Hizmet Koşulları (“Koşullar”), ghostlight.actor adresindeki web sitesine ve platforma, iOS için Ghost Light: Monologues dahil mobil uygulamalarımıza ve ilgili hizmetlere (birlikte “Hizmet”) erişimini ve bunları kullanımını düzenleyen, seninle Ghost Light (“biz” veya “bizim”) arasında bağlayıcı bir sözleşmedir. Hesap oluşturarak, giriş yaparak veya Hizmeti başka bir şekilde kullanarak bu Koşulları ve Gizlilik Politikamızı kabul etmiş olursun. Kabul etmiyorsan Hizmeti kullanmamalısın.",
     s2Title: "2. Hizmetin Tanımı",
     s2Body:
-      "ActorRise oyunculara; monolog arama ve keşfetme, profil yönetimi, yapay zekâ destekli öneriler, sahne partneri ve koçluk özellikleri ile ilgili içerik ve işlevler dahil çeşitli araçlar sunar. Özellikleri istediğimiz zaman ekleyebilir, değiştirebilir veya sonlandırabiliriz. Hizmet, bu Koşullardaki sorumluluk reddi beyanlarına ve sınırlamalara tabi olarak “olduğu gibi” sunulur.",
+      "Ghost Light oyunculara; monolog arama ve keşfetme, profil yönetimi, yapay zekâ destekli öneriler, sahne partneri ve koçluk özellikleri ile ilgili içerik ve işlevler dahil çeşitli araçlar sunar. Özellikleri istediğimiz zaman ekleyebilir, değiştirebilir veya sonlandırabiliriz. Hizmet, bu Koşullardaki sorumluluk reddi beyanlarına ve sınırlamalara tabi olarak “olduğu gibi” sunulur.",
     s3Title: "3. Uygunluk ve Hesap",
     s3Body:
       "Hizmeti kullanmak için en az 16 yaşında (veya bulunduğun yargı alanındaki ergin olma yaşı daha yüksekse o yaşta) olmalı ve bağlayıcı bir sözleşme yapma ehliyetine sahip olmalısın. Hesap bilgilerinin gizliliğini korumaktan ve hesabın altında gerçekleşen tüm etkinliklerden sen sorumlusun. Doğru ve eksiksiz bilgi vermeli ve gerektikçe güncellemelisin. Bu Koşulları ihlal edersen veya gerekli gördüğümüz başka nedenlerle hesabını askıya alabilir ya da sonlandırabiliriz.",
@@ -731,7 +731,7 @@ export const content: Widen<typeof en> = {
     s6SourcesLink: "Kaynaklar ve telif",
     s6FilmLabel: "Film ve televizyon referansları:",
     s6Film:
-      "Film ve televizyon referans kayıtları yalnızca olgusal üst veriler (karakter adı, kaynak eserin adı, tematik açıklamalar ve bağlantılar) içerir ve telifli senaryo metni içermez. Üçüncü taraf senaryo kaynaklarına verilen bağlantılar yalnızca kolaylık amacıyla sunulur; ActorRise üçüncü taraf içeriklerinden sorumlu değildir.",
+      "Film ve televizyon referans kayıtları yalnızca olgusal üst veriler (karakter adı, kaynak eserin adı, tematik açıklamalar ve bağlantılar) içerir ve telifli senaryo metni içermez. Üçüncü taraf senaryo kaynaklarına verilen bağlantılar yalnızca kolaylık amacıyla sunulur; Ghost Light üçüncü taraf içeriklerinden sorumlu değildir.",
     s6YoursLabel: "Senin içeriğin:",
     s6Yours:
       "Yüklediğin içeriklerin (ör. vesikalıklar, profil metni) sahipliği sende kalır. Bu içeriği Hizmeti sunmak ve geliştirmek için gerektiği şekilde ve Gizlilik Politikamızda açıklandığı biçimde kullanmamız, saklamamız, göstermemiz ve işlememiz için bize münhasır olmayan, bedelsiz ve dünya çapında geçerli bir lisans verirsin. Bu lisansı verme hakkına sahip olduğunu ve içeriğinin bu Koşulları veya herhangi bir üçüncü taraf hakkını ihlal etmediğini beyan edersin.",
@@ -751,7 +751,7 @@ export const content: Widen<typeof en> = {
       "BU KOŞULLARDAN VEYA HİZMETTEN KAYNAKLANAN YA DA BUNLARLA İLGİLİ TÜM TALEPLER İÇİN TOPLAM SORUMLULUĞUMUZ, (A) TALEBİN DOĞMASINDAN ÖNCEKİ ON İKİ (12) AY İÇİNDE BİZE ÖDEDİĞİN TUTAR VEYA (B) YÜZ ABD DOLARI (100 USD) TUTARLARINDAN HANGİSİ DAHA YÜKSEKSE ONU AŞAMAZ. BAZI YARGI ALANLARI BELİRLİ ZARARLARIN HARİÇ TUTULMASINA VEYA SINIRLANDIRILMASINA İZİN VERMEZ; BU DURUMLARDA YUKARIDAKİ SINIRLAMALAR O ÖLÇÜDE SANA UYGULANMAYABİLİR.",
     s9Title: "9. Tazminat",
     s9Body:
-      "ActorRise'ı ve bağlı kuruluşlarını, yöneticilerini, yönetim kurulu üyelerini, çalışanlarını ve temsilcilerini; (a) Hizmeti kullanmandan, (b) içeriğinden veya davranışından, (c) bu Koşulları veya herhangi bir yasayı ihlal etmenden ya da (d) herhangi bir üçüncü taraf hakkını ihlal etmenden kaynaklanan veya bunlarla ilgili her türlü talep, zarar, kayıp, yükümlülük, maliyet ve masrafa (makul avukatlık ücretleri dahil) karşı tazmin etmeyi, savunmayı ve zarardan ari tutmayı kabul edersin. Senin tarafından tazmin edilmesi gereken herhangi bir konunun savunmasını ve kontrolünü münhasıran üstlenme hakkımızı saklı tutarız; bu durumda savunmada bizimle iş birliği yaparsın.",
+      "Ghost Light'ı ve bağlı kuruluşlarını, yöneticilerini, yönetim kurulu üyelerini, çalışanlarını ve temsilcilerini; (a) Hizmeti kullanmandan, (b) içeriğinden veya davranışından, (c) bu Koşulları veya herhangi bir yasayı ihlal etmenden ya da (d) herhangi bir üçüncü taraf hakkını ihlal etmenden kaynaklanan veya bunlarla ilgili her türlü talep, zarar, kayıp, yükümlülük, maliyet ve masrafa (makul avukatlık ücretleri dahil) karşı tazmin etmeyi, savunmayı ve zarardan ari tutmayı kabul edersin. Senin tarafından tazmin edilmesi gereken herhangi bir konunun savunmasını ve kontrolünü münhasıran üstlenme hakkımızı saklı tutarız; bu durumda savunmada bizimle iş birliği yaparsın.",
     s10Title: "10. Sona Erme",
     s10Body:
       "Hizmeti kullanmayı istediğin zaman bırakabilir ve hesabını kapatabilirsin. Bu Koşulların ihlali dahil herhangi bir nedenle, bildirimde bulunarak veya bulunmadan Hizmete erişimini askıya alabilir veya sonlandırabiliriz. Sona erme ile birlikte Hizmeti kullanma hakkın sona erer. Niteliği gereği sona ermeden sonra da geçerli kalması gereken hükümler (sorumluluk reddi, sorumluluğun sınırlandırılması, tazminat ve uygulanacak hukuk dahil) sona ermeden sonra da geçerliliğini korur.",
@@ -760,14 +760,14 @@ export const content: Widen<typeof en> = {
       "Bu Koşullar, kanunlar ihtilafı kurallarına bakılmaksızın Amerika Birleşik Devletleri, Delaware Eyaleti kanunlarına tabidir. Bu Koşullardan veya Hizmetten kaynaklanan ya da bunlarla ilgili her türlü uyuşmazlık münhasıran Delaware'de bulunan eyalet veya federal mahkemelerde çözülür ve sen de oradaki mahkemelerin şahsi yargı yetkisini kabul edersin. Geçerli kanunun izin verdiği ölçüde jüri yargılaması hakkından ve toplu dava veya temsili davaya katılma hakkından feragat edersin.",
     s12Title: "12. Genel Hükümler",
     s12p1:
-      "Bu Koşullar, Gizlilik Politikamız ve atıfta bulunduğumuz diğer politikalarla birlikte, Hizmete ilişkin olarak seninle ActorRise arasındaki sözleşmenin tamamını oluşturur. Herhangi bir hakkı veya hükmü uygulamamamız, o haktan veya hükümden feragat ettiğimiz anlamına gelmez. Herhangi bir hükmün geçersiz veya uygulanamaz olduğuna karar verilirse diğer hükümler yürürlükte kalır. Bu Koşullar kapsamındaki haklarımızı ve yükümlülüklerimizi devredebiliriz; sen ise önceden yazılı onayımız olmadan devredemezsin.",
+      "Bu Koşullar, Gizlilik Politikamız ve atıfta bulunduğumuz diğer politikalarla birlikte, Hizmete ilişkin olarak seninle Ghost Light arasındaki sözleşmenin tamamını oluşturur. Herhangi bir hakkı veya hükmü uygulamamamız, o haktan veya hükümden feragat ettiğimiz anlamına gelmez. Herhangi bir hükmün geçersiz veya uygulanamaz olduğuna karar verilirse diğer hükümler yürürlükte kalır. Bu Koşullar kapsamındaki haklarımızı ve yükümlülüklerimizi devredebiliriz; sen ise önceden yazılı onayımız olmadan devredemezsin.",
     s12p2:
       "Bu Koşulları istediğimiz zaman değiştirebiliriz. Güncellenmiş Koşulları bu sayfada yayımlar ve “Son güncelleme” tarihini güncelleriz. Önemli değişiklikler, gerekli olduğu durumlarda e-posta veya ürün içi bildirimle duyurulabilir. Değişikliklerin yürürlük tarihinden sonra Hizmeti kullanmaya devam etmen, güncellenmiş Koşulları kabul ettiğin anlamına gelir.",
     s13Title: "13. İletişim",
     s13Body: "Bu Koşullarla ilgili soruların için bize {link} üzerinden ulaşabilirsin.",
     s14Title: "14. DMCA Bildirimi",
     s14Body:
-      "ActorRise'daki bir içeriğin telif hakkını ihlal ettiğini düşünüyorsan, şu bilgilerle {email} adresinden bize ulaş: (1) telif hakkıyla korunan eserin belirtilmesi; (2) ihlal ettiği iddia edilen materyalin ve URL'sinin belirtilmesi; (3) iletişim bilgilerin; (4) söz konusu kullanıma telif hakkı sahibinin izin vermediğine iyi niyetle inandığına dair bir beyan; ve (5) elektronik veya ıslak imzan. İnceleyip uygun durumlarda ihlal eden içeriği kaldırırız.",
+      "Ghost Light'taki bir içeriğin telif hakkını ihlal ettiğini düşünüyorsan, şu bilgilerle {email} adresinden bize ulaş: (1) telif hakkıyla korunan eserin belirtilmesi; (2) ihlal ettiği iddia edilen materyalin ve URL'sinin belirtilmesi; (3) iletişim bilgilerin; (4) söz konusu kullanıma telif hakkı sahibinin izin vermediğine iyi niyetle inandığına dair bir beyan; ve (5) elektronik veya ıslak imzan. İnceleyip uygun durumlarda ihlal eden içeriği kaldırırız.",
     privacyLink: "Gizlilik Politikası",
   },
 };
