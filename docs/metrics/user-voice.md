@@ -265,3 +265,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-11-15, free, read allowance spent the same day
 **They said:** "I'm auditioning for Hair at my university. I'm looking for it to be around a minute (maybe a little shorter), from a play, and action-centered so not telling a story but talking to someone."
 **Heard as:** audition brief (university musical, needs a play monologue); the search note started a conversation the same day
+
+## 2026-11-16
+
+**Replying to:** search note ("comedic pieces", 2026-11-14)
+**Account:** signed up 2026-11-13, free, 13 app reads across 6 pieces this week
+**They said:** "Yes one of them did land!"
+**Heard as:** happy, a search note turned into a found piece inside two days
