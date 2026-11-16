@@ -4,6 +4,7 @@
     "slug": "ghostlight",
     "scheme": "ghostlight",
     "version": "1.1.5",
+    "platforms": ["ios", "android"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
