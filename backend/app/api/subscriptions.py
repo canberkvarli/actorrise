@@ -53,6 +53,13 @@ class SubscriptionResponse(BaseModel):
     # prints this number rather than carrying its own.
     trial_days: int = 7
     trial_earned: bool = False
+    # The no-card trial switch (app_settings.NO_CARD_TRIAL_ENABLED): when on,
+    # checkout asks no card for the trial and the walls say so.
+    no_card_trial: bool = False
+    # A Stripe trial with no card on the subscription or the customer: without
+    # one it ends on its own (missing_payment_method "cancel"), so the app
+    # shows a reminder to add one through the billing portal.
+    card_needed: bool = False
     # The three days of Plus given at the first read wall (services/taste.py).
     # {had, active, ends_at}. Once had, trial_days is 0: checkout gives no
     # second free stretch, and the walls ask for the money.
@@ -67,11 +74,66 @@ def _trial_fields(db: Session, user_id: int) -> dict[str, Any]:
 
     from app.services import taste
 
+    no_card = no_card_trial_on(db)
     state = taste.status(db, user_id)
     if state["had"]:
-        return {"trial_days": 0, "trial_earned": False, "taste": state}
+        return {"trial_days": 0, "trial_earned": False, "taste": state, "no_card_trial": no_card}
     days = trial_days_for(db, user_id)
-    return {"trial_days": days, "trial_earned": days == EARNED_TRIAL_DAYS, "taste": state}
+    return {
+        "trial_days": days,
+        "trial_earned": days == EARNED_TRIAL_DAYS,
+        "taste": state,
+        "no_card_trial": no_card,
+    }
+
+
+def no_card_trial_on(db: Session) -> bool:
+    """The no-card trial switch. Fails closed: a read error keeps the card."""
+    from app.services import app_settings
+
+    try:
+        return app_settings.get_bool(db, app_settings.NO_CARD_TRIAL_ENABLED, default=False)
+    except Exception:
+        db.rollback()
+        return False
+
+
+#: subscription id -> (checked at, card on file?). Few people are ever in a
+#: trial at once, so this is a handful of entries; ten minutes keeps /me from
+#: asking Stripe on every page load, and a card just added shows within that.
+_CARD_CACHE: dict[str, tuple[float, bool]] = {}
+_CARD_CACHE_SECONDS = 600
+
+
+def card_on_file(stripe_subscription_id: str) -> bool:
+    """True when the subscription or its customer has a default payment
+    method, which is what Stripe checks before cancelling a trial that has
+    none. Fails open (True): a Stripe hiccup must not nag someone who paid."""
+    import time
+
+    hit = _CARD_CACHE.get(stripe_subscription_id)
+    if hit and time.time() - hit[0] < _CARD_CACHE_SECONDS:
+        return hit[1]
+    try:
+        sub = stripe.Subscription.retrieve(stripe_subscription_id, expand=["customer"])
+        customer = sub.get("customer")
+        invoice_settings = (customer.get("invoice_settings") if hasattr(customer, "get") else None) or {}
+        has = bool(sub.get("default_payment_method") or invoice_settings.get("default_payment_method"))
+    except Exception:
+        return True
+    _CARD_CACHE[stripe_subscription_id] = (time.time(), has)
+    return has
+
+
+def _card_needed(subscription: UserSubscription) -> bool:
+    """A Stripe trial that will stop for want of a card. Someone who chose to
+    cancel is not reminded: they already said no."""
+    return bool(
+        subscription.status == "trialing"
+        and subscription.stripe_subscription_id
+        and not subscription.cancel_at_period_end
+        and not card_on_file(str(subscription.stripe_subscription_id))
+    )
 
 
 class CreateCheckoutSessionRequest(BaseModel):
@@ -206,6 +268,7 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
         current_period_end=subscription.current_period_end,
         cancel_at_period_end=subscription.cancel_at_period_end,
         has_stripe_customer=bool(subscription.stripe_customer_id),
+        card_needed=_card_needed(subscription),
         **trial,
     )
 
@@ -397,19 +460,22 @@ async def create_checkout_session(
             "trial_settings": {"end_behavior": {"missing_payment_method": "cancel"}},
             "metadata": subscription_metadata,
         }
-        create_params["payment_method_collection"] = "always"
+        no_card = no_card_trial_on(db)
+        # "if_required" asks for no card when nothing is due today, which a
+        # trial is; end_behavior above makes a card-less trial simply stop.
+        create_params["payment_method_collection"] = "if_required" if no_card else "always"
         # The terms, said once, above the button. Three of the four people who
         # reached this page between 2026-09-28 and 10-12 left at the card form;
         # a surprise charge is what people fear there, and a charge nobody saw
         # coming comes back as a dispute.
-        create_params["custom_text"] = {
-            "submit": {
-                "message": (
-                    f"Free for {trial_period_days} days. Cancel any time from your "
-                    "account before then and you pay nothing."
-                )
-            }
-        }
+        message = (
+            f"No card needed. Free for {trial_period_days} days. Add a card from "
+            "your account before then to keep Plus; if you don't, it just stops."
+            if no_card
+            else f"Free for {trial_period_days} days. Cancel any time from your "
+            "account before then and you pay nothing."
+        )
+        create_params["custom_text"] = {"submit": {"message": message}}
     else:
         create_params["subscription_data"] = {"metadata": subscription_metadata}
 

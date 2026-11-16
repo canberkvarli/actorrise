@@ -215,6 +215,28 @@ def set_triggered_emails(
     return SavedPieceReminderToggle(enabled=enabled)
 
 
+@router.get("/no-card-trial", response_model=SavedPieceReminderToggle)
+def get_no_card_trial(
+    _: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+) -> SavedPieceReminderToggle:
+    """Whether the Plus trial starts without a card. Off by default. Lives with
+    the other money-path switches on /admin/emails."""
+    enabled = app_settings.get_bool(db, app_settings.NO_CARD_TRIAL_ENABLED, default=False)
+    return SavedPieceReminderToggle(enabled=enabled)
+
+
+@router.put("/no-card-trial", response_model=SavedPieceReminderToggle)
+def set_no_card_trial(
+    payload: SavedPieceReminderToggle,
+    _: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+) -> SavedPieceReminderToggle:
+    """Turn the no-card trial on or off. Takes effect on the next checkout."""
+    enabled = app_settings.set_bool(db, app_settings.NO_CARD_TRIAL_ENABLED, payload.enabled)
+    return SavedPieceReminderToggle(enabled=enabled)
+
+
 @router.get("/audition-reminders", response_model=SavedPieceReminderToggle)
 def get_audition_reminders(
     _: User = Depends(require_approval_permission),

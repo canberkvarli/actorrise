@@ -38,6 +38,14 @@ AUDITION_REMINDERS_ENABLED = "audition_reminders_enabled"
 # Ghost Light's nightly push (services/push.py). Defaults ON: nothing goes out
 # until a phone on the build with push has handed over a token.
 GHOSTLIGHT_PUSH_ENABLED = "ghostlight_push_enabled"
+# The Plus trial without a card (2026-11-16). OFF by default. On: checkout
+# stops asking for a card on the trial (Stripe payment_method_collection
+# "if_required"), the walls stop saying "card on file", and a trialist with no
+# card sees an in-app reminder to add one. The trial already ends with
+# missing_payment_method "cancel", so a trial nobody adds a card to just stops:
+# no charge, no unpaid invoice. Five of six who reached Stripe in the week to
+# 11-16 left at the card form, with Apple Pay, Google Pay and Link all on.
+NO_CARD_TRIAL_ENABLED = "no_card_trial_enabled"
 
 
 def get_bool(db: Session, key: str, default: bool = False) -> bool:

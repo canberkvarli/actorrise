@@ -351,9 +351,13 @@ function CheckoutContent() {
           <div className="t-ticket__note">
             <p className="t-ticket__note-title">{t("appAccountCheckout.nothingToday")}</p>
             <p className="t-ticket__note-body">
-              {t("appAccountCheckout.trialNoteA", { days: words.days, then: afterTrial })}
+              {subscription?.no_card_trial
+                ? t("appAccountCheckout.trialNoteNoCardA", { days: words.days, then: afterTrial })
+                : t("appAccountCheckout.trialNoteA", { days: words.days, then: afterTrial })}
               <span suppressHydrationWarning>{chargeDateIn(locale, new Date(), words.days)}</span>
-              {t("appAccountCheckout.trialNoteB")}{" "}
+              {subscription?.no_card_trial
+                ? t("appAccountCheckout.trialNoteNoCardB")
+                : t("appAccountCheckout.trialNoteB")}{" "}
               <EarnSecondWeek />
             </p>
           </div>

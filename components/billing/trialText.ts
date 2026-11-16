@@ -102,6 +102,6 @@ export function useTrialText(): TrialText {
     cta: t("appAccountTrial.cta", { short }),
     short,
     span,
-    terms: t("appAccountTrial.terms"),
+    terms: subscription?.no_card_trial ? t("appAccountTrial.termsNoCard") : t("appAccountTrial.terms"),
   };
 }

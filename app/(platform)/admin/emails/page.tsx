@@ -258,6 +258,10 @@ export default function AdminEmailsPage() {
   const [triggeredOn, setTriggeredOn] = useState<boolean | null>(null);
   const [triggeredSaving, setTriggeredSaving] = useState(false);
 
+  // The no-card trial (checkout asks no card for the Plus trial)
+  const [noCardOn, setNoCardOn] = useState<boolean | null>(null);
+  const [noCardSaving, setNoCardSaving] = useState(false);
+
   // Audition tracker reminders toggle
   const [auditionRemindersOn, setAuditionRemindersOn] = useState<boolean | null>(null);
   const [auditionRemindersSaving, setAuditionRemindersSaving] = useState(false);
@@ -286,8 +290,29 @@ export default function AdminEmailsPage() {
       api.get<{ enabled: boolean }>("/api/admin/emails/lifecycle-emails").then(({ data }) => setLifecycleOn(data.enabled)).catch(() => {}),
       api.get<{ enabled: boolean }>("/api/admin/emails/triggered-emails").then(({ data }) => setTriggeredOn(data.enabled)).catch(() => {}),
       api.get<{ enabled: boolean }>("/api/admin/emails/audition-reminders").then(({ data }) => setAuditionRemindersOn(data.enabled)).catch(() => {}),
+      api.get<{ enabled: boolean }>("/api/admin/emails/no-card-trial").then(({ data }) => setNoCardOn(data.enabled)).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
+
+  async function updateNoCardTrial(enabled: boolean) {
+    const prev = noCardOn;
+    setNoCardOn(enabled); // optimistic
+    setNoCardSaving(true);
+    try {
+      const { data } = await api.put<{ enabled: boolean }>("/api/admin/emails/no-card-trial", { enabled });
+      setNoCardOn(data.enabled);
+      toast.success(
+        data.enabled
+          ? "Trial without a card is on, from the next checkout"
+          : "Trial asks for a card again, from the next checkout",
+      );
+    } catch {
+      setNoCardOn(prev); // revert
+      toast.error("Failed to update the no-card trial setting");
+    } finally {
+      setNoCardSaving(false);
+    }
+  }
 
   async function updateTriggeredEmails(enabled: boolean) {
     const prev = triggeredOn;
@@ -970,6 +995,28 @@ export default function AdminEmailsPage() {
             disabled={triggeredSaving}
             onCheckedChange={updateTriggeredEmails}
             aria-label="Toggle triggered emails"
+          />
+        </div>
+      )}
+
+      {canSend && noCardOn !== null && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-3 sm:p-4">
+          <div className="flex items-start gap-2.5">
+            <IconClock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Trial without a card</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {noCardOn
+                  ? "On. The Plus trial starts with no card. Trialists without one see a reminder in the app to add one; if they don't, the trial just stops, nothing charged."
+                  : "Off. The Plus trial asks for a card at checkout, as it always has."}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={noCardOn}
+            disabled={noCardSaving}
+            onCheckedChange={updateNoCardTrial}
+            aria-label="Toggle the trial without a card"
           />
         </div>
       )}

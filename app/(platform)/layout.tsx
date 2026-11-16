@@ -68,6 +68,7 @@ import { SaveAsk } from "@/components/billing/SaveAsk";
 import { EmailClickBeacon } from "@/components/analytics/EmailClickBeacon";
 import { ClassLinkRedeemer } from "@/components/billing/ClassLinkRedeemer";
 import { Cue } from "@/components/cue/Cue";
+import { CardNeededBanner } from "@/components/billing/CardNeededBanner";
 import { useLocale, useT } from "@/lib/i18n";
 
 function cleanImageUrl(url: string) {
@@ -639,6 +640,10 @@ export default function PlatformLayout({
         </div>
       </SpotlightSurface>
       )}
+
+      {/* A no-card trial that would stop for want of a card. Not in a run or
+          a scene: nothing should sit over the actor mid-line. */}
+      {!isImmersive && <CardNeededBanner />}
 
       {/* Main Content - extra padding on mobile so content scrolls above bottom nav */}
       <main className={isImmersive ? "" : "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0"}>
