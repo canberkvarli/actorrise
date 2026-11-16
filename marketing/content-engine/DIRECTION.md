@@ -3,6 +3,16 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-16: no more AI actors; drawn + George is the format (wins over everything below)
+
+Canberk, after two weeks of numbers: the AI generated actor films do not bring views, so they stop. No Omni
+or Veo actors, no generated people on camera, for any feature. (Instagram, 30 days: the three drawn films
+with George's voice did 1,422 / 1,414 / 1,259 views with 10 to 12 seconds average watch and 11 to 37 saves;
+the AI actor films did 110 to 265 views, about 3 seconds average watch and almost no saves.)
+Every film is the drawn paper world with George narrating: a relatable actor moment first (the Dora lobby,
+the inner monologue at "whenever you're ready", the reader stuck on a train), then the real app in the drawn
+phone. The "AI actors, always labelled" block below no longer applies; keep the AI VOICE label on posts.
+
 ## 2026-11-12: articulation is the key, and real screens are never zoomed (wins over everything below)
 
 Canberk on the reader-on-the-train film ("good videos, really"), two fixes:
