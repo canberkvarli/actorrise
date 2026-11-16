@@ -71,6 +71,34 @@ export function ReadView({
   textSlot?: React.ReactNode;
 }) {
   const t = useT();
+  if (monologue.taken_down) {
+    return (
+      <div
+        className="rounded-lg border p-4 text-sm"
+        style={{
+          borderColor: "var(--t-line-light)",
+          background: "var(--t-paper-2)",
+          color: "var(--t-muted-dark)",
+        }}
+      >
+        <p className="mb-1 font-medium" style={{ color: "var(--t-text)" }}>
+          {t("appMonologueRead.takenDownTitle")}
+        </p>
+        <p>{t("appMonologueRead.takenDownBody")}</p>
+        {monologue.source_url && (
+          <a
+            href={monologue.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex text-xs underline underline-offset-4"
+            style={{ color: "var(--t-orange-deep)" }}
+          >
+            {t("appMonologueRead.takenDownLink")}
+          </a>
+        )}
+      </div>
+    );
+  }
   if (isBibliographicText(monologue.text)) {
     return (
       <div

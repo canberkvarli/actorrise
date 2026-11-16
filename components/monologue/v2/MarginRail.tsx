@@ -133,6 +133,7 @@ export function MarginRail({
   onRehearse,
   onMemorize,
   outOfReads,
+  textless,
 }: {
   monologue: Monologue;
   beatCount: number;
@@ -145,15 +146,19 @@ export function MarginRail({
   onMemorize: () => void;
   /** The reads are spent. Said plainly; never as a count we can't see. */
   outOfReads?: boolean;
+  /** No text to work on (a takedown): nothing to rehearse or learn, and no
+   *  reads to blame for it. */
+  textless?: boolean;
 }) {
   const house = usePieceHouse(monologue.id);
   const t = useT();
+  const locked = outOfReads || textless;
 
   return (
     <aside className="t-m-rise flex flex-col gap-[18px]">
       {/* Rehearse. Desktop only — on a phone this is the run bar at the foot
           of the screen, and two of it would be one too many. */}
-      {!outOfReads && (
+      {!locked && (
         <div className="hidden lg:block">
           <button
             type="button"
@@ -186,7 +191,7 @@ export function MarginRail({
           and one quiet, told apart by weight rather than by hovering an icon.
           Not hidden on phones the way Rehearse is: the run bar at the foot of
           the screen carries Rehearse there, and it carries nothing else. */}
-      {!outOfReads && (
+      {!locked && (
         <button
           type="button"
           onClick={onMemorize}
@@ -219,7 +224,7 @@ export function MarginRail({
               value={memorized ? t("appMonologueRail.yes") : t("appMonologueRail.notYet")}
               tone={memorized ? "var(--t-orange-deep)" : undefined}
             />
-            {!memorized && !outOfReads && (
+            {!memorized && !locked && (
               /* The one mark on this list you can do something about from
                  here. A line, not a second button: the drill already has one
                  above, and two of it would be the working bar's mistake again. */

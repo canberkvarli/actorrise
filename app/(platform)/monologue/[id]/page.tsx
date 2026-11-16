@@ -122,7 +122,7 @@ export default function MonologueDetailPage() {
      behind the free-read wall is not. Wide screens see it under the title, a
      phone sees the bar at the foot. */
   const shownRunRef = useRef<number | null>(null);
-  const runOffered = Boolean(monologue) && !monologue?.paywalled;
+  const runOffered = Boolean(monologue) && !monologue?.paywalled && !monologue?.taken_down;
   useEffect(() => {
     if (!runOffered || !monologue || shownRunRef.current === monologue.id) return;
     shownRunRef.current = monologue.id;
@@ -388,7 +388,7 @@ export default function MonologueDetailPage() {
     );
   }
 
-  const annotatable = Boolean(user) && !monologue.paywalled && units.length > 0;
+  const annotatable = Boolean(user) && !monologue.paywalled && !monologue.taken_down && units.length > 0;
 
   return (
     /* theatre-tokens AND the faces on the same element. Binding the tokens
@@ -404,7 +404,7 @@ export default function MonologueDetailPage() {
         inLane={inLane}
         laneReason={laneMatch?.reasons[0]}
         onBack={() => router.back()}
-        onRun={monologue.paywalled ? undefined : () => run("sheet")}
+        onRun={monologue.paywalled || monologue.taken_down ? undefined : () => run("sheet")}
         runSeconds={cutSeconds}
       />
 
@@ -414,7 +414,7 @@ export default function MonologueDetailPage() {
         <WorkingBar
           mode={mode}
           onModeChange={selectMode}
-          readOnly={monologue.paywalled}
+          readOnly={monologue.paywalled || monologue.taken_down}
           noteCount={beatMap.size}
           hasNotes={Boolean(notes.trim())}
           onNote={openNote}
@@ -673,6 +673,7 @@ export default function MonologueDetailPage() {
               fullSeconds={fullSeconds}
               hasCut={Boolean(hasCut)}
               outOfReads={monologue.paywalled}
+              textless={monologue.taken_down}
               onRehearse={() => run("margin")}
               onMemorize={() => router.push(`/monologue/${monologue.id}/memorize`)}
             />
@@ -740,14 +741,14 @@ export default function MonologueDetailPage() {
         />
       </main>
 
-      {!monologue.paywalled && (
+      {!monologue.paywalled && !monologue.taken_down && (
         <RunBar onRehearse={() => run("bar")} seconds={cutSeconds} />
       )}
       {/* Says the free reads are running out while there are still some left.
           Rendered only once the piece is on screen, which is after the server
           has counted this read. Signed-out readers have no allowance to count. */}
-      {user && !monologue.paywalled && <ReadsLeft ready />}
-      {user && !monologue.paywalled && <TasteNote granted={Boolean(monologue.taste)} grantedEndsAt={monologue.taste?.ends_at} aboveRunBar />}
+      {user && !monologue.paywalled && !monologue.taken_down && <ReadsLeft ready />}
+      {user && !monologue.paywalled && !monologue.taken_down && <TasteNote granted={Boolean(monologue.taste)} grantedEndsAt={monologue.taste?.ends_at} aboveRunBar />}
     </div>
   );
 }

@@ -77,6 +77,9 @@ export const appMonologue = {
     unavailableTitle: "Text not available",
     unavailableBody: "This entry appears to contain catalog data rather than the monologue itself.",
     viewSource: "View source",
+    takenDownTitle: "On the writer's site",
+    takenDownBody: "The writer asked for this speech to stay on their own site, so it is read there.",
+    takenDownLink: "Read it there",
     dimmedDirections: "(stage directions are dimmed; the spoken lines are in normal text.)",
   },
   appMonologueSides: {
