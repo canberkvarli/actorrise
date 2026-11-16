@@ -630,11 +630,13 @@ app.add_middleware(LibraryLanguageMiddleware)
 app.add_middleware(LogCORSOriginMiddleware)
 
 # Configure CORS (OPTIONS preflight must succeed or browser blocks requests)
-# allow_origins from env; regex covers *.vercel.app and actorrise.com
+# allow_origins from env; the regex covers *.vercel.app, actorrise.com and
+# ghostlight.actor (the domain the site moves to, 2026-11-16; both stay allowed).
+CORS_ORIGIN_REGEX = r"^https://([^/]+\.vercel\.app|(www\.)?actorrise\.com|(www\.)?ghostlight\.actor)$"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_origin_regex=r"^https://([^/]+\.vercel\.app|(www\.)?actorrise\.com)$",
+    allow_origin_regex=CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
