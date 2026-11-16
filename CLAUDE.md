@@ -97,6 +97,11 @@ moved into this repo with its history (`git subtree`) at **`apps/mobile/`**; the
   its commands from inside it (`npm run typecheck`, `npm test`). The web's tsconfig, eslint
   and vitest skip `apps/`, and a push that only touches `apps/` does not build Vercel.
 - Both apps share one backend, one Supabase project and one `user_subscriptions` table.
+- **One tier, Plus (2026-11-16).** An App Store purchase grants Plus, the same Plus as Stripe
+  (`RC_GRANT_TIER` in `api/webhooks.py`), so paying in either place unlocks both. The old app
+  tier `monologues` stays on app rows until their next RENEWAL. The App Store price is still
+  the old one ($9.99/mo, $59.99/yr against the web's $12 and $99); aligning it is the next
+  pricing step, after this one has been read.
 
 # Working rules (Canberk's standing decisions, for every session, cloud or laptop)
 

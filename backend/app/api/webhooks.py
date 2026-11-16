@@ -947,9 +947,19 @@ def _suppress(db: Session, email: str | None, reason: str) -> None:
 revenuecat_webhook_auth = os.getenv("REVENUECAT_WEBHOOK_AUTH")
 
 # RevenueCat's app_user_id is set to the Supabase user id at login, so it maps
-# straight onto users.supabase_id. The mobile Monologues tier is granted/revoked
-# entirely from these events — the App Store, not Stripe, is the source of truth
-# for iOS subscriptions.
+# straight onto users.supabase_id. The app's tier is granted/revoked entirely
+# from these events — the App Store, not Stripe, is the source of truth for iOS
+# subscriptions.
+
+# What an App Store purchase grants. Plus since 2026-11-16: one brand, one tier,
+# so paying in the app unlocks the web too (Canberk). It was "monologues", a
+# cheaper app-only tier the web treated as free. Rows written before keep that
+# tier until their next RENEWAL, which moves them onto Plus. The price on the
+# App Store is a separate step, read before the next.
+RC_GRANT_TIER = "plus"
+# The app's tier before 2026-11-16. Still on the rows of app subscribers who
+# have not renewed since, so the admin app-money views count both.
+RC_LEGACY_TIER = "monologues"
 _RC_GRANT_EVENTS = {
     "INITIAL_PURCHASE",
     "RENEWAL",
@@ -1022,13 +1032,14 @@ def _rc_owns_row(sub: UserSubscription, db: Session) -> bool:
         return True
     if src or sub.stripe_subscription_id:
         return False
+    # Only the old app tier: a NULL-source Plus row is an old comp, not the app's.
     tier = db.query(PricingTier).get(sub.tier_id) if sub.tier_id else None
-    return tier is not None and tier.name == "monologues"
+    return tier is not None and tier.name == RC_LEGACY_TIER
 
 
 @router.post("/revenuecat")
 async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
-    """Grant/revoke the mobile Monologues tier from RevenueCat events.
+    """Grant/revoke the app's tier (Plus, RC_GRANT_TIER) from RevenueCat events.
 
     RevenueCat authenticates with a static bearer set in its dashboard; we check
     it against REVENUECAT_WEBHOOK_AUTH. INITIAL_PURCHASE/RENEWAL grant the tier;
@@ -1097,7 +1108,7 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
             kwargs={
                 "user_name": user.name or "",
                 "user_email": user.email,
-                "tier_display_name": "Monologues (app)",
+                "tier_display_name": "Plus (app)",
                 "outcome": outcome,
                 "stripe_status": f"RevenueCat {event_type} · {event.get('product_id') or ''}",
             },
@@ -1114,10 +1125,10 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
         return {"status": "ok", "message": "web subscription kept"}
 
     if event_type in _RC_GRANT_EVENTS:
-        tier = db.query(PricingTier).filter(PricingTier.name == "monologues").first()
+        tier = db.query(PricingTier).filter(PricingTier.name == RC_GRANT_TIER).first()
         if not tier:
-            logger.error("Monologues tier not seeded — cannot grant RevenueCat entitlement")
-            return {"status": "ok", "message": "monologues tier missing"}
+            logger.error("%s tier not seeded — cannot grant RevenueCat entitlement", RC_GRANT_TIER)
+            return {"status": "ok", "message": f"{RC_GRANT_TIER} tier missing"}
         sub.tier_id = tier.id
         sub.status = "active"
         # The row is the app's now, so its EXPIRATION may revoke it.
@@ -1140,7 +1151,7 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
         # 2026-10-14); the first NORMAL renewal clears it.
         sub.trial_end = sub.current_period_end if event.get("period_type") == "TRIAL" else None
         db.commit()
-        logger.info("RevenueCat %s → granted Monologues to user %s", event_type, user.id)
+        logger.info("RevenueCat %s → granted %s to user %s", event_type, RC_GRANT_TIER, user.id)
         if event.get("period_type") == "TRIAL":
             _rc_notify("app_trial")
         elif prior_tier_id != tier.id or event_type == "INITIAL_PURCHASE":
@@ -1167,7 +1178,7 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
             sub.tier_id = free_tier.id
         sub.status = "expired"
         db.commit()
-        logger.info("RevenueCat EXPIRATION → revoked Monologues from user %s", user.id)
+        logger.info("RevenueCat EXPIRATION → revoked the app tier from user %s", user.id)
         _rc_notify("app_expired")
 
     elif event_type == "BILLING_ISSUE":

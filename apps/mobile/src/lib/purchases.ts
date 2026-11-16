@@ -17,7 +17,8 @@ import { supabase } from './supabase';
  *
  * The entitlement of record lives on the ActorRise account: RevenueCat's
  * `app_user_id` is set to the Supabase user id at login, and a RevenueCat
- * webhook (spec §4 #3) grants/revokes the Monologues tier server-side. This
+ * webhook (spec §4 #3) grants/revokes Plus server-side (the same Plus as the
+ * web since 2026-11-16, so one purchase unlocks both). This
  * client reads entitlement to gate the UI; the server is the source of truth.
  */
 

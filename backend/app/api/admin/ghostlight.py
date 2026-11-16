@@ -152,10 +152,20 @@ def _store_section(db: Session) -> dict:
     }
 
 
+def _app_tier_ids(db: Session) -> dict:
+    """{tier id: name} for the tiers an app purchase can hold: Plus since
+    2026-11-16, and the old Monologues tier on rows that have not renewed
+    since. The rows are already the app's (source = revenuecat)."""
+    from app.api.webhooks import RC_GRANT_TIER, RC_LEGACY_TIER
+
+    rows = db.query(PricingTier).filter(PricingTier.name.in_([RC_GRANT_TIER, RC_LEGACY_TIER])).all()
+    return {t.id: t.name for t in rows}
+
+
 @router.get("/ghostlight")
 def ghostlight_overview(db: Session = Depends(get_db), _=Depends(require_moderator)):
     now = datetime.now(timezone.utc)
-    monologues = db.query(PricingTier).filter(PricingTier.name == "monologues").first()
+    app_tiers = _app_tier_ids(db)
 
     subs = (
         db.query(UserSubscription, User)
@@ -170,7 +180,7 @@ def ghostlight_overview(db: Session = Depends(get_db), _=Depends(require_moderat
     mrr = 0.0
     paid = _paid_prices(db, [int(sub.user_id) for sub, _ in subs])
     for sub, user in subs:
-        on_tier = monologues is not None and sub.tier_id == monologues.id
+        on_tier = sub.tier_id in app_tiers
         trialing = on_tier and sub.status == "active" and _in_trial(sub)
         if trialing:
             in_trial += 1
@@ -182,7 +192,7 @@ def ghostlight_overview(db: Session = Depends(get_db), _=Depends(require_moderat
                 "user_id": user.id,
                 "email": user.email,
                 "name": user.name or "",
-                "tier": "monologues" if on_tier else "free",
+                "tier": app_tiers.get(sub.tier_id, "free"),
                 "status": "trial" if trialing else sub.status,
                 "billing_period": sub.billing_period or "",
                 "cancel_at_period_end": bool(sub.cancel_at_period_end),
@@ -255,14 +265,14 @@ def app_revenue(db: Session = Depends(get_db), _=Depends(require_moderator)):
     lump. `proceeds_30d_usd` is what Apple actually paid out, from the Sales
     report, after its cut; it is the only one of these that is not list price.
     """
-    monologues = db.query(PricingTier).filter(PricingTier.name == "monologues").first()
+    app_tiers = _app_tier_ids(db)
     subs = db.query(UserSubscription).filter(UserSubscription.source == "revenuecat").all()
     paying = 0
     cash = 0.0
     amortised = 0.0
     paid = _paid_prices(db, [int(sub.user_id) for sub in subs])
     for sub in subs:
-        if not (monologues and sub.tier_id == monologues.id and sub.status == "active"):
+        if not (sub.tier_id in app_tiers and sub.status == "active"):
             continue
         if _in_trial(sub):
             continue  # a free week is not money

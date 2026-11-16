@@ -113,7 +113,7 @@ class RevenueCatWebRowTest(unittest.TestCase):
         self._row(tier_id=self.plus.id, status="active", source="manual", trial_end=end)
         self._send("INITIAL_PURCHASE")
         sub = self._sub()
-        self.assertEqual((sub.tier_id, sub.source), (self.app.id, "revenuecat"))
+        self.assertEqual((sub.tier_id, sub.source), (self.plus.id, "revenuecat"))
         self._send("EXPIRATION")
         sub = self._sub()
         self.assertEqual((sub.tier_id, sub.status), (self.free.id, "expired"))
@@ -122,15 +122,15 @@ class RevenueCatWebRowTest(unittest.TestCase):
         self._row(tier_id=self.free.id, status="canceled", source="stripe", stripe_subscription_id="sub_old")
         self._send("INITIAL_PURCHASE")
         sub = self._sub()
-        self.assertEqual((sub.tier_id, sub.status, sub.source), (self.app.id, "active", "revenuecat"))
+        self.assertEqual((sub.tier_id, sub.status, sub.source), (self.plus.id, "active", "revenuecat"))
         # The next app event treats it as the app's row, not a live Stripe one.
         self._send("RENEWAL")
-        self.assertEqual(self._sub().tier_id, self.app.id)
+        self.assertEqual(self._sub().tier_id, self.plus.id)
 
     def test_app_only_user_gets_granted_and_revoked(self):
         self._send("INITIAL_PURCHASE")
         sub = self._sub()
-        self.assertEqual((sub.tier_id, sub.source, sub.billing_period), (self.app.id, "revenuecat", "annual"))
+        self.assertEqual((sub.tier_id, sub.source, sub.billing_period), (self.plus.id, "revenuecat", "annual"))
         self._send("EXPIRATION")
         self.assertEqual(self._sub().tier_id, self.free.id)
 
@@ -138,6 +138,37 @@ class RevenueCatWebRowTest(unittest.TestCase):
         self._row(tier_id=self.app.id, status="active", source=None)
         self._send("EXPIRATION")
         self.assertEqual(self._sub().tier_id, self.free.id)
+
+    # One brand, one tier (2026-11-16): an App Store purchase grants Plus.
+
+    def test_app_purchase_grants_plus_not_the_old_app_tier(self):
+        self._send("INITIAL_PURCHASE", product_id="ghostlight_monthly")
+        sub = self._sub()
+        self.assertEqual((sub.tier_id, sub.billing_period), (self.plus.id, "monthly"))
+
+    def test_old_app_subscriber_moves_to_plus_on_renewal(self):
+        self._row(tier_id=self.app.id, status="active", source="revenuecat")
+        self._send("RENEWAL")
+        self.assertEqual(self._sub().tier_id, self.plus.id)
+
+    def test_old_app_subscriber_still_expires_before_renewing(self):
+        self._row(tier_id=self.app.id, status="active", source="revenuecat")
+        self._send("EXPIRATION")
+        self.assertEqual(self._sub().tier_id, self.free.id)
+
+    def test_app_plus_expires_to_free(self):
+        self._send("INITIAL_PURCHASE")
+        self._send("CANCELLATION")
+        self.assertEqual(self._sub().tier_id, self.plus.id)  # paid period runs out first
+        self._send("EXPIRATION")
+        sub = self._sub()
+        self.assertEqual((sub.tier_id, sub.status), (self.free.id, "expired"))
+
+    def test_null_source_plus_row_is_an_old_comp_not_the_apps(self):
+        self._row(tier_id=self.plus.id, status="active", source=None)
+        out = self._send("EXPIRATION")
+        self.assertEqual(out["message"], "row not owned by revenuecat")
+        self.assertEqual(self._sub().tier_id, self.plus.id)
 
 
 if __name__ == "__main__":
