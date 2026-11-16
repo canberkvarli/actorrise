@@ -1,6 +1,7 @@
-"""How long a Plus trial runs for this actor: a week, or two if they earned it.
+"""How long a Plus trial runs for this actor: 3 days, or a week if they earned it.
 
-The second week belongs to anyone who has finished a scene. It is the one
+3 and 7 since 2026-11-16 (Canberk; 7 and 14 before). The longer trial belongs
+to anyone who has finished a scene. It is the one
 behaviour that shows the product working, and until now it won nothing: of the
 22 actors who started the guided scene in its first three days, 6 finished.
 
@@ -32,8 +33,8 @@ from app.models.actor import RehearsalSession
 
 logger = logging.getLogger(__name__)
 
-BASE_TRIAL_DAYS = 7
-EARNED_TRIAL_DAYS = 14
+BASE_TRIAL_DAYS = 3
+EARNED_TRIAL_DAYS = 7
 
 
 def has_finished_a_scene(db, user_id: int) -> bool:

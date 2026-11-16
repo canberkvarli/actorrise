@@ -129,7 +129,7 @@ export const appScenes = {
     title: "That was your first scene.",
     house: "That one was mine. The next is yours.",
     plus: "Plus",
-    earned: "Finishing that scene earned you the second week.",
+    earned: "Finishing that scene earned you a full week.",
     runsLabel: "Runs",
     runsValue: "as many as it takes",
     scriptsLabel: "Your scripts",

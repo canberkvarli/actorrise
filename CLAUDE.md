@@ -235,7 +235,7 @@ LINK LENGTHS DIFFER, CHECK BEFORE SENDING. Three live Stripe payment links exist
 - `00w6oJgG8gjAaVSgsl6g801` — Plus $99/yr, **90-day** trial. Older founder-era link, do NOT send with 2-week copy.
 - `28EbJ30Had7o1li8ZT6g800` — Pro $199/yr, **90-day** trial.
 
-THE IN-APP TRIAL IS NOT 2 WEEKS FOR EVERYONE (changed 2026-09-29). Inside the app the trial is **1 week, and 2 weeks for an actor who has finished a scene**. The server decides (`backend/app/services/trial_length.py`) and every surface prints what `/api/subscriptions/me` returns as `trial_days`. It rolls into Plus monthly at $12. So:
+THE IN-APP TRIAL IS NOT 2 WEEKS (changed 2026-09-29, shortened 2026-11-16). Inside the app the trial is **3 days, and 1 week for an actor who has finished a scene** (it was 1 week and 2 weeks until 2026-11-16). The server decides (`backend/app/services/trial_length.py`) and every surface prints what `/api/subscriptions/me` returns as `trial_days`. It rolls into Plus monthly at $12. So:
 - The Stripe link above is still 14 days, and copy that sends THAT link still says "2 weeks free".
 - Copy that sends someone into the app (`actorrise.com/trial`, a wall, an ask) must NOT promise a length by hand. The triggered emails fill `{span}` per person for this reason.
 - Whether the email link should drop to 7 days to match is open, Canberk's call.

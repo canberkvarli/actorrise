@@ -131,7 +131,7 @@ export const appScenes: Widen<typeof en> = {
     title: "Bu senin ilk sahnendi.",
     house: "O benimdi. Sıradaki senin.",
     plus: "Plus",
-    earned: "O sahneyi bitirmek sana ikinci haftayı kazandırdı.",
+    earned: "O sahneyi bitirmek sana tam bir hafta kazandırdı.",
     runsLabel: "Provalar",
     runsValue: "ne kadar gerekirse",
     scriptsLabel: "Metinlerin",

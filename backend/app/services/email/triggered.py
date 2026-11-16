@@ -132,9 +132,11 @@ def _has_held_a_subscription(db) -> set[int]:
 
 
 def trial_span_for(db, user_id: int) -> str:
-    from app.services.trial_length import EARNED_TRIAL_DAYS, trial_days_for
+    """The trial as words for {span}: "a week", "two weeks", "3 days"."""
+    from app.services.trial_length import trial_days_for
 
-    return "two weeks" if trial_days_for(db, user_id) == EARNED_TRIAL_DAYS else "a week"
+    days = trial_days_for(db, user_id)
+    return {1: "a day", 7: "a week", 14: "two weeks"}.get(days, f"{days} days")
 
 
 def _link(touch: str) -> str:
