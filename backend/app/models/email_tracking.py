@@ -56,7 +56,8 @@ class EmailSend(Base):
     status = Column(String, default="queued")
     # When the claim was taken. A worker that dies mid-batch leaves rows in
     # "sending" forever, and a state that resume ignores is how recipients go
-    # missing, so a claim older than STALE_CLAIM_MINUTES is reclaimable.
+    # missing, so a claim older than STALE_CLAIM_MINUTES is reclaimable by
+    # Resume (never by a restart: admin/emails.py batches_to_resume).
     claimed_at = Column(DateTime(timezone=True), nullable=True)
     opened_at = Column(DateTime(timezone=True), nullable=True)
     clicked_at = Column(DateTime(timezone=True), nullable=True)
