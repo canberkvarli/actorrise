@@ -1,0 +1,43 @@
+# EAS Build reads this file from the REPO ROOT (eas-cli vcs/local.js), and
+# while it exists EAS ignores every .gitignore. So it does two jobs:
+#   1. upload only the app (apps/mobile), not the web, backend or docs;
+#   2. repeat the app's .gitignore rules below, above all the secret ones
+#      (keys/, .env, the Play service account). Drop one and it is uploaded.
+# .git and node_modules are always skipped by EAS itself.
+
+/*
+!/apps
+/apps/*
+!/apps/mobile
+
+# ---- apps/mobile/.gitignore, anchored to apps/mobile ----
+/apps/mobile/node_modules/
+/apps/mobile/.expo/
+/apps/mobile/dist/
+/apps/mobile/web-build/
+/apps/mobile/**/expo-env.d.ts
+/apps/mobile/.kotlin/
+/apps/mobile/**/*.orig.*
+/apps/mobile/**/*.jks
+/apps/mobile/**/*.p8
+/apps/mobile/**/*.p12
+/apps/mobile/**/*.key
+/apps/mobile/**/*.mobileprovision
+/apps/mobile/**/.metro-health-check*
+/apps/mobile/metro-cache/
+/apps/mobile/**/npm-debug.*
+/apps/mobile/**/yarn-debug.*
+/apps/mobile/**/yarn-error.*
+/apps/mobile/**/.DS_Store
+/apps/mobile/**/*.pem
+/apps/mobile/**/.env*.local
+/apps/mobile/**/*.tsbuildinfo
+/apps/mobile/ios
+/apps/mobile/android
+/apps/mobile/**/.env
+/apps/mobile/docs/plans/
+/apps/mobile/keys/
+!/apps/mobile/certs/certificate.pem
+/apps/mobile/**/google-play-service-account.json
+/apps/mobile/**/metro-file-map-expo-*
+/apps/mobile/eas-cli-nodejs/

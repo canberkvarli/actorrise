@@ -30,6 +30,7 @@ fi
 if git diff --quiet "$prev" HEAD -- . \
   ':(exclude)backend' \
   ':(exclude)apps' \
+  ':(exclude).easignore' \
   ':(exclude)docs' \
   ':(exclude)outputs' \
   ':(exclude)outreach' \
