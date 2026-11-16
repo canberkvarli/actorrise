@@ -29,6 +29,7 @@ fi
 # included, still builds.
 if git diff --quiet "$prev" HEAD -- . \
   ':(exclude)backend' \
+  ':(exclude)apps' \
   ':(exclude)docs' \
   ':(exclude)outputs' \
   ':(exclude)outreach' \

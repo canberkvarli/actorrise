@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The Ghost Light app lints with its own config.
+    "apps/**",
   ]),
 ]);
 

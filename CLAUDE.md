@@ -86,6 +86,18 @@ Two rules hold there:
   is the three-place check, read only, so a cloud run can verify and send search notes.
   When `/marketing-week` last ran is `loop_snapshot.py last marketing_week`, not a folder.
 
+# One repo, one brand (2026-11-16)
+
+ActorRise and Ghost Light are becoming one brand, Ghost Light (Canberk, 2026-11-16). The iOS app
+moved into this repo with its history (`git subtree`) at **`apps/mobile/`**; the old
+`canberkvarli/ghostlight` repo is to be archived. Work on the app happens here now.
+- The web stays at the repo root for now (Vercel's root directory is `.`). Moving it to
+  `apps/web` needs Vercel's Root Directory changed in the same step, or prod stops building.
+- `apps/mobile` has its own `package.json`, lockfile, tsconfig, tests and `CLAUDE.md`; run
+  its commands from inside it (`npm run typecheck`, `npm test`). The web's tsconfig, eslint
+  and vitest skip `apps/`, and a push that only touches `apps/` does not build Vercel.
+- Both apps share one backend, one Supabase project and one `user_subscriptions` table.
+
 # Working rules (Canberk's standing decisions, for every session, cloud or laptop)
 
 These lived only in the laptop's memory until 2026-11-03. A cloud session has no memory, so
@@ -111,7 +123,7 @@ they are here. When he gives a new standing rule, add it here, not to a memory f
   re-embeds it if the vector is missing.
 - **The web is English only (2026-11-03).** `TURKISH_ON_WEB = false` in `lib/i18n/locale.ts`:
   every visitor resolves to English and the EN/TR switch is not drawn. The Turkish UI lives in
-  Ghost Light (repo `canberkvarli/ghostlight`), where a Turkish actor brings their own script and
+  Ghost Light (`apps/mobile`), where a Turkish actor brings their own script and
   rehearses it in Turkish; the web's monologue library is for English-speaking actors. The
   Turkish strings and the gate below stay in place for the app's requests.
 - **Language gate (CAN-19).** The UI language picks the library, everywhere: the Turkish UI
