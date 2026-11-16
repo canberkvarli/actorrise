@@ -248,3 +248,20 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** none, playwright
 **They said:** "look what i found! i wrote this as i was working on my newest play ... i ultimately did not include it in the script so i forgot about it. let me know if it's something you'd like to use."
 **Heard as:** happy, a no turned into a yes once she found a standalone piece; sent a monologue as a PDF
+
+## 2026-11-15
+
+**Replying to:** search note (title not in the library), reply of 2026-11-12
+**Account:** free; details not in today's brief
+**They said:** "Thanks for letting me know. Actually no longer interested!"
+**Heard as:** content gap closed the door: the one title they came for was not in, and they left. Filed as an opt-out.
+
+**Replying to:** search note (a 30 second comedic piece), reply of 2026-11-14
+**Account:** free; details not in today's brief
+**They said:** "I was seeking a 30 second comedic monologue for SETC, but I had decided to go for a singing only audition. However, that doesn't mean my hunt for Monologues is over. In fact, it's the farthest thing from. I'm seeking to build a monologue repertoire similar to a vocal one to better shape my acting skills. If you have any suggestions, please let me know!"
+**Heard as:** happy, and a feature ask in disguise: a singer wants a monologue book built the way a vocal book is (contrasting pieces by type), not one search at a time
+
+**Replying to:** search note ("an activist, a young woman")
+**Account:** signed up 2026-11-15, free, read allowance spent the same day
+**They said:** "I'm auditioning for Hair at my university. I'm looking for it to be around a minute (maybe a little shorter), from a play, and action-centered so not telling a story but talking to someone."
+**Heard as:** audition brief (university musical, needs a play monologue); the search note started a conversation the same day

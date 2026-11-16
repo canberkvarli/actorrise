@@ -21,7 +21,7 @@ export const appAccount: Widen<typeof en> = {
     overTitle1: "Bir günlük Plus’ın bitti.",
     overTitleN: "{n} günlük Plus’ın bitti.",
     overBody: "Her parça, her arama, her prova senindi. Hepsi sende kalsın.",
-    earnSecondWeek: "Önce bir sahne bitir, iki hafta olsun.",
+    earnSecondWeek: "Önce bir sahne bitir, tam bir hafta olsun.",
   },
   appAccountBilling: {
     direction: "(gişe.)",

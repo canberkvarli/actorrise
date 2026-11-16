@@ -71,7 +71,9 @@ class Rest:
         return self._call("GET", f"{table}?{urllib.parse.urlencode(params)}") or []
 
     def post(self, table: str, body: Any) -> list[dict]:
-        return self._call("POST", table, body) or []
+        # Only the id comes back. A monologue row carries its 1536-number
+        # embedding, and echoing every inserted row costs egress for nothing.
+        return self._call("POST", f"{table}?select=id", body) or []
 
     def patch(self, table: str, body: dict, **params: str) -> list[dict]:
         return self._call("PATCH", f"{table}?{urllib.parse.urlencode(params)}", body) or []
@@ -123,6 +125,7 @@ def ingest_monologue_rest(
     analyzer: Any,
     embed: Callable,
     rejected: Optional[set[str]] = None,
+    provided: Optional[dict] = None,
 ) -> IngestReport:
     """Store ONE already-extracted speech through PostgREST. Always writes.
 
@@ -227,7 +230,9 @@ def ingest_monologue_rest(
         report.play_created = True
     report.play_id = play_id
 
-    meta = resolve_metadata({}, analysis)
+    # What the SOURCE states (a publisher's "Age: Teen", "Gender: Female") wins
+    # over what the analyser infers, when it normalises to a value we can query.
+    meta = resolve_metadata(provided or {}, analysis)
     row = {
         "play_id": play_id,
         "title": f"{character}, {play_title}",

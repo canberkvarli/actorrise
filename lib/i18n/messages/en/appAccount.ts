@@ -20,7 +20,7 @@ export const appAccount = {
     overTitle1: "Your day of Plus ended.",
     overTitleN: "Your {n} days of Plus ended.",
     overBody: "You had every piece, every search and every run. Keep all of it.",
-    earnSecondWeek: "Finish a scene first and it’s two weeks.",
+    earnSecondWeek: "Finish a scene first and it’s a full week.",
   },
   appAccountBilling: {
     direction: "(the box office.)",

@@ -70,12 +70,12 @@ class Fixture(unittest.TestCase):
 
 class TrialLengthTests(Fixture):
     def test_default_is_a_week(self):
-        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 7)
+        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 3)
         self.assertFalse(trial_length.has_finished_a_scene(self.db, self.user.id))
 
     def test_a_finished_scene_earns_the_second(self):
         self._session(self.user, "completed")
-        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 14)
+        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 7)
         self.assertTrue(trial_length.has_finished_a_scene(self.db, self.user.id))
 
     def _alex_line_indexes(self) -> list[int]:
@@ -129,14 +129,14 @@ class TrialLengthTests(Fixture):
     def test_a_scene_left_early_does_not(self):
         for status in ("in_progress", "abandoned", "timed_out"):
             self._session(self.user, status)
-        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 7)
+        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 3)
 
     def test_someone_elses_scene_does_not(self):
         other = User(email="other@example.com", supabase_id="s2")
         self.db.add(other)
         self.db.commit()
         self._session(other, "completed")
-        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 7)
+        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 3)
 
     def test_the_browser_cannot_claim_it(self):
         # guided_scene_finished arrives over POST /api/events, which any
@@ -147,17 +147,17 @@ class TrialLengthTests(Fixture):
             UserEvent(user_id=self.user.id, event_name="guided_scene_finished", properties={})
         )
         self.db.commit()
-        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 7)
+        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 3)
 
     def test_a_failed_lookup_gives_the_week(self):
         broken = mock.Mock()
         broken.query.side_effect = RuntimeError("db gone")
-        self.assertEqual(trial_length.trial_days_for(broken, self.user.id), 7)
+        self.assertEqual(trial_length.trial_days_for(broken, self.user.id), 3)
         broken.rollback.assert_called_once()
 
     def test_the_two_lengths(self):
-        self.assertEqual(trial_length.BASE_TRIAL_DAYS, 7)
-        self.assertEqual(trial_length.EARNED_TRIAL_DAYS, 14)
+        self.assertEqual(trial_length.BASE_TRIAL_DAYS, 3)
+        self.assertEqual(trial_length.EARNED_TRIAL_DAYS, 7)
 
 
 class CheckoutAndMeTests(Fixture):
@@ -187,35 +187,35 @@ class CheckoutAndMeTests(Fixture):
 
     def test_checkout_runs_a_week(self):
         sent = self._checkout()
-        self.assertEqual(sent["subscription_data"]["trial_period_days"], 7)
-        self.assertEqual(sent["metadata"]["trial_days"], "7")
+        self.assertEqual(sent["subscription_data"]["trial_period_days"], 3)
+        self.assertEqual(sent["metadata"]["trial_days"], "3")
         self.assertEqual(sent["metadata"]["trial_earned"], "0")
 
     def test_checkout_runs_two_for_a_finished_scene(self):
         self._session(self.user, "completed")
         sent = self._checkout()
-        self.assertEqual(sent["subscription_data"]["trial_period_days"], 14)
-        self.assertEqual(sent["metadata"]["trial_days"], "14")
+        self.assertEqual(sent["subscription_data"]["trial_period_days"], 7)
+        self.assertEqual(sent["metadata"]["trial_days"], "7")
         self.assertEqual(sent["metadata"]["trial_earned"], "1")
 
     def test_the_request_cannot_name_a_length(self):
         # The model takes `trial`, a yes or no. A length sent alongside it is
         # not a field and must not reach Stripe.
         sent = self._checkout(trial_days=90, trial_period_days=90)
-        self.assertEqual(sent["subscription_data"]["trial_period_days"], 7)
+        self.assertEqual(sent["subscription_data"]["trial_period_days"], 3)
 
     def test_a_yearly_trial_rolls_into_yearly(self):
         sent = self._checkout(billing_period="annual")
         self.assertEqual(sent["line_items"][0]["price"], "price_year")
         self.assertEqual(sent["metadata"]["billing_period"], "annual")
-        self.assertEqual(sent["subscription_data"]["trial_period_days"], 7)
+        self.assertEqual(sent["subscription_data"]["trial_period_days"], 3)
         self.assertEqual(sent["payment_method_collection"], "always")
 
     def test_a_monthly_trial_stays_monthly(self):
         sent = self._checkout(billing_period="monthly")
         self.assertEqual(sent["line_items"][0]["price"], "price_month")
         self.assertEqual(sent["metadata"]["billing_period"], "monthly")
-        self.assertEqual(sent["subscription_data"]["trial_period_days"], 7)
+        self.assertEqual(sent["subscription_data"]["trial_period_days"], 3)
 
     def test_a_yearly_trial_needs_the_yearly_price(self):
         self.plus.stripe_annual_price_id = None
@@ -232,10 +232,10 @@ class CheckoutAndMeTests(Fixture):
 
     def test_me_reports_what_checkout_would_run(self):
         me = asyncio.run(subscriptions.get_my_subscription(current_user=self.user, db=self.db))
-        self.assertEqual((me.trial_days, me.trial_earned), (7, False))
+        self.assertEqual((me.trial_days, me.trial_earned), (3, False))
         self._session(self.user, "completed")
         me = asyncio.run(subscriptions.get_my_subscription(current_user=self.user, db=self.db))
-        self.assertEqual((me.trial_days, me.trial_earned), (14, True))
+        self.assertEqual((me.trial_days, me.trial_earned), (7, True))
 
 
 if __name__ == "__main__":

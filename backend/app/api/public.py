@@ -26,24 +26,12 @@ router = APIRouter(prefix="/api/public", tags=["public"])
 _CACHE: dict[str, tuple[Any, float]] = {}
 _CACHE_TTL_SEC = 30
 
-# Demo searches (landing page) increment this so the public count ticks up when anyone tries the demo.
-# Resets on process restart; added to DB total for display.
-_demo_searches_count = 0
-
-
-def record_demo_search() -> None:
-    """Call when a landing-page demo search is performed. Adds to public total_searches."""
-    global _demo_searches_count
-    _demo_searches_count += 1
-    # Invalidate cache so the next GET /api/public/stats returns the new count (live update).
-    _CACHE.pop("public_stats", None)
-
 
 @router.get("/stats")
 def get_public_stats(db: Session = Depends(get_db)) -> dict[str, Any]:
     """
     Return public stats for the landing page (no auth).
-    total_searches: DB sum of all searches (with results) + demo count.
+    total_searches: DB sum of all searches (with results).
     total_monologues, total_plays, total_film_tv_references: library size. Cached 30s.
     """
     now = time.time()
@@ -69,7 +57,7 @@ def get_public_stats(db: Session = Depends(get_db)) -> dict[str, Any]:
         db_total = db.query(
             func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0)
         ).filter(UsageMetrics.user_id.notin_(staff_ids)).scalar() or 0
-    total = int(db_total) + _demo_searches_count
+    total = int(db_total)
 
     # Content record counts.
     #
