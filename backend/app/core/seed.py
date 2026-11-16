@@ -33,7 +33,9 @@ def canonical_tiers() -> list[PricingTier]:
             stripe_annual_price_id=None,
             features={
                 "ai_searches_per_month": 10,
-                "bookmarks_limit": 10,
+                # 5 since 2026-11-16, and enforced since then (FREE_SAVES_LIMIT in
+                # api/monologues.py); 10 was written here and never read.
+                "bookmarks_limit": 5,
                 "recommendations": True,
                 "download_formats": ["pdf", "docx"],
                 "priority_support": False,

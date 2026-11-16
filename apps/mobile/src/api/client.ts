@@ -2,6 +2,7 @@ import type { components, paths } from './schema';
 import { deviceId } from '../lib/device';
 import { supabase } from '../lib/supabase';
 import { currentLocale } from '../i18n';
+import Constants from 'expo-constants';
 
 /**
  * Typed client for the ActorRise FastAPI backend (`api.actorrise.com`) — the
@@ -83,6 +84,11 @@ export async function authHeaders(): Promise<Record<string, string>> {
   // half lands on its own without waiting for another binary to reach everyone.
   const device = await deviceId();
   if (device) headers['X-Device-Id'] = device;
+  // Which build is asking. The save cap (2026-11-16) is only enforced on builds
+  // that send this, because only those open the paywall when a save is refused;
+  // older ones would show "Saved" and quietly lose it.
+  const version = Constants.expoConfig?.version;
+  if (version) headers['X-App-Version'] = version;
   return headers;
 }
 

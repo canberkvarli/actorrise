@@ -40,6 +40,7 @@ import { computeProfileMatch } from "@/lib/profileMatch";
 import { estimateDurationSeconds } from "@/lib/estimateDuration";
 import { applyCut } from "@/lib/monologueSegments";
 import { tapRun, type RunSurface } from "@/lib/runEntry";
+import { openSavesWallIfCapped } from "@/components/billing/SavesWall";
 
 /**
  * One piece, three ways of looking at it — with a margin.
@@ -315,6 +316,7 @@ export default function MonologueDetailPage() {
         if (monologue.paywalled) await fetchMonologue(String(monologue.id));
       }
     } catch (error) {
+      if (openSavesWallIfCapped(error)) return;
       console.error("Error toggling favorite:", error);
     }
   };

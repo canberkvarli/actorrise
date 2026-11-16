@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 
-import { getFavorites, setCut, setFavorite, setMemorized, setPrepState } from '../api/client';
+import { ApiError, getFavorites, setCut, setFavorite, setMemorized, setPrepState } from '../api/client';
 import { apiToMonologue } from '../data/adapt';
-import { listOffline, saveOffline } from '../lib/offline';
+import { listOffline, removeOffline, saveOffline } from '../lib/offline';
+import { paywallHref } from '../lib/paywall';
 import { track } from '../lib/analytics';
 import { recordSave } from '../lib/reviewMoments';
 import type { Monologue } from '../data/monologues';
@@ -79,8 +81,15 @@ export function useToggleFavorite() {
       });
       return { previous };
     },
-    onError: (_err, _vars, ctx) => {
+    onError: (err, { id, on }, ctx) => {
       if (ctx?.previous) qc.setQueryData(KEY, ctx.previous);
+      // A free account at the save cap (5, FREE_SAVES_LIMIT on the server):
+      // the read screen already put the piece on the offline shelf, so take it
+      // back off, and open the paywall instead of failing quietly.
+      if (on && err instanceof ApiError && err.status === 403) {
+        void removeOffline(id);
+        router.push(paywallHref('save_limit'));
+      }
     },
     // Only a save the server kept counts toward the rating moment.
     onSuccess: (_data, { on }) => {

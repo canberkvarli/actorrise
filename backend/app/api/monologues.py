@@ -1196,6 +1196,35 @@ async def request_content(
 FREE_FIND_FOR_ME_PER_MONTH = 1
 _FIND_FOR_ME_EVENT = "find_for_me_used"
 
+#: Monologues a free account can hold saved at once, web and app alike
+#: (2026-11-16, Canberk). Onboarding keeps 3 of them, so 2 are saved by hand
+#: and the next one meets the offer. Until now saves were uncapped:
+#: bookmarks_limit was in the tier row and nothing read it. Plus is unlimited.
+#: Pieces saved before the cap stay; only a new save is refused.
+FREE_SAVES_LIMIT = 5
+
+
+def _free_save_refused(db: Session, user: User, request: Request | None = None) -> dict | None:
+    """The 403 detail when a free account is at the save cap, else None.
+
+    Ghost Light builds from before the cap send no X-App-Version and have no
+    paywall for a refused save (they would say "Saved" and lose it), so they
+    stay uncapped until the actor updates.
+    """
+    if request is not None:
+        client = normalise_client(request.headers.get("x-client"))
+        if client == CLIENT_GHOSTLIGHT and not request.headers.get("x-app-version"):
+            return None
+    if _user_has_unlimited_reads(int(user.id), db, getattr(user, "email", None)):
+        return None
+    held = db.query(MonologueFavorite).filter(
+        MonologueFavorite.user_id == user.id,
+        MonologueFavorite.removed_at.is_(None),
+    ).count()
+    if held < FREE_SAVES_LIMIT:
+        return None
+    return {"error": "saves_plus", "used": held, "limit": FREE_SAVES_LIMIT}
+
 
 def find_for_me_used_this_month(db: Session, user_id: int) -> int:
     """Presses of Find for me this calendar month, counted from user_events.
@@ -2004,6 +2033,7 @@ async def get_monologue(
 @router.post("/{monologue_id:int}/favorite")
 async def favorite_monologue(
     monologue_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -2019,6 +2049,13 @@ async def favorite_monologue(
         MonologueFavorite.user_id == current_user.id,
         MonologueFavorite.monologue_id == monologue_id
     ).first()
+
+    if existing and existing.removed_at is None:
+        return {"message": "Already favorited", "id": existing.id}
+
+    refused = _free_save_refused(db, current_user, request)
+    if refused:
+        raise HTTPException(status_code=403, detail=refused)
 
     if existing:
         # Re-adding a soft-deleted item restores it (with its memorized/notes/cut).
@@ -2294,6 +2331,7 @@ async def get_recently_removed(
 @router.post("/{monologue_id:int}/restore")
 async def restore_favorite(
     monologue_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -2309,6 +2347,9 @@ async def restore_favorite(
     if not fav:
         raise HTTPException(status_code=404, detail="Not found")
     if fav.removed_at is not None:
+        refused = _free_save_refused(db, current_user, request)
+        if refused:
+            raise HTTPException(status_code=403, detail=refused)
         fav.removed_at = None  # type: ignore[assignment]
         monologue = db.query(Monologue).filter(Monologue.id == monologue_id).first()
         if monologue:
