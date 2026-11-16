@@ -104,13 +104,16 @@ type Screens = {
     /** move the shot up inside the phone by this share of its height, [from, to], so a low part (the tab bar) reaches the safe area */
     pan?: [number, number];
     /** cross fade in instead of sliding in (a shot that changes while the phone turns) */
-    fade?: boolean }[];
+    fade?: boolean;
+    /** a drawn sticky note stuck on the phone (shares of the screen), from the story's own world: it sits over a part of the
+     *  real screen that may not be filmed (a line of an in-copyright play in Tonight's speech). Never a fake screen. */
+    note?: { x: number; y: number; w: number; h: number; text: string; rot?: number } }[];
   /** the drawn phone turns on its side at this scene frame (0 = it is already sideways), the way the actor turns it for casting */
   turn?: number;
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -1087,6 +1090,13 @@ const ScreensScene: React.FC<{ s: Screens; first: boolean }> = ({ s, first }) =>
                 boxShadow: i > 0 && inP < 1 ? "-20px 0 40px rgba(0,0,0,0.35)" : undefined }}>
                 <Img src={staticFile(sh.src)} style={{ width: SW, height: SHOT_H, objectFit: "cover",
                   objectPosition: "top" }} />
+                {sh.note && (
+                  <div style={{ position: "absolute", left: sh.note.x * SW, top: sh.note.y * SHOT_H, width: sh.note.w * SW, height: sh.note.h * SHOT_H,
+                    background: HL, border: `5px solid ${C_PAPER.ink}`, transform: `rotate(${sh.note.rot ?? -2}deg)`, boxShadow: "0 10px 24px rgba(0,0,0,0.45)",
+                    display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.serifI, fontStyle: "italic", fontSize: 78, color: C_PAPER.ink }}>
+                    {sh.note.text}
+                  </div>
+                )}
                 {sh.push && f >= sh.at + 6 && (() => {
                   const a = Easing.out(Easing.cubic)(prog(f, sh.at + 6, sh.at + 20)) * (next ? 1 - prog(f, next.at, next.at + 8) : 1);
                   const ring = spring({ frame: f - sh.at - 8, fps, config: { damping: 12, mass: 0.7 } });
@@ -3422,6 +3432,242 @@ const FreshScene: React.FC<{ s: Fresh }> = ({ s }) => {
   );
 };
 
+// ---------- Milo (Canberk, 2026-11-16: one recurring actor in every drawn film) ----------
+/** Milo: a working actor in his late twenties. Messy dark hair, a long mustard scarf, a tote bag always overflowing
+ *  with scripts. The same drawing every film: use this component, never redraw him. George is his inner voice. */
+const MUSTARD = "#dba423";
+const Milo: React.FC<{ x: number; y: number; r?: number; panic?: number; hope?: number; tilt?: number; start?: number; /** where his tote bag sits (video px), if it is in the shot */ tote?: [number, number]; /** the tote tips and the scripts slide out (0 to 1) */ spill?: number }> = ({ x, y, r = 84, panic = 0, hope = 0, tilt = 0, start = 0, tote, spill = 0 }) => {
+  const f = useCurrentFrame();
+  if (f < start) return null;
+  const k = r / 78, op = prog(f, start, start + 8);
+  const swing = Math.sin(f / 12) * 4 + panic * Math.sin(f / 3) * 3;
+  return (
+    <>
+      {tote && (
+        <g transform={`translate(${tote[0]} ${tote[1]}) rotate(${-6 + spill * 62}) scale(${k})`} opacity={op}>
+          {[[-34, -14, -16], [0, -26, 4], [32, -12, 18]].map(([px, py, pr], i) => (
+            <g key={i} transform={`translate(${px + spill * (30 + i * 16)} ${py - 78 - spill * (40 + i * 34)}) rotate(${pr + spill * i * 14})`}>
+              <rect x={-30} y={-44} width={60} height={88} fill="#ffffff" stroke={C.ink} strokeWidth={4} />
+              <path d="M-18 -24 L 18 -24 M-18 -8 L 10 -8 M-18 8 L 16 8" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" />
+            </g>
+          ))}
+          <path d="M-44 -70 C -44 -150, 44 -150, 44 -70" fill="none" stroke={C.ink} strokeWidth={8} strokeLinecap="round" />
+          <path d="M-74 -72 L 74 -72 L 64 84 L -64 84 Z" fill="#efe2c6" stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+          <path d="M-36 -6 L 36 -6 M-36 16 L 20 16" stroke={C.inkSoft} strokeWidth={5} strokeLinecap="round" />
+        </g>
+      )}
+      <Face x={x} y={y} r={r} panic={panic} hope={hope} tilt={tilt} start={start} />
+      <g transform={`translate(${x} ${y}) rotate(${tilt}) scale(${k})`} opacity={op}>
+        {/* the hair: never combed */}
+        <path d="M-78 -16 L -92 -58 L -62 -50 L -60 -96 L -30 -68 L -10 -112 L 12 -72 L 40 -104 L 46 -64 L 84 -78 L 76 -20 C 50 -52, -20 -60, -74 -18 Z" fill={LOOK === "midnight" ? "#3a2a22" : C.ink} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+        {/* the mustard scarf: wound once, one long end */}
+        <g transform={`rotate(${swing} 34 96)`}>
+          <path d="M16 92 L 60 86 L 86 300 L 44 308 Z" fill={MUSTARD} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+          <path d="M50 306 l 2 22 M62 304 l 4 22 M74 302 l 6 22" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+          <path d="M34 150 L 68 144 M40 210 L 76 204" stroke="rgba(33,26,21,0.35)" strokeWidth={5} strokeLinecap="round" />
+        </g>
+        <path d="M-62 56 C -30 92, 30 92, 62 56 L 68 98 C 30 130, -30 130, -68 98 Z" fill={MUSTARD} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+        <path d="M-40 92 C -14 108, 14 108, 40 92" fill="none" stroke="rgba(33,26,21,0.35)" strokeWidth={5} strokeLinecap="round" />
+      </g>
+    </>
+  );
+};
+
+// ---------- the audition notice, the tower of Complete Works, buried (2026-11-21, story + how-to: Viola) ----------
+/** The notice on the wall: the play, the part circled in orange, what to bring. You look up at it, and the question marks start. */
+type Notice = { type: "notice"; seconds: number; line: string; accent: string; head: string; play: string; role: string; ask: string; /** scene frame the circle goes round the part (the first scene of a film starts 62 frames in) */ circleAt?: number; /** scene frame the question marks start */ askAt?: number };
+const NoticeScene: React.FC<{ s: Notice }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const at = s.circleAt ?? 40, ask = s.askAt ?? 72;
+  const NX = 640, NY = 880, NW = 560, NH = 520, NK = 0.8;
+  const sway = Math.sin(f / 26) * 1.2 - 2;
+  const marks: [number, number, number][] = [[110, 1130, 0], [190, 1050, 12], [335, 1040, 24]];
+  return (
+    <AbsoluteFill>
+      <Sfx name="pencil_long" at={at} vol={0.5} />
+      {marks.map((m, i) => <Sfx key={i} name={i === 2 ? "cine/toing" : "pop"} at={ask + m[2]} vol={0.45} />)}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <g transform={`translate(${NX} ${NY}) scale(${NK}) translate(${-NX} ${-NY}) rotate(${sway} ${NX} ${NY - NH / 2})`}>
+          <rect x={NX - NW / 2 + 12} y={NY - NH / 2 + 12} width={NW} height={NH} fill="rgba(33,26,21,0.12)" />
+          <Ink d={`M${NX - NW / 2} ${NY - NH / 2} L ${NX + NW / 2} ${NY - NH / 2} L ${NX + NW / 2} ${NY + NH / 2} L ${NX - NW / 2} ${NY + NH / 2} Z`} start={0} dur={14} w={6} fill="#ffffff" />
+          <g opacity={prog(f, 8, 18)}>
+            <text x={NX} y={NY - 172} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={34} letterSpacing={10} fill={C.inkSoft}>{s.head}</text>
+            <text x={NX} y={NY - 92} textAnchor="middle" fontFamily={F.serifI} fontStyle="italic" fontSize={64} fill={C.ink}>{s.play}</text>
+            <path d={`M${NX - 200} ${NY - 54} L ${NX + 200} ${NY - 54}`} stroke={C.inkSoft} strokeWidth={3} />
+            <text x={NX} y={NY + 76} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={112} letterSpacing={8} fill={C.ink}>{s.role}</text>
+            <text x={NX} y={NY + 190} textAnchor="middle" fontFamily={F.serifI} fontStyle="italic" fontSize={50} fill={C.ink}>{s.ask}</text>
+          </g>
+          {/* the part, circled */}
+          <Ink d={`M${NX - 214} ${NY + 44} C ${NX - 230} ${NY - 52}, ${NX + 190} ${NY - 70}, ${NX + 226} ${NY + 26} C ${NX + 250} ${NY + 124}, ${NX - 190} ${NY + 140}, ${NX - 222} ${NY + 36}`} start={at} dur={16} w={8} color={C.orange} />
+          {/* the pin */}
+          <circle cx={NX} cy={NY - NH / 2 + 30} r={16} fill={C.orange} stroke={C.ink} strokeWidth={5} opacity={prog(f, 4, 10)} />
+        </g>
+        {/* you, looking up at it */}
+        <Ink d="M130 1440 C 130 1350, 220 1324, 300 1324 C 380 1324, 470 1350, 470 1440" start={4} dur={12} w={6} fill="rgba(232,121,43,0.35)" />
+        <Milo x={300} y={1240} r={84} tilt={8} panic={0.55 * prog(f, ask, ask + 24)} start={4} tote={[620, 1340]} />
+        {marks.map((m, i) => {
+          const p = spring({ frame: f - ask - m[2], fps, config: { damping: 9, mass: 0.5 } });
+          return p <= 0 ? null : (
+            <text key={i} x={m[0]} y={m[1] - Math.sin((f + i * 9) / 9) * 8} textAnchor="middle" fontFamily={F.serif} fontWeight={600} fontSize={110 * p} fill={i === 1 ? C.orange : C.ink} transform={`rotate(${(i - 1) * 14} ${m[0]} ${m[1]})`}>?</text>
+          );
+        })}
+      </svg>
+      {/* the hook: big, bold, there from frame 0 (it is the cover) */}
+      <AbsoluteFill style={{ alignItems: "center", padding: "262px 56px 0" }}>
+        <Rise at={2}><Headline text={s.line} accent={s.accent} color={C.ink} size={100} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** One book of the tower: a fat spine with its title, sticky notes poking out of the pages. */
+const TOME_H = 64;
+const TOMES: [number, number, number, string][] = [
+  [0, 340, 0, "COMPLETE WORKS"], [-16, 300, -2, "SHAKESPEARE"], [14, 320, 1.5, "THE COMEDIES"], [-8, 290, -1, "COMPLETE WORKS"],
+  [18, 310, 2, "ALL THE PLAYS"], [-14, 280, -2, "COMPLETE WORKS"], [8, 300, 1, "THE PLAYS"], [-4, 270, -1.5, "COMPLETE WORKS"]];
+const Tome: React.FC<{ w: number; label: string; k: number; notes?: number }> = ({ w, label, k, notes = 0 }) => (
+  <g>
+    {Array.from({ length: Math.min(3, Math.max(0, Math.floor(notes))) }, (_, j) => {
+      const right = (k + j) % 2 === 0;
+      return <rect key={j} x={right ? w / 2 - 6 : -w / 2 - 34} y={-TOME_H + 8 + j * 17} width={40} height={15} fill={j === 1 ? "#ffb7a3" : HL} stroke={C.ink} strokeWidth={3} />;
+    })}
+    <rect x={-w / 2} y={-TOME_H} width={w} height={TOME_H} rx={7} fill={k % 3 === 1 ? "#f3c39c" : PAPER_FILL} stroke={C.ink} strokeWidth={6} />
+    <path d={`M${-w / 2 + 28} ${-TOME_H} L ${-w / 2 + 28} 0 M${w / 2 - 28} ${-TOME_H} L ${w / 2 - 28} 0`} stroke={C.inkSoft} strokeWidth={3} />
+    <text x={0} y={-TOME_H / 2 + 9} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={23} letterSpacing={3} fill={C.ink}>{label}</text>
+  </g>
+);
+
+/** Every Complete Works you own lands on the floor, one on another, taller than you, bristling with sticky notes; you flip pages beside it. */
+type Tower = { type: "tower"; seconds: number; line: string; accent: string; from?: number; every?: number };
+const TowerScene: React.FC<{ s: Tower }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const FY = 1270, TX = 700;
+  const from = s.from ?? 8, every = s.every ?? 10;
+  const n = TOMES.length;
+  const landed = Math.max(0, Math.min(n, Math.floor((f - from) / every) + 1));
+  const tall = landed / n;
+  const lean = Math.sin(f / 8) * tall * tall * 2.6;
+  const flip = (f % 14) / 14;
+  return (
+    <AbsoluteFill>
+      {TOMES.map((_, i) => <Sfx key={i} name="thud" at={from + i * every} vol={0.3 + i * 0.03} />)}
+      {TOMES.map((_, i) => (i % 2 ? <Sfx key={`n${i}`} name="pop" at={from + i * every + 14} vol={0.35} /> : null))}
+      <Sfx name="pencil_short" at={from + 30} vol={0.4} />
+      <Sfx name="cine/toing" at={from + n * every + 6} vol={0.4} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the floor */}
+        <Ink d={`M80 ${FY} C 360 ${FY - 8}, 720 ${FY + 8}, 1000 ${FY}`} start={0} dur={14} w={8} />
+        {/* the tower */}
+        <g transform={`rotate(${lean} ${TX} ${FY})`}>
+          {TOMES.map(([dx, w, tilt, label], i) => {
+            const land = from + i * every;
+            if (f < land - 8) return null;
+            const d = spring({ frame: f - land + 8, fps, config: { damping: 11, mass: 0.6, stiffness: 170 } });
+            return (
+              <g key={i} transform={`translate(${TX + dx} ${FY - 4 - i * TOME_H - (1 - d) * 760}) rotate(${tilt + (1 - d) * 10})`}>
+                <Tome w={w} label={label} k={i} notes={(f - land - 10) / 7} />
+              </g>
+            );
+          })}
+        </g>
+        {/* you, cross legged beside it, flipping */}
+        <Ink d={`M130 ${FY - 2} C 130 ${FY - 96}, 220 ${FY - 124}, 300 ${FY - 124} C 380 ${FY - 124}, 470 ${FY - 96}, 470 ${FY - 2}`} start={2} dur={12} w={6} fill="rgba(232,121,43,0.35)" />
+        <Milo x={300} y={FY - 214} r={86} tilt={6} panic={0.15 + 0.6 * tall} start={2} tote={[112, FY - 74]} />
+        <g transform={`translate(330 ${FY - 62})`} opacity={prog(f, 6, 14)}>
+          <path d="M0 0 C -40 -22, -100 -22, -136 -6 L -136 52 C -100 36, -40 36, 0 58 Z" fill="#ffffff" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+          <path d="M0 0 C 40 -22, 100 -22, 136 -6 L 136 52 C 100 36, 40 36, 0 58 Z" fill="#ffffff" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+          <path d={`M0 2 C ${Math.cos(flip * Math.PI) * 60} ${-30 - Math.sin(flip * Math.PI) * 70}, ${Math.cos(flip * Math.PI) * 110} ${-20 - Math.sin(flip * Math.PI) * 60}, ${Math.cos(flip * Math.PI) * 132} ${-4 - Math.sin(flip * Math.PI) * 30}`} fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+          <rect x={96} y={-22} width={34} height={18} fill={HL} stroke={C.ink} strokeWidth={3} transform="rotate(-8 96 -22)" />
+        </g>
+        {/* it is taller than you now */}
+        {tall >= 1 && [0, 1, 2].map((i) => <path key={i} d={`M${TX + 210 + i * 22} ${FY - n * TOME_H + 30 + i * 46} l 26 ${-10 + i * 10}`} stroke={C.ink} strokeWidth={5} strokeLinecap="round" opacity={0.3 + 0.7 * Math.abs(Math.sin(f / 4 + i))} />)}
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** The tower tips and buries you. Sticky notes flutter down; then one hand comes up out of the heap, holding a phone. */
+type Buried = { type: "buried"; seconds: number; line: string; accent: string; tipAt?: number; handAt?: number };
+const BuriedScene: React.FC<{ s: Buried }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const FY = 1270, TX = 700;
+  const tipAt = s.tipAt ?? 30, handAt = s.handAt ?? tipAt + 44;
+  const n = TOMES.length;
+  const heap: [number, number, number][] = [[250, FY, -4], [450, FY - 6, 8], [340, FY - 66, -12], [200, FY - 118, 22], [490, FY - 108, -26], [350, FY - 146, 6], [262, FY - 206, -18], [430, FY - 200, 30]];
+  const wob = Math.sin(f / 3.2) * prog(f, 0, tipAt) * 5;
+  const hand = spring({ frame: f - handAt, fps, config: { damping: 11, mass: 0.7 } });
+  const hit = prog(f, tipAt + 8, tipAt + 30);
+  return (
+    <AbsoluteFill>
+      <Sfx name="cine/toing" at={Math.max(0, tipAt - 22)} vol={0.5} />
+      <Sfx name="toss" at={tipAt} vol={0.7} />
+      {[0, 1, 2].map((i) => <Sfx key={i} name="thud" at={tipAt + 12 + i * 5} vol={0.8 - i * 0.15} />)}
+      <Sfx name="cine/ping" at={handAt + 4} vol={0.55} />
+      <AbsoluteFill style={{ background: `radial-gradient(circle 250px at 392px ${FY - 500}px, rgba(232,121,43,${0.4 * hand}) 0%, rgba(232,121,43,0) 100%)` }} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Ink d={`M80 ${FY} C 360 ${FY - 8}, 720 ${FY + 8}, 1000 ${FY}`} start={-20} dur={10} w={8} />
+        {/* you, for one more second */}
+        <Ink d={`M130 ${FY - 2} C 130 ${FY - 96}, 220 ${FY - 124}, 300 ${FY - 124} C 380 ${FY - 124}, 470 ${FY - 96}, 470 ${FY - 2}`} start={-20} dur={10} w={6} fill="rgba(232,121,43,0.35)" />
+        <Milo x={300} y={FY - 214} r={86} tilt={10} panic={0.4 + 0.6 * prog(f, tipAt - 18, tipAt)} start={-20} tote={[112, FY - 74]} spill={prog(f, tipAt + 6, tipAt + 20)} />
+        {/* the hand that makes it out, with the phone */}
+        {hand > 0.01 && (
+          <g transform={`translate(392 ${FY - 150 - hand * 200}) rotate(${-6 + Math.sin(f / 10) * 3})`}>
+            <path d="M0 150 L 0 10" stroke={C.ink} strokeWidth={56} strokeLinecap="round" />
+            <path d="M0 150 L 0 10" stroke="#f0b98e" strokeWidth={44} strokeLinecap="round" />
+            <g transform="translate(0 -92) rotate(8)">
+              <rect x={-62} y={-112} width={124} height={224} rx={22} fill={C.stage} stroke={C.ink} strokeWidth={7} />
+              <rect x={-48} y={-94} width={96} height={188} rx={10} fill="#2a1a10" />
+              <rect x={-34} y={-70} width={68} height={12} rx={6} fill={C.orange} opacity={0.6 + 0.4 * Math.sin(f / 6)} />
+              <path d="M-34 -36 L 34 -36 M-34 -10 L 20 -10 M-34 16 L 30 16" stroke="rgba(239,230,216,0.5)" strokeWidth={7} strokeLinecap="round" />
+            </g>
+            <circle cx={0} cy={2} r={36} fill="#f0b98e" stroke={C.ink} strokeWidth={6} />
+            <path d="M-30 -8 L 30 -8 M-32 8 L 32 8" stroke={C.ink} strokeWidth={4} strokeLinecap="round" opacity={0.5} />
+          </g>
+        )}
+        {/* the tower, standing, then all of it on you */}
+        {TOMES.map(([dx, w, tilt, label], i) => {
+          const go = spring({ frame: f - tipAt - (n - 1 - i) * 0.6, fps, config: { damping: 14, mass: 0.9, stiffness: 120 } });
+          const a = (wob * Math.PI) / 180;
+          const sx = TX + dx - Math.sin(a) * i * TOME_H * 2.2, sy = FY - 4 - i * TOME_H;
+          const [hx, hy, hr] = heap[i];
+          const x = sx + (hx - sx) * go, y = sy + (hy - sy) * go - Math.sin(Math.min(1, go) * Math.PI) * (40 + i * 26);
+          return (
+            <g key={i} transform={`translate(${x} ${y}) rotate(${tilt - wob * (i / n) * 2 + (hr - tilt) * go})`}>
+              <Tome w={w} label={label} k={i} notes={3 * (1 - prog(f, tipAt, tipAt + 6))} />
+            </g>
+          );
+        })}
+        {/* the scarf got caught, as always: its end sticks out of the heap */}
+        {f > tipAt + 14 && (
+          <g transform={`translate(545 ${FY - 30}) rotate(${-64 + Math.sin(f / 9) * 5})`} opacity={prog(f, tipAt + 14, tipAt + 20)}>
+            <path d="M-20 0 L 20 0 L 26 150 L -16 154 Z" fill={MUSTARD} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+            <path d="M-10 152 l 0 22 M4 152 l 3 22 M18 150 l 6 22" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+          </g>
+        )}
+        {/* dust, and the sticky notes coming down after */}
+        {hit > 0 && hit < 1 && [0, 1, 2, 3].map((i) => (
+          <circle key={i} cx={(i % 2 ? 560 : 130) + (i % 2 ? 1 : -1) * hit * (30 + i * 24)} cy={FY - 24 - hit * (24 + i * 18)} r={(20 - i * 3) * (1 - hit * 0.4)} fill="none" stroke={C.inkSoft} strokeWidth={4} opacity={1 - hit} />
+        ))}
+        {f > tipAt + 4 && Array.from({ length: 9 }, (_, i) => {
+          const t = f - tipAt - 4 - i * 2;
+          if (t < 0) return null;
+          const x = 640 - i * 52 + Math.sin((t + i * 13) / 9) * 30, y = Math.min(FY - 12 - (i % 3) * 4, 700 + i * 22 + t * (6 + (i % 3)));
+          return <rect key={i} x={x} y={y} width={40} height={30} fill={i % 3 === 1 ? "#ffb7a3" : HL} stroke={C.ink} strokeWidth={3} transform={`rotate(${y >= FY - 24 ? i * 23 : t * (5 + i)} ${x + 20} ${y + 15})`} />;
+        })}
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
   const f = useCurrentFrame();
   const t = f / FPS;
@@ -3511,6 +3757,9 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "tally" ? <TallyScene s={sc} /> :
       sc.type === "snap" ? <SnapScene s={sc} /> :
       sc.type === "fresh" ? <FreshScene s={sc} /> :
+      sc.type === "notice" ? <NoticeScene s={sc} /> :
+      sc.type === "tower" ? <TowerScene s={sc} /> :
+      sc.type === "buried" ? <BuriedScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

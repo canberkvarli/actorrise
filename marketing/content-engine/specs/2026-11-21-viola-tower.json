@@ -1,0 +1,584 @@
+{
+  "id": "2026-11-21-viola-tower",
+  "look": "paper",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "Stop flipping the Complete Works looking for Viola. The notice says Twelfth Night, one speech.",
+        "say": "[amused] Stop flipping the Complete Works looking for Viola. The notice says Twelfth Night, one speech.",
+        "at": 0.518,
+        "words": [
+          {
+            "w": "Stop",
+            "s": 0.0,
+            "e": 0.038
+          },
+          {
+            "w": "flipping",
+            "s": 0.074,
+            "e": 0.358
+          },
+          {
+            "w": "the",
+            "s": 0.374,
+            "e": 0.422
+          },
+          {
+            "w": "Complete",
+            "s": 0.465,
+            "e": 0.806
+          },
+          {
+            "w": "Works",
+            "s": 0.881,
+            "e": 1.254
+          },
+          {
+            "w": "looking",
+            "s": 1.294,
+            "e": 1.574
+          },
+          {
+            "w": "for",
+            "s": 1.606,
+            "e": 1.702
+          },
+          {
+            "w": "Viola.",
+            "s": 1.766,
+            "e": 2.598
+          },
+          {
+            "w": "The",
+            "s": 2.71,
+            "e": 3.046
+          },
+          {
+            "w": "notice",
+            "s": 3.092,
+            "e": 3.366
+          },
+          {
+            "w": "says",
+            "s": 3.405,
+            "e": 3.558
+          },
+          {
+            "w": "Twelfth",
+            "s": 3.622,
+            "e": 3.878
+          },
+          {
+            "w": "Night,",
+            "s": 3.932,
+            "e": 4.39
+          },
+          {
+            "w": "one",
+            "s": 4.438,
+            "e": 4.582
+          },
+          {
+            "w": "speech.",
+            "s": 4.646,
+            "e": 5.094
+          }
+        ],
+        "dur": 5.214,
+        "sub": false
+      },
+      {
+        "text": "So I stack up every Complete Works I own, and I go page by page.",
+        "say": "So I stack up every Complete Works I own, and I go page by page.",
+        "at": 5.846,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.47
+          },
+          {
+            "w": "I",
+            "s": 0.566,
+            "e": 0.662
+          },
+          {
+            "w": "stack",
+            "s": 0.694,
+            "e": 0.854
+          },
+          {
+            "w": "up",
+            "s": 0.918,
+            "e": 1.046
+          },
+          {
+            "w": "every",
+            "s": 1.088,
+            "e": 1.302
+          },
+          {
+            "w": "Complete",
+            "s": 1.344,
+            "e": 1.686
+          },
+          {
+            "w": "Works",
+            "s": 1.739,
+            "e": 2.006
+          },
+          {
+            "w": "I",
+            "s": 2.07,
+            "e": 2.134
+          },
+          {
+            "w": "own,",
+            "s": 2.198,
+            "e": 2.518
+          },
+          {
+            "w": "and",
+            "s": 2.598,
+            "e": 2.838
+          },
+          {
+            "w": "I",
+            "s": 2.87,
+            "e": 2.902
+          },
+          {
+            "w": "go",
+            "s": 2.944,
+            "e": 3.03
+          },
+          {
+            "w": "page",
+            "s": 3.119,
+            "e": 3.478
+          },
+          {
+            "w": "by",
+            "s": 3.52,
+            "e": 3.606
+          },
+          {
+            "w": "page.",
+            "s": 3.708,
+            "e": 4.438
+          }
+        ],
+        "dur": 4.558
+      },
+      {
+        "text": "And the whole tower tips over and buries me, so I open Ghost Light.",
+        "say": "[playful] And the whole tower tips over and buries me, so I open Ghost Light.",
+        "at": 10.656,
+        "words": [
+          {
+            "w": "And",
+            "s": 0.0,
+            "e": 0.012
+          },
+          {
+            "w": "the",
+            "s": 0.028,
+            "e": 0.076
+          },
+          {
+            "w": "whole",
+            "s": 0.108,
+            "e": 0.268
+          },
+          {
+            "w": "tower",
+            "s": 0.322,
+            "e": 0.588
+          },
+          {
+            "w": "tips",
+            "s": 0.639,
+            "e": 0.844
+          },
+          {
+            "w": "over",
+            "s": 0.882,
+            "e": 1.036
+          },
+          {
+            "w": "and",
+            "s": 1.052,
+            "e": 1.1
+          },
+          {
+            "w": "buries",
+            "s": 1.164,
+            "e": 1.42
+          },
+          {
+            "w": "me,",
+            "s": 1.484,
+            "e": 1.932
+          },
+          {
+            "w": "so",
+            "s": 1.974,
+            "e": 2.06
+          },
+          {
+            "w": "I",
+            "s": 2.092,
+            "e": 2.124
+          },
+          {
+            "w": "open",
+            "s": 2.188,
+            "e": 2.444
+          },
+          {
+            "w": "Ghost",
+            "s": 2.486,
+            "e": 2.7
+          },
+          {
+            "w": "Light.",
+            "s": 2.754,
+            "e": 3.468
+          }
+        ],
+        "dur": 3.588
+      },
+      {
+        "text": "I tap Search, and I type Viola.",
+        "say": "[upbeat] I tap Search, and I type Viola.",
+        "at": 14.628,
+        "sub": false,
+        "words": [
+          {
+            "w": "I",
+            "s": 0.0,
+            "e": 0.008
+          },
+          {
+            "w": "tap",
+            "s": 0.088,
+            "e": 0.328
+          },
+          {
+            "w": "Search,",
+            "s": 0.383,
+            "e": 0.904
+          },
+          {
+            "w": "and",
+            "s": 0.92,
+            "e": 0.968
+          },
+          {
+            "w": "I",
+            "s": 1.032,
+            "e": 1.096
+          },
+          {
+            "w": "type",
+            "s": 1.147,
+            "e": 1.352
+          },
+          {
+            "w": "Viola.",
+            "s": 1.48,
+            "e": 2.472
+          }
+        ],
+        "dur": 2.592
+      },
+      {
+        "text": "And up come her speeches, so I open one, tap Run it, and start rehearsing.",
+        "say": "[delighted] And up come her speeches, so I open one, tap Run it, and start rehearsing.",
+        "at": 17.538,
+        "sub": false,
+        "words": [
+          {
+            "w": "And",
+            "s": 0.0,
+            "e": 0.048
+          },
+          {
+            "w": "up",
+            "s": 0.112,
+            "e": 0.24
+          },
+          {
+            "w": "come",
+            "s": 0.278,
+            "e": 0.432
+          },
+          {
+            "w": "her",
+            "s": 0.448,
+            "e": 0.496
+          },
+          {
+            "w": "speeches,",
+            "s": 0.553,
+            "e": 1.328
+          },
+          {
+            "w": "so",
+            "s": 1.37,
+            "e": 1.456
+          },
+          {
+            "w": "I",
+            "s": 1.52,
+            "e": 1.584
+          },
+          {
+            "w": "open",
+            "s": 1.622,
+            "e": 1.776
+          },
+          {
+            "w": "one,",
+            "s": 1.84,
+            "e": 2.288
+          },
+          {
+            "w": "tap",
+            "s": 2.352,
+            "e": 2.544
+          },
+          {
+            "w": "Run",
+            "s": 2.592,
+            "e": 2.736
+          },
+          {
+            "w": "it,",
+            "s": 2.8,
+            "e": 3.056
+          },
+          {
+            "w": "and",
+            "s": 3.088,
+            "e": 3.184
+          },
+          {
+            "w": "start",
+            "s": 3.226,
+            "e": 3.44
+          },
+          {
+            "w": "rehearsing.",
+            "s": 3.478,
+            "e": 4.016
+          }
+        ],
+        "dur": 4.136
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 22.476,
+        "sub": false,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.198
+          },
+          {
+            "w": "Ghost",
+            "s": 0.225,
+            "e": 0.358
+          },
+          {
+            "w": "Light.",
+            "s": 0.401,
+            "e": 0.902
+          },
+          {
+            "w": "Built",
+            "s": 0.95,
+            "e": 1.19
+          },
+          {
+            "w": "by",
+            "s": 1.254,
+            "e": 1.382
+          },
+          {
+            "w": "a",
+            "s": 1.414,
+            "e": 1.446
+          },
+          {
+            "w": "working",
+            "s": 1.486,
+            "e": 1.766
+          },
+          {
+            "w": "actor.",
+            "s": 1.82,
+            "e": 2.214
+          }
+        ],
+        "dur": 2.334
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-21-viola-tower/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.25
+  },
+  "scenes": [
+    {
+      "type": "notice",
+      "seconds": 5.746,
+      "line": "Stop flipping the Complete Works looking for Viola.",
+      "accent": "Viola.",
+      "head": "AUDITIONS",
+      "play": "Twelfth Night",
+      "role": "VIOLA",
+      "ask": "one speech",
+      "circleAt": 40,
+      "askAt": 74
+    },
+    {
+      "type": "tower",
+      "seconds": 4.81,
+      "line": "Every Complete Works.",
+      "accent": "Complete Works.",
+      "from": 26,
+      "every": 11
+    },
+    {
+      "type": "buried",
+      "seconds": 3.972,
+      "line": "Still no Viola.",
+      "accent": "Viola.",
+      "tipAt": 40,
+      "handAt": 84
+    },
+    {
+      "type": "screens",
+      "seconds": 2.91,
+      "line": "Type her name.",
+      "accent": "her name.",
+      "shots": [
+        {
+          "src": "story/2026-11-21-viola-tower/book.png",
+          "at": 0,
+          "tap": {
+            "x": 0.171,
+            "y": 0.93,
+            "at": 12
+          }
+        },
+        {
+          "src": "story/2026-11-21-viola-tower/search.png",
+          "at": 48,
+          "note": {
+            "x": 0.05,
+            "y": 0.492,
+            "w": 0.9,
+            "h": 0.2,
+            "text": "Viola??",
+            "rot": -2
+          }
+        },
+        {
+          "src": "story/2026-11-21-viola-tower/typed.png",
+          "at": 67,
+          "fade": true,
+          "note": {
+            "x": 0.05,
+            "y": 0.492,
+            "w": 0.9,
+            "h": 0.2,
+            "text": "Viola??",
+            "rot": -2
+          }
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 4.888,
+      "line": "Open one. Run it.",
+      "accent": "Run it.",
+      "shots": [
+        {
+          "src": "story/2026-11-21-viola-tower/typed.png",
+          "at": 0,
+          "note": {
+            "x": 0.05,
+            "y": 0.492,
+            "w": 0.9,
+            "h": 0.2,
+            "text": "Viola??",
+            "rot": -2
+          },
+          "tap": {
+            "x": 0.856,
+            "y": 0.312,
+            "at": 0
+          }
+        },
+        {
+          "src": "story/2026-11-21-viola-tower/results.png",
+          "at": 24,
+          "tap": {
+            "x": 0.5,
+            "y": 0.3,
+            "at": 40
+          }
+        },
+        {
+          "src": "story/2026-11-21-viola-tower/open.png",
+          "at": 66,
+          "tap": {
+            "x": 0.46,
+            "y": 0.382,
+            "at": 74
+          }
+        },
+        {
+          "src": "story/2026-11-21-viola-tower/run.png",
+          "at": 100
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "tiktok": "Stop flipping the Complete Works looking for Viola. Type her name in Ghost Light. #actorslife #monologue #audition #shakespeare #actortok",
+    "youtube_title": "Stop flipping the Complete Works for a Viola monologue #shorts",
+    "youtube_description": "Auditioning for Viola in Twelfth Night? Type her name in Ghost Light and her speeches come up, with how long each one runs.\nOpen one, tap Run it, and rehearse it out loud. Free on the App Store. Built by a working actor.\n#monologue #audition #shakespeare #twelfthnight",
+    "instagram": "Stop flipping the Complete Works looking for Viola.\n\nMilo's notice says Twelfth Night, one speech. The tower of books did not help.\n1. Open Ghost Light and tap Search.\n2. Type Viola.\n3. Open one of her speeches and tap Run it.\n\nFree on the App Store, built by a working actor. Link in bio.\n\n#actorslife #monologue #audition #shakespeare #actorsofinstagram"
+  },
+  "cover_ms": 1200,
+  "source": {
+    "plan": "Callboard row 2026-11-21 (storyhowto, story-howto, paper), with Canberk's 11-16 note on the row: Milo episode, hook 'Stop flipping the Complete Works looking for Viola.' spoken first and big on screen from frame 0, Ghost Light only, about 25s",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "checked": "2026-11-16: plays.id 13 Twelfth Night (Shakespeare, public_domain). Viola rows: 1201 (1:03), 1239 (1:23), 39469 (1:08), 39470 (1:03) show; 1246 and 1287 are too_short and 1224 'I left no ring with her' is marked duplicate, so they do not come up",
+    "changed_from_plan": "the board asked to open 'I left no ring with her'; it is not in the results (review_status duplicate), so the film opens the first result, 1201 'There is a fair behaviour in thee, Captain'. No count of speeches is said (4 show, the board had 7)",
+    "app": "Ghost Light web preview built from actorrise main apps/mobile (7ae7c263) plus web-preview.patch, dark theme, demo account, 2026-11-16. The old ghostlight repo is outside this session's access, so serve.sh's clone step was replaced by a copy of apps/mobile",
+    "flow": "flows/search-viola-twelfth-night.json (shots -> public/story/2026-11-21-viola-tower/*.png): Book, Search, typed Viola, 30 monologues with Viola first, the speech page, Run it",
+    "sticky_note": "Tonight's speech on the search screen showed a line of a contemporary play, which may not be filmed; a drawn sticky note ('Viola??', new `note` field on a screens shot) sits over that card. Nothing on the screen is mocked",
+    "voice": "George, one take at stability 0.5, Scribe 1.00; sped up 1.25x with fit_take.py",
+    "new_scene_types": "Milo (the recurring actor: messy dark hair, mustard scarf, tote of scripts; one component, reuse it), notice (the pinned audition notice, the part circled, the hook big from frame 0), tower (Complete Works stacking up with sticky notes), buried (the tower tips, his scarf end sticks out, a hand comes up with the phone)",
+    "motifs": "milo-first-film,audition-notice-viola-circled,tower-of-complete-works-sticky-notes,buried-under-books-hand-with-phone,scarf-caught-under-the-heap",
+    "end": "specs/2026-11-21-viola-tower-end.json, joined with scripts/join.sh; the end line is cut from the take",
+    "feature": "character"
+  }
+}

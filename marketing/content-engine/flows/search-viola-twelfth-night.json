@@ -1,0 +1,81 @@
+{
+  "start": "/search",
+  "lead": 600,
+  "steps": [
+    {
+      "wait": 2500
+    },
+    {
+      "goto": "/saves"
+    },
+    {
+      "wait": 1800
+    },
+    {
+      "shot": "book"
+    },
+    {
+      "click": {
+        "css": "a[href='/search']"
+      }
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "shot": "search"
+    },
+    {
+      "type": "Viola",
+      "into": {
+        "css": "input"
+      },
+      "delay": 60
+    },
+    {
+      "blur": true
+    },
+    {
+      "wait": 500
+    },
+    {
+      "shot": "typed"
+    },
+    {
+      "click": {
+        "css": "[aria-label='Search']"
+      }
+    },
+    {
+      "waitFor": "monologues."
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "shot": "results"
+    },
+    {
+      "click": "There is a fair behaviour"
+    },
+    {
+      "wait": 3000
+    },
+    {
+      "shot": "open"
+    },
+    {
+      "click": "RUN IT"
+    },
+    {
+      "wait": 3500
+    },
+    {
+      "shot": "run"
+    },
+    {
+      "wait": 400
+    }
+  ],
+  "tail": 300
+}

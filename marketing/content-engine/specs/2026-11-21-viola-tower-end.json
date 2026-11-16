@@ -1,0 +1,86 @@
+{
+  "id": "2026-11-21-viola-tower-end",
+  "look": "noir",
+  "cut": "hard",
+  "music": {
+    "style": "beat",
+    "volume": 0.2
+  },
+  "voice": {
+    "volume": 1,
+    "lines": [
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 0.0,
+        "sub": false,
+        "audio": "voice/2026-11-21-viola-tower-end/end.mp3",
+        "dur": 2.484,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.15,
+            "e": 0.348
+          },
+          {
+            "w": "Ghost",
+            "s": 0.375,
+            "e": 0.508
+          },
+          {
+            "w": "Light.",
+            "s": 0.551,
+            "e": 1.052
+          },
+          {
+            "w": "Built",
+            "s": 1.1,
+            "e": 1.34
+          },
+          {
+            "w": "by",
+            "s": 1.404,
+            "e": 1.532
+          },
+          {
+            "w": "a",
+            "s": 1.564,
+            "e": 1.596
+          },
+          {
+            "w": "working",
+            "s": 1.636,
+            "e": 1.916
+          },
+          {
+            "w": "actor.",
+            "s": 1.97,
+            "e": 2.364
+          }
+        ]
+      }
+    ]
+  },
+  "beats": [
+    {
+      "kind": "end",
+      "seconds": 3.0,
+      "brand": "Ghost Light",
+      "line": "Built by a working actor.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "snap": true,
+      "sfx": [],
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "part_of": "2026-11-21-viola-tower",
+    "why": "the sharp Ghost Light card (DIRECTION 2026-11-10 afternoon), joined after the story with scripts/join.sh"
+  }
+}
