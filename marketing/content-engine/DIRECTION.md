@@ -3,6 +3,29 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-16, later: one brand, one actor, clickbait hooks (wins over everything below)
+
+**Ghost Light is the only brand now (Canberk: "unified").** Never say or show "ActorRise" or
+actorrise.com in a film, a caption, a title or a card. Every film closes on the Ghost Light card, every
+caption says Ghost Light, "free on the App Store", "link in bio". Older blocks below that close some films
+on ActorRise no longer apply.
+
+**Milo, the actor in every drawn film.** One recurring drawn character so people follow a person, not a
+format: Milo, a working actor in his late twenties, messy dark hair, a long mustard scarf, a tote bag
+always overflowing with scripts. Same drawing every film (keep his design in one component and reuse it).
+George is Milo's inner voice. Milo has running bits: the scarf gets caught on things, the tote bag spills,
+he always ends up next to five Juliets. Other people around him stay simple outlines.
+
+**Clickbait hooks, the way TikTok does it.** The first 1.5 seconds decide the reach. Every film opens with a
+hook that is BOTH spoken first AND on screen as big bold text from frame 0 (it is also the cover frame):
+- Calling out a mistake: "Stop bringing Juliet to auditions." "Casting is tired of this monologue."
+- The secret: "The monologue nobody brings." "A 40 second comedic monologue nobody knows."
+- POV: "POV: you're the sixth Juliet today." "POV: your reader is stuck on a train."
+- Don't do X until: "Don't pick a Shakespeare monologue until you see this."
+- The number: "Three weeks without saying a monologue out loud."
+The payoff must be true: a real piece, a real feature, real counts. Never promise an outcome we can't
+show (no "this books every time", no fake stats, no fake testimonials). Keep the whole film around 25s.
+
 ## 2026-11-16: no more AI actors; drawn + George is the format (wins over everything below)
 
 Canberk, after two weeks of numbers: the AI generated actor films do not bring views, so they stop. No Omni
