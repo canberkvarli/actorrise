@@ -116,8 +116,22 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
   an actor means by contemporary), 33 filed under a collection title instead of the play,
   302 refused by the quality gate, 20 already in the library.
 
+- **2026-11-16, musical audition packets** (`packets/mus2.py`): 21 pieces, 46140-46160, on
+  the musical floor. Guys and Dolls (Great Theatre's adult packet, 10), Little Women, the
+  Allan Knee musical (IP Theater, 10), Mamma Mia! (Harlingen CISD, Sophie only: the other
+  speeches are under 60 words or for two characters). Lines the packets give to another
+  character are cut; Benny's speech is word for word the end of Nicely's and was left out.
+  Visible musical pieces: 108, past the 100 the musical tag needs.
+  The two Madagascar: A Musical Adventure Jr. pieces from the Seattle Children's Theatre
+  packet (44778, 44780) are hidden as `pending` with the reason recorded: a Jr. edition is
+  on the deny list whatever packet carries it.
+  Tried and dropped: the Callboard "Mamma Mia" sheet (its speeches are from other plays,
+  uncredited), Yale's Legally Blonde packet (sides are links, not text), Cabrini's Little
+  Shop sides (the site no longer answers). **StageAgent**: robots.txt allows everything,
+  but its terms forbid automated collection and commercial use. Permission only.
+
 Asks rather than scrapes (permission emails): Monologue Blogger (terms forbid commercial
-use),
+use), StageAgent (terms),
 Don Zolidis (403), Arthur M. Jolly (PDFs, disallowed), Stage Partners (403).
 
 All were written from a cloud session with `--write-rest`, which goes through

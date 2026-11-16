@@ -11,7 +11,8 @@ and stay out of the repository.
 Order: `getpdf.py` (PDF packets) → `split.py <key> [one] [cf]` per packet → `combine.py`
 (titles, playwrights, deny list) with `fixes.py` (years, corrections); `wa_fetch.py` +
 `wa_parse.py` (We Are Actors); `tumblr.py` + `tb_parse.py` + `tb_fix.py`; `sheas.py`;
-`pai.py` + `mus.py` (musical audition packets).
+`pai.py` + `mus.py` (musical audition packets); `mus2.py <dir> <out.json>` (2026-11-16:
+Guys and Dolls, Little Women, Mamma Mia! packets, read from the PDFs' text).
 
 State on 2026-11-12: about 520 pieces were ready to write (packets 200, We Are Actors 85,
 Tumblr 205 at ten per play, Shea's 22, musicals 14) and NONE went in: the OpenAI account
