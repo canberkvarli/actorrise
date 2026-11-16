@@ -12,6 +12,7 @@ from typing import Optional
 
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.templates import EmailTemplates
+from app.core.brand import site_url
 
 
 def send_welcome_email(user_email: str, user_name: Optional[str] = None) -> dict:
@@ -181,7 +182,7 @@ def send_submission_notification(
         elif status == 'approved':
             subject = f"🎉 Submission Approved: {monologue_title}"
             if not monologue_url:
-                monologue_url = "https://actorrise.com/monologues"
+                monologue_url = f"{site_url()}/monologues"
             html = templates.render_submission_approved(
                 user_name=user_name,
                 monologue_title=monologue_title,

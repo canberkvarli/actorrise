@@ -31,10 +31,11 @@ from app.services.email.marketing import APPLE_RELAY_DOMAIN, build_unsubscribe_u
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.school_address import is_school_student
 from app.services.email.templates import EmailTemplates
+from app.core.brand import site_url
 
 logger = logging.getLogger(__name__)
 
-SITE_URL = os.getenv("SITE_URL", "https://actorrise.com")
+SITE_URL = site_url()
 SUBJECT = "you saved {character} and never opened it"
 
 

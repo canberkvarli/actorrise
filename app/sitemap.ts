@@ -2,8 +2,9 @@
   import { BLOG_POSTS } from "@/lib/blog/posts";
   import { COLLECTIONS } from "@/lib/monologueCollections";
 import { getIndexableMonologues, monologueSlug } from "@/lib/monologueSeo";
+import { SITE_URL } from "@/lib/brand";
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+  const baseUrl = SITE_URL;
 
   /** Stable date for sitemap entries so crawlers get consistent signals (update when doing larger content refreshes). */
   const lastMod = new Date("2026-07-27");

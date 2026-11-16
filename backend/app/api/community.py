@@ -30,6 +30,7 @@ from app.models.user import User
 from app.services.community import RETIRED_EVENT_TYPES
 from app.services.library_language import current_languages, script_clause
 from app.services.search.semantic_search import language_clause
+from app.core.brand import site_url
 
 # Community library needs at least this many shared scripts before it stops
 # showing the "still gathering" cold-start state.
@@ -444,7 +445,7 @@ def send_room_invite(
     # Escape everything user-controlled before it enters the email HTML.
     inviter = html.escape(_first_name(current_user.name))
     scene = html.escape((body.scene_title or "").strip()[:120])
-    url = f"https://actorrise.com/greenroom/room/{body.room_id}?script={int(body.script_id)}"
+    url = f"{site_url()}/greenroom/room/{body.room_id}?script={int(body.script_id)}"
 
     body_html = f"""
     <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:28px;color:#1a1a1a">

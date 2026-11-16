@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { ForStudentsContent } from "./ForStudentsContent";
+import { SITE_URL } from "@/lib/brand";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+const siteUrl = SITE_URL;
 
 /* Students come in through their teacher's class link (2026-10-16) and get Plus
    for a month without paying; a school keeps the class on with a class plan

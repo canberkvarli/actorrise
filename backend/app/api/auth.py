@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from sqlalchemy import exists, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from app.core.brand import BRAND_NAME, site_url
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 security = HTTPBearer()
@@ -594,9 +595,9 @@ def _unsubscribe_page(message: str) -> str:
 </head>
 <body>
     <div class="card">
-        <img src="https://actorrise.com/logo_with_text.png" alt="ActorRise" />
+        <img src="{site_url()}/logo_with_text.png" alt="{BRAND_NAME}" />
         <p>{message}</p>
-        <p><a href="https://actorrise.com">Back to ActorRise</a></p>
+        <p><a href="{site_url()}">Back to {BRAND_NAME}</a></p>
     </div>
 </body>
 </html>"""

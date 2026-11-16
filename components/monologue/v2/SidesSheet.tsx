@@ -8,6 +8,7 @@ import { displayableAuthor } from "@/lib/utils";
 import { estimateDurationSeconds, formatClock } from "@/lib/estimateDuration";
 import { applyCut } from "@/lib/monologueSegments";
 import { useT } from "@/lib/i18n";
+import { BRAND } from "@/lib/brand";
 
 /**
  * Copy mode: your sides, as a sheet you could hand someone.
@@ -47,7 +48,7 @@ export function SidesSheet({ monologue }: { monologue: Monologue }) {
   const translatorCredit = monologue.translator
     ? t("appMonologueSides.translation", { translator: monologue.translator })
     : "";
-  const slug = [`actorrise.com/monologue/${monologue.id}`, translatorCredit]
+  const slug = [`${BRAND.domain}/monologue/${monologue.id}`, translatorCredit]
     .filter(Boolean)
     .join(" · ");
   const seconds = estimateDurationSeconds(cutText);

@@ -5,8 +5,9 @@ import { StageHero } from "@/components/marketing/StageHero";
 import { BLOG_POSTS } from "@/lib/blog/posts";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { T, type MessageKey } from "@/lib/i18n";
+import { SITE_URL } from "@/lib/brand";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+const siteUrl = SITE_URL;
 const post = BLOG_POSTS.find((p) => p.slug === "most-overdone-audition-monologues")!;
 const url = `${siteUrl}/blog/${post.slug}`;
 

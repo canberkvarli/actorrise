@@ -7,8 +7,9 @@ import { getCorpusStats, type CorpusStats } from "@/lib/monologueSeo";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { english } from "@/components/marketing/seo/english";
 import { T, type MessageKey } from "@/lib/i18n";
+import { SITE_URL } from "@/lib/brand";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+const siteUrl = SITE_URL;
 
 /*
  * This is the page ChatGPT cites. In September it sent 113 of the 160

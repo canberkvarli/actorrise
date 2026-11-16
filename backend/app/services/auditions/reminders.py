@@ -29,13 +29,14 @@ from app.services.auditions.core import asks_for_own_piece, aware, count_runs, p
 from app.services.email.marketing import build_unsubscribe_url
 from app.services.email.templates import EmailTemplates
 from app.services.events import record_user_event
+from app.core.brand import site_url
 
 logger = logging.getLogger(__name__)
 
 COPY_DIR = Path(__file__).resolve().parents[3] / "emails" / "auditions"
 MOMENTS = ("prep", "eve", "after")
 WINDOW = timedelta(hours=6)
-SITE_URL = os.getenv("SITE_URL", "https://actorrise.com")
+SITE_URL = site_url()
 API_PUBLIC_URL = os.getenv("API_PUBLIC_URL", "https://api.actorrise.com")
 UNREACHABLE = ("@anon.actorrise.com", "@privaterelay.appleid.com")
 

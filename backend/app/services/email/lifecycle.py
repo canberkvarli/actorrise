@@ -40,10 +40,11 @@ from app.services.email.marketing import APPLE_RELAY_DOMAIN, build_unsubscribe_u
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.templates import EmailTemplates
 from app.services.events import record_user_event
+from app.core.brand import site_url
 
 logger = logging.getLogger(__name__)
 
-SITE_URL = os.getenv("SITE_URL", "https://actorrise.com")
+SITE_URL = site_url()
 ANON_DOMAIN = "@anon.actorrise.com"
 
 # touch -> (hours after signup: min, max). 72h wide so the hour-of-day match

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { T, type MessageKey } from "@/lib/i18n";
+import { BRAND } from "@/lib/brand";
 
 /**
  * A note for teachers, pinned to the callboard. The class link a teacher makes
@@ -16,7 +17,7 @@ const CARDS: { n: string; head: MessageKey; body: MessageKey; chip?: string; rot
     n: "1",
     head: "landingClass.card1Head",
     body: "landingClass.card1Body",
-    chip: "actorrise.com/join/your-class",
+    chip: `${BRAND.domain}/join/your-class`,
     rot: "-2deg",
     mt: "0px",
   },

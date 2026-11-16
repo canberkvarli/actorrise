@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import desc, func, or_, text as sa_text
 from sqlalchemy.orm import Session
+from app.core.brand import site_url
 
 router = APIRouter(prefix="/api/admin", tags=["admin", "searches"])
 
@@ -708,7 +709,7 @@ def get_notify_drafts(
             detail=f"{requested} is not in the library yet, so there is nothing to tell them.",
         )
 
-    base = os.getenv("SITE_URL", "https://actorrise.com")
+    base = site_url()
     url = f"{base}/monologues?monologue={pieces[0][0]}"
 
     waiting = (

@@ -8,8 +8,9 @@ import {
   PARTNER_CATEGORY_ORDER,
   type PartnerItem,
 } from "@/data/partners";
+import { SITE_URL } from "@/lib/brand";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "With thanks",

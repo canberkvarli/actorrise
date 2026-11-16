@@ -7,8 +7,9 @@ import { GuideVideoCard } from "@/components/guides/GuideVideoCard";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { ContentT } from "@/components/seo/ContentT";
 import { T } from "@/lib/i18n";
+import { SITE_URL } from "@/lib/brand";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "Guides & Tutorials for Actors",

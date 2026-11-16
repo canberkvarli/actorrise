@@ -27,6 +27,7 @@ from app.core.database import get_db
 from app.models.actor import Monologue, MonologueFavorite, Play, UserScript
 from app.models.book import BookList, BookListItem, BookListShare
 from app.models.user import User
+from app.core.brand import site_url
 
 router = APIRouter(prefix="/api/book", tags=["book"])
 
@@ -257,7 +258,7 @@ async def remove_item(
 
 # ---------------------------------------------------------------- sharing
 
-SITE = "https://www.actorrise.com"
+SITE = site_url()
 
 
 class ShareOut(BaseModel):

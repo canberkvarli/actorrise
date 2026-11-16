@@ -21,8 +21,9 @@ import {
 import { displayableAuthor } from "@/lib/utils";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { T } from "@/lib/i18n";
+import { SITE_URL } from "@/lib/brand";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+const siteUrl = SITE_URL;
 
 // ISR: render on first request, cache for a week. Keeps ~20k pages cheap + crawlable.
 // A day was the setting until 2026-10-02: a monologue page does not change

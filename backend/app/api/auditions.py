@@ -23,10 +23,11 @@ from app.models.audition import Audition
 from app.models.user import User
 from app.services.auditions import assist, core, ics, parse
 from app.services.events import record_user_event
+from app.core.brand import site_url
 
 router = APIRouter(prefix="/api/auditions", tags=["auditions"])
 
-SITE_URL = os.getenv("SITE_URL", "https://actorrise.com")
+SITE_URL = site_url()
 API_PUBLIC_URL = os.getenv("API_PUBLIC_URL", "https://api.actorrise.com")
 
 

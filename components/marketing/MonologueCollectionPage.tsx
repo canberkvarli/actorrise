@@ -8,8 +8,9 @@ import { displayableAuthor } from "@/lib/utils";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { T, type MessageKey } from "@/lib/i18n";
 import { ContentT } from "@/components/seo/ContentT";
+import { SITE_URL } from "@/lib/brand";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+const siteUrl = SITE_URL;
 
 function readableLength(seconds: number | null): string | null {
   if (!seconds) return null;

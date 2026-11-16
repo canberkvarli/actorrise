@@ -8,6 +8,7 @@ import { useMySharing } from "@/hooks/useClassShelf";
 import { useUsageLimits } from "@/hooks/useSubscription";
 import { trackEvent } from "@/lib/events";
 import { useLocale, useT, type Locale } from "@/lib/i18n";
+import { BRAND } from "@/lib/brand";
 
 type ClassLinkSummary = {
   code: string;
@@ -31,7 +32,7 @@ function planDate(iso: string, locale: Locale): string {
   });
 }
 
-const SITE = "actorrise.com";
+const SITE = BRAND.domain;
 
 const muted = { color: "var(--t-muted-dark)" };
 const line = { borderColor: "var(--t-line-light-2)" };

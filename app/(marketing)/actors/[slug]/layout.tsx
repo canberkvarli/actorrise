@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/brand";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+const siteUrl = SITE_URL;
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.actorrise.com";
 
 type Props = { params: Promise<{ slug: string }> };

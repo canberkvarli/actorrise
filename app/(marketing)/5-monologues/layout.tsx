@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/brand";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "5 Monologues Casting Directors Would Rather See",

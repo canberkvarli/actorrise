@@ -17,6 +17,7 @@ import { OAuthCallbackRedirect } from "@/components/auth/OAuthCallbackRedirect";
 import { LastAuthCookieSync } from "@/components/auth/LastAuthCookieSync";
 import { AttributionCapture } from "@/components/analytics/AttributionCapture";
 import { HtmlLang } from "@/lib/i18n";
+import { SITE_URL } from "@/lib/brand";
 
 const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
@@ -79,7 +80,7 @@ const bigShoulders = localFont({
   preload: false,
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

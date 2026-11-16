@@ -21,6 +21,7 @@ from app.models.user import User
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.school_address import STUDENT_INBOX_PREFIXES
 from app.services.email.templates import EmailTemplates
+from app.core.brand import site_url
 
 
 # ---------------------------------------------------------------------------
@@ -53,7 +54,7 @@ def verify_unsubscribe_token(email: str, token: str) -> bool:
 def build_unsubscribe_url(email: str) -> str:
     """Build the full unsubscribe URL for a user."""
     token = generate_unsubscribe_token(email)
-    base = os.getenv("SITE_URL", "https://actorrise.com")
+    base = site_url()
     return f"{base}/unsubscribe?email={email}&token={token}"
 
 

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from app.core.brand import site_url
 
 
 def library_claim(monologue_count: Optional[int] = None) -> str:
@@ -346,7 +347,7 @@ class EmailTemplates:
             user_name=user_name or "there",
             character_analysis=character_analysis,
             monologue_snippet=monologue_snippet,
-            monologue_url=monologue_url or "https://actorrise.com/dashboard",
+            monologue_url=monologue_url or f"{site_url()}/dashboard",
             unsubscribe_url=unsubscribe_url,
         )
 
@@ -708,7 +709,7 @@ class EmailTemplates:
             preheader=kwargs.get("preheader", ""),
             greeting=kwargs.get("greeting", ""),
             app_url=kwargs.get("app_url") or self.GHOSTLIGHT_APP_URL,
-            base_url=kwargs.get("base_url") or "https://actorrise.com",
+            base_url=kwargs.get("base_url") or site_url(),
             postscript=kwargs.get("postscript", ""),
             # The footer link must not repeat the reply-UNSUBSCRIBE offer the
             # body already makes, so this template overrides the default

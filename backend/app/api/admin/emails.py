@@ -35,6 +35,7 @@ from app.services.email.resend_client import ResendEmailClient
 from app.services.email.smtp_client import SmtpEmailClient
 from app.services.email.templates import EmailTemplates
 from app.services.email.tracking import add_tracking
+from app.core.brand import site_url
 
 
 def _reject_unsupported_schedule(send_via: str, scheduled_at: Optional[str]) -> None:
@@ -298,7 +299,7 @@ TEMPLATES = [
             {"name": "preheader", "label": "Inbox preview line", "type": "text", "default": "the whole library on your phone, and it reads with no signal.", "required": False},
             {"name": "greeting", "label": "Greeting (optional, replaces \"hey <first name>,\")", "type": "text", "default": "", "required": False},
             {"name": "app_url", "label": "App Store link (keep the ?ct= tag, it is how App Store Connect attributes the install)", "type": "url", "default": "https://apps.apple.com/us/app/ghost-light-monologues/id6804278673?ct=launch_email", "required": True},
-            {"name": "base_url", "label": "Asset host for the screenshot", "type": "url", "default": "https://actorrise.com", "required": True},
+            {"name": "base_url", "label": "Asset host for the screenshot", "type": "url", "default": site_url(), "required": True},
             {"name": "sender_title", "label": "Sender title", "type": "text", "default": "actor, and the person who built this", "required": False},
             {"name": "postscript", "label": "Postscript (the reply-to-opt-out line, below the signature)", "type": "text", "default": "not interested in emails from me? reply UNSUBSCRIBE and i will take you off the list, no hard feelings.", "required": False},
             {"name": "unsubscribe_note", "label": "Footer opt-out wording (kept short so it does not repeat the postscript)", "type": "text", "default": "prefer a button? you can also", "required": False},
@@ -322,7 +323,7 @@ TEMPLATES = [
             {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
             {"name": "character_analysis", "label": "AI character intro (2-3 sentences)", "type": "text", "default": "", "required": False},
             {"name": "monologue_snippet", "label": "Monologue excerpt", "type": "text", "default": "", "required": False},
-            {"name": "monologue_url", "label": "Monologue URL", "type": "url", "default": "https://actorrise.com/dashboard", "required": False},
+            {"name": "monologue_url", "label": "Monologue URL", "type": "url", "default": f"{site_url()}/dashboard", "required": False},
         ],
     },
 ]
@@ -1601,7 +1602,7 @@ def prepare_weekly_digest(
 
         # Create EmailSend record with extra data in JSON
         snippet = (monologue.text[:200] + "...") if len(monologue.text) > 200 else monologue.text
-        monologue_url = f"https://actorrise.com/monologues/{monologue.id}"
+        monologue_url = f"{site_url()}/monologues/{monologue.id}"
 
         send = EmailSend(
             batch_id=batch.id,
