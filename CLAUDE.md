@@ -105,9 +105,10 @@ moved into this repo with its history (`git subtree`) at **`apps/mobile/`**; the
   Never brand: `api.actorrise.com`, the `X-ActorRise-Locale` header, storage keys, bot names.
 - **One tier, Plus (2026-11-16).** An App Store purchase grants Plus, the same Plus as Stripe
   (`RC_GRANT_TIER` in `api/webhooks.py`), so paying in either place unlocks both. The old app
-  tier `monologues` stays on app rows until their next RENEWAL. The App Store price is still
-  the old one ($9.99/mo, $59.99/yr against the web's $12 and $99); aligning it is the next
-  pricing step, after this one has been read.
+  tier `monologues` stays on app rows until their next RENEWAL. The App Store price moves to
+  the web's: **$11.99/mo, $99.99/yr** (was $9.99 and $59.99; Canberk sets it in App Store
+  Connect, existing subscribers keep theirs), because a cheaper app door to the same Plus paid
+  about half. Apple took 30% until he enrols in the Small Business Program (15%).
 
 # Working rules (Canberk's standing decisions, for every session, cloud or laptop)
 
