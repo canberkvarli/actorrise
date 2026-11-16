@@ -26,7 +26,7 @@ import { pick, useL } from '../i18n';
  *
  * Since 1.1 the plan is one: the library and the scene partner together. Since
  * 2026-11-16 it is Plus, the same Plus as the website, at the website's price:
- * $11.99 a month or $99.99 a year (it was $9.99 and $59.99). The free week rides on the yearly plan
+ * $12.99 a month (no $11.99 tier was offered) or $99.99 a year (it was $9.99 and $59.99). The free week rides on the yearly plan
  * only; monthly is charged the day it starts. The fallbacks below are what
  * the screen says while the store answers and are never what anyone is
  * charged: the CTA is inert until the store has spoken.
@@ -40,7 +40,7 @@ export const TERMS_URL = 'https://ghostlight.actor/terms';
 export const PRIVACY_URL = 'https://ghostlight.actor/privacy';
 
 const FALLBACK_ANNUAL = '$99.99';
-const FALLBACK_MONTHLY = '$11.99';
+const FALLBACK_MONTHLY = '$12.99';
 const FALLBACK_PER_MONTH = '$8.33';
 
 export function useTrialOffer({
@@ -138,9 +138,9 @@ export function useTrialOffer({
   const monthlyBilled = monthlyPkg?.product.priceString ?? FALLBACK_MONTHLY;
   const annualPerMonth = perMonthString(annualPkg?.product, 12) ?? FALLBACK_PER_MONTH;
   // What the year saves on twelve months, from the store's own prices; the
-  // fallbacks' 99.99 against 11.99 when there is no offering to ask.
+  // fallbacks' 99.99 against 12.99 when there is no offering to ask.
   const aP = annualPkg?.product.price ?? (offering ? 0 : 99.99);
-  const mP = monthlyPkg?.product.price ?? (offering ? 0 : 11.99);
+  const mP = monthlyPkg?.product.price ?? (offering ? 0 : 12.99);
   const savePercent = aP > 0 && mP > 0 && aP < mP * 12 ? Math.round((1 - aP / (mP * 12)) * 100) : null;
 
   const selectedPkg: PurchasesPackage | null = plan === 'annual' ? annualPkg : monthlyPkg;
