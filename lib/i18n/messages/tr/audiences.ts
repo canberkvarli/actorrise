@@ -1,5 +1,6 @@
 import type { Widen } from "../types";
 import type { audiences as en } from "../en/audiences";
+import { BRAND } from "../../../brand";
 
 export const audiences: Widen<typeof en> = {
   audStudents: {
@@ -28,7 +29,7 @@ export const audiences: Widen<typeof en> = {
     titleB: " ve koçlar için.",
     lede: "Öğrencilerin doğru seçme monoloğunu saniyeler içinde buluyor, böylece aramaya daha az, provaya daha çok vakit kalıyor.",
     intro:
-      "ActorRise onlara aranabilir 19.000+ parça, tiplerine ve seçmenin istediğine göre eşleştiren bir yapay zekâ ve çok oynanmış parçaları ayıklayan bir filtre veriyor, böylece seçmeye farklı bir şeyle giriyorlar.",
+      `${BRAND.name} onlara aranabilir 19.000+ parça, tiplerine ve seçmenin istediğine göre eşleştiren bir yapay zekâ ve çok oynanmış parçaları ayıklayan bir filtre veriyor, böylece seçmeye farklı bir şeyle giriyorlar.`,
     features: [
       "Aranabilir en büyük monolog arşivlerinden biri (19.000+ parça)",
       "Doğal dille arama: ör. “comedic woman under 2 minutes”",
@@ -134,7 +135,7 @@ export const audiences: Widen<typeof en> = {
     sending: "Gönderiliyor…",
     send: "Listeyi gönder",
     privacy:
-      "Spam yok. E-postanı yalnızca bu listeyi ve ara sıra ActorRise haberlerini göndermek için kullanırım. İstediğin zaman abonelikten çıkabilirsin.",
+      `Spam yok. E-postanı yalnızca bu listeyi ve ara sıra ${BRAND.name} haberlerini göndermek için kullanırım. İstediğin zaman abonelikten çıkabilirsin.`,
   },
   audList: {
     fromBy: "Ghost Light’tan, {by} gönderdi",

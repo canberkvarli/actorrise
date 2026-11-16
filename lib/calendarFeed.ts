@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand";
 /**
  * One-tap subscribe links for the auditions calendar feed.
  *
@@ -9,7 +10,7 @@
 
 export type CalendarProvider = "google" | "apple" | "outlook";
 
-export const CALENDAR_FEED_NAME = "ActorRise auditions";
+export const CALENDAR_FEED_NAME = `${BRAND.name} auditions`;
 
 /** https://… or http://… → webcal://… (anything already webcal stays as it is). */
 export function webcalUrl(feed: string): string {

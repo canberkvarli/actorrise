@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
+import { BRAND } from "@/lib/brand";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "ActorRise",
-    short_name: "ActorRise",
+    name: BRAND.name,
+    short_name: BRAND.name,
     description: "Rehearse scenes and monologues with an AI scene partner.",
     start_url: "/practice",
     scope: "/",

@@ -1,5 +1,6 @@
 import type { Widen } from "../types";
 import type { marketing as en } from "../en/marketing";
+import { BRAND } from "../../../brand";
 
 export const marketing: Widen<typeof en> = {
   marketingFooter: {
@@ -86,7 +87,7 @@ export const marketing: Widen<typeof en> = {
     titleA: "Bir ",
     titleB: "oyuncu",
     titleC: " yaptı, oyuncular için.",
-    lede: "ActorRise tek kişilik bir proje. Bir oyuncu, bir kod tabanı ve prova zamanının nereye gitmesi gerektiğine dair net bir fikir.",
+    lede: `${BRAND.name} tek kişilik bir proje. Bir oyuncu, bir kod tabanı ve prova zamanının nereye gitmesi gerektiğine dair net bir fikir.`,
     p1: "Ben Canberk. Berkeley’de Inferno Theater’da oynuyorum, aynı zamanda yazılım mühendisiyim.",
     p2: "ActorRise’ı yaptım, çünkü seçme monologlarını prova etmek yerine onları aramakla koca günler kaybediyordum. Hesap tutmuyordu: 6 saat arama, 2 saat prova. Tam tersi olmalı.",
     p3: "Ben de keşke elimde olsaydı dediğim aracı yaptım. Ne aradığını anlatıyorsun, doğru parçayı buluyor ve sen asıl işine dönüyorsun: prova, oyunculuk, hazırlık.",

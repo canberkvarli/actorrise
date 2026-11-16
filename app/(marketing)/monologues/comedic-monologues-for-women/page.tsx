@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -11,13 +11,13 @@ export const metadata: Metadata = {
   title: "Comedic Monologues for Women",
   description: "Find comedic monologues for women for auditions. Search 19,000+ real pieces by length and tone, filter out overdone choices, and land the laugh.",
   openGraph: {
-    title: "Comedic Monologues for Women | ActorRise",
+    title: `Comedic Monologues for Women | ${BRAND.name}`,
     description: "Comedic monologues for women, searchable by length and tone. Real published pieces, Overdone filter, free to start.",
     url: `${siteUrl}/monologues/comedic-monologues-for-women`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Comedic Monologues for Women | ActorRise",
+    title: `Comedic Monologues for Women | ${BRAND.name}`,
     description: "Comedic monologues for women, searchable by length and tone. Real published pieces, Overdone filter, free to start.",
     images: ["/opengraph-image"],
   },

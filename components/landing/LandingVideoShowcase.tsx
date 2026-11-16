@@ -9,6 +9,7 @@ import {
 } from "framer-motion";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
 import { VideoSchema } from "@/components/seo/VideoSchema";
+import { BRAND } from "@/lib/brand";
 
 const YOUTUBE_ID = "TTZxo3bZPI4";
 // TODO(Canberk): set to the real YouTube publish date of the ScenePartner demo.
@@ -55,8 +56,8 @@ export function LandingVideoShowcase() {
       className="relative py-28 sm:py-36 md:py-44 overflow-hidden"
     >
       <VideoSchema
-        name="ActorRise ScenePartner demo"
-        description="See how ActorRise's ScenePartner lets actors rehearse scenes with an AI reading partner, anytime."
+        name={`${BRAND.name} ScenePartner demo`}
+        description={`See how ${BRAND.name}'s ScenePartner lets actors rehearse scenes with an AI reading partner, anytime.`}
         thumbnailUrl={`https://img.youtube.com/vi/${YOUTUBE_ID}/maxresdefault.jpg`}
         uploadDate={VIDEO_UPLOAD_DATE}
         embedUrl={`https://www.youtube.com/embed/${YOUTUBE_ID}`}

@@ -1,11 +1,11 @@
 {% extends "base_personal.html" %}
 
-{% block title %}Welcome to ActorRise{% endblock %}
+{% block title %}Welcome to {{ brand }}{% endblock %}
 
 {% block content %}
         <p>Hey {{ user_name }},</p>
 
-        <p>Welcome to ActorRise. Really glad you signed up.</p>
+        <p>Welcome to {{ brand }}. Really glad you signed up.</p>
 
         <p>Here's what you can do right now:</p>
 
@@ -19,7 +19,7 @@
 
         <p style="margin-top: 28px;">
             Canberk<br>
-            <span style="color: #666;">Founder, ActorRise</span><br>
+            <span style="color: #666;">Founder, {{ brand }}</span><br>
             <a href="https://actorrise.com" style="color: #666;">actorrise.com</a>
         </p>
 {% endblock %}

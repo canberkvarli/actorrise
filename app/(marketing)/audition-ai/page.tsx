@@ -5,7 +5,7 @@ import { StageHero } from "@/components/marketing/StageHero";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { english } from "@/components/marketing/seo/english";
 import { T, type MessageKey } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -14,14 +14,14 @@ export const metadata: Metadata = {
   description:
     "AI for auditions: monologue search, ScenePartner for rehearsal, and Audition Mode. Real scripts, not AI-generated. Less time searching, more time rehearsing.",
   openGraph: {
-    title: "Audition AI | ActorRise",
+    title: `Audition AI | ${BRAND.name}`,
     description:
       "Monologue search, ScenePartner, and Audition Mode. AI that helps you prep with real scripts.",
     url: `${siteUrl}/audition-ai`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Audition AI | ActorRise",
+    title: `Audition AI | ${BRAND.name}`,
     description:
       "Monologue search, ScenePartner, and Audition Mode. AI that helps you prep with real scripts.",
     images: ["/opengraph-image"],

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { IconUsers } from "@tabler/icons-react";
 import { API_URL } from "@/lib/api";
+import { BRAND } from "@/lib/brand";
 
 const INITIAL_DURATION_MS = 2000;
 const UPDATE_DURATION_MS = 1200;
@@ -251,7 +252,7 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
               <IconUsers size={isInline ? 20 : 24} className="text-primary" />
               {usersToShow.toLocaleString("en-US")}+ actors
             </p>
-            <p className={subCls}>are using ActorRise</p>
+            <p className={subCls}>are using {BRAND.name}</p>
           </div>
         )}
       </div>

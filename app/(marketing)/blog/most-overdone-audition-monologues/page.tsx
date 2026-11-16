@@ -5,7 +5,7 @@ import { StageHero } from "@/components/marketing/StageHero";
 import { BLOG_POSTS } from "@/lib/blog/posts";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { T, type MessageKey } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 const post = BLOG_POSTS.find((p) => p.slug === "most-overdone-audition-monologues")!;
@@ -40,7 +40,7 @@ const articleJsonLd = {
   author: { "@type": "Person", name: "Canberk Varli", url: `${siteUrl}/about` },
   publisher: {
     "@type": "Organization",
-    name: "ActorRise",
+    name: BRAND.name,
     logo: { "@type": "ImageObject", url: `${siteUrl}/icon-512.png` },
   },
   mainEntityOfPage: { "@type": "WebPage", "@id": url },

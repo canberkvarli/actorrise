@@ -5,23 +5,23 @@ import { StageHero } from "@/components/marketing/StageHero";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { english } from "@/components/marketing/seo/english";
 import { T, type MessageKey } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "Monologue Finder for Actors | Find Audition Pieces Fast",
   description:
-    "Use ActorRise's monologue finder to search 19,000+ real monologues by tone, length, and character type. No keyword guessing. Free to start.",
+    `Use ${BRAND.name}'s monologue finder to search 19,000+ real monologues by tone, length, and character type. No keyword guessing. Free to start.`,
   openGraph: {
-    title: "Monologue Finder for Actors | ActorRise",
+    title: `Monologue Finder for Actors | ${BRAND.name}`,
     description:
       "Find your next audition piece in seconds. 19,000+ monologues, AI search, no keyword hunting. Free tier available.",
     url: `${siteUrl}/monologue-finder`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Monologue Finder for Actors | ActorRise",
+    title: `Monologue Finder for Actors | ${BRAND.name}`,
     description:
       "Find your next audition piece in seconds. 19,000+ monologues, AI search, no keyword hunting. Free tier available.",
     images: ["/opengraph-image"],

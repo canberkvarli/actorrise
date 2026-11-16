@@ -1,3 +1,4 @@
+import { BRAND } from "../../../brand";
 /** English copy for the "appSearch" area. Top-level keys are namespaces; prefix them with "appSearch" so they stay unique across files. */
 export const appSearch = {
   /** The /monologues page itself, beyond the shared core `search.*` head. */
@@ -92,7 +93,7 @@ export const appSearch = {
     sceneDescription: "Scene Description",
     monologue: "Monologue",
     stageDirections: "Stage Directions",
-    downloadedFrom: "Downloaded from ActorRise",
+    downloadedFrom: `Downloaded from ${BRAND.name}`,
   },
   /** Chip labels for an active filter, keyed by filter field. */
   appSearchFilterLabels: {

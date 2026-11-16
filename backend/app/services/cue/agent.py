@@ -23,6 +23,7 @@ from app.models.feedback import ResultFeedback
 from app.models.user import User
 from app.services.cue import caps, guard, tools
 from sqlalchemy.orm import Session
+from app.core.brand import BRAND_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,8 @@ _BACKSTOP = [
 @lru_cache(maxsize=1)
 def system_prompt() -> str:
     facts = (HERE / "facts.md").read_text()
-    return (HERE / "prompt.md").read_text().replace("{facts}", facts)
+    # {brand} in both files is the product's name (app/core/brand.py).
+    return (HERE / "prompt.md").read_text().replace("{facts}", facts).replace("{brand}", BRAND_NAME)
 
 
 def backstop_reason(text: str) -> str | None:

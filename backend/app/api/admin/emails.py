@@ -35,7 +35,7 @@ from app.services.email.resend_client import ResendEmailClient
 from app.services.email.smtp_client import SmtpEmailClient
 from app.services.email.templates import EmailTemplates
 from app.services.email.tracking import add_tracking
-from app.core.brand import site_url
+from app.core.brand import BRAND_NAME, site_url
 
 
 def _reject_unsupported_schedule(send_via: str, scheduled_at: Optional[str]) -> None:
@@ -277,7 +277,7 @@ TEMPLATES = [
             {"name": "cta_label", "label": "Button label (optional, e.g. 'run the scene')", "type": "text", "default": "", "required": False},
             {"name": "cta_url", "label": "Button link (optional, e.g. https://actorrise.com/practice)", "type": "text", "default": "", "required": False},
             {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
-            {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder, ActorRise", "required": True},
+            {"name": "sender_title", "label": "Sender title", "type": "text", "default": f"Founder, {BRAND_NAME}", "required": True},
             {"name": "postscript", "label": "Postscript (optional, renders below the signature, e.g. the reply-to-opt-out line)", "type": "text", "default": "", "required": False},
             {"name": "unsubscribe_note", "label": "Opt-out wording (optional. Default: \"didn't mean to sign up for these? undo it here and i'll stop...\". Your text gets the unsubscribe link appended)", "type": "text", "default": "", "required": False},
             {"name": "theme", "label": "Theme: 'auto' (light, follows reader's dark mode) or 'dark' (dark for everyone)", "type": "text", "default": "auto", "required": False},
@@ -309,7 +309,7 @@ TEMPLATES = [
         "id": "welcome",
         "name": "Welcome",
         "description": "Sent to new users on signup",
-        "subject": "Welcome to ActorRise!",
+        "subject": f"Welcome to {BRAND_NAME}!",
         "variables": [
             {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
         ],
@@ -1112,7 +1112,7 @@ def send_campaign_endpoint(
     subject_map = {
         "scene_partner_launch": "New: rehearse lines with a scene partner that never flakes",
     }
-    default_subject = subject_map.get(campaign_type, meta["subject"] if meta else "News from ActorRise")
+    default_subject = subject_map.get(campaign_type, meta["subject"] if meta else f"News from {BRAND_NAME}")
     subject = (body.subject or "").strip() or default_subject
 
     # Create batch record

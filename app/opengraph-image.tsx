@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
-export const alt = "ActorRise - Find the monologue. In seconds.";
+export const alt = `${BRAND.name} - Find the monologue. In seconds.`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -138,7 +138,7 @@ export default async function Image() {
                 letterSpacing: "0.02em",
               }}
             >
-              ActorRise
+              {BRAND.name}
             </span>
           </div>
         </div>

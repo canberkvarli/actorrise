@@ -97,6 +97,12 @@ moved into this repo with its history (`git subtree`) at **`apps/mobile/`**; the
   its commands from inside it (`npm run typecheck`, `npm test`). The web's tsconfig, eslint
   and vitest skip `apps/`, and a push that only touches `apps/` does not build Vercel.
 - Both apps share one backend, one Supabase project and one `user_subscriptions` table.
+- **The name and site live in one place:** `lib/brand.ts` (`BRAND.name`, `BRAND.domain`,
+  `SITE_URL`) and `backend/app/core/brand.py` (`BRAND_NAME`, `site_url()`); email templates say
+  `{{ brand }}`, Cue's prompt files `{brand}`. New copy never types "ActorRise" or the domain.
+  Typed by hand on purpose: the legal pages (`content.ts`), testimonials, and Turkish strings
+  with a suffix (`ActorRise’ta`, `’ı`, `’ın`, `’a`, `’tan`: Ghost Light takes different ones).
+  Never brand: `api.actorrise.com`, the `X-ActorRise-Locale` header, storage keys, bot names.
 - **One tier, Plus (2026-11-16).** An App Store purchase grants Plus, the same Plus as Stripe
   (`RC_GRANT_TIER` in `api/webhooks.py`), so paying in either place unlocks both. The old app
   tier `monologues` stays on app rows until their next RENEWAL. The App Store price is still

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from app.core.brand import site_url
+from app.core.brand import BRAND_NAME, site_url
 
 
 def library_claim(monologue_count: Optional[int] = None) -> str:
@@ -51,6 +51,9 @@ class EmailTemplates:
         # (welcome, submission_*, upgrade_notification, ...) still renders.
         # render() kwargs override globals, which is how custom.html goes dark.
         self.env.globals["c"] = self._palette("auto")
+        # The product's name and site, so templates say {{ brand }} (app/core/brand.py).
+        self.env.globals["brand"] = BRAND_NAME
+        self.env.globals["site_url"] = site_url()
 
     def render_submission_received(
         self,
@@ -526,7 +529,7 @@ class EmailTemplates:
         return "\n".join([
             f"Hey {name},",
             "",
-            "Welcome to ActorRise. Really glad you signed up.",
+            f"Welcome to {BRAND_NAME}. Really glad you signed up.",
             "",
             "Here's what you can do right now:",
             "",
@@ -540,7 +543,7 @@ class EmailTemplates:
             "If you have feedback, questions, or ideas, just reply to this email. I read everything.",
             "",
             "Canberk",
-            "Founder, ActorRise",
+            f"Founder, {BRAND_NAME}",
             "actorrise.com",
         ])
 
@@ -567,7 +570,7 @@ class EmailTemplates:
             "I'd love your feedback on Scene Partner - just reply to this email. I read everything.",
             "",
             "Canberk",
-            "Founder, ActorRise",
+            f"Founder, {BRAND_NAME}",
             "actorrise.com",
         ]
         return "\n".join(lines)

@@ -7,7 +7,7 @@ import { getCorpusStats, type CorpusStats } from "@/lib/monologueSeo";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { english } from "@/components/marketing/seo/english";
 import { T, type MessageKey } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -26,14 +26,14 @@ export const metadata: Metadata = {
   description:
     "A searchable monologue database: 19,000+ real pieces from 2,000+ plays, films and TV shows, by tone, length, gender, age and theme. Public-domain plays printed in full. Free to start.",
   openGraph: {
-    title: "The Monologue Database for Actors | ActorRise",
+    title: `The Monologue Database for Actors | ${BRAND.name}`,
     description:
       "19,000+ real monologues from plays, film and TV, searchable in plain English. Public-domain plays printed in full. Free to start.",
     url: `${siteUrl}/monologue-database`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "The Monologue Database for Actors | ActorRise",
+    title: `The Monologue Database for Actors | ${BRAND.name}`,
     description:
       "19,000+ real monologues from plays, film and TV, searchable in plain English. Public-domain plays printed in full. Free to start.",
     images: ["/opengraph-image"],
@@ -160,10 +160,10 @@ export default async function MonologueDatabasePage() {
   const datasetJsonLd = {
     "@context": "https://schema.org",
     "@type": "Dataset",
-    name: "ActorRise monologue database",
+    name: `${BRAND.name} monologue database`,
     description: `${approx(s.pieces)} monologues from plays, film and television, with character, source, author, tone, gender, age range, running time and themes. ${fmt(s.publicDomain)} public-domain pieces printed in full.`,
     url: `${siteUrl}/monologue-database`,
-    creator: { "@type": "Organization", name: "ActorRise", url: siteUrl },
+    creator: { "@type": "Organization", name: BRAND.name, url: siteUrl },
     isAccessibleForFree: true,
     ...(s.lastAdded ? { dateModified: s.lastAdded } : {}),
     variableMeasured: ["character", "source", "author", "tone", "gender", "age range", "running time", "themes", "overdone score"],

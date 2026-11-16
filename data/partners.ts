@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand";
 /**
  * Organizations that list ActorRise: chapters, theaters, studios, schools, newsletters.
  * Add logo files to public/partners/ and reference as /partners/filename.svg
@@ -51,7 +52,7 @@ export const PARTNERS: PartnerItem[] = [
     shortName: "VTA",
     url: "https://www.vtasite.org",
     logo: "/partners/vta.png",
-    blurb: "Lists ActorRise for its member teachers and actors.",
+    blurb: `Lists ${BRAND.name} for its member teachers and actors.`,
     category: "chapter",
     // Approved in writing by VTA's conference manager on 2026-09-13, logo file supplied.
     approved: true,
@@ -60,7 +61,7 @@ export const PARTNERS: PartnerItem[] = [
     name: "Nothing Bogus",
     url: "https://nothingbogus.substack.com",
     logo: "/partners/nothing-bogus.webp",
-    blurb: "Max Cea's indie film newsletter. Listed ActorRise in the July 2026 listings.",
+    blurb: `Max Cea's indie film newsletter. Listed ${BRAND.name} in the July 2026 listings.`,
     category: "newsletter",
     fullColor: true,
     // Max Cea OK'd pulling the wordmark off the site on 2026-09-08 ("That's fine").

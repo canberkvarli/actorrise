@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { T } from "@/lib/i18n";
+import { BRAND } from "@/lib/brand";
 
 /**
  * The frame around /login and /signup, matching the auth modal.
@@ -72,7 +73,7 @@ export function TheatreAuthShell({
           <div className="flex justify-center">
             <Image
               src="/transparent_textlogo.png"
-              alt="ActorRise"
+              alt={BRAND.name}
               width={2000}
               height={600}
               priority

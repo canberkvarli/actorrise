@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { useAuthModal } from "@/components/auth/AuthModalContext";
 import { TheatreCta } from "./TheatreCta";
 import { useT, type MessageKey } from "@/lib/i18n";
+import { BRAND } from "@/lib/brand";
 
 /** `labelKey` rather than a label: the pill is translated (lib/i18n). */
 export type TheatreNavLink = { href: string; labelKey: MessageKey };
@@ -60,7 +61,7 @@ export function TheatreNav({
         <Link prefetch={false} href="/" aria-label={t("nav.home")} className="flex items-center">
           <Image
             src="/transparent_textlogo.png"
-            alt="ActorRise"
+            alt={BRAND.name}
             /* The file's real size. See BrandLogo for why this matters. */
             width={2000}
             height={600}

@@ -5,6 +5,7 @@ import { FoundingActorCard } from "@/components/founding-actor/FoundingActorCard
 import { Skeleton } from "@/components/ui/skeleton";
 import { StageHero } from "@/components/marketing/StageHero";
 import { useT } from "@/lib/i18n";
+import { BRAND } from "@/lib/brand";
 
 export default function ActorsPage() {
   const { data: actors, isLoading } = useFoundingActors();
@@ -68,7 +69,7 @@ export default function ActorsPage() {
             {t("audActors.feedback")}
           </p>
           <a
-            href="mailto:canberk@actorrise.com?subject=ActorRise"
+            href={`mailto:canberk@actorrise.com?subject=${BRAND.name}`}
             className="mt-4 inline-block text-base font-medium text-primary underline underline-offset-4"
           >
             canberk@actorrise.com

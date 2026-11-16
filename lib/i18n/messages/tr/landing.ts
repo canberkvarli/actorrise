@@ -1,5 +1,6 @@
 import type { Widen } from "../types";
 import type { landing as en } from "../en/landing";
+import { BRAND } from "../../../brand";
 
 /**
  * Türkçe, the theatre landing walk. The library and the scene shelf are still
@@ -95,7 +96,7 @@ export const landing: Widen<typeof en> = {
     titleA: "Ghost Light. ",
     titleB: "Prova odası, cebinde.",
     body:
-      "iPhone’unda ActorRise. Günün her saati bir sahne partneri, sesli okunan metinlerin, bütün seçmelerin tek bir panoda ve her gece ana ekranında yeni bir monolog. Kaydettiklerin çevrimdışı da açılır.",
+      `iPhone’unda ${BRAND.name}. Günün her saati bir sahne partneri, sesli okunan metinlerin, bütün seçmelerin tek bir panoda ve her gece ana ekranında yeni bir monolog. Kaydettiklerin çevrimdışı da açılır.`,
     screensLabel: "Ghost Light ekranları",
     swipe: "(on ekran. kaydırarak gez.)",
     earlier: "Önceki ekranlar",
@@ -112,12 +113,12 @@ export const landing: Widen<typeof en> = {
   landingHouse: {
     statSearches: "oyuncuların şimdiye kadar bulduğu monolog",
     statPieces: "oyun, film ve diziden İngilizce parça",
-    statActors: "ActorRise ile prova yapan oyuncu",
+    statActors: `${BRAND.name} ile prova yapan oyuncu`,
     noticesDirection: "(eleştiriler.)",
     noticesA: "Gerçek oyuncular. ",
     noticesB: "Gerçek yorumlar.",
     videoDirection: "(doksan saniye. nasıl çalıştığını izle.)",
-    videoTitle: "Doksan saniyede ActorRise",
+    videoTitle: `Doksan saniyede ${BRAND.name}`,
     videoPlay: "Doksan saniyelik tanıtımı oynat",
     founderAlt: "Canberk Varli, ActorRise’ın kurucusu",
     founderTag: "(kurucu. o da bir oyuncu.)",
@@ -125,7 +126,7 @@ export const landing: Widen<typeof en> = {
     noteA:
       "Ben de oyuncuyum. ActorRise’ı, seçmelerden önceki akşamlarımı parça çalışarak değil parça arayarak geçirdiğim için yaptım. Şimdi açıyorum, aradığımı bir arkadaşıma anlatır gibi yazıyorum, bir dakika sonra provadayım. ",
     noteB: "Mesele bu kadar.",
-    founderRole: "· kurucu, ActorRise",
+    founderRole: `· kurucu, ${BRAND.name}`,
     talk: "(konuşmak istersen beni her yerde bulabilirsin. cevap veririm.)",
     freeA: "Ücretsiz başla. ",
     freeB: "Kart yok.",

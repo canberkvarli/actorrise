@@ -30,7 +30,7 @@ from app.models.user import User
 from app.services.community import RETIRED_EVENT_TYPES
 from app.services.library_language import current_languages, script_clause
 from app.services.search.semantic_search import language_clause
-from app.core.brand import site_url
+from app.core.brand import BRAND_NAME, site_url
 
 # Community library needs at least this many shared scripts before it stops
 # showing the "still gathering" cold-start state.
@@ -261,7 +261,7 @@ def get_community_scripts(
                 title=script.title,
                 author=script.author,
                 genre=script.genre,
-                owner_name="ActorRise" if script.is_sample else _first_name(owner),
+                owner_name=BRAND_NAME if script.is_sample else _first_name(owner),
                 scene_count=script.num_scenes_extracted or len(script.scenes or []),
                 character_count=script.num_characters or 0,
                 scene_titles=titles,
@@ -357,7 +357,7 @@ def get_community_script(
         id=script.id,
         title=script.title,
         author=script.author,
-        owner_name="ActorRise" if script.is_sample else _first_name(owner),
+        owner_name=BRAND_NAME if script.is_sample else _first_name(owner),
         is_demo=bool(script.is_sample),
         scenes=scenes,
     )
@@ -449,7 +449,7 @@ def send_room_invite(
 
     body_html = f"""
     <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:28px;color:#1a1a1a">
-      <p style="font-size:16px;line-height:1.5">{inviter} wants to rehearse a scene with you on ActorRise.</p>
+      <p style="font-size:16px;line-height:1.5">{inviter} wants to rehearse a scene with you on {BRAND_NAME}.</p>
       {f'<p style="font-size:15px;color:#555;margin:0 0 8px">Scene: <strong>{scene}</strong></p>' if scene else ''}
       <p style="margin:24px 0">
         <a href="{url}" style="display:inline-block;background:#CB4B00;color:#fff;padding:13px 22px;border-radius:9999px;text-decoration:none;font-weight:600">Join the rehearsal room</a>
@@ -463,7 +463,7 @@ def send_room_invite(
 
         ResendEmailClient().send_email(
             to=email,
-            subject=f"{inviter} invited you to rehearse a scene on ActorRise",
+            subject=f"{inviter} invited you to rehearse a scene on {BRAND_NAME}",
             html=body_html,
         )
         return {"sent": True}

@@ -2,23 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StageHero } from "@/components/marketing/StageHero";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "Support",
   description:
-    "Get help with ActorRise. Account, billing, and technical support for the web app and the iOS app. Email canberk@actorrise.com.",
+    `Get help with ${BRAND.name}. Account, billing, and technical support for the web app and the iOS app. Email canberk@actorrise.com.`,
   openGraph: {
-    title: "Support | ActorRise",
-    description: "Get help with your ActorRise account, billing, or the app.",
+    title: `Support | ${BRAND.name}`,
+    description: `Get help with your ${BRAND.name} account, billing, or the app.`,
     url: `${siteUrl}/support`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Support | ActorRise",
-    description: "Get help with your ActorRise account, billing, or the app.",
+    title: `Support | ${BRAND.name}`,
+    description: `Get help with your ${BRAND.name} account, billing, or the app.`,
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/support` },

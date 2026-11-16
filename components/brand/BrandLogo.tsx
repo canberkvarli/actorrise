@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { BRAND } from "@/lib/brand";
 
 /** Icon-only logo (e.g. favicon, auth). Use transparent_logo.png for icon-only. */
 const LOGO_ICON = "/transparent_logo.png";
@@ -54,7 +55,7 @@ export function BrandLogo({
     return (
       <Image
         src={LOGO_ICON}
-        alt="ActorRise"
+        alt={BRAND.name}
         width={LOGO_ICON_ASPECT.w}
         height={LOGO_ICON_ASPECT.h}
         className={iconClass}
@@ -68,7 +69,7 @@ export function BrandLogo({
     return (
       <Image
         src={LOGO_WITH_TEXT}
-        alt="ActorRise"
+        alt={BRAND.name}
         width={LOGO_TEXT_ASPECT.w}
         height={LOGO_TEXT_ASPECT.h}
         className={fullLogoClass}
@@ -86,7 +87,7 @@ export function BrandLogo({
     <>
       <Image
         src={LOGO_WITH_TEXT_DARK}
-        alt="ActorRise"
+        alt={BRAND.name}
         width={LOGO_TEXT_ASPECT.w}
         height={LOGO_TEXT_ASPECT.h}
         className={`${fullLogoClass} dark:hidden`}

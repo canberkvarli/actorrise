@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { API_URL } from "@/lib/api";
 import { trackWhisperClicked, trackWhisperShown } from "@/lib/analytics";
+import { BRAND } from "@/lib/brand";
 
 /**
  * The house, live, on the landing page.
@@ -57,7 +58,7 @@ function line(e: LandingEvent): string | null {
     case "viewed":
       return p.title ? `reading ${p.title}` : "reading a monologue";
     case "joined":
-      return "joined ActorRise";
+      return `joined ${BRAND.name}`;
     case "worked":
       return "ran a monologue out loud";
     case "rehearsing":

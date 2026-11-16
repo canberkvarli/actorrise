@@ -1,5 +1,6 @@
 import type { Widen } from "../types";
 import type { core as enCore } from "../en/core";
+import { BRAND } from "../../../brand";
 
 /**
  * Türkçe. Typed against en.ts, so a missing key fails the typecheck.
@@ -33,7 +34,7 @@ export const core: Widen<typeof enCore> = {
     guides: "Rehberler",
     practice: "Prova",
     signIn: "Giriş yap",
-    home: "ActorRise ana sayfa",
+    home: `${BRAND.name} ana sayfa`,
   },
   cta: {
     startRehearsing: "Provaya başla",

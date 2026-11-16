@@ -3,24 +3,24 @@ import Link from "next/link";
 import { ContactPageForm } from "@/components/contact/ContactPageForm";
 import { StageHero } from "@/components/marketing/StageHero";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Get in touch with ActorRise. Questions, support, or feedback. We're here to help.",
+    `Get in touch with ${BRAND.name}. Questions, support, or feedback. We're here to help.`,
   openGraph: {
-    title: "Contact | ActorRise",
-    description: "Get in touch with ActorRise for support and inquiries.",
+    title: `Contact | ${BRAND.name}`,
+    description: `Get in touch with ${BRAND.name} for support and inquiries.`,
     url: `${siteUrl}/contact`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Contact | ActorRise",
+    title: `Contact | ${BRAND.name}`,
     description:
-      "Get in touch with ActorRise for support and inquiries.",
+      `Get in touch with ${BRAND.name} for support and inquiries.`,
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/contact` },

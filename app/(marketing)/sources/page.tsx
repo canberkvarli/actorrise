@@ -3,7 +3,7 @@ import Link from "next/link";
 import { StageHero } from "@/components/marketing/StageHero";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -12,14 +12,14 @@ export const metadata: Metadata = {
   description:
     "Public domain work in full; anything still in copyright as a short excerpt with attribution and a link back. We never host full scripts of copyrighted works.",
   openGraph: {
-    title: "Sources & Copyright | ActorRise",
+    title: `Sources & Copyright | ${BRAND.name}`,
     description:
       "Public domain work in full; anything in copyright as a short excerpt with attribution. We never host full scripts of copyrighted works.",
     url: `${siteUrl}/sources`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sources & Copyright | ActorRise",
+    title: `Sources & Copyright | ${BRAND.name}`,
     description:
       "Public domain work in full; anything in copyright as a short excerpt with attribution. We never host full scripts of copyrighted works.",
     images: ["/opengraph-image"],

@@ -1,3 +1,4 @@
+import { BRAND } from "../../../brand";
 /**
  * English copy for the "seo" pages: the keyword landing pages, the guides, the
  * sources page, the 12k ISR monologue pages and the collection shelves.
@@ -75,7 +76,7 @@ export const seo = {
     title: "Monologue finder: find your next {em} in seconds",
     titleEm: "audition piece",
     lede:
-      "ActorRise is a monologue finder and database built for actors. Instead of scrolling books or generic lists, you describe what you need in plain English and get a shortlist of real monologues in seconds. No keyword guessing, no flipping through anthologies the night before a callback.",
+      `${BRAND.name} is a monologue finder and database built for actors. Instead of scrolling books or generic lists, you describe what you need in plain English and get a shortlist of real monologues in seconds. No keyword guessing, no flipping through anthologies the night before a callback.`,
     b1: "One of the largest searchable monologue databases online",
     b2: "AI search that understands “comedic woman under 2 minutes” or “angry contemporary male”",
     b3: "Real scripts from playwrights, not AI-generated text",
@@ -102,9 +103,9 @@ export const seo = {
     searchesOutro: "Every result is a real published piece, so you can trust the text and look up the source.",
     realTitle: "Real scripts, not AI-generated lines",
     real1:
-      "ActorRise doesn’t invent monologues. The AI is in the search, not the writing. Every result is a real piece from a play, film, or TV script, so what you rehearse is what casting will recognize. When a piece gets overused, the Overdone filter flags it, so you can bring something fresh instead of the monologue three other people read that same day.",
+      `${BRAND.name} doesn’t invent monologues. The AI is in the search, not the writing. Every result is a real piece from a play, film, or TV script, so what you rehearse is what casting will recognize. When a piece gets overused, the Overdone filter flags it, so you can bring something fresh instead of the monologue three other people read that same day.`,
     real2:
-      "I built ActorRise because I’m an actor, and finding the right monologue used to eat hours I’d rather spend rehearsing.",
+      `I built ${BRAND.name} because I’m an actor, and finding the right monologue used to eat hours I’d rather spend rehearsing.`,
     builtTitle: "Built for actors, students, and coaches",
     built:
       "Whether you’re prepping a professional audition, a {college}, or coaching a class as a {teacher}, the finder works the same way. Once you’ve picked your piece, rehearse it out loud with {scenePartner}, which reads the other lines so you can run it anytime. You can also browse curated {audition} by style and length.",
@@ -118,7 +119,7 @@ export const seo = {
       q3: "Can I search by length, gender, and tone?",
       a3: "Yes. Describe the length (for example under two minutes), gender, tone, and style, and filter the shortlist until it fits the room you’re walking into.",
       q4: "Where do the monologues come from?",
-      a4: "ActorRise organizes real published text, and every piece links back to its source and original publication. We never host full scripts of copyrighted works. Full details: ",
+      a4: `${BRAND.name} organizes real published text, and every piece links back to its source and original publication. We never host full scripts of copyrighted works. Full details: `,
       link: "Sources & copyright",
     },
   },
@@ -127,7 +128,7 @@ export const seo = {
     title: "The {em} built for actors",
     titleEm: "monologue database",
     lede:
-      "ActorRise is a searchable monologue database: {count} real pieces from plays, film and television. You search by what you actually need, tone, length, gender, age, theme, the play, the show, and read the real text in seconds. Public-domain plays are printed in full.",
+      `${BRAND.name} is a searchable monologue database: {count} real pieces from plays, film and television. You search by what you actually need, tone, length, gender, age, theme, the play, the show, and read the real text in seconds. Public-domain plays are printed in full.`,
     countedTitle: "What is in it, counted",
     stats: {
       pieces: "Monologues",
@@ -177,7 +178,7 @@ export const seo = {
       q5: "Can I search by play, show, theme or age?",
       a5: "Yes. Type it the way you would say it: \"a monologue from Hamlet\", \"something about revenge\", \"comedic, teenager, under two minutes\". The browse pages below cover the most asked-for shelves.",
       q6: "Where do the monologues come from?",
-      a6: "Public-domain plays, printed in full, and licensed or referenced contemporary sources, listed by character, work and length. ActorRise does not distribute copyrighted scripts. Full details: ",
+      a6: `Public-domain plays, printed in full, and licensed or referenced contemporary sources, listed by character, work and length. ${BRAND.name} does not distribute copyrighted scripts. Full details: `,
       link: "Sources and copyright",
     },
     ctaTitle: "Search {count} monologues now",
@@ -188,7 +189,7 @@ export const seo = {
     titleEm: "Audition",
     title: "{em} monologues for every casting need.",
     lede:
-      "Whether you need classical, contemporary, or comedic audition monologues, ActorRise lets you search 19,000+ real pieces by style, length, gender, and tone. The AI finds what fits, so you spend less time digging and more time rehearsing.",
+      `Whether you need classical, contemporary, or comedic audition monologues, ${BRAND.name} lets you search 19,000+ real pieces by style, length, gender, and tone. The AI finds what fits, so you spend less time digging and more time rehearsing.`,
     searchBtn: "Search audition monologues",
     b1: "{link} : Shakespeare and beyond",
     b1Link: "Classical monologues",
@@ -221,7 +222,7 @@ export const seo = {
     realTitle: "Real pieces, not AI-generated lines",
     real1:
       "Every monologue is from a published play or a licensed source, never invented by a model. The AI is in the search, so what you rehearse is text casting will recognize. Once you’ve picked your piece, run it out loud with {scenePartner}.",
-    real2: "I’m an actor, and I built ActorRise so the search part takes minutes instead of an evening.",
+    real2: `I’m an actor, and I built ${BRAND.name} so the search part takes minutes instead of an evening.`,
     faq: {
       q1: "What makes a good audition monologue?",
       a1: "Something that fits your type and the role, lands inside the time limit, and that casting hasn’t already heard ten times that day. The search and the Overdone filter help with all three.",
@@ -230,7 +231,7 @@ export const seo = {
       q3: "Do you have contemporary and classical pieces?",
       a3: "Both. Browse classical (Shakespeare and beyond), dramatic contemporary, and comedic pieces, or just describe what you want and let the search sort it.",
       q4: "Where do the monologues come from?",
-      a4: "ActorRise organizes real published text, and every piece links back to its source and original publication. We never host full scripts of copyrighted works. Full details: ",
+      a4: `${BRAND.name} organizes real published text, and every piece links back to its source and original publication. We never host full scripts of copyrighted works. Full details: `,
       link: "Sources & copyright",
     },
   },
@@ -260,8 +261,8 @@ export const seo = {
     q1: "What makes a good dramatic monologue for an audition?",
     a1: "A good dramatic monologue has clear stakes, a shift in emotion, and something for you to play. Avoid pieces that are just sad from start to finish. Look for a monologue where the character wants something and is actively trying to get it.",
     q2: "How do I find a dramatic monologue that isn't overdone?",
-    a2: "ActorRise has an Overdone filter that flags monologues casting directors see constantly. Search for what you need, then toggle the filter to surface fresh material that still fits the tone.",
-    q3: "Can I rehearse my dramatic monologue on ActorRise?",
+    a2: `${BRAND.name} has an Overdone filter that flags monologues casting directors see constantly. Search for what you need, then toggle the filter to surface fresh material that still fits the tone.`,
+    q3: `Can I rehearse my dramatic monologue on ${BRAND.name}?`,
     a3: "Yes. {link} lets you rehearse scenes and monologues with AI reading the other lines. Save any monologue and practice it directly in the app.",
   },
 
@@ -273,12 +274,12 @@ export const seo = {
     searchBtn: "Search monologues for men",
     also: "Browse by category: {dramatic}, {shakespeare}, or {contemporary}.",
     q1: "What are good monologues for men that aren't overdone?",
-    a1: "The Overdone filter on ActorRise flags pieces that casting directors see constantly. Search for what you need, toggle the filter, and you'll get fresh material that still fits the tone of your audition.",
+    a1: `The Overdone filter on ${BRAND.name} flags pieces that casting directors see constantly. Search for what you need, toggle the filter, and you'll get fresh material that still fits the tone of your audition.`,
     q2: "Should I do a comedic or dramatic monologue?",
     a2: "Match the tone of the project. If the audition doesn't specify, go with whichever shows your range better. Some actors keep one of each ready. You can search for both and save them to your library.",
     q3: "Can I practice my monologue with AI?",
     a3: "Yes. {link} lets you run through scenes and monologues with AI reading the other parts. No need to find a scene partner.",
-    a3Link: "ActorRise's rehearsal tool",
+    a3Link: `${BRAND.name}'s rehearsal tool`,
   },
 
   seoWomen: {
@@ -292,7 +293,7 @@ export const seo = {
     a1: "Match the tone of the show. If you're auditioning for a comedy, bring a comedic piece. If the breakdown mentions a specific age range or type, search for that. The Overdone filter helps you avoid pieces casting directors have heard a thousand times.",
     q2: "Can I filter monologues by age range?",
     a2: "Yes. Describe the age range in your search, like \"monologue for woman in her 20s\" or \"older woman, 50s, serious.\" The AI understands natural language so you don't need to pick from dropdown menus.",
-    q3: "Can I rehearse monologues on ActorRise?",
+    q3: `Can I rehearse monologues on ${BRAND.name}?`,
     a3: "Yes. Save any monologue and rehearse it with {link}, which reads the other lines out loud so you can practice on your own.",
   },
 
@@ -306,7 +307,7 @@ export const seo = {
     a1: "It depends on the role. For drama, Hamlet, Macbeth, and Othello have strong options. For comedy, try Twelfth Night, A Midsummer Night's Dream, or Much Ado About Nothing. The best audition monologue is one that fits the tone of the show you're auditioning for. Use the search to filter by tone and character type.",
     q2: "How long should a Shakespeare monologue be for an audition?",
     a2: "Most auditions ask for 1 to 2 minutes. That's roughly 15 to 25 lines of verse. If the listing doesn't specify, aim for under 90 seconds. You can filter by length in the search.",
-    q3: "Does ActorRise have the full text of Shakespeare monologues?",
+    q3: `Does ${BRAND.name} have the full text of Shakespeare monologues?`,
     a3: "Yes. Shakespeare's works are in the public domain, so we include full monologue text you can read, save, and rehearse with {link}.",
   },
 
@@ -338,7 +339,7 @@ export const seo = {
     },
     s2Outro:
       "That is exactly what the {link} does. It reads what you describe and ranks real monologues that fit your tone, length, gender, and type, pulled from 19,000+ pieces across plays, film, and TV.",
-    s2Link: "ActorRise monologue finder",
+    s2Link: `${BRAND.name} monologue finder`,
     s3Title: "3. Pick one that works, and skip the overdone ones",
     s3p1:
       "A good audition monologue is playable, active, and fresh. Once you have a shortlist, choose the piece that lets you do something, has a real shift or stakes, and is not the same warhorse every other actor is bringing that day. The most cut pieces are the famous ones, so use the overdone filter to hide them and surface something the panel has not heard twelve times already.",
@@ -346,19 +347,19 @@ export const seo = {
       "Read the full text, check the source, and make sure it stands on its own out of context. If it needs the whole play to make sense, keep looking.",
     s4Title: "4. Rehearse it until it is off the page",
     s4p:
-      "Finding the piece is half the job. Once it is yours, run it out loud until it is off book and in your body. On ActorRise you can rehearse a monologue right after you find it: a spotlight follows your voice line by line so you can get it off the page before you ever walk into the room.",
+      `Finding the piece is half the job. Once it is yours, run it out loud until it is off book and in your body. On ${BRAND.name} you can rehearse a monologue right after you find it: a spotlight follows your voice line by line so you can get it off the page before you ever walk into the room.`,
     browseTitle: "Browse by what you need",
     faq: {
       q1: "How do I find a monologue that fits me?",
-      a1: "Start with what the audition asks for (length, tone, contemporary or classical), then narrow to your age range and type. Describe that in plain English and search a real database instead of scrolling anthologies. ActorRise ranks pieces that match your tone, length, and type in seconds.",
+      a1: `Start with what the audition asks for (length, tone, contemporary or classical), then narrow to your age range and type. Describe that in plain English and search a real database instead of scrolling anthologies. ${BRAND.name} ranks pieces that match your tone, length, and type in seconds.`,
       q2: "Where can I find monologues for free?",
-      a2: "There is a free tier on ActorRise and you do not need a credit card to try it. You can search and read real published monologues right away; paid plans unlock unlimited rehearsals with the AI.",
+      a2: `There is a free tier on ${BRAND.name} and you do not need a credit card to try it. You can search and read real published monologues right away; paid plans unlock unlimited rehearsals with the AI.`,
       q3: "How long should an audition monologue be?",
       a3: "Most auditions want 60 seconds to 2 minutes unless the breakdown says otherwise. Always time it out loud, and have a shorter cut ready in case they ask you to trim.",
       q4: "How do I avoid an overdone monologue?",
       a4: "The most cut pieces are the ones every actor brings. Use the overdone filter to hide warhorses and surface fresher options that still fit your tone and type.",
       q5: "Where do the monologues come from?",
-      a5: "From public domain and licensed sources. ActorRise organizes real published text and does not distribute copyrighted play scripts. Full details: ",
+      a5: `From public domain and licensed sources. ${BRAND.name} organizes real published text and does not distribute copyrighted play scripts. Full details: `,
       link: "Sources & copyright",
     },
     ctaTitle: "Find your monologue in seconds",
@@ -370,7 +371,7 @@ export const seo = {
     title: "AI {em} tool for actors",
     titleEm: "rehearsal",
     lede:
-      "Find your material and rehearse it in one place. ActorRise combines AI monologue search with ScenePartner, a rehearsal tool that reads the other lines out loud so you can practice scenes and monologues on your own schedule.",
+      `Find your material and rehearse it in one place. ${BRAND.name} combines AI monologue search with ScenePartner, a rehearsal tool that reads the other lines out loud so you can practice scenes and monologues on your own schedule.`,
     b1Strong: "Find material",
     b1: "{strong}: search 19,000+ monologues and films, and TV by meaning, not keywords.",
     b2Strong: "Rehearse scenes",
@@ -379,7 +380,7 @@ export const seo = {
     b3: "{strong}: Overdone filter, fit-to-type matching, and side-running so you walk in ready.",
     learnSp: "Learn about ScenePartner",
     looking: "Looking for material? Try the {finder}, browse {audition}, or explore {women} and {men}.",
-    q1: "Is ActorRise free to use?",
+    q1: `Is ${BRAND.name} free to use?`,
     a1: "Yes. The free tier gives you access to monologue search and limited ScenePartner sessions. No credit card required. Check the {pricing} for details on paid plans.",
     q2: "How is this different from rehearsing with a friend?",
     a2: "It's available whenever you need it. No scheduling, no asking for favors. ScenePartner reads the lines consistently every time, which is great for drilling memorization and working on your choices before you bring it to a real scene partner.",
@@ -391,7 +392,7 @@ export const seo = {
     title: "Audition AI that helps you {em}, not replace performance",
     titleEm: "prep",
     lede:
-      "ActorRise uses AI to help you find the right material and rehearse, without generating scripts or replacing the work you do as an actor. Everything you search and practice with is from real published plays and film/TV.",
+      `${BRAND.name} uses AI to help you find the right material and rehearse, without generating scripts or replacing the work you do as an actor. Everything you search and practice with is from real published plays and film/TV.`,
     b1Strong: "Monologue search",
     b1: "{strong}: describe what you need in plain English. It matches you to 19,000+ real monologues by meaning, not just keywords.",
     b2: "{strong}: rehearse scenes with AI that reads the other lines. Run sides, film/TV references, and your saved monologues so you can walk in ready.",
@@ -400,7 +401,7 @@ export const seo = {
     b4: "It finds and organizes real text. It doesn’t invent or generate monologues.",
     whatTitle: "What the AI does, and what it doesn’t",
     what1:
-      "A lot of “AI for actors” means a model writing fake scenes. ActorRise works the other way. The AI reads what you describe and points you to real published pieces, and it reads scene partner lines back to you so you can rehearse. It never writes the monologue.",
+      `A lot of “AI for actors” means a model writing fake scenes. ${BRAND.name} works the other way. The AI reads what you describe and points you to real published pieces, and it reads scene partner lines back to you so you can rehearse. It never writes the monologue.`,
     what2:
       "That matters in the room. Casting recognizes real material, and a piece you can attribute to a play or film holds up to questions in a way a generated one never will.",
     searchTitle: "Monologue search",
@@ -412,9 +413,9 @@ export const seo = {
     mode1:
       "When you’re prepping for a specific call, Audition Mode narrows things to your type and the role, and the Overdone filter flags pieces casting hears constantly so you can bring something they haven’t.",
     mode2:
-      "I built ActorRise because I’m an actor, and I wanted prep tools that respect the craft instead of trying to do it for me.",
+      `I built ${BRAND.name} because I’m an actor, and I wanted prep tools that respect the craft instead of trying to do it for me.`,
     faq: {
-      q1: "Does ActorRise write monologues with AI?",
+      q1: `Does ${BRAND.name} write monologues with AI?`,
       a1: "No. The AI is in the search and the rehearsal, not the writing. Every monologue is a real published piece, so what you bring is something casting can recognize.",
       q2: "What is ScenePartner?",
       a2: "An AI reading partner. It reads the other lines in a scene so you can run sides or your monologue out loud anytime, without scheduling someone to feed you cues.",
@@ -443,14 +444,14 @@ export const seo = {
     q2: "Is ScenePartner free?",
     a2: "The free tier includes limited ScenePartner sessions. For unlimited rehearsal, check the {pricing}.",
     q3: "Can I use my own sides or scripts?",
-    a3: "Yes. You can paste or upload your own audition sides and rehearse them with ScenePartner. It works with any text, not just material from the ActorRise database.",
+    a3: `Yes. You can paste or upload your own audition sides and rehearse them with ScenePartner. It works with any text, not just material from the ${BRAND.name} database.`,
   },
 
   seoSources: {
     title: "Sources & {em}.",
     titleEm: "copyright",
     lede:
-      "ActorRise is a search and discovery tool for monologues. Public domain work is carried in full. Anything still in copyright appears only as a short excerpt, one speech, with attribution and a link back to the original. We never host the full script of a copyrighted work.",
+      `${BRAND.name} is a search and discovery tool for monologues. Public domain work is carried in full. Anything still in copyright appears only as a short excerpt, one speech, with attribution and a link back to the original. We never host the full script of a copyrighted work.`,
     whereTitle: "Where our content comes from",
     pdStrong: "Works in the public domain",
     pd: "{strong}: plays whose copyright has expired, such as Shakespeare, Ibsen, Chekhov, Molière and Wilde, mostly from Project Gutenberg. These are out of copyright, so we carry the speech in full and link back to the edition it came from.",
@@ -460,7 +461,7 @@ export const seo = {
     noneStrong: "Works we hold no text for at all",
     none: "{strong}: for some titles we list only the play, the character and a link to the publisher, with no text on the page. If we have no clear basis to reproduce a passage, we would rather point you to it than quote it.",
     fullTitle: "Full scripts",
-    full: "We never host or distribute the full script of any copyrighted play, film or show, and we have no way for anyone to obtain one here. ActorRise is for finding and rehearsing a single audition piece. When you want the whole work, we point you at the publisher or a licensed seller, which is where it should be bought.",
+    full: `We never host or distribute the full script of any copyrighted play, film or show, and we have no way for anyone to obtain one here. ${BRAND.name} is for finding and rehearsing a single audition piece. When you want the whole work, we point you at the publisher or a licensed seller, which is where it should be bought.`,
     removalTitle: "Content removal",
     removal:
       "If you are a rights holder, or represent one, and would like an excerpt removed or corrected, email {email} with a link to the piece. Requests are honored promptly, usually within a day.",
@@ -478,11 +479,11 @@ export const seo = {
     rehearseThisFree: "Rehearse this free",
     findMore: "Find more monologues",
     copyrightFilm:
-      "This piece is from a copyrighted film, so the full text isn't published here. You can bring your own copy of the lines and rehearse it on ActorRise.",
+      `This piece is from a copyrighted film, so the full text isn't published here. You can bring your own copy of the lines and rehearse it on ${BRAND.name}.`,
     copyrightTv:
-      "This piece is from a copyrighted TV series, so the full text isn't published here. You can bring your own copy of the lines and rehearse it on ActorRise.",
+      `This piece is from a copyrighted TV series, so the full text isn't published here. You can bring your own copy of the lines and rehearse it on ${BRAND.name}.`,
     copyrightWork:
-      "This piece is from a copyrighted work, so the full text isn't published here. You can bring your own copy of the lines and rehearse it on ActorRise.",
+      `This piece is from a copyrighted work, so the full text isn't published here. You can bring your own copy of the lines and rehearse it on ${BRAND.name}.`,
     about: "About this piece",
     ageUp: "{age} and up",
     lenMin: "{mm}:{ss} min",
@@ -618,7 +619,7 @@ export const seo = {
       title: "{em} monologue for woman under 2 minutes",
       titleEm: "Comedic",
       lede:
-        "One of the most common searches we see. ActorRise has thousands of comedic monologues for women, and you can filter by length, tone, and style. Or just describe what you need in plain English.",
+        `One of the most common searches we see. ${BRAND.name} has thousands of comedic monologues for women, and you can filter by length, tone, and style. Or just describe what you need in plain English.`,
     },
     dramaticContemporary: {
       title: "Dramatic monologue from a {em} play",

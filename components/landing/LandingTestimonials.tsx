@@ -18,6 +18,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
+import { BRAND } from "@/lib/brand";
 
 export type { TestimonialItem };
 
@@ -305,7 +306,7 @@ export function LandingTestimonials() {
                               onClick={() => authModal.openAuthModal("signup")}
                               className="font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary/50 rounded"
                             >
-                              Join ActorRise →
+                              Join {BRAND.name} →
                             </button>
                           </>
                         )}

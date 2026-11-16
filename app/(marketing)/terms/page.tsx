@@ -4,24 +4,24 @@ import { StageHero } from "@/components/marketing/StageHero";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { TrOnly } from "@/components/seo/ContentT";
 import { T, type MessageKey } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "ActorRise Terms of Service. Rules and conditions for using our platform and services.",
+    `${BRAND.name} Terms of Service. Rules and conditions for using our platform and services.`,
   openGraph: {
-    title: "Terms of Service | ActorRise",
-    description: "Rules and conditions for using ActorRise.",
+    title: `Terms of Service | ${BRAND.name}`,
+    description: `Rules and conditions for using ${BRAND.name}.`,
     url: `${siteUrl}/terms`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Terms of Service | ActorRise",
+    title: `Terms of Service | ${BRAND.name}`,
     description:
-      "Rules and conditions for using ActorRise.",
+      `Rules and conditions for using ${BRAND.name}.`,
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/terms` },

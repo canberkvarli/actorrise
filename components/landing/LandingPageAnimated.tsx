@@ -16,6 +16,7 @@ import { LandingLiveCount } from "@/components/landing/LandingLiveCount";
 import { HeroCta } from "@/components/landing/HeroCta";
 import { RevealSection } from "@/components/landing/RevealSection";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
+import { BRAND } from "@/lib/brand";
 
 const easing = [0.25, 0.1, 0.25, 1] as const;
 const duration = 0.45;
@@ -44,7 +45,7 @@ export function LandingPageAnimated() {
               <Link
                 href="/"
                 className="flex items-center shrink-0 min-w-0 text-foreground hover:opacity-85 transition-opacity"
-                aria-label="ActorRise home"
+                aria-label={`${BRAND.name} home`}
               >
                 <BrandLogo size="header" />
               </Link>
@@ -131,7 +132,7 @@ export function LandingPageAnimated() {
         <div className="container mx-auto px-4 sm:px-6 py-8 flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} ActorRise</p>
+              <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} {BRAND.name}</p>
               <span className="text-muted-foreground/40">·</span>
               <p className="text-sm text-muted-foreground/70">Built by an actor, for actors.</p>
             </div>

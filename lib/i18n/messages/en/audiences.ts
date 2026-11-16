@@ -1,3 +1,4 @@
+import { BRAND } from "../../../brand";
 /** English copy for the "audiences" pages. Top-level keys are namespaces; keep them unique across files. */
 export const audiences = {
   audStudents: {
@@ -26,7 +27,7 @@ export const audiences = {
     titleB: " & coaches.",
     lede: "Your students find the right audition monologue in seconds, so they spend less time digging and more time rehearsing.",
     intro:
-      "ActorRise gives them 19,000+ searchable pieces, AI that matches to their type and the casting scenario, and an Overdone filter so they bring something different.",
+      `${BRAND.name} gives them 19,000+ searchable pieces, AI that matches to their type and the casting scenario, and an Overdone filter so they bring something different.`,
     features: [
       "One of the largest searchable monologue databases (19,000+ pieces)",
       "Natural-language search: e.g. “comedic woman under 2 minutes”",
@@ -60,10 +61,10 @@ export const audiences = {
     titleA: "The founding ",
     titleEm: "actors",
     titleB: "",
-    lede: "The actors who backed ActorRise from day one. They shape the platform, tell me what's broken, and help build something that actually serves the craft.",
+    lede: `The actors who backed ${BRAND.name} from day one. They shape the platform, tell me what's broken, and help build something that actually serves the craft.`,
     empty: "No actors to display yet.",
     feedback:
-      "Using ActorRise and want to tell me what's broken, or what you wish it did? Send me an email. I read every one, and it is how most of this got built.",
+      `Using ${BRAND.name} and want to tell me what's broken, or what you wish it did? Send me an email. I read every one, and it is how most of this got built.`,
     notFoundTitle: "Actor not found",
     notFoundBody: "This actor page doesn't exist or is not published yet.",
     backToAll: "← Back to all actors",
@@ -114,25 +115,25 @@ export const audiences = {
     errNetwork: "Network error. Please try again.",
     successTitle: "Here are your 5 monologues",
     successBody:
-      "Fresh pieces casting directors would rather see. Find the full text and more like these on ActorRise.",
+      `Fresh pieces casting directors would rather see. Find the full text and more like these on ${BRAND.name}.`,
     fromA: "From ",
     fromB: " by {author}",
     minutes: "{n} min",
-    viewOn: "View on ActorRise",
+    viewOn: `View on ${BRAND.name}`,
     loadFailA: "We couldn't load the list right now. ",
     loadFailLink: "Browse monologues",
     loadFailB: " to find fresh pieces.",
-    startRehearsing: "Start rehearsing on ActorRise",
+    startRehearsing: `Start rehearsing on ${BRAND.name}`,
     direction: "(your shortlist.)",
     titleA: "5 monologues casting directors would rather ",
     titleEm: "see",
     titleB: "",
-    lede: "Tired of overdone pieces? Get a curated list of fresh monologues, the kind that make casting directors sit up. Enter your email and we'll send you the list and links to find them on ActorRise.",
+    lede: `Tired of overdone pieces? Get a curated list of fresh monologues, the kind that make casting directors sit up. Enter your email and we'll send you the list and links to find them on ${BRAND.name}.`,
     placeholder: "you@example.com",
     sending: "Sending…",
     send: "Send me the list",
     privacy:
-      "No spam. We'll only use your email to send this list and occasional ActorRise updates. Unsubscribe anytime.",
+      `No spam. We'll only use your email to send this list and occasional ${BRAND.name} updates. Unsubscribe anytime.`,
   },
   audList: {
     fromBy: "From {by}, on Ghost Light",

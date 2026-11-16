@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -11,13 +11,13 @@ export const metadata: Metadata = {
   title: "Two Minute Monologues",
   description: "Two minute monologues for auditions. Search 19,000+ real pieces and filter by tone and type to find a strong two minute monologue that fits the call.",
   openGraph: {
-    title: "Two Minute Monologues | ActorRise",
+    title: `Two Minute Monologues | ${BRAND.name}`,
     description: "Two minute monologues for auditions, searchable by tone and type. Real published pieces with an Overdone filter.",
     url: `${siteUrl}/monologues/two-minute-monologues`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Two Minute Monologues | ActorRise",
+    title: `Two Minute Monologues | ${BRAND.name}`,
     description: "Two minute monologues for auditions, searchable by tone and type. Real published pieces with an Overdone filter.",
     images: ["/opengraph-image"],
   },

@@ -2,22 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StageHero } from "@/components/marketing/StageHero";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "About",
   description:
-    "ActorRise was built by Canberk Varli, an actor and software engineer, to give actors more time for the work that matters.",
+    `${BRAND.name} was built by Canberk Varli, an actor and software engineer, to give actors more time for the work that matters.`,
   openGraph: {
-    title: "About | ActorRise",
+    title: `About | ${BRAND.name}`,
     description: "Built by an actor who believes technology should support the art, not get in the way of it.",
     url: `${siteUrl}/about`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "About | ActorRise",
+    title: `About | ${BRAND.name}`,
     description:
       "Built by an actor who believes technology should support the art, not get in the way of it.",
     images: ["/opengraph-image"],
@@ -63,7 +63,7 @@ export default function AboutPage() {
           <a href="https://www.producthunt.com/products/actorrise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise" target="_blank" rel="noopener noreferrer">
             <img
               src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=dark&t=1773031056919"
-              alt="ActorRise on Product Hunt"
+              alt={`${BRAND.name} on Product Hunt`}
               className="h-[40px] w-auto"
             />
           </a>
@@ -78,7 +78,7 @@ export default function AboutPage() {
           <a href="https://peerlist.io/canberkvarli/project/actorrise" target="_blank" rel="noreferrer">
             <img
               src="https://peerlist.io/api/v1/projects/embed/PRJHKKDKE6P6NPEPG3DRRAQ68J9OBR?showUpvote=false&theme=dark"
-              alt="ActorRise on Peerlist"
+              alt={`${BRAND.name} on Peerlist`}
               className="h-[40px] w-auto"
             />
           </a>

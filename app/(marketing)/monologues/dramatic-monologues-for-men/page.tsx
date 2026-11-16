@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -11,13 +11,13 @@ export const metadata: Metadata = {
   title: "Dramatic Monologues for Men",
   description: "Dramatic monologues for men for auditions. Search 19,000+ real pieces by intensity and length, avoid overdone choices, and find a piece that fits your type.",
   openGraph: {
-    title: "Dramatic Monologues for Men | ActorRise",
+    title: `Dramatic Monologues for Men | ${BRAND.name}`,
     description: "Dramatic monologues for men, searchable by intensity, length, and type. Real published pieces with an Overdone filter.",
     url: `${siteUrl}/monologues/dramatic-monologues-for-men`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dramatic Monologues for Men | ActorRise",
+    title: `Dramatic Monologues for Men | ${BRAND.name}`,
     description: "Dramatic monologues for men, searchable by intensity, length, and type. Real published pieces with an Overdone filter.",
     images: ["/opengraph-image"],
   },

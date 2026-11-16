@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -11,13 +11,13 @@ export const metadata: Metadata = {
   title: "One Minute Monologues",
   description: "One minute monologues for fast auditions and class. Search 19,000+ real pieces and filter to short monologues that fit a tight time limit.",
   openGraph: {
-    title: "One Minute Monologues | ActorRise",
+    title: `One Minute Monologues | ${BRAND.name}`,
     description: "Short one minute monologues for auditions, class, and self tapes. Real pieces, searchable by tone and type.",
     url: `${siteUrl}/monologues/one-minute-monologues`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "One Minute Monologues | ActorRise",
+    title: `One Minute Monologues | ${BRAND.name}`,
     description: "Short one minute monologues for auditions, class, and self tapes. Real pieces, searchable by tone and type.",
     images: ["/opengraph-image"],
   },

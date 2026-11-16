@@ -21,7 +21,7 @@ from app.models.user import User
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.school_address import STUDENT_INBOX_PREFIXES
 from app.services.email.templates import EmailTemplates
-from app.core.brand import site_url
+from app.core.brand import BRAND_NAME, site_url
 
 
 # ---------------------------------------------------------------------------
@@ -195,14 +195,14 @@ def send_campaign(
     templates = EmailTemplates()
 
     subject_map = {
-        "upgrade_nudge": "Unlock more with ActorRise Plus",
-        "feature_announcement": template_kwargs.get("feature_title", "What's new on ActorRise"),
-        "actor_page": "Your actor page on ActorRise",
-        "cold_outreach": "hey from ActorRise",
-        "weekly_engagement": "Your weekly pick from ActorRise",
+        "upgrade_nudge": f"Unlock more with {BRAND_NAME} Plus",
+        "feature_announcement": template_kwargs.get("feature_title", f"What's new on {BRAND_NAME}"),
+        "actor_page": f"Your actor page on {BRAND_NAME}",
+        "cold_outreach": f"hey from {BRAND_NAME}",
+        "weekly_engagement": f"Your weekly pick from {BRAND_NAME}",
         "scene_partner_launch": "New: rehearse lines with a scene partner that never flakes",
     }
-    subject = subject_map.get(campaign_type, "News from ActorRise")
+    subject = subject_map.get(campaign_type, f"News from {BRAND_NAME}")
 
     # Resolve the renderer by name so a campaign whose template method no longer
     # exists doesn't blow up dict construction for every other campaign.
@@ -299,7 +299,7 @@ def _send_upgrade_nudge_campaign(db: Session, target: str, dry_run: bool) -> dic
             )
             client.send_email(
                 to=user.email,
-                subject="Unlock more with ActorRise Plus",
+                subject=f"Unlock more with {BRAND_NAME} Plus",
                 html=html,
                 unsubscribe_url=unsub_url,
             )
@@ -364,7 +364,7 @@ def maybe_send_upgrade_nudge(db: Session, user_id: int) -> None:
             )
             client.send_email(
                 to=email,
-                subject="Unlock more with ActorRise Plus",
+                subject=f"Unlock more with {BRAND_NAME} Plus",
                 html=html,
                 unsubscribe_url=unsub_url,
             )

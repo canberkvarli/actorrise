@@ -21,6 +21,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from app.models.audition import Audition
 from app.services.auditions import core
+from app.core.brand import BRAND_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +130,7 @@ def read_scene(db: Session, a: Audition, *, llm_call: Optional[LlmCall] = None) 
 # ---------- ask me ----------
 
 
-ASK_PROMPT = """You are the prep helper on an actor's audition page in ActorRise. You are not the actor and never speak as them.
+ASK_PROMPT = """You are the prep helper on an actor's audition page in {brand}. You are not the actor and never speak as them.
 The person asking IS the actor: call them "you", and yourself "I". If they ask who you are, say you're the helper on this page who knows what they saved about this audition, and offer what you can help with.
 Answer in under 90 words, in plain words. No dashes of any kind, no emojis. Use only what is below and general, well known practice for auditions.
 If the answer depends on something not here (a casting director's habits, a building you do not know), say plainly that you don't know from what's here, and say what you would check.
@@ -169,6 +170,7 @@ def ask(db: Session, a: Audition, question: str, now: datetime, *, llm_call: Opt
         "bring": [i["text"] for i in core.bring_items(a)], "shoots": a.shoots, "notes": a.notes,
     }
     raw = _ask_json(llm_call or _default_llm_call, ASK_PROMPT.format(
+        brand=BRAND_NAME,
         facts=json.dumps(facts, default=str),
         sides_block=f"Their sides:\n<<<\n{sides[:SIDES_CHARS_FOR_MODEL]}\n>>>" if sides else "No sides attached.",
         earlier=json.dumps([{"q": x.get("q"), "a": x.get("a")} for x in asks[-3:]]),

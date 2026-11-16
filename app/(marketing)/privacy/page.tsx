@@ -4,22 +4,22 @@ import { StageHero } from "@/components/marketing/StageHero";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { TrOnly } from "@/components/seo/ContentT";
 import { T, type MessageKey } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "ActorRise Privacy Policy. How we collect, use, and protect your personal data when you use our platform.",
+    `${BRAND.name} Privacy Policy. How we collect, use, and protect your personal data when you use our platform.`,
   openGraph: {
-    title: "Privacy Policy | ActorRise",
+    title: `Privacy Policy | ${BRAND.name}`,
     description: "How we collect, use, and protect your personal data.",
     url: `${siteUrl}/privacy`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Privacy Policy | ActorRise",
+    title: `Privacy Policy | ${BRAND.name}`,
     description:
       "How we collect, use, and protect your personal data.",
     images: ["/opengraph-image"],

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -13,14 +13,14 @@ export const metadata: Metadata = {
   description:
     "Find dramatic monologues from contemporary plays in 19,000+ searchable pieces. AI search by era, tone, and length. Free to try.",
   openGraph: {
-    title: "Dramatic Monologue from Contemporary Play | ActorRise",
+    title: `Dramatic Monologue from Contemporary Play | ${BRAND.name}`,
     description:
       "Search 19,000+ monologues for dramatic pieces from contemporary plays. AI-powered discovery.",
     url: `${siteUrl}/monologues/dramatic-contemporary`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dramatic Monologue from Contemporary Play | ActorRise",
+    title: `Dramatic Monologue from Contemporary Play | ${BRAND.name}`,
     description:
       "Search 19,000+ monologues for dramatic pieces from contemporary plays. AI-powered discovery.",
     images: ["/opengraph-image"],

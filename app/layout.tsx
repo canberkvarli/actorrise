@@ -17,7 +17,7 @@ import { OAuthCallbackRedirect } from "@/components/auth/OAuthCallbackRedirect";
 import { LastAuthCookieSync } from "@/components/auth/LastAuthCookieSync";
 import { AttributionCapture } from "@/components/analytics/AttributionCapture";
 import { HtmlLang } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
@@ -85,8 +85,8 @@ const siteUrl = SITE_URL;
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Find Your Audition Monologue in Seconds | ActorRise",
-    template: "%s | ActorRise",
+    default: `Find Your Audition Monologue in Seconds | ${BRAND.name}`,
+    template: `%s | ${BRAND.name}`,
   },
   description:
     "Find your audition monologue in seconds with AI search. 19,000+ real pieces from plays, films, and TV, sorted by tone, length, and type. Free to start.",
@@ -102,8 +102,8 @@ export const metadata: Metadata = {
     "classical monologues",
     "acting auditions",
   ],
-  authors: [{ name: "ActorRise", url: siteUrl }],
-  creator: "ActorRise",
+  authors: [{ name: BRAND.name, url: siteUrl }],
+  creator: BRAND.name,
   /**
    * Apple's Smart App Banner, on every page of the site.
    *
@@ -138,8 +138,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: siteUrl,
-    siteName: "ActorRise",
-    title: "Find Your Audition Monologue in Seconds | ActorRise",
+    siteName: BRAND.name,
+    title: `Find Your Audition Monologue in Seconds | ${BRAND.name}`,
     description:
       "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 19,000+ monologues from plays, films, and TV. Free to start, no credit card required.",
     images: [
@@ -147,13 +147,13 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "ActorRise - Find your monologue in seconds. Spend your time rehearsing.",
+        alt: `${BRAND.name} - Find your monologue in seconds. Spend your time rehearsing.`,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Find Your Audition Monologue in Seconds | ActorRise",
+    title: `Find Your Audition Monologue in Seconds | ${BRAND.name}`,
     description:
       "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 19,000+ monologues from plays, films, and TV. Free to start, no credit card required.",
     images: ["/opengraph-image"],
@@ -177,7 +177,7 @@ const jsonLd = {
     {
       "@type": "WebSite",
       "@id": `${siteUrl}/#website`,
-      name: "ActorRise",
+      name: BRAND.name,
       url: siteUrl,
       description: "Find your perfect audition monologue in seconds with AI search. 19,000+ monologues from plays, films, and TV. Spend your time rehearsing.",
       publisher: { "@id": `${siteUrl}/#organization` },
@@ -185,7 +185,7 @@ const jsonLd = {
     {
       "@type": "Organization",
       "@id": `${siteUrl}/#organization`,
-      name: "ActorRise",
+      name: BRAND.name,
       url: siteUrl,
       description:
         "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. Free to start, no credit card required.",
@@ -194,7 +194,7 @@ const jsonLd = {
     {
       "@type": "WebApplication",
       "@id": `${siteUrl}/#webapp`,
-      name: "ActorRise",
+      name: BRAND.name,
       url: siteUrl,
       description:
         "Find your monologue in seconds. Spend your time rehearsing. AI semantic search over 19,000+ monologues from plays, films, and TV.",

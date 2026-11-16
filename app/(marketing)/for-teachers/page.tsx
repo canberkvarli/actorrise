@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ForTeachersContent } from "./ForTeachersContent";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -9,14 +9,14 @@ export const metadata: Metadata = {
   description:
     "Your students find the right audition monologue in seconds. 19,000+ pieces, AI search, Overdone filter. A free resource for drama teachers.",
   openGraph: {
-    title: "Monologues for Drama Teachers & Acting Coaches | ActorRise",
+    title: `Monologues for Drama Teachers & Acting Coaches | ${BRAND.name}`,
     description:
       "Find the right audition monologue in seconds. 19,000+ pieces, AI fit to type and casting, Overdone filter. Your class gets Plus free for a month, then a class plan from $249 a year.",
     url: `${siteUrl}/for-teachers`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Monologues for Drama Teachers & Acting Coaches | ActorRise",
+    title: `Monologues for Drama Teachers & Acting Coaches | ${BRAND.name}`,
     description:
       "Find the right audition monologue in seconds. 19,000+ pieces, AI fit to type and casting, Overdone filter. Your class gets Plus free for a month, then a class plan from $249 a year.",
     images: ["/opengraph-image"],

@@ -76,6 +76,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from app.core.brand import BRAND_NAME
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -595,7 +596,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="ActorRise API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title=f"{BRAND_NAME} API", version="1.0.0", lifespan=lifespan)
 
 
 @app.exception_handler(Exception)
@@ -693,7 +694,7 @@ app.include_router(loop_bridge_router)
 
 @app.get("/")
 def root():
-    return {"message": "ActorRise API is running"}
+    return {"message": f"{BRAND_NAME} API is running"}
 
 
 @app.get("/health")

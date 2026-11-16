@@ -5,6 +5,7 @@ import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 import { RopeHeadline } from "@/components/landing/v2/RopeHeadline";
 import { StageMotes } from "@/components/landing/v2/StageMotes";
 import { appStoreUrl } from "@/lib/appStore";
+import { BRAND } from "@/lib/brand";
 
 /**
  * Ghost Light hero: a dark stage, one spotlight that follows the cursor,
@@ -12,7 +13,7 @@ import { appStoreUrl } from "@/lib/appStore";
  */
 export function SpotlightHero() {
   return (
-    <SpotlightSurface as="section" flicker className="stage-grain" aria-label="ActorRise introduction">
+    <SpotlightSurface as="section" flicker className="stage-grain" aria-label={`${BRAND.name} introduction`}>
       <StageMotes />
       <div className="container mx-auto px-4 sm:px-6 pt-20 pb-16 sm:pt-28 sm:pb-20 md:pt-36 md:pb-24 text-center">
         {/* The one light, then the stage direction naming it */}

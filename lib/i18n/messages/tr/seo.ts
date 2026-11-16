@@ -1,5 +1,6 @@
 import type { Widen } from "../types";
 import type { seo as en } from "../en/seo";
+import { BRAND } from "../../../brand";
 
 /**
  * Türkçe, for the SEO pages' chrome only. The monologues, play titles and
@@ -70,7 +71,7 @@ export const seo: Widen<typeof en> = {
     title: "Monolog bulucu: bir sonraki {em} saniyeler içinde bul",
     titleEm: "seçme parçanı",
     lede:
-      "ActorRise, oyuncular için yapılmış bir monolog bulucu ve arşiv. Kitapları ya da sıradan listeleri karıştırmak yerine neye ihtiyacın olduğunu düz bir dille anlatıyorsun, saniyeler içinde gerçek monologlardan oluşan kısa bir liste geliyor. Anahtar kelime tahmini yok, ikinci turdan önceki gece antolojileri karıştırmak yok. Arşiv şimdilik İngilizce.",
+      `${BRAND.name}, oyuncular için yapılmış bir monolog bulucu ve arşiv. Kitapları ya da sıradan listeleri karıştırmak yerine neye ihtiyacın olduğunu düz bir dille anlatıyorsun, saniyeler içinde gerçek monologlardan oluşan kısa bir liste geliyor. Anahtar kelime tahmini yok, ikinci turdan önceki gece antolojileri karıştırmak yok. Arşiv şimdilik İngilizce.`,
     b1: "İnternette aranabilir en büyük monolog arşivlerinden biri",
     b2: "“2 dakikadan kısa komik kadın” ya da “öfkeli modern erkek” dediğinde ne demek istediğini anlayan yapay zekâ araması",
     b3: "Yapay zekâ metni değil, oyun yazarlarının gerçek metinleri",
@@ -97,7 +98,7 @@ export const seo: Widen<typeof en> = {
     searchesOutro: "Her sonuç yayımlanmış gerçek bir parça, yani metne güvenebilir ve kaynağına bakabilirsin.",
     realTitle: "Yapay zekâ repliği değil, gerçek metinler",
     real1:
-      "ActorRise monolog uydurmaz. Yapay zekâ yazıda değil, aramada. Her sonuç bir oyundan, filmden ya da dizi senaryosundan gerçek bir parça, yani prova ettiğin metni seçmeciler de tanır. Bir parça fazla oynanmaya başladığında çok oynananlar filtresi onu işaretler, böylece o gün üç kişinin daha okuduğu monolog yerine taze bir şey getirirsin.",
+      `${BRAND.name} monolog uydurmaz. Yapay zekâ yazıda değil, aramada. Her sonuç bir oyundan, filmden ya da dizi senaryosundan gerçek bir parça, yani prova ettiğin metni seçmeciler de tanır. Bir parça fazla oynanmaya başladığında çok oynananlar filtresi onu işaretler, böylece o gün üç kişinin daha okuduğu monolog yerine taze bir şey getirirsin.`,
     real2:
       "ActorRise’ı ben bir oyuncu olduğum için yaptım. Doğru monoloğu bulmak, provaya ayırmayı tercih edeceğim saatlerimi yiyordu.",
     builtTitle: "Oyuncular, öğrenciler ve koçlar için",
@@ -113,7 +114,7 @@ export const seo: Widen<typeof en> = {
       q3: "Süreye, cinsiyete ve tona göre arayabilir miyim?",
       a3: "Evet. Süreyi (örneğin iki dakikadan kısa), cinsiyeti, tonu ve tarzı anlat, sonra kısa listeyi gireceğin odaya uyana kadar filtrele.",
       q4: "Monologlar nereden geliyor?",
-      a4: "ActorRise yayımlanmış gerçek metinleri düzenler ve her parça kaynağına ve ilk yayımlandığı yere bağlanır. Telif hakkı süren eserlerin tam metinlerini asla barındırmayız. Ayrıntılar: ",
+      a4: `${BRAND.name} yayımlanmış gerçek metinleri düzenler ve her parça kaynağına ve ilk yayımlandığı yere bağlanır. Telif hakkı süren eserlerin tam metinlerini asla barındırmayız. Ayrıntılar: `,
       link: "Kaynaklar ve telif hakkı",
     },
   },
@@ -122,7 +123,7 @@ export const seo: Widen<typeof en> = {
     title: "Oyuncular için yapılmış {em}",
     titleEm: "monolog arşivi",
     lede:
-      "ActorRise aranabilir bir monolog arşivi: oyunlardan, filmlerden ve dizilerden {count} gerçek parça, şimdilik İngilizce. Gerçekten neye ihtiyacın varsa onunla ararsın; ton, süre, cinsiyet, yaş, tema, oyun, dizi. Gerçek metni saniyeler içinde okursun. Kamu malı oyunlar tam metin olarak yer alır.",
+      `${BRAND.name} aranabilir bir monolog arşivi: oyunlardan, filmlerden ve dizilerden {count} gerçek parça, şimdilik İngilizce. Gerçekten neye ihtiyacın varsa onunla ararsın; ton, süre, cinsiyet, yaş, tema, oyun, dizi. Gerçek metni saniyeler içinde okursun. Kamu malı oyunlar tam metin olarak yer alır.`,
     countedTitle: "İçinde ne var, sayılarla",
     stats: {
       pieces: "Monolog",
@@ -172,7 +173,7 @@ export const seo: Widen<typeof en> = {
       q5: "Oyuna, diziye, temaya ya da yaşa göre arayabilir miyim?",
       a5: "Evet. Nasıl söylüyorsan öyle yaz: \"Hamlet’ten bir monolog\", \"intikam üzerine bir şey\", \"komik, genç, iki dakikadan kısa\". Aşağıdaki sayfalar en çok istenen rafları kapsıyor.",
       q6: "Monologlar nereden geliyor?",
-      a6: "Tam metin olarak yer alan kamu malı oyunlardan ve karakter, eser ve süreyle listelenen lisanslı ya da kaynak gösterilen modern eserlerden. ActorRise telifli metinleri dağıtmaz. Ayrıntılar: ",
+      a6: `Tam metin olarak yer alan kamu malı oyunlardan ve karakter, eser ve süreyle listelenen lisanslı ya da kaynak gösterilen modern eserlerden. ${BRAND.name} telifli metinleri dağıtmaz. Ayrıntılar: `,
       link: "Kaynaklar ve telif hakkı",
     },
     ctaTitle: "{count} monolog içinde şimdi ara",
@@ -183,7 +184,7 @@ export const seo: Widen<typeof en> = {
     titleEm: "seçme",
     title: "Her ihtiyaca uygun {em} monologları.",
     lede:
-      "Klasik, modern ya da komik seçme monoloğu, hangisine ihtiyacın varsa ActorRise ile 19.000+ gerçek parçayı tarza, süreye, cinsiyete ve tona göre arayabilirsin. Uyanı yapay zekâ bulur, sen de kazmaya daha az, provaya daha çok vakit ayırırsın.",
+      `Klasik, modern ya da komik seçme monoloğu, hangisine ihtiyacın varsa ${BRAND.name} ile 19.000+ gerçek parçayı tarza, süreye, cinsiyete ve tona göre arayabilirsin. Uyanı yapay zekâ bulur, sen de kazmaya daha az, provaya daha çok vakit ayırırsın.`,
     searchBtn: "Seçme monologlarında ara",
     b1: "{link}: Shakespeare ve ötesi",
     b1Link: "Klasik monologlar",
@@ -225,7 +226,7 @@ export const seo: Widen<typeof en> = {
       q3: "Modern ve klasik parçalar var mı?",
       a3: "İkisi de var. Klasik (Shakespeare ve ötesi), dramatik modern ve komik parçalara göz at ya da ne istediğini anlat, gerisini arama ayıklasın.",
       q4: "Monologlar nereden geliyor?",
-      a4: "ActorRise yayımlanmış gerçek metinleri düzenler ve her parça kaynağına ve ilk yayımlandığı yere bağlanır. Telif hakkı süren eserlerin tam metinlerini asla barındırmayız. Ayrıntılar: ",
+      a4: `${BRAND.name} yayımlanmış gerçek metinleri düzenler ve her parça kaynağına ve ilk yayımlandığı yere bağlanır. Telif hakkı süren eserlerin tam metinlerini asla barındırmayız. Ayrıntılar: `,
       link: "Kaynaklar ve telif hakkı",
     },
   },
@@ -333,7 +334,7 @@ export const seo: Widen<typeof en> = {
     },
     s2Outro:
       "{link} tam olarak bunu yapar. Anlattığını okur ve oyunlardan, filmlerden ve dizilerden 19.000+ parça arasından tonuna, süresine, cinsiyetine ve tipine uyan gerçek monologları sıralar. Arşiv şimdilik İngilizce.",
-    s2Link: "ActorRise monolog bulucu",
+    s2Link: `${BRAND.name} monolog bulucu`,
     s3Title: "3. İşe yarayanı seç, çok oynananları atla",
     s3p1:
       "İyi bir seçme monoloğu oynanabilir, aktif ve tazedir. Kısa listen olunca sana bir şey yaptırtan, gerçek bir kırılması ya da riski olan ve o gün diğer her oyuncunun getirdiği eskimiş klasik olmayan parçayı seç. En çok kesilen parçalar ünlü olanlardır; onları gizlemek için çok oynananlar filtresini kullan ve jürinin henüz on iki kez duymadığı bir şeyi öne çıkar.",
@@ -345,7 +346,7 @@ export const seo: Widen<typeof en> = {
     browseTitle: "İhtiyacına göre göz at",
     faq: {
       q1: "Bana uyan bir monoloğu nasıl bulurum?",
-      a1: "Seçmenin istediğiyle başla (süre, ton, modern ya da klasik), sonra yaş aralığına ve tipine göre daralt. Bunu düz bir dille anlat ve antolojileri karıştırmak yerine gerçek bir arşivde ara. ActorRise tonuna, süresine ve tipine uyan parçaları saniyeler içinde sıralar.",
+      a1: `Seçmenin istediğiyle başla (süre, ton, modern ya da klasik), sonra yaş aralığına ve tipine göre daralt. Bunu düz bir dille anlat ve antolojileri karıştırmak yerine gerçek bir arşivde ara. ${BRAND.name} tonuna, süresine ve tipine uyan parçaları saniyeler içinde sıralar.`,
       q2: "Ücretsiz monologu nerede bulabilirim?",
       a2: "ActorRise’ta ücretsiz bir katman var ve denemek için kredi kartı gerekmiyor. Yayımlanmış gerçek monologları hemen arayıp okuyabilirsin; ücretli planlar yapay zekâyla sınırsız prova açar.",
       q3: "Bir seçme monoloğu ne kadar uzun olmalı?",
@@ -353,7 +354,7 @@ export const seo: Widen<typeof en> = {
       q4: "Çok oynanmış bir monologdan nasıl kaçınırım?",
       a4: "En çok kesilen parçalar, her oyuncunun getirdikleridir. Eskimiş klasikleri gizlemek ve tonuna ve tipine hâlâ uyan daha taze seçenekleri öne çıkarmak için çok oynananlar filtresini kullan.",
       q5: "Monologlar nereden geliyor?",
-      a5: "Kamu malı ve lisanslı kaynaklardan. ActorRise yayımlanmış gerçek metinleri düzenler, telifli oyun metinlerini dağıtmaz. Ayrıntılar: ",
+      a5: `Kamu malı ve lisanslı kaynaklardan. ${BRAND.name} yayımlanmış gerçek metinleri düzenler, telifli oyun metinlerini dağıtmaz. Ayrıntılar: `,
       link: "Kaynaklar ve telif hakkı",
     },
     ctaTitle: "Monoloğunu saniyeler içinde bul",
@@ -365,7 +366,7 @@ export const seo: Widen<typeof en> = {
     title: "Oyuncular için yapay zekâ {em} aracı",
     titleEm: "prova",
     lede:
-      "Malzemeni bul ve aynı yerde prova et. ActorRise, yapay zekâ destekli monolog aramasını ScenePartner ile birleştirir: diğer replikleri sesli okuyan bir prova aracı, böylece sahneleri ve monologları kendi programına göre çalışırsın.",
+      `Malzemeni bul ve aynı yerde prova et. ${BRAND.name}, yapay zekâ destekli monolog aramasını ScenePartner ile birleştirir: diğer replikleri sesli okuyan bir prova aracı, böylece sahneleri ve monologları kendi programına göre çalışırsın.`,
     b1Strong: "Malzeme bul",
     b1: "{strong}: 19.000+ monolog, film ve dizi içinde anahtar kelimeyle değil, anlamla ara.",
     b2Strong: "Sahne prova et",
@@ -386,7 +387,7 @@ export const seo: Widen<typeof en> = {
     title: "Performansın yerine geçmeyen, {em} yardım eden seçme yapay zekâsı",
     titleEm: "hazırlanmana",
     lede:
-      "ActorRise yapay zekâyı doğru malzemeyi bulman ve prova etmen için kullanır; metin üretmez, bir oyuncu olarak yaptığın işin yerini almaz. Aradığın ve çalıştığın her şey yayımlanmış gerçek oyunlardan ve film ve dizilerden gelir.",
+      `${BRAND.name} yapay zekâyı doğru malzemeyi bulman ve prova etmen için kullanır; metin üretmez, bir oyuncu olarak yaptığın işin yerini almaz. Aradığın ve çalıştığın her şey yayımlanmış gerçek oyunlardan ve film ve dizilerden gelir.`,
     b1Strong: "Monolog arama",
     b1: "{strong}: neye ihtiyacın olduğunu düz bir dille anlat. Seni yalnızca anahtar kelimeyle değil, anlamla 19.000+ gerçek monologla eşleştirir.",
     b2: "{strong}: diğer replikleri okuyan yapay zekâyla sahne prova et. Seçme metinlerini, film ve dizi referanslarını ve kaydettiğin monologları çalış, odaya hazır gir.",
@@ -395,7 +396,7 @@ export const seo: Widen<typeof en> = {
     b4: "Gerçek metni bulur ve düzenler. Monolog uydurmaz, üretmez.",
     whatTitle: "Yapay zekâ ne yapar, ne yapmaz",
     what1:
-      "“Oyuncular için yapay zekâ” çoğu zaman bir modelin sahte sahneler yazması demek. ActorRise tam tersini yapar. Yapay zekâ anlattığını okur ve seni yayımlanmış gerçek parçalara yönlendirir, prova edebilmen için sahne partnerinin repliklerini sana okur. Monoloğu asla yazmaz.",
+      `“Oyuncular için yapay zekâ” çoğu zaman bir modelin sahte sahneler yazması demek. ${BRAND.name} tam tersini yapar. Yapay zekâ anlattığını okur ve seni yayımlanmış gerçek parçalara yönlendirir, prova edebilmen için sahne partnerinin repliklerini sana okur. Monoloğu asla yazmaz.`,
     what2:
       "Bu, odada fark yaratır. Seçmeciler gerçek malzemeyi tanır ve bir oyuna ya da filme dayandırabildiğin bir parça, üretilmiş bir parçanın asla dayanamayacağı sorulara dayanır.",
     searchTitle: "Monolog arama",
@@ -409,7 +410,7 @@ export const seo: Widen<typeof en> = {
     mode2:
       "ActorRise’ı ben bir oyuncu olduğum için yaptım. İşi benim yerime yapmaya çalışan değil, zanaate saygı duyan hazırlık araçları istedim.",
     faq: {
-      q1: "ActorRise monologları yapay zekâyla mı yazıyor?",
+      q1: `${BRAND.name} monologları yapay zekâyla mı yazıyor?`,
       a1: "Hayır. Yapay zekâ yazıda değil, aramada ve provada. Her monolog yayımlanmış gerçek bir parça, yani getirdiğin şeyi seçmeciler tanıyabilir.",
       q2: "ScenePartner nedir?",
       a2: "Yapay zekâ bir okuma partneri. Bir sahnedeki diğer replikleri okur, böylece sana giriş verecek birini ayarlamadan seçme metnini ya da monoloğunu istediğin an sesli çalışırsın.",
@@ -438,14 +439,14 @@ export const seo: Widen<typeof en> = {
     q2: "ScenePartner ücretsiz mi?",
     a2: "Ücretsiz katmanda sınırlı ScenePartner seansları var. Sınırsız prova için {pricing} bak.",
     q3: "Kendi seçme metinlerimi ya da senaryolarımı kullanabilir miyim?",
-    a3: "Evet. Kendi seçme metinlerini yapıştırabilir ya da yükleyebilir ve ScenePartner ile prova edebilirsin. Yalnızca ActorRise arşivindeki malzemeyle değil, her metinle çalışır.",
+    a3: `Evet. Kendi seçme metinlerini yapıştırabilir ya da yükleyebilir ve ScenePartner ile prova edebilirsin. Yalnızca ${BRAND.name} arşivindeki malzemeyle değil, her metinle çalışır.`,
   },
 
   seoSources: {
     title: "Kaynaklar ve {em}.",
     titleEm: "telif hakkı",
     lede:
-      "ActorRise monologlar için bir arama ve keşif aracı. Kamu malı eserler tam metin olarak yer alır. Telif hakkı hâlâ süren her şey yalnızca kısa bir alıntı olarak, tek bir konuşma, kaynak gösterilerek ve orijinaline bağlantıyla yer alır. Telifli bir eserin tam metnini asla barındırmayız.",
+      `${BRAND.name} monologlar için bir arama ve keşif aracı. Kamu malı eserler tam metin olarak yer alır. Telif hakkı hâlâ süren her şey yalnızca kısa bir alıntı olarak, tek bir konuşma, kaynak gösterilerek ve orijinaline bağlantıyla yer alır. Telifli bir eserin tam metnini asla barındırmayız.`,
     whereTitle: "İçeriğimiz nereden geliyor",
     pdStrong: "Kamu malı eserler",
     pd: "{strong}: Shakespeare, Ibsen, Çehov, Molière ve Wilde gibi telif süresi dolmuş oyunlar, çoğunlukla Project Gutenberg’den. Bunların telifi sona erdiği için konuşmayı tam olarak veriyor ve geldiği baskıya bağlantı veriyoruz.",
@@ -455,7 +456,7 @@ export const seo: Widen<typeof en> = {
     noneStrong: "Hiç metin tutmadığımız eserler",
     none: "{strong}: bazı eserler için yalnızca oyunu, karakteri ve yayıncıya bir bağlantıyı listeliyoruz, sayfada hiç metin yok. Bir pasajı çoğaltmak için net bir dayanağımız yoksa, onu alıntılamak yerine seni ona yönlendirmeyi tercih ederiz.",
     fullTitle: "Tam metinler",
-    full: "Telifli hiçbir oyunun, filmin ya da dizinin tam metnini barındırmayız, dağıtmayız ve burada birinin böyle bir metni edinmesinin bir yolu yok. ActorRise tek bir seçme parçasını bulmak ve prova etmek için var. Eserin tamamını istediğinde seni yayıncıya ya da lisanslı bir satıcıya yönlendiririz; satın alınması gereken yer orası.",
+    full: `Telifli hiçbir oyunun, filmin ya da dizinin tam metnini barındırmayız, dağıtmayız ve burada birinin böyle bir metni edinmesinin bir yolu yok. ${BRAND.name} tek bir seçme parçasını bulmak ve prova etmek için var. Eserin tamamını istediğinde seni yayıncıya ya da lisanslı bir satıcıya yönlendiririz; satın alınması gereken yer orası.`,
     removalTitle: "İçerik kaldırma",
     removal:
       "Bir hak sahibiysen ya da birini temsil ediyorsan ve bir alıntının kaldırılmasını ya da düzeltilmesini istiyorsan, parçanın bağlantısıyla birlikte {email} adresine e-posta gönder. Talepler hızla, genelde bir gün içinde karşılanır.",

@@ -1,3 +1,4 @@
+import { BRAND } from "../../../brand";
 /** English copy for the "appAccount" area. Top-level keys are namespaces; prefix them with "appAccount" so they stay unique across files. */
 export const appAccount = {
   /** lib/trial.ts's words, said by components/billing/trialText.ts. */
@@ -229,7 +230,7 @@ export const appAccount = {
     thisWill: "This will:",
     will1: "Permanently delete all your scripts, scenes, and bookmarks",
     will2: "Cancel your subscription immediately (no refund)",
-    will3: "Remove access to all ActorRise features immediately",
+    will3: `Remove access to all ${BRAND.name} features immediately`,
     will4: "This action cannot be undone",
     confirmSubscription:
       "I understand my subscription will be canceled immediately and I will lose access",
@@ -323,7 +324,7 @@ export const appAccount = {
     descriptorPlaceholder: "e.g. Actor · Voice Actor · Comedian",
     descriptorHint: "Shown below your name on the homepage and your actor page.",
     quote: "Testimonial Quote",
-    quotePlaceholder: "What would you like to say about ActorRise?",
+    quotePlaceholder: `What would you like to say about ${BRAND.name}?`,
     quoteHint: "{n} characters. Shorter quotes (under 260 chars) display best on the homepage.",
     bioPlaceholder: "Tell us about yourself, your acting journey, and what drives you...",
     bioHint: "Shown on your dedicated actor page. Write in first or third person.",

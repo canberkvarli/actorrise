@@ -12,6 +12,7 @@ import {
   type BadgeKey,
   type NavItem,
 } from "@/lib/adminNav";
+import { BRAND } from "@/lib/brand";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -101,7 +102,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="px-5 py-5">
             <Link href="/admin" className="block">
               <p className="font-brand text-xl font-semibold text-foreground">
-                ActorRise
+                {BRAND.name}
               </p>
               <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mt-0.5">
                 Admin
@@ -126,7 +127,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="lg:hidden border-b border-border/40 bg-card/30">
           <div className="flex items-center justify-between px-4 pt-3">
             <p className="font-brand text-lg font-semibold">
-              ActorRise <span className="text-muted-foreground font-normal">Admin</span>
+              {BRAND.name} <span className="text-muted-foreground font-normal">Admin</span>
             </p>
           </div>
           <div className="-mx-0 overflow-x-auto scrollbar-hide px-4 py-3">

@@ -1,5 +1,6 @@
 import type { Widen } from "../types";
 import type { appAccount as en } from "../en/appAccount";
+import { BRAND } from "../../../brand";
 
 export const appAccount: Widen<typeof en> = {
   appAccountTrial: {
@@ -325,7 +326,7 @@ export const appAccount: Widen<typeof en> = {
     descriptorPlaceholder: "ör. Oyuncu · Seslendirme sanatçısı · Komedyen",
     descriptorHint: "Ana sayfada ve oyuncu sayfanda adının altında görünür.",
     quote: "Yorumun",
-    quotePlaceholder: "ActorRise hakkında ne söylemek istersin?",
+    quotePlaceholder: `${BRAND.name} hakkında ne söylemek istersin?`,
     quoteHint: "{n} karakter. Kısa yorumlar (260 karakterin altı) ana sayfada en iyi görünür.",
     bioPlaceholder: "Bize kendinden, oyunculuk yolculuğundan ve seni neyin harekete geçirdiğinden bahset...",
     bioHint: "Sana özel oyuncu sayfanda görünür. Birinci ya da üçüncü tekil şahısla yazabilirsin.",

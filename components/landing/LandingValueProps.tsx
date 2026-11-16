@@ -1,6 +1,7 @@
 "use client";
 
 import { useLibraryStats } from "@/lib/useLibraryStats";
+import { BRAND } from "@/lib/brand";
 
 /**
  * Value props (Speed, Odds, Scale). Editorial strip with light structure.
@@ -65,7 +66,7 @@ export function LandingValueProps() {
   return (
     <section
       className="border-t border-border/60 py-20 md:py-28 bg-muted/20"
-      aria-label="Why ActorRise"
+      aria-label={`Why ${BRAND.name}`}
     >
       <div className="container mx-auto px-4 sm:px-6">
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row md:items-start gap-12 md:gap-14">

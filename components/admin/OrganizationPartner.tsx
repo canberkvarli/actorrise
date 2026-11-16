@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { BRAND } from "@/lib/brand";
 
 /**
  * Where an organization stands as a partner (admin only). The written-yes rule
@@ -77,7 +78,7 @@ export function PartnerCard({
             <h3 className="font-medium text-foreground">Partner</h3>
             <p className="text-xs text-muted-foreground">
               {partner.ready_to_ask
-                ? "Their class has used it. Worth asking them to link to ActorRise."
+                ? `Their class has used it. Worth asking them to link to ${BRAND.name}.`
                 : "Ask once a class has really used it. Nothing shows on the landing without a written yes."}
             </p>
           </div>

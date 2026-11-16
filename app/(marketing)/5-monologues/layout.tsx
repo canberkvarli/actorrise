@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "5 Monologues Casting Directors Would Rather See",
   description:
-    "Get a free curated list of fresh monologues, the kind that make casting directors sit up. Enter your email for the list and find them on ActorRise.",
+    `Get a free curated list of fresh monologues, the kind that make casting directors sit up. Enter your email for the list and find them on ${BRAND.name}.`,
   openGraph: {
-    title: "5 Monologues Casting Directors Would Rather See | ActorRise",
+    title: `5 Monologues Casting Directors Would Rather See | ${BRAND.name}`,
     description:
-      "Fresh monologues casting directors want to see. Free curated list + links to find them on ActorRise.",
+      `Fresh monologues casting directors want to see. Free curated list + links to find them on ${BRAND.name}.`,
     url: `${siteUrl}/5-monologues`,
   },
   alternates: { canonical: `${siteUrl}/5-monologues` },

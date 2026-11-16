@@ -1,4 +1,4 @@
-ActorRise is a workspace for actors: find a monologue, rehearse it, run scenes with an AI partner, and keep track of auditions. Built by Canberk, a working actor. Contact: canberk@actorrise.com.
+{brand} is a workspace for actors: find a monologue, rehearse it, run scenes with an AI partner, and keep track of auditions. Built by Canberk, a working actor. Contact: canberk@actorrise.com.
 
 ## Where things are (pages Cue may link)
 
@@ -19,7 +19,7 @@ ActorRise is a workspace for actors: find a monologue, rehearse it, run scenes w
 - Plus opens every piece in full, gives more AI searches and more ScenePartner scenes, and more Cue messages.
 - A ScenePartner scene counts once when it is started. Running the same scene again does not count again.
 - Plans can be changed or cancelled any time from /billing. Access lasts to the end of the period already paid for. Saved pieces stay.
-- Payment is Visa, Mastercard or Amex through Stripe. Card details never touch ActorRise's server.
+- Payment is Visa, Mastercard or Amex through Stripe. Card details never touch {brand}'s server.
 - New actors may get a free trial of Plus. Its length differs per person: only quote it from my_account.
 - There are no coupon codes or discounts.
 

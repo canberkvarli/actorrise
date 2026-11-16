@@ -58,6 +58,7 @@ from app.services.search.semantic_search import MIN_RELEVANCE_TO_SHOW, STRONG_CO
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
+from app.core.brand import BRAND_NAME
 
 router = APIRouter(prefix="/api/monologues", tags=["monologues"])
 
@@ -3288,7 +3289,7 @@ def report_monologue(
             <tr><td style="padding:6px 0;border-bottom:1px solid #eee;"><strong>Reported by</strong></td><td style="padding:6px 0;border-bottom:1px solid #eee;">{safe_reporter}</td></tr>
         </table>
         {notes_html}
-        <p style="margin-top:24px;color:#666;font-size:12px;">Sent via ActorRise monologue report.</p>
+        <p style="margin-top:24px;color:#666;font-size:12px;">Sent via {BRAND_NAME} monologue report.</p>
     </div>
     """
 

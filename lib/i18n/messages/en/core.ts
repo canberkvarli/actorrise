@@ -1,3 +1,4 @@
+import { BRAND } from "../../../brand";
 /** App chrome shared everywhere: language switch, nav, CTA, hero, auth, search. */
 export const core = {
   language: {
@@ -25,7 +26,7 @@ export const core = {
     guides: "Guides",
     practice: "Practice",
     signIn: "Sign in",
-    home: "ActorRise home",
+    home: `${BRAND.name} home`,
   },
   cta: {
     startRehearsing: "Start rehearsing",

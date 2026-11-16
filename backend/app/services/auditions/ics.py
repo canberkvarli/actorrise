@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.models.audition import Audition
 from app.services.auditions.core import aware
+from app.core.brand import BRAND_NAME
 
 
 def _esc(s: str) -> str:
@@ -68,7 +69,7 @@ def _event(a: Audition, now: datetime, site: str) -> list[str]:
 
 def build_calendar(auditions: list[Audition], *, now: datetime, site: str) -> str:
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//ActorRise//Auditions//EN",
-             "CALSCALE:GREGORIAN", "X-WR-CALNAME:Auditions (ActorRise)",
+             "CALSCALE:GREGORIAN", f"X-WR-CALNAME:Auditions ({BRAND_NAME})",
              "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H"]
     for a in auditions:
         if a.starts_at or a.due_at:

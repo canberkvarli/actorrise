@@ -18,6 +18,7 @@ import Image from "next/image";
 import { AuthProgressiveDisclosure } from "@/components/auth/AuthProgressiveDisclosure";
 import { theatreFontVars } from "@/lib/fonts/theatre";
 import { useT, type MessageKey } from "@/lib/i18n";
+import { BRAND } from "@/lib/brand";
 
 type AuthModalMode = "login" | "signup";
 
@@ -101,7 +102,7 @@ export function AuthModalProvider({ children }: AuthModalProviderProps) {
             <div className="flex justify-center">
               <Image
                 src="/transparent_textlogo.png"
-                alt="ActorRise"
+                alt={BRAND.name}
                 width={2000}
                 height={600}
                 className="h-9 w-auto"

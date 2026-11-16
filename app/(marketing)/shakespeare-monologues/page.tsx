@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -13,14 +13,14 @@ export const metadata: Metadata = {
   description:
     "Shakespeare monologues for auditions from Hamlet, Macbeth, Midsummer, and more. Filter 19,000+ real pieces by play, length, and character type.",
   openGraph: {
-    title: "Shakespeare Monologues for Auditions | ActorRise",
+    title: `Shakespeare Monologues for Auditions | ${BRAND.name}`,
     description:
       "Search Shakespeare monologues by character, play, tone, and length. AI-powered discovery from 19,000+ pieces.",
     url: `${siteUrl}/shakespeare-monologues`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Shakespeare Monologues for Auditions | ActorRise",
+    title: `Shakespeare Monologues for Auditions | ${BRAND.name}`,
     description:
       "Search Shakespeare monologues by character, play, tone, and length. AI-powered discovery from 19,000+ pieces.",
     images: ["/opengraph-image"],

@@ -2,6 +2,7 @@
 
 import { IconStar } from "@tabler/icons-react";
 import { LandingLiveCount } from "./LandingLiveCount";
+import { BRAND } from "@/lib/brand";
 
 /**
  * Compact social proof shown directly under the hero CTA.
@@ -37,11 +38,11 @@ export function LandingTrustBar() {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block opacity-90 hover:opacity-100 transition-opacity"
-            aria-label="ActorRise on Product Hunt"
+            aria-label={`${BRAND.name} on Product Hunt`}
           >
             <img
               src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=dark&t=1772064638507"
-              alt="ActorRise - Find the perfect monologue in seconds | Product Hunt"
+              alt={`${BRAND.name} - Find the perfect monologue in seconds | Product Hunt`}
               width={250}
               height={54}
               className="h-[40px] sm:h-[54px] w-auto"

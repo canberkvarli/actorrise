@@ -1,3 +1,4 @@
+import { BRAND } from "../../../brand";
 /** English copy for the "landing" pages. Top-level keys are namespaces; keep them unique across files. */
 export const landing = {
   landingMarquee: {
@@ -87,7 +88,7 @@ export const landing = {
     titleA: "Ghost Light. ",
     titleB: "The rehearsal room, in your pocket.",
     body:
-      "ActorRise on your iPhone. A scene partner at any hour, your sides read back, every audition on one board, and a new speech on your home screen each night. Saves work offline.",
+      `${BRAND.name} on your iPhone. A scene partner at any hour, your sides read back, every audition on one board, and a new speech on your home screen each night. Saves work offline.`,
     screensLabel: "Ghost Light screens",
     swipe: "(ten screens. swipe along.)",
     earlier: "Earlier screens",
@@ -104,20 +105,20 @@ export const landing = {
   landingHouse: {
     statSearches: "monologues found by actors, so far",
     statPieces: "pieces from plays, film and TV",
-    statActors: "actors rehearsing with ActorRise",
+    statActors: `actors rehearsing with ${BRAND.name}`,
     noticesDirection: "(the notices.)",
     noticesA: "Real actors. ",
     noticesB: "Real feedback.",
     videoDirection: "(ninety seconds. watch it work.)",
-    videoTitle: "ActorRise in ninety seconds",
+    videoTitle: `${BRAND.name} in ninety seconds`,
     videoPlay: "Play the ninety second demo",
-    founderAlt: "Canberk Varli, founder of ActorRise",
+    founderAlt: `Canberk Varli, founder of ${BRAND.name}`,
     founderTag: "(the founder. also an actor.)",
     noteDirection: "(a note, from the wings.)",
     noteA:
       "I’m an actor. I built this because I was spending audition nights hunting for a piece instead of working on one. Now I open it, say what I need the way I’d say it to a friend, and I’m rehearsing in a minute. ",
     noteB: "That’s the whole idea.",
-    founderRole: "· founder, ActorRise",
+    founderRole: `· founder, ${BRAND.name}`,
     talk: "(and if you want to talk, find me anywhere. i answer.)",
     freeA: "Free to start. ",
     freeB: "No card.",

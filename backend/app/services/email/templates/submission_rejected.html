@@ -11,7 +11,7 @@
 {% block content %}
                 <p class="greeting">Hi {{ user_name }},</p>
 
-                <p>Thank you for your submission to ActorRise. After review, I'm unable to approve:</p>
+                <p>Thank you for your submission to {{ brand }}. After review, I'm unable to approve:</p>
 
                 <div class="monologue-title" style="border-left-color: #ef4444;">
                     <strong>{{ monologue_title }}</strong>
@@ -38,11 +38,11 @@
                     <li>If you believe this decision was made in error, reply to this email</li>
                 </ul>
 
-                <p>I appreciate your interest in contributing to ActorRise and encourage you to submit other monologues.</p>
+                <p>I appreciate your interest in contributing to {{ brand }} and encourage you to submit other monologues.</p>
 
                 <p class="signature">
                     Best,<br>
                     <strong>Canberk</strong><br>
-                    <span style="font-size:14px; color:#616161;">Founder, ActorRise</span>
+                    <span style="font-size:14px; color:#616161;">Founder, {{ brand }}</span>
                 </p>
 {% endblock %}

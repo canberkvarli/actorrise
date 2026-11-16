@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -14,9 +14,9 @@ const LOGIN = `/login?redirect=${encodeURIComponent(FORM)}`;
 export const metadata: Metadata = {
   title: "For Playwrights: Put Your Monologues in Front of Actors",
   description:
-    "Actors search ActorRise for audition monologues every day, teens most of all. Send me a monologue from your play and it shows up in search with your name and a link to get the play.",
+    `Actors search ${BRAND.name} for audition monologues every day, teens most of all. Send me a monologue from your play and it shows up in search with your name and a link to get the play.`,
   openGraph: {
-    title: "For Playwrights | ActorRise",
+    title: `For Playwrights | ${BRAND.name}`,
     description:
       "Send me a monologue from your play. Actors find it in search with your name on it and a link to get the play. You can take it down any time.",
     url: `${siteUrl}/for-playwrights`,
@@ -47,12 +47,12 @@ export default function ForPlaywrightsPage() {
             Put your monologues in front of <em className="italic text-primary">actors</em> looking for them.
           </>
         }
-        lede="Actors come to ActorRise to find audition pieces. What they ask for most, and what I have least of, is contemporary monologues from real plays. Teens most of all."
+        lede={`Actors come to ${BRAND.name} to find audition pieces. What they ask for most, and what I have least of, is contemporary monologues from real plays. Teens most of all.`}
       />
 
       <div className="container mx-auto max-w-2xl px-6 py-12 md:py-16">
         <p className="mb-8 text-lg text-muted-foreground">
-          I'm Canberk, an actor in Berkeley, and I built ActorRise because finding the right piece took me forever.
+          I'm Canberk, an actor in Berkeley, and I built {BRAND.name} because finding the right piece took me forever.
           If you write plays, your monologues are exactly what the actors here are searching for. Let them find you.
         </p>
 

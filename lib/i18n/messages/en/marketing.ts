@@ -1,3 +1,4 @@
+import { BRAND } from "../../../brand";
 /** English copy for the "marketing" pages. Top-level keys are namespaces; keep them unique across files. */
 export const marketing = {
   marketingFooter: {
@@ -38,7 +39,7 @@ export const marketing = {
     direction: "(a note to the booth.)",
     title: "Get in touch",
     description:
-      "Partnership, feedback, bugs, collaboration. I built ActorRise on my own and really appreciate your support. I'll reply as soon as I can.",
+      `Partnership, feedback, bugs, collaboration. I built ${BRAND.name} on my own and really appreciate your support. I'll reply as soon as I can.`,
     name: "Name",
     namePlaceholder: "Your name",
     email: "Email",
@@ -70,7 +71,7 @@ export const marketing = {
     titleC: ".",
     lede: "Questions, feedback, bug reports, anything. It goes straight to my inbox, and I read every message.",
     formBody:
-      "Partnership, feedback, bug reports, or collaboration. I built ActorRise on my own and really appreciate your support.",
+      `Partnership, feedback, bug reports, or collaboration. I built ${BRAND.name} on my own and really appreciate your support.`,
     formButton: "Send a message",
     emailTitle: "Or email directly",
     emailBody: "For account issues, billing questions, or technical support:",
@@ -84,9 +85,9 @@ export const marketing = {
     titleA: "Built by an ",
     titleB: "actor",
     titleC: ", for actors.",
-    lede: "ActorRise is a solo project. One actor, one codebase, and a strong opinion about where your rehearsal time should go.",
+    lede: `${BRAND.name} is a solo project. One actor, one codebase, and a strong opinion about where your rehearsal time should go.`,
     p1: "I'm Canberk. I act with Inferno Theater in Berkeley and I'm also a software engineer.",
-    p2: "I built ActorRise because I kept losing entire days to finding audition monologues instead of actually rehearsing them. The math didn't make sense: 6 hours searching, 2 hours rehearsing. That's backwards.",
+    p2: `I built ${BRAND.name} because I kept losing entire days to finding audition monologues instead of actually rehearsing them. The math didn't make sense: 6 hours searching, 2 hours rehearsing. That's backwards.`,
     p3: "So I built the tool I wished I had. You describe what you need, it finds the right piece, and you get back to the actual work: rehearsing, acting, getting ready.",
     p4: "The goal isn't to replace the art. It's to give you more time for it.",
     featuredOn: "Featured on",
@@ -120,9 +121,9 @@ export const marketing = {
     titleA: "Where you’ll ",
     titleB: "find us",
     titleC: ".",
-    lede: "Theatre chapters, companies, studios, schools and newsletters that point their actors at ActorRise. If you run one and want a listing, write to me.",
+    lede: `Theatre chapters, companies, studios, schools and newsletters that point their actors at ${BRAND.name}. If you run one and want a listing, write to me.`,
     emptyA:
-      "Nothing listed here yet. If your organization has ActorRise in a resource guide or newsletter, email ",
+      `Nothing listed here yet. If your organization has ${BRAND.name} in a resource guide or newsletter, email `,
     emptyB: " and I will add you.",
     catChapter: "Chapters",
     catTheater: "Theaters",
@@ -140,7 +141,7 @@ export const marketing = {
     ],
     processing: "Processing your request...",
     doneTitle: "You've been unsubscribed",
-    doneBody: "You won't receive marketing emails from ActorRise anymore.",
+    doneBody: `You won't receive marketing emails from ${BRAND.name} anymore.`,
     misclick: "Didn't mean to?",
     undo: "Undo this",
     undoing: "Undoing...",
@@ -150,7 +151,7 @@ export const marketing = {
     sending: "Sending...",
     submit: "Submit feedback",
     thanks: "Thanks for letting me know. I appreciate the honesty.",
-    back: "Back to ActorRise",
+    back: `Back to ${BRAND.name}`,
     backTitle: "You're back on the list",
     backBody:
       "Nothing changed. You'll keep getting the occasional email from me, and you can unsubscribe from any of them.",

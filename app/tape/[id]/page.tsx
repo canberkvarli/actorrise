@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { IconVideo, IconAlertCircle } from '@tabler/icons-react';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { BRAND } from "@/lib/brand";
 
 interface PublicTape {
   id: number;
@@ -71,7 +72,7 @@ export default function PublicTapePage() {
             This tape may have been removed or the link is invalid.
           </p>
           <Link href="/" className="text-sm text-primary hover:text-primary/80 transition-colors">
-            Go to ActorRise
+            Go to {BRAND.name}
           </Link>
         </motion.div>
       </div>
@@ -123,7 +124,7 @@ export default function PublicTapePage() {
             <p className="text-[10px] text-white/20">
               Recorded on{' '}
               <Link href="/" className="text-primary/60 hover:text-primary/80 transition-colors">
-                ActorRise
+                {BRAND.name}
               </Link>
             </p>
           </div>

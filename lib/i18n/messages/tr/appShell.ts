@@ -1,5 +1,6 @@
 import type { Widen } from "../types";
 import type { appShell as en } from "../en/appShell";
+import { BRAND } from "../../../brand";
 
 /**
  * Türkçe: uygulamanın çerçevesi. Başlık, menüler, telefon sayfası, pano,
@@ -13,7 +14,7 @@ export const appShell: Widen<typeof en> = {
     loggingOutLabel: "Çıkış yapılıyor",
     curtainDirection: "(perde.)",
     curtainLine: "Bir sonraki provada görüşürüz.",
-    home: "ActorRise ana sayfa",
+    home: `${BRAND.name} ana sayfa`,
     primary: "Ana menü",
     monologues: "Monologlar",
     collection: "Koleksiyon",

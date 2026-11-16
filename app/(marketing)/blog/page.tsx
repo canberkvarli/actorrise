@@ -5,23 +5,23 @@ import { BLOG_POSTS } from "@/lib/blog/posts";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { ContentT } from "@/components/seo/ContentT";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "Blog: Audition & Monologue Tips for Actors",
   description:
-    "Practical writing for actors on choosing monologues, prepping auditions, and rehearsing smarter. From an actor building ActorRise.",
+    `Practical writing for actors on choosing monologues, prepping auditions, and rehearsing smarter. From an actor building ${BRAND.name}.`,
   openGraph: {
-    title: "ActorRise Blog",
+    title: `${BRAND.name} Blog`,
     description:
       "Practical writing for actors on choosing monologues, prepping auditions, and rehearsing smarter.",
     url: `${siteUrl}/blog`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "ActorRise Blog",
+    title: `${BRAND.name} Blog`,
     description:
       "Practical writing for actors on choosing monologues, prepping auditions, and rehearsing smarter.",
     images: ["/opengraph-image"],

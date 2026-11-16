@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -11,13 +11,13 @@ export const metadata: Metadata = {
   title: "Shakespeare Monologues for Women",
   description: "Shakespeare monologues for women from across the plays. Search by character, tone, and length to find a classical piece that fits your audition.",
   openGraph: {
-    title: "Shakespeare Monologues for Women | ActorRise",
+    title: `Shakespeare Monologues for Women | ${BRAND.name}`,
     description: "Shakespeare monologues for women across the comedies, tragedies, and histories. Searchable by character, tone, and length.",
     url: `${siteUrl}/monologues/shakespeare-monologues-for-women`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Shakespeare Monologues for Women | ActorRise",
+    title: `Shakespeare Monologues for Women | ${BRAND.name}`,
     description: "Shakespeare monologues for women across the comedies, tragedies, and histories. Searchable by character, tone, and length.",
     images: ["/opengraph-image"],
   },

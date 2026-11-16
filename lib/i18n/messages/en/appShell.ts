@@ -1,3 +1,4 @@
+import { BRAND } from "../../../brand";
 /** English copy for the "appShell" area. Top-level keys are namespaces; prefix them with "appShell" so they stay unique across files. */
 export const appShell = {
   /* The platform layout: app bar, account menu, phone sheet, tab bar. */
@@ -5,7 +6,7 @@ export const appShell = {
     loggingOutLabel: "Logging out",
     curtainDirection: "(curtain.)",
     curtainLine: "See you at the next call.",
-    home: "ActorRise Home",
+    home: `${BRAND.name} Home`,
     primary: "Primary",
     monologues: "Monologues",
     collection: "Collection",
@@ -82,7 +83,7 @@ export const appShell = {
   appShellClass: {
     title: "Your class",
     notTeacher:
-      "This page is for teacher accounts. If you teach and want your class on ActorRise, email canberk@actorrise.com and I'll set you up.",
+      `This page is for teacher accounts. If you teach and want your class on ${BRAND.name}, email canberk@actorrise.com and I'll set you up.`,
     failed: "That didn't load. Refresh, or email canberk@actorrise.com and I'll look.",
     emptyBefore: "Nobody has joined through your link yet. It's in the ",
     emptyLink: "library",
@@ -147,8 +148,8 @@ export const appShell = {
     agoH: "{n}h ago",
     agoD: "{n}d ago",
     /* The marquee's sentences. {title} is a slot for the play's title. */
-    lineJoined: "joined ActorRise",
-    lineJoinedFrom: "joined ActorRise from {city}",
+    lineJoined: `joined ${BRAND.name}`,
+    lineJoinedFrom: `joined ${BRAND.name} from {city}`,
     lineSearching: "is looking for {piece}{who}",
     linePiece: "a monologue",
     linePieceTone: "a {tone} monologue",

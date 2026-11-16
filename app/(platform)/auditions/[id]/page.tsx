@@ -1,8 +1,9 @@
 import { Suspense } from "react";
 
 import { AuditionsShell } from "@/components/auditions/AuditionsShell";
+import { BRAND } from "@/lib/brand";
 
-export const metadata = { title: "Prep room | ActorRise" };
+export const metadata = { title: `Prep room | ${BRAND.name}` };
 
 export default async function AuditionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

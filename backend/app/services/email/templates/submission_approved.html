@@ -11,7 +11,7 @@
 {% block content %}
                 <p class="greeting">Hi {{ user_name }},</p>
 
-                <p>Great news! Your monologue submission has been approved and is now live on ActorRise:</p>
+                <p>Great news! Your monologue submission has been approved and is now live on {{ brand }}:</p>
 
                 <div class="monologue-title" style="border-left-color: #10b981;">
                     <strong>{{ monologue_title }}</strong>
@@ -21,11 +21,11 @@
                     <a href="{{ monologue_url }}" class="cta" style="background-color: #10b981;">View Your Monologue</a>
                 </div>
 
-                <p>Your contribution helps fellow actors find the perfect material for auditions and performances. Thank you for being part of ActorRise!</p>
+                <p>Your contribution helps fellow actors find the perfect material for auditions and performances. Thank you for being part of {{ brand }}!</p>
 
                 <p><strong>What's next?</strong></p>
                 <ul>
-                    <li>Your monologue is now searchable by all ActorRise users</li>
+                    <li>Your monologue is now searchable by all {{ brand }} users</li>
                     <li>Other users can favorite and practice it</li>
                     <li>You'll earn contributor recognition on your profile</li>
                 </ul>
@@ -35,6 +35,6 @@
                 <p class="signature">
                     Best,<br>
                     <strong>Canberk</strong><br>
-                    <span style="font-size:14px; color:#616161;">Founder, ActorRise</span>
+                    <span style="font-size:14px; color:#616161;">Founder, {{ brand }}</span>
                 </p>
 {% endblock %}

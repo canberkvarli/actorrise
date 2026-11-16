@@ -492,7 +492,7 @@ def unsubscribe(
         return JSONResponse({"ok": True, "message": "Unsubscribed successfully."})
 
     return HTMLResponse(content=_unsubscribe_page(
-        "You've been unsubscribed from ActorRise marketing emails."
+        f"You've been unsubscribed from {BRAND_NAME} marketing emails."
     ))
 
 
@@ -576,7 +576,7 @@ def _unsubscribe_page(message: str) -> str:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unsubscribe — ActorRise</title>
+    <title>Unsubscribe — {BRAND_NAME}</title>
     <style>
         body {{
             margin: 0; padding: 60px 24px;

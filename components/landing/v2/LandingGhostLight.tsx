@@ -31,6 +31,7 @@ import { Traveler } from "@/components/landing/v2/Traveler";
 import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
 import { GhostLightModal } from "@/components/landing/GhostLightModal";
 import { APPROVED_PARTNERS } from "@/data/partners";
+import { BRAND } from "@/lib/brand";
 
 /** Courier "stage direction" eyebrow above the light sections */
 function SceneMark({ children }: { children: string }) {
@@ -91,7 +92,7 @@ export function LandingGhostLight() {
             <Link
               href="/"
               className="flex items-center shrink-0 min-w-0 hover:opacity-85 transition-opacity"
-              aria-label="ActorRise home"
+              aria-label={`${BRAND.name} home`}
             >
               <BrandLogo size="header" onDark />
             </Link>
@@ -207,7 +208,7 @@ export function LandingGhostLight() {
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <p className="text-sm text-[var(--stage-muted)]">© {new Date().getFullYear()} ActorRise</p>
+              <p className="text-sm text-[var(--stage-muted)]">© {new Date().getFullYear()} {BRAND.name}</p>
               <span className="text-[var(--stage-faint)]">·</span>
               <p className="text-sm text-[var(--stage-faint)]">Built by an actor, for actors.</p>
             </div>

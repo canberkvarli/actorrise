@@ -8,25 +8,25 @@ import {
   PARTNER_CATEGORY_ORDER,
   type PartnerItem,
 } from "@/data/partners";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "With thanks",
   description:
-    "The theatre chapters, companies, studios, schools and newsletters that list ActorRise for their actors.",
+    `The theatre chapters, companies, studios, schools and newsletters that list ${BRAND.name} for their actors.`,
   openGraph: {
-    title: "With thanks | ActorRise",
+    title: `With thanks | ${BRAND.name}`,
     description:
-      "The theatre chapters, companies, studios, schools and newsletters that list ActorRise for their actors.",
+      `The theatre chapters, companies, studios, schools and newsletters that list ${BRAND.name} for their actors.`,
     url: `${siteUrl}/thanks`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "With thanks | ActorRise",
+    title: `With thanks | ${BRAND.name}`,
     description:
-      "The theatre chapters, companies, studios, schools and newsletters that list ActorRise for their actors.",
+      `The theatre chapters, companies, studios, schools and newsletters that list ${BRAND.name} for their actors.`,
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/thanks` },

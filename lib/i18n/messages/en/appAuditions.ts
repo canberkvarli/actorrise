@@ -1,3 +1,4 @@
+import { BRAND } from "../../../brand";
 /** English copy for the "appAuditions" area. Top-level keys are namespaces; prefix them with "appAuditions" so they stay unique across files. */
 export const appAuditions = {
   /** What lib/auditions builds for display: kinds, the eyebrow, the when, the next step. */
@@ -436,7 +437,7 @@ export const appAuditions = {
     playwrightSub: "Send me a monologue from your play. I read every one myself, and once it's in, actors find it in search with your name on it and a link to get the play.",
     fieldBuyUrl: "Where actors can get the play",
     buyUrlHint: "Your publisher's page or your own site. This is the link on every piece.",
-    rightsConfirm: "I wrote this play and hold the rights to it, and I'm giving ActorRise permission to show this monologue with my name and a link to the play. I can ask for it to come down any time, and it will, the same day.",
+    rightsConfirm: `I wrote this play and hold the rights to it, and I'm giving ${BRAND.name} permission to show this monologue with my name and a link to the play. I can ask for it to come down any time, and it will, the same day.`,
     errRights: "Tick the box to confirm it's yours.",
     errBuyUrl: "The link should start with https://",
     errTitle: "Title is required",

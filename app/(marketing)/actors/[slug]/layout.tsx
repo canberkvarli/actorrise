@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.actorrise.com";
@@ -21,14 +21,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const actor = await res.json();
     const title = actor.name;
     const description = actor.descriptor
-      ? `${actor.name}, ${actor.descriptor}. An actor on ActorRise.`
-      : `${actor.name} is an actor on ActorRise, helping shape the platform for actors everywhere.`;
+      ? `${actor.name}, ${actor.descriptor}. An actor on ${BRAND.name}.`
+      : `${actor.name} is an actor on ${BRAND.name}, helping shape the platform for actors everywhere.`;
 
     return {
       title,
       description,
       openGraph: {
-        title: `${title} | ActorRise`,
+        title: `${title} | ${BRAND.name}`,
         description,
         url: `${siteUrl}/actors/${slug}`,
         images: actor.headshots?.[0]?.url

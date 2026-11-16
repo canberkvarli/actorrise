@@ -9,6 +9,7 @@ import os
 from app.services.email.resend_client import ResendEmailClient
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr, Field
+from app.core.brand import BRAND_NAME
 
 router = APIRouter(prefix="/api/contact", tags=["contact"])
 
@@ -52,7 +53,7 @@ def _build_contact_html(name: str, email: str, category: str, message: str) -> s
         </table>
         <h3 style="margin-bottom: 8px;">Message</h3>
         <div style="white-space: pre-wrap; background: #f5f5f5; padding: 12px; border-radius: 8px;">{safe_message}</div>
-        <p style="margin-top: 24px; color: #666; font-size: 12px;">Sent via ActorRise contact form.</p>
+        <p style="margin-top: 24px; color: #666; font-size: 12px;">Sent via {BRAND_NAME} contact form.</p>
     </div>
     """
 
@@ -76,7 +77,7 @@ def send_contact_message(body: ContactRequest) -> dict:
 
     try:
         client = ResendEmailClient()
-        subject = f"[ActorRise Contact] {body.category}: from {body.name}"
+        subject = f"[{BRAND_NAME} Contact] {body.category}: from {body.name}"
         html = _build_contact_html(
             name=body.name,
             email=body.email,

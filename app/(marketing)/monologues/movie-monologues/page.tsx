@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -11,13 +11,13 @@ export const metadata: Metadata = {
   title: "Movie Monologues for Auditions",
   description: "Movie monologues from real films for auditions and reels. Search pieces pulled from screenplays by tone, length, and character type.",
   openGraph: {
-    title: "Movie Monologues for Auditions | ActorRise",
+    title: `Movie Monologues for Auditions | ${BRAND.name}`,
     description: "Movie monologues drawn from real films, searchable by tone, length, and character type. Rehearse them with ScenePartner.",
     url: `${siteUrl}/monologues/movie-monologues`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Movie Monologues for Auditions | ActorRise",
+    title: `Movie Monologues for Auditions | ${BRAND.name}`,
     description: "Movie monologues drawn from real films, searchable by tone, length, and character type. Rehearse them with ScenePartner.",
     images: ["/opengraph-image"],
   },

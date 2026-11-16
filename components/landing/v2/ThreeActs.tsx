@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { MasksSketch, SkullSketch, StageDoorSketch } from "@/components/brand/sketches";
+import { BRAND } from "@/lib/brand";
 
 const ACTS = [
   {
@@ -39,7 +40,7 @@ const rise = {
 
 export function ThreeActs() {
   return (
-    <section className="container mx-auto px-4 sm:px-6 py-16 sm:py-24" aria-label="How ActorRise works">
+    <section className="container mx-auto px-4 sm:px-6 py-16 sm:py-24" aria-label={`How ${BRAND.name} works`}>
       <p className="stage-direction text-center text-xs sm:text-sm text-[var(--stage-muted)]">
         (how it works, in three acts.)
       </p>

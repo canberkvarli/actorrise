@@ -7,6 +7,7 @@ import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
 import { useT, type MessageKey } from "@/lib/i18n";
 import { SOCIALS, externalProps } from "@/lib/socials";
+import { BRAND } from "@/lib/brand";
 
 const LINKS: { href: string; label: MessageKey }[] = [
   { href: "/about", label: "nav.about" },
@@ -40,7 +41,7 @@ export function TheatreFooter() {
           <Link prefetch={false} href="/" aria-label={t("nav.home")} className="-ml-6">
             <Image
               src="/transparent_textlogo.png"
-              alt="ActorRise"
+              alt={BRAND.name}
               width={2000}
               height={600}
               className="block h-9 w-auto"

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -13,14 +13,14 @@ export const metadata: Metadata = {
   description:
     "An AI rehearsal tool that reads the other lines so you can practice scenes and monologues before auditions. 19,000+ pieces. Free to try.",
   openGraph: {
-    title: "AI Rehearsal Tool for Actors | ActorRise",
+    title: `AI Rehearsal Tool for Actors | ${BRAND.name}`,
     description:
       "Practice scenes and monologues with AI that reads the other lines. 19,000+ monologues from plays, films, and TV. Free to try.",
     url: `${siteUrl}/ai-rehearsal-tool`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI Rehearsal Tool for Actors | ActorRise",
+    title: `AI Rehearsal Tool for Actors | ${BRAND.name}`,
     description:
       "Practice scenes and monologues with AI that reads the other lines. 19,000+ monologues from plays, films, and TV. Free to try.",
     images: ["/opengraph-image"],

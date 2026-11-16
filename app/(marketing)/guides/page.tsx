@@ -7,23 +7,23 @@ import { GuideVideoCard } from "@/components/guides/GuideVideoCard";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { ContentT } from "@/components/seo/ContentT";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   title: "Guides & Tutorials for Actors",
   description:
-    "Short video guides on getting the most out of ActorRise: finding the right monologue, rehearsing with ScenePartner, and prepping for auditions.",
+    `Short video guides on getting the most out of ${BRAND.name}: finding the right monologue, rehearsing with ScenePartner, and prepping for auditions.`,
   openGraph: {
-    title: "ActorRise Guides & Tutorials",
+    title: `${BRAND.name} Guides & Tutorials`,
     description:
       "Short video guides on finding monologues, rehearsing with ScenePartner, and prepping for auditions.",
     url: `${siteUrl}/guides`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "ActorRise Guides & Tutorials",
+    title: `${BRAND.name} Guides & Tutorials`,
     description:
       "Short video guides on finding monologues, rehearsing with ScenePartner, and prepping for auditions.",
     images: ["/opengraph-image"],

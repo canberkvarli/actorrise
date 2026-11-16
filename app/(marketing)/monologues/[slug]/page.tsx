@@ -21,7 +21,7 @@ import {
 import { displayableAuthor } from "@/lib/utils";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -106,10 +106,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       title: collection.title,
       description: collection.description,
       alternates: { canonical },
-      openGraph: { title: `${collection.title} | ActorRise`, description: collection.description, url: canonical },
+      openGraph: { title: `${collection.title} | ${BRAND.name}`, description: collection.description, url: canonical },
       twitter: {
         card: "summary_large_image",
-        title: `${collection.title} | ActorRise`,
+        title: `${collection.title} | ${BRAND.name}`,
         description: collection.description,
         images: ["/opengraph-image"],
       },
@@ -127,17 +127,17 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const by = displayableAuthor(m.author) ? ` by ${displayableAuthor(m.author)}` : "";
   const len = readableLength(m.durationSeconds);
   const description = m.isPublicDomain
-    ? `Read ${m.character}'s monologue${src}${by} in full, then rehearse it out loud on ActorRise${len ? `. ${len}` : ""}. Free to start.`
-    : `${m.character}'s monologue${src}${by}. See the details and rehearse it on ActorRise. Free to start.`;
+    ? `Read ${m.character}'s monologue${src}${by} in full, then rehearse it out loud on ${BRAND.name}${len ? `. ${len}` : ""}. Free to start.`
+    : `${m.character}'s monologue${src}${by}. See the details and rehearse it on ${BRAND.name}. Free to start.`;
   return {
     // Root layout appends " | ActorRise" via its title template — don't double it.
     title,
     description,
     alternates: { canonical },
-    openGraph: { title: `${title} | ActorRise`, description, url: canonical },
+    openGraph: { title: `${title} | ${BRAND.name}`, description, url: canonical },
     twitter: {
       card: "summary_large_image",
-      title: `${title} | ActorRise`,
+      title: `${title} | ${BRAND.name}`,
       description,
       images: ["/opengraph-image"],
     },
@@ -192,7 +192,7 @@ export default async function PublicMonologuePage({ params }: Params) {
     ...(m.sceneDescription ? { abstract: m.sceneDescription } : {}),
     ...(m.themes.length ? { keywords: m.themes.join(", ") } : {}),
     ...(m.isPublicDomain ? { text: m.text } : {}),
-    publisher: { "@type": "Organization", name: "ActorRise", url: siteUrl },
+    publisher: { "@type": "Organization", name: BRAND.name, url: siteUrl },
   };
   // Every crumb but the last needs an `item` URL; Search Console flagged the
   // play crumb without one as a critical issue on 2026-10-13. A play with no

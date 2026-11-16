@@ -5,7 +5,7 @@ import { StageHero } from "@/components/marketing/StageHero";
 import { SeoT } from "@/components/marketing/seo/SeoT";
 import { english } from "@/components/marketing/seo/english";
 import { T, type MessageKey } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -14,14 +14,14 @@ export const metadata: Metadata = {
   description:
     "How to find an audition monologue that fits you: pick the length, tone, and type the room wants, skip the overdone ones, and search 19,000+ real pieces.",
   openGraph: {
-    title: "How to Find a Monologue for an Audition | ActorRise",
+    title: `How to Find a Monologue for an Audition | ${BRAND.name}`,
     description:
       "The fast way to find an audition monologue that actually fits you: length, tone, type, and a searchable database of 19,000+ real pieces.",
     url: `${siteUrl}/how-to-find-a-monologue`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "How to Find a Monologue for an Audition | ActorRise",
+    title: `How to Find a Monologue for an Audition | ${BRAND.name}`,
     description:
       "The fast way to find an audition monologue that actually fits you: length, tone, type, and 19,000+ real pieces.",
     images: ["/opengraph-image"],

@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand";
 /**
  * Keyword collection pages under /monologues/<slug>.
  *
@@ -377,9 +378,9 @@ export const COLLECTIONS: Collection[] = [
     h1: { em: "Euphoria", rest: "monologues, by character" },
     direction: "(east highland.)",
     description:
-      "Monologues from Euphoria by character: Rue, Jules, Ali, Maddy, Cal, Nate and Leslie, with tone and running time for each. One of the most searched-for shows on ActorRise.",
+      `Monologues from Euphoria by character: Rue, Jules, Ali, Maddy, Cal, Nate and Leslie, with tone and running time for each. One of the most searched-for shows on ${BRAND.name}.`,
     intro:
-      "Rue's ten, Jules's eight, Ali's eleven, and Maddy, Cal, Nate and Leslie beside them. Euphoria is one of the most searched-for shows on ActorRise and these are the speeches people come for, listed by character. The text is copyrighted, so each entry names the piece and the search opens the rest.",
+      `Rue's ten, Jules's eight, Ali's eleven, and Maddy, Cal, Nate and Leslie beside them. Euphoria is one of the most searched-for shows on ${BRAND.name} and these are the speeches people come for, listed by character. The text is copyrighted, so each entry names the piece and the search opens the rest.`,
     query: "monologue from Euphoria",
     filters: { plays: ["Euphoria"] },
     related: ["yellowjackets-monologues", "contemporary-monologues-for-teens", "dramatic-monologues-for-teens"],
@@ -553,7 +554,7 @@ export const COLLECTIONS: Collection[] = [
     description:
       "Monologues from Midnight Mass by character: Father Paul, Bev, Erin, Riley and Leeza, with tone and running time for each.",
     intro:
-      "Fifty-seven speeches from the show, the most of any series on ActorRise. Father Paul's sixteen, Bev's twelve, Erin's eleven and Riley's nine, with Leeza and Mildred beside them. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.",
+      `Fifty-seven speeches from the show, the most of any series on ${BRAND.name}. Father Paul's sixteen, Bev's twelve, Erin's eleven and Riley's nine, with Leeza and Mildred beside them. The text is copyrighted, so each entry names the character, the piece and the length, and the search opens the rest.`,
     query: "monologue from Midnight Mass",
     filters: { plays: ["Midnight Mass"] },
     related: ["the-night-manager-monologues", "big-little-lies-monologues", "monologues-about-grief"],

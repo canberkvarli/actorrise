@@ -7,6 +7,7 @@ import { LanguageSwitch } from "@/components/i18n/LanguageSwitch";
 import { ContactModal } from "./ContactModal";
 import { APPROVED_PARTNERS } from "@/data/partners";
 import { useT, type MessageKey } from "@/lib/i18n";
+import { BRAND } from "@/lib/brand";
 
 const linkCls = "transition-colors hover:!text-[var(--t-gel)] sm:shrink-0";
 
@@ -79,7 +80,7 @@ export function MarketingFooter() {
               <Link prefetch={false} href="/" aria-label={t("nav.home")} className="-ml-6">
                 <Image
                   src="/transparent_textlogo.png"
-                  alt="ActorRise"
+                  alt={BRAND.name}
                   width={2000}
                   height={600}
                   className="block h-9 w-auto"

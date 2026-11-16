@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -11,13 +11,13 @@ export const metadata: Metadata = {
   title: "Contemporary Monologues for Women",
   description: "Contemporary monologues for women from modern plays and screen. Search 19,000+ pieces by tone and length, skip the overdone ones, and walk in ready.",
   openGraph: {
-    title: "Contemporary Monologues for Women | ActorRise",
+    title: `Contemporary Monologues for Women | ${BRAND.name}`,
     description: "Contemporary monologues for women from modern plays and screen. Searchable by tone and length, with an Overdone filter.",
     url: `${siteUrl}/monologues/contemporary-monologues-for-women`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Contemporary Monologues for Women | ActorRise",
+    title: `Contemporary Monologues for Women | ${BRAND.name}`,
     description: "Contemporary monologues for women from modern plays and screen. Searchable by tone and length, with an Overdone filter.",
     images: ["/opengraph-image"],
   },

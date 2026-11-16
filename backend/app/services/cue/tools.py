@@ -16,6 +16,7 @@ from app.models.billing import PricingTier
 from app.models.user import User
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload, undefer
+from app.core.brand import BRAND_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ NUMBER_SOURCES = {"my_account", "pricing"}
 DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "search_monologues",
-        "description": "Search the ActorRise monologue library with the app's own search. Use for any request for pieces (by mood, age, gender, length, playwright, play or character). Returns up to 5 real pieces with a link each.",
+        "description": f"Search the {BRAND_NAME} monologue library with the app's own search. Use for any request for pieces (by mood, age, gender, length, playwright, play or character). Returns up to 5 real pieces with a link each.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -54,7 +55,7 @@ DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "check_title",
-        "description": "Check whether a title or character is in the library, looking in play titles, monologue titles and character names. Call this before ever saying a title or character is, or is not, in ActorRise.",
+        "description": f"Check whether a title or character is in the library, looking in play titles, monologue titles and character names. Call this before ever saying a title or character is, or is not, in {BRAND_NAME}.",
         "input_schema": {
             "type": "object",
             "properties": {"text": {"type": "string", "description": "The title or character name to look for."}},

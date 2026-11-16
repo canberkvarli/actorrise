@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { StageHero } from "@/components/marketing/StageHero";
 import { T } from "@/lib/i18n";
-import { SITE_URL } from "@/lib/brand";
+import { BRAND, SITE_URL } from "@/lib/brand";
 
 const siteUrl = SITE_URL;
 
@@ -11,13 +11,13 @@ export const metadata: Metadata = {
   title: "Monologues for Teens",
   description: "Monologues for teen actors and students. Search 19,000+ real pieces by age range, tone, and length to find audition and class material that fits.",
   openGraph: {
-    title: "Monologues for Teens | ActorRise",
+    title: `Monologues for Teens | ${BRAND.name}`,
     description: "Monologues for teen actors, searchable by age range, tone, and length. Real published pieces, free to start.",
     url: `${siteUrl}/monologues/monologues-for-teens`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Monologues for Teens | ActorRise",
+    title: `Monologues for Teens | ${BRAND.name}`,
     description: "Monologues for teen actors, searchable by age range, tone, and length. Real published pieces, free to start.",
     images: ["/opengraph-image"],
   },

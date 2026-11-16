@@ -12,7 +12,7 @@ from typing import Optional
 
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.templates import EmailTemplates
-from app.core.brand import site_url
+from app.core.brand import BRAND_NAME, site_url
 
 
 def send_welcome_email(user_email: str, user_name: Optional[str] = None) -> dict:
@@ -33,7 +33,7 @@ def send_welcome_email(user_email: str, user_name: Optional[str] = None) -> dict
     try:
         client = ResendEmailClient()
         templates = EmailTemplates()
-        subject = "Welcome to ActorRise"
+        subject = f"Welcome to {BRAND_NAME}"
         html = templates.render_welcome(
             user_name=user_name or "there",
             monologue_count=_searchable_monologue_count(),
