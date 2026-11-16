@@ -28,6 +28,10 @@ export interface SubscriptionData {
   /** How long a trial would run if started now: 7, or 14 once a scene is finished. */
   trial_days?: number;
   trial_earned?: boolean;
+  /** The no-card trial switch: checkout asks no card, the walls say so. */
+  no_card_trial?: boolean;
+  /** A running Stripe trial with no card on file: it stops on its own unless one is added. */
+  card_needed?: boolean;
   /** The three days of Plus given at the first read wall. Once had, no trial is left. */
   taste?: {
     had: boolean;

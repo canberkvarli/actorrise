@@ -76,7 +76,9 @@ export function PlusOffer({ feature, lead, onDismiss, dismissLabel }: PlusOfferP
         ]) as [string, string][],
     fine: words.tasted
       ? t("appAccountPlusOffer.fineTasted")
-      : t("appAccountPlusOffer.fine", { date: on }),
+      : subscription?.no_card_trial
+        ? t("appAccountPlusOffer.fineNoCard", { date: on })
+        : t("appAccountPlusOffer.fine", { date: on }),
     annualLabel: t("appAccountPlusOffer.annual", {
       annual: PLUS_ANNUAL,
       perMonth: PLUS_PER_MONTH_ON_ANNUAL,
