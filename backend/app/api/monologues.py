@@ -134,6 +134,10 @@ class MonologueResponse(BaseModel):
     # Web only: set on the one response that opened a three-day taste of Plus
     # (services/taste.py), so the page can say so. {"ends_at": iso}.
     taste: Optional[dict] = None
+    # The rights holder asked for this piece's text to come off (TAKEN_DOWN).
+    # `text` is empty and no plan opens it, so a client shows the play, the
+    # writer and the link out, never a wall or a run.
+    taken_down: bool = False
 
     class Config:
         from_attributes = True
@@ -281,11 +285,13 @@ def _monologue_to_response(
     # for its text to stay on its own site. An actor who saved it still sees the
     # play, the writer and the link out.
     from app.services.search.semantic_search import TAKEN_DOWN
-    if getattr(m, "review_status", None) == TAKEN_DOWN:
+    taken_down = getattr(m, "review_status", None) == TAKEN_DOWN
+    if taken_down:
         body_text = ""
         segments = None
 
     return MonologueResponse(
+        taken_down=taken_down,
         id=cast(int, m.id),
         title=cast(str, m.title),
         character_name=cast(str, m.character_name),
@@ -1580,6 +1586,17 @@ def _quote(text: str, limit: int = 150) -> str:
     return cut.rstrip(" .,;:") + "…"
 
 
+def _quote_of(m: Monologue) -> str:
+    """`_quote` of a row's text, or nothing for a takedown. A pick stored before
+    the takedown still comes back from pick_for, and one sentence is still its
+    text."""
+    from app.services.search.semantic_search import TAKEN_DOWN
+
+    if getattr(m, "review_status", None) == TAKEN_DOWN:
+        return ""
+    return _quote(cast(str, m.text))
+
+
 def _tonight_pool(db: Session, house: str) -> list:
     q = (
         exclude_hidden(db.query(Monologue))
@@ -1625,7 +1642,7 @@ async def get_tonight(
             r = _monologue_to_response(m)
             r.text = _teaser(r.text)
             r.text_segments = None
-            out.append(TonightDay(day=d.isoformat(), quote=_quote(cast(str, m.text)), monologue=r))
+            out.append(TonightDay(day=d.isoformat(), quote=_quote_of(m), monologue=r))
     payload = TonightResponse(house=house, days=out)
     # Yesterday's entries are never asked for again.
     for stale in [k for k in _tonight_cache if k[1] != key[1]]:
@@ -1679,7 +1696,7 @@ async def get_tonight_mine(
     return TonightMine(
         day=day.isoformat(),
         house=house,
-        quote=_quote(cast(str, m.text)),
+        quote=_quote_of(m),
         answer=row.answer,
         monologue=_monologue_to_response(m, is_favorited=fav is not None),
     )
@@ -1759,7 +1776,7 @@ async def tonight_widget(
         r = _monologue_to_response(m)
         r.text = _teaser(r.text)
         r.text_segments = None
-        out.append(TonightDay(day=d.isoformat(), quote=_quote(cast(str, m.text)), monologue=r))
+        out.append(TonightDay(day=d.isoformat(), quote=_quote_of(m), monologue=r))
     return TonightResponse(house=house, days=out)
 
 
@@ -1923,6 +1940,22 @@ async def get_monologue(
 
     if not monologue:
         raise HTTPException(status_code=404, detail="Monologue not found")
+
+    # A takedown has no words to read, so opening it is not a read: no view row,
+    # no free read spent, no taste of Plus, no wall (Plus would not open it).
+    # The actor who saved it gets the play, the writer and the link out.
+    from app.services.search.semantic_search import TAKEN_DOWN
+    if getattr(monologue, "review_status", None) == TAKEN_DOWN:
+        saved = db.query(MonologueFavorite).filter(
+            MonologueFavorite.user_id == current_user.id,
+            MonologueFavorite.monologue_id == monologue_id,
+            MonologueFavorite.removed_at.is_(None),
+        ).first()
+        return _monologue_to_response(
+            monologue,
+            is_favorited=saved is not None,
+            saved_at=saved.created_at.isoformat() if saved and saved.created_at else None,
+        )
 
     # Increment view count
     monologue.view_count = int(monologue.view_count) + 1  # type: ignore[assignment]

@@ -65,6 +65,14 @@ export interface Monologue {
    */
   paywalled?: boolean;
   /**
+   * The writer or publisher asked for the text to come off. `fullText` is empty
+   * and no plan opens it: the read screen says where to read it instead, and
+   * offers no wall, cut or run.
+   */
+  takenDown?: boolean;
+  /** Where the play is published or sold, for the link out. */
+  sourceUrl?: string;
+  /**
    * Film & TV only (spec: the Screen house). The poster and screen metadata
    * come straight from Supabase's `film_tv_references` — see src/lib/screen.ts.
    * Absent for stage pieces, which have no poster.

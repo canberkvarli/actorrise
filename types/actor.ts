@@ -61,6 +61,12 @@ export interface Monologue {
    * to check this first, or it operates on forty words and looks broken.
    */
   paywalled?: boolean;
+  /**
+   * The writer or publisher asked for the text to come off. `text` is empty and
+   * no plan opens it: show the play, the writer and `source_url`, never the
+   * read wall, a run or the annotator.
+   */
+  taken_down?: boolean;
   /** Set on the one response that opened three days of Plus (no card) at the read wall. */
   taste?: { ends_at: string } | null;
   notes?: string | null;

@@ -83,6 +83,9 @@ export const appMonologue: Widen<typeof en> = {
     unavailableTitle: "Metin mevcut değil",
     unavailableBody: "Bu kayıtta monoloğun kendisi yerine katalog bilgisi var gibi görünüyor.",
     viewSource: "Kaynağa bak",
+    takenDownTitle: "Yazarın sitesinde",
+    takenDownBody: "Yazar bu konuşmanın kendi sitesinde kalmasını istedi, metni orada okunuyor.",
+    takenDownLink: "Orada oku",
     dimmedDirections: "(sahne yönergeleri soluk; söylenen satırlar normal yazıda.)",
   },
   appMonologueSides: {

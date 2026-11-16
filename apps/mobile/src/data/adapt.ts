@@ -73,6 +73,9 @@ export function apiToMonologue(m: ApiMonologue): Monologue {
     fullText: m.text,
     // `paywalled` is newer than the committed OpenAPI snapshot; read defensively.
     paywalled: (m as { paywalled?: boolean }).paywalled ?? false,
+    // Both newer than the committed OpenAPI snapshot; read defensively.
+    takenDown: (m as { taken_down?: boolean }).taken_down === true ? true : undefined,
+    sourceUrl: (m as { source_url?: string | null }).source_url ?? undefined,
     // For the theme sketch on a play's cover (src/lib/sketchFor.ts).
     themes: Array.isArray(m.themes) ? m.themes : undefined,
     // The screen's poster and the year, which the shelf route always carried

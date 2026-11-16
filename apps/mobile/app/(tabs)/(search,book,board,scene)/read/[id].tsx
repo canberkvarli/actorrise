@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Linking, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -366,7 +366,10 @@ export default function Read() {
   // to follow: the server knows which pieces stay open past the day's three
   // (the ones kept, tonight's, the ones already read today) and the phone's
   // count does not. The count only decides for a page with no verdict on it.
-  const gated = !isPaid && (monologue?.paywalled === true || (monologue?.paywalled === undefined && settled && atWall));
+  // A takedown has no words behind any wall, so it is never gated: the page
+  // says where to read it instead (below), and Plus would not change that.
+  const takenDown = monologue?.takenDown === true;
+  const gated = !takenDown && !isPaid && (monologue?.paywalled === true || (monologue?.paywalled === undefined && settled && atWall));
 
   // Do we yet KNOW whether this is walled? This gap is why the whole monologue
   // flashed up for a beat on the very first open: `atWall` is undefined until
@@ -448,8 +451,8 @@ export default function Read() {
     // Spend a read only when one is actually being read — never behind the wall,
     // and never before we know whether there IS a wall. Without `wallKnown` the
     // first open of a walled piece spent a read it then refused to show.
-    if (monologue && wallKnown && !gated) void recordRead(monologue.id);
-  }, [monologue, gated, wallKnown]);
+    if (monologue && wallKnown && !gated && !takenDown) void recordRead(monologue.id);
+  }, [monologue, gated, wallKnown, takenDown]);
 
   // A read is dwell, not an open. Bouncing off the first two lines is the most
   // common thing that happens on this screen, and counting it as a read would
@@ -945,7 +948,31 @@ export default function Read() {
                     }
                   }}
                 >
-                  {gated ? (
+                  {takenDown ? (
+                    <View style={{ gap: 10 }}>
+                      <Text style={{ fontFamily: 'CourierPrime_400Regular', fontSize: 15, lineHeight: LINE_HEIGHT, color: c.paperInk }}>
+                        (the writer asked for this speech to stay on their own site, so it is read there.)
+                      </Text>
+                      {monologue.sourceUrl ? (
+                        <Pressable
+                          onPress={() => void Linking.openURL(monologue.sourceUrl as string)}
+                          accessibilityRole="link"
+                          style={{
+                            alignSelf: 'flex-start',
+                            borderRadius: radius.card,
+                            borderWidth: 1.5,
+                            borderColor: ink.accent,
+                            paddingHorizontal: 14,
+                            paddingVertical: 10,
+                          }}
+                        >
+                          <Text style={{ fontFamily: 'BricolageGrotesque_500Medium', fontSize: 13, color: ink.accent }}>
+                            Read it there
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ) : gated ? (
                     // Two lines sharp, the rest out of focus, the offer floating
                     // over it. Segments are never passed here: they cover the
                     // full text, which is the part the actor hasn't paid for.
