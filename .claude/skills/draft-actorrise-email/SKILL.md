@@ -1,11 +1,11 @@
 ---
 name: draft-actorrise-email
-description: Use when drafting any email for ActorRise users — marketing announcements, founder updates, weekly engagement, re-engagement, launch emails, feature announcements, founder offers, beta invites, testimonial requests, or any user-facing email from Canberk. Triggers on "draft an email", "send users an email", "email about X", "founder update", "announcement email".
+description: Use when drafting any email for Ghost Light users — marketing announcements, founder updates, weekly engagement, re-engagement, launch emails, feature announcements, founder offers, beta invites, testimonial requests, or any user-facing email from Canberk. Triggers on "draft an email", "send users an email", "email about X", "founder update", "announcement email".
 ---
 
-# Drafting ActorRise Emails
+# Drafting Ghost Light Emails
 
-You are drafting an email from Canberk (solo founder + actor) to ActorRise users.
+You are drafting an email from Canberk (solo founder + actor) to Ghost Light users.
 
 ## Required inputs — ASK if missing
 
@@ -56,7 +56,7 @@ Canberk
 ## Examples of BAD opens (rewrite if you see these)
 
 - "We're excited to announce..." → "I built..."
-- "The ActorRise team is thrilled..." → "I'm stoked..."
+- "The Ghost Light team is thrilled..." → "I'm stoked..."
 - "We hope this email finds you well..." → just cut it
 - "Unlock your acting potential with our new feature..." → "Here's what's new..."
 

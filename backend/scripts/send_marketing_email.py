@@ -62,6 +62,7 @@ from app.services.email.marketing import (
 )
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.templates import EmailTemplates
+from app.core.brand import BRAND_NAME
 
 
 def _send_test(args):
@@ -80,7 +81,7 @@ def _send_test(args):
         "feature-announcement": lambda: templates.render_feature_announcement(
             user_name="Test User",
             feature_title=args.title or "New Feature",
-            feature_description=args.description or "Check out what's new on ActorRise.",
+            feature_description=args.description or f"Check out what's new on {BRAND_NAME}.",
             cta_text=args.cta_text or "Learn more",
             cta_url=args.cta_url or "https://actorrise.com",
             video_url=args.video_url,
@@ -103,9 +104,9 @@ def _send_test(args):
         sys.exit(1)
 
     subject_map = {
-        "upgrade-nudge": "Unlock more with ActorRise Plus",
-        "feature-announcement": args.title or "What's new on ActorRise",
-        "weekly-engagement": "Your weekly pick from ActorRise",
+        "upgrade-nudge": f"Unlock more with {BRAND_NAME} Plus",
+        "feature-announcement": args.title or f"What's new on {BRAND_NAME}",
+        "weekly-engagement": f"Your weekly pick from {BRAND_NAME}",
     }
 
     html = render_map[campaign]()
@@ -176,7 +177,7 @@ def _send_campaign(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Send ActorRise marketing emails")
+    parser = argparse.ArgumentParser(description=f"Send {BRAND_NAME} marketing emails")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # --- test command ---

@@ -4,7 +4,7 @@ description: The daily money-path run. Reads the funnel and the inbox, files opt
 
 # /conversion-loop
 
-The daily run for ActorRise's money path. Plan and reasoning: `docs/plans/conversion-phase1.md`.
+The daily run for Ghost Light's money path. Plan and reasoning: `docs/plans/conversion-phase1.md`.
 
 You read, file and draft. **You never send an email, post, or push.** Canberk sends. The one
 write you make without asking is an opt-out, because CLAUDE.md says to do that right away.
@@ -139,7 +139,7 @@ and had waited 3 days, found by the laptop run and not by the cloud one):
    draft on it. Those are "waiting" whatever day they came in; say in the summary how many
    days each has waited.
 
-Read each thread that is a reply to something Canberk or ActorRise sent.
+Read each thread that is a reply to something Canberk or Ghost Light sent.
 
 Sort every reply into exactly one of these:
 
@@ -175,10 +175,10 @@ first person singular, no dashes of any kind, no "we", signed `Canberk`, no emoj
 Create each as a Gmail draft:
 
 - `htmlBody` only. Never `body`.
-- No URL of any kind. Write the domain as `actorrise<span>.</span>com`.
+- No URL of any kind. Write the domain as `ghostlight<span>.</span>actor`.
 - A class link goes in written out and highlighted, never as [LINK] (Canberk, 2026-10-25:
   "add those links and highlight them, I don't wanna do it by hand"):
-  `<span style="background-color:#fff2a8;font-weight:bold;padding:2px 4px">actorrise<span>.</span>com/join/<code></span>`. The span keeps Gmail from wrapping it (checked 2026-10-25: an `<a href>` is
+  `<span style="background-color:#fff2a8;font-weight:bold;padding:2px 4px">ghostlight<span>.</span>actor/join/<code></span>`. The span keeps Gmail from wrapping it (checked 2026-10-25: an `<a href>` is
   still wrapped, inline style survives). The teacher reads and types it; it is not clickable.
 - Any other link (the Stripe link after CURTAIN) stays `[LINK]`, with the full link in your
   summary: it is too long to type, so Canberk pastes it as a real link.
@@ -301,7 +301,7 @@ supported by, on our landing page"). `/admin/organizations` marks an org "ready 
 once 10 students have joined and nobody has asked. Its teacher gets ONE draft, on the
 thread where they last wrote to Canberk, and only after the class has used it without
 trouble: thank them for bringing the class in, then ask two things they can say yes to
-themselves, a link to ActorRise from their drama or class resources page, and whether
+themselves, a link to Ghost Light from their drama or class resources page, and whether
 their program's NAME may appear on the landing ("used in classes at ..."). Never ask a
 teacher for a district or university logo; that is not theirs to give. A studio,
 conservatory, theatre or association may be asked for its logo. Log it `--kind

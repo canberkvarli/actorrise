@@ -88,7 +88,7 @@ Two rules hold there:
 
 # One repo, one brand (2026-11-16)
 
-ActorRise and Ghost Light are becoming one brand, Ghost Light (Canberk, 2026-11-16). The iOS app
+ActorRise and Ghost Light became one brand, Ghost Light, live at ghostlight.actor (Canberk, 2026-11-16). The iOS app
 moved into this repo with its history (`git subtree`) at **`apps/mobile/`**; the old
 `canberkvarli/ghostlight` repo is to be archived. Work on the app happens here now.
 - The web stays at the repo root for now (Vercel's root directory is `.`). Moving it to
@@ -212,9 +212,9 @@ skill's spec-doc step. Code, configs and anything the app itself reads are still
 files. A subagent may write its notes wherever it likes, but what it found is told
 to him here, in full enough that he never has to open the file.
 
-# ActorRise Marketing Mode
+# Ghost Light Marketing Mode (ActorRise until 2026-11-16)
 
-ActorRise is a solo project by **Canberk** (founder + working actor). When Canberk asks for marketing help — user acquisition, emails to users, social posts, launch copy, founder updates, growth ideas — invoke the `marketing` skill. Sub-skills: `draft-actorrise-email`, `write-actor-social-post`.
+Ghost Light is a solo project by **Canberk** (founder + working actor). When Canberk asks for marketing help — user acquisition, emails to users, social posts, launch copy, founder updates, growth ideas — invoke the `marketing` skill. Sub-skills: `draft-actorrise-email`, `write-actor-social-post`.
 
 Trigger phrases that mean "go into marketing mode" and invoke the `marketing` skill:
 - `/marketing` (treat as direct invocation)
@@ -222,9 +222,9 @@ Trigger phrases that mean "go into marketing mode" and invoke the `marketing` sk
 
 ## Non-negotiable voice rules (apply to ALL marketing output)
 
-1. **First person singular only.** "I", "me", "my". NEVER "we", "our", "us", or "the ActorRise team".
+1. **First person singular only.** "I", "me", "my". NEVER "we", "our", "us", or "the Ghost Light team".
 2. **No dashes.** No em dash (—), en dash (–), or long hyphen. Use commas, periods, or rewrite. They look AI-generated.
-3. **Sign off as `Canberk`** in emails. Never "The ActorRise Team".
+3. **Sign off as `Canberk`** in emails. Never "The Ghost Light Team".
 4. **Tone:** Casual, warm, direct, like texting a friend who's also an actor. No corporate phrases ("excited to announce", "leverage", "unlock", "revolutionize", "game-changer").
 5. **No emojis** unless Canberk explicitly asks.
 6. **Audience:** working/aspiring actors, peer-to-peer not CEO-to-customer.
@@ -261,7 +261,7 @@ LINK LENGTHS DIFFER, CHECK BEFORE SENDING. Three live Stripe payment links exist
 
 THE IN-APP TRIAL IS NOT 2 WEEKS (changed 2026-09-29, shortened 2026-11-16). Inside the app the trial is **3 days, and 1 week for an actor who has finished a scene** (it was 1 week and 2 weeks until 2026-11-16). The server decides (`backend/app/services/trial_length.py`) and every surface prints what `/api/subscriptions/me` returns as `trial_days`. It rolls into Plus monthly at $12. So:
 - The Stripe link above is still 14 days, and copy that sends THAT link still says "2 weeks free".
-- Copy that sends someone into the app (`actorrise.com/trial`, a wall, an ask) must NOT promise a length by hand. The triggered emails fill `{span}` per person for this reason.
+- Copy that sends someone into the app (`ghostlight.actor/trial`, a wall, an ask) must NOT promise a length by hand. The triggered emails fill `{span}` per person for this reason.
 - Whether the email link should drop to 7 days to match is open, Canberk's call.
 
 Automated emails to people who looked at a price live in `backend/emails/lifecycle/*.txt` and send from `backend/app/services/email/triggered.py`. There are two: `checkout_abandoned` and `paywall_seen_no_trial`. They are OFF until the "Triggered emails" switch in `/admin/emails` is turned on. `/conversion-loop` is the daily run that reads the funnel and the inbox and leaves drafts; it never sends.
@@ -270,7 +270,7 @@ Two decisions about those, both Canberk's, 2026-09-29. Do not undo either withou
 - **No email about a trial ending.** Not a heads-up before the card is charged, not a question after a trial lapses. Both were written and he removed both.
 - **No reply-UNSUBSCRIBE line on the triggered emails.** They end on `canberk`. This is the one exception to the Opt-out requirement above, which still holds for every other email to current users. The unsubscribe link under the letter stays.
 
-PREFILLED-EMAIL RULE (critical, do not skip): when someone replies CURTAIN, send them the link with their email appended as `?prefilled_email=<their address>`, using the exact address they replied from (that is their ActorRise account email). Example: https://buy.stripe.com/00w8wR4Xqd7o7JGa3X6g802?prefilled_email=giosboss4@gmail.com . The webhook grants Plus by matching the checkout email to their ActorRise account, so a prefilled link makes the match automatic. Never send the bare base link to a specific person, and do not embed the link in cold outreach (only send after a CURTAIN reply).
+PREFILLED-EMAIL RULE (critical, do not skip): when someone replies CURTAIN, send them the link with their email appended as `?prefilled_email=<their address>`, using the exact address they replied from (that is their Ghost Light account email). Example: https://buy.stripe.com/00w8wR4Xqd7o7JGa3X6g802?prefilled_email=giosboss4@gmail.com . The webhook grants Plus by matching the checkout email to their Ghost Light account, so a prefilled link makes the match automatic. Never send the bare base link to a specific person, and do not embed the link in cold outreach (only send after a CURTAIN reply).
 
 Note: CURTAIN is now the trial SIGN-UP word only. Marketing/re-engagement opt-outs use a separate, plain word: UNSUBSCRIBE (see the Opt-out requirement section above). The two no longer overlap, so a CURTAIN reply always means "sign me up for the trial" and an UNSUBSCRIBE reply always means "take me off the list." No context-guessing needed. (Changed 2026-08-17: opt-out was previously also CURTAIN, which was too appealing and got over-used.)
 
@@ -278,15 +278,15 @@ Note: CURTAIN is now the trial SIGN-UP word only. Marketing/re-engagement opt-ou
 
 The Gmail MCP `create_draft` tool rewrites EVERY URL at draft-creation time into a
 `https://www.google.com/url?q=...&source=gmail&ust=...&sa=E` redirect. Tested and
-confirmed: `<a href>` in htmlBody, a bare `https://actorrise.com` in body, and even
-the plain text `actorrise.com` (auto-linked, and as http) all get wrapped. This is
+confirmed: `<a href>` in htmlBody, a bare `https://ghostlight.actor` in body, and even
+the plain text `ghostlight.actor` (auto-linked, and as http) all get wrapped. This is
 NOT the template and NOT Gmail's web UI; the wrapper is already in the stored draft
 (ust = creation time + 24h). Every nudge sent from a connector-made draft since at
 least 2026-09-01 went out with wrapped links.
 
 Workaround that produces a clean draft: pass `htmlBody` ONLY (no `body`), and write
-the domain as `actorrise<span>.</span>com` so nothing is auto-linked. The recipient
-sees plain "actorrise.com" text with no link. If a real clickable link is needed,
+the domain as `ghostlight<span>.</span>actor` so nothing is auto-linked. The recipient
+sees plain "ghostlight.actor" text with no link. If a real clickable link is needed,
 leave it out of the draft and have Canberk insert it in Gmail before sending (links
 added in the Gmail UI are not wrapped). Never put a URL of any kind in `body`.
 
@@ -294,7 +294,7 @@ added in the Gmail UI are not wrapped). Never put a URL of any kind in `body`.
 
 Educators, teachers, coaches, teaching artists, and their students do NOT get the Stripe trial and do NOT get the CURTAIN CTA. They get free Plus directly. The mechanism to give in emails:
 
-1. They sign up at https://actorrise.com (free to start).
+1. They sign up at https://ghostlight.actor (free to start).
 2. They email canberk@actorrise.com the address they signed up with.
 3. Canberk manually upgrades that account, on him.
 
@@ -320,7 +320,7 @@ CLASS LINKS replace the class list (2026-10-16). Once a teacher has said yes,
 make them a link (`cd backend && uv run python scripts/class_link.py make
 <teacher email> --code <school-firstname> --label <first name> --school <short
 school>`) and send it in the reply: every student who signs up through
-actorrise.com/join/<code> is on the student month by themselves, no addresses
+ghostlight.actor/join/<code> is on the student month by themselves, no addresses
 to collect. A teacher who already has comped Plus gets their link in the
 follow-up or check-in. The FIRST email to a teacher still carries no link: it
 offers Plus and asks for a reply. The Gmail connector wraps URLs, so the link is
@@ -328,7 +328,7 @@ written out and highlighted instead, `<span style="background-color:#fff2a8;font
 paste them by hand). It reads as text, not a link. `class_link.py list` shows who joined.
 Ticking "student" at signup gives nobody anything, on purpose.
 
-STUDENTS ARE 13 AND UP (2026-10-29). The privacy policy says ActorRise is for 13 and
+STUDENTS ARE 13 AND UP (2026-10-29). The privacy policy says Ghost Light is for 13 and
 older, with students 13 to 17 using it through their teacher (section 11, and section 12
 on what teachers see). US law (COPPA) puts real rules on accounts for under-13s, so: never
 offer the class link or student Plus for a class under 13, and when a teacher's program

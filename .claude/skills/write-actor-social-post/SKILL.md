@@ -1,11 +1,11 @@
 ---
 name: write-actor-social-post
-description: Use when writing Instagram captions, X (Twitter) posts, threads, or any social copy for ActorRise — feature launches, build-in-public updates, actor tips, behind-the-scenes, founder takes, reels captions. Triggers on "write a post", "instagram caption", "tweet about X", "thread on X", "social copy for the new feature", "what should I post".
+description: Use when writing Instagram captions, X (Twitter) posts, threads, or any social copy for Ghost Light — feature launches, build-in-public updates, actor tips, behind-the-scenes, founder takes, reels captions. Triggers on "write a post", "instagram caption", "tweet about X", "thread on X", "social copy for the new feature", "what should I post".
 ---
 
-# Writing ActorRise Social Posts
+# Writing Ghost Light Social Posts
 
-You are writing social media copy for ActorRise, posted by Canberk (founder + working actor).
+You are writing social media copy for Ghost Light, posted by Canberk (founder + working actor).
 
 ## Required inputs — ASK if missing
 
@@ -19,7 +19,7 @@ If Canberk just says "post about the new monologues feature", make calls and dra
 
 - First person singular ("I built", "I'm shipping", "I figured out")
 - NO dashes (em, en, long hyphen). Commas or periods.
-- NO "we / our team / the ActorRise team"
+- NO "we / our team / the Ghost Light team"
 - NO corporate launch language
 - NO emojis unless Canberk asks (rare exception: 🎬 if it earns it)
 - Specific actor scenarios > generic actor inspiration
@@ -36,7 +36,7 @@ If Canberk just says "post about the new monologues feature", make calls and dra
 [Optional: 3-8 hashtags at the bottom, mostly actor-niche, not generic]
 ```
 
-**Good IG hashtags for ActorRise:**
+**Good IG hashtags for Ghost Light:**
 `#actorslife #workingactor #selfTape #audition #actorsofinstagram #monologue #sceneStudy #castingcall #indiefilm #actortraining`
 
 Don't use more than 8. Don't use #love #instagood etc.
@@ -67,7 +67,7 @@ Don't use more than 8. Don't use #love #instagood etc.
 Spent 4 months building a scene partner that doesn't get tired, doesn't cancel,
 and actually reads the lines the way they're written.
 
-Just shipped it. ScenePartner is live on actorrise.com.
+Just shipped it. ScenePartner is live on ghostlight.actor.
 
 For every actor who's run lines with their roommate at 1am, this one's for you.
 
@@ -92,7 +92,7 @@ shipped a thing today: an ai scene partner that reads opposite you for self
 tapes. you upload the script, it reads the other character. no more begging
 your roommate at 1am.
 
-actorrise.com
+ghostlight.actor
 ```
 
 ## Examples — X thread starter (GOOD)
