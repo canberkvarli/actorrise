@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { SearchTour } from "@/components/onboarding/SearchTour";
 import { useTourTrigger } from "@/components/onboarding/useTourTrigger";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
+import { openSavesWallIfCapped } from "@/components/billing/SavesWall";
 import { MonologueWall } from "@/components/monologue/MonologueWall";
 import { ReadWallModal } from "@/components/monologue/ReadWallModal";
 import { TasteNote } from "@/components/billing/TasteNote";
@@ -1446,6 +1447,10 @@ ${mono.character_age_range ? `${d("ageRange")}: ${mono.character_age_range}` : '
       setResults(previousResults);
       setFilmTvResults(previousFilmTvResults);
       setSelectedMonologue(previousSelected);
+      if (openSavesWallIfCapped(error)) {
+        queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+        return;
+      }
       toast.error(t("appSearchPage.bookmarkUpdateFailed"));
       console.error("Error toggling favorite:", error);
     }

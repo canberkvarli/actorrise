@@ -65,6 +65,7 @@ import { CallboardLamp, CallboardSheetRow } from "@/components/community/Callboa
 import { useHeaderLight } from "@/components/layout/useHeaderLight";
 import { HouseLightsRow, HouseLightsSwitch } from "@/components/layout/HouseLightsSwitch";
 import { SaveAsk } from "@/components/billing/SaveAsk";
+import { SavesWall } from "@/components/billing/SavesWall";
 import { EmailClickBeacon } from "@/components/analytics/EmailClickBeacon";
 import { ClassLinkRedeemer } from "@/components/billing/ClassLinkRedeemer";
 import { Cue } from "@/components/cue/Cue";
@@ -875,6 +876,7 @@ export default function PlatformLayout({
       <SignupTracker />
       <FirstRehearsalGate />
       <SaveAsk />
+      <SavesWall />
       {/* Canberk's assistant. Off where the page is the stage (rehearsal,
           /work), and for signed-out visitors. */}
       {user && !isDemoUser && !isImmersive && <Cue />}

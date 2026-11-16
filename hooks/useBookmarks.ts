@@ -7,6 +7,7 @@ import { toastBookmark } from "@/lib/toast";
 import api from "@/lib/api";
 import { trackMonologueSaved } from "@/lib/analytics";
 import { Monologue } from "@/types/actor";
+import { openSavesWallIfCapped } from "@/components/billing/SavesWall";
 
 // Hook for fetching bookmarks (cached – shared with dashboard, My Monologues, etc.)
 export function useBookmarks(opts?: { alwaysFresh?: boolean }) {
@@ -160,6 +161,8 @@ export function useToggleFavorite() {
           queryClient.setQueryData(key, data);
         }
       }
+      // A free account at the save cap: the offer, not an error (SavesWall).
+      if (openSavesWallIfCapped(err)) return;
       toast.error("Couldn't update bookmark. Please try again.");
     },
     onSettled: (_data, _err, variables) => {
