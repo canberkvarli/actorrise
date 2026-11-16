@@ -574,6 +574,41 @@ def _start_ghostlight_push_scheduler():
     logger.info("Ghost Light push scheduler started (every 15 minutes)")
 
 
+def _start_email_batch_resume() -> None:
+    """Finish a bulk email a restart cut off, once, shortly after startup.
+
+    A batch sends from a thread in this process, so every push to backend/
+    (a Render redeploy) killed whatever was sending. The Ghost Light launch
+    stopped at 179 of 1,195 on 2026-11-16 and nothing said so. Waits 90 s, so
+    the server this one replaced has gone or shows as live and is left alone;
+    only today's batches and only rows still queued (admin/emails.py
+    batches_to_resume). Production only, like the schedulers above: a laptop
+    on the production database must never send."""
+    from app.services.scheduler_gate import scheduler_status
+
+    status = scheduler_status(
+        "email_batch_resume",
+        environment=os.getenv("ENVIRONMENT"),
+        flag=os.getenv("EMAIL_BATCH_RESUME_ENABLED"),
+    )
+    logger.info(status.reason)
+    if not status.will_run:
+        return
+
+    def run() -> None:
+        time.sleep(90)
+        try:
+            from app.api.admin.emails import resume_interrupted_batches
+
+            resumed = resume_interrupted_batches()
+            if resumed:
+                logger.warning("email batch resume: finished batch(es) %s", resumed)
+        except Exception as e:  # noqa: BLE001
+            logger.error("email batch resume FAILED: %s", e, exc_info=True)
+
+    threading.Thread(target=run, daemon=True, name="email-batch-resume").start()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _init_db()
@@ -590,6 +625,7 @@ async def lifespan(app: FastAPI):
     _start_rehearsal_sweep_scheduler()
     _start_comp_expiry_scheduler()
     _start_ghostlight_push_scheduler()
+    _start_email_batch_resume()
     # Cue's Anthropic client takes ~7s to import and build on this box. Build it
     # off the startup path so the first actor after a deploy doesn't wait.
     threading.Thread(target=_warm_cue_client, daemon=True).start()

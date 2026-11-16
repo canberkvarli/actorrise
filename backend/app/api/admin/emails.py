@@ -658,46 +658,15 @@ def bulk_send_email(
             b.status = "processing"
             db2.commit()
 
-            client = _get_email_client(body.send_via)
-            sends = db2.query(EmailSend).filter(
-                EmailSend.batch_id == batch_id,
-                EmailSend.status == "queued",
-            ).all()
-
-            with client.batch_session():
-                for send_row in sends:
-                    try:
-                        vars_copy = dict(body.variables)
-                        vars_copy["unsubscribe_url"] = build_unsubscribe_url(send_row.to_email)
-                        vars_copy["user_name"] = send_row.to_name or default_name
-
-                        html, _, plain_text = _render_template(body.template_id, vars_copy)
-
-                        # Inject self-hosted open/click tracking
-                        html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
-
-                        response = client.send_email(
-                            to=send_row.to_email,
-                            subject=subject,
-                            html=html,
-                            scheduled_at=body.scheduled_at or None,
-                            plain_text=plain_text,
-                            unsubscribe_url=build_unsubscribe_url(send_row.to_email),
-                        )
-
-                        send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
-                        send_row.status = "sent"
-                    except Exception as e:
-                        send_row.status = "failed"
-                        errors = list(b.errors_json or [])
-                        errors.append(f"{send_row.to_email}: {e}")
-                        b.errors_json = errors
-                        logger.warning("Failed to send to %s: %s", send_row.to_email, e)
-
-                    db2.commit()
-                    # SMTP needs more spacing to avoid Gmail throttling
-                    delay = 2.0 if body.send_via == "smtp" else 0.5
-                    time.sleep(delay)
+            _send_batch_rows(
+                db2, b,
+                template_id=body.template_id,
+                subject=subject,
+                variables=dict(body.variables),
+                default_name=default_name,
+                send_via=body.send_via,
+                scheduled_at=body.scheduled_at,
+            )
 
             _recount_batch(db2, b)
             b.status = "completed"
@@ -775,57 +744,39 @@ def get_batch_status(
 STALE_CLAIM_MINUTES = 15
 
 
-def _claim_sends(db, batch_id: int) -> list[int]:
+def _requeue_for_resume(db, batch_id: int) -> int:
     """
-    Atomically take every row that still owes someone an email.
+    Put back in the queue what a Resume (the button, not a restart) should try
+    again: failures, and a claim older than STALE_CLAIM_MINUTES.
 
-    One UPDATE flips them to "sending" and returns their ids, so two concurrent
-    resumes cannot both take the same row: the second one's WHERE clause no
-    longer matches and it gets an empty list. Before this, a double-tap on
-    "Send the rest" — which a toast that wrongly reported failure actively
-    invited — would run two loops over the same recipients and mail each of
-    them twice.
+    A stale claim is the one row a killed worker held (a Render redeploy does
+    exactly that). It may have gone out, so only a person pressing Resume brings
+    it back; a restart never does (see batches_to_resume).
 
-    A claim older than STALE_CLAIM_MINUTES is taken back, so a worker killed
-    mid-batch (a Render redeploy does exactly that) does not strand its rows in
-    a state nothing ever looks at again.
+    Claiming itself happens a row at a time in _claim_next, so two resumes, or a
+    resume and a live first run, never take the same row. The old version
+    claimed every row up front, and a worker killed mid-batch left hundreds of
+    rows parked in "sending" for the stale timer.
     """
     from sqlalchemy import text as _sql
 
-    rows = db.execute(
+    result = db.execute(
         _sql(
             """
             update email_sends
-               set status = 'sending', claimed_at = now()
+               set status = 'queued', claimed_at = null
              where batch_id = :bid
                and (
-                     status in ('queued', 'failed')
+                     status = 'failed'
                      or (status = 'sending'
                          and claimed_at < now() - make_interval(mins => :stale))
                    )
-         returning id
             """
         ),
         {"bid": batch_id, "stale": STALE_CLAIM_MINUTES},
-    ).fetchall()
-    db.commit()
-    return [r[0] for r in rows]
-
-
-def _release_claims(db, ids: list[int]) -> None:
-    """Hand back rows a worker claimed but never got to, so resume sees them."""
-    if not ids:
-        return
-    from sqlalchemy import text as _sql
-
-    db.execute(
-        _sql(
-            "update email_sends set status='queued', claimed_at=null "
-            "where id = any(:ids) and status='sending'"
-        ),
-        {"ids": ids},
     )
     db.commit()
+    return result.rowcount or 0
 
 
 # A row that still owes someone an email. "failed" belongs here as much as
@@ -839,6 +790,184 @@ def _release_claims(db, ids: list[int]) -> None:
 # self-limiting. "sent"/"opened"/"clicked" are never re-selected, so nobody
 # receives a second copy.
 RESUMABLE_STATUSES = ("queued", "failed")
+
+
+def _claim_next(db, batch_id: int) -> Optional[int]:
+    """
+    Take ONE queued row of the batch and mark it "sending", or None when none
+    is left.
+
+    One row at a time, so a worker killed mid-batch leaves at most one row
+    whose fate is unknown (claimed, maybe handed to SMTP, never marked sent).
+    The first run used to read every queued row up front and claim nothing, so
+    a Resume tapped while it was still going ran a second loop over the same
+    people. SKIP LOCKED plus the status flip mean two workers, a double-tap or
+    two servers overlapping in a deploy, can never take the same row.
+    """
+    from sqlalchemy import text as _sql
+
+    row = db.execute(
+        _sql(
+            """
+            update email_sends
+               set status = 'sending', claimed_at = now()
+             where id = (select id from email_sends
+                          where batch_id = :bid and status = 'queued'
+                          order by id
+                          limit 1
+                          for update skip locked)
+         returning id
+            """
+        ),
+        {"bid": batch_id},
+    ).fetchone()
+    db.commit()
+    return row[0] if row else None
+
+
+def _send_batch_rows(
+    db,
+    b,
+    *,
+    template_id: str,
+    subject: str,
+    variables: dict,
+    default_name: str,
+    send_via: str,
+    scheduled_at: Optional[str] = None,
+) -> None:
+    """Send the batch's queued rows, one claim at a time, until none is left.
+
+    The one loop behind the first run, Resume and the resume after a restart,
+    so the rest of the list always gets the email the first part got."""
+    client = _get_email_client(send_via)
+    delay = 2.0 if send_via == "smtp" else 0.5
+    with client.batch_session():
+        while True:
+            send_id = _claim_next(db, b.id)
+            if send_id is None:
+                break
+            send_row = db.query(EmailSend).filter(EmailSend.id == send_id).first()
+            try:
+                vars_copy = dict(variables)
+                vars_copy["unsubscribe_url"] = build_unsubscribe_url(send_row.to_email)
+                vars_copy["user_name"] = send_row.to_name or default_name
+
+                html, _, plain_text = _render_template(template_id, vars_copy)
+
+                # Inject self-hosted open/click tracking
+                html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
+
+                response = client.send_email(
+                    to=send_row.to_email,
+                    subject=subject,
+                    html=html,
+                    scheduled_at=scheduled_at or None,
+                    plain_text=plain_text,
+                    unsubscribe_url=build_unsubscribe_url(send_row.to_email),
+                )
+
+                send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
+                send_row.status = "sent"
+            except Exception as e:
+                send_row.status = "failed"
+                errors = list(b.errors_json or [])
+                errors.append(f"{send_row.to_email}: {e}")
+                b.errors_json = errors
+                logger.warning("Batch %s: send failed for %s: %s", b.id, send_row.to_email, e)
+
+            db.commit()
+            # SMTP needs more spacing to avoid Gmail throttling
+            time.sleep(delay)
+
+
+#: How recent a batch must be for a restart to finish it by itself. Three
+#: batches from March and August sat half sent for months; a restart must never
+#: mail those people out of nowhere. Older ones wait for the Resume button.
+AUTO_RESUME_WITHIN_HOURS = 24
+
+#: A worker writes a claim every few seconds. A batch claimed from more recently
+#: than this has a live worker, likely the server this one is replacing, still
+#: draining it, so the restart leaves it be.
+LIVE_WORKER_SECONDS = 60
+
+
+def batches_to_resume(rows: list[dict], now) -> list[int]:
+    """
+    Which interrupted batches a restart should finish, from one row per batch:
+    id, status, created_at, scheduled_at, queued, last_claim, has_text.
+
+    Only rows still "queued" are ever taken, never "failed" and never a stale
+    "sending": the one row a dead worker held may already have gone out, and a
+    restart would rather miss one person than mail them twice. Resume can still
+    pick it up, by hand.
+    """
+    from datetime import timedelta
+
+    out: list[int] = []
+    for r in rows:
+        if r["status"] not in ("pending", "processing"):
+            continue
+        if not r["queued"]:
+            continue
+        if r["scheduled_at"] is not None:
+            continue
+        if not r["has_text"]:
+            continue
+        if r["created_at"] < now - timedelta(hours=AUTO_RESUME_WITHIN_HOURS):
+            continue
+        if r["last_claim"] is not None and r["last_claim"] > now - timedelta(seconds=LIVE_WORKER_SECONDS):
+            continue
+        out.append(r["id"])
+    return out
+
+
+def resume_interrupted_batches() -> list[int]:
+    """Finish today's batches a restart cut off. Called once, after startup
+    (main.py), in production only. Sends over SMTP, the bulk default: which
+    transport a batch started on is not stored."""
+    from datetime import datetime, timezone
+
+    from sqlalchemy import func
+
+    db = SessionLocal()
+    try:
+        rows = []
+        for b in db.query(EmailBatch).filter(EmailBatch.status.in_(("pending", "processing"))).all():
+            queued = db.query(func.count(EmailSend.id)).filter(
+                EmailSend.batch_id == b.id, EmailSend.status == "queued"
+            ).scalar()
+            last_claim = db.query(func.max(EmailSend.claimed_at)).filter(EmailSend.batch_id == b.id).scalar()
+            meta = next((t for t in TEMPLATES if t["id"] == b.template_id), None)
+            needs_text = meta is None or any(
+                v.get("required") and not v.get("default") for v in meta["variables"]
+            )
+            rows.append({
+                "id": b.id, "status": b.status, "created_at": b.created_at,
+                "scheduled_at": b.scheduled_at, "queued": queued, "last_claim": last_claim,
+                "has_text": meta is not None and (b.variables_json is not None or not needs_text),
+            })
+        ids = batches_to_resume(rows, datetime.now(timezone.utc))
+        for batch_id in ids:
+            b = db.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
+            variables = dict(b.variables_json or {})
+            logger.warning("Resuming batch %s after a restart (%s)", batch_id, b.subject)
+            b.status = "processing"
+            db.commit()
+            _send_batch_rows(
+                db, b,
+                template_id=b.template_id,
+                subject=b.subject,
+                variables=variables,
+                default_name=variables.get("user_name") or "there",
+                send_via="smtp",
+            )
+            _recount_batch(db, b)
+            b.status = "completed"
+            db.commit()
+        return ids
+    finally:
+        db.close()
 
 
 class ResumeBatchRequest(BaseModel):
@@ -901,67 +1030,35 @@ def resume_batch(
             b.status = "processing"
             db2.commit()
 
-            client = _get_email_client(body.send_via)
             templates_svc = EmailTemplates()
-
-            # Claim first, then read. Anything this worker holds is invisible to
-            # a second resume, so a double-tap cannot double-send.
-            claimed_ids = _claim_sends(db2, batch_id)
-            if not claimed_ids:
-                b.status = "completed"
+            render_fn = getattr(templates_svc, RENDER_MAP.get(template_id, ""), None)
+            if not render_fn:
+                b.status = "failed"
+                b.errors_json = list(b.errors_json or []) + [f"Unknown template: {template_id}"]
                 db2.commit()
                 return
-            sends = db2.query(EmailSend).filter(EmailSend.id.in_(claimed_ids)).all()
+
+            # Failures, and a dead worker's stale claim, go back in the queue
+            # once, here. The loop itself only takes "queued", so a row that
+            # fails again during this run is not retried in a circle.
+            _requeue_for_resume(db2, batch_id)
 
             # A retry starts from a clean error list, otherwise errors_json
             # grows by a few hundred strings every attempt.
             b.errors_json = []
             db2.commit()
 
-            render_fn = getattr(templates_svc, RENDER_MAP.get(template_id, ""), None)
-            if not render_fn:
-                # Give the rows back rather than leaving 372 people parked in a
-                # state no later resume would ever look at.
-                _release_claims(db2, claimed_ids)
-                b.status = "failed"
-                b.errors_json = list(b.errors_json or []) + [f"Unknown template: {template_id}"]
-                db2.commit()
-                return
-
-            with client.batch_session():
-                for send_row in sends:
-                    try:
-                        # Same render as the first run, so the rest of the list
-                        # gets the email the first half got.
-                        vars_copy = dict(variables)
-                        vars_copy["unsubscribe_url"] = build_unsubscribe_url(send_row.to_email)
-                        vars_copy["user_name"] = send_row.to_name or default_name
-
-                        html, _, plain_text = _render_template(template_id, vars_copy)
-
-                        # Inject self-hosted open/click tracking
-                        html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
-
-                        response = client.send_email(
-                            to=send_row.to_email,
-                            subject=subject,
-                            html=html,
-                            plain_text=plain_text,
-                            unsubscribe_url=build_unsubscribe_url(send_row.to_email),
-                        )
-
-                        send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
-                        send_row.status = "sent"
-                    except Exception as e:
-                        send_row.status = "failed"
-                        errors = list(b.errors_json or [])
-                        errors.append(f"{send_row.to_email}: {e}")
-                        b.errors_json = errors
-                        logger.warning("Resume send failed for %s: %s", send_row.to_email, e)
-
-                    db2.commit()
-                    delay = 2.0 if body.send_via == "smtp" else 0.5
-                    time.sleep(delay)
+            # Same loop as the first run, so the rest of the list gets the
+            # email the first part got. One claim at a time: a double-tap runs
+            # two loops that never take the same row.
+            _send_batch_rows(
+                db2, b,
+                template_id=template_id,
+                subject=subject,
+                variables=variables,
+                default_name=default_name,
+                send_via=body.send_via,
+            )
 
             _recount_batch(db2, b)
             b.status = "completed"
@@ -969,12 +1066,9 @@ def resume_batch(
 
         except Exception as e:
             logger.exception("Resume batch %s failed: %s", batch_id, e)
-            # Hand back anything claimed but unsent, so the next resume sees it
-            # instead of it sitting in "sending" until the stale timer expires.
-            try:
-                _release_claims(db2, locals().get("claimed_ids") or [])
-            except Exception:
-                pass
+            # Rows are claimed one at a time, so everything unsent is still
+            # "queued" for the next resume. The one row in flight, if any, stays
+            # "sending": it may have gone out, and the stale timer hands it back.
             try:
                 b = db2.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
                 if b:
