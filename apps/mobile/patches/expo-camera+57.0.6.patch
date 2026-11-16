@@ -1,0 +1,214 @@
+diff --git a/node_modules/expo-camera/ios/CameraViewModule.swift b/node_modules/expo-camera/ios/CameraViewModule.swift
+index e199463..c9017d9 100644
+--- a/node_modules/expo-camera/ios/CameraViewModule.swift
++++ b/node_modules/expo-camera/ios/CameraViewModule.swift
+@@ -255,6 +255,11 @@ public final class CameraViewModule: Module, ScannerResultHandler {
+         view.getAvailableLenses()
+       }
+ 
++      // Ghost Light patch: the session's real state, in one line.
++      AsyncFunction("diagnose") { view in
++        view.diagnose()
++      }
++
+       AsyncFunction("takePictureRef") { (view, options: TakePictureOptions) -> PictureRef in
+         #if targetEnvironment(simulator)
+         if AVCaptureDevice.default(for: .video) == nil {
+diff --git a/node_modules/expo-camera/ios/Common/CameraExceptions.swift b/node_modules/expo-camera/ios/Common/CameraExceptions.swift
+index 424294b..f2187c4 100644
+--- a/node_modules/expo-camera/ios/Common/CameraExceptions.swift
++++ b/node_modules/expo-camera/ios/Common/CameraExceptions.swift
+@@ -18,6 +18,13 @@ internal final class CameraOutputNotReadyException: Exception {
+   }
+ }
+ 
++// Ghost Light patch: carries iOS's own reason.
++internal final class CameraImageCaptureDetailedException: GenericException<String> {
++  override var reason: String {
++    "Image could not be captured: \(param)"
++  }
++}
++
+ internal final class CameraImageCaptureException: Exception {
+   override var reason: String {
+     "Image could not be captured"
+diff --git a/node_modules/expo-camera/ios/Current/CameraPhotoCapture.swift b/node_modules/expo-camera/ios/Current/CameraPhotoCapture.swift
+index fc9a9bb..4678bc6 100644
+--- a/node_modules/expo-camera/ios/Current/CameraPhotoCapture.swift
++++ b/node_modules/expo-camera/ios/Current/CameraPhotoCapture.swift
+@@ -126,8 +126,9 @@ class CameraPhotoCapture: NSObject, AVCapturePhotoCaptureDelegate {
+     photoCapturedContinuation = nil
+     photoCaptureOptions = nil
+ 
+-    if error != nil {
+-      continuation.resume(throwing: CameraImageCaptureException())
++    if let error {
++      let ns = error as NSError
++      continuation.resume(throwing: CameraImageCaptureDetailedException("\(ns.domain) \(ns.code) \(ns.localizedDescription) \(ns.userInfo[NSUnderlyingErrorKey].map { "\($0)" } ?? "")"))
+       return
+     }
+ 
+diff --git a/node_modules/expo-camera/ios/Current/CameraSessionManager.swift b/node_modules/expo-camera/ios/Current/CameraSessionManager.swift
+index 7a6568c..9d6a928 100644
+--- a/node_modules/expo-camera/ios/Current/CameraSessionManager.swift
++++ b/node_modules/expo-camera/ios/Current/CameraSessionManager.swift
+@@ -34,6 +34,7 @@ class CameraSessionManager: NSObject, DeviceDiscoveryDelegate {
+   private var photoOutput: AVCapturePhotoOutput?
+   private var videoFileOutput: AVCaptureMovieFileOutput?
+   private var runtimeErrorTask: Task<Void, Never>?
++  private var interruptionTask: Task<Void, Never>?
+ 
+   init(delegate: CameraSessionManagerDelegate) {
+     self.delegate = delegate
+@@ -100,10 +101,52 @@ class CameraSessionManager: NSObject, DeviceDiscoveryDelegate {
+ 
+       if let device {
+         addDevice(device)
++      } else {
++        delegate.onMountError(["message": "No camera device found for this side"])
+       }
+     }
+   }
+ 
++  /// Ghost Light patch: everything about the session, for the camera check.
++  var lastInterruption = "none"
++  func diagnose() -> String {
++    let s = session
++    var parts: [String] = []
++    parts.append("running=\(s.isRunning) interrupted=\(s.isInterrupted) last=\(lastInterruption)")
++    parts.append("preset=\(s.sessionPreset.rawValue) inputs=\(s.inputs.count) outputs=\(s.outputs.count)")
++    parts.append("auth=\(AVCaptureDevice.authorizationStatus(for: .video).rawValue) mic=\(AVCaptureDevice.authorizationStatus(for: .audio).rawValue)")
++    if let d = captureDeviceInput?.device {
++      parts.append("device=\(d.localizedName) connected=\(d.isConnected) suspended=\(d.isSuspended) format=\(d.activeFormat.formatDescription.dimensions.width)x\(d.activeFormat.formatDescription.dimensions.height)")
++    } else {
++      parts.append("device=none")
++    }
++    for o in s.outputs {
++      let c = o.connection(with: .video)
++      parts.append("\(type(of: o)) video=\(c != nil) enabled=\(c?.isEnabled ?? false) active=\(c?.isActive ?? false)")
++    }
++    if #available(iOS 18.0, *) {
++      parts.append("multitask=\(s.isMultitaskingCameraAccessSupported)/\(s.isMultitaskingCameraAccessEnabled)")
++    }
++    let audio = AVAudioSession.sharedInstance()
++    parts.append("audio=\(audio.category.rawValue)/\(audio.mode.rawValue) other=\(audio.isOtherAudioPlaying)")
++    return parts.joined(separator: " | ")
++  }
++
++  /// Ghost Light patch: the view came back to a window after its session was torn down.
++  func reviveIfTornDown() {
++    guard let delegate, session.inputs.isEmpty else {
++      return
++    }
++    captureDeviceInput = nil
++    photoOutput = nil
++    videoFileOutput = nil
++    updateDevice()
++    startSession()
++    setCameraMode()
++    updateCameraIsActive()
++    delegate.onMountError(["message": "Camera was rebuilt after being detached"])
++  }
++
+   func updateCameraIsActive() {
+     guard let delegate else {
+       return
+@@ -112,6 +155,10 @@ class CameraSessionManager: NSObject, DeviceDiscoveryDelegate {
+       if hasAvailableCameraDevice && !self.session.isRunning {
+         self.session.startRunning()
+       }
++      // Ghost Light patch: a session that is not running after being started says so.
++      if !self.session.isRunning || self.session.inputs.isEmpty {
++        delegate.onMountError(["message": "Camera did not start: running=\(self.session.isRunning) inputs=\(self.session.inputs.count) outputs=\(self.session.outputs.count) device=\(hasAvailableCameraDevice)"])
++      }
+     } else {
+       self.session.stopRunning()
+     }
+@@ -309,19 +356,32 @@ class CameraSessionManager: NSObject, DeviceDiscoveryDelegate {
+     runtimeErrorTask = Task {
+       let errors = NotificationCenter.default.notifications(named: .AVCaptureSessionRuntimeError, object: self.session)
+         .compactMap({ $0.userInfo?[AVCaptureSessionErrorKey] as? AVError })
+-      for await error in errors where error.code == .mediaServicesWereReset {
+-        delegate.sessionQueue.async {
+-          if !self.session.isRunning {
+-            self.session.startRunning()
++      for await error in errors {
++        // Ghost Light patch: every runtime error is said, not only a media-services reset.
++        delegate.onMountError(["message": "Camera runtime error \(error.code.rawValue): \(error.localizedDescription)"])
++        if error.code == .mediaServicesWereReset {
++          delegate.sessionQueue.async {
++            if !self.session.isRunning {
++              self.session.startRunning()
++            }
++            self.updateSessionAudioIsMuted()
+           }
+-          self.updateSessionAudioIsMuted()
+         }
+-        delegate.onMountError(["message": "Camera session was reset"])
++      }
++    }
++    interruptionTask?.cancel()
++    interruptionTask = Task {
++      let notes = NotificationCenter.default.notifications(named: .AVCaptureSessionWasInterrupted, object: self.session)
++        .map({ ($0.userInfo?[AVCaptureSessionInterruptionReasonKey] as? Int) ?? -1 })
++      for await reason in notes {
++        self.lastInterruption = "\(reason)"
++        delegate.onMountError(["message": "Camera interrupted, reason \(reason)"])
+       }
+     }
+   }
+ 
+   deinit {
++    interruptionTask?.cancel()
+     runtimeErrorTask?.cancel()
+   }
+ 
+@@ -356,6 +416,8 @@ class CameraSessionManager: NSObject, DeviceDiscoveryDelegate {
+         session.addInput(deviceInput)
+         captureDeviceInput = deviceInput
+         updateZoom()
++      } else {
++        delegate.onMountError(["message": "Camera input could not be added to the session"])
+       }
+     } catch {
+       delegate.onMountError(["message": "Camera could not be started - \(error.localizedDescription)"])
+diff --git a/node_modules/expo-camera/ios/Current/CameraView.swift b/node_modules/expo-camera/ios/Current/CameraView.swift
+index 4692d00..70b1e1b 100644
+--- a/node_modules/expo-camera/ios/Current/CameraView.swift
++++ b/node_modules/expo-camera/ios/Current/CameraView.swift
+@@ -320,6 +320,20 @@ public class CameraView: ExpoView, EXAppLifecycleListener, EXCameraInterface, Ca
+     super.didMoveToWindow()
+     if window != nil {
+       configurePreviewRotation()
++      // Ghost Light patch: a view that was removed and put back gets its session again.
++      if didStartSession {
++        previewLayer.session = sessionManager.session
++        sessionQueue.async { [weak self] in
++          guard let self else {
++            return
++          }
++          self.sessionManager.reviveIfTornDown()
++          let session = self.sessionManager.session
++          DispatchQueue.main.async { [weak self] in
++            self?.previewLayer.session = session
++          }
++        }
++      }
+       startSessionIfNeeded()
+     }
+   }
+@@ -347,6 +361,14 @@ public class CameraView: ExpoView, EXAppLifecycleListener, EXCameraInterface, Ca
+     rotationCoordinator = nil
+   }
+ 
++  // Ghost Light patch: the session's state, read on its own queue.
++  func diagnose() -> String {
++    var out = ""
++    sessionQueue.sync { out = self.sessionManager.diagnose() }
++    let layer = previewLayer
++    return out + " | preview session=\(layer.session != nil) conn=\(layer.connection?.isEnabled ?? false)/\(layer.connection?.isActive ?? false) frame=\(Int(layer.bounds.width))x\(Int(layer.bounds.height)) window=\(window != nil) app=\(UIApplication.shared.applicationState.rawValue)"
++  }
++
+   func stopRecording() {
+     videoRecording.stopRecording(videoFileOutput: sessionManager.currentVideoFileOutput)
+   }

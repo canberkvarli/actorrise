@@ -1,0 +1,166 @@
+{
+  "expo": {
+    "name": "Ghost Light",
+    "slug": "ghostlight",
+    "scheme": "ghostlight",
+    "version": "1.1.3",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ee3938d8-8f0f-4a0d-bea1-2f717ef7f911",
+      "fallbackToCacheTimeout": 0
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.actorrise.ghostlight",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSMotionUsageDescription": "Ghost Light uses device motion to move the stage light as you tilt your phone.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "Sides",
+            "CFBundleTypeRole": "Viewer",
+            "LSHandlerRank": "Alternate",
+            "LSItemContentTypes": [
+              "com.adobe.pdf",
+              "org.openxmlformats.wordprocessingml.document",
+              "public.plain-text"
+            ]
+          }
+        ],
+        "LSSupportsOpeningDocumentsInPlace": false,
+        "NSPhotoLibraryUsageDescription": "Ghost Light only opens a script you choose to bring to the scene partner. It never reads your photos on its own.",
+        "CFBundleAllowMixedLocalizations": true,
+        "NSSupportsLiveActivities": true
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.actorrise.ghostlight"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.actorrise.ghostlight",
+      "adaptiveIcon": {
+        "backgroundColor": "#130b08",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Ghost Light adds an audition to your calendar only when you ask it to."
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Ghost Light uses device motion to move the stage light as you tilt your phone."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#130b08",
+          "dark": {
+            "backgroundColor": "#130b08"
+          },
+          "android": {
+            "image": "./assets/splash-android.png",
+            "imageWidth": 180,
+            "backgroundColor": "#130b08",
+            "dark": {
+              "image": "./assets/splash-android.png",
+              "backgroundColor": "#130b08"
+            }
+          }
+        }
+      ],
+      "expo-web-browser",
+      "expo-sqlite",
+      "expo-apple-authentication",
+      "expo-localization",
+      "expo-secure-store",
+      "expo-image",
+      [
+        "expo-quick-actions",
+        {
+          "iosActions": [
+            {
+              "id": "note",
+              "title": "Before you go… 🎭",
+              "subtitle": "A note from Canberk",
+              "icon": "symbol:theatermasks"
+            }
+          ]
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "color": "#e0731f",
+          "defaultChannel": "reminders"
+        }
+      ],
+      "@bacons/apple-targets",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Ghost Light listens while you run your lines and records your voice when you tape yourself."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Ghost Light listens while you run your lines and records your voice when you tape yourself.",
+          "speechRecognitionPermission": "Your words are matched to the script as you say them, so your partner knows when to come in and the tape knows a line from a cut."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Ghost Light uses the camera when you tape yourself. Your takes stay on your phone.",
+          "microphonePermission": "Ghost Light listens while you run your lines and records your voice when you tape yourself.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Ghost Light saves the takes you choose to your photos.",
+          "savePhotosPermission": "Ghost Light saves the takes you choose to your photos.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      "expo-video"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ee3938d8-8f0f-4a0d-bea1-2f717ef7f911"
+      }
+    },
+    "locales": {
+      "tr": "./locales/tr.json"
+    }
+  }
+}

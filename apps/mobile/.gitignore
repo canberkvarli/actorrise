@@ -1,0 +1,72 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+metro-cache/
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+
+# local secrets
+.env
+
+# personal planning notes (listing copy, ASO, go-to-market) — local only
+/docs/plans/
+
+# expo-updates code signing. The private key signs every OTA update: anyone
+# holding it can push JavaScript to every install. Never commit it. Back it up
+# somewhere durable (password manager), because losing it means no signed
+# update can ever reach the shipped binary again without a new App Store build.
+# certs/certificate.pem is public and IS committed — it gets embedded in the
+# binary so the app can verify signatures. The `*.pem` rule above would
+# otherwise swallow it, and EAS honours .gitignore when it uploads the project,
+# so the build would silently ship with no certificate to verify against.
+/keys/
+!certs/certificate.pem
+
+# Google Play service account. A private key that can upload builds, edit the
+# store listing and read financial reports for com.actorrise.ghostlight. It is
+# read off local disk by `eas submit` (eas.json -> submit.production.android),
+# never bundled, so ignoring it costs nothing and committing it would hand
+# anyone who clones this repo publishing rights to the app.
+google-play-service-account.json
+metro-file-map-expo-*
+
+# EAS Build scratch dir. Left behind when a build is interrupted, and on the
+# next run its presence breaks the upload: eas tries to copy the project into
+# a subdirectory of itself.
+eas-cli-nodejs/

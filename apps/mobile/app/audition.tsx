@@ -1,0 +1,706 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+
+import { StageBackdrop } from '../src/components/StageBackdrop';
+import { StageDirection } from '../src/components/StageDirection';
+import { LabelledField } from '../src/components/LabelledField';
+import { PrimaryPill } from '../src/components/PrimaryPill';
+import { useStageMotion } from '../src/hooks/useStageMotion';
+import {
+  useAuditions,
+  useCreateAudition,
+  useDeleteAudition,
+  useParseNotice,
+  useUpdateAudition,
+} from '../src/hooks/useAuditions';
+import {
+  KIND_LABEL,
+  ParseQuotaError,
+  attachedPiece,
+  type AuditionDraft,
+  type AuditionKind,
+  type ParsedDraft,
+} from '../src/api/auditions';
+import { useSession } from '../src/lib/useSession';
+import { useGoBack } from '../src/lib/nav';
+import { dayLabel, defaultAuditionDate, localTimeZone, timeLabel } from '../src/lib/when';
+import { useTheme } from '../src/theme/ThemeContext';
+
+/**
+ * One audition, new or being changed. A modal over the list.
+ *
+ * The fast way in is the website's: paste the casting email and let the reader
+ * fill the form. The slow way is always there under it: when, which project,
+ * which role, where (or the tape link), and notes. The piece from the book,
+ * the bring list and the reminders live on the file (app/prep.tsx), which a
+ * new audition opens onto. On a phone, between the bus and the room, the
+ * point is to get the date in so the reminder exists.
+ */
+
+const KINDS: AuditionKind[] = ['in_person', 'self_tape', 'virtual'];
+
+/** What the reading line says while the parse runs. Same beats as the website. */
+const READING_BEATS = [
+  'Reading it.',
+  'Finding the date and the room.',
+  'Looking for what they want you to bring.',
+  'Nearly there.',
+];
+const BEAT_MS = 1600;
+
+export default function AuditionForm() {
+  const { colors: c } = useTheme();
+  const router = useRouter();
+  const goBack = useGoBack('/auditions');
+  const { tiltX, tiltY } = useStageMotion();
+  const { id, paste, when: whenParam } = useLocalSearchParams<{ id?: string; paste?: string; when?: string }>();
+  const { isAuthenticated } = useSession();
+
+  const { data: auditions } = useAuditions(isAuthenticated);
+  const existing = useMemo(
+    () => (id ? auditions?.find((a) => String(a.id) === id) ?? null : null),
+    [auditions, id],
+  );
+  const create = useCreateAudition();
+  const update = useUpdateAudition();
+  const remove = useDeleteAudition();
+  const busy = create.isPending || update.isPending || remove.isPending;
+
+  const [project, setProject] = useState('');
+  const [role, setRole] = useState('');
+  const [kind, setKind] = useState<AuditionKind>('in_person');
+  // The first night hands a date it already asked for; anything else starts on the default.
+  const [when, setWhen] = useState<Date>(() => {
+    const d = whenParam ? new Date(whenParam) : null;
+    return d && !Number.isNaN(d.getTime()) && d.getTime() > Date.now() ? d : defaultAuditionDate();
+  });
+  const [place, setPlace] = useState('');
+  const [notes, setNotes] = useState('');
+  const scroll = useRef<ScrollView>(null);
+  const notesFocused = useRef(false);
+  // Read from the email and kept, never typed here: who is casting, what they
+  // asked for, and the "bring" line the server turns into the first tick list.
+  const [casting, setCasting] = useState('');
+  const [materialRaw, setMaterialRaw] = useState('');
+  const [bring, setBring] = useState('');
+  const [touched, setTouched] = useState(false);
+
+  // Two ways in, one at a time. The switch at the top picks, and only the
+  // chosen pane is on screen: the paste sheet, or the fields. Arriving from
+  // "Paste a casting email" opens on paste; everything else opens on the
+  // fields, with paste one tap away in the switch.
+  const [mode, setMode] = useState<'paste' | 'hand'>(paste === '1' && !id ? 'paste' : 'hand');
+  const [pasteText, setPasteText] = useState('');
+  const [readLine, setReadLine] = useState<string | null>(null);
+  const [beat, setBeat] = useState(0);
+  const parse = useParseNotice();
+
+  useEffect(() => {
+    if (!parse.isPending) {
+      setBeat(0);
+      return;
+    }
+    const t = setInterval(() => setBeat((b) => Math.min(b + 1, READING_BEATS.length - 1)), BEAT_MS);
+    return () => clearInterval(t);
+  }, [parse.isPending]);
+
+  // Fill from the server row once it arrives; never overwrite what someone has
+  // already started typing.
+  useEffect(() => {
+    if (!existing || touched) return;
+    setProject(existing.project);
+    setRole(existing.role ?? '');
+    setKind(existing.kind);
+    if (existing.when) setWhen(new Date(existing.when));
+    setPlace((existing.kind === 'self_tape' ? existing.tape_link : existing.location) ?? '');
+    setNotes(existing.notes ?? '');
+    setCasting(existing.casting ?? '');
+    setMaterialRaw(existing.material_raw ?? '');
+  }, [existing, touched]);
+
+  const pasteFromClipboard = async () => {
+    Haptics.selectionAsync().catch(() => {});
+    const s = (await Clipboard.getStringAsync().catch(() => '')).trim();
+    if (s) setPasteText(s);
+    else setReadLine('(nothing on the clipboard yet. copy the email first.)');
+  };
+
+  /** The reader's draft, into the form. Low confidence is said, not hidden. */
+  const applyDraft = (d: ParsedDraft) => {
+    setTouched(true);
+    if (d.project.value) setProject(d.project.value);
+    if (d.role.value) setRole(d.role.value);
+    const k = d.kind.value ?? 'in_person';
+    setKind(k);
+    const isTape = k === 'self_tape';
+    const iso = isTape ? d.due_at.value : d.starts_at.value ?? d.due_at.value;
+    const date = iso ? new Date(iso) : null;
+    const dateOk = !!date && !Number.isNaN(date.getTime()) && date.getTime() > Date.now() - 60_000;
+    if (dateOk) setWhen(date);
+    if (!isTape && d.location.value) setPlace(d.location.value);
+    if (d.notes.value) setNotes(d.notes.value);
+    if (d.casting.value) setCasting(d.casting.value);
+    if (d.material_raw?.value) setMaterialRaw(d.material_raw.value);
+    if (d.bring.value) setBring(d.bring.value);
+    const conf = isTape ? d.due_at.confidence : d.starts_at.confidence;
+    setReadLine(
+      !dateOk
+        ? "(read it, but couldn't find the date. pick one below.)"
+        : conf === 'low'
+          ? '(read it. not sure about the date, so check it.)'
+          : '(read it. look it over and put it on the board.)',
+    );
+    setMode('hand');
+  };
+
+  const readIt = () => {
+    const text = pasteText.trim();
+    if (!text || parse.isPending) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setReadLine(null);
+    parse.mutate(
+      { text, tz: localTimeZone() },
+      {
+        onSuccess: (r) => {
+          if (r.ok) applyDraft(r.draft);
+          else setReadLine("(couldn't read that one. fill it in below.)");
+        },
+        onError: (e) => {
+          if (e instanceof ParseQuotaError) {
+            const n = e.quota?.limit;
+            setReadLine(
+              n
+                ? `(that was your ${n} free reads this month. fill it in below, that's always free.)`
+                : "(no reads left this month. fill it in below, that's always free.)",
+            );
+          } else {
+            setReadLine("(couldn't reach the reader. fill it in below.)");
+          }
+        },
+      },
+    );
+  };
+
+  const tape = kind === 'self_tape';
+  const placeLabel = tape ? 'Where to send the tape (optional)' : kind === 'virtual' ? 'Meeting link (optional)' : 'Where (optional)';
+  const canSave = project.trim().length > 0 && !busy;
+
+  const onSave = () => {
+    if (!canSave) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const iso = when.toISOString();
+    const draft: AuditionDraft = {
+      project: project.trim(),
+      role: role.trim() || null,
+      kind,
+      tz: localTimeZone(),
+      starts_at: tape ? null : iso,
+      due_at: tape ? iso : null,
+      location: tape ? null : place.trim() || null,
+      tape_link: tape ? place.trim() || null : null,
+      notes: notes.trim() || null,
+      casting: casting.trim() || null,
+      material_raw: materialRaw.trim() || null,
+    };
+    const fail = () => Alert.alert("Couldn't save", 'Check your connection and try again.');
+    if (existing) {
+      // The piece is attached from the file now; an edit here leaves it alone.
+      update.mutate(
+        { id: existing.id, draft, monologueId: attachedPiece(existing)?.monologue_id ?? null, current: existing },
+        { onSuccess: () => goBack(), onError: fail },
+      );
+    } else {
+      // "Bring" only on create: sent again it would re-split the list and
+      // untick everything already packed.
+      create.mutate(
+        { draft: { ...draft, bring: bring.trim() || null }, monologueId: null },
+        {
+          // Straight onto its file, where the piece, the bring list and the
+          // reminders are, rather than back to the board.
+          onSuccess: (a) => router.replace({ pathname: '/prep', params: { id: String(a.id) } }),
+          onError: fail,
+        },
+      );
+    }
+  };
+
+  const onDelete = () => {
+    if (!existing) return;
+    Alert.alert('Remove this audition?', 'Its reminders go with it. You can bring it back on the website for 30 days.', [
+      { text: 'Keep', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          remove.mutate(existing.id, { onSuccess: () => goBack() });
+        },
+      },
+    ]);
+  };
+
+  const pickDate = (mode: 'date' | 'time') => {
+    if (Platform.OS !== 'android') return;
+    DateTimePickerAndroid.open({
+      value: when,
+      mode,
+      onChange: (_e, d) => {
+        if (d) {
+          setTouched(true);
+          setWhen(d);
+        }
+      },
+    });
+  };
+
+  const label = {
+    fontFamily: 'BricolageGrotesque_600SemiBold',
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase' as const,
+    color: c.mutedForeground,
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <StageBackdrop tiltX={tiltX} tiltY={tiltY} />
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          {/* A modal's own header: close on the left, the act on the right. */}
+          <View style={{ height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16 }}>
+            <Pressable onPress={goBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
+              <Ionicons name="close" size={24} color={c.mutedForeground} />
+            </Pressable>
+            {existing ? (
+              <Pressable onPress={onDelete} hitSlop={12} accessibilityRole="button" accessibilityLabel="Remove audition" disabled={busy}>
+                <Ionicons name="trash-outline" size={20} color={c.mutedForeground} />
+              </Pressable>
+            ) : null}
+          </View>
+
+          <ScrollView
+            ref={scroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+          >
+            <Text style={{ fontFamily: 'InstrumentSerif_400Regular', fontSize: 40, lineHeight: 46, letterSpacing: -0.6, color: c.foreground }}>
+              {existing ? 'Change ' : 'Next '}
+              <Text style={{ fontFamily: 'InstrumentSerif_400Regular_Italic', color: c.accentText }}>
+                {existing ? 'it.' : 'up.'}
+              </Text>
+            </Text>
+            <StageDirection style={{ marginTop: 6 }}>
+              {existing ? '(the reminders move with it.)' : "(we'll remind you the night before.)"}
+            </StageDirection>
+
+            {/* The switch: two ways in, said plainly, one pane at a time. */}
+            {!existing ? (
+              <ModeSwitch
+                mode={mode}
+                onChange={(m) => {
+                  if (m === mode || parse.isPending) return;
+                  Haptics.selectionAsync().catch(() => {});
+                  setMode(m);
+                }}
+              />
+            ) : null}
+
+            {/* The fast way in: the casting email on a sheet of paper, read into
+                the form. Paper, not the panel colour: on the light theme the
+                panel was grey type in a grey box, and the email is the one thing
+                on this screen you must be able to read back. */}
+            {/* One host for both panes, so the form's height eases between
+                them instead of jumping, and each pane fades rather than snaps:
+                the switch above is a slide, and the page under it should move
+                like one thing. Fade only: an entrance that travels leaves the
+                buttons under it dead on Fabric. */}
+            <Animated.View layout={LinearTransition.duration(280)}>
+            {!existing && mode === 'paste' ? (
+              <Animated.View
+                key="paste"
+                entering={FadeIn.duration(240)}
+                exiting={FadeOut.duration(140)}
+                style={{ marginTop: 18 }}
+              >
+                <View
+                  style={{
+                    borderRadius: 8,
+                    backgroundColor: c.paper,
+                    borderWidth: 1.5,
+                    borderColor: c.paperRule,
+                    paddingHorizontal: 14,
+                    paddingTop: 12,
+                    paddingBottom: 10,
+                  }}
+                >
+                  <TextInput
+                    multiline
+                    value={pasteText}
+                    onChangeText={setPasteText}
+                    editable={!parse.isPending}
+                    autoFocus={paste === '1'}
+                    placeholder={'Paste the casting email here.\nThe whole thing is fine, signature and all.'}
+                    placeholderTextColor={c.paperMuted}
+                    selectionColor={c.accentText}
+                    scrollEnabled
+                    style={{
+                      minHeight: 150,
+                      maxHeight: 260,
+                      fontFamily: 'CourierPrime_400Regular',
+                      fontSize: 13.5,
+                      lineHeight: 20,
+                      color: c.paperInk,
+                      textAlignVertical: 'top',
+                    }}
+                  />
+                  {parse.isPending ? (
+                    <View style={{ marginTop: 12, marginBottom: 4 }}>
+                      <Text style={{ fontFamily: 'BricolageGrotesque_500Medium', fontSize: 12.5, color: c.paperMuted }}>
+                        {READING_BEATS[beat]}
+                      </Text>
+                      <Sweep />
+                    </View>
+                  ) : (
+                    <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Pressable
+                        onPress={pasteFromClipboard}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel="Paste from the clipboard"
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8 }}
+                      >
+                        <Ionicons name="clipboard-outline" size={15} color={c.paperInk} />
+                        <Text style={{ fontFamily: 'BricolageGrotesque_600SemiBold', fontSize: 13, color: c.paperInk }}>
+                          {pasteText ? 'Paste again' : 'Paste'}
+                        </Text>
+                      </Pressable>
+                      <PrimaryPill label="Read it" onPress={readIt} height={44} disabled={!pasteText.trim()} />
+                    </View>
+                  )}
+                </View>
+                {readLine && !parse.isPending ? (
+                  <StageDirection numberOfLines={3} style={{ marginTop: 12 }}>{readLine}</StageDirection>
+                ) : null}
+              </Animated.View>
+            ) : null}
+
+            {/* The slow way in, always free. After a read, this is where the
+                draft lands, with what the reader was unsure about said up top.
+                Coming off a read, the fields arrive a beat after the sheet has
+                gone, so the email reads as having turned into the form. */}
+            {existing || mode === 'hand' ? (
+              <Animated.View
+                key="hand"
+                entering={existing ? undefined : FadeIn.duration(260).delay(readLine ? 120 : 40)}
+                exiting={FadeOut.duration(140)}
+              >
+            {!existing && readLine ? (
+              <View style={{ marginTop: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <StageDirection numberOfLines={3} style={{ flex: 1 }}>{readLine}</StageDirection>
+              </View>
+            ) : null}
+            {/* Kind: three words in a row, the chosen one in ink. */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 24 }}>
+              {KINDS.map((k) => {
+                const on = k === kind;
+                return (
+                  <Pressable
+                    key={k}
+                    onPress={() => {
+                      Haptics.selectionAsync().catch(() => {});
+                      setTouched(true);
+                      setKind(k);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                    style={{
+                      paddingHorizontal: 14,
+                      height: 36,
+                      borderRadius: 999,
+                      borderWidth: 1.5,
+                      borderColor: on ? c.foreground : c.border,
+                      backgroundColor: on ? c.foreground : 'transparent',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ fontFamily: 'BricolageGrotesque_600SemiBold', fontSize: 13, color: on ? c.background : c.foreground }}>
+                      {KIND_LABEL[k]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <LabelledField
+              label="Project"
+              value={project}
+              onChangeText={(t) => {
+                setTouched(true);
+                setProject(t);
+              }}
+              autoCapitalize="words"
+              returnKeyType="next"
+              style={{ marginTop: 22 }}
+            />
+            <LabelledField
+              label="Role (optional)"
+              value={role}
+              onChangeText={(t) => {
+                setTouched(true);
+                setRole(t);
+              }}
+              autoCapitalize="words"
+              returnKeyType="next"
+              style={{ marginTop: 10 }}
+            />
+
+            {/* When. iOS draws its compact pickers inline; Android opens a dialog. */}
+            <Text style={[label, { marginTop: 26 }]}>{tape ? 'Tape due' : 'When'}</Text>
+            {Platform.OS === 'ios' ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, marginLeft: -8 }}>
+                <DateTimePicker
+                  value={when}
+                  mode="date"
+                  display="compact"
+                  minimumDate={new Date()}
+                  themeVariant={c.isLight ? 'light' : 'dark'}
+                  accentColor={c.accentText}
+                  onChange={(_e, d) => {
+                    if (d) {
+                      setTouched(true);
+                      setWhen(d);
+                    }
+                  }}
+                />
+                <DateTimePicker
+                  value={when}
+                  mode="time"
+                  display="compact"
+                  themeVariant={c.isLight ? 'light' : 'dark'}
+                  accentColor={c.accentText}
+                  onChange={(_e, d) => {
+                    if (d) {
+                      setTouched(true);
+                      setWhen(d);
+                    }
+                  }}
+                />
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                <WhenChip label={dayLabel(when.toISOString())} onPress={() => pickDate('date')} />
+                <WhenChip label={timeLabel(when.toISOString())} onPress={() => pickDate('time')} />
+              </View>
+            )}
+
+            <LabelledField
+              label={placeLabel}
+              value={place}
+              onChangeText={(t) => {
+                setTouched(true);
+                setPlace(t);
+              }}
+              autoCapitalize={tape || kind === 'virtual' ? 'none' : 'words'}
+              keyboardType={tape || kind === 'virtual' ? 'url' : 'default'}
+              autoCorrect={!(tape || kind === 'virtual')}
+              style={{ marginTop: 16 }}
+            />
+
+            {/* Notes: what they want you to bring, who is in the room, anything.
+                Its own block rather than a LabelledField: that one is a single
+                34pt line with a label that floats over it. */}
+            <Text style={[label, { marginTop: 26 }]}>Notes (optional)</Text>
+            {/* Notes is the last field, under the keyboard the moment it comes
+                up. The avoiding view makes room; nothing scrolls into it on
+                its own, so the field does: to the end on focus (once the
+                keyboard has risen), and again each time a new line is typed. */}
+            <TextInput
+              multiline
+              scrollEnabled={false}
+              value={notes}
+              onFocus={() => {
+                notesFocused.current = true;
+                setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 280);
+              }}
+              onBlur={() => {
+                notesFocused.current = false;
+              }}
+              onContentSizeChange={() => {
+                if (notesFocused.current) scroll.current?.scrollToEnd({ animated: true });
+              }}
+              onChangeText={(t) => {
+                setTouched(true);
+                setNotes(t);
+              }}
+              autoCapitalize="sentences"
+              placeholder="Who's in the room, what to bring, anything."
+              placeholderTextColor={c.mutedForeground}
+              selectionColor={c.accentText}
+              style={{
+                marginTop: 4,
+                minHeight: 44,
+                paddingHorizontal: 2,
+                paddingVertical: 8,
+                fontFamily: 'BricolageGrotesque_500Medium',
+                fontSize: 16,
+                lineHeight: 22,
+                color: c.foreground,
+                textAlignVertical: 'top',
+                borderBottomWidth: 1,
+                borderBottomColor: c.border,
+              }}
+            />
+
+            <PrimaryPill
+              label={existing ? 'Save changes' : 'Put it on the board'}
+              onPress={onSave}
+              disabled={!canSave}
+              block
+              style={{ marginTop: 32 }}
+            />
+              </Animated.View>
+            ) : null}
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+/** The reading bar: a short light sweeping a track while the reader works. */
+function Sweep() {
+  const { colors: c } = useTheme();
+  const x = useSharedValue(-60);
+  useEffect(() => {
+    x.value = -60;
+    x.value = withRepeat(withTiming(360, { duration: 1400, easing: Easing.inOut(Easing.quad) }), -1, false);
+    return () => cancelAnimation(x);
+  }, [x]);
+  const style = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
+  return (
+    <View style={{ marginTop: 8, height: 3, borderRadius: 2, backgroundColor: c.paperRule, overflow: 'hidden' }}>
+      <Animated.View style={[{ width: 60, height: 3, borderRadius: 2, backgroundColor: c.primary }, style]} />
+    </View>
+  );
+}
+
+/**
+ * Paste the email, or fill it in by hand. A two-stop track with the chosen
+ * stop in ink, the same vocabulary as the kind chips below it, so the first
+ * thing on the form reads as a choice and not as two forms stacked.
+ */
+function ModeSwitch({ mode, onChange }: { mode: 'paste' | 'hand'; onChange: (m: 'paste' | 'hand') => void }) {
+  const { colors: c } = useTheme();
+  const reduce = useReducedMotion();
+  const stops: { key: 'paste' | 'hand'; label: string; icon: 'clipboard-outline' | 'create-outline' }[] = [
+    { key: 'paste', label: 'Paste the email', icon: 'clipboard-outline' },
+    { key: 'hand', label: 'By hand', icon: 'create-outline' },
+  ];
+  const index = stops.findIndex((s) => s.key === mode);
+  // The ink thumb is one object that slides between the stops, not two pills
+  // that trade fills. Width comes from layout, so the thumb fits whatever the
+  // phone's width leaves for each stop.
+  const [slot, setSlot] = useState(0);
+  const x = useSharedValue(0);
+  useEffect(() => {
+    const to = index * (slot + GAP);
+    x.value = reduce || slot === 0 ? to : withSpring(to, { damping: 22, stiffness: 240, mass: 0.7 });
+  }, [index, slot, reduce, x]);
+  const thumb = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
+  return (
+    <View
+      accessibilityRole="tablist"
+      onLayout={(e) => setSlot((e.nativeEvent.layout.width - PAD * 2 - GAP) / 2)}
+      style={{
+        marginTop: 22,
+        flexDirection: 'row',
+        padding: PAD,
+        borderRadius: 999,
+        borderWidth: 1.5,
+        borderColor: c.border,
+        gap: GAP,
+      }}
+    >
+      {slot > 0 ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            thumb,
+            { position: 'absolute', left: PAD, top: PAD, width: slot, height: 40, borderRadius: 999, backgroundColor: c.foreground },
+          ]}
+        />
+      ) : null}
+      {stops.map((s) => {
+        const on = s.key === mode;
+        return (
+          <Pressable
+            key={s.key}
+            onPress={() => onChange(s.key)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
+            style={{
+              flex: 1,
+              height: 40,
+              borderRadius: 999,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 7,
+            }}
+          >
+            <Ionicons name={s.icon} size={15} color={on ? c.background : c.mutedForeground} />
+            <Text style={{ fontFamily: 'BricolageGrotesque_600SemiBold', fontSize: 13.5, color: on ? c.background : c.foreground }}>
+              {s.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+const PAD = 4;
+const GAP = 4;
+
+function WhenChip({ label, onPress }: { label: string; onPress: () => void }) {
+  const { colors: c } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={{ paddingHorizontal: 14, height: 40, borderRadius: 999, borderWidth: 1.5, borderColor: c.border, alignItems: 'center', justifyContent: 'center' }}
+    >
+      <Text style={{ fontFamily: 'BricolageGrotesque_600SemiBold', fontSize: 14, color: c.foreground }}>{label}</Text>
+    </Pressable>
+  );
+}

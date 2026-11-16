@@ -1,0 +1,81 @@
+import { Pressable, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+
+import { Image } from 'expo-image';
+
+import { StageDirection } from './StageDirection';
+import { posterThumb } from '../lib/screen';
+import { getTrending } from '../api/client';
+import { apiToMonologue } from '../data/adapt';
+import type { Monologue } from '../data/monologues';
+import { track } from '../lib/analytics';
+import type { Medium } from '../theme/medium';
+import { useTheme } from '../theme/ThemeContext';
+
+/**
+ * What other actors are working on right now, for the screen before there is
+ * a past. The website's trending shelf, as two hairline rows in this house:
+ * real pieces, each one a page you can open, which is a better invitation than
+ * three searches somebody else phrased. Under the recents once there are
+ * some, two rows. Fresh every few minutes: it is what the house read lately.
+ */
+export function Trending({ medium, accent, rows = 2 }: { medium: Medium; accent: string; rows?: number }) {
+  const router = useRouter();
+  const qc = useQueryClient();
+  const { colors: c } = useTheme();
+  const { data } = useQuery<Monologue[]>({
+    queryKey: ['trending'],
+    retry: false,
+    staleTime: 5 * 60_000,
+    queryFn: async ({ signal }) => (await getTrending(20, signal)).map(apiToMonologue),
+  });
+  const house = (data ?? []).filter((m) => (medium === 'screen' ? m.sourceType !== 'play' : m.sourceType === 'play')).slice(0, rows);
+  if (house.length === 0) return null;
+
+  const open = (m: Monologue) => {
+    Haptics.selectionAsync().catch(() => {});
+    track('app_home_row', { row: 'trending' });
+    // The heading paints at once from this row; the words follow.
+    qc.setQueryData(['monologue-preview', m.id], m);
+    router.push({ pathname: '/read/[id]', params: { id: m.id, medium } });
+  };
+
+  return (
+    <View style={{ width: '100%' }}>
+      <StageDirection style={{ marginBottom: 2 }}>(what others are working on.)</StageDirection>
+      {house.map((m) => (
+        <Pressable
+          key={m.id}
+          onPress={() => open(m)}
+          accessibilityRole="button"
+          accessibilityLabel={`${m.character}, ${m.source}`}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            paddingVertical: 10,
+            borderBottomWidth: 1,
+            borderBottomColor: c.divider,
+          }}
+        >
+          {medium === 'screen' && m.posterUrl ? (
+            <Image source={{ uri: posterThumb(m.posterUrl) }} style={{ width: 24, height: 36, borderRadius: 3, marginRight: 2 }} contentFit="cover" cachePolicy="memory-disk" transition={120} accessibilityIgnoresInvertColors />
+          ) : null}
+          <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: 'CourierPrime_700Bold', fontSize: 13, color: c.foreground }}>
+            {m.character}
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={{ flex: 1, fontFamily: 'CourierPrime_400Regular', fontSize: 12, color: c.mutedForeground }}
+          >
+            {m.source}
+          </Text>
+          <Ionicons name="arrow-forward" size={14} color={accent} />
+        </Pressable>
+      ))}
+    </View>
+  );
+}

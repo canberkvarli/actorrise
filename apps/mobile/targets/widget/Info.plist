@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>NSExtension</key>
+    <dict>
+      <key>NSExtensionPointIdentifier</key>
+      <string>com.apple.widgetkit-extension</string>
+    </dict>
+    <key>UIAppFonts</key>
+    <array>
+      <string>InstrumentSerif_400Regular.ttf</string>
+      <string>InstrumentSerif_400Regular_Italic.ttf</string>
+      <string>CourierPrime_400Regular.ttf</string>
+      <string>CourierPrime_400Regular_Italic.ttf</string>
+      <string>CourierPrime_700Bold.ttf</string>
+    </array>
+  </dict>
+</plist>

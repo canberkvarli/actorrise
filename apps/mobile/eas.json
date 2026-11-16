@@ -1,0 +1,88 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "ios": {
+        "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ppvqmbzuqvzpiuqaiqfy.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_6X-B4xO0C0ndogzqzy8RAw_BJETJmsh",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_OWSaWDMRpMhrxjrMjmEtFOxvgHa"
+      }
+    },
+    "development-simulator": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ppvqmbzuqvzpiuqaiqfy.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_6X-B4xO0C0ndogzqzy8RAw_BJETJmsh",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_OWSaWDMRpMhrxjrMjmEtFOxvgHa"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "environment": "preview",
+      "ios": {
+        "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ppvqmbzuqvzpiuqaiqfy.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_6X-B4xO0C0ndogzqzy8RAw_BJETJmsh",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_OWSaWDMRpMhrxjrMjmEtFOxvgHa"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production",
+      "environment": "production",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ppvqmbzuqvzpiuqaiqfy.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_6X-B4xO0C0ndogzqzy8RAw_BJETJmsh",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_OWSaWDMRpMhrxjrMjmEtFOxvgHa"
+      }
+    },
+    "android-internal": {
+      "extends": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6804278673"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "alpha",
+        "releaseStatus": "draft"
+      }
+    }
+  }
+}
