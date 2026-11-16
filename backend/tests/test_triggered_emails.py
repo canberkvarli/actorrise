@@ -367,3 +367,25 @@ class _NoClose:
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTrialWillEndToTheFounder:
+    """A three-day trial is all warning window: Stripe's trial_will_end fires as
+    it starts, so the founder's "Trial ends" mail repeated "Trial started"."""
+
+    DAY = 24 * 3600
+
+    def test_a_three_day_trial_is_skipped(self):
+        from app.api.webhooks import trial_is_all_warning
+
+        assert trial_is_all_warning({"trial_start": 1_000, "trial_end": 1_000 + 3 * self.DAY})
+
+    def test_a_week_trial_still_warns(self):
+        from app.api.webhooks import trial_is_all_warning
+
+        assert not trial_is_all_warning({"trial_start": 1_000, "trial_end": 1_000 + 7 * self.DAY})
+
+    def test_missing_dates_still_warn(self):
+        from app.api.webhooks import trial_is_all_warning
+
+        assert not trial_is_all_warning({"trial_end": 1_000})

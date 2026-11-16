@@ -737,6 +737,23 @@ def handle_subscription_updated(
         print(f"Warning: trial cancel notice not sent: {e}")
 
 
+#: Stripe sends trial_will_end three days before a trial ends.
+TRIAL_WILL_END_NOTICE_SECONDS = 3 * 24 * 3600
+
+
+def trial_is_all_warning(stripe_subscription: dict) -> bool:
+    """True when the trial is three days or shorter, so Stripe's three-day
+    warning fires the moment it starts. The founder then got "Trial ends" half
+    a minute after "Trial started", saying nothing new (Canberk, 2026-11-16).
+    A week or two-week trial still gets it, mid-trial, when asking how it is
+    going can still change the outcome."""
+    start = stripe_subscription.get("trial_start")
+    end = stripe_subscription.get("trial_end")
+    if not start or not end:
+        return False
+    return int(end) - int(start) <= TRIAL_WILL_END_NOTICE_SECONDS
+
+
 def handle_trial_will_end(stripe_subscription: dict, db: Session):
     """Stripe's 3-day warning before a trial converts.
 
@@ -761,6 +778,10 @@ def handle_trial_will_end(stripe_subscription: dict, db: Session):
     user = db.query(User).filter(User.id == subscription.user_id).first()
     tier = db.query(PricingTier).filter(PricingTier.id == subscription.tier_id).first()
     if not user:
+        return
+
+    if trial_is_all_warning(stripe_subscription):
+        print(f"ℹ️  trial_will_end skipped for user {subscription.user_id}: the whole trial is the warning window")
         return
 
     from app.services.email.notifications import send_trial_ending_notification
