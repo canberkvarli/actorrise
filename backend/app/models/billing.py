@@ -154,6 +154,26 @@ class UserSubscription(Base):
         return max(0, delta.days)
 
 
+class GuestMerge(Base):
+    """
+    An anonymous app user who became a real account (services/guest_purchase.py).
+
+    The app mints an anonymous Supabase user at launch, and RevenueCat's
+    app_user_id is that user's id. Sign in with Apple (or a returning account)
+    makes a NEW Supabase user rather than upgrading the anonymous one, so a
+    purchase made as a guest stayed on the guest while the actor used the real
+    account and hit the paywall again (2026-11-17, a paying subscriber). One row
+    per guest says where its purchases now belong, so the subscription moves at
+    sign-in and the guest's later RevenueCat events (renewals) follow it.
+    """
+
+    __tablename__ = "guest_merges"
+
+    guest_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    owner_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
+
+
 class UsageMetrics(Base):
     """
     Track usage for rate limiting and analytics.

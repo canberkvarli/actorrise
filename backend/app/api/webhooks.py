@@ -1082,11 +1082,36 @@ async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
     event = body.get("event") or {}
     event_type = event.get("type", "")
 
+    from app.services.guest_purchase import follow_merge, move_app_subscription
+
+    if event_type == "TRANSFER":
+        # Restore Purchases on another account moves the receipt there, and
+        # RevenueCat sends the old and new app_user_ids instead of one. The
+        # subscription row moves with it; later events carry the new id.
+        def _first(ids):
+            for rc_id in ids or []:
+                found = db.query(User).filter(User.supabase_id == str(rc_id)).first()
+                if found:
+                    return found
+            return None
+
+        src = _first(event.get("transferred_from"))
+        dst = _first(event.get("transferred_to"))
+        if not src or not dst:
+            logger.warning("RevenueCat TRANSFER with an unknown side: %s → %s", event.get("transferred_from"), event.get("transferred_to"))
+            return {"status": "ok", "message": "user not found"}
+        moved = move_app_subscription(src, follow_merge(dst, db), db)
+        db.commit()
+        logger.info("RevenueCat TRANSFER %s → %s (row moved: %s)", src.id, dst.id, moved)
+        return {"status": "ok", "message": "transferred" if moved else "nothing to move"}
+
     user = _rc_find_user(event, db)
     if not user:
         # Ack so RevenueCat doesn't retry forever for an id we'll never know.
         logger.warning("RevenueCat %s for unknown app_user_id %s", event_type, event.get("app_user_id"))
         return {"status": "ok", "message": "user not found"}
+    # A guest who signed into a real account: its events belong to the account.
+    user = follow_merge(user, db)
 
     sub = _rc_get_or_create_subscription(int(user.id), db)
     prior_tier_id = sub.tier_id

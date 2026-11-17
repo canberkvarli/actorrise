@@ -42,6 +42,7 @@ const ENTITLEMENT_ID = 'monologues';
 
 let configured = false;
 let lastIdentified: string | null = null;
+let lastWasGuest = false;
 
 export function isPurchasesConfigured(): boolean {
   return configured;
@@ -64,6 +65,7 @@ export async function configurePurchases(): Promise<void> {
   void Purchases.getOfferings().catch(() => {});
   configured = true;
   lastIdentified = userId ?? null;
+  lastWasGuest = data.session?.user.is_anonymous ?? false;
   // Warm the offering now, at launch, rather than when the paywall opens. The
   // SDK caches it, along with the StoreKit products behind it, so the paywall's
   // prices and the Apple sheet on "Start the trial" no longer wait on a cold
@@ -81,15 +83,23 @@ export async function configurePurchases(): Promise<void> {
  * the API authenticates the real account. Server reports free, the app stays
  * locked, and the receipt is real — the worst possible bug to ship.
  *
- * `logIn` also aliases the anonymous user's existing purchases onto the
- * identified one, so a trial bought before signing in follows the user across.
+ * `logIn` only aliases RevenueCat's OWN anonymous id ($RCAnonymous…) onto the
+ * identified one. Ours is the Supabase guest's uuid, so a purchase made as the
+ * guest stays on the guest when a sign-in makes a new user (Sign in with
+ * Apple, 2026-11-17). The server moves the subscription (auth.ts carryGuest);
+ * here the receipt is synced to the new user so RevenueCat moves it too, and
+ * the phone's own entitlement and later renewals follow. Only from a guest:
+ * after a sign-out on a shared phone the receipt is someone else's.
  */
-export async function identifyPurchasesUser(userId: string | null): Promise<void> {
+export async function identifyPurchasesUser(userId: string | null, isGuest = false): Promise<void> {
   if (!configured || userId === lastIdentified) return;
   try {
+    const carry = lastWasGuest && !!userId && !isGuest && (await hasMonologuesEntitlement());
     if (userId) await Purchases.logIn(userId);
     else await Purchases.logOut();
     lastIdentified = userId;
+    lastWasGuest = isGuest;
+    if (carry) void Purchases.syncPurchases().catch(() => {});
   } catch {
     // Never let an identity hiccup take down the app; the next auth change
     // retries, and Restore Purchases remains the manual escape hatch.

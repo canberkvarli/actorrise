@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from unittest import mock
 
 from app.api import webhooks
-from app.models.billing import PricingTier, UserSubscription
+from app.models.billing import GuestMerge, PricingTier, UserSubscription
 from app.models.organization import Organization
 from app.models.user import User
 from tests.dbfixture import memory_db, restore
@@ -37,7 +37,7 @@ class _NoThread:
 
 class RevenueCatWebRowTest(unittest.TestCase):
     def setUp(self):
-        self.db, self.saved = memory_db([Organization, User, PricingTier, UserSubscription])
+        self.db, self.saved = memory_db([Organization, User, PricingTier, UserSubscription, GuestMerge])
         self.free = PricingTier(name="free", display_name="Free", monthly_price_cents=0, features={})
         self.plus = PricingTier(name="plus", display_name="Plus", monthly_price_cents=1200, features={})
         self.app = PricingTier(name="monologues", display_name="Monologues", monthly_price_cents=500, features={})

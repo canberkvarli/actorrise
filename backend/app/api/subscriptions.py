@@ -522,6 +522,53 @@ async def create_portal_session(current_user: User = Depends(get_current_user), 
         raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
 
 
+class ClaimGuestRequest(BaseModel):
+    guest_token: str
+
+
+def _verified_guest_supabase_id(token: str) -> str | None:
+    """The guest's Supabase id, asked of Supabase itself, or None.
+
+    verify_supabase_token decodes without checking the signature, which is
+    not enough to hand someone a subscription: the token must be one Supabase
+    still honours, for a user Supabase calls anonymous."""
+    from app.core.security import get_supabase_client
+
+    client = get_supabase_client()
+    if client is None:
+        raise HTTPException(status_code=503, detail="Auth verification unavailable")
+    try:
+        found = client.auth.get_user(token)
+    except Exception:
+        return None
+    user = getattr(found, "user", None)
+    if user is None or not getattr(user, "is_anonymous", False):
+        return None
+    return str(user.id)
+
+
+@router.post("/claim-guest")
+async def claim_guest_purchase(
+    body: ClaimGuestRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Move what the app's guest session bought onto the account it signed into.
+
+    The app sends the anonymous session's access token, captured just before
+    signing in, under the new account's auth. See services/guest_purchase.py."""
+    from app.services.guest_purchase import claim_guest
+
+    guest_sid = _verified_guest_supabase_id(body.guest_token)
+    if not guest_sid:
+        raise HTTPException(status_code=403, detail="Not a guest session")
+    guest = db.query(User).filter(User.supabase_id == guest_sid).first()
+    if guest is None:
+        # The guest never reached the API, so it bought nothing through it.
+        return {"moved": False}
+    return {"moved": claim_guest(guest, current_user, db)}
+
+
 @router.get("/usage", response_model=UsageLimitsResponse)
 async def get_usage_limits(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """
