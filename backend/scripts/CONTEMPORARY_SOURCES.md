@@ -125,7 +125,18 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
   The Musical, filed as `youth`, was refiled as `musical` the same day).
   Fences had 16 pieces across sources, over the 12-per-play cap: Troy's four shortest
   (44270, 44274, 44279, 44280) are hidden as `pending`, so every character keeps a piece.
-  Adam Szymkowicz: asked by email the same day whether his 109 blog pieces may stay.
+  Adam Szymkowicz: a note asking whether his 109 blog pieces may stay is drafted for
+  Canberk to send (no address found on the blog).
+- **2026-11-17, Legally Blonde and Little Shop of Horrors** (`packets/mus3.py`): 10 pieces,
+  46161-46170, the two musicals actors searched most and found nothing for. Legally Blonde
+  from Great Theatre's adult packet (6), Little Shop from Hi-Desert Playhouse's sides (4; its
+  PDF set "tt", "ft" and "ti" as one stray glyph, mended in the script). Refused: Paulette
+  (45 words), Mushnik (the packet cuts him off mid-sentence).
+  Looked for recent (2016 on) plays and found the free web used up: every playwright site
+  that posts free monologues is in, on the deny list, asked, behind New Play Exchange's
+  paywall, or behind a bot check. Laine's 2025/26 packet is the 2024 one again. More recent
+  pieces now come by permission: Daniel Guyton and Christian Kiley said yes on 2026-11-11
+  and have follow-ups drafted.
   The two Madagascar: A Musical Adventure Jr. pieces from the Seattle Children's Theatre
   packet (44778, 44780) are hidden as `pending` with the reason recorded: a Jr. edition is
   on the deny list whatever packet carries it.
