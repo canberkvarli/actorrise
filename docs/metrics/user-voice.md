@@ -332,3 +332,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** student, school domain
 **They said:** "A dramatic optimistic monolouge that is good for Someone who is auditiooning for maria in the sopund of music"
 **Heard as:** content gap, an audition piece to match a musical role (Maria, The Sound of Music)
+
+## 2026-11-18
+
+**Replying to:** Canberk's reply on a personal search note (building a monologue book)
+**Account:** free, college actor
+**They said:** "It's a bit hard to pinpoint my typical casting age range, but I'd say it's around my current age to 40s... As for the types of songs I sing, they range from sincere and raw to comedic and showy. I'm still building my vocal repertoire."
+**Heard as:** happy; building a four piece monologue book like a vocal book

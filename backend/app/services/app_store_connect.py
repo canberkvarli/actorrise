@@ -108,11 +108,18 @@ def ensure_report_request(db: Session, cfg: Config, client: httpx.Client) -> str
     """The one ONGOING analytics request for the app. Created on first use."""
     existing = db.query(app_settings.AppSetting).filter(app_settings.AppSetting.key == REPORT_REQUEST_KEY).first()
     if existing and existing.value:
-        return existing.value
+        # A kept request can die on Apple's side (deleted, or stopped for
+        # inactivity) and then answers "not available" forever: from 2026-09-22
+        # the reports never arrived. Keep it only while Apple still has it live.
+        r = client.get(f"/v1/analyticsReportRequests/{existing.value}")
+        attrs = (r.json().get("data") or {}).get("attributes") or {} if r.status_code == 200 else {}
+        if r.status_code == 200 and not attrs.get("stoppedDueToInactivity"):
+            return existing.value
+        logger.warning("App Store Connect: kept report request %s is gone (%s %s), asking again", existing.value, r.status_code, attrs)
     # Apple keeps at most one ONGOING request per app; reuse if one exists.
     r = client.get(f"/v1/apps/{cfg.app_id}/analyticsReportRequests", params={"filter[accessType]": "ONGOING"})
     r.raise_for_status()
-    data = r.json().get("data") or []
+    data = [d for d in (r.json().get("data") or []) if not (d.get("attributes") or {}).get("stoppedDueToInactivity")]
     if data:
         rid = data[0]["id"]
     else:
@@ -132,13 +139,30 @@ def ensure_report_request(db: Session, cfg: Config, client: httpx.Client) -> str
     return rid
 
 
+def _report_names(client: httpx.Client, request_id: str) -> dict[str, str]:
+    """Every report the request holds, name -> id, across pages (no name filter: an exact
+    name that drifted by a word matched nothing, silently)."""
+    out: dict[str, str] = {}
+    url: Optional[str] = f"/v1/analyticsReportRequests/{request_id}/reports"
+    params: Optional[dict[str, Any]] = {"limit": 200}
+    while url:
+        r = client.get(url, params=params)
+        r.raise_for_status()
+        body = r.json()
+        for item in body.get("data") or []:
+            name = (item.get("attributes") or {}).get("name")
+            if name:
+                out[name] = item["id"]
+        url, params = (body.get("links") or {}).get("next"), None
+    return out
+
+
 def _report_id(client: httpx.Client, request_id: str, name: str) -> Optional[str]:
-    r = client.get(f"/v1/analyticsReportRequests/{request_id}/reports", params={"filter[name]": name, "limit": 200})
-    r.raise_for_status()
-    for item in r.json().get("data") or []:
-        if (item.get("attributes") or {}).get("name") == name:
-            return item["id"]
-    return None
+    names = _report_names(client, request_id)
+    if name in names:
+        return names[name]
+    folded = {k.casefold(): v for k, v in names.items()}
+    return folded.get(name.casefold())
 
 
 def _daily_instances(client: httpx.Client, report_id: str, limit: int) -> list[dict[str, Any]]:
@@ -206,7 +230,11 @@ def sync_analytics(db: Session, cfg: Config, days: int = 30) -> dict[str, Any]:
         ):
             rid = _report_id(client, request_id, name)
             if not rid:
-                out["notes"].append(f"{name}: not available yet (Apple publishes about a day after the request)")
+                have = sorted(_report_names(client, request_id))
+                out["notes"].append(
+                    f"{name}: not in request {request_id[:8]}, which holds {len(have)} reports"
+                    + (f" (e.g. {', '.join(have[:4])})" if have else " (Apple publishes about a day after a new request)")
+                )
                 continue
             for inst in _daily_instances(client, rid, days):
                 attrs = inst.get("attributes") or {}
