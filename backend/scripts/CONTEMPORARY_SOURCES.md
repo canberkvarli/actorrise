@@ -137,6 +137,21 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
   paywall, or behind a bot check. Laine's 2025/26 packet is the 2024 one again. More recent
   pieces now come by permission: Daniel Guyton and Christian Kiley said yes on 2026-11-11
   and have follow-ups drafted.
+- **2026-11-17, text pass over every contemporary stage piece** (2,246 scanned, then read
+  by eye in samples). Fixed in place, text and word counts both:
+  - 90 rows of scan leftovers: copyright footers inside the speech (Detainee, Doorsteps,
+    Wedding Song, What Happened to the Dollar, David Zarko's plays), "AUDIO CUE", "CUE#",
+    "ACTOR TIP" production notes (27 of them My Own Personal Mermaid), soft hyphens, words a
+    line break split ("self- esteem", "ad- ventures"), em dashes a PDF turned into "- ",
+    sentences glued at the full stop.
+  - 20 speakers named who had come in as a number from the Tumblr archive ("01"): Yellowman
+    (Alma, Eugene), I Never Saw Another Butterfly (Raja, Irena), Fun Home (Alison), Before
+    It Hits Home (Reba, Bailey), and three one-piece plays named from the archive's URL.
+  Hidden, all reversible: 31 of The S Paradox's 35 (`not_monologue`: its stage directions
+  came in as plain sentences), 3 more with another character's lines inside, 1 duplicate
+  (45173 = 44797), and 8 whose speaker could not be named for sure (`pending`,
+  `character_unknown`; the archive answers our bot 403). Visible contemporary stage
+  pieces after the pass: 2,203.
   The two Madagascar: A Musical Adventure Jr. pieces from the Seattle Children's Theatre
   packet (44778, 44780) are hidden as `pending` with the reason recorded: a Jr. edition is
   on the deny list whatever packet carries it.
