@@ -68,7 +68,7 @@ function start() {
   supabase.auth.getSession().then(({ data }) => {
     live = true;
     publish({ session: data.session, loading: false });
-    void identifyPurchasesUser(data.session?.user.id ?? null);
+    void identifyPurchasesUser(data.session?.user.id ?? null, data.session?.user.is_anonymous ?? false);
   }).catch(() => { live = true; publish({ loading: false }); });
   supabase.auth.onAuthStateChange((_event, next) => {
     live = true;
@@ -76,7 +76,7 @@ function start() {
     // RevenueCat is configured once at launch against the anonymous user. If
     // it isn't re-bound here, a purchase made after signing in is credited to
     // the anonymous uuid and the account it was bought for stays locked.
-    void identifyPurchasesUser(next?.user.id ?? null);
+    void identifyPurchasesUser(next?.user.id ?? null, next?.user.is_anonymous ?? false);
   });
 }
 

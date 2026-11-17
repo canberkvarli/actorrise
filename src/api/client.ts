@@ -188,6 +188,21 @@ export async function deleteAccount(): Promise<void> {
   if (!res.ok) throw new ApiError(res.status, `delete failed (${res.status})`);
 }
 
+/**
+ * Move what the guest session bought onto the account just signed into. The
+ * guest's own token proves this phone held it; the server checks it with
+ * Supabase (actorrise services/guest_purchase.py).
+ */
+export async function claimGuestPurchase(guestToken: string): Promise<{ moved: boolean }> {
+  const res = await fetch(`${API_URL}/api/subscriptions/claim-guest`, {
+    method: 'POST',
+    headers: { ...(await authHeaders()), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ guest_token: guestToken }),
+  });
+  if (!res.ok) throw new ApiError(res.status, `claim-guest failed (${res.status})`);
+  return res.json();
+}
+
 /** Save / unsave (spec §4, `POST`/`DELETE /api/monologues/{id}/favorite`). */
 export async function setFavorite(id: string | number, on: boolean): Promise<void> {
   const res = await fetch(`${API_URL}/api/monologues/${id}/favorite`, {

@@ -3,6 +3,7 @@ import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 
+import { claimGuestPurchase } from '../api/client';
 import { configMissing, supabase } from './supabase';
 
 /**
@@ -36,6 +37,38 @@ export type AuthResult =
 
 const redirectTo = Linking.createURL('auth-callback');
 
+type Guest = { id: string; token: string } | null;
+
+/** The guest session, taken before a sign-in replaces it. */
+async function currentGuest(): Promise<Guest> {
+  const { data } = await supabase.auth.getSession();
+  const s = data.session;
+  return s?.user.is_anonymous ? { id: s.user.id, token: s.access_token } : null;
+}
+
+/**
+ * Bring the guest's purchase across to the account it just became.
+ *
+ * Sign in with Apple, a returning account and Google without linking all make
+ * a different user from the guest, so an App Store purchase made as the guest
+ * stayed behind and the account was asked to pay again (2026-11-17, a paying
+ * subscriber). The server moves the row; the session refresh fires
+ * TOKEN_REFRESHED, which _layout answers by asking for the wall again.
+ */
+async function carryGuest(guest: Guest): Promise<void> {
+  if (!guest) return;
+  try {
+    const { data } = await supabase.auth.getSession();
+    const user = data.session?.user;
+    // Upgraded in place (linking, email sign-up): nothing to carry.
+    if (!user || user.is_anonymous || user.id === guest.id) return;
+    const { moved } = await claimGuestPurchase(guest.token);
+    if (moved) await supabase.auth.refreshSession();
+  } catch {
+    // Restore Purchases stays the manual way back.
+  }
+}
+
 export function isAppleAuthAvailable(): Promise<boolean> {
   return AppleAuthentication.isAvailableAsync();
 }
@@ -62,12 +95,14 @@ export async function signInWithApple(): Promise<AuthResult> {
       return { ok: false, message: 'Apple did not return an identity token.' };
     }
 
+    const guest = await currentGuest();
     const { error } = await supabase.auth.signInWithIdToken({
       provider: 'apple',
       token: credential.identityToken,
       nonce: rawNonce,
     });
     if (error) return { ok: false, message: error.message };
+    void carryGuest(guest);
 
     // Apple hands over the name exactly ONCE — on the very first authorization
     // for this app, and never again, not even after a reinstall. The identity
@@ -95,10 +130,12 @@ export async function signInWithApple(): Promise<AuthResult> {
 export async function signInWithEmail(email: string, password: string): Promise<AuthResult> {
   try {
     if (configMissing) return { ok: false, message: CONFIG_ERROR };
+    const guest = await currentGuest();
     const { error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,
     });
+    if (!error) void carryGuest(guest);
     if (error) {
       // Supabase answers the same way whether the address is unknown or the
       // password is wrong — deliberately, so the endpoint can't be used to
@@ -197,6 +234,7 @@ export async function signInWithGoogle(): Promise<AuthResult> {
     // upgrade; a fresh user just signs in.
     const { data: sessionData } = await supabase.auth.getSession();
     const isAnon = sessionData.session?.user.is_anonymous ?? false;
+    const guest = await currentGuest();
 
     const options = { redirectTo, skipBrowserRedirect: true } as const;
 
@@ -241,6 +279,7 @@ export async function signInWithGoogle(): Promise<AuthResult> {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) return { ok: false, message: error.message };
+    void carryGuest(guest);
     return { ok: true };
   } catch (e) {
     return { ok: false, message: (e as Error).message ?? 'Google sign-in failed.' };
