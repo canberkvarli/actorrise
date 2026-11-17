@@ -47,6 +47,7 @@ SERVER_EVENT_NAMES = frozenset(
         # Light iOS app's money trail. Until 2026-10-06 every delivery failed
         # on auth and two paying subscribers were invisible to the backend.
         "app_subscription_event",  # {type, product_id, store, period_type, environment, price, expires_at}
+        "auth_token_unverified",  # {reason, alg, mode} a token failed the signature/expiry check (core/security.py)
         # The audition tracker (services/auditions). Written where the fact is
         # certain: the row exists, the status moved, the email left.
         "audition_created",  # {source: parse|manual|onboarding, kind, has_sides, has_material}
