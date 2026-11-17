@@ -220,6 +220,66 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **They said:** "Thank you. I will use it today. And again just to be clear two person “scenes” are not in the database, just monologues?"
 **Heard as:** could not find the feature (scenes come from an uploaded script in ScenePartner, there is no scene library to browse)
 
+## 2026-10-27
+
+**Replying to:** a personal reply saying 271 public-domain two-person scenes are live
+**Account:** acting studio owner, comped Pro since July, class link with 0 joins
+**They said:** "This is great, thank you so much! But other than the classic playwrights like Ibsen, Shaw, Checkhov if you couid somehow add to your database two person scenes from films, both contemporary and from the sixties forward, as well as new streaming shows (for example "Mobland", "The Gentleman", "Homeland" etc) your website would be booming. I know without even trying I would be able to get you 150 or more actors to sign up."
+**Heard as:** content gap, contemporary film and TV two-person scenes; the classics are not what a studio teaches from
+
+## 2026-10-28
+
+**Replying to:** a reply asking what her class's assignment is
+**Account:** high school drama teacher, comped Plus, class link with about 110 students
+**They said:** "Yes it is for their final exam so it is due in Dec. I also have had two of my drama classes use it. However, some of them are not on the plus so it won't let them look up more monologues."
+**Heard as:** bug, class link hit its 60 cap mid-class on 10-27 (fixed the same evening, cap raised, the turned-away students granted); content ask, a love monologue page for the final
+
+## 2026-10-29
+
+**Replying to:** a class link nudge to a teacher who had a comp and a link
+**Account:** high school teacher, comped Plus, class link with 0 joins
+**They said:** "Can you clarify what students would use this for? I haven't had time to explore it yet."
+**Heard as:** did not understand what it does; teachers need the student use in one line before they try it
+
+## 2026-10-30
+
+**Replying to:** reply to a teacher, after the library fix
+**Account:** educator, signed up 2026-10-12, never switched on Plus
+**They said:** "I am in tech and have performances thru Nov 15. I want to check out your program on my laptop and give it good look when I have real time to invest. Would you be willing to extend your offer?"
+**Heard as:** happy, timing; teachers in production season need the offer to wait
+
+**Replying to:** class link follow-up
+**Account:** educator, comped Plus, class link unused
+**They said:** "Can you clarify what students would use this for? I haven't had time to explore it yet."
+**Heard as:** did not understand what it does; the teacher email says the offer, not the use
+
+**Replying to:** class plan offer ($499 through June)
+**Account:** educator, 114 students on a class link
+**They said:** "I don't want to take advantage and I don't think we can do the $499 this year. However, I will look at this for next year. There is one thing that the students are saying and that is that they keep getting the same options even if they change up their search fields. Do you have any tips for how they can get other options to come up?"
+**Heard as:** price (no budget this year, maybe next); search: 380 of 426 class searches ran on the Plays tab, which holds 28 contemporary teen pieces against about 300 in Film and TV, so different searches return the same few
+
+## 2026-11-08
+
+**Replying to:** day10
+**Account:** signed up late October, 1 saved, free
+**They said:** "I signed up because I was looking for suitable monologues for acting auditions and wanted to discover more plays and characters. I think the platform has potential, and I'd love to see more contemporary monologues, especially for young female actors."
+**Heard as:** content gap, contemporary stage for young women
+
+**Replying to:** Canberk's reply on the same thread
+**Account:** same actor, applying to US college acting programs for Fall 2027
+**They said:** "I'm particularly interested in contemporary comedic monologues with natural dialogue and interesting subtext. Could you let me know what you currently have in your library that might be suitable?"
+**Heard as:** content gap, contemporary comedic stage pieces for young women (8 in the Plays tab today)
+
+**Replying to:** personal search note
+**Account:** free, seven saves across film and TV
+**They said:** "Yep. Just for my book. Thanks for asking"
+**Heard as:** happy; builds a monologue book, not prepping one audition
+
+**Replying to:** site feedback, search
+**Account:** student on a class link
+**They said:** "contemporary"
+**Heard as:** content gap, contemporary (thumbs down on a search)
+
 ## 2026-11-11
 
 **Replying to:** search note (Yellowjackets)
@@ -265,3 +325,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** signed up 2026-11-15, free, read allowance spent the same day
 **They said:** "I'm auditioning for Hair at my university. I'm looking for it to be around a minute (maybe a little shorter), from a play, and action-centered so not telling a story but talking to someone."
 **Heard as:** audition brief (university musical, needs a play monologue); the search note started a conversation the same day
+
+## 2026-11-17
+
+**Replying to:** site feedback, search
+**Account:** student, school domain
+**They said:** "A dramatic optimistic monolouge that is good for Someone who is auditiooning for maria in the sopund of music"
+**Heard as:** content gap, an audition piece to match a musical role (Maria, The Sound of Music)
