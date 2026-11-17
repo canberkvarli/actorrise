@@ -29,7 +29,7 @@ const MONO_I = 'CourierPrime_400Regular_Italic';
  * long it ran. That is the proof no copy can give: it listened to them.
  *
  * After the first scene, the other keys are offered, "another, in a
- * different key?". After the second, the week: the offer's stage, with the
+ * different key?", with the week under them. After the second, the week: the offer's stage, with the
  * paywall itself unchanged behind it. "Not tonight" is always there and
  * says they will be back.
  */
@@ -104,6 +104,9 @@ export function DemoCurtain({ title, which, heard, of, seconds, others, termsLin
               );
             })}
           </View>
+          {/* The offer is on the first curtain too: the October buyers bought in their first sitting. */}
+          <PrimaryPill label={L('Or start the free week', 'Ya da ücretsiz haftayı başlat')} onPress={onWeek} height={50} block haptic="medium" style={{ marginTop: 18 }} />
+          {termsLine ? <Text style={{ marginTop: 10, textAlign: 'center', fontFamily: SANS, fontSize: 11.5, lineHeight: 16, color: c.chevron }}>{termsLine}</Text> : null}
         </Animated.View>
       ) : (
         <Animated.View entering={FadeIn.duration(600).delay(2600)} style={{ marginTop: 30 }}>

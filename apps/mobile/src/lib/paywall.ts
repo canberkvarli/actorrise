@@ -38,7 +38,8 @@ export function paywallHref(trigger: PaywallTrigger): Href {
  * Getters, so each line is read in the language of the moment it is shown.
  */
 export const WHY_LINE: Partial<Record<PaywallTrigger, string>> = {
-  get read_limit() { return pick('(three tonight. three more tomorrow.)', '(bu gece üç. yarın üç daha.)'); },
+  // The server gives one new piece a day (FREE_MONOLOGUE_READ_LIMIT_GHOSTLIGHT); say exactly that.
+  get read_limit() { return pick("(that was today's piece. one more tomorrow.)", '(bugünün parçası buydu. yarın bir tane daha.)'); },
   get run_limit() { return pick('(one partner run a month is free.)', '(ayda bir partner provası ücretsiz.)'); },
   get script_limit() { return pick('(one script of your own is free.)', '(kendi metinlerinden biri ücretsiz.)'); },
   get scene_limit() { return pick('(one scene of each script is free. the rest come with the whole stage.)', '(her metinden bir sahne ücretsiz. gerisi sahnenin tamamıyla gelir.)'); },

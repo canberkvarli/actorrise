@@ -215,6 +215,8 @@ select day, impressions, page_views, downloads, redownloads, iap_units, proceeds
 from app_store_daily where day >= current_date - 14 order by day
 """
 
+ASC_LAST_SYNC = "select value from app_settings where key = 'asc_last_sync'"
+
 APP_READS = """
 select count(*) filter (where created_at > now() - interval '7 days'),
        count(distinct user_id) filter (where created_at > now() - interval '7 days'),
@@ -543,6 +545,22 @@ def build(conn) -> str:
         else:
             store_rows.append((name, now_v if now_v is not None else "", before_v if before_v is not None else "",
                                change(int(now_v or 0), int(before_v or 0)) if isinstance(now_v, int) or now_v is None else ""))
+    # What Apple said on the last sync, so a blank row says why it is blank.
+    store_note = ""
+    if any(r[1] == "not from Apple yet" for r in store_rows):
+        last = q(ASC_LAST_SYNC)
+        if last and last[0][0]:
+            import json
+
+            try:
+                kept = json.loads(last[0][0])
+                notes = "; ".join(kept.get("notes") or []) or "no notes"
+                store_note = (f"Last sync {str(kept.get('synced_at', ''))[:16]}: analytics days {kept.get('engagement_days', '?')}, "
+                              f"download days {kept.get('download_days', '?')}. Apple said: {notes}\n")
+            except ValueError:
+                store_note = ""
+        else:
+            store_note = "No sync result kept yet (asc_last_sync is written from 2026-11-17).\n"
     reads7, readers7, reads14, readers14 = q(APP_READS)[0]
     guided = guided_section(conn)
     gap_overall, gap_kinds = gap_rows(q(GAP_SEARCHES))
@@ -584,6 +602,7 @@ def build(conn) -> str:
         "App Store Connect, synced at 16:00 UTC and about a day behind. Downloads are",
         "first-time installs.\n",
         table(("", "last 7 days", "7 before", "change"), store_rows),
+        store_note,
         "### In the app\n",
         f"{readers7} people read {reads7} pieces in the app this week, against {readers14} people and {reads14} the week before.",
         "Anonymous means they never signed in: the app lets you read without an account, and those people cannot be emailed.\n",

@@ -52,6 +52,7 @@ logger = logging.getLogger(__name__)
 API = "https://api.appstoreconnect.apple.com"
 DEFAULT_APP_ID = "6804278673"
 REPORT_REQUEST_KEY = "asc_analytics_report_request_id"
+LAST_SYNC_KEY = "asc_last_sync"
 
 ENGAGEMENT_REPORT = "App Store Discovery and Engagement"
 DOWNLOADS_REPORT = "App Store Downloads"
@@ -297,4 +298,12 @@ def sync_recent(db: Session) -> dict[str, Any]:
             logger.warning("App Store Connect %s failed: %s", fn.__name__, e)
             result["notes"].append(f"{fn.__name__}: {e}")
     result["synced_at"] = datetime.now(timezone.utc).isoformat()
+    # Kept where the brief can read it: for 50 days the analytics half
+    # returned nothing and the only record of why was a Render log line.
+    try:
+        import json
+
+        app_settings.set_value(db, LAST_SYNC_KEY, json.dumps(result, default=str)[:4000])
+    except Exception as e:  # noqa: BLE001
+        logger.warning("App Store Connect: could not keep the sync result: %s", e)
     return result

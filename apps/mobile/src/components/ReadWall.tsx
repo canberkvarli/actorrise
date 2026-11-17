@@ -19,6 +19,7 @@ import { PaperCard } from './PaperCard';
 import { PrimaryPill } from './PrimaryPill';
 import { Sketch } from './Sketches';
 import { PRIVACY_URL, TERMS_URL, useTrialOffer } from '../hooks/useTrialOffer';
+import { WHY_LINE } from '../lib/paywall';
 import { hardShadow } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -159,15 +160,15 @@ export function ReadWall({
           <PaperCard shadow={hardShadow.offsetSmall} style={{ paddingHorizontal: 22, paddingTop: 22, paddingBottom: 14 }}>
             <View style={{ alignItems: 'center' }}>
               <Sketch name="stageDoor" size={48} stroke={c.paperInk} accent={accent} weight={1.9} />
-              {/* Why the page stopped, before what it costs: the day's three
-                  are spent, and they come back. */}
+              {/* Why the page stopped, before what it costs: the day's piece
+                  is spent, and another comes tomorrow. */}
               <Text
                 numberOfLines={1}
                 adjustsFontSizeToFit
                 minimumFontScale={0.8}
                 style={{ marginTop: 8, fontFamily: 'CourierPrime_400Regular_Italic', fontSize: 13, letterSpacing: 0.6, textAlign: 'center', color: c.paperMuted }}
               >
-                (that's three tonight. three more tomorrow.)
+                {WHY_LINE.read_limit}
               </Text>
               <Text
                 style={{
