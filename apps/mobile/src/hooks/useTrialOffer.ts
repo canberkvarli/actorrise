@@ -208,6 +208,10 @@ export function useTrialOffer({
       }
     } catch (e) {
       const err = e as { userCancelled?: boolean; message?: string };
+      // Which way the Apple sheet ended: a cancel is the price talking, a failure is a bug.
+      const ended = { plan, trial: Boolean(trialLabel), from, trigger: trigger ?? null };
+      if (err.userCancelled) track('purchase_cancelled', { ...ended, message: null });
+      else track('purchase_failed', { ...ended, message: err.message ?? null });
       if (!err.userCancelled) setNote(err.message ?? L('Purchase failed.', 'Satın alma olmadı.'));
     } finally {
       setBusy(false);

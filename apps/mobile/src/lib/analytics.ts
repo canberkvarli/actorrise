@@ -133,6 +133,8 @@ export type Event =
   /** Did the paywall convert, and on which plan? */
   | { name: 'purchase_started'; props: { plan: 'annual' | 'monthly'; trial: boolean; from: string; trigger: string | null } }
   | { name: 'purchase_completed'; props: { plan: 'annual' | 'monthly'; trial: boolean; from: string; trigger: string | null } }
+  | { name: 'purchase_cancelled'; props: { plan: 'annual' | 'monthly'; trial: boolean; from: string; trigger: string | null; message: string | null } }
+  | { name: 'purchase_failed'; props: { plan: 'annual' | 'monthly'; trial: boolean; from: string; trigger: string | null; message: string | null } }
   /** Saves are the retention signal: someone building a book comes back. */
   | { name: 'monologue_saved'; props: { id: string } }
   /** Sign-in is the other one, and which method matters for what to keep. */
