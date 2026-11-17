@@ -33,7 +33,7 @@ const C_PAPER = {
 const C = { ...C_PAPER };
 /** Drawn looks. paper: warm paper, serif, orange italic key word. marker: off white, black sans,
  * a yellow highlighter swipe behind the key word (same idea as the reel's marker look). */
-export type StoryLook = "paper" | "marker" | "midnight";
+export type StoryLook = "paper" | "marker" | "midnight" | "bold";
 const HL = "#ffe15a";
 // Fills for drawn shapes and pages; the look sets them (dark shapes on the midnight sheet).
 let PAPER_FILL = "#f8f4ec";
@@ -45,7 +45,9 @@ const applyLook = (look: StoryLook) => {
   LOOK = look;
   Object.assign(C, C_PAPER, look === "marker" ? { paper: "#f7f5f0", ink: "#141414", inkSoft: "rgba(20,20,20,0.55)" }
     // midnight (2026-11-17): the reel's midnight look for drawn films. Deep blue black sheet, cream ink, warm amber key word.
-    : look === "midnight" ? { paper: "#0d1020", ink: "#f3efe6", inkSoft: "rgba(243,239,230,0.55)", orange: "#f2b75b" } : {});
+    : look === "midnight" ? { paper: "#0d1020", ink: "#f3efe6", inkSoft: "rgba(243,239,230,0.55)", orange: "#f2b75b" }
+    // bold (2026-11-22): the reel's bold look for drawn films. Orange field, near black ink, the key word in white.
+    : look === "bold" ? { paper: "#e8792b", ink: "#15100c", inkSoft: "rgba(21,16,12,0.6)", orange: "#ffffff" } : {});
   PAPER_FILL = look === "midnight" ? "#1a2038" : "#f8f4ec";
   PAGE = look === "midnight" ? "#262d4a" : "#ffffff";
   Object.assign(F, F_PAPER, {});
@@ -113,7 +115,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -207,13 +209,13 @@ const Headline: React.FC<{ text: string; accent: string; color: string; size?: n
   return (
     <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: size, lineHeight: 1.06, color, textAlign: "center" }}>
       {before}
-      {i >= 0 && LOOK === "marker" && (
+      {i >= 0 && (LOOK === "marker" || LOOK === "bold") && (
         <span style={{ position: "relative", display: "inline-block", color: C.ink, padding: "0 0.08em" }}>
-          <span style={{ position: "absolute", left: "-0.04em", right: "-0.04em", top: "0.22em", bottom: "0.06em", background: HL, transform: "rotate(-1.6deg) skewX(-8deg)", borderRadius: 6, zIndex: 0 }} />
+          <span style={{ position: "absolute", left: "-0.04em", right: "-0.04em", top: "0.22em", bottom: "0.06em", background: LOOK === "bold" ? "#ffffff" : HL, transform: "rotate(-1.6deg) skewX(-8deg)", borderRadius: 6, zIndex: 0 }} />
           <span style={{ position: "relative" }}>{accent}</span>
         </span>
       )}
-      {i >= 0 && LOOK !== "marker" && (
+      {i >= 0 && LOOK !== "marker" && LOOK !== "bold" && (
         <span style={{ fontFamily: F.serifI, fontStyle: "italic", fontWeight: 400, color: C.orange }}>{accent}</span>
       )}
       {after}
@@ -3473,6 +3475,104 @@ const Milo: React.FC<{ x: number; y: number; r?: number; panic?: number; hope?: 
   );
 };
 
+// ---------- Milo's corkboard of searched names (2026-11-22, backstage list: what actors searched this week) ----------
+/** Index cards pinned to cork. Each card shows a name; at its `flips` frame it turns over to its count of speeches
+ *  (real numbers from the library on the day), or, with `ask`, to an empty search bar with a blinking cursor.
+ *  4 cards sit 2 by 2 on the board (the hook scene), 3 in a column, 1 big. `milo`: he stands under the board;
+ *  `snag`: his scarf is caught on the card's pin and the tote spills when the card turns. */
+type Cards = { type: "cards"; seconds: number; line: string; accent: string; cards: { name: string; count?: number; unit?: string; ask?: boolean }[];
+  /** scene frame each card turns over (the first scene of a film starts 62 frames in); none = the names stay up */
+  flips?: number[]; milo?: boolean; snag?: boolean; size?: number };
+const CardsScene: React.FC<{ s: Cards }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const n = s.cards.length;
+  const lay: { x: number; y: number; w: number; h: number; fs: number; rot: number }[] =
+    n >= 4 ? [[290, 850], [690, 836], [286, 1082], [694, 1090]].map(([x, y], i) => ({ x, y, w: 356, h: 196, fs: 46, rot: [-3, 2.5, 2, -2.5][i] }))
+    : n === 1 ? [{ x: 500, y: 800, w: 720, h: 380, fs: 104, rot: -2 }]
+    : s.cards.map((_, i) => ({ x: 500, y: 660 + i * 262, w: 700, h: 226, fs: 62, rot: [-1.6, 1.4, -1][i % 3] }));
+  const board = n >= 4 ? [70, 706, 840, 520] : n === 1 ? [90, 560, 820, 480] : [100, 510, 800, 820];
+  const split = (t: string) => { const out: string[] = []; let cur = ""; for (const w of t.split(" ")) { if ((cur + " " + w).trim().length > 15 && cur) { out.push(cur); cur = w; } else cur = (cur + " " + w).trim(); } if (cur) out.push(cur); return out; };
+  const flipOf = (i: number) => s.flips?.[i];
+  const snagAt = flipOf(0) ?? 9999;
+  const mx = n === 1 ? 300 : 250, my = n === 1 ? 1250 : 1362;
+  return (
+    <AbsoluteFill>
+      {s.cards.map((_, i) => <Sfx key={`p${i}`} name="pop" at={6 + i * 5} vol={0.4} />)}
+      {s.cards.map((_, i) => flipOf(i) != null ? <Sfx key={`f${i}`} name={s.cards[i].ask ? "cine/toing" : "toss"} at={flipOf(i)!} vol={0.5} /> : null)}
+      {s.cards.map((c, i) => flipOf(i) != null && !c.ask ? <Sfx key={`n${i}`} name="cine/ping" at={flipOf(i)! + 7} vol={0.4} /> : null)}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the corkboard */}
+        <rect x={board[0] + 12} y={board[1] + 14} width={board[2]} height={board[3]} fill="rgba(21,16,12,0.18)" />
+        <Ink d={`M${board[0]} ${board[1]} L ${board[0] + board[2]} ${board[1]} L ${board[0] + board[2]} ${board[1] + board[3]} L ${board[0]} ${board[1] + board[3]} Z`} start={0} dur={14} w={12} color="#6b4a2c" fill={CORK} />
+        {[[0.13, 0.2], [0.82, 0.12], [0.5, 0.55], [0.2, 0.86], [0.9, 0.8], [0.66, 0.34]].map(([a, b], i) => (
+          <circle key={i} cx={board[0] + a * board[2]} cy={board[1] + b * board[3]} r={5} fill="rgba(107,74,44,0.35)" opacity={prog(f, 10, 18)} />
+        ))}
+        {s.cards.map((c, i) => {
+          const L = lay[i], at = 4 + i * 5, fl = flipOf(i);
+          const land = prog(f, at, at + 10);
+          if (land <= 0) return null;
+          const p = fl == null ? 0 : prog(f, fl, fl + 12);
+          const sx = Math.abs(Math.cos(p * Math.PI)), back = p > 0.5;
+          const lines = split(c.name), lh = L.fs * 1.12;
+          const blink = Math.floor(f / 9) % 2 === 0;
+          return (
+            <g key={i} transform={`translate(${L.x} ${L.y - (1 - land) * 40}) rotate(${L.rot + Math.sin(p * Math.PI) * 4})`} opacity={land}>
+              <g transform={`scale(${Math.max(0.02, sx)} ${1 + Math.sin(p * Math.PI) * 0.06})`}>
+                <rect x={-L.w / 2 + 8} y={-L.h / 2 + 10} width={L.w} height={L.h} fill="rgba(21,16,12,0.22)" />
+                <rect x={-L.w / 2} y={-L.h / 2} width={L.w} height={L.h} fill={back && !c.ask ? "#15100c" : "#fffdf7"} stroke="#15100c" strokeWidth={6} />
+                {!back && (
+                  <>
+                    <path d={`M${-L.w / 2 + 24} ${-L.h / 2 + 34} L ${L.w / 2 - 24} ${-L.h / 2 + 34}`} stroke="rgba(203,75,0,0.55)" strokeWidth={3} />
+                    {lines.map((t, k) => (
+                      <text key={k} x={0} y={(k - (lines.length - 1) / 2) * lh + L.fs * 0.36 + 10} textAnchor="middle" fontFamily={F.serif} fontWeight={600} fontSize={L.fs} fill="#15100c">{t}</text>
+                    ))}
+                  </>
+                )}
+                {back && !c.ask && (
+                  <>
+                    <text x={-L.w * 0.2} y={L.h * 0.26} textAnchor="middle" fontFamily={F.serif} fontWeight={600} fontSize={L.h * 0.74} fill="#f08a3c">{c.count}</text>
+                    <text x={L.w * 0.16} y={-6} textAnchor="middle" fontFamily={F.serifI} fontStyle="italic" fontSize={L.fs * 0.74} fill="#fbf7f0">{c.unit ?? (c.count === 1 ? "speech" : "speeches")}</text>
+                    <text x={L.w * 0.16} y={L.fs * 0.74} textAnchor="middle" fontFamily={F.serif} fontWeight={600} fontSize={L.fs * 0.5} fill="rgba(251,247,240,0.7)">{c.name.length > 18 ? c.name.slice(0, 17) + "…" : c.name}</text>
+                  </>
+                )}
+                {back && c.ask && (
+                  <>
+                    <rect x={-L.w / 2 + 44} y={-62} width={L.w - 88} height={124} rx={62} fill="#15100c" />
+                    <circle cx={-L.w / 2 + 116} cy={-4} r={22} fill="none" stroke="#fbf7f0" strokeWidth={7} />
+                    <path d={`M${-L.w / 2 + 132} 12 L ${-L.w / 2 + 150} 30`} stroke="#fbf7f0" strokeWidth={7} strokeLinecap="round" />
+                    {blink && <rect x={-L.w / 2 + 180} y={-32} width={7} height={64} fill="#f08a3c" />}
+                  </>
+                )}
+              </g>
+              {/* the pin */}
+              <circle cx={0} cy={-L.h / 2 + 4} r={n === 1 ? 20 : 14} fill="#c0392b" stroke="#15100c" strokeWidth={5} />
+            </g>
+          );
+        })}
+        {/* Milo under his board */}
+        {s.milo && (
+          <>
+            {s.snag && (
+              <g opacity={prog(f, 8, 16)}>
+                {/* the scarf, caught on the pin again */}
+                <path d={`M${mx + 20} ${my + 78} L ${mx + 62} ${my + 96} L ${lay[0].x - lay[0].w / 2 + 96 + Math.sin(f / 5) * 3} ${lay[0].y + lay[0].h / 2 - 4} L ${lay[0].x - lay[0].w / 2 + 56} ${lay[0].y + lay[0].h / 2 - 10} Z`} fill={MUSTARD} stroke="#15100c" strokeWidth={6} strokeLinejoin="round" />
+                <circle cx={lay[0].x - lay[0].w / 2 + 76} cy={lay[0].y + lay[0].h / 2 - 12} r={18} fill="#c0392b" stroke="#15100c" strokeWidth={5} />
+              </g>
+            )}
+            <Ink d={`M${mx - 170} ${my + 200} C ${mx - 170} ${my + 110}, ${mx - 80} ${my + 84}, ${mx} ${my + 84} C ${mx + 80} ${my + 84}, ${mx + 170} ${my + 110}, ${mx + 170} ${my + 200}`} start={4} dur={12} w={6} fill={LOOK === "bold" ? "#f8f4ec" : "rgba(232,121,43,0.35)"} />
+            <Milo x={mx} y={my} r={n === 1 ? 84 : 74} tilt={s.snag ? 10 : -6} panic={s.snag ? 0.7 * (1 - prog(f, snagAt, snagAt + 14)) : 0} hope={s.snag ? prog(f, snagAt + 6, snagAt + 22) : 0.4} start={4}
+              tote={n === 1 ? [720, 1330] : [590, 1420]} spill={s.snag ? prog(f, snagAt - 26, snagAt - 6) : 0} />
+          </>
+        )}
+      </svg>
+      {/* the hook: big, bold, there from frame 0 (it is the cover) */}
+      <AbsoluteFill style={{ alignItems: "center", padding: "262px 60px 0" }}>
+        <Rise at={2}><Headline text={s.line} accent={s.accent} color={C.ink} size={s.size ?? 92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 // ---------- the audition notice, the tower of Complete Works, buried (2026-11-21, story + how-to: Viola) ----------
 /** The notice on the wall: the play, the part circled in orange, what to bring. You look up at it, and the question marks start. */
 type Notice = { type: "notice"; seconds: number; line: string; accent: string; head: string; play: string; role: string; ask: string; /** scene frame the circle goes round the part (the first scene of a film starts 62 frames in) */ circleAt?: number; /** scene frame the question marks start */ askAt?: number };
@@ -3760,6 +3860,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "notice" ? <NoticeScene s={sc} /> :
       sc.type === "tower" ? <TowerScene s={sc} /> :
       sc.type === "buried" ? <BuriedScene s={sc} /> :
+      sc.type === "cards" ? <CardsScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

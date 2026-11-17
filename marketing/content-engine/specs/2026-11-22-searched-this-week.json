@@ -1,0 +1,658 @@
+{
+  "id": "2026-11-22-searched-this-week",
+  "look": "bold",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "The characters actors searched most this week. I pinned every name to my corkboard.",
+        "say": "[amused] The characters actors searched most this week. I pinned every name to my corkboard.",
+        "at": 0.354,
+        "sub": false,
+        "words": [
+          {
+            "w": "The",
+            "s": 0.0,
+            "e": 0.01
+          },
+          {
+            "w": "characters",
+            "s": 0.045,
+            "e": 0.394
+          },
+          {
+            "w": "actors",
+            "s": 0.449,
+            "e": 0.778
+          },
+          {
+            "w": "searched",
+            "s": 0.82,
+            "e": 1.162
+          },
+          {
+            "w": "most",
+            "s": 1.213,
+            "e": 1.418
+          },
+          {
+            "w": "this",
+            "s": 1.443,
+            "e": 1.546
+          },
+          {
+            "w": "week.",
+            "s": 1.61,
+            "e": 2.314
+          },
+          {
+            "w": "I",
+            "s": 2.538,
+            "e": 2.762
+          },
+          {
+            "w": "pinned",
+            "s": 2.798,
+            "e": 3.018
+          },
+          {
+            "w": "every",
+            "s": 3.071,
+            "e": 3.338
+          },
+          {
+            "w": "name",
+            "s": 3.376,
+            "e": 3.53
+          },
+          {
+            "w": "to",
+            "s": 3.551,
+            "e": 3.594
+          },
+          {
+            "w": "my",
+            "s": 3.636,
+            "e": 3.722
+          },
+          {
+            "w": "corkboard.",
+            "s": 3.786,
+            "e": 4.362
+          }
+        ],
+        "dur": 4.482
+      },
+      {
+        "text": "Yellowjackets has twelve speeches in the library, Stand by Me has three, and Interview with the Vampire has two.",
+        "say": "Yellowjackets has twelve speeches in the library, Stand by Me has three, and Interview with the Vampire has two.",
+        "at": 4.817,
+        "sub": false,
+        "words": [
+          {
+            "w": "Yellowjackets",
+            "s": 0.0,
+            "e": 0.923
+          },
+          {
+            "w": "has",
+            "s": 0.971,
+            "e": 1.115
+          },
+          {
+            "w": "twelve",
+            "s": 1.152,
+            "e": 1.371
+          },
+          {
+            "w": "speeches",
+            "s": 1.414,
+            "e": 1.755
+          },
+          {
+            "w": "in",
+            "s": 1.798,
+            "e": 1.883
+          },
+          {
+            "w": "the",
+            "s": 1.899,
+            "e": 1.947
+          },
+          {
+            "w": "library,",
+            "s": 1.995,
+            "e": 2.779
+          },
+          {
+            "w": "Stand",
+            "s": 2.833,
+            "e": 3.099
+          },
+          {
+            "w": "by",
+            "s": 3.142,
+            "e": 3.227
+          },
+          {
+            "w": "Me",
+            "s": 3.313,
+            "e": 3.483
+          },
+          {
+            "w": "has",
+            "s": 3.515,
+            "e": 3.611
+          },
+          {
+            "w": "three,",
+            "s": 3.675,
+            "e": 4.059
+          },
+          {
+            "w": "and",
+            "s": 4.171,
+            "e": 4.507
+          },
+          {
+            "w": "Interview",
+            "s": 4.546,
+            "e": 4.891
+          },
+          {
+            "w": "with",
+            "s": 4.917,
+            "e": 5.019
+          },
+          {
+            "w": "the",
+            "s": 5.035,
+            "e": 5.083
+          },
+          {
+            "w": "Vampire",
+            "s": 5.131,
+            "e": 5.467
+          },
+          {
+            "w": "has",
+            "s": 5.515,
+            "e": 5.659
+          },
+          {
+            "w": "two.",
+            "s": 5.755,
+            "e": 6.107
+          }
+        ],
+        "dur": 6.227
+      },
+      {
+        "text": "And then a play I have never heard of, Why Marry, so I opened Ghost Light.",
+        "say": "[playful] And then a play I have never heard of, Why Marry, so I opened Ghost Light.",
+        "at": 11.68,
+        "words": [
+          {
+            "w": "And",
+            "s": 0.0,
+            "e": 0.012
+          },
+          {
+            "w": "then",
+            "s": 0.038,
+            "e": 0.14
+          },
+          {
+            "w": "a",
+            "s": 0.172,
+            "e": 0.204
+          },
+          {
+            "w": "play",
+            "s": 0.268,
+            "e": 0.524
+          },
+          {
+            "w": "I",
+            "s": 0.588,
+            "e": 0.652
+          },
+          {
+            "w": "have",
+            "s": 0.678,
+            "e": 0.78
+          },
+          {
+            "w": "never",
+            "s": 0.812,
+            "e": 0.972
+          },
+          {
+            "w": "heard",
+            "s": 1.014,
+            "e": 1.228
+          },
+          {
+            "w": "of,",
+            "s": 1.27,
+            "e": 1.42
+          },
+          {
+            "w": "Why",
+            "s": 1.564,
+            "e": 1.996
+          },
+          {
+            "w": "Marry,",
+            "s": 2.06,
+            "e": 2.636
+          },
+          {
+            "w": "so",
+            "s": 2.7,
+            "e": 2.828
+          },
+          {
+            "w": "I",
+            "s": 2.86,
+            "e": 2.892
+          },
+          {
+            "w": "opened",
+            "s": 2.938,
+            "e": 3.212
+          },
+          {
+            "w": "Ghost",
+            "s": 3.266,
+            "e": 3.532
+          },
+          {
+            "w": "Light.",
+            "s": 3.574,
+            "e": 4.204
+          }
+        ],
+        "dur": 4.324
+      },
+      {
+        "text": "I tap Search, and I type Why Marry.",
+        "say": "[upbeat] I tap Search, and I type Why Marry.",
+        "at": 16.356,
+        "sub": false,
+        "words": [
+          {
+            "w": "I",
+            "s": 0.0,
+            "e": 0.008
+          },
+          {
+            "w": "tap",
+            "s": 0.072,
+            "e": 0.264
+          },
+          {
+            "w": "Search,",
+            "s": 0.328,
+            "e": 0.84
+          },
+          {
+            "w": "and",
+            "s": 0.872,
+            "e": 0.968
+          },
+          {
+            "w": "I",
+            "s": 1.0,
+            "e": 1.032
+          },
+          {
+            "w": "type",
+            "s": 1.096,
+            "e": 1.352
+          },
+          {
+            "w": "Why",
+            "s": 1.48,
+            "e": 1.864
+          },
+          {
+            "w": "Marry.",
+            "s": 1.928,
+            "e": 2.312
+          }
+        ],
+        "dur": 2.432
+      },
+      {
+        "text": "And up comes the Judge, by Jesse Lynch Williams, so I open him and read it out loud.",
+        "say": "[delighted] And up comes the Judge, by Jesse Lynch Williams, so I open him and read it out loud.",
+        "at": 19.36,
+        "sub": false,
+        "words": [
+          {
+            "w": "And",
+            "s": 0.0,
+            "e": 0.012
+          },
+          {
+            "w": "up",
+            "s": 0.076,
+            "e": 0.204
+          },
+          {
+            "w": "comes",
+            "s": 0.246,
+            "e": 0.46
+          },
+          {
+            "w": "the",
+            "s": 0.476,
+            "e": 0.524
+          },
+          {
+            "w": "Judge,",
+            "s": 0.588,
+            "e": 1.1
+          },
+          {
+            "w": "by",
+            "s": 1.164,
+            "e": 1.292
+          },
+          {
+            "w": "Jesse",
+            "s": 1.346,
+            "e": 1.612
+          },
+          {
+            "w": "Lynch",
+            "s": 1.654,
+            "e": 1.868
+          },
+          {
+            "w": "Williams,",
+            "s": 1.91,
+            "e": 2.572
+          },
+          {
+            "w": "so",
+            "s": 2.614,
+            "e": 2.7
+          },
+          {
+            "w": "I",
+            "s": 2.764,
+            "e": 2.828
+          },
+          {
+            "w": "open",
+            "s": 2.879,
+            "e": 3.084
+          },
+          {
+            "w": "him",
+            "s": 3.132,
+            "e": 3.276
+          },
+          {
+            "w": "and",
+            "s": 3.324,
+            "e": 3.468
+          },
+          {
+            "w": "read",
+            "s": 3.506,
+            "e": 3.66
+          },
+          {
+            "w": "it",
+            "s": 3.682,
+            "e": 3.724
+          },
+          {
+            "w": "out",
+            "s": 3.772,
+            "e": 3.916
+          },
+          {
+            "w": "loud.",
+            "s": 3.993,
+            "e": 4.716
+          }
+        ],
+        "dur": 4.836
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 24.594,
+        "sub": false,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.09
+          },
+          {
+            "w": "Ghost",
+            "s": 0.132,
+            "e": 0.346
+          },
+          {
+            "w": "Light.",
+            "s": 0.388,
+            "e": 0.826
+          },
+          {
+            "w": "Built",
+            "s": 0.863,
+            "e": 1.05
+          },
+          {
+            "w": "by",
+            "s": 1.114,
+            "e": 1.242
+          },
+          {
+            "w": "a",
+            "s": 1.274,
+            "e": 1.306
+          },
+          {
+            "w": "working",
+            "s": 1.346,
+            "e": 1.626
+          },
+          {
+            "w": "actor.",
+            "s": 1.679,
+            "e": 2.074
+          }
+        ],
+        "dur": 2.194
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-22-searched-this-week/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.25
+  },
+  "scenes": [
+    {
+      "type": "cards",
+      "seconds": 4.717,
+      "line": "The characters actors searched most this week.",
+      "accent": "this week.",
+      "milo": true,
+      "cards": [
+        {
+          "name": "Yellowjackets"
+        },
+        {
+          "name": "Stand by Me"
+        },
+        {
+          "name": "Interview with the Vampire"
+        },
+        {
+          "name": "Why Marry?"
+        }
+      ]
+    },
+    {
+      "type": "cards",
+      "seconds": 6.863,
+      "line": "In the library.",
+      "accent": "library.",
+      "size": 96,
+      "cards": [
+        {
+          "name": "Yellowjackets",
+          "count": 12
+        },
+        {
+          "name": "Stand by Me",
+          "count": 3
+        },
+        {
+          "name": "Interview with the Vampire",
+          "count": 2
+        }
+      ],
+      "flips": [
+        58,
+        132,
+        194
+      ]
+    },
+    {
+      "type": "cards",
+      "seconds": 4.676,
+      "line": "Never heard of it.",
+      "accent": "it.",
+      "size": 100,
+      "milo": true,
+      "snag": true,
+      "cards": [
+        {
+          "name": "Why Marry?",
+          "ask": true
+        }
+      ],
+      "flips": [
+        104
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 3.004,
+      "line": "Type the name.",
+      "accent": "the name.",
+      "shots": [
+        {
+          "src": "story/2026-11-22-searched-this-week/book.png",
+          "at": 0,
+          "tap": {
+            "x": 0.171,
+            "y": 0.93,
+            "at": 12
+          }
+        },
+        {
+          "src": "story/2026-11-22-searched-this-week/search.png",
+          "at": 48,
+          "note": {
+            "x": 0.05,
+            "y": 0.492,
+            "w": 0.9,
+            "h": 0.2,
+            "text": "Why Marry??",
+            "rot": -2
+          }
+        },
+        {
+          "src": "story/2026-11-22-searched-this-week/typed.png",
+          "at": 67,
+          "fade": true,
+          "note": {
+            "x": 0.05,
+            "y": 0.492,
+            "w": 0.9,
+            "h": 0.2,
+            "text": "Why Marry??",
+            "rot": -2
+          }
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 5.184,
+      "line": "Open one. Read it.",
+      "accent": "Read it.",
+      "shots": [
+        {
+          "src": "story/2026-11-22-searched-this-week/typed.png",
+          "at": 0,
+          "note": {
+            "x": 0.05,
+            "y": 0.492,
+            "w": 0.9,
+            "h": 0.2,
+            "text": "Why Marry??",
+            "rot": -2
+          },
+          "tap": {
+            "x": 0.856,
+            "y": 0.312,
+            "at": 0
+          }
+        },
+        {
+          "src": "story/2026-11-22-searched-this-week/results.png",
+          "at": 14,
+          "tap": {
+            "x": 0.5,
+            "y": 0.3,
+            "at": 84
+          }
+        },
+        {
+          "src": "story/2026-11-22-searched-this-week/open.png",
+          "at": 96
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "tiktok": "The characters actors searched most this week. Yellowjackets, Stand by Me, Interview with the Vampire, and a play called Why Marry? #actorslife #monologue #audition #actortok #actors",
+    "youtube_title": "The characters actors searched most this week.",
+    "youtube_description": "Yellowjackets has 12 speeches in Ghost Light, Stand by Me has 3, Interview with the Vampire has 2. Then Milo typed a play he had never heard of, Why Marry? by Jesse Lynch Williams, and the Judge came up.",
+    "instagram": "The characters actors searched most this week. Which one would you bring? (list of the four names and counts, link in bio)"
+  },
+  "cover_ms": 1200,
+  "source": {
+    "plan": "Callboard row 2026-11-22 (wildcard, backstage, bold), the earliest planned row on 2026-11-17",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "checked": "2026-11-17, search_logs last 7 days (signed in actors) and visible monologues (review_status null): Yellowjackets 6 searches from 4 actors, 12 speeches; Stand by Me 6 from 1, 3; Interview with the Vampire 4 from 2, 2; Why Marry? 3 from 1, 18 (play 3245, Jesse Lynch Williams, public domain)",
+    "changed_from_plan": "Black Swan, Anastasia, Atticus Finch and Lady Bird were not searched in the last 7 days, so they are not on the cards; the names shown are shows, films and a play rather than characters; the last card is Why Marry?, which turns into the empty search bar",
+    "app": "Ghost Light web preview built from main apps/mobile plus web-preview.patch, dark, demo account; app.json platforms needed web added in the throwaway copy",
+    "flow": "flows/search-why-marry.json: Book, Search, typed Why Marry?, 30 monologues, the Judge 38987 opened (public domain text)",
+    "sticky_note": "Tonight's speech showed a line from Radium Girls (in copyright); the drawn sticky note sits over it",
+    "voice": "George, one take, Scribe 0.97, 1.25x with fit_take.py",
+    "new_scene_types": "cards (corkboard index cards that flip to a count or an empty search bar); new StoryVideo look bold",
+    "motifs": "milo-corkboard-index-cards,cards-flip-to-counts,scarf-caught-on-the-pushpin,tote-spills,card-turns-into-search-bar",
+    "end": "specs/2026-11-22-searched-this-week-end.json, joined with scripts/join.sh",
+    "feature": "character"
+  }
+}
