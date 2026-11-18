@@ -76,6 +76,12 @@ export interface ReadMark {
   position: number;
 }
 
+/** The actor's own words for "action" and "cut", tokenized. Absent or empty: the default word. */
+export interface CueWords {
+  action?: string[];
+  cut?: string[];
+}
+
 export interface CueInput {
   phase: TapePhase;
   heard: Heard;
@@ -84,6 +90,8 @@ export interface CueInput {
   script?: string[];
   /** The reading position over this take, oldest first. Only used while rolling. */
   reads?: ReadMark[];
+  /** The actor's own cue words, if any. */
+  custom?: CueWords;
 }
 
 export interface CueHit {
@@ -117,14 +125,30 @@ export function positionAt(reads: ReadMark[], t: number): number {
   return p;
 }
 
-/** Is a word like `spoken` in the text from `from`, within the look-ahead? */
-function aheadInScript(script: string[], from: number, spoken: string): boolean {
+/** Is the cue's phrase in the text from `from`, within the look-ahead? */
+function aheadInScript(script: string[], from: number, phrase: string[]): boolean {
   const end = Math.min(script.length, from + LOOK_AHEAD);
+  const like = (w: string | undefined, p: string) => w !== undefined && (w === p || wordsMatch(w, p) || (cueOf(p) !== null && cueOf(w) === cueOf(p)));
   for (let i = Math.max(0, from); i < end; i++) {
-    const w = script[i];
-    if (w === spoken || cueOf(w) === cueOf(spoken) || wordsMatch(w, spoken)) return true;
+    if (phrase.every((p, j) => like(script[i + j], p))) return true;
   }
   return false;
+}
+
+/**
+ * The cue whose words end at `end` in what was heard, and how many words it
+ * took. A word the actor chose stands in for "action" or "cut" (and the
+ * default word no longer counts); "again" and "keeper" stay as they are.
+ */
+function cueEndingAt(words: string[], end: number, custom: CueWords): { cue: Cue; len: number } | null {
+  for (const cue of ['action', 'cut'] as const) {
+    const phrase = custom[cue];
+    if (!phrase?.length || end - phrase.length + 1 < 0) continue;
+    if (phrase.every((p, j) => words[end - phrase.length + 1 + j] === p)) return { cue, len: phrase.length };
+  }
+  const c = cueOf(words[end]);
+  if (!c || ((c === 'action' || c === 'cut') && custom[c]?.length)) return null;
+  return { cue: c, len: 1 };
 }
 
 /**
@@ -134,33 +158,31 @@ function aheadInScript(script: string[], from: number, spoken: string): boolean 
  * needs time to pass with nothing new). Once it returns a hit, reset what the
  * ear has heard, or the same words will be read as the same cue again.
  */
-export function hearCue({ phase, heard, now, script = [], reads = [] }: CueInput): CueHit | null {
+export function hearCue({ phase, heard, now, script = [], reads = [], custom = {} }: CueInput): CueHit | null {
   const { words, at } = heard;
   const n = words.length;
   if (!n) return null;
 
+  const last = cueEndingAt(words, n - 1, custom);
+
   // "cut cut": always, the moment the second one lands.
-  if (
-    phase === 'rolling' &&
-    n >= 2 &&
-    cueOf(words[n - 1]) === 'cut' &&
-    cueOf(words[n - 2]) === 'cut' &&
-    at[n - 1] - at[n - 2] <= DOUBLE_WITHIN_MS
-  ) {
-    return { cue: 'cut', from: n - 2, saidAt: at[n - 2], lastWordAt: n > 2 ? at[n - 3] : null };
+  if (phase === 'rolling' && n >= 2 && last?.cue === 'cut' && last.len === 1) {
+    const prev = cueEndingAt(words, n - 2, custom);
+    if (prev?.cue === 'cut' && prev.len === 1 && at[n - 1] - at[n - 2] <= DOUBLE_WITHIN_MS) {
+      return { cue: 'cut', from: n - 2, saidAt: at[n - 2], lastWordAt: n > 2 ? at[n - 3] : null };
+    }
   }
 
   // Nothing after it for a beat.
   if (now - at[n - 1] < SETTLE_MS) return null;
 
-  const spoken = words[n - 1];
-  const heardCue = cueOf(spoken);
-  if (!heardCue) return null;
-  const cue = inPhase(phase, heardCue);
+  if (!last) return null;
+  const cue = inPhase(phase, last.cue);
   if (!cue) return null;
+  const phrase = words.slice(n - last.len);
 
-  // The utterance: the cue word, with at most one lead-in in front of it, said close to it.
-  let from = n - 1;
+  // The utterance: the cue's words, with at most one lead-in in front of them, said close to them.
+  let from = n - last.len;
   if (from > 0 && LEAD_INS.has(words[from - 1]) && at[from] - at[from - 1] < PAUSE_MS) from -= 1;
 
   const lastWordAt = from > 0 ? at[from - 1] : null;
@@ -177,7 +199,7 @@ export function hearCue({ phase, heard, now, script = [], reads = [] }: CueInput
   // The word moved the reading on: it was read as the text.
   if (positionAt(reads, now) > before) return null;
   // The actor is about to say it.
-  if (aheadInScript(script, before, spoken)) return null;
+  if (aheadInScript(script, before, phrase)) return null;
 
   return { cue, from, saidAt: at[from], lastWordAt };
 }

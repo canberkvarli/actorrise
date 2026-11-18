@@ -154,6 +154,36 @@ describe('hearCue: watching it back', () => {
   });
 });
 
+describe('hearCue: words of your own', () => {
+  const custom = { action: ['rolling'], cut: ['thank', 'you'] };
+
+  it('rolls on the word you chose, and no longer on "action"', () => {
+    const a = say('', [['rolling', 0]]);
+    expect(hearCue({ phase: 'ready', heard: a.heard, now: a.last + SETTLE_MS, custom })?.cue).toBe('action');
+    const b = say('', [['action', 0]]);
+    expect(hearCue({ phase: 'ready', heard: b.heard, now: b.last + SETTLE_MS, custom })).toBeNull();
+  });
+
+  it('cuts on a phrase of two words said after a pause', () => {
+    const text = 'I have waited all my life for this one day.';
+    const { heard, reads, script, last } = say(text, [...flowing(text), ['thank', 900], ['you', 250]]);
+    const hit = hearCue({ phase: 'rolling', heard, now: last + SETTLE_MS, script, reads, custom });
+    expect(hit?.cue).toBe('cut');
+    expect(heard.words[hit!.from]).toBe('thank');
+  });
+
+  it('keeps rolling when the phrase is the next line', () => {
+    const text = 'Thank you for nothing, she said.';
+    const { heard, reads, script, last } = say(text, [['thank', 900], ['you', 250]]);
+    expect(hearCue({ phase: 'rolling', heard, now: last + SETTLE_MS, script, reads, custom })).toBeNull();
+  });
+
+  it('still keeps "again" and "keeper"', () => {
+    const { heard, last } = say('', [['keeper', 0]]);
+    expect(hearCue({ phase: 'review', heard, now: last + SETTLE_MS, custom })?.cue).toBe('keeper');
+  });
+});
+
 describe('takeEnd', () => {
   it('keeps a held beat after the last word and stops before the cut was said', () => {
     const end = takeEnd({ startedAt: 0, stoppedAt: 20_000, hit: { lastWordAt: 15_000, saidAt: 17_000 } });

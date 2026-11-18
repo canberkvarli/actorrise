@@ -19,6 +19,14 @@ export interface TapeSettings {
   tones: boolean;
   /** Seconds between "action" and rolling, to settle into it. */
   beat: 0 | 2 | 3;
+  /** Seconds counted down after a tap on the record button, to walk back to your mark. 0 rolls at once. */
+  countdown: 0 | 3 | 5 | 10;
+  /** The words that roll and stop it, when you'd rather not say "action" and "cut". Empty is the default word. */
+  actionWord: string;
+  cutWord: string;
+  /** The lines under the lens: how big, and a dark band behind them so they read on any picture. */
+  prompterSize: 'S' | 'M' | 'L';
+  prompterBacking: boolean;
   facing: 'front' | 'back';
   /** On "cut": the take goes to Tapes and the room is ready again, or it plays straight back. */
   afterCut: 'tapes' | 'play';
@@ -34,6 +42,11 @@ export interface TapeSettings {
 export const DEFAULT_SETTINGS: TapeSettings = {
   tones: true,
   beat: 0,
+  countdown: 3,
+  actionWord: '',
+  cutWord: '',
+  prompterSize: 'M',
+  prompterBacking: true,
   facing: 'front',
   afterCut: 'tapes',
   quality: '1080p',
@@ -55,6 +68,14 @@ export async function loadTapeSettings(): Promise<TapeSettings> {
 
 export async function saveTapeSettings(s: TapeSettings): Promise<void> {
   try { await AsyncStorage.setItem(KEY, JSON.stringify(s)); } catch { /* a convenience */ }
+}
+
+export const EMPTY_SLATE: Slate = { name: '', height: '', location: '', rep: '' };
+
+/** The word to say for a cue, as the room writes it in its hints. */
+export function cueWord(s: TapeSettings, cue: 'action' | 'cut'): string {
+  const w = (cue === 'action' ? s.actionWord : s.cutWord).trim().toLowerCase();
+  return w || cue;
 }
 
 /** The slate's lines, as the prompter shows them. Empty until a name is in. */

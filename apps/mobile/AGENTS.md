@@ -21,6 +21,7 @@ Not a line-reader or scene-partner app — that is explicitly v2.
 | `src/theme/layout.ts` | Fixed row geometry the scroll spotlight depends on. |
 | `src/data/monologues.ts` | Step 0 fixtures. Replaced by the API in Step 3. |
 | `app/tape/[id].tsx` | The self-tape room (CAN-23). Camera, prompter, "action" / "cut" / "again" / "keeper" by voice, takes, save and send. |
+| `src/components/TapeSettingsSheet.tsx` | The tape room's settings (countdown, your own words for action and cut, prompter size and band, slate with Clear), shared by the room and the Tape page (`app/tapes.tsx`). Settings live in `src/lib/tapeSettings.ts`. |
 | `src/rehearsal/tape-cues.ts` | Pure: is a heard word a cue or a line of the script. Pinned by `tape-cues.test.ts`. Keep in step with the web when it gets the room. |
 | `src/rehearsal/native/tape-ear.ts` | The room's recogniser: every word with the moment it arrived, restarted when the camera's audio session deafens it. |
 | `src/lib/takes.ts` | Takes, on the phone only: files in documents/tapes, the list in AsyncStorage. No server, no database. |

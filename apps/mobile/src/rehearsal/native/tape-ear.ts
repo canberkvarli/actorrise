@@ -110,9 +110,9 @@ export class TapeEar {
     ];
   }
 
-  /** The words of the piece, and the cues, for Apple to listen for. */
-  prime(script: string[]) {
-    this.keywords = ['action', 'cut', 'again', 'keeper', ...new Set(script)].slice(0, 100);
+  /** The words of the piece, and the cues (the actor's own among them), for Apple to listen for. */
+  prime(script: string[], cues: string[] = []) {
+    this.keywords = [...new Set([...cues, 'action', 'cut', 'again', 'keeper', ...script])].slice(0, 100);
   }
 
   listen() {

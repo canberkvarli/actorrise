@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Pressable, ScrollView, Share, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ActionSheetIOS, ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -36,9 +36,6 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { getMonologueById, type Monologue } from '../../src/data/monologues';
-import { getMonologue } from '../../src/api/client';
-import { apiToMonologue } from '../../src/data/adapt';
-import { getOffline } from '../../src/lib/offline';
 import { unitsOf } from '../../src/lib/segments';
 import { useSession } from '../../src/lib/useSession';
 import { useFavorites, useSavedPiece } from '../../src/hooks/useFavorites';
@@ -57,7 +54,6 @@ import { displayRuns } from '../../src/rehearsal/display-words';
 import { hearCue, lineAt, takeEnd, type CueHit, type Heard, type ReadMark, type TapePhase } from '../../src/rehearsal/tape-cues';
 import { TapeEar } from '../../src/rehearsal/native/tape-ear';
 import { cameraTrouble } from '../../src/rehearsal/camera-trouble';
-import { useIsFounder } from '../../src/lib/founder';
 import {
   addTake,
   allTakes,
@@ -73,7 +69,10 @@ import {
   type Take,
 } from '../../src/lib/takes';
 import { canExport, canJoin, exportJoined, exportTake } from '../../modules/tape-export';
-import { castingName, DEFAULT_SETTINGS, loadTapeSettings, saveTapeSettings, slateLines, type TapeSettings } from '../../src/lib/tapeSettings';
+import { castingName, cueWord, DEFAULT_SETTINGS, loadTapeSettings, saveTapeSettings, slateLines, type TapeSettings } from '../../src/lib/tapeSettings';
+import { Filter, Sheet, SheetLabel, TapeSettingsSheet } from '../../src/components/TapeSettingsSheet';
+import { tokenize } from '../../src/rehearsal/word-match';
+import { loadPiece } from '../../src/lib/loadPiece';
 
 /**
  * Tape it: the self-tape room.
@@ -120,7 +119,7 @@ const TYPE = 'CourierPrime_400Regular';
 const TYPE_I = 'CourierPrime_400Regular_Italic';
 
 export default function TapeRoom() {
-  const { id, take: takeParam, name: nameParam, audition: auditionParam } = useLocalSearchParams<{ id: string; take?: string; name?: string; audition?: string }>();
+  const { id, take: takeParam, name: nameParam, audition: auditionParam, trim: trimParam } = useLocalSearchParams<{ id: string; take?: string; name?: string; audition?: string; trim?: string }>();
   const router = useRouter();
   const goBack = useGoBack('/search');
   const reduce = useReducedMotion();
@@ -265,7 +264,11 @@ export default function TapeRoom() {
     track('app_tape_intro', { allowed });
   }, [refused, camPerm, micPerm, askCam, askMic, allowed]);
 
-  // A piece's takes; and, opened from Tapes, straight onto the one picked.
+  // A piece's takes; and, opened from Tapes or the Book, straight onto the one picked.
+  // Clearing the take from the params runs this again: that pass must not
+  // send the room back to the camera over the take it just opened.
+  const opened = useRef<string | null>(null);
+  const trimNext = useRef(false);
   useEffect(() => {
     const piece = id || FREE_TAPE;
     let alive = true;
@@ -274,10 +277,13 @@ export default function TapeRoom() {
       setTakes(list);
       const open = takeParam ? list.find((t) => t.id === takeParam) : undefined;
       if (open) {
+        opened.current = open.id;
+        trimNext.current = trimParam === '1';
         setCurrent(open);
         setPhase('review');
-        router.setParams({ take: undefined });
+        router.setParams({ take: undefined, trim: undefined });
       } else if (!takeParam) {
+        if (opened.current && list.some((t) => t.id === opened.current)) { opened.current = null; return; }
         setCurrent(null);
         if (phaseRef.current === 'review') setPhase('ready');
       }
@@ -301,12 +307,19 @@ export default function TapeRoom() {
   const scriptRef = useRef(script);
   scriptRef.current = script;
   const onCue = useRef<(hit: CueHit) => void>(() => {});
+  // The actor's own words for "action" and "cut", as the ear writes them.
+  const custom = useMemo(() => ({ action: tokenize(settings.actionWord).slice(0, 3), cut: tokenize(settings.cutWord).slice(0, 3) }), [settings.actionWord, settings.cutWord]);
+  const customRef = useRef(custom);
+  customRef.current = custom;
+  const cuePrime = useMemo(() => [settings.actionWord.trim(), settings.cutWord.trim()].filter(Boolean), [settings.actionWord, settings.cutWord]);
+  const cuePrimeRef = useRef(cuePrime);
+  cuePrimeRef.current = cuePrime;
 
   const listenForCue = useCallback(() => {
     const p = phaseRef.current;
     if (p === 'countdown') return;
     if (p === 'review' && playing.current) return; // the take's own words, out of the speaker
-    const hit = hearCue({ phase: p as TapePhase, heard: heard.current, now: Date.now(), script: scriptRef.current, reads: reads.current });
+    const hit = hearCue({ phase: p as TapePhase, heard: heard.current, now: Date.now(), script: scriptRef.current, reads: reads.current, custom: customRef.current });
     if (!hit) return;
     ear.current?.reset();
     onCue.current(hit);
@@ -334,7 +347,7 @@ export default function TapeRoom() {
       onFailed: () => { ear.current?.detach(); ear.current = null; setHearing(false); },
     });
     e.attach();
-    e.prime(scriptRef.current);
+    e.prime(scriptRef.current, cuePrimeRef.current);
     e.listen();
     ear.current = e;
     setHearing(true);
@@ -355,7 +368,7 @@ export default function TapeRoom() {
     const t = setTimeout(() => { void startEar(); }, 1000);
     return () => clearTimeout(t);
   }, [cameraReady, allowed, earOff, startEar]);
-  useEffect(() => { if (ear.current && script.length) ear.current.prime(script); }, [script]);
+  useEffect(() => { if (ear.current) ear.current.prime(script, cuePrime); }, [script, cuePrime]);
   // The room check: loud for two seconds with no words heard is the room, not
   // you, and the ear may miss a cue in it. Said once, quietly, before a take.
   const levels = useRef<{ t: number; v: number }[]>([]);
@@ -527,8 +540,8 @@ export default function TapeRoom() {
   }, [stop]);
   const actionRef = useRef<() => void>(() => {});
 
-  // The countdown: three beats after a tap to walk back to your mark, or the
-  // beat you chose after a spoken "action" to settle into it.
+  // The countdown: the seconds you chose after a tap to walk back to your
+  // mark, or the beat you chose after a spoken "action" to settle into it.
   const countdown = useCallback((via: 'voice' | 'tap' = 'tap', from = 3) => {
     Haptics.selectionAsync().catch(() => {});
     countdownVia.current = via;
@@ -565,8 +578,9 @@ export default function TapeRoom() {
     const p = phaseRef.current;
     if (p === 'rolling') void stop(null);
     else if (p === 'countdown') { Haptics.selectionAsync().catch(() => {}); setPhase('ready'); }
-    else countdown('tap', 3);
-  }, [countdown, setPhase, stop]);
+    else if (settingsRef.current.countdown > 0) countdown('tap', settingsRef.current.countdown);
+    else void roll('tap');
+  }, [countdown, roll, setPhase, stop]);
 
   /* ─── Watching it back ────────────────────────────────────────────── */
 
@@ -643,6 +657,20 @@ export default function TapeRoom() {
     ]);
   }, [current?.id, setPhase, takes]);
 
+  // Holding a take's chip: the same choices as holding it on the Book.
+  const takeMenu = useCallback((take: Take) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    ActionSheetIOS.showActionSheetWithOptions(
+      { title: `Take ${take.number}`, options: ['Watch it', 'Trim it', take.starred ? 'Unkeep' : 'Keep', 'Delete', 'Cancel'], destructiveButtonIndex: 3, cancelButtonIndex: 4, userInterfaceStyle: 'dark' },
+      (i) => {
+        if (i === 0) setCurrent(take);
+        else if (i === 1) { if (current?.id === take.id) setTrimming(true); else { trimNext.current = true; setCurrent(take); } }
+        else if (i === 2) void toggleStar(take);
+        else if (i === 3) remove(take);
+      },
+    );
+  }, [current?.id, remove, toggleStar]);
+
   /* ─── Out the door ────────────────────────────────────────────────── */
 
   const [busy, setBusy] = useState<'save' | 'share' | null>(null);
@@ -708,7 +736,7 @@ export default function TapeRoom() {
     }
   }, [busy, exported, isPaid]);
 
-  useEffect(() => { setSavedId(null); setTrimming(false); }, [current?.id]);
+  useEffect(() => { setSavedId(null); setTrimming(trimNext.current); trimNext.current = false; }, [current?.id]);
 
   // Trimmed by hand: the new start and end, kept with the take.
   const [trimming, setTrimming] = useState(false);
@@ -766,7 +794,7 @@ export default function TapeRoom() {
           {`For ${audition.project}${audition.role ? ` · ${audition.role}` : ''}${audition.when ? ` · due ${dayLabel(audition.when)} ${clockLabel(audition.when)}` : ''}${auditionSent ? ' · sent' : ''}`}
         </Animated.Text>
       ) : null}
-      <Cue phase={phase} hearing={hearing} atEnd={atEnd} noisy={noisy} upright={upright} back={facing === 'back'} notice={saving ? '(saving the take…)' : notice} />
+      <Cue phase={phase} hearing={hearing} atEnd={atEnd} noisy={noisy} upright={upright} back={facing === 'back'} roll={cueWord(settings, 'action')} cut={cueWord(settings, 'cut')} notice={saving ? '(saving the take…)' : notice} />
     </View>
   );
   // The strip, turned: as long as it may be, centred on the record button's
@@ -828,7 +856,7 @@ export default function TapeRoom() {
 
       {/* The piece, under the lens. */}
       {showPrompter ? (
-        <Prompter key={`p${turn}${id}`} lines={lines} loading={loading} at={rolling ? here : 0} said={rolling ? position - lineStart(lineLengths, here) : -1} turn={turn} width={width} top={topH} rolling={rolling} />
+        <Prompter key={`p${turn}${id}`} lines={lines} loading={loading} at={rolling ? here : 0} said={rolling ? position - lineStart(lineLengths, here) : -1} turn={turn} width={width} top={topH} rolling={rolling} size={settings.prompterSize} backing={settings.prompterBacking} />
       ) : null}
 
       {/* Three, two, one. */}
@@ -924,7 +952,7 @@ export default function TapeRoom() {
             {takes.length > 1 ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 14 }}>
                 {takes.slice().reverse().map((t) => (
-                  <Chip key={t.id} take={t} on={t.id === current.id} turn={turn} onPress={() => { Haptics.selectionAsync().catch(() => {}); setCurrent(t); }} onLongPress={() => remove(t)} />
+                  <Chip key={t.id} take={t} on={t.id === current.id} turn={turn} onPress={() => { Haptics.selectionAsync().catch(() => {}); setCurrent(t); }} onLongPress={() => takeMenu(t)} />
                 ))}
               </ScrollView>
             ) : null}
@@ -955,7 +983,7 @@ export default function TapeRoom() {
               </Animated.View>
             ) : null}
             <View style={{ flexDirection: 'row', paddingHorizontal: 12 }}>
-              <Action icon="refresh" label="Again" primary turn={turn} onPress={() => countdown('tap', 3)} />
+              <Action icon="refresh" label="Again" primary turn={turn} onPress={() => (settings.countdown > 0 ? countdown('tap', settings.countdown) : void roll('tap'))} />
               <Action icon="cut-outline" label={trimming ? 'Done' : 'Trim'} on={trimming} turn={turn} onPress={() => { Haptics.selectionAsync().catch(() => {}); setTrimming((v) => !v); }} />
               <Action icon={current.starred ? 'star' : 'star-outline'} label={current.starred ? 'Kept' : 'Keep'} on={current.starred} turn={turn} onPress={() => toggleStar(current)} />
               <Action icon={savedId === current.id ? 'checkmark' : 'download-outline'} label={savedId === current.id ? 'Saved' : 'Save'} busy={busy === 'save'} turn={turn} onPress={() => save(current)} />
@@ -1001,17 +1029,19 @@ export default function TapeRoom() {
         />
       ) : null}
 
-      {showIntro ? <Intro allowed={allowed} refused={refused} onGo={goIn} onLeave={goBack} reduce={reduce} /> : null}
+      {showIntro ? <Intro allowed={allowed} refused={refused} onGo={goIn} onLeave={goBack} reduce={reduce} roll={cueWord(settings, 'action')} cut={cueWord(settings, 'cut')} /> : null}
 
       {sheet === 'piece' ? (
         <PiecePicker current={id || FREE_TAPE} signedIn={isAuthenticated} onClose={() => setSheet(null)} onPick={pickPiece} />
       ) : sheet === 'tapes' ? (
         <TapesLibrary current={current?.id ?? null} onClose={() => setSheet(null)} onOpen={openTake} />
       ) : sheet === 'settings' ? (
-        <SettingsSheet
+        <TapeSettingsSheet
           settings={settings}
           onChange={setSettings}
           onClose={() => setSheet(null)}
+          // The room closes first so two cameras never run at once.
+          onCameraCheck={() => { setSheet(null); router.back(); setTimeout(() => router.push('/tape-check' as Href), 500); }}
           onSlate={() => {
             setSheet(null);
             if (!settings.slate.name.trim()) return;
@@ -1028,18 +1058,6 @@ function lineStart(lengths: number[], line: number): number {
   let n = 0;
   for (let i = 0; i < line && i < lengths.length; i++) n += lengths[i];
   return n;
-}
-
-/** The words of a piece: the phone's own copy first (instant for anything in the Book), then the server. */
-async function loadPiece(id: string): Promise<Monologue> {
-  const local = await getOffline(id).catch(() => null);
-  if (local?.fullText) return local;
-  try {
-    return apiToMonologue(await getMonologue(id));
-  } catch (err) {
-    if (local) return local;
-    throw err;
-  }
 }
 
 /* ─── Pieces of the room ─────────────────────────────────────────────── */
@@ -1065,13 +1083,20 @@ function Scrim({ edge, height }: { edge: 'top' | 'bottom'; height: number }) {
  * The prompter: the line you are on, and the next, just under the top bar
  * where the lens is. Turned with the phone, it lies along the lens's edge.
  */
-const Prompter = memo(function Prompter({ lines, loading, at, said, turn, width, top, rolling }: { lines: string[]; loading: boolean; at: number; said: number; turn: number; width: number; top: number; rolling: boolean }) {
+const PROMPT_SIZE = { S: { line: 18, lead: 25, next: 14 }, M: { line: 22, lead: 30, next: 16 }, L: { line: 27, lead: 36, next: 19 } } as const;
+
+const Prompter = memo(function Prompter({ lines, loading, at, said, turn, width, top, rolling, size = 'M', backing = true }: { lines: string[]; loading: boolean; at: number; said: number; turn: number; width: number; top: number; rolling: boolean; size?: 'S' | 'M' | 'L'; backing?: boolean }) {
   const turned = Math.abs(turn) === 90;
-  const box = { w: width, h: turned ? width * 0.62 : 190 };
+  const z = PROMPT_SIZE[size];
+  const box = { w: width, h: turned ? width * 0.62 : z.lead * 5 + 70 };
   const inner = turned ? { w: box.h, h: box.w } : box;
   const line = lines[at] ?? '';
   const next = lines[at + 1] ?? '';
   const long = line.length > 120;
+  const lineSize = long ? Math.round(z.line * 0.85) : z.line;
+  const lineLead = long ? Math.round(z.lead * 0.85) : z.lead;
+  // Heavier shadow with no band, so the words still lift off a bright picture.
+  const shadow = backing ? { textShadowColor: 'rgba(0,0,0,0.55)', textShadowRadius: 6 } : { textShadowColor: 'rgba(0,0,0,0.95)', textShadowRadius: 12, textShadowOffset: { width: 0, height: 1 } };
   return (
     <Animated.View entering={FadeIn.duration(320)} exiting={FadeOut.duration(260)} pointerEvents="none" style={{ position: 'absolute', top: turned ? 0 : top - 6, left: 0, width: box.w, height: box.h }}>
       <View
@@ -1082,34 +1107,36 @@ const Prompter = memo(function Prompter({ lines, loading, at, said, turn, width,
           left: (box.w - inner.w) / 2,
           top: (box.h - inner.h) / 2,
           transform: [{ rotate: `${turn}deg` }],
-          paddingHorizontal: 28,
+          paddingHorizontal: backing ? 14 : 28,
           paddingTop: turned ? 24 : 4,
         }}
       >
-        {loading && !line ? (
-          <Animated.Text entering={FadeIn.duration(240)} style={{ fontFamily: TYPE_I, fontSize: 15, color: DIM, textAlign: 'center' }}>(finding the page…)</Animated.Text>
-        ) : (
-          <>
-            <Animated.Text
-              key={`l${at}${line.slice(0, 12)}`}
-              entering={FadeInDown.duration(300).easing(EASE)}
-              style={{ fontFamily: TYPE, fontSize: long ? 17 : 20, lineHeight: long ? 24 : 28, color: WHITE, textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 10 }}
-              numberOfLines={turned ? 3 : 4}
-            >
-              {rolling && said >= 0 ? <SpokenLine line={line} said={said} /> : line}
-            </Animated.Text>
-            {next && (rolling || at === 0) ? (
+        <View style={backing ? { backgroundColor: 'rgba(8,5,4,0.62)', paddingHorizontal: 16, paddingVertical: 12 } : undefined}>
+          {loading && !line ? (
+            <Animated.Text entering={FadeIn.duration(240)} style={{ fontFamily: TYPE_I, fontSize: 15, color: DIM, textAlign: 'center' }}>(finding the page…)</Animated.Text>
+          ) : (
+            <>
               <Animated.Text
-                key={`n${at}${next.slice(0, 12)}`}
-                entering={FadeIn.delay(120).duration(300)}
-                style={{ marginTop: 10, fontFamily: TYPE, fontSize: 15, lineHeight: 21, color: DIM, textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 8 }}
-                numberOfLines={2}
+                key={`l${at}${line.slice(0, 12)}`}
+                entering={FadeInDown.duration(300).easing(EASE)}
+                style={{ fontFamily: TYPE, fontSize: lineSize, lineHeight: lineLead, color: WHITE, textAlign: 'center', ...shadow }}
+                numberOfLines={turned ? 3 : 4}
               >
-                {next}
+                {rolling && said >= 0 ? <SpokenLine line={line} said={said} /> : line}
               </Animated.Text>
-            ) : null}
-          </>
-        )}
+              {next && (rolling || at === 0) ? (
+                <Animated.Text
+                  key={`n${at}${next.slice(0, 12)}`}
+                  entering={FadeIn.delay(120).duration(300)}
+                  style={{ marginTop: 10, fontFamily: TYPE, fontSize: z.next, lineHeight: Math.round(z.next * 1.4), color: 'rgba(255,250,243,0.78)', textAlign: 'center', ...shadow }}
+                  numberOfLines={2}
+                >
+                  {next}
+                </Animated.Text>
+              ) : null}
+            </>
+          )}
+        </View>
       </View>
     </Animated.View>
   );
@@ -1132,7 +1159,7 @@ const SpokenLine = memo(function SpokenLine({ line, said }: { line: string; said
           <Text key={i}>
             <Text
               style={{
-                color: done || here ? WHITE : 'rgba(255,250,243,0.48)',
+                color: done || here ? WHITE : 'rgba(255,250,243,0.66)',
                 textDecorationLine: here ? 'underline' : 'none',
                 textDecorationColor: GLOW,
                 textShadowColor: here ? 'rgba(224,115,31,0.85)' : 'rgba(0,0,0,0.7)',
@@ -1150,14 +1177,14 @@ const SpokenLine = memo(function SpokenLine({ line, said }: { line: string; said
 });
 
 /** One quiet line over the record button: what to say next, or what is in the way. */
-function Cue({ phase, hearing, atEnd, noisy, upright, back, notice }: { phase: Phase; hearing: boolean; atEnd: boolean; noisy: boolean; upright: boolean; back: boolean; notice?: string | null }) {
+function Cue({ phase, hearing, atEnd, noisy, upright, back, roll, cut, notice }: { phase: Phase; hearing: boolean; atEnd: boolean; noisy: boolean; upright: boolean; back: boolean; roll: string; cut: string; notice?: string | null }) {
   const text = notice ? notice
     : phase === 'countdown' ? '(tap to stop the count.)'
-      : phase === 'rolling' ? (hearing ? (atEnd ? '(hold it. then say “cut”.)' : '(say “cut” when you are done.)') : '(tap to cut.)')
+      : phase === 'rolling' ? (hearing ? (atEnd ? `(hold it. then say “${cut}”.)` : `(say “${cut}” when you are done.)`) : '(tap to cut.)')
       : noisy && hearing ? '(it’s loud in here. the ear may miss you.)'
       : upright ? '(turn it sideways for casting.)'
-      : back && hearing ? '(back camera: listen for the tones. say “action”.)'
-      : hearing ? '(say “action”, or tap.)' : '(tap to roll.)';
+      : back && hearing ? `(back camera: watch for the flash. say “${roll}”.)`
+      : hearing ? `(say “${roll}”, or tap.)` : '(tap to roll.)';
   return (
     <View style={{ height: 30, alignItems: 'center', justifyContent: 'center', marginBottom: 6, paddingHorizontal: 20 }}>
       <Animated.Text key={text} entering={FadeIn.duration(260)} exiting={FadeOut.duration(140)} numberOfLines={1} style={{ fontFamily: TYPE_I, fontSize: 13, color: noisy && phase === 'ready' ? GLOW : DIM, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 6 }}>
@@ -1488,7 +1515,7 @@ function Action({ icon, label, onPress, primary, on, busy, badge, bounce, turn }
 
 function Chip({ take, on, turn, onPress, onLongPress }: { take: Take; on: boolean; turn: number; onPress: () => void; onLongPress: () => void }) {
   return (
-    <Pressable onPress={onPress} onLongPress={onLongPress} accessibilityRole="button" accessibilityLabel={`Take ${take.number}${take.starred ? ', kept' : ''}. Hold to delete.`} accessibilityState={{ selected: on }}
+    <Pressable onPress={onPress} onLongPress={onLongPress} accessibilityRole="button" accessibilityLabel={`Take ${take.number}${take.starred ? ', kept' : ''}. Hold for more.`} accessibilityState={{ selected: on }}
       style={{ height: 34, minWidth: 64, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1.5, borderColor: on ? WHITE : 'rgba(255,250,243,0.3)', backgroundColor: on ? WHITE : GLASS, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
       <Text style={{ fontFamily: SANS, fontSize: 13, color: on ? colors.ink : WHITE, transform: [{ rotate: `${turn}deg` }] }}>Take {take.number}</Text>
       {take.starred ? <Ionicons name="star" size={11} color={GLOW} /> : null}
@@ -1531,35 +1558,6 @@ function Clock({ ms, turn }: { ms: number; turn: number }) {
 
 /* ─── Sheets ─────────────────────────────────────────────────────────── */
 
-/** A sheet up from the bottom over the camera, with a title and a way out. */
-function Sheet({ title, onClose, children, tall }: { title: string; onClose: () => void; children: React.ReactNode; tall?: boolean }) {
-  const { height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  return (
-    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-      <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(160)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,5,4,0.55)' }}>
-        <Pressable onPress={onClose} style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel="Close" />
-      </Animated.View>
-      <KeyboardAvoidingView behavior="padding" pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end' }}>
-      <Animated.View
-        entering={FadeInDown.duration(320).easing(EASE)}
-        exiting={FadeOutDown.duration(200)}
-        style={{ height: tall ? height * 0.82 : undefined, maxHeight: height * 0.82, backgroundColor: colors.ink, borderTopWidth: 1, borderColor: 'rgba(255,250,243,0.12)', paddingBottom: insets.bottom }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingTop: 16, paddingBottom: 8 }}>
-          <Text style={{ fontFamily: SERIF, fontSize: 26, color: WHITE }}>{title}</Text>
-          <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close"
-            style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,250,243,0.1)', alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}>
-            <Ionicons name="close" size={17} color={WHITE} />
-          </Pressable>
-        </View>
-        {children}
-      </Animated.View>
-      </KeyboardAvoidingView>
-    </View>
-  );
-}
-
 /**
  * Which piece to tape: the ones you read lately and the ones in your Book,
  * or none, for sides of your own.
@@ -1591,14 +1589,6 @@ function PiecePicker({ current, signedIn, onClose, onPick }: { current: string; 
         ))}
       </ScrollView>
     </Sheet>
-  );
-}
-
-function SheetLabel({ children }: { children: string }) {
-  return (
-    <Text style={{ paddingHorizontal: 22, paddingTop: 16, paddingBottom: 6, fontFamily: 'CourierPrime_700Bold', fontSize: 10, letterSpacing: 2.2, textTransform: 'uppercase', color: DIM }}>
-      {children}
-    </Text>
   );
 }
 
@@ -1654,15 +1644,6 @@ function TapesLibrary({ current, onClose, onOpen }: { current: string | null; on
   );
 }
 
-function Filter({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
-  return (
-    <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); onPress(); }} accessibilityRole="button" accessibilityState={{ selected: on }}
-      style={{ height: 32, paddingHorizontal: 14, borderRadius: 999, backgroundColor: on ? WHITE : 'rgba(255,250,243,0.1)', justifyContent: 'center' }}>
-      <Text style={{ fontFamily: SANS, fontSize: 13, color: on ? colors.ink : WHITE }}>{label}</Text>
-    </Pressable>
-  );
-}
-
 function TapeCell({ take, size, on, onPress }: { take: Take; size: number; on: boolean; onPress: () => void }) {
   const still = thumbFile(take);
   const s = Math.round(take.endMs / 1000);
@@ -1686,116 +1667,15 @@ function TapeCell({ take, size, on, onPress }: { take: Take; size: number; on: b
 }
 
 /**
- * The room's settings: the tones, the beat after "action", and your slate,
- * typed once and kept on the phone.
- */
-function SettingsSheet({ settings, onChange, onClose, onSlate }: { settings: TapeSettings; onChange: (s: TapeSettings) => void; onClose: () => void; onSlate: () => void }) {
-  const checkRouter = useRouter();
-  const founder = useIsFounder();
-  const [slate, setSlate] = useState(settings.slate);
-  const keep = (next: typeof slate) => { setSlate(next); onChange({ ...settings, slate: next }); };
-  const field = (key: keyof typeof slate, label: string, placeholder: string) => (
-    <View style={{ paddingHorizontal: 22, paddingVertical: 6 }}>
-      <Text style={{ fontFamily: SANS_M, fontSize: 12, color: DIM, marginBottom: 4 }}>{label}</Text>
-      <TextInput
-        value={slate[key]}
-        onChangeText={(v) => keep({ ...slate, [key]: v })}
-        placeholder={placeholder}
-        placeholderTextColor="rgba(255,250,243,0.3)"
-        autoCorrect={false}
-        style={{ height: 44, paddingHorizontal: 14, borderRadius: 12, backgroundColor: 'rgba(255,250,243,0.08)', color: WHITE, fontFamily: SANS_M, fontSize: 16 }}
-      />
-    </View>
-  );
-  return (
-    <Sheet title="Tape settings" onClose={onClose}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 18 }}>
-        {/* Temporary: the black-picture test bench. The room closes first so two cameras never run at once. */}
-        {founder ? <Pressable onPress={() => { onClose(); checkRouter.back(); setTimeout(() => checkRouter.push('/tape-check' as Href), 500); }} accessibilityRole="button"
-          style={{ marginHorizontal: 22, marginTop: 4, marginBottom: 6, height: 46, borderRadius: 23, backgroundColor: 'rgba(194,78,16,0.9)', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontFamily: SANS_M, fontSize: 15, color: WHITE }}>Camera check</Text>
-        </Pressable> : null}
-        <SheetLabel>Sound</SheetLabel>
-        <Row label="A flash when it rolls and cuts" sub="The torch on the back camera, the screen on the front. You see it heard you from across the room.">
-          <Toggle on={settings.tones} onPress={() => onChange({ ...settings, tones: !settings.tones })} />
-        </Row>
-        <SheetLabel>Picture</SheetLabel>
-        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 22, paddingVertical: 6 }}>
-          <Filter label="1080p" on={settings.quality === '1080p'} onPress={() => onChange({ ...settings, quality: '1080p' })} />
-          <Filter label="4K, bigger files" on={settings.quality === '2160p'} onPress={() => onChange({ ...settings, quality: '2160p' })} />
-        </View>
-        <Row label="Steady on the back camera" sub="Smooths a hand held or a wobbly stand.">
-          <Toggle on={settings.steady} onPress={() => onChange({ ...settings, steady: !settings.steady })} />
-        </Row>
-        <Row label="Slate first when I save or send" sub="Your newest slate and the take, as one file named the casting way.">
-          <Toggle on={settings.slateFirst} onPress={() => onChange({ ...settings, slateFirst: !settings.slateFirst })} />
-        </Row>
-        <SheetLabel>After you say “cut”</SheetLabel>
-        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 22, paddingVertical: 6 }}>
-          <Filter label="Save to Tapes" on={settings.afterCut === 'tapes'} onPress={() => onChange({ ...settings, afterCut: 'tapes' })} />
-          <Filter label="Play it back" on={settings.afterCut === 'play'} onPress={() => onChange({ ...settings, afterCut: 'play' })} />
-        </View>
-        <SheetLabel>After you say “action”</SheetLabel>
-        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 22, paddingVertical: 6 }}>
-          {([0, 2, 3] as const).map((b) => (
-            <Filter key={b} label={b === 0 ? 'Roll at once' : `${b} second beat`} on={settings.beat === b} onPress={() => onChange({ ...settings, beat: b })} />
-          ))}
-        </View>
-        <SheetLabel>Your slate</SheetLabel>
-        {field('name', 'Name', 'Your name')}
-        {field('height', 'Height', 'Like 5’10”')}
-        {field('location', 'Based in', 'Your town')}
-        {field('rep', 'Agent or manager (if any)', 'Leave it empty if none')}
-        <View style={{ paddingHorizontal: 22, paddingTop: 14 }}>
-          <Pressable
-            onPress={onSlate}
-            disabled={!slate.name.trim()}
-            accessibilityRole="button"
-            style={({ pressed }) => ({ height: 52, borderRadius: 999, backgroundColor: slate.name.trim() ? GLOW : 'rgba(255,250,243,0.12)', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, opacity: pressed ? 0.85 : 1 })}
-          >
-            <Ionicons name="person-circle-outline" size={19} color={slate.name.trim() ? colors.ink : DIM} />
-            <Text style={{ fontFamily: SANS, fontSize: 15, color: slate.name.trim() ? colors.ink : DIM }}>Tape my slate</Text>
-          </Pressable>
-        </View>
-      </ScrollView>
-    </Sheet>
-  );
-}
-
-function Row({ label, sub, children }: { label: string; sub: string; children: React.ReactNode }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 22, paddingVertical: 8, gap: 14 }}>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontFamily: SANS, fontSize: 15, color: WHITE }}>{label}</Text>
-        <Text style={{ fontFamily: SANS_M, fontSize: 12, color: DIM, marginTop: 2 }}>{sub}</Text>
-      </View>
-      {children}
-    </View>
-  );
-}
-
-function Toggle({ on, onPress }: { on: boolean; onPress: () => void }) {
-  const x = useSharedValue(on ? 1 : 0);
-  useEffect(() => { x.value = withTiming(on ? 1 : 0, { duration: 180, easing: EASE }); }, [on, x]);
-  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: 3 + x.value * 20 }] }));
-  return (
-    <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); onPress(); }} accessibilityRole="switch" accessibilityState={{ checked: on }} hitSlop={8}
-      style={{ width: 50, height: 30, borderRadius: 15, backgroundColor: on ? GLOW : 'rgba(255,250,243,0.18)', justifyContent: 'center' }}>
-      <Animated.View style={[knob, { width: 24, height: 24, borderRadius: 12, backgroundColor: WHITE }]} />
-    </Pressable>
-  );
-}
-
-/**
  * The first time in: what the room is, in three lines, and one button. The
  * camera and the microphone are asked for only when the actor taps it.
  */
-function Intro({ allowed, refused, onGo, onLeave, reduce }: { allowed: boolean; refused: boolean; onGo: () => void; onLeave: () => void; reduce: boolean }) {
+function Intro({ allowed, refused, onGo, onLeave, reduce, roll, cut }: { allowed: boolean; refused: boolean; onGo: () => void; onLeave: () => void; reduce: boolean; roll: string; cut: string }) {
   const insets = useSafeAreaInsets();
   const steps: { icon: React.ComponentProps<typeof Ionicons>['name']; say: string; sub: string }[] = [
-    { icon: 'mic', say: 'Say “action”.', sub: 'It rolls. Your lines run under the lens.' },
+    { icon: 'mic', say: `Say “${roll}”.`, sub: 'It rolls. Your lines run under the lens.' },
     { icon: 'sparkles', say: 'Act.', sub: 'Each word lights up as you say it.' },
-    { icon: 'cut', say: 'Say “cut”.', sub: 'The take lands in Tapes. Say “keeper” to keep it.' },
+    { icon: 'cut', say: `Say “${cut}”.`, sub: 'The take lands in Tapes. Say “keeper” to keep it.' },
   ];
   const enter = (i: number) => (reduce ? FadeIn.duration(200) : FadeInDown.delay(160 + i * 110).duration(420).easing(EASE));
   return (

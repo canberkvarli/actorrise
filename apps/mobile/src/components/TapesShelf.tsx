@@ -1,11 +1,12 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback } from 'react';
+import { ActionSheetIOS, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useTakeList } from '../hooks/useCallboard';
-import { thumbFile, type Take } from '../lib/takes';
+import { refreshCallboard, useTakeList } from '../hooks/useCallboard';
+import { deleteTake, setStarred, thumbFile, type Take } from '../lib/takes';
 import { useTheme } from '../theme/ThemeContext';
 
 const SERIF = 'InstrumentSerif_400Regular';
@@ -17,6 +18,39 @@ export function takeHref(t: Take): Href {
   const params: Record<string, string> = { id: t.pieceId, take: t.id };
   if (t.auditionId != null) params.audition = String(t.auditionId);
   return { pathname: '/tape/[id]', params } as Href;
+}
+
+/** A take opened straight into trimming. */
+export function trimHref(t: Take): Href {
+  const href = takeHref(t) as { pathname: string; params: Record<string, string> };
+  return { ...href, params: { ...href.params, trim: '1' } } as Href;
+}
+
+/**
+ * Holding a take: what can be done with it, without opening it. Watch, trim,
+ * keep or let go, delete. `open` is how the screen goes to the room (the Tape
+ * page closes itself first; the Book just pushes).
+ */
+export function useTakeMenu(open: (href: Href) => void) {
+  return useCallback((t: Take) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    const name = `${t.character ?? 'No script'}, take ${t.number}`;
+    const items = ['Watch it', 'Trim it', t.starred ? 'Unkeep' : 'Keep', 'Delete', 'Cancel'];
+    ActionSheetIOS.showActionSheetWithOptions(
+      { title: name, options: items, destructiveButtonIndex: 3, cancelButtonIndex: 4, userInterfaceStyle: 'dark' },
+      (i) => {
+        if (i === 0) open(takeHref(t));
+        else if (i === 1) open(trimHref(t));
+        else if (i === 2) void setStarred(t.id, !t.starred).then(refreshCallboard);
+        else if (i === 3) {
+          Alert.alert(`Delete take ${t.number}?`, 'It goes from this phone. Takes you saved to Photos stay there.', [
+            { text: 'Keep it', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: () => { void deleteTake(t.id).then(refreshCallboard); } },
+          ]);
+        }
+      },
+    );
+  }, [open]);
 }
 
 /**
@@ -31,6 +65,7 @@ export function TapesShelf() {
   const kept = takes.filter((t) => t.starred).length;
   const row = [...takes].sort((a, b) => Number(b.starred) - Number(a.starred) || b.createdAt - a.createdAt).slice(0, 8);
   const all = () => { Haptics.selectionAsync().catch(() => {}); router.push('/tapes' as Href); };
+  const menu = useTakeMenu((href) => router.push(href));
   return (
     <View style={{ marginTop: 22 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -43,19 +78,20 @@ export function TapesShelf() {
         </Pressable>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-        {row.map((t) => <Still key={t.id} take={t} width={92} onPress={() => { Haptics.selectionAsync().catch(() => {}); router.push(takeHref(t)); }} />)}
+        {row.map((t) => <Still key={t.id} take={t} width={92} onPress={() => { Haptics.selectionAsync().catch(() => {}); router.push(takeHref(t)); }} onLongPress={() => menu(t)} />)}
       </ScrollView>
     </View>
   );
 }
 
 /** One take: its still, its length, a star if kept, and whose it is. */
-export function Still({ take, width, onPress }: { take: Take; width: number; onPress: () => void }) {
+export function Still({ take, width, onPress, onLongPress }: { take: Take; width: number; onPress: () => void; onLongPress?: () => void }) {
   const { colors: c } = useTheme();
   const still = thumbFile(take);
   const s = Math.round(take.endMs / 1000);
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${take.character ?? 'No script'}, take ${take.number}${take.starred ? ', kept' : ''}`}
+    <Pressable onPress={onPress} onLongPress={onLongPress} delayLongPress={350} accessibilityRole="button" accessibilityLabel={`${take.character ?? 'No script'}, take ${take.number}${take.starred ? ', kept' : ''}`}
+      accessibilityHint={onLongPress ? 'Hold for more' : undefined}
       style={({ pressed }) => ({ width, opacity: pressed ? 0.75 : 1 })}>
       <View style={{ width, height: width * 1.3, borderRadius: 10, overflow: 'hidden', backgroundColor: c.foreground + '14' }}>
         {still?.exists ? <Image source={{ uri: still.uri }} style={{ flex: 1 }} contentFit="cover" transition={200} /> : (

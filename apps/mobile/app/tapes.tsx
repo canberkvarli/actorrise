@@ -1,15 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, type Href } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeInDown, FadeOut, FadeOutDown, Easing } from 'react-native-reanimated';
+import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 
 import { StageBackdrop } from '../src/components/StageBackdrop';
 import { StageDirection } from '../src/components/StageDirection';
 import { Sketch } from '../src/components/Sketches';
-import { Still, takeHref } from '../src/components/TapesShelf';
+import { Still, takeHref, useTakeMenu } from '../src/components/TapesShelf';
+import { TapeSettingsSheet } from '../src/components/TapeSettingsSheet';
+import { loadPiece } from '../src/lib/loadPiece';
+import { sharpPoster } from '../src/lib/posters';
+import { cueWord, DEFAULT_SETTINGS, loadTapeSettings, saveTapeSettings, slateLines, type TapeSettings } from '../src/lib/tapeSettings';
+import type { Monologue } from '../src/data/monologues';
 import { useTakeList } from '../src/hooks/useCallboard';
 import { useStageMotion } from '../src/hooks/useStageMotion';
 import { useTheme } from '../src/theme/ThemeContext';
@@ -26,6 +33,7 @@ const SERIF = 'InstrumentSerif_400Regular';
 const SANS = 'BricolageGrotesque_500Medium';
 const SANS_B = 'BricolageGrotesque_600SemiBold';
 const CAPS = 'BricolageGrotesque_700Bold';
+const TYPE = 'CourierPrime_400Regular';
 const EASE = Easing.out(Easing.cubic);
 
 interface Piece { id: string; name: string; source: string }
@@ -54,6 +62,10 @@ export default function TapesScreen() {
   const { data: book } = useFavorites(isAuthenticated);
   const [recents, setRecents] = useState<RecentPiece[]>([]);
   const [picking, setPicking] = useState(false);
+  const [tuning, setTuning] = useState(false);
+  const [settings, setSettingsState] = useState<TapeSettings>(DEFAULT_SETTINGS);
+  useEffect(() => { loadTapeSettings().then(setSettingsState).catch(() => {}); }, []);
+  const setSettings = useCallback((next: TapeSettings) => { setSettingsState(next); void saveTapeSettings(next); }, []);
 
   // What the card says: the piece last taped, or last read, or none.
   const [piece, setPiece] = useState<Piece>(NONE);
@@ -77,6 +89,12 @@ export default function TapesScreen() {
     return (book ?? []).filter((m) => !seen.has(String(m.id))).slice(0, 30).map((m) => ({ id: String(m.id), name: m.character, source: m.source }));
   }, [book, lately]);
 
+  // The piece itself, for the frame: its opening lines and its poster. The
+  // same query the room reads, so the room opens with the words already here.
+  const real = piece.id !== SLATE_TAPE && piece.id !== FREE_TAPE;
+  const { data: mono } = useQuery<Monologue>({ queryKey: ['monologue', piece.id], enabled: real, retry: false, staleTime: 5 * 60_000, queryFn: () => loadPiece(piece.id) });
+  const meta = real && mono ? mono : undefined;
+
   const due = useMemo(() => (auditions ?? []).filter((a) => tapeDue(a)).sort((x, y) => Date.parse(x.when!) - Date.parse(y.when!)), [auditions]);
   // The camera opens from the tabs, the way it did when it worked: this page
   // closes first, then the room comes up. Swapping this full-screen modal for
@@ -93,6 +111,7 @@ export default function TapesScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     openRoom({ pathname: '/tape/[id]', params: { id: piece.id } } as Href);
   };
+  const menu = useTakeMenu(openRoom);
   const shown = takes.filter((t) => !kept || t.starred);
   const keptCount = takes.filter((t) => t.starred).length;
   const gap = 14;
@@ -116,14 +135,17 @@ export default function TapesScreen() {
       {/* The insets by hand: inside a full-screen modal SafeAreaView reads 0 at first, and the title ran under the clock. */}
       <View style={{ flex: 1, paddingTop: insets.top }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 6, paddingBottom: 4 }}>
-          <View>
-            <Text style={{ fontFamily: CAPS, fontSize: 10.5, letterSpacing: 1.6, textTransform: 'uppercase', color: c.accentText }}>Ghost Light</Text>
-            <Text style={{ fontFamily: SERIF, fontSize: 34, lineHeight: 38, color: c.foreground }}>Tape room</Text>
+          <Text style={{ fontFamily: SERIF, fontSize: 34, lineHeight: 38, color: c.foreground }}>Tape room</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); setTuning(true); }} hitSlop={10} accessibilityRole="button" accessibilityLabel="Tape settings and your slate"
+              style={({ pressed }) => ({ width: 38, height: 38, borderRadius: 19, backgroundColor: c.foreground + '12', alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+              <Ionicons name="options-outline" size={19} color={c.foreground} />
+            </Pressable>
+            <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close"
+              style={({ pressed }) => ({ width: 38, height: 38, borderRadius: 19, backgroundColor: c.foreground + '12', alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+              <Ionicons name="close" size={19} color={c.foreground} />
+            </Pressable>
           </View>
-          <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close"
-            style={({ pressed }) => ({ width: 38, height: 38, borderRadius: 19, backgroundColor: c.foreground + '12', alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-            <Ionicons name="close" size={19} color={c.foreground} />
-          </Pressable>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 14, paddingBottom: bar + 12 }}>
@@ -132,6 +154,12 @@ export default function TapesScreen() {
             <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); setPicking(true); }} accessibilityRole="button"
               accessibilityLabel={`Taping ${piece.name}. Change it.`}
               style={({ pressed }) => ({ height: frameH, borderRadius: 26, backgroundColor: '#130b08', overflow: 'hidden', transform: [{ scale: pressed ? 0.985 : 1 }] })}>
+              {meta?.posterUrl ? (
+                <>
+                  <Image source={{ uri: sharpPoster(meta.posterUrl, 800) }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" transition={250} />
+                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(19,11,8,0.72)' }} />
+                </>
+              ) : null}
               {/* Thirds, faint. */}
               {[1, 2].map((k) => (
                 <View key={`v${k}`} style={{ position: 'absolute', top: 0, bottom: 0, left: `${(k * 100) / 3}%`, width: StyleSheet.hairlineWidth, backgroundColor: ink + '14' }} />
@@ -151,20 +179,34 @@ export default function TapesScreen() {
                   borderBottomLeftRadius: k === 'bl' ? 8 : 0, borderBottomRightRadius: k === 'br' ? 8 : 0,
                 }} />
               ))}
-              <View style={{ position: 'absolute', top: 26, left: 50, flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.primary }} />
-                <Text style={{ fontFamily: CAPS, fontSize: 10.5, letterSpacing: 1.6, color: ink + 'cc' }}>STANDBY</Text>
-              </View>
+              {frameFacts(piece, meta, settings) ? (
+                <View style={{ position: 'absolute', top: 26, left: 50, right: 150, flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.primary }} />
+                  <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: CAPS, fontSize: 10.5, letterSpacing: 1.6, textTransform: 'uppercase', color: ink + 'cc' }}>{frameFacts(piece, meta, settings)}</Text>
+                </View>
+              ) : null}
               <View style={{ position: 'absolute', top: 20, right: 46, flexDirection: 'row', alignItems: 'center', gap: 4, height: 28, paddingHorizontal: 12, borderRadius: 14, backgroundColor: ink + '1f' }}>
                 <Text style={{ fontFamily: SANS_B, fontSize: 12.5, color: ink }}>Change</Text>
                 <Ionicons name="chevron-down" size={14} color={ink} />
               </View>
 
-              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36 }}>
-                <Sketch name={piece.id === SLATE_TAPE ? 'masks' : piece.id === FREE_TAPE ? 'scriptPages' : 'tripod'} size={Math.min(84, frameH * 0.24)} stroke={ink} />
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36, paddingTop: 40 }}>
+                {opening(piece, meta, settings) ? null : (
+                  <Sketch name={piece.id === SLATE_TAPE ? 'masks' : piece.id === FREE_TAPE ? 'scriptPages' : 'tripod'} size={Math.min(84, frameH * 0.24)} stroke={ink} />
+                )}
                 <Text style={{ marginTop: 14, fontFamily: CAPS, fontSize: 10.5, letterSpacing: 1.6, textTransform: 'uppercase', color: c.primary }}>Taping</Text>
-                <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75} style={{ marginTop: 2, textAlign: 'center', fontFamily: SERIF, fontSize: 38, lineHeight: 42, color: ink }}>{piece.name}</Text>
-                {piece.source ? <Text numberOfLines={1} style={{ marginTop: 2, fontFamily: SANS, fontSize: 14, color: ink + '99' }}>{piece.source}</Text> : null}
+                <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75} style={{ marginTop: 2, textAlign: 'center', fontFamily: SERIF, fontSize: 38, lineHeight: 42, color: ink }}>{meta?.character ?? piece.name}</Text>
+                {(meta?.source ?? piece.source) ? (
+                  <Text numberOfLines={1} style={{ marginTop: 2, fontFamily: SANS, fontSize: 14, color: ink + '99' }}>
+                    {meta?.source ?? piece.source}{meta?.author ? ` · ${meta.author}` : ''}
+                  </Text>
+                ) : null}
+                {opening(piece, meta, settings) ? (
+                  <Animated.Text key={piece.id} entering={FadeIn.duration(300)} numberOfLines={Math.max(2, Math.floor((frameH - 210) / 22))}
+                    style={{ marginTop: 16, textAlign: 'center', fontFamily: TYPE, fontSize: 14.5, lineHeight: 22, color: ink + 'd9' }}>
+                    {opening(piece, meta, settings)}
+                  </Animated.Text>
+                ) : null}
               </View>
             </Pressable>
           </Animated.View>
@@ -215,7 +257,7 @@ export default function TapesScreen() {
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap }}>
                     {shown.map((t, i) => (
                       <Animated.View key={t.id} entering={FadeInDown.delay(Math.min(i, 10) * 35).duration(300)}>
-                        <Still take={t} width={cell} onPress={() => { Haptics.selectionAsync().catch(() => {}); openRoom(takeHref(t)); }} />
+                        <Still take={t} width={cell} onPress={() => { Haptics.selectionAsync().catch(() => {}); openRoom(takeHref(t)); }} onLongPress={() => menu(t)} />
                       </Animated.View>
                     ))}
                   </View>
@@ -232,9 +274,19 @@ export default function TapesScreen() {
             <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#fff' }} />
             <Text style={{ fontFamily: SANS_B, fontSize: 17.5, color: '#fff' }}>Start taping</Text>
           </Pressable>
-          <StageDirection numberOfLines={1} style={{ marginTop: 8, textAlign: 'center' }}>(say “action” to roll, “cut” to stop.)</StageDirection>
+          <StageDirection numberOfLines={1} style={{ marginTop: 8, textAlign: 'center' }}>{`(say “${cueWord(settings, 'action')}” to roll, “${cueWord(settings, 'cut')}” to stop.)`}</StageDirection>
         </View>
       </View>
+
+      {tuning ? (
+        <TapeSettingsSheet
+          settings={settings}
+          onChange={setSettings}
+          onClose={() => setTuning(false)}
+          onSlate={() => { setTuning(false); if (settings.slate.name.trim()) openRoom({ pathname: '/tape/[id]', params: { id: SLATE_TAPE } } as Href); }}
+          onCameraCheck={() => { setTuning(false); openRoom('/tape-check' as Href); }}
+        />
+      ) : null}
 
       {picking ? (
         <PiecePicker
@@ -247,6 +299,23 @@ export default function TapesScreen() {
       ) : null}
     </View>
   );
+}
+
+/** The line at the top of the frame: what kind of piece and how long, or what the slate holds. */
+function frameFacts(piece: Piece, m: Monologue | undefined, s: TapeSettings): string {
+  if (piece.id === SLATE_TAPE) return s.slate.name.trim() ? 'Your slate' : 'Set your slate in settings';
+  if (piece.id === FREE_TAPE) return 'Your own sides';
+  if (!m) return '';
+  const kind = m.sourceType === 'play' ? 'Play' : m.sourceType === 'film' ? 'Film' : m.sourceType === 'tv' ? 'TV' : '';
+  const min = m.duration ? `${Math.max(1, Math.round(m.duration / 60))} min` : '';
+  return [kind, min, m.ageRange].filter(Boolean).join(' · ');
+}
+
+/** The words in the frame: how the piece opens, or the slate as you will say it. */
+function opening(piece: Piece, m: Monologue | undefined, s: TapeSettings): string {
+  if (piece.id === SLATE_TAPE) return slateLines(s.slate).join(' ');
+  if (!m) return '';
+  return (m.excerpt || m.fullText || '').replace(/\s+/g, ' ').trim();
 }
 
 /** The dropdown's list: a sheet up from the foot, Lately, then the Book, then the slate and none. */
