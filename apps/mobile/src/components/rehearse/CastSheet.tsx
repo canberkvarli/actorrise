@@ -144,7 +144,7 @@ export function CastSheet({ payload, guided, preparing, waiting, error, gated, o
             <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); router.push({ pathname: '/edit/[id]', params: { id: String(payload.scene.id) } }); }} hitSlop={8} accessibilityRole="button" accessibilityLabel={L('Read and fix the sides', 'Metni oku ve düzelt')}
               style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' }}>
               <Ionicons name="create-outline" size={14} color={c.accentText} />
-              <Text numberOfLines={1} style={{ fontFamily: SANS_B, fontSize: 13, color: c.accentText }}>{L('Fix the sides', 'Metni düzelt')}</Text>
+              <Text numberOfLines={1} style={{ fontFamily: SANS_B, fontSize: 13, color: c.accentText }}>{L('Edit the scene', 'Sahneyi düzenle')}</Text>
             </Pressable>
           ) : null}
 

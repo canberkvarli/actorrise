@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
 import { ApiError, getFavorites, setCut, setFavorite, setMemorized, setPrepState } from '../api/client';
@@ -19,10 +19,10 @@ import type { Monologue } from '../data/monologues';
 
 const KEY = ['favorites'];
 
-export function useFavorites(enabled: boolean) {
-  return useQuery<Monologue[]>({
+/** The Book's saves, as one set of options: read by the screens, prefetched the moment a session lands (app/_layout.tsx). */
+export function favoritesOptions() {
+  return queryOptions<Monologue[]>({
     queryKey: KEY,
-    enabled,
     queryFn: async ({ signal }) => {
       try {
         const list = (await getFavorites(signal)).map(apiToMonologue);
@@ -37,6 +37,10 @@ export function useFavorites(enabled: boolean) {
       }
     },
   });
+}
+
+export function useFavorites(enabled: boolean) {
+  return useQuery({ ...favoritesOptions(), enabled });
 }
 
 export function useIsFavorited(id: string, enabled: boolean): boolean {

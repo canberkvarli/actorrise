@@ -30,6 +30,10 @@ import '../src/global.css';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeContext';
 import { getGuided, getRunStats, getShelf, listRuns, listScenes } from '../src/api/rehearsal';
 import { loadRecents } from '../src/lib/recents';
+import { prefetchShelf } from '../src/lib/shelfStart';
+import { favoritesOptions } from '../src/hooks/useFavorites';
+import { auditionsOptions } from '../src/hooks/useAuditions';
+import { LISTS_KEY } from '../src/hooks/useLists';
 import { markHadAccount } from '../src/lib/demo';
 import { useWelcomeOnce } from '../src/hooks/useWelcomeOnce';
 import { ReadingBanner } from '../src/components/ReadingBanner';
@@ -53,6 +57,7 @@ import { KnockNoteHost } from '../src/components/KnockNote';
 import { WhatsNewHost } from '../src/components/WhatsNew';
 import { useSession } from '../src/lib/useSession';
 import { setFavorite } from '../src/api/client';
+import { getLists } from '../src/api/book';
 import { PENDING_KEEP } from '../src/lib/keep';
 import { loadLocalePreference, useLocale } from '../src/i18n';
 
@@ -87,7 +92,7 @@ const queryClient = new QueryClient({ defaultOptions: { queries: { gcTime: 24 * 
 const persister = createAsyncStoragePersister({ storage: AsyncStorage, key: 'ghostlight-queries', throttleTime: 1000 });
 /** Answers that are the same for every actor: kept across a sign-out. */
 const SHARED = new Set(['guided', 'scenes', 'trending', 'tonight', 'discover', 'catalogue-size', 'screen-shelf']);
-const PERSISTED = new Set(['favorites', 'auditions', 'trending', 'screen-shelf', 'tonight', 'discover', 'catalogue-size', 'scripts', 'scenes', 'run-stats', 'guided', 'runs', 'recents-local', 'read-wall']);
+const PERSISTED = new Set(['favorites', 'auditions', 'trending', 'screen-shelf', 'tonight', 'discover', 'catalogue-size', 'scripts', 'scenes', 'run-stats', 'guided', 'runs', 'recents-local', 'read-wall', 'latest-run', 'book-lists']);
 const persistOptions = {
   persister,
   maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -308,19 +313,31 @@ function Shell() {
   useEffect(() => { if (isAuthenticated) void markHadAccount(); }, [isAuthenticated]);
   // A new account is asked the three questions once, however it was made.
   useWelcomeOnce(session, isAuthenticated);
-  // The Scene room is fetched as the app opens, so its shelves are there when the tab is.
+  // The rooms are fetched as the app opens, and again the moment a sign-in
+  // lands, all at once, so each tab is there when it is pressed. The tabs are
+  // made only when first opened, and before a sign-in every query of the
+  // account's was off, so without this a new sign-in met an empty cache and
+  // each room asked for its own things only on arrival, one room after the
+  // next. Keyed on who, not on the session object: a token refresh is the same
+  // person and asks for nothing again.
+  const userId = session?.user.id ?? null;
   useEffect(() => {
-    if (!session) return;
+    if (!userId) return;
     void queryClient.prefetchQuery({ queryKey: ['guided'], queryFn: ({ signal }) => getGuided(signal), staleTime: 60 * 60_000 });
     void queryClient.prefetchQuery({ queryKey: ['scenes'], queryFn: ({ signal }) => listScenes(signal), staleTime: 10 * 60_000 });
-    if (isAuthenticated) void queryClient.prefetchQuery({ queryKey: ['scripts', 'shelf-head'], queryFn: ({ signal }) => getShelf({ limit: 1 }, signal), staleTime: 60_000 });
+    if (!isAuthenticated) return;
+    void queryClient.prefetchQuery({ queryKey: ['scripts', 'shelf-head'], queryFn: ({ signal }) => getShelf({ limit: 1 }, signal), staleTime: 60_000 });
+    // The Scene room's shelf under the exact key the screen asks with, and the scene that was left.
+    void prefetchShelf(queryClient).catch(() => {});
+    // The Book: the saves, the lists, the week on the board.
+    void queryClient.prefetchQuery({ ...favoritesOptions(), staleTime: 30_000 });
+    void queryClient.prefetchQuery({ ...auditionsOptions(), staleTime: 30_000 });
+    void queryClient.prefetchQuery({ queryKey: LISTS_KEY, queryFn: getLists, staleTime: 30_000 });
     // The profile's streak and counts, so it opens whole.
-    if (isAuthenticated) {
-      void queryClient.prefetchQuery({ queryKey: ['runs'], queryFn: ({ signal }) => listRuns(signal), staleTime: 60_000 });
-      void queryClient.prefetchQuery({ queryKey: ['run-stats'], queryFn: ({ signal }) => getRunStats(signal), staleTime: 60_000 });
-      void queryClient.prefetchQuery({ queryKey: ['recents-local'], queryFn: loadRecents, staleTime: 30_000 });
-    }
-  }, [session, isAuthenticated]);
+    void queryClient.prefetchQuery({ queryKey: ['runs'], queryFn: ({ signal }) => listRuns(signal), staleTime: 60_000 });
+    void queryClient.prefetchQuery({ queryKey: ['run-stats'], queryFn: ({ signal }) => getRunStats(signal), staleTime: 60_000 });
+    void queryClient.prefetchQuery({ queryKey: ['recents-local'], queryFn: loadRecents, staleTime: 30_000 });
+  }, [userId, isAuthenticated]);
   useReminderTaps();
 
   /**

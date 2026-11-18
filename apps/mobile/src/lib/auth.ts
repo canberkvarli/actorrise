@@ -111,8 +111,11 @@ export async function signInWithApple(): Promise<AuthResult> {
     // so there is nothing left to derive a greeting from.
     const given = credential.fullName?.givenName?.trim();
     if (given) {
-      // Best effort. A failure here costs a first name, not a sign-in.
-      await supabase.auth.updateUser({ data: { given_name: given } }).catch(() => {});
+      // Best effort. A failure here costs a first name, not a sign-in. Not
+      // waited on: the room behind the sheet should not stand still for a
+      // round trip about a name. Only Account reads it, from the live session,
+      // which USER_UPDATED refreshes when this lands.
+      void supabase.auth.updateUser({ data: { given_name: given } }).catch(() => {});
     }
     return { ok: true };
   } catch (e) {

@@ -202,6 +202,13 @@ function Run({ payload, guided, picked, cast, castVoices, demoN, demoKey, guided
   };
 
   const running = state !== 'ready' && !ended;
+  // Your own sides open in the editor from here, before the run: up in the
+  // bar, where it is seen, not only as the small link on the cast sheet.
+  const editable = !guided && !picked && !demoN && !payload.scene.is_library;
+  const editScene = () => {
+    Haptics.selectionAsync().catch(() => {});
+    router.push({ pathname: '/edit/[id]', params: { id: String(payload.scene.id) } });
+  };
   // The end comes in three beats, not a cut: the last line stays on the stage
   // while the lights go down over it, then the card, a line at a time.
   const [curtain, setCurtain] = useState(false);
@@ -250,7 +257,8 @@ function Run({ payload, guided, picked, cast, castVoices, demoN, demoKey, guided
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
       <TopBar title={running || ended ? sceneLine : ''} onLeave={leave} progress={running ? progressOf(r.snapshot?.lineIndex ?? 0, payload.lines.length) : null}
-        counter={running ? `${(r.snapshot?.lineIndex ?? 0) + 1}/${payload.lines.length}` : null} />
+        counter={running ? `${(r.snapshot?.lineIndex ?? 0) + 1}/${payload.lines.length}` : null}
+        onEdit={editable && !running && !ended && !armed ? editScene : undefined} />
       {ended && curtain && demoN ? (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
           <DemoCurtain
@@ -357,7 +365,7 @@ function Run({ payload, guided, picked, cast, castVoices, demoN, demoKey, guided
 const progressOf = (line: number, of: number) => (of > 0 ? Math.min(1, line / of) : 0);
 
 /** The bar across the top: leave, the title with a thin bar of progress under it, and where in the scene as a count. */
-function TopBar({ title, onLeave, progress = null, counter = null }: { title: string; onLeave: () => void; progress?: number | null; counter?: string | null }) {
+function TopBar({ title, onLeave, progress = null, counter = null, onEdit }: { title: string; onLeave: () => void; progress?: number | null; counter?: string | null; onEdit?: () => void }) {
   const { colors: c } = useTheme();
   const L = useL();
   return (
@@ -374,6 +382,13 @@ function TopBar({ title, onLeave, progress = null, counter = null }: { title: st
         ) : null}
       </View>
       {counter ? <Text style={{ fontFamily: SANS_B, fontSize: 14, color: c.mutedForeground }}>{counter}</Text> : null}
+      {onEdit ? (
+        <Pressable onPress={onEdit} hitSlop={10} accessibilityRole="button" accessibilityLabel={L('Edit the scene', 'Sahneyi düzenle')}
+          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1.5, borderColor: c.border, opacity: pressed ? 0.7 : 1 })}>
+          <Ionicons name="create-outline" size={15} color={c.accentText} />
+          <Text style={{ fontFamily: SANS_B, fontSize: 14, color: c.accentText }}>{L('Edit', 'Düzenle')}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

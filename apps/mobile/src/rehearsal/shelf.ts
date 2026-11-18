@@ -40,6 +40,18 @@ export const REST_FOLDED = 5;
 const DAY = 86_400_000;
 const stamp = (iso: string | null | undefined) => (iso ? new Date(iso).getTime() || 0 : 0);
 
+/**
+ * The scripts opened on this phone inside the working window, as the server is
+ * told them: ids, ascending. Part of the shelf's query key, so the screen and
+ * the prefetch at launch must build it the same way.
+ */
+export function touchedIds(touched: Record<number, string>, now = Date.now()): number[] {
+  return Object.entries(touched)
+    .filter(([, iso]) => now - stamp(iso) <= WORKING_DAYS * DAY)
+    .map(([id]) => Number(id))
+    .sort((a, b) => a - b);
+}
+
 /** The last time the actor did anything with it: ran a scene, opened it here, or brought it in. */
 export function lastActive(s: ScriptSummary, touched?: string | null): number {
   return Math.max(stamp(s.last_rehearsed_at), stamp(touched), stamp(s.created_at));

@@ -4,12 +4,13 @@
  * (the server's runs and scripts are per person), so every query waits on
  * `enabled`.
  */
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { infiniteQueryOptions, queryOptions, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   cancelExtraction, deleteScript, getGuided, getLatestRun, getRehearsalScene, getRunStats, getScript, getScriptProgress, listScenes, listScripts,
   uploadScriptBackground, getSceneMap, addScenes, setScriptLayout, renameScriptScene, resetScriptLayout, deleteScriptScene, listDeletedScripts, restoreScript, getShelf,
   type ShelfSortKey,
+  type ShelfPage,
   type Sendable,
   type SidesSource,
   editSceneLines,
@@ -28,22 +29,37 @@ export function useScenes(enabled: boolean) {
  * The shelf, a page at a time. Keyed under SCRIPTS_KEY, so whatever refreshes
  * the scripts (an upload, a delete, a restore, a stop) refreshes the shelf.
  */
-export function useShelf(
-  p: { q: string; genre: string | null; sort: ShelfSortKey; touched: number[]; reading: boolean },
-  enabled: boolean,
-) {
-  return useInfiniteQuery({
+export type ShelfParams = { q: string; genre: string | null; sort: ShelfSortKey; touched: number[] };
+
+/**
+ * The shelf's first page and the ones after it, as one set of options: the
+ * screen reads them, and the app's launch and a sign-in prefetch them, so the
+ * Scene tab opens on an answer already in the cache (the key has to match to
+ * the letter, or the prefetch is a request nobody reads).
+ */
+export function shelfOptions(p: ShelfParams) {
+  return infiniteQueryOptions({
     queryKey: [...SCRIPTS_KEY, 'shelf', p.q.trim(), p.genre, p.sort, p.touched.join(',')],
     queryFn: ({ pageParam, signal }) => getShelf({ q: p.q, genre: p.genre, sort: p.sort, touched: p.touched, offset: pageParam, limit: 30 }, signal),
     initialPageParam: 0,
-    getNextPageParam: (last) => last.next_offset ?? undefined,
-    enabled,
+    getNextPageParam: (last: ShelfPage) => last.next_offset ?? undefined,
     staleTime: 60_000,
+  });
+}
+
+export function useShelf(p: ShelfParams & { reading: boolean }, enabled: boolean) {
+  return useInfiniteQuery({
+    ...shelfOptions(p),
+    enabled,
     placeholderData: (prev) => prev,
     // Something still being read is asked about again until it settles.
     refetchInterval: p.reading ? 3000 : false,
     retry: 1,
   });
+}
+
+export function latestRunOptions() {
+  return queryOptions({ queryKey: ['latest-run'], queryFn: ({ signal }) => getLatestRun(signal), staleTime: 30_000 });
 }
 
 /** Just what is in flight, for the card that follows a read around the app: working on comes whole, the rest is one row. */
@@ -211,7 +227,7 @@ export function useRestoreScript() {
 
 /** The scene left unfinished most recently, for the pick-up card on the home and in the room. */
 export function useLatestRun(enabled: boolean) {
-  return useQuery({ queryKey: ['latest-run'], queryFn: ({ signal }) => getLatestRun(signal), enabled, staleTime: 30_000, retry: 1 });
+  return useQuery({ ...latestRunOptions(), enabled, retry: 1 });
 }
 
 /** The actor's own lines, rewritten: the scene, the scripts and the scenes all read again. */

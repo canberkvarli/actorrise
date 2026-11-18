@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ScriptSummary } from '../api/rehearsal';
-import { findInShelf, groupShelf, shelfGenres, sortShelf } from './shelf';
+import { findInShelf, groupShelf, shelfGenres, sortShelf, touchedIds } from './shelf';
 
 const NOW = new Date('2026-10-27T12:00:00Z').getTime();
 const daysAgo = (d: number) => new Date(NOW - d * 86_400_000).toISOString();
@@ -63,5 +63,15 @@ describe('shelfGenres', () => {
   it('lists the genres, the most common first', () => {
     const list = [script({ genres: ['Drama', 'Comedy'] }), script({ genres: ['Drama'] }), script({ genre: 'Thriller' })];
     expect(shelfGenres(list)).toEqual(['Drama', 'Comedy', 'Thriller']);
+  });
+});
+
+describe('touchedIds', () => {
+  it('keeps the ones opened inside the working window, ascending', () => {
+    expect(touchedIds({ 9: daysAgo(1), 3: daysAgo(13), 5: daysAgo(15), 7: daysAgo(0) }, NOW)).toEqual([3, 7, 9]);
+  });
+  it('is empty for nothing opened, and for a stamp it cannot read', () => {
+    expect(touchedIds({}, NOW)).toEqual([]);
+    expect(touchedIds({ 4: 'not a date' }, NOW)).toEqual([]);
   });
 });

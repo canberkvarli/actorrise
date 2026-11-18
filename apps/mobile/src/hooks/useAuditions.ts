@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Linking } from 'react-native';
 
@@ -46,10 +46,10 @@ import {
 
 export const AUDITIONS_KEY = ['auditions'];
 
-export function useAuditions(enabled: boolean) {
-  return useQuery<Audition[]>({
+/** The board's week, as one set of options: read by the screens, prefetched the moment a session lands (app/_layout.tsx). */
+export function auditionsOptions() {
+  return queryOptions<Audition[]>({
     queryKey: AUDITIONS_KEY,
-    enabled,
     queryFn: async ({ signal }) => {
       const list = await listAuditions(undefined, signal);
       // The cheapest moment to catch an audition added on the website: the list
@@ -58,6 +58,10 @@ export function useAuditions(enabled: boolean) {
       return list;
     },
   });
+}
+
+export function useAuditions(enabled: boolean) {
+  return useQuery({ ...auditionsOptions(), enabled });
 }
 
 /** One audition out of the cached list, or null until it is there. */

@@ -102,20 +102,23 @@ export function Tooltip({ open, at, title, body, onClose }: {
  * One choice from a short list, as a sheet of our own: each row is the
  * choice's name and one Courier line on what it does, and the one in force
  * carries a gel dot. A tap picks and closes. The dark behind it is not a
- * button, like the other sheets; "(leave it.)" is the way out.
+ * button, like the other sheets; "(leave it.)" is the way out. With no
+ * `value` it is a short list of things to do (a scene's options on a hold):
+ * the same rows, no dots.
  */
 export function ChoiceSheet<K extends string>({ open, title, accent, options, value, onPick, onClose }: {
   open: boolean;
   title: string;
   accent: string;
   options: { key: K; label: string; line?: string }[];
-  value: K;
+  value?: K;
   onPick: (key: K) => void;
   onClose: () => void;
 }) {
   const { colors: c } = useTheme();
   const insets = useSafeAreaInsets();
   const L = useL();
+  const actions = value === undefined;
   return (
     <Modal visible={open} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(12,7,4,0.66)' }}>
@@ -133,9 +136,9 @@ export function ChoiceSheet<K extends string>({ open, title, accent, options, va
             {options.map((o) => {
               const on = o.key === value;
               return (
-                <Pressable key={o.key} onPress={() => { onPick(o.key); onClose(); }} accessibilityRole="radio" accessibilityState={{ selected: on }}
+                <Pressable key={o.key} onPress={() => { onPick(o.key); onClose(); }} accessibilityRole={actions ? 'button' : 'radio'} accessibilityState={actions ? undefined : { selected: on }}
                   style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: c.divider, opacity: pressed ? 0.7 : 1 })}>
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: on ? c.yellow : 'transparent', borderWidth: on ? 0 : 1, borderColor: c.chevron }} />
+                  {actions ? null : <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: on ? c.yellow : 'transparent', borderWidth: on ? 0 : 1, borderColor: c.chevron }} />}
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ fontFamily: on ? SANS_B : SANS, fontSize: 16, color: c.foreground }}>{o.label}</Text>
                     {o.line ? <Text style={{ marginTop: 1, fontFamily: 'CourierPrime_400Regular_Italic', fontSize: 12.5, color: c.mutedForeground }}>({o.line})</Text> : null}

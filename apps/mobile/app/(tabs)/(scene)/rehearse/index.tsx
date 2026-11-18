@@ -28,11 +28,11 @@ import { SortableList } from '../../../../src/components/SortableList';
 import { SwipeRow } from '../../../../src/components/SwipeRow';
 import { KEY_WORDS, firstScenes } from '../../../../src/lib/demo';
 import { aboutLeft } from '../../../../src/lib/scriptSteps';
-import { loadTouched, markTouched } from '../../../../src/lib/scriptTouched';
+import { markTouched } from '../../../../src/lib/scriptTouched';
+import { loadShelfStart, rememberSort, rememberTouched, shelfStartNow, type ShelfStart } from '../../../../src/lib/shelfStart';
 import { groupByAct } from '../../../../src/rehearsal/script-layout';
-import { FIND_FROM, REST_FOLDED, SHELF_SORTS, shelfSorts, type ShelfSort } from '../../../../src/rehearsal/shelf';
+import { FIND_FROM, REST_FOLDED, shelfSorts, touchedIds, type ShelfSort } from '../../../../src/rehearsal/shelf';
 import { ChoiceSheet } from '../../../../src/components/ConfirmSheet';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { LatestRun, SceneSummary, ScriptScene, ScriptSummary } from '../../../../src/api/rehearsal';
 import { track } from '../../../../src/lib/analytics';
 import { useSession } from '../../../../src/lib/useSession';
@@ -41,7 +41,6 @@ import { useTheme } from '../../../../src/theme/ThemeContext';
 import { monologueRoomsShown, useL, useLocale } from '../../../../src/i18n';
 import { lower } from '../../../../src/i18n/pick';
 
-const SORT_KEY = 'ghostlight:sides.sort';
 const SERIF = 'InstrumentSerif_400Regular';
 const SERIF_I = 'InstrumentSerif_400Regular_Italic';
 const MONO = 'CourierPrime_400Regular';
@@ -78,15 +77,17 @@ export default function RehearseHub() {
   // The shelf, made sense of on the server a page at a time, so five hundred
   // scripts cost what thirty do: Working on whole, the rest thirty at a time
   // in the order chosen, a find that looks inside, the genres.
-  const [touched, setTouched] = useState<Record<number, string>>({});
-  useEffect(() => { void loadTouched().then(setTouched); }, []);
-  const touch = (id: number) => { void markTouched(id).then(setTouched); };
-  const touchedIds = useMemo(
-    () => Object.entries(touched).filter(([, iso]) => Date.now() - new Date(iso).getTime() <= 14 * 86_400_000).map(([id]) => Number(id)).sort((a, b) => a - b),
-    [touched],
-  );
-  const [restSort, setRestSort] = useState<ShelfSort>('recent');
-  useEffect(() => { AsyncStorage.getItem(SORT_KEY).then((v) => { if (v && SHELF_SORTS.some((o) => o.key === v)) setRestSort(v as ShelfSort); }).catch(() => {}); }, []);
+  // What the shelf is asked with lives on the phone (src/lib/shelfStart.ts):
+  // read once for the app and kept, so this screen starts on the same key the
+  // launch prefetched, and asks nothing until it has it. Before, it asked with
+  // nothing, then again as each of the two came off the disk.
+  const [start, setStart] = useState<ShelfStart | null>(shelfStartNow);
+  useEffect(() => { if (!start) void loadShelfStart().then(setStart); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const touched = start?.touched ?? {};
+  const touch = (id: number) => { void markTouched(id).then((t) => { rememberTouched(t); setStart((s) => ({ touched: t, sort: s?.sort ?? 'recent' })); }); };
+  const ids = useMemo(() => touchedIds(touched), [touched]);
+  const restSort: ShelfSort = start?.sort ?? 'recent';
+  const setRestSort = (k: ShelfSort) => { rememberSort(k); setStart((s) => ({ touched: s?.touched ?? {}, sort: k })); };
   const [pickingSort, setPickingSort] = useState(false);
   const [find, setFind] = useState('');
   // Asked when the typing stops, not on every letter.
@@ -95,7 +96,7 @@ export default function RehearseHub() {
   const [genre, setGenre] = useState<string | null>(null);
   const [allRest, setAllRest] = useState(false);
   const [inFlight, setInFlight] = useState(false);
-  const shelfQ = useShelf({ q, genre, sort: restSort, touched: touchedIds, reading: inFlight }, isAuthenticated);
+  const shelfQ = useShelf({ q, genre, sort: restSort, touched: ids, reading: inFlight }, isAuthenticated && start !== null);
   const pages = shelfQ.data?.pages ?? [];
   const head = pages[0];
   const total = head?.total ?? 0;
@@ -423,7 +424,7 @@ export default function RehearseHub() {
         accent={L('rest.', 'sırala.')}
         options={shelfSorts().map(({ key, label }) => ({ key, label }))}
         value={restSort}
-        onPick={(k) => { setRestSort(k); AsyncStorage.setItem(SORT_KEY, k).catch(() => {}); }}
+        onPick={(k) => setRestSort(k)}
         onClose={() => setPickingSort(false)}
       />
       <ConfirmSheet
@@ -546,6 +547,21 @@ function ScriptRow({ script, startOpen, left, why, onTouch, onOpen }: { script: 
   const remaining = progress.data?.estimate_seconds != null && progress.data.elapsed_seconds != null
     ? progress.data.estimate_seconds - progress.data.elapsed_seconds : null;
   const go = (sceneId: number) => { Haptics.selectionAsync().catch(() => {}); onTouch?.(script.id); router.push({ pathname: '/rehearse/[id]', params: { id: String(sceneId), from: 'script' } }); };
+  // A hold on a scene starts nothing: it offers what can be done with that
+  // scene. It used to open the map of the whole script, which read as the
+  // hold having set the whole thing off. A tap still opens the scene.
+  const [held, setHeld] = useState<{ id: number; title: string } | null>(null);
+  const hold = (sc: { id: number; title: string }) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); setHeld({ id: sc.id, title: sc.title }); };
+  const onHeld = (k: 'run' | 'edit' | 'map') => {
+    const sc = held;
+    if (!sc) return;
+    // After the sheet has gone: a screen raised while it is still closing can be refused by iOS.
+    setTimeout(() => {
+      if (k === 'run') go(sc.id);
+      else if (k === 'edit') { onTouch?.(script.id); router.push({ pathname: '/edit/[id]', params: { id: String(sc.id) } }); }
+      else editMap(sc.id);
+    }, 260);
+  };
   const line = broke ? `(${lower(script.processing_error) ?? L('it could not be read.', 'okunamadı.')})`
     : !ready ? L(`(reading the pages. ${aboutLeft(remaining)})`, `(sayfalar okunuyor. ${aboutLeft(remaining)})`)
     : L(`(${cast || `${script.num_characters} parts`} · ${script.num_scenes_extracted} ${script.num_scenes_extracted === 1 ? 'scene' : 'scenes'}.)`, `(${cast || `${script.num_characters} rol`} · ${script.num_scenes_extracted} sahne.)`);
@@ -600,10 +616,18 @@ function ScriptRow({ script, startOpen, left, why, onTouch, onOpen }: { script: 
             const here = left && left.scene_id === sc.id ? left : null;
             const progress = here && here.line_count > 0 ? Math.min(1, (here.line_index + 1) / here.line_count) : 0;
             return (
-              <Pressable key={sc.id} onPress={() => go(sc.id)} onLongPress={script.is_sample ? undefined : () => editMap(sc.id)} delayLongPress={350} accessibilityRole="button" accessibilityHint={script.is_sample ? undefined : L('Hold to edit the map', 'Haritayı düzenlemek için basılı tut')} style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingRight: 6, opacity: pressed ? 0.7 : 1 })}>
+              <Pressable key={sc.id} onPress={() => go(sc.id)} onLongPress={script.is_sample ? undefined : () => hold(sc)} delayLongPress={350} accessibilityRole="button" accessibilityHint={script.is_sample ? undefined : L('Hold for its options: edit the scene, move or rename it', 'Seçenekler için basılı tut: sahneyi düzenle, taşı ya da yeniden adlandır')}
+                accessibilityActions={script.is_sample ? undefined : [{ name: 'longpress', label: L('Options', 'Seçenekler') }]} onAccessibilityAction={script.is_sample ? undefined : () => hold(sc)} style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingRight: 6, opacity: pressed ? 0.7 : 1 })}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                   <Text style={{ flex: 1, fontFamily: SANS, fontSize: 15, lineHeight: 21, color: c.foreground }}>{g.act ? underAct(sc.title, g.act) : sc.title}</Text>
                   <Text style={{ fontFamily: MONO, fontSize: 12, color: c.mutedForeground }}>{here ? L(`line ${here.line_index + 1} of ${here.line_count}`, `${here.line_count} replikten ${here.line_index + 1}`) : L(`${Math.max(1, Math.round(sc.estimated_duration_seconds / 60))} min`, `${Math.max(1, Math.round(sc.estimated_duration_seconds / 60))} dk`)}</Text>
+                  {/* The same options as a hold, where they can be seen: edit the scene, move or rename it. */}
+                  {script.is_sample ? null : (
+                    <Pressable onPress={() => hold(sc)} hitSlop={8} accessibilityRole="button" accessibilityLabel={L(`Options for ${sc.title}`, `Seçenekler: ${sc.title}`)}
+                      style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+                      <Ionicons name="ellipsis-horizontal" size={16} color={c.mutedForeground} />
+                    </Pressable>
+                  )}
                 </View>
                 {here ? (
                   <View style={{ marginTop: 6, height: 3, borderRadius: 1.5, backgroundColor: c.inactiveMeter, overflow: 'hidden' }}>
@@ -643,6 +667,18 @@ function ScriptRow({ script, startOpen, left, why, onTouch, onOpen }: { script: 
         <StageDirection style={{ paddingLeft: 68, paddingBottom: 12 }}>{L('(it would not open. try again.)', '(açılmadı. bir daha dene.)')}</StageDirection>
       ) : null}
       <KeepSheet open={keeping} what={{ user_script_id: script.id }} name={script.title} onClose={() => setKeeping(false)} />
+      <ChoiceSheet
+        open={held !== null}
+        title={held?.title ?? ''}
+        accent=""
+        options={[
+          { key: 'run' as const, label: L('Rehearse it', 'Prova et'), line: L('pick your part, then the run', 'rolünü seç, sonra prova') },
+          { key: 'edit' as const, label: L('Edit the scene', 'Sahneyi düzenle'), line: L('who says what, a direction, a line split in two', 'kim ne diyor, bir yönerge, ikiye bölünmüş bir replik') },
+          { key: 'map' as const, label: L('Move or rename it', 'Taşı ya da yeniden adlandır'), line: L('in the map of the script', 'metnin haritasında') },
+        ]}
+        onPick={onHeld}
+        onClose={() => setHeld(null)}
+      />
     </View>
   );
 }
