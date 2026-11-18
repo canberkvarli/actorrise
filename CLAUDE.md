@@ -90,7 +90,7 @@ Two rules hold there:
 
 ActorRise and Ghost Light became one brand, Ghost Light, live at ghostlight.actor (Canberk, 2026-11-16). The iOS app
 moved into this repo with its history (`git subtree`) at **`apps/mobile/`**; the old
-`canberkvarli/ghostlight` repo is to be archived. Work on the app happens here now.
+`canberkvarli/ghostlight` repo is archived (2026-11-16). 1.1.5, the first App Store build from this repo, went live 2026-11-17. Work on the app happens here now.
 - The web stays at the repo root for now (Vercel's root directory is `.`). Moving it to
   `apps/web` needs Vercel's Root Directory changed in the same step, or prod stops building.
 - `apps/mobile` has its own `package.json`, lockfile, tsconfig, tests and `CLAUDE.md`; run
