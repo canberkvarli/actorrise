@@ -63,7 +63,24 @@ export async function sendToCue(text: string, onEvent: (e: CueEvent) => void): P
 /** Paths Cue may turn into links. Anything else stays plain text. */
 const PATH = /(\/(?:monologues|monologue\/\d+|rehearse|practice|auditions|profile|billing|help|pricing)\b)/g;
 
-export type CueSegment = { kind: "text"; value: string } | { kind: "link"; value: string };
+export type CueSegment = { kind: "text"; value: string } | { kind: "link"; value: string; label: string };
+
+/** What a link reads as: the name the menu uses, never the path. An actor who is
+ *  not technical reads "/rehearse" as code; "Collection" is the tab they can see. */
+const LABELS: Record<string, string> = {
+  "/monologues": "Monologues",
+  "/rehearse": "Collection",
+  "/practice": "ScenePartner",
+  "/auditions": "Auditions",
+  "/profile": "your profile",
+  "/billing": "Billing",
+  "/help": "Help",
+  "/pricing": "Plans",
+};
+
+export function linkLabel(path: string): string {
+  return LABELS[path] ?? (path.startsWith("/monologue/") ? "open it" : path);
+}
 
 export function linkify(text: string): CueSegment[] {
   const out: CueSegment[] = [];
@@ -71,7 +88,7 @@ export function linkify(text: string): CueSegment[] {
   for (const m of text.matchAll(PATH)) {
     const i = m.index ?? 0;
     if (i > last) out.push({ kind: "text", value: text.slice(last, i) });
-    out.push({ kind: "link", value: m[1] });
+    out.push({ kind: "link", value: m[1], label: linkLabel(m[1]) });
     last = i + m[1].length;
   }
   if (last < text.length) out.push({ kind: "text", value: text.slice(last) });

@@ -182,7 +182,7 @@ export function Cue() {
                     {linkify(m.content).map((seg, j) =>
                       seg.kind === "link" ? (
                         <Link key={j} href={seg.value} onClick={() => window.innerWidth < 768 && setOpen(false)}>
-                          {seg.value}
+                          {seg.label}
                         </Link>
                       ) : (
                         <span key={j}>{seg.value}</span>

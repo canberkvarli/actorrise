@@ -279,7 +279,9 @@ def respond(db: Session, user: User, text: str, client=None) -> Iterator[dict[st
             if name == "hand_off":
                 hand_off(db, user, conv, str(args.get("reason") or "asked"), str(args.get("summary") or text))
                 handed_off = True
-                out: dict[str, Any] = {"ok": True, "note": "Canberk will see this and reply by email."}
+                # The model tends to tell the actor before the call and again after it
+                # (2026-11-17: the same line twice in one reply). Say so in the result.
+                out: dict[str, Any] = {"ok": True, "note": "Passed to Canberk, who replies by email. Tell them this once in the reply; if you already have, do not repeat it."}
             else:
                 out = tools.run(name, args, db, user)
                 if name in tools.NUMBER_SOURCES:

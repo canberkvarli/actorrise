@@ -28,11 +28,16 @@ describe("linkify", () => {
   it("links app paths Cue is allowed to point at", () => {
     expect(linkify("Try /monologue/123 or /practice.")).toEqual([
       { kind: "text", value: "Try " },
-      { kind: "link", value: "/monologue/123" },
+      { kind: "link", value: "/monologue/123", label: "open it" },
       { kind: "text", value: " or " },
-      { kind: "link", value: "/practice" },
+      { kind: "link", value: "/practice", label: "ScenePartner" },
       { kind: "text", value: "." },
     ]);
+  });
+
+  it("shows a link as the menu's name, never the path", () => {
+    const link = linkify("Your saved pieces are in /rehearse.").find((s) => s.kind === "link");
+    expect(link).toEqual({ kind: "link", value: "/rehearse", label: "Collection" });
   });
 
   it("leaves anything else as text, including full URLs to other sites", () => {

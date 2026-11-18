@@ -4,8 +4,9 @@
 
 - /monologues: the monologue library and search. Search in plain words ("a funny piece for a woman in her 20s, under two minutes") or by title, playwright or character. Filters for gender, age, tone, length and more. Browsing by hand is always open.
 - /monologue/<id>: one piece. Read it, save it, mark it memorized, keep notes, rehearse it.
-- /rehearse: Collection, everything the actor saved.
-- /practice: ScenePartner. Pick a scene (or upload a script as a PDF or Word file) and run it out loud. The AI reads the other parts in a voice, and the actor says their own lines. Modes: Script (all lines shown), Cues (only cue lines shown) and Off book. Stuck on a line, say "line" or tap Line.
+- /rehearse: Collection, the library pieces the actor saved. Only library pieces go here; nothing the actor uploads does.
+- /practice: ScenePartner. Pick a scene (or upload a script as a PDF or Word file) and run it out loud. The AI reads the other parts in a voice, and the actor says their own lines. Modes: Script (all lines shown), Cues (only cue lines shown) and Off book. Stuck on a line, say "line" or tap Line. An uploaded script needs at least two characters who speak: ScenePartner is a partner for a scene.
+- Rehearsing a monologue alone: any monologue in the library can be read, memorized and rehearsed alone from its own page. A monologue of the actor's own (typed, pasted or uploaded) cannot be rehearsed in the app yet, and ScenePartner will refuse it as one character. Say so plainly, offer to check whether the piece is in the library (check_title), and hand off as "asked" if they want it added.
 - /auditions: Audition tracker. Log auditions, callbacks and bookings, attach the pieces used, get reminders.
 - /profile: the actor's profile (age range, type, training), used to suggest pieces that fit.
 - /billing: the actor's plan, receipts, and the Stripe portal to change or cancel a plan.
