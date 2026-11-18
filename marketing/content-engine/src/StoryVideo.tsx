@@ -33,12 +33,14 @@ const C_PAPER = {
 const C = { ...C_PAPER };
 /** Drawn looks. paper: warm paper, serif, orange italic key word. marker: off white, black sans,
  * a yellow highlighter swipe behind the key word (same idea as the reel's marker look). */
-export type StoryLook = "paper" | "marker" | "midnight" | "bold";
+export type StoryLook = "paper" | "marker" | "midnight" | "bold" | "noir";
 const HL = "#ffe15a";
 // Fills for drawn shapes and pages; the look sets them (dark shapes on the midnight sheet).
 let PAPER_FILL = "#f8f4ec";
 let PAGE = "#ffffff";
 let LOOK: StoryLook = "paper";
+/** The dark sheets (midnight, noir): drawn shapes get dark fills and the ink is light. */
+const DARK = () => LOOK === "midnight" || LOOK === "noir";
 const F_PAPER = { serif: "Playfair", serifI: "PlayfairItalic", type: "CourierPrime", sans: "Montserrat" };
 const F = { ...F_PAPER };
 const applyLook = (look: StoryLook) => {
@@ -47,9 +49,11 @@ const applyLook = (look: StoryLook) => {
     // midnight (2026-11-17): the reel's midnight look for drawn films. Deep blue black sheet, cream ink, warm amber key word.
     : look === "midnight" ? { paper: "#0d1020", ink: "#f3efe6", inkSoft: "rgba(243,239,230,0.55)", orange: "#f2b75b" }
     // bold (2026-11-22): the reel's bold look for drawn films. Orange field, near black ink, the key word in white.
-    : look === "bold" ? { paper: "#e8792b", ink: "#15100c", inkSoft: "rgba(21,16,12,0.6)", orange: "#ffffff" } : {});
-  PAPER_FILL = look === "midnight" ? "#1a2038" : "#f8f4ec";
-  PAGE = look === "midnight" ? "#262d4a" : "#ffffff";
+    : look === "bold" ? { paper: "#e8792b", ink: "#15100c", inkSoft: "rgba(21,16,12,0.6)", orange: "#ffffff" }
+    // noir (2026-11-23): lights off. Warm near black sheet, cream ink, the brand orange as the only colour.
+    : look === "noir" ? { paper: "#0d0b09", ink: "#f1ece2", inkSoft: "rgba(241,236,226,0.5)", orange: "#f08a3c" } : {});
+  PAPER_FILL = look === "midnight" ? "#1a2038" : look === "noir" ? "#1c1916" : "#f8f4ec";
+  PAGE = look === "midnight" ? "#262d4a" : look === "noir" ? "#27231f" : "#ffffff";
   Object.assign(F, F_PAPER, {});
 };
 loadFont({ family: F.serif, url: staticFile("fonts/playfair.woff2"), weight: "600" });
@@ -115,7 +119,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -236,7 +240,9 @@ const Cue: React.FC<{ text: string; color: string; at?: number }> = ({ text, col
 const Paper: React.FC = () => (
   <AbsoluteFill
     style={{
-      background: LOOK === "midnight"
+      background: LOOK === "noir"
+        ? `radial-gradient(ellipse 90% 70% at 50% 45%, #1a1613 0%, ${C.paper} 62%, #050403 100%)`
+        : DARK()
         ? `radial-gradient(ellipse 90% 70% at 50% 40%, #171c36 0%, ${C.paper} 62%, #070914 100%)`
         : LOOK === "marker"
         ? `radial-gradient(ellipse 90% 70% at 50% 40%, #fbfaf6 0%, ${C.paper} 65%, #ecebe6 100%)`
@@ -2225,7 +2231,7 @@ const Face: React.FC<{ x: number; y: number; r?: number; panic?: number; hope?: 
     <g transform={`translate(${x + shake} ${y}) rotate(${tilt}) scale(${k * pop})`}>
       <circle cx={0} cy={0} r={78} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} />
       {/* hair */}
-      <path d="M-74 -18 C -70 -80, 60 -96, 76 -24 C 50 -52, -20 -60, -74 -18 Z" fill={LOOK === "midnight" ? "#b9823f" : C.ink} />
+      <path d="M-74 -18 C -70 -80, 60 -96, 76 -24 C 50 -52, -20 -60, -74 -18 Z" fill={DARK() ? "#b9823f" : C.ink} />
       {/* brows: up in panic, relaxed in hope */}
       <path d={`M-40 ${-26 - panic * 12} L -14 ${-30 - panic * 4 + hope * 4} M14 ${-30 - panic * 4 + hope * 4} L 40 ${-26 - panic * 12}`} stroke={C.ink} strokeWidth={6} strokeLinecap="round" />
       <circle cx={-26} cy={-4} r={eye} fill={C.ink} />
@@ -2873,7 +2879,7 @@ const FlatFace: React.FC<{ x: number; y: number; r?: number; start?: number }> =
   return (
     <g transform={`translate(${x} ${y + sag}) rotate(-7) scale(${(r / 78) * pop})`}>
       <circle cx={0} cy={0} r={78} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} />
-      <path d="M-74 -18 C -70 -80, 60 -96, 76 -24 C 50 -52, -20 -60, -74 -18 Z" fill={LOOK === "midnight" ? "#b9823f" : C.ink} />
+      <path d="M-74 -18 C -70 -80, 60 -96, 76 -24 C 50 -52, -20 -60, -74 -18 Z" fill={DARK() ? "#b9823f" : C.ink} />
       <path d="M-42 -20 L -16 -32 M16 -32 L 42 -20" stroke={C.ink} strokeWidth={6} strokeLinecap="round" />
       <path d="M-36 -2 C -30 6, -20 6, -14 -2 M14 -2 C 20 6, 30 6, 36 -2" fill="none" stroke={C.ink} strokeWidth={6} strokeLinecap="round" />
       <path d="M-20 42 C -8 30, 8 30, 20 42" fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
@@ -2885,7 +2891,7 @@ const NightWindow: React.FC<{ x: number; y: number; w: number; h: number; start?
   const f = useCurrentFrame();
   return (
     <>
-      <Ink d={`M${x} ${y} L ${x + w} ${y} L ${x + w} ${y + h} L ${x} ${y + h} Z`} start={start} dur={16} w={7} fill={LOOK === "midnight" ? "#05070f" : "rgba(33,26,21,0.12)"} />
+      <Ink d={`M${x} ${y} L ${x + w} ${y} L ${x + w} ${y + h} L ${x} ${y + h} Z`} start={start} dur={16} w={7} fill={DARK() ? "#05070f" : "rgba(33,26,21,0.12)"} />
       <Ink d={`M${x + w / 2} ${y + 2} L ${x + w / 2} ${y + h - 2} M${x + 2} ${y + h / 2} L ${x + w - 2} ${y + h / 2}`} start={start + 8} dur={10} w={4} color={C.inkSoft} />
       <Ink d={`M${x - 22} ${y + h + 4} L ${x + w + 22} ${y + h + 4}`} start={start + 6} dur={8} w={8} />
       {[[0.2, 0.22], [0.72, 0.16], [0.3, 0.7], [0.82, 0.62]].map(([a, b], i) => (
@@ -3246,7 +3252,7 @@ const Caster: React.FC<{ x: number; y: number; awake: number; start?: number; k?
     <g transform={`translate(${x} ${y - lift}) scale(${k * pop}) rotate(${(1 - awake) * 7})`}>
       <path d="M-128 196 C -128 96, -60 78, 0 78 C 60 78, 128 96, 128 196 Z" fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
       <circle cx={0} cy={0} r={86} fill={PAPER_FILL} stroke={C.ink} strokeWidth={6} />
-      <path d="M-84 -20 C -92 -74, -40 -104, 8 -98 C 52 -96, 86 -66, 84 -22 C 60 -56, 20 -70, -20 -62 C -48 -58, -70 -44, -84 -20 Z" fill={LOOK === "midnight" ? "#8f95b8" : C.ink} />
+      <path d="M-84 -20 C -92 -74, -40 -104, 8 -98 C 52 -96, 86 -66, 84 -22 C 60 -56, 20 -70, -20 -62 C -48 -58, -70 -44, -84 -20 Z" fill={DARK() ? "#8f95b8" : C.ink} />
       <path d={`M-46 ${-34 - awake * 16} L -14 ${-38 - awake * 12} M14 ${-38 - awake * 12} L 46 ${-34 - awake * 16}`} stroke={C.ink} strokeWidth={6} strokeLinecap="round" />
       <circle cx={-30} cy={-4} r={25} fill="none" stroke={C.ink} strokeWidth={5} />
       <circle cx={30} cy={-4} r={25} fill="none" stroke={C.ink} strokeWidth={5} />
@@ -3461,7 +3467,7 @@ const Milo: React.FC<{ x: number; y: number; r?: number; panic?: number; hope?: 
       <Face x={x} y={y} r={r} panic={panic} hope={hope} tilt={tilt} start={start} />
       <g transform={`translate(${x} ${y}) rotate(${tilt}) scale(${k})`} opacity={op}>
         {/* the hair: never combed */}
-        <path d="M-78 -16 L -92 -58 L -62 -50 L -60 -96 L -30 -68 L -10 -112 L 12 -72 L 40 -104 L 46 -64 L 84 -78 L 76 -20 C 50 -52, -20 -60, -74 -18 Z" fill={LOOK === "midnight" ? "#3a2a22" : C.ink} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+        <path d="M-78 -16 L -92 -58 L -62 -50 L -60 -96 L -30 -68 L -10 -112 L 12 -72 L 40 -104 L 46 -64 L 84 -78 L 76 -20 C 50 -52, -20 -60, -74 -18 Z" fill={DARK() ? "#3a2a22" : C.ink} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
         {/* the mustard scarf: wound once, one long end */}
         <g transform={`rotate(${swing} 34 96)`}>
           <path d="M16 92 L 60 86 L 86 300 L 44 308 Z" fill={MUSTARD} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
@@ -3768,6 +3774,229 @@ const BuriedScene: React.FC<{ s: Buried }> = ({ s }) => {
   );
 };
 
+// ---------- 1am, off book tomorrow (2026-11-23, story + how-to: Run it with the lines hidden) ----------
+const BED_FLOOR = 1310, BED_TOP = 1150;
+const SKIN_LIT = "#f0b98e";
+/** Milo's bed from the side, lights off: headboard on the left, the mattress, the footboard, an alarm clock on a shelf above the
+ *  headboard. `pillow` up = propped against the headboard (he is sitting), flat = he has given up. */
+const BedFrame: React.FC<{ start?: number; clock?: string; pillow?: "up" | "flat" }> = ({ start = 0, clock, pillow = "up" }) => {
+  const f = useCurrentFrame();
+  const soft = DARK() ? "#3a3632" : "#ffffff";
+  return (
+    <>
+      <Ink d={`M60 ${BED_FLOOR} C 360 ${BED_FLOOR - 8}, 720 ${BED_FLOOR + 8}, 1020 ${BED_FLOOR}`} start={start} dur={14} w={8} />
+      <Ink d={`M110 ${BED_FLOOR} L 110 880 C 110 846, 152 846, 152 880 L 152 ${BED_FLOOR} Z`} start={start + 2} dur={12} w={6} fill={PAPER_FILL} />
+      <Ink d={`M770 ${BED_FLOOR} L 770 1092 C 770 1066, 802 1066, 802 1092 L 802 ${BED_FLOOR} Z`} start={start + 2} dur={12} w={6} fill={PAPER_FILL} />
+      <Ink d={`M152 ${BED_TOP} L 770 ${BED_TOP} L 770 1238 L 152 1238 Z`} start={start + 4} dur={12} w={6} fill={PAGE} />
+      <g opacity={prog(f, start + 6, start + 14)}>
+        {pillow === "up" ? (
+          <g transform="translate(206 1046) rotate(9)"><rect x={-44} y={-112} width={88} height={224} rx={38} fill={soft} stroke={C.ink} strokeWidth={6} /></g>
+        ) : (
+          <g transform="translate(262 1126)"><rect x={-112} y={-30} width={224} height={60} rx={28} fill={soft} stroke={C.ink} strokeWidth={6} /></g>
+        )}
+        {clock && (
+          <>
+            <path d="M70 794 L 272 794" stroke={C.ink} strokeWidth={6} strokeLinecap="round" />
+            <rect x={86} y={702} width={170} height={86} rx={14} fill="#070605" stroke={C.ink} strokeWidth={5} />
+            <text x={171} y={766} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={58} letterSpacing={2} fill={C_PAPER.orange}>{clock}</text>
+          </>
+        )}
+      </g>
+    </>
+  );
+};
+/** The page he keeps peeking at, lying on the blanket: the part's name on it. */
+const BedPage: React.FC<{ x: number; y: number; label: string; hot?: number }> = ({ x, y, label, hot = 0 }) => (
+  <g transform={`translate(${x} ${y}) rotate(${12 - hot * 6}) scale(${1 + hot * 0.12})`}>
+    <rect x={-62} y={-80} width={124} height={160} fill="#ffffff" stroke={hot > 0.3 ? C_PAPER.orange : C_PAPER.ink} strokeWidth={5 + hot * 3} />
+    <text x={0} y={-44} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={19} letterSpacing={3} fill={C_PAPER.ink}>{label}</text>
+    <path d="M-42 -22 L 42 -22 M-42 0 L 30 0 M-42 22 L 40 22 M-42 44 L 18 44" stroke="rgba(33,26,21,0.45)" strokeWidth={5} strokeLinecap="round" />
+  </g>
+);
+const blanketFill = () => (DARK() ? "#2b2723" : "#e9dec8");
+/** The blanket when he sits up: over his chest, a bump for the knees. */
+const BLANKET_UP = `M236 ${BED_TOP} C 236 1116, 300 1102, 380 1106 C 440 1106, 468 1040, 540 1036 C 612 1034, 640 1100, 700 1124 C 735 1136, 760 1140, 770 ${BED_TOP} L 770 1238 L 236 1238 Z`;
+const BLANKET_DOWN = `M392 ${BED_TOP} C 410 1072, 520 1050, 610 1074 C 690 1094, 750 1124, 770 ${BED_TOP} L 770 1238 L 392 1238 Z`;
+
+/** The hook scene. 1am, lights off, Milo sitting up in bed with the phone, its glow on the ceiling; the clock ticks over. */
+type OneAm = { type: "oneam"; seconds: number; line: string; accent: string; clock?: [string, string]; /** scene frame the clock ticks over (the first scene of a film starts 62 frames in) */ tickAt?: number; page: string };
+const OneAmScene: React.FC<{ s: OneAm }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const tick = s.tickAt ?? 150, clock = s.clock ?? ["1:00", "1:01"];
+  const fl = 0.86 + 0.14 * Math.sin(f / 7);
+  const worry = prog(f, tick, tick + 20);
+  return (
+    <AbsoluteFill>
+      <Sfx name="cine/tick" at={tick} vol={0.6} />
+      <Sfx name="cine/heartbeat" at={tick + 6} vol={0.35} />
+      {/* the phone's glow: on him, and thrown up on the ceiling */}
+      <AbsoluteFill style={{ background: `radial-gradient(circle 300px at 470px 985px, rgba(232,121,43,${0.34 * fl}) 0%, rgba(232,121,43,0) 100%)` }} />
+      <AbsoluteFill style={{ background: `radial-gradient(ellipse 330px 74px at 430px 660px, rgba(232,121,43,${0.3 * fl}) 0%, rgba(232,121,43,0) 100%)` }} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <path d="M505 960 L 160 660 L 700 660 Z" fill={`rgba(232,121,43,${0.05 * fl})`} />
+        <BedFrame start={0} clock={f < tick ? clock[0] : clock[1]} />
+        <Ink d={`M214 ${BED_TOP + 4} C 214 1082, 272 1052, 330 1052 C 388 1052, 446 1082, 446 ${BED_TOP + 4}`} start={2} dur={12} w={6} fill="rgba(232,121,43,0.35)" />
+        <Milo x={330} y={958} r={84} tilt={5} panic={0.25 + 0.4 * worry} start={2} tote={[892, 1222]} />
+        <Ink d={BLANKET_UP} start={4} dur={12} w={6} fill={blanketFill()} />
+        <g opacity={prog(f, 10, 18)}>
+          <path d="M300 1160 L 740 1160 M330 1196 L 760 1196" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" strokeDasharray="14 16" />
+          <BedPage x={676} y={1070} label={s.page} />
+          {/* the phone on his knees */}
+          <g transform="translate(508 1004) rotate(-14)">
+            <rect x={-38} y={-66} width={76} height={132} rx={14} fill={C_PAPER.stage} stroke={C.ink} strokeWidth={6} />
+            <path d="M-38 -40 L -52 -34 L -52 30 L -38 40" fill={`rgba(232,121,43,${0.7 * fl})`} />
+          </g>
+          <circle cx={500} cy={1050} r={26} fill={SKIN_LIT} stroke={C.ink} strokeWidth={6} />
+          {/* the scarf, still on, hanging off the side of the bed */}
+          <g transform={`translate(262 1232) rotate(${Math.sin(f / 14) * 3})`}>
+            <path d="M-20 0 L 20 0 L 24 64 L -18 68 Z" fill={MUSTARD} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+            <path d="M-12 68 l 0 16 M2 67 l 2 16 M16 66 l 4 16" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+          </g>
+        </g>
+      </svg>
+      {/* the hook: big, bold, there from frame 0 (it is the cover) */}
+      <AbsoluteFill style={{ alignItems: "center", padding: "262px 56px 0" }}>
+        <Rise at={2}><Headline text={s.line} accent={s.accent} color={C.ink} size={98} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** He says a line, he peeks at the page, he says a line, he peeks. Over the bed, where the sheep should be, pages hop the fence
+ *  and a counter of peeks climbs. */
+type Peeks = { type: "peeks"; seconds: number; line: string; accent: string; from?: number; every?: number; /** the count he is already on */ count?: number; page: string };
+const PeeksScene: React.FC<{ s: Peeks }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const from = s.from ?? 30, every = s.every ?? 24, c0 = s.count ?? 12;
+  const total = Math.max(1, Math.floor((s.seconds * FPS + T - from) / every));
+  const n = f < from ? -1 : Math.floor((f - from) / every);
+  const ph = f < from ? 1 : ((f - from) % every) / every;
+  const pk = ph < 0.5 ? Math.sqrt(Math.sin(ph * 2 * Math.PI)) : 0;
+  const bump = spring({ frame: f - from - Math.max(0, n) * every, fps, config: { damping: 9, mass: 0.4 } });
+  const fl = 0.86 + 0.14 * Math.sin(f / 7);
+  const BX = 742, BY = 664;
+  return (
+    <AbsoluteFill>
+      {Array.from({ length: total }, (_, i) => <Sfx key={i} name={i % 2 ? "cine/pong" : "pop"} at={from + i * every} vol={0.4} />)}
+      <AbsoluteFill style={{ background: `radial-gradient(circle 300px at 470px 985px, rgba(232,121,43,${0.3 * fl}) 0%, rgba(232,121,43,0) 100%)` }} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <BedFrame start={0} clock="1:07" />
+        <Ink d={`M214 ${BED_TOP + 4} C 214 1082, 272 1052, 330 1052 C 388 1052, 446 1082, 446 ${BED_TOP + 4}`} start={2} dur={12} w={6} fill="rgba(232,121,43,0.35)" />
+        <Milo x={330 + pk * 16} y={958} r={84} tilt={-3 + pk * 19} panic={0.35 + 0.35 * Math.min(1, Math.max(0, n) / 5)} start={2} tote={[892, 1222]} />
+        <Ink d={BLANKET_UP} start={4} dur={12} w={6} fill={blanketFill()} />
+        <g opacity={prog(f, 8, 16)}>
+          <path d="M300 1160 L 740 1160 M330 1196 L 760 1196" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" strokeDasharray="14 16" />
+          {/* the peek: his eyes go to the page */}
+          <path d="M420 985 L 606 1050" stroke={C.orange} strokeWidth={6} strokeLinecap="round" strokeDasharray="6 18" opacity={pk} />
+          <BedPage x={676} y={1070} label={s.page} hot={pk} />
+          <g transform="translate(508 1004) rotate(-14)">
+            <rect x={-38} y={-66} width={76} height={132} rx={14} fill={C_PAPER.stage} stroke={C.ink} strokeWidth={6} />
+            <path d="M-38 -40 L -52 -34 L -52 30 L -38 40" fill={`rgba(232,121,43,${0.7 * fl})`} />
+          </g>
+          <circle cx={500} cy={1050} r={26} fill={SKIN_LIT} stroke={C.ink} strokeWidth={6} />
+          {/* mouthing the line, between peeks */}
+          {[0, 1, 2].map((i) => (
+            <path key={i} d={`M${432 + i * 20} ${972 - i * 10} q ${12 + i * 4} ${14 + i * 5}, 0 ${28 + i * 10}`} fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round"
+              opacity={(1 - pk) * (f >= from ? 0.25 + 0.75 * Math.abs(Math.sin(f / 3 + i)) : 0.6)} />
+          ))}
+          <g transform={`translate(262 1232) rotate(${Math.sin(f / 14) * 3})`}>
+            <path d="M-20 0 L 20 0 L 24 64 L -18 68 Z" fill={MUSTARD} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+            <path d="M-12 68 l 0 16 M2 67 l 2 16 M16 66 l 4 16" stroke={C.ink} strokeWidth={5} strokeLinecap="round" />
+          </g>
+        </g>
+        {/* where the sheep should be */}
+        <circle cx={436} cy={826} r={11} fill={PAPER_FILL} stroke={C.ink} strokeWidth={5} opacity={prog(f, 10, 16)} />
+        <circle cx={486} cy={782} r={17} fill={PAPER_FILL} stroke={C.ink} strokeWidth={5} opacity={prog(f, 14, 20)} />
+        <Ink d={`M${BX - 236} ${BY} C ${BX - 236} ${BY - 196}, ${BX + 236} ${BY - 196}, ${BX + 236} ${BY} C ${BX + 236} ${BY + 196}, ${BX - 236} ${BY + 196}, ${BX - 236} ${BY} Z`} start={16} dur={14} w={6} fill={PAPER_FILL} />
+        <g opacity={prog(f, 24, 32)}>
+          {/* the fence */}
+          <path d={`M${BX - 96} ${BY + 54} L ${BX + 96} ${BY + 54} M${BX - 96} ${BY + 86} L ${BX + 96} ${BY + 86} M${BX - 66} ${BY + 34} L ${BX - 66} ${BY + 112} M${BX} ${BY + 34} L ${BX} ${BY + 112} M${BX + 66} ${BY + 34} L ${BX + 66} ${BY + 112}`} stroke={C.ink} strokeWidth={7} strokeLinecap="round" />
+          <text x={BX} y={BY - 62} textAnchor="middle" fontFamily={F.serifI} fontStyle="italic" fontSize={58} fill={C.ink}>
+            peeks: <tspan fontFamily={F.serif} fontStyle="normal" fontWeight={600} fontSize={58 + 16 * (1 - Math.min(1, bump)) * (n >= 0 ? 1 : 0)} fill={C.orange}>{c0 + Math.max(0, n + 1)}</tspan>
+          </text>
+          {/* a page hops the fence for every peek */}
+          {Array.from({ length: total }, (_, i) => {
+            const t = f - from - i * every;
+            if (t < 0 || t > 22) return null;
+            const p = t / 22;
+            return (
+              <g key={i} transform={`translate(${BX - 150 + p * 300} ${BY + 74 - Math.sin(p * Math.PI) * 112}) rotate(${-20 + p * 220})`}>
+                <rect x={-20} y={-27} width={40} height={54} fill="#ffffff" stroke={C_PAPER.ink} strokeWidth={4} />
+                <path d="M-11 -11 L 11 -11 M-11 2 L 7 2 M-11 14 L 10 14" stroke="rgba(33,26,21,0.5)" strokeWidth={3} strokeLinecap="round" />
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", paddingTop: 290 }}>
+        <Rise at={6}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+/** He drops flat and pulls the pillow over his face (the scarf is caught on the bedpost, the tote goes over). Then the turn:
+ *  the pillow comes off and one arm comes up out of the blanket with the phone. */
+type Pillow = { type: "pillow"; seconds: number; line: string; accent: string; dropAt?: number; turnAt?: number; mutter?: string };
+const PillowScene: React.FC<{ s: Pillow }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const dropAt = s.dropAt ?? 16, turnAt = s.turnAt ?? 56;
+  const d = spring({ frame: f - dropAt, fps, config: { damping: 12, mass: 0.7, stiffness: 160 } });
+  const o = spring({ frame: f - turnAt, fps, config: { damping: 13, mass: 0.7 } });
+  const hand = spring({ frame: f - turnAt - 4, fps, config: { damping: 11, mass: 0.7 } });
+  const soft = DARK() ? "#3a3632" : "#ffffff";
+  return (
+    <AbsoluteFill>
+      <Sfx name="toss" at={dropAt} vol={0.6} />
+      <Sfx name="thud" at={dropAt + 5} vol={0.7} />
+      <Sfx name="cine/toing" at={dropAt + 10} vol={0.35} />
+      <Sfx name="cine/ping" at={turnAt + 6} vol={0.55} />
+      <AbsoluteFill style={{ background: `radial-gradient(circle 280px at 566px ${1010 - hand * 150}px, rgba(232,121,43,${0.42 * hand}) 0%, rgba(232,121,43,0) 100%)` }} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <BedFrame start={0} clock="1:12" pillow="flat" />
+        {/* the scarf, caught on the bedpost as always, pulled tight */}
+        <g opacity={prog(f, 6, 12)}>
+          <path d={`M124 872 L 148 858 L 262 ${1040 + Math.sin(f / 5) * 3} L 236 1058 Z`} fill={MUSTARD} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+          <circle cx={132} cy={864} r={17} fill={MUSTARD} stroke={C.ink} strokeWidth={6} />
+        </g>
+        <Milo x={302} y={1070} r={84} tilt={-80} panic={0.5 * (1 - o)} hope={o} start={2} tote={[892, 1222]} spill={prog(f, dropAt + 6, dropAt + 20)} />
+        {/* the arm that comes up with the phone */}
+        {hand > 0.01 && (
+          <g transform={`translate(566 ${1094 - hand * 200}) rotate(${-5 + Math.sin(f / 10) * 3})`}>
+            <path d="M0 150 L 0 10" stroke={C.ink} strokeWidth={56} strokeLinecap="round" />
+            <path d="M0 150 L 0 10" stroke={SKIN_LIT} strokeWidth={44} strokeLinecap="round" />
+            <g transform="translate(0 -92) rotate(8)">
+              <rect x={-62} y={-112} width={124} height={224} rx={22} fill={C_PAPER.stage} stroke={C.ink} strokeWidth={7} />
+              <rect x={-48} y={-94} width={96} height={188} rx={10} fill="#2a1a10" />
+              <rect x={-34} y={-70} width={68} height={12} rx={6} fill={C_PAPER.orange} opacity={0.6 + 0.4 * Math.sin(f / 6)} />
+              <path d="M-34 -36 L 34 -36 M-34 -10 L 20 -10 M-34 16 L 30 16" stroke="rgba(239,230,216,0.5)" strokeWidth={7} strokeLinecap="round" />
+            </g>
+            <circle cx={0} cy={2} r={36} fill={SKIN_LIT} stroke={C.ink} strokeWidth={6} />
+          </g>
+        )}
+        <Ink d={BLANKET_DOWN} start={4} dur={12} w={6} fill={blanketFill()} />
+        <path d="M430 1160 L 740 1160 M450 1196 L 760 1196" stroke={C.inkSoft} strokeWidth={4} strokeLinecap="round" strokeDasharray="14 16" opacity={prog(f, 10, 18)} />
+        {/* the pillow, over his face */}
+        {f >= dropAt && (
+          <g transform={`translate(${306 - o * 30} ${1050 - (1 - d) * 520 - o * 190}) rotate(${-8 - o * 34})`}>
+            <rect x={-132} y={-72} width={264} height={144} rx={62} fill={soft} stroke={C.ink} strokeWidth={6} />
+            <path d="M-70 -20 C -30 -34, 30 -34, 70 -20" fill="none" stroke={C.inkSoft} strokeWidth={5} strokeLinecap="round" />
+          </g>
+        )}
+        {s.mutter && f >= dropAt + 12 && f < turnAt + 6 && (
+          <text x={500} y={930 - prog(f, dropAt + 12, turnAt) * 20} textAnchor="middle" fontFamily={F.serifI} fontStyle="italic" fontSize={70} fill={C.inkSoft}
+            opacity={prog(f, dropAt + 12, dropAt + 18) * (1 - prog(f, turnAt, turnAt + 6))} transform={`rotate(-6 500 930)`}>{s.mutter}</text>
+        )}
+      </svg>
+      <AbsoluteFill style={{ alignItems: "center", padding: "290px 56px 0" }}>
+        <Rise at={turnAt}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
   const f = useCurrentFrame();
   const t = f / FPS;
@@ -3785,7 +4014,7 @@ const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = (
   const op = interpolate(lt, [-0.05, 0.1, dur(line) + 0.05, dur(line) + 0.25], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
     <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", padding: "0 170px 450px 80px", opacity: op, pointerEvents: "none" }}>
-      <div style={{ background: LOOK === "midnight" ? "#05070f" : C.ink, border: LOOK === "midnight" ? "2px solid rgba(243,239,230,0.28)" : undefined, borderRadius: 22, padding: "16px 28px", boxShadow: "0 8px 30px rgba(33,26,21,0.25)",
+      <div style={{ background: DARK() ? "#05070f" : C.ink, border: DARK() ? "2px solid rgba(243,239,230,0.28)" : undefined, borderRadius: 22, padding: "16px 28px", boxShadow: "0 8px 30px rgba(33,26,21,0.25)",
         textAlign: "center", fontFamily: F.serif, fontWeight: 600, fontSize: 50, lineHeight: 1.2, color: "#fbf7f0", maxWidth: 830 }}>
         {chunk.map((w, i) => {
           const on = lt >= w.s - 0.02;
@@ -3861,6 +4090,9 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "tower" ? <TowerScene s={sc} /> :
       sc.type === "buried" ? <BuriedScene s={sc} /> :
       sc.type === "cards" ? <CardsScene s={sc} /> :
+      sc.type === "oneam" ? <OneAmScene s={sc} /> :
+      sc.type === "peeks" ? <PeeksScene s={sc} /> :
+      sc.type === "pillow" ? <PillowScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

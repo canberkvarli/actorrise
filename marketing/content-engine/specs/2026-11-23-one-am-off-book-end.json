@@ -1,0 +1,86 @@
+{
+  "id": "2026-11-23-one-am-off-book-end",
+  "look": "noir",
+  "cut": "hard",
+  "music": {
+    "style": "beat",
+    "volume": 0.2
+  },
+  "voice": {
+    "volume": 1,
+    "lines": [
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 0.0,
+        "sub": false,
+        "audio": "voice/2026-11-23-one-am-off-book-end/end.mp3",
+        "dur": 2.331,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.15,
+            "e": 0.24
+          },
+          {
+            "w": "Ghost",
+            "s": 0.282,
+            "e": 0.496
+          },
+          {
+            "w": "Light.",
+            "s": 0.538,
+            "e": 1.04
+          },
+          {
+            "w": "Built",
+            "s": 1.088,
+            "e": 1.328
+          },
+          {
+            "w": "by",
+            "s": 1.376,
+            "e": 1.543
+          },
+          {
+            "w": "a",
+            "s": 1.575,
+            "e": 1.741
+          },
+          {
+            "w": "working",
+            "s": 1.781,
+            "e": 1.975
+          },
+          {
+            "w": "actor.",
+            "s": 1.996,
+            "e": 2.211
+          }
+        ]
+      }
+    ]
+  },
+  "beats": [
+    {
+      "kind": "end",
+      "seconds": 3.0,
+      "brand": "Ghost Light",
+      "line": "Built by a working actor.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "snap": true,
+      "sfx": [],
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "part_of": "2026-11-23-one-am-off-book",
+    "why": "the sharp Ghost Light card (DIRECTION 2026-11-10 afternoon), joined after the story with scripts/join.sh"
+  }
+}

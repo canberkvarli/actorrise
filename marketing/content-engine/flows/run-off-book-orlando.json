@@ -1,0 +1,25 @@
+{
+  "start": "/saves",
+  "lead": 600,
+  "note": "Ghost Light, Run it with the lines hidden: Orlando (As You Like It, monologue 1120). The actor's lines go in through the recorder's scripted mic; the app's own ear decides what they mean. The free run is the first four lines, so the flow stops at three.",
+  "steps": [
+    {"wait": 2500},
+    {"goto": "/read/1120"},
+    {"wait": 3500},
+    {"shot": "open"},
+    {"click": "RUN IT"},
+    {"wait": 3500},
+    {"shot": "run"},
+    {"click": {"css": "[aria-label='hide the lines']"}},
+    {"wait": 1500},
+    {"shot": "hidden"},
+    {"mic": "Why, how now, Adam?", "ms": 220, "after": 1500},
+    {"shot": "said1"},
+    {"mic": "No greater heart in thee?", "ms": 220, "after": 1500},
+    {"shot": "said2"},
+    {"mic": "Live a little, comfort a little, cheer thyself a little.", "ms": 220, "after": 1500},
+    {"shot": "said3"},
+    {"wait": 400}
+  ],
+  "tail": 300
+}

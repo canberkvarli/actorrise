@@ -1,4 +1,4 @@
-From 4777d64d26c64448ca9fc0e11c79c4f80bd72df7 Mon Sep 17 00:00:00 2001
+From f10c9ce00f497947bf0a031e971e8c5ca8aa20b6 Mon Sep 17 00:00:00 2001
 From: preview <preview@local>
 Date: Sat, 14 Nov 2026 07:24:42 +0000
 Subject: [PATCH] Web preview for marketing recordings: the real screens in a
@@ -9,6 +9,7 @@ The sides upload shim moved into sendFile and sendable, because scan, upload-bac
 add-scenes now all go through them.
 ---
  README.md                            |  21 +++
+ app.json                             |   2 +-
  app/tape/[id].tsx                    |   3 +
  metro.config.js                      |  42 ++++-
  package-lock.json                    | 262 ++++++++++++++++++++++++---
@@ -24,7 +25,7 @@ add-scenes now all go through them.
  src/rehearsal/native/loader.web.ts   |  69 +++++++
  src/rehearsal/native/tape-ear.web.ts |  55 ++++++
  web-preview/entry.js                 |   9 +
- 16 files changed, 680 insertions(+), 31 deletions(-)
+ 17 files changed, 681 insertions(+), 32 deletions(-)
  create mode 100644 scripts/web-preview-camera.mjs
  create mode 100644 scripts/web-preview-server.mjs
  create mode 100755 scripts/web-preview.sh
@@ -63,6 +64,19 @@ index 3748a9a..57357f0 100644
 +  unreachable). Haptics, tilt and the microphone do nothing useful in a browser; untested.
 +- `/api` goes through the local server to api.actorrise.com, because the API does not allow a
 +  localhost origin.
+diff --git a/app.json b/app.json
+index dfb8ea2..157f221 100644
+--- a/app.json
++++ b/app.json
+@@ -4,7 +4,7 @@
+     "slug": "ghostlight",
+     "scheme": "ghostlight",
+     "version": "1.1.5",
+-    "platforms": ["ios", "android"],
++    "platforms": ["ios", "android", "web"],
+     "orientation": "portrait",
+     "icon": "./assets/icon.png",
+     "userInterfaceStyle": "automatic",
 diff --git a/app/tape/[id].tsx b/app/tape/[id].tsx
 index c15f7af..e77f3a7 100644
 --- a/app/tape/[id].tsx

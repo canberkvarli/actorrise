@@ -1,0 +1,605 @@
+{
+  "id": "2026-11-23-one-am-off-book",
+  "look": "noir",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "POV: it's 1am and you're off book tomorrow. And I am not off book.",
+        "say": "[wry] P O V, it's one A M and you're off book tomorrow. And I am not off book.",
+        "at": 0.524,
+        "sub": false,
+        "words": [
+          {
+            "w": "P",
+            "s": 0.0,
+            "e": 0.032
+          },
+          {
+            "w": "O",
+            "s": 0.16,
+            "e": 0.288
+          },
+          {
+            "w": "V,",
+            "s": 0.448,
+            "e": 0.672
+          },
+          {
+            "w": "it's",
+            "s": 0.842,
+            "e": 1.248
+          },
+          {
+            "w": "one",
+            "s": 1.264,
+            "e": 1.312
+          },
+          {
+            "w": "A",
+            "s": 1.376,
+            "e": 1.44
+          },
+          {
+            "w": "M",
+            "s": 1.568,
+            "e": 1.696
+          },
+          {
+            "w": "and",
+            "s": 1.728,
+            "e": 1.824
+          },
+          {
+            "w": "you're",
+            "s": 1.84,
+            "e": 1.952
+          },
+          {
+            "w": "off",
+            "s": 1.984,
+            "e": 2.08
+          },
+          {
+            "w": "book",
+            "s": 2.118,
+            "e": 2.272
+          },
+          {
+            "w": "tomorrow.",
+            "s": 2.314,
+            "e": 2.72
+          },
+          {
+            "w": "And",
+            "s": 2.832,
+            "e": 3.168
+          },
+          {
+            "w": "I",
+            "s": 3.2,
+            "e": 3.232
+          },
+          {
+            "w": "am",
+            "s": 3.274,
+            "e": 3.36
+          },
+          {
+            "w": "not",
+            "s": 3.424,
+            "e": 3.616
+          },
+          {
+            "w": "off",
+            "s": 3.664,
+            "e": 3.808
+          },
+          {
+            "w": "book.",
+            "s": 3.872,
+            "e": 4.544
+          }
+        ],
+        "dur": 4.664
+      },
+      {
+        "text": "So I say a line, and I peek, and I say a line, and I peek, counting peeks instead of sheep.",
+        "say": "So I say a line, and I peek, and I say a line, and I peek, counting peeks instead of sheep.",
+        "at": 5.206,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.278
+          },
+          {
+            "w": "I",
+            "s": 0.342,
+            "e": 0.406
+          },
+          {
+            "w": "say",
+            "s": 0.438,
+            "e": 0.534
+          },
+          {
+            "w": "a",
+            "s": 0.566,
+            "e": 0.598
+          },
+          {
+            "w": "line,",
+            "s": 0.662,
+            "e": 0.982
+          },
+          {
+            "w": "and",
+            "s": 1.046,
+            "e": 1.238
+          },
+          {
+            "w": "I",
+            "s": 1.27,
+            "e": 1.302
+          },
+          {
+            "w": "peek,",
+            "s": 1.378,
+            "e": 1.75
+          },
+          {
+            "w": "and",
+            "s": 1.862,
+            "e": 2.198
+          },
+          {
+            "w": "I",
+            "s": 2.23,
+            "e": 2.262
+          },
+          {
+            "w": "say",
+            "s": 2.31,
+            "e": 2.454
+          },
+          {
+            "w": "a",
+            "s": 2.486,
+            "e": 2.518
+          },
+          {
+            "w": "line,",
+            "s": 2.582,
+            "e": 3.03
+          },
+          {
+            "w": "and",
+            "s": 3.078,
+            "e": 3.222
+          },
+          {
+            "w": "I",
+            "s": 3.286,
+            "e": 3.35
+          },
+          {
+            "w": "peek,",
+            "s": 3.426,
+            "e": 4.086
+          },
+          {
+            "w": "counting",
+            "s": 4.125,
+            "e": 4.438
+          },
+          {
+            "w": "peeks",
+            "s": 4.502,
+            "e": 4.758
+          },
+          {
+            "w": "instead",
+            "s": 4.798,
+            "e": 5.078
+          },
+          {
+            "w": "of",
+            "s": 5.1,
+            "e": 5.142
+          },
+          {
+            "w": "sheep.",
+            "s": 5.196,
+            "e": 5.846
+          }
+        ],
+        "dur": 5.966
+      },
+      {
+        "text": "Pillow over my face. So I opened Ghost Light.",
+        "say": "[playful] Pillow over my face. So I opened Ghost Light.",
+        "at": 11.621,
+        "words": [
+          {
+            "w": "Pillow",
+            "s": 0.0,
+            "e": 0.073
+          },
+          {
+            "w": "over",
+            "s": 0.111,
+            "e": 0.265
+          },
+          {
+            "w": "my",
+            "s": 0.307,
+            "e": 0.393
+          },
+          {
+            "w": "face.",
+            "s": 0.469,
+            "e": 0.841
+          },
+          {
+            "w": "So",
+            "s": 0.99,
+            "e": 1.289
+          },
+          {
+            "w": "I",
+            "s": 1.353,
+            "e": 1.417
+          },
+          {
+            "w": "opened",
+            "s": 1.463,
+            "e": 1.737
+          },
+          {
+            "w": "Ghost",
+            "s": 1.779,
+            "e": 1.993
+          },
+          {
+            "w": "Light.",
+            "s": 2.035,
+            "e": 2.697
+          }
+        ],
+        "dur": 2.817
+      },
+      {
+        "text": "I open Orlando, from As You Like It, tap Run it, and hide the lines.",
+        "say": "[upbeat] I open Orlando, from As You Like It, tap Run it, and hide the lines.",
+        "at": 14.822,
+        "sub": false,
+        "words": [
+          {
+            "w": "I",
+            "s": 0.0,
+            "e": 0.008
+          },
+          {
+            "w": "open",
+            "s": 0.059,
+            "e": 0.264
+          },
+          {
+            "w": "Orlando,",
+            "s": 0.336,
+            "e": 0.968
+          },
+          {
+            "w": "from",
+            "s": 0.994,
+            "e": 1.096
+          },
+          {
+            "w": "As",
+            "s": 1.16,
+            "e": 1.288
+          },
+          {
+            "w": "You",
+            "s": 1.304,
+            "e": 1.352
+          },
+          {
+            "w": "Like",
+            "s": 1.403,
+            "e": 1.608
+          },
+          {
+            "w": "It,",
+            "s": 1.65,
+            "e": 1.8
+          },
+          {
+            "w": "tap",
+            "s": 1.928,
+            "e": 2.312
+          },
+          {
+            "w": "Run",
+            "s": 2.36,
+            "e": 2.504
+          },
+          {
+            "w": "it,",
+            "s": 2.546,
+            "e": 2.696
+          },
+          {
+            "w": "and",
+            "s": 2.744,
+            "e": 2.888
+          },
+          {
+            "w": "hide",
+            "s": 2.939,
+            "e": 3.144
+          },
+          {
+            "w": "the",
+            "s": 3.16,
+            "e": 3.208
+          },
+          {
+            "w": "lines.",
+            "s": 3.282,
+            "e": 3.784
+          }
+        ],
+        "dur": 3.904
+      },
+      {
+        "text": "Then I say it out loud, and every line I know comes back.",
+        "say": "[delighted] Then I say it out loud, and every line I know comes back.",
+        "at": 19.297,
+        "sub": false,
+        "words": [
+          {
+            "w": "Then",
+            "s": 0.0,
+            "e": 0.013
+          },
+          {
+            "w": "I",
+            "s": 0.077,
+            "e": 0.141
+          },
+          {
+            "w": "say",
+            "s": 0.189,
+            "e": 0.333
+          },
+          {
+            "w": "it",
+            "s": 0.355,
+            "e": 0.397
+          },
+          {
+            "w": "out",
+            "s": 0.445,
+            "e": 0.589
+          },
+          {
+            "w": "loud,",
+            "s": 0.653,
+            "e": 1.037
+          },
+          {
+            "w": "and",
+            "s": 1.069,
+            "e": 1.165
+          },
+          {
+            "w": "every",
+            "s": 1.197,
+            "e": 1.357
+          },
+          {
+            "w": "line",
+            "s": 1.408,
+            "e": 1.613
+          },
+          {
+            "w": "I",
+            "s": 1.677,
+            "e": 1.741
+          },
+          {
+            "w": "know",
+            "s": 1.779,
+            "e": 1.933
+          },
+          {
+            "w": "comes",
+            "s": 1.975,
+            "e": 2.189
+          },
+          {
+            "w": "back.",
+            "s": 2.253,
+            "e": 2.573
+          }
+        ],
+        "dur": 2.693
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 22.676,
+        "sub": false,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.09
+          },
+          {
+            "w": "Ghost",
+            "s": 0.132,
+            "e": 0.346
+          },
+          {
+            "w": "Light.",
+            "s": 0.388,
+            "e": 0.89
+          },
+          {
+            "w": "Built",
+            "s": 0.938,
+            "e": 1.178
+          },
+          {
+            "w": "by",
+            "s": 1.226,
+            "e": 1.393
+          },
+          {
+            "w": "a",
+            "s": 1.425,
+            "e": 1.591
+          },
+          {
+            "w": "working",
+            "s": 1.631,
+            "e": 1.825
+          },
+          {
+            "w": "actor.",
+            "s": 1.846,
+            "e": 2.061
+          }
+        ],
+        "dur": 2.181
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-23-one-am-off-book/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.25
+  },
+  "scenes": [
+    {
+      "type": "oneam",
+      "seconds": 5.106,
+      "line": "POV: it's 1am and you're off book tomorrow.",
+      "accent": "off book tomorrow.",
+      "clock": [
+        "1:00",
+        "1:01"
+      ],
+      "tickAt": 160,
+      "page": "ORLANDO"
+    },
+    {
+      "type": "peeks",
+      "seconds": 6.415,
+      "line": "Say a line. Peek.",
+      "accent": "Peek.",
+      "from": 66,
+      "every": 31,
+      "count": 12,
+      "page": "ORLANDO"
+    },
+    {
+      "type": "pillow",
+      "seconds": 3.201,
+      "line": "So I opened Ghost Light.",
+      "accent": "Ghost Light.",
+      "dropAt": 24,
+      "turnAt": 55,
+      "mutter": "mmph."
+    },
+    {
+      "type": "screens",
+      "seconds": 4.475,
+      "line": "Hide the lines.",
+      "accent": "lines.",
+      "shots": [
+        {
+          "src": "story/2026-11-23-one-am-off-book/open.png",
+          "at": 0,
+          "tap": {
+            "x": 0.4917,
+            "y": 0.3827,
+            "at": 84
+          }
+        },
+        {
+          "src": "story/2026-11-23-one-am-off-book/run.png",
+          "at": 106,
+          "tap": {
+            "x": 0.2897,
+            "y": 0.9135,
+            "at": 112
+          }
+        },
+        {
+          "src": "story/2026-11-23-one-am-off-book/hidden.png",
+          "at": 138,
+          "fade": true
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 3.329,
+      "line": "Say it out loud.",
+      "accent": "out loud.",
+      "shots": [
+        {
+          "src": "story/2026-11-23-one-am-off-book/hidden.png",
+          "at": 0
+        },
+        {
+          "src": "story/2026-11-23-one-am-off-book/said1.png",
+          "at": 30,
+          "fade": true
+        },
+        {
+          "src": "story/2026-11-23-one-am-off-book/said2.png",
+          "at": 52,
+          "fade": true
+        },
+        {
+          "src": "story/2026-11-23-one-am-off-book/said3.png",
+          "at": 74,
+          "fade": true
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "tiktok": "POV: it's 1am and you're off book tomorrow. Hide the lines in Ghost Light and say it out loud. #actorslife #offbook #monologue #audition #actortok",
+    "youtube_title": "POV: it's 1am and you're off book tomorrow #shorts",
+    "youtube_description": "Milo is off book tomorrow and still peeking at the page. In Ghost Light he opens Orlando from As You Like It, taps Run it and hides the lines. The speech goes to dots, and each line comes back as he says it out loud.\nFree on the App Store. Built by a working actor. The voice is AI.\n#offbook #monologue #actorslife #audition",
+    "instagram": "POV: it's 1am and you're off book tomorrow.\n\nSay a line, peek. Say a line, peek. Milo stopped counting sheep and started counting peeks.\n\nSo he opened Ghost Light, picked Orlando from As You Like It, tapped Run it and hid the lines. Say it out loud and every line you know comes back.\n\nFree on the App Store, built by a working actor. Link in bio.\n\n#actorslife #offbook #monologue #audition #actorsofinstagram"
+  },
+  "cover_ms": 1200,
+  "source": {
+    "plan": "Callboard row 2026-11-23 (storyhowto, story-howto, noir), ideas inbox i5, with Canberk's 11-16 note: Milo episode, hook spoken first and big on screen from frame 0, Ghost Light only, about 25s",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "checked": "2026-11-18: monologue 1120 Orlando (As You Like It, play by William Shakespeare, public_domain), 'Why, how now, Adam?', 76s, overdone 0.30",
+    "changed_from_plan": "the board asked for Script, then Cues, then Off book and saying 'line' for a prompt. That is the web's rehearsal; the app (apps/mobile app/run/[id].tsx on main c3665735) has Run it with 'hide the lines': the speech turns to dots and each line comes out as the actor says it. The film shows that and promises nothing else",
+    "app": "Ghost Light web preview built from actorrise main apps/mobile (c3665735) plus web-preview.patch, dark theme, demo account, 2026-11-18. app.json on main now lists only ios and android, so the patch adds web to platforms (patch regenerated)",
+    "flow": "flows/run-off-book-orlando.json (shots -> public/story/2026-11-23-one-am-off-book/*.png): the speech page, Run it, hide the lines, three lines said through the recorder's scripted mic",
+    "voice": "George, one take at stability 0.5, Scribe 0.94 (the spoken 'P O V' and 'one A M' against the written hook); sped up 1.25x with fit_take.py. The say text of line 1 has more words than its text, so the per line word split was redone by hand",
+    "new_scene_types": "noir look for StoryVideo (lights off: near black sheet, cream ink, orange); oneam (Milo sitting up in bed, the phone's glow on the ceiling, the clock ticks to 1:01), peeks (he says a line and peeks; pages hop a fence where the sheep should be and a peeks counter climbs), pillow (the pillow over his face, scarf caught on the bedpost, tote tips over, then the arm comes up with the phone)",
+    "motifs": "milo-in-bed-1am,phone-glow-on-ceiling,alarm-clock-ticks,peeks-counter-pages-hop-the-fence,pillow-over-face,scarf-caught-on-bedpost,arm-up-with-phone",
+    "end": "specs/2026-11-23-one-am-off-book-end.json, joined with scripts/join.sh; the end line is cut from the take",
+    "feature": "off-book"
+  }
+}
