@@ -19,7 +19,7 @@ import { useRoomScroll } from '../../../../src/lib/barScroll';
 import { Sketch } from '../../../../src/components/Sketches';
 import { useStageMotion } from '../../../../src/hooks/useStageMotion';
 import { useEntitlement } from '../../../../src/hooks/useEntitlement';
-import { useCancelExtraction, useDeleteScript, useDeletedScripts, useRestoreScript, useShelf, useGuided, useScriptProgress, useLatestRun, useRunStats, useScenes, useScript, useScripts } from '../../../../src/hooks/useScenePartner';
+import { useCancelExtraction, useDeleteScript, useDeletedScripts, useRestoreScript, useShelf, useGuided, useScriptProgress, useLatestRun, useRunStats, useScenes, useScript, useScripts, useMakeSampleMine } from '../../../../src/hooks/useScenePartner';
 import { useQueryClient } from '@tanstack/react-query';
 import { postEvents, reorderScripts } from '../../../../src/api/rehearsal';
 import { ConfirmSheet } from '../../../../src/components/ConfirmSheet';
@@ -537,7 +537,24 @@ function ScriptRow({ script, startOpen, left, why, onTouch, onOpen }: { script: 
   const detail = useScript(script.id, open);
   // Open, the row stays put on the shelf: a hold on one of its scenes is for that scene.
   useEffect(() => { onOpen?.(script.id, open); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-  const editMap = (sceneId?: number) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); router.push({ pathname: '/edit-map', params: { id: String(script.id), ...(sceneId ? { scene: String(sceneId) } : {}) } }); };
+  // A sample is every actor's, so an edit of one goes to a copy of the
+  // actor's own, made first (once; the server hands the same copy back after).
+  // The copy then stands on the shelf where the sample was.
+  const makeMine = useMakeSampleMine();
+  const [copyFailed, setCopyFailed] = useState(false);
+  const own = (sceneId: number | undefined, then: (scriptId: number, sceneId: number | null) => void) => {
+    if (!script.is_sample) { then(script.id, sceneId ?? null); return; }
+    if (makeMine.isPending) return;
+    setCopyFailed(false);
+    makeMine.mutate({ scriptId: script.id, sceneId }, {
+      onSuccess: (r) => { if (sceneId != null && r.sceneId == null) setCopyFailed(true); else then(r.scriptId, r.sceneId); },
+      onError: () => setCopyFailed(true),
+    });
+  };
+  const editMap = (sceneId?: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    own(sceneId, (id, sc) => router.push({ pathname: '/edit-map', params: { id: String(id), ...(sc ? { scene: String(sc) } : {}) } }));
+  };
   const ready = script.processing_status === 'completed';
   const broke = script.processing_status === 'failed';
   const cast = script.characters.map(ch => ch.name).filter(Boolean).slice(0, 3).join(', ');
@@ -558,7 +575,7 @@ function ScriptRow({ script, startOpen, left, why, onTouch, onOpen }: { script: 
     // After the sheet has gone: a screen raised while it is still closing can be refused by iOS.
     setTimeout(() => {
       if (k === 'run') go(sc.id);
-      else if (k === 'edit') { onTouch?.(script.id); router.push({ pathname: '/edit/[id]', params: { id: String(sc.id) } }); }
+      else if (k === 'edit') { onTouch?.(script.id); own(sc.id, (_id, scene) => router.push({ pathname: '/edit/[id]', params: { id: String(scene ?? sc.id) } })); }
       else editMap(sc.id);
     }, 260);
   };
@@ -585,7 +602,7 @@ function ScriptRow({ script, startOpen, left, why, onTouch, onOpen }: { script: 
         {ready ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             {/* Opened: the pencil is the way into the map, next to the chevron. */}
-            {open && !script.is_sample ? (
+            {open ? (
               <Pressable onPress={() => editMap()} hitSlop={8} accessibilityRole="button" accessibilityLabel={L(`Edit the map of ${script.title}`, `Haritayı düzenle: ${script.title}`)}
                 style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: c.border, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
                 <Ionicons name="pencil" size={14} color={c.accentText} />
@@ -616,18 +633,16 @@ function ScriptRow({ script, startOpen, left, why, onTouch, onOpen }: { script: 
             const here = left && left.scene_id === sc.id ? left : null;
             const progress = here && here.line_count > 0 ? Math.min(1, (here.line_index + 1) / here.line_count) : 0;
             return (
-              <Pressable key={sc.id} onPress={() => go(sc.id)} onLongPress={script.is_sample ? undefined : () => hold(sc)} delayLongPress={350} accessibilityRole="button" accessibilityHint={script.is_sample ? undefined : L('Hold for its options: edit the scene, move or rename it', 'Seçenekler için basılı tut: sahneyi düzenle, taşı ya da yeniden adlandır')}
-                accessibilityActions={script.is_sample ? undefined : [{ name: 'longpress', label: L('Options', 'Seçenekler') }]} onAccessibilityAction={script.is_sample ? undefined : () => hold(sc)} style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingRight: 6, opacity: pressed ? 0.7 : 1 })}>
+              <Pressable key={sc.id} onPress={() => go(sc.id)} onLongPress={() => hold(sc)} delayLongPress={350} accessibilityRole="button" accessibilityHint={L('Hold for its options: edit the scene, move or rename it', 'Seçenekler için basılı tut: sahneyi düzenle, taşı ya da yeniden adlandır')}
+                accessibilityActions={[{ name: 'longpress', label: L('Options', 'Seçenekler') }]} onAccessibilityAction={() => hold(sc)} style={({ pressed }) => ({ minHeight: 44, justifyContent: 'center', paddingRight: 6, opacity: pressed ? 0.7 : 1 })}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                   <Text style={{ flex: 1, fontFamily: SANS, fontSize: 15, lineHeight: 21, color: c.foreground }}>{g.act ? underAct(sc.title, g.act) : sc.title}</Text>
                   <Text style={{ fontFamily: MONO, fontSize: 12, color: c.mutedForeground }}>{here ? L(`line ${here.line_index + 1} of ${here.line_count}`, `${here.line_count} replikten ${here.line_index + 1}`) : L(`${Math.max(1, Math.round(sc.estimated_duration_seconds / 60))} min`, `${Math.max(1, Math.round(sc.estimated_duration_seconds / 60))} dk`)}</Text>
                   {/* The same options as a hold, where they can be seen: edit the scene, move or rename it. */}
-                  {script.is_sample ? null : (
-                    <Pressable onPress={() => hold(sc)} hitSlop={8} accessibilityRole="button" accessibilityLabel={L(`Options for ${sc.title}`, `Seçenekler: ${sc.title}`)}
-                      style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-                      <Ionicons name="ellipsis-horizontal" size={16} color={c.mutedForeground} />
-                    </Pressable>
-                  )}
+                  <Pressable onPress={() => hold(sc)} hitSlop={8} accessibilityRole="button" accessibilityLabel={L(`Options for ${sc.title}`, `Seçenekler: ${sc.title}`)}
+                    style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+                    <Ionicons name="ellipsis-horizontal" size={16} color={c.mutedForeground} />
+                  </Pressable>
                 </View>
                 {here ? (
                   <View style={{ marginTop: 6, height: 3, borderRadius: 1.5, backgroundColor: c.inactiveMeter, overflow: 'hidden' }}>
@@ -646,11 +661,17 @@ function ScriptRow({ script, startOpen, left, why, onTouch, onOpen }: { script: 
               <StageDirection link>{L('(choose more scenes.)', '(daha çok sahne seç.)')}</StageDirection>
             </Pressable>
           ) : null}
-          {!script.is_sample ? (
-            <Pressable onPress={() => editMap()} accessibilityRole="button" accessibilityLabel={L(`Edit the map of ${script.title}`, `Haritayı düzenle: ${script.title}`)}
-              style={({ pressed }) => ({ minHeight: 40, justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}>
-              <StageDirection link>{L('(edit the map.)', '(haritayı düzenle.)')}</StageDirection>
-            </Pressable>
+          <Pressable onPress={() => editMap()} accessibilityRole="button" accessibilityLabel={L(`Edit the map of ${script.title}`, `Haritayı düzenle: ${script.title}`)}
+            style={({ pressed }) => ({ minHeight: 40, justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}>
+            <StageDirection link>{L('(edit the map.)', '(haritayı düzenle.)')}</StageDirection>
+          </Pressable>
+          {makeMine.isPending ? (
+            <View style={{ minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <ActivityIndicator size="small" color={c.mutedForeground} />
+              <StageDirection>{L('(making you a copy to edit.)', '(düzenlemen için bir kopya hazırlıyorum.)')}</StageDirection>
+            </View>
+          ) : copyFailed ? (
+            <StageDirection style={{ minHeight: 32, color: c.accentText }}>{L("(I couldn't make your copy. try again.)", '(kopyanı hazırlayamadım. bir daha dene.)')}</StageDirection>
           ) : null}
           {/* The Book's lists hold sides too: two contrasting, this term's class, the callback. */}
           <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); setKeeping(true); }} accessibilityRole="button"

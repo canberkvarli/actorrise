@@ -182,6 +182,9 @@ export interface ScriptDetail extends ScriptSummary { scenes: ScriptScene[] }
 export const listScripts = (signal?: AbortSignal) => call<ScriptSummary[]>('/api/scripts/', {}, signal);
 export const getScript = (id: number, signal?: AbortSignal) => call<ScriptDetail>(`/api/scripts/${id}`, {}, signal);
 export const deleteScript = (id: number, forever = false) => call<void>(`/api/scripts/${id}${forever ? '?forever=true' : ''}`, { method: 'DELETE' });
+/** A sample made the actor's own so it can be edited: every actor shares the sample, so the edit goes to a copy. Twice is once. */
+export interface MadeMine { script: ScriptDetail; scene_ids: Record<string, number>; created: boolean }
+export const makeSampleMine = (id: number) => call<MadeMine>(`/api/scripts/${id}/make-mine`, { method: 'POST' });
 /** A row of the shelf: why it came up, when a find matched inside it. */
 export type ShelfItem = ScriptSummary & { why?: string | null };
 export type ShelfSortKey = 'recent' | 'newest' | 'title' | 'scenes';

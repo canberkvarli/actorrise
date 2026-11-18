@@ -144,6 +144,10 @@ def get_rehearsal_scene(
             "id": scene.id, "title": scene.title, "act": scene.act, "scene_number": scene.scene_number,
             "play_title": scene.play.title if scene.play else (script.title if script else None),
             "is_library": bool(scene.is_library),
+            # A sample is every actor's: the app edits it through a copy of
+            # the actor's own (POST /api/scripts/{script_id}/make-mine).
+            "is_sample": bool(script is not None and script.is_sample),
+            "script_id": script.id if script is not None else None,
         },
         "lines": [l.model_dump() for l in lines],
         "characters": characters,

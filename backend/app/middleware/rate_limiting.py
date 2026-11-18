@@ -177,9 +177,10 @@ class FeatureGate:
                     .filter(
                         UserScript.user_id == current_user.id,
                         UserScript.created_at >= month_start,
-                        # A classic from the Community library isn't an upload.
-                        # Marked by file_type, which an upload can't set (shelf.py).
-                        UserScript.file_type != "shelf",
+                        # A classic from the Community library isn't an upload,
+                        # nor is a copy of a sample made to edit it. Marked by
+                        # file_type, which an upload can't set (shelf.py, sample_copy.py).
+                        UserScript.file_type.notin_(("shelf", "sample")),
                     )
                     .scalar()
                 )

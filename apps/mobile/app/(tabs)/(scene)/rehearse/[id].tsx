@@ -22,7 +22,7 @@ import { useEntitlement } from '../../../../src/hooks/useEntitlement';
 import { runsSpent } from '../../../../src/api/client';
 import { useRehearsal } from '../../../../src/hooks/useRehearsal';
 import { sameCharacter } from '../../../../src/rehearsal/contract';
-import { useGuided, useRehearsalScene } from '../../../../src/hooks/useScenePartner';
+import { useGuided, useMakeSampleMine, useRehearsalScene } from '../../../../src/hooks/useScenePartner';
 import { track } from '../../../../src/lib/analytics';
 import { paywallHref } from '../../../../src/lib/paywall';
 import { recordFinishedRun } from '../../../../src/lib/reviewMoments';
@@ -205,10 +205,30 @@ function Run({ payload, guided, picked, cast, castVoices, demoN, demoKey, guided
   // Your own sides open in the editor from here, before the run: up in the
   // bar, where it is seen, not only as the small link on the cast sheet.
   const editable = !guided && !picked && !demoN && !payload.scene.is_library;
+  // A sample is every actor's: the edit goes to a copy of the actor's own,
+  // made first. This screen then becomes the copy's, so coming back from the
+  // editor runs the lines as they were left, not the sample's.
+  const makeMine = useMakeSampleMine();
+  const [editFailed, setEditFailed] = useState(false);
   const editScene = () => {
     Haptics.selectionAsync().catch(() => {});
-    router.push({ pathname: '/edit/[id]', params: { id: String(payload.scene.id) } });
+    const s = payload.scene;
+    if (!s.is_sample || s.script_id == null) {
+      router.push({ pathname: '/edit/[id]', params: { id: String(s.id) } });
+      return;
+    }
+    if (makeMine.isPending) return;
+    setEditFailed(false);
+    makeMine.mutate({ scriptId: s.script_id, sceneId: s.id }, {
+      onSuccess: (m) => {
+        if (m.sceneId == null) { setEditFailed(true); return; }
+        router.replace({ pathname: '/rehearse/[id]', params: { id: String(m.sceneId), from: from ?? 'script' } });
+        router.push({ pathname: '/edit/[id]', params: { id: String(m.sceneId) } });
+      },
+      onError: () => setEditFailed(true),
+    });
   };
+  const editState = makeMine.isPending ? 'busy' as const : editFailed ? 'failed' as const : null;
   // The end comes in three beats, not a cut: the last line stays on the stage
   // while the lights go down over it, then the card, a line at a time.
   const [curtain, setCurtain] = useState(false);
@@ -258,7 +278,7 @@ function Run({ payload, guided, picked, cast, castVoices, demoN, demoKey, guided
     <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
       <TopBar title={running || ended ? sceneLine : ''} onLeave={leave} progress={running ? progressOf(r.snapshot?.lineIndex ?? 0, payload.lines.length) : null}
         counter={running ? `${(r.snapshot?.lineIndex ?? 0) + 1}/${payload.lines.length}` : null}
-        onEdit={editable && !running && !ended && !armed ? editScene : undefined} />
+        onEdit={editable && !running && !ended && !armed ? editScene : undefined} editState={editState} />
       {ended && curtain && demoN ? (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
           <DemoCurtain
@@ -353,6 +373,8 @@ function Run({ payload, guided, picked, cast, castVoices, demoN, demoKey, guided
             error={phoneError(r.readiness.error)}
             gated={r.gated || spent}
             onBegin={onBeginTap}
+            onEdit={editScene}
+            editState={editState}
             onClose={leave}
             onPlans={() => { track('app_rehearse_gated', { source: payload.scene.is_library ? 'library' : 'script', to_paywall: true }); router.push(paywallHref('run_limit')); }}
           />
@@ -365,7 +387,7 @@ function Run({ payload, guided, picked, cast, castVoices, demoN, demoKey, guided
 const progressOf = (line: number, of: number) => (of > 0 ? Math.min(1, line / of) : 0);
 
 /** The bar across the top: leave, the title with a thin bar of progress under it, and where in the scene as a count. */
-function TopBar({ title, onLeave, progress = null, counter = null, onEdit }: { title: string; onLeave: () => void; progress?: number | null; counter?: string | null; onEdit?: () => void }) {
+function TopBar({ title, onLeave, progress = null, counter = null, onEdit, editState = null }: { title: string; onLeave: () => void; progress?: number | null; counter?: string | null; onEdit?: () => void; editState?: 'busy' | 'failed' | null }) {
   const { colors: c } = useTheme();
   const L = useL();
   return (
@@ -383,10 +405,10 @@ function TopBar({ title, onLeave, progress = null, counter = null, onEdit }: { t
       </View>
       {counter ? <Text style={{ fontFamily: SANS_B, fontSize: 14, color: c.mutedForeground }}>{counter}</Text> : null}
       {onEdit ? (
-        <Pressable onPress={onEdit} hitSlop={10} accessibilityRole="button" accessibilityLabel={L('Edit the scene', 'Sahneyi düzenle')}
+        <Pressable onPress={onEdit} disabled={editState === 'busy'} hitSlop={10} accessibilityRole="button" accessibilityLabel={L('Edit the scene', 'Sahneyi düzenle')} accessibilityState={{ busy: editState === 'busy' }}
           style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1.5, borderColor: c.border, opacity: pressed ? 0.7 : 1 })}>
-          <Ionicons name="create-outline" size={15} color={c.accentText} />
-          <Text style={{ fontFamily: SANS_B, fontSize: 14, color: c.accentText }}>{L('Edit', 'Düzenle')}</Text>
+          {editState === 'busy' ? <ActivityIndicator size="small" color={c.accentText} /> : <Ionicons name="create-outline" size={15} color={c.accentText} />}
+          <Text style={{ fontFamily: SANS_B, fontSize: 14, color: c.accentText }}>{editState === 'failed' ? L('Try again', 'Bir daha dene') : L('Edit', 'Düzenle')}</Text>
         </Pressable>
       ) : null}
     </View>

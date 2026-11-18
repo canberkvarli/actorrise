@@ -1335,14 +1335,23 @@ def shelf_scripts_query(db: Session, user_id: int):
     The guided first scene is a sample too, but it is started by the hub, not
     picked off a shelf, so it never appears here.
     """
-    from sqlalchemy import and_, or_
+    from sqlalchemy import and_, or_, true
     from app.services.library_language import script_clause
+    from app.services.sample_copy import copied_sample_ids
+
+    # A sample the actor has made their own (edited, POST /{id}/make-mine)
+    # steps off their shelf: the copy is there in its place.
+    copied = copied_sample_ids(db, user_id)
     return db.query(UserScript).filter(
         or_(
             UserScript.user_id == user_id,
             # The samples are library material: the request's language only
             # (CAN-19). The actor's own scripts show whatever they are in.
-            and_(UserScript.is_sample == True, script_clause()),
+            and_(
+                UserScript.is_sample == True,
+                script_clause(),
+                ~UserScript.id.in_(copied) if copied else true(),
+            ),
         ),
         UserScript.is_guided.is_(False),
         or_(UserScript.processing_status.is_(None), UserScript.processing_status != DELETED),
@@ -1724,6 +1733,56 @@ async def get_script(
     )
 
 
+class MadeMineResponse(BaseModel):
+    """The actor's own copy of a sample, and where each sample scene went."""
+    script: UserScriptDetailResponse
+    # Sample scene id -> the copy's scene id (JSON keys are strings).
+    scene_ids: dict[str, int]
+    created: bool
+
+
+@router.post("/{script_id}/make-mine", response_model=MadeMineResponse)
+async def make_sample_mine(
+    script_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Copy on edit: a sample is shared by every actor, so editing it makes
+    the actor a copy of their own (services/sample_copy.py) and the edit goes
+    there. Twice is once: an actor who has a copy gets that copy back."""
+    from app.services import sample_copy
+
+    sample = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.is_sample.is_(True),
+        # The guided first scene is started by the hub, never edited.
+        UserScript.is_guided.is_(False),
+    ).first()
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
+
+    # Two taps at once would both find no copy. Holding the actor's row until
+    # the copy commits makes the second wait and find the first's.
+    db.query(User).filter(User.id == current_user.id).with_for_update().first()
+    copy = sample_copy.copy_of(db, current_user.id, sample.id)
+    created = copy is None
+    if created:
+        copy, _ = sample_copy.make_copy(db, current_user.id, sample)
+        db.commit()
+        db.refresh(copy)
+    mapping = sample_copy.scene_map(db, sample, copy)
+
+    scenes = db.query(Scene).filter(Scene.user_script_id == copy.id).order_by(*_script_scene_order()).all()
+    return MadeMineResponse(
+        script=UserScriptDetailResponse(
+            **UserScriptResponse.model_validate(copy).model_dump(),
+            scenes=[SceneInScriptResponse.model_validate(s) for s in scenes],
+        ),
+        scene_ids={str(k): v for k, v in mapping.items()},
+        created=created,
+    )
+
+
 @router.patch("/{script_id}", response_model=UserScriptResponse)
 async def update_script_metadata(
     script_id: int,
@@ -1784,6 +1843,11 @@ async def set_script_shared(
         raise HTTPException(status_code=404, detail="Script not found")
 
     if body.shared:
+        from app.services.sample_copy import is_copy
+
+        if is_copy(script):
+            # Every actor has the sample already; a copy of it is the actor's alone.
+            raise HTTPException(status_code=400, detail="This is your copy of a sample, so it stays yours alone.")
         scene_count = db.query(Scene).filter(Scene.user_script_id == script_id).count()
         if scene_count == 0:
             raise HTTPException(

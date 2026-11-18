@@ -217,6 +217,8 @@ def _my_scenes(db: Session, user: User):
             UserScript.is_guided.is_(False),
             # A copy taken from the shelf is the shelf's already.
             ~UserScript.original_filename.like("shelf-%"),
+            # A copy of a sample is every actor's already: not one to share.
+            UserScript.file_type != "sample",
         )
     )
 

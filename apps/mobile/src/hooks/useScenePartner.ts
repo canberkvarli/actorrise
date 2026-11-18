@@ -15,6 +15,7 @@ import {
   type SidesSource,
   editSceneLines,
   type EditedLine,
+  makeSampleMine,
 } from '../api/rehearsal';
 import type { ScannedScene } from '../rehearsal/scene-map';
 
@@ -239,6 +240,26 @@ export function useEditSceneLines(sceneId: number) {
       void qc.invalidateQueries({ queryKey: ['rehearsal-scene', sceneId] });
       void qc.invalidateQueries({ queryKey: ['scripts'] });
       void qc.invalidateQueries({ queryKey: ['scenes'] });
+    },
+  });
+}
+
+/**
+ * Edit a sample: the actor gets a copy of their own (the server's, made once)
+ * and the shelf is asked again so the copy stands where the sample was.
+ * Resolves to the copy's id for the scene asked about, or its first scene.
+ */
+export function useMakeSampleMine() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { scriptId: number; sceneId?: number }) => {
+      const made = await makeSampleMine(v.scriptId);
+      const sceneId = v.sceneId != null ? made.scene_ids[String(v.sceneId)] ?? null : made.script.scenes[0]?.id ?? null;
+      return { scriptId: made.script.id, sceneId };
+    },
+    onSuccess: (r) => {
+      void qc.invalidateQueries({ queryKey: SCRIPTS_KEY });
+      void qc.invalidateQueries({ queryKey: ['script', r.scriptId] });
     },
   });
 }

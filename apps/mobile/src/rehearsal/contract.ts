@@ -12,7 +12,12 @@ export interface RehearsalLine {
 export interface Voice { id: string; label: string; gender: 'female' | 'male' }
 
 export interface ScenePayload {
-  scene: { id: number; title: string; act: string | null; scene_number: string | null; play_title: string | null; is_library: boolean };
+  scene: {
+    id: number; title: string; act: string | null; scene_number: string | null; play_title: string | null; is_library: boolean;
+    /** A sample every actor shares: edited through a copy of the actor's own (makeSampleMine). Absent on an older server. */
+    is_sample?: boolean;
+    script_id?: number | null;
+  };
   lines: RehearsalLine[];
   characters: string[];
   /** What the scene is spoken in, from the script (never the UI language). Absent on an older server: English. */

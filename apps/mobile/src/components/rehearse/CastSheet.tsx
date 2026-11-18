@@ -40,6 +40,9 @@ interface Props {
   onBegin: (character: string, voices: Record<string, string>, resume?: { runId: number; lineIndex: number }) => void;
   onPlans: () => void;
   onClose: () => void;
+  /** Opens the editor; a sample is copied to the actor's own first. Without it, the editor opens on this scene. */
+  onEdit?: () => void;
+  editState?: 'busy' | 'failed' | null;
 }
 
 /**
@@ -50,7 +53,7 @@ interface Props {
  * is never dark. Begin reads "Begin as Mark" and starts the run the moment
  * the first line is ready.
  */
-export function CastSheet({ payload, guided, preparing, waiting, error, gated, onBegin, onPlans, onClose }: Props) {
+export function CastSheet({ payload, guided, preparing, waiting, error, gated, onBegin, onPlans, onClose, onEdit, editState = null }: Props) {
   const router = useRouter();
   const { colors: c } = useTheme();
   const L = useL();
@@ -141,10 +144,15 @@ export function CastSheet({ payload, guided, preparing, waiting, error, gated, o
           <Text style={{ marginTop: 4, fontFamily: SERIF, fontSize: 34, lineHeight: 38, letterSpacing: -0.5, color: c.foreground }}>{payload.scene.title}</Text>
           {!guided && !payload.scene.is_library ? (
             /* Your own sides can be read through and put right before the run: a speaker, a direction, a line split in two. */
-            <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); router.push({ pathname: '/edit/[id]', params: { id: String(payload.scene.id) } }); }} hitSlop={8} accessibilityRole="button" accessibilityLabel={L('Read and fix the sides', 'Metni oku ve düzelt')}
+            <Pressable onPress={() => { if (onEdit) { onEdit(); return; } Haptics.selectionAsync().catch(() => {}); router.push({ pathname: '/edit/[id]', params: { id: String(payload.scene.id) } }); }}
+              disabled={editState === 'busy'} hitSlop={8} accessibilityRole="button" accessibilityLabel={L('Read and fix the sides', 'Metni oku ve düzelt')} accessibilityState={{ busy: editState === 'busy' }}
               style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' }}>
-              <Ionicons name="create-outline" size={14} color={c.accentText} />
-              <Text numberOfLines={1} style={{ fontFamily: SANS_B, fontSize: 13, color: c.accentText }}>{L('Edit the scene', 'Sahneyi düzenle')}</Text>
+              {editState === 'busy' ? <ActivityIndicator size="small" color={c.accentText} /> : <Ionicons name="create-outline" size={14} color={c.accentText} />}
+              <Text numberOfLines={1} style={{ fontFamily: SANS_B, fontSize: 13, color: c.accentText }}>
+                {editState === 'busy' ? L('Making you a copy to edit', 'Düzenlemen için bir kopya hazırlıyorum')
+                  : editState === 'failed' ? L("I couldn't make your copy. Try again", 'Kopyanı hazırlayamadım. Bir daha dene')
+                  : L('Edit the scene', 'Sahneyi düzenle')}
+              </Text>
             </Pressable>
           ) : null}
 
