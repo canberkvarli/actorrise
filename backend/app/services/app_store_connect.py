@@ -56,6 +56,9 @@ LAST_SYNC_KEY = "asc_last_sync"
 
 ENGAGEMENT_REPORT = "App Store Discovery and Engagement"
 DOWNLOADS_REPORT = "App Store Downloads"
+# Apple files each report as "<name> Standard" and "<name> Detailed" (the bare name matched
+# nothing from 09-22 to 11-19), and the downloads one is also seen as "App Downloads".
+_ALIASES = {DOWNLOADS_REPORT: ("App Downloads",)}
 
 
 @dataclass(frozen=True)
@@ -158,11 +161,13 @@ def _report_names(client: httpx.Client, request_id: str) -> dict[str, str]:
 
 
 def _report_id(client: httpx.Client, request_id: str, name: str) -> Optional[str]:
-    names = _report_names(client, request_id)
-    if name in names:
-        return names[name]
-    folded = {k.casefold(): v for k, v in names.items()}
-    return folded.get(name.casefold())
+    folded = {k.casefold(): v for k, v in _report_names(client, request_id).items()}
+    for base in (name, *_ALIASES.get(name, ())):
+        # Standard first: it is the variant without the privacy thresholds' gaps on small apps.
+        for candidate in (f"{base} Standard", base, f"{base} Detailed"):
+            if candidate.casefold() in folded:
+                return folded[candidate.casefold()]
+    return None
 
 
 def _daily_instances(client: httpx.Client, report_id: str, limit: int) -> list[dict[str, Any]]:

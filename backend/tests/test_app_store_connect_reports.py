@@ -25,6 +25,15 @@ class ReportLookup(unittest.TestCase):
         with _client([[asc.ENGAGEMENT_REPORT.upper()]]) as c:
             self.assertEqual(asc._report_id(c, "req", asc.ENGAGEMENT_REPORT), "r00")
 
+    def test_prefers_the_standard_variant_apple_files_it_under(self):
+        names = [f"{asc.ENGAGEMENT_REPORT} Detailed", f"{asc.ENGAGEMENT_REPORT} Standard"]
+        with _client([names]) as c:
+            self.assertEqual(asc._report_id(c, "req", asc.ENGAGEMENT_REPORT), "r01")
+
+    def test_downloads_under_its_other_name(self):
+        with _client([["App Sessions Standard", "App Downloads Standard"]]) as c:
+            self.assertEqual(asc._report_id(c, "req", asc.DOWNLOADS_REPORT), "r01")
+
     def test_missing_report_is_none(self):
         with _client([["App Sessions"]]) as c:
             self.assertIsNone(asc._report_id(c, "req", asc.ENGAGEMENT_REPORT))
