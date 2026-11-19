@@ -339,3 +339,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** free, college actor
 **They said:** "It's a bit hard to pinpoint my typical casting age range, but I'd say it's around my current age to 40s... As for the types of songs I sing, they range from sincere and raw to comedic and showy. I'm still building my vocal repertoire."
 **Heard as:** happy; building a four piece monologue book like a vocal book
+
+## 2026-11-19
+
+**Replying to:** playwright outreach (Check Please)
+**Account:** none, a playwright
+**They said:** "Love what you've got going on here. And it's great to hear that students are looking for contemporary monologues. Maybe here's a good place to start?" (his free monologues page)
+**Heard as:** content source, contemporary comedy for teens and twenties; asked whether he is fine with the text going in or a listing only
