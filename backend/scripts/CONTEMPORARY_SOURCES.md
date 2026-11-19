@@ -159,6 +159,16 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
   uncredited), Yale's Legally Blonde packet (sides are links, not text), Cabrini's Little
   Shop sides (the site no longer answers). **StageAgent**: robots.txt allows everything,
   but its terms forbid automated collection and commercial use. Permission only.
+- **2026-11-19, Jonathan Rand, by permission** (`licensed`): 5 comedic pieces, 46171 and
+  46173-46176, from the free audition PDFs on jonathanrand.com/resources.html, which he
+  pointed us to when asked (email, 2026-11-18). Paul (The Acts of Life), Detective H.D.
+  (Law & Order: Fairy Tale Unit), Matt (Check Please), Detective Itsy (Law & Order: Rhymes
+  and Misdemeanors), Todd (Meet the Roommates; cut at "made in the shade", the rest is
+  sound cues). Each links to where the play is licensed (Open Curtain, TRW for Rhymes).
+  Linda (Check Please) left out: one actor playing three voices, with speaker labels. His
+  six scenes are not in yet. Years are floors, unverified: Check Please 2003 (Theatre
+  Saskatchewan record), Meet the Roommates 2008 (a 2008 production), the other three 2023
+  (TRW's 2023 catalogue).
 
 Asks rather than scrapes (permission emails): Monologue Blogger (terms forbid commercial
 use), StageAgent (terms),
