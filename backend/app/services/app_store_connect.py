@@ -171,12 +171,19 @@ def _report_id(client: httpx.Client, request_id: str, name: str) -> Optional[str
 
 
 def _daily_instances(client: httpx.Client, report_id: str, limit: int) -> list[dict[str, Any]]:
-    r = client.get(
-        f"/v1/analyticsReports/{report_id}/instances",
-        params={"filter[granularity]": "DAILY", "limit": limit, "sort": "-processingDate"},
-    )
-    r.raise_for_status()
-    return r.json().get("data") or []
+    # The instances endpoint refuses `sort` (400 PARAMETER_ERROR.ILLEGAL, 2026-11-19), so every
+    # page is read and the newest `limit` days are picked here.
+    out: list[dict[str, Any]] = []
+    url: Optional[str] = f"/v1/analyticsReports/{report_id}/instances"
+    params: Optional[dict[str, Any]] = {"filter[granularity]": "DAILY", "limit": 200}
+    while url:
+        r = client.get(url, params=params)
+        r.raise_for_status()
+        body = r.json()
+        out.extend(body.get("data") or [])
+        url, params = (body.get("links") or {}).get("next"), None
+    out.sort(key=lambda i: (i.get("attributes") or {}).get("processingDate") or "", reverse=True)
+    return out[:limit]
 
 
 def _instance_rows(client: httpx.Client, instance_id: str) -> Iterable[dict[str, str]]:

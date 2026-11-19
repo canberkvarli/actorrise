@@ -346,3 +346,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** none, a playwright
 **They said:** "Love what you've got going on here. And it's great to hear that students are looking for contemporary monologues. Maybe here's a good place to start?" (his free monologues page)
 **Heard as:** content source, contemporary comedy for teens and twenties; asked whether he is fine with the text going in or a listing only
+
+## 2026-11-20
+
+**Replying to:** playwright outreach (Check Please), his answer to "text in, or a listing only?"
+**Account:** none, a playwright
+**They said:** "Feel free to host whichever monologues from my resources page you think would be useful to actors on ActorRise. For each piece, please include my name and the play title, and link directly to that play's profile page on my site rather than to the Resources page. Thanks for checking. I'm glad these pieces will be easier for students to find."
+**Heard as:** licence granted in writing; links must go to each play's page on his site

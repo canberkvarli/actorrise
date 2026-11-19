@@ -41,3 +41,21 @@ class ReportLookup(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DailyInstances(unittest.TestCase):
+    def test_no_sort_param_and_newest_days_first_across_pages(self):
+        pages = [["2026-11-10", "2026-11-18"], ["2026-11-19", "2026-11-01"]]
+        seen = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(dict(request.url.params))
+            page = int(request.url.params.get("page", "0"))
+            data = [{"id": d, "attributes": {"processingDate": d}} for d in pages[page]]
+            links = {"next": f"https://api.example/v1/x?page={page + 1}"} if page + 1 < len(pages) else {}
+            return httpx.Response(200, json={"data": data, "links": links})
+
+        with httpx.Client(base_url="https://api.example", transport=httpx.MockTransport(handler)) as c:
+            got = asc._daily_instances(c, "rep", 2)
+        self.assertEqual([i["id"] for i in got], ["2026-11-19", "2026-11-18"])
+        self.assertTrue(all("sort" not in p for p in seen))
