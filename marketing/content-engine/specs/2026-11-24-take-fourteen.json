@@ -1,0 +1,678 @@
+{
+  "id": "2026-11-24-take-fourteen",
+  "look": "noir",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "My inner monologue on take fourteen of a self tape.",
+        "say": "[wry] My inner monologue on take fourteen of a self tape.",
+        "at": 0.406,
+        "sub": false,
+        "words": [
+          {
+            "w": "My",
+            "s": 0.0,
+            "e": 0.022
+          },
+          {
+            "w": "inner",
+            "s": 0.064,
+            "e": 0.278
+          },
+          {
+            "w": "monologue",
+            "s": 0.31,
+            "e": 0.726
+          },
+          {
+            "w": "on",
+            "s": 0.79,
+            "e": 0.918
+          },
+          {
+            "w": "take",
+            "s": 0.969,
+            "e": 1.174
+          },
+          {
+            "w": "fourteen",
+            "s": 1.223,
+            "e": 1.622
+          },
+          {
+            "w": "of",
+            "s": 1.643,
+            "e": 1.686
+          },
+          {
+            "w": "a",
+            "s": 1.718,
+            "e": 1.75
+          },
+          {
+            "w": "self",
+            "s": 1.801,
+            "e": 2.006
+          },
+          {
+            "w": "tape.",
+            "s": 2.07,
+            "e": 2.71
+          }
+        ],
+        "dur": 2.83
+      },
+      {
+        "text": "Is the lamp too orange, do I really blink this much, was take three the one, and why does my voice sound like that.",
+        "say": "[nervous] Is the lamp too orange, do I really blink this much, was take three the one, and why does my voice sound like that.",
+        "at": 3.547,
+        "sub": false,
+        "words": [
+          {
+            "w": "Is",
+            "s": 0.0,
+            "e": 0.086
+          },
+          {
+            "w": "the",
+            "s": 0.102,
+            "e": 0.15
+          },
+          {
+            "w": "lamp",
+            "s": 0.188,
+            "e": 0.342
+          },
+          {
+            "w": "too",
+            "s": 0.39,
+            "e": 0.534
+          },
+          {
+            "w": "orange,",
+            "s": 0.589,
+            "e": 1.302
+          },
+          {
+            "w": "do",
+            "s": 1.344,
+            "e": 1.43
+          },
+          {
+            "w": "I",
+            "s": 1.494,
+            "e": 1.558
+          },
+          {
+            "w": "really",
+            "s": 1.585,
+            "e": 1.75
+          },
+          {
+            "w": "blink",
+            "s": 1.792,
+            "e": 2.006
+          },
+          {
+            "w": "this",
+            "s": 2.044,
+            "e": 2.198
+          },
+          {
+            "w": "much,",
+            "s": 2.249,
+            "e": 2.902
+          },
+          {
+            "w": "was",
+            "s": 2.934,
+            "e": 3.03
+          },
+          {
+            "w": "take",
+            "s": 3.081,
+            "e": 3.286
+          },
+          {
+            "w": "three",
+            "s": 3.318,
+            "e": 3.478
+          },
+          {
+            "w": "the",
+            "s": 3.51,
+            "e": 3.606
+          },
+          {
+            "w": "one,",
+            "s": 3.686,
+            "e": 4.214
+          },
+          {
+            "w": "and",
+            "s": 4.286,
+            "e": 4.502
+          },
+          {
+            "w": "why",
+            "s": 4.534,
+            "e": 4.63
+          },
+          {
+            "w": "does",
+            "s": 4.668,
+            "e": 4.822
+          },
+          {
+            "w": "my",
+            "s": 4.864,
+            "e": 4.95
+          },
+          {
+            "w": "voice",
+            "s": 4.992,
+            "e": 5.206
+          },
+          {
+            "w": "sound",
+            "s": 5.248,
+            "e": 5.462
+          },
+          {
+            "w": "like",
+            "s": 5.487,
+            "e": 5.59
+          },
+          {
+            "w": "that.",
+            "s": 5.654,
+            "e": 6.326
+          }
+        ],
+        "dur": 6.446
+      },
+      {
+        "text": "Take fifteen, take sixteen. So I opened Ghost Light.",
+        "say": "[deadpan] Take fifteen, take sixteen. So I opened Ghost Light.",
+        "at": 10.384,
+        "words": [
+          {
+            "w": "Take",
+            "s": 0.0,
+            "e": 0.034
+          },
+          {
+            "w": "fifteen,",
+            "s": 0.098,
+            "e": 0.93
+          },
+          {
+            "w": "take",
+            "s": 0.969,
+            "e": 1.122
+          },
+          {
+            "w": "sixteen.",
+            "s": 1.178,
+            "e": 1.698
+          },
+          {
+            "w": "So",
+            "s": 1.933,
+            "e": 2.402
+          },
+          {
+            "w": "I",
+            "s": 2.466,
+            "e": 2.53
+          },
+          {
+            "w": "opened",
+            "s": 2.576,
+            "e": 2.85
+          },
+          {
+            "w": "Ghost",
+            "s": 2.893,
+            "e": 3.106
+          },
+          {
+            "w": "Light.",
+            "s": 3.149,
+            "e": 3.426
+          }
+        ],
+        "dur": 3.546
+      },
+      {
+        "text": "In the Tape room I pick my own words to roll and to stop, and a countdown to get back to my mark.",
+        "say": "[upbeat] In the Tape room I pick my own words to roll and to stop, and a countdown to get back to my mark.",
+        "at": 14.76,
+        "sub": false,
+        "words": [
+          {
+            "w": "In",
+            "s": 0.0,
+            "e": 0.01
+          },
+          {
+            "w": "the",
+            "s": 0.042,
+            "e": 0.138
+          },
+          {
+            "w": "Tape",
+            "s": 0.177,
+            "e": 0.33
+          },
+          {
+            "w": "room",
+            "s": 0.394,
+            "e": 0.65
+          },
+          {
+            "w": "I",
+            "s": 0.746,
+            "e": 0.842
+          },
+          {
+            "w": "pick",
+            "s": 0.881,
+            "e": 1.034
+          },
+          {
+            "w": "my",
+            "s": 1.077,
+            "e": 1.162
+          },
+          {
+            "w": "own",
+            "s": 1.226,
+            "e": 1.418
+          },
+          {
+            "w": "words",
+            "s": 1.482,
+            "e": 1.802
+          },
+          {
+            "w": "to",
+            "s": 1.845,
+            "e": 1.93
+          },
+          {
+            "w": "roll",
+            "s": 1.994,
+            "e": 2.25
+          },
+          {
+            "w": "and",
+            "s": 2.282,
+            "e": 2.378
+          },
+          {
+            "w": "to",
+            "s": 2.421,
+            "e": 2.506
+          },
+          {
+            "w": "stop,",
+            "s": 2.583,
+            "e": 3.21
+          },
+          {
+            "w": "and",
+            "s": 3.242,
+            "e": 3.338
+          },
+          {
+            "w": "a",
+            "s": 3.37,
+            "e": 3.402
+          },
+          {
+            "w": "countdown",
+            "s": 3.441,
+            "e": 3.786
+          },
+          {
+            "w": "to",
+            "s": 3.808,
+            "e": 3.85
+          },
+          {
+            "w": "get",
+            "s": 3.898,
+            "e": 4.042
+          },
+          {
+            "w": "back",
+            "s": 4.068,
+            "e": 4.17
+          },
+          {
+            "w": "to",
+            "s": 4.213,
+            "e": 4.298
+          },
+          {
+            "w": "my",
+            "s": 4.341,
+            "e": 4.426
+          },
+          {
+            "w": "mark.",
+            "s": 4.503,
+            "e": 4.874
+          }
+        ],
+        "dur": 4.994
+      },
+      {
+        "text": "I say places, it rolls, I say scene, and every take is waiting in Tapes.",
+        "say": "[delighted] I say places, it rolls, I say scene, and every take is waiting in Tapes.",
+        "at": 20.394,
+        "sub": false,
+        "words": [
+          {
+            "w": "I",
+            "s": 0.0,
+            "e": 0.008
+          },
+          {
+            "w": "say",
+            "s": 0.056,
+            "e": 0.2
+          },
+          {
+            "w": "places,",
+            "s": 0.264,
+            "e": 0.84
+          },
+          {
+            "w": "it",
+            "s": 0.904,
+            "e": 1.032
+          },
+          {
+            "w": "rolls,",
+            "s": 1.096,
+            "e": 1.672
+          },
+          {
+            "w": "I",
+            "s": 1.736,
+            "e": 1.8
+          },
+          {
+            "w": "say",
+            "s": 1.848,
+            "e": 1.992
+          },
+          {
+            "w": "scene,",
+            "s": 2.056,
+            "e": 2.568
+          },
+          {
+            "w": "and",
+            "s": 2.616,
+            "e": 2.76
+          },
+          {
+            "w": "every",
+            "s": 2.802,
+            "e": 3.016
+          },
+          {
+            "w": "take",
+            "s": 3.067,
+            "e": 3.272
+          },
+          {
+            "w": "is",
+            "s": 3.294,
+            "e": 3.336
+          },
+          {
+            "w": "waiting",
+            "s": 3.376,
+            "e": 3.656
+          },
+          {
+            "w": "in",
+            "s": 3.678,
+            "e": 3.72
+          },
+          {
+            "w": "Tapes.",
+            "s": 3.816,
+            "e": 4.584
+          }
+        ],
+        "dur": 4.704
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 25.513,
+        "sub": false,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.237
+          },
+          {
+            "w": "Ghost",
+            "s": 0.263,
+            "e": 0.397
+          },
+          {
+            "w": "Light.",
+            "s": 0.439,
+            "e": 0.909
+          },
+          {
+            "w": "Built",
+            "s": 0.951,
+            "e": 1.165
+          },
+          {
+            "w": "by",
+            "s": 1.229,
+            "e": 1.357
+          },
+          {
+            "w": "a",
+            "s": 1.389,
+            "e": 1.421
+          },
+          {
+            "w": "working",
+            "s": 1.461,
+            "e": 1.741
+          },
+          {
+            "w": "actor.",
+            "s": 1.805,
+            "e": 2.253
+          }
+        ],
+        "dur": 2.373
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-24-take-fourteen/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.25
+  },
+  "scenes": [
+    {
+      "type": "selftape",
+      "beat": "hook",
+      "seconds": 3.447,
+      "line": "My inner monologue on take fourteen of a self tape.",
+      "accent": "take fourteen",
+      "count": 14
+    },
+    {
+      "type": "selftape",
+      "beat": "doubts",
+      "seconds": 6.837,
+      "line": "Take fourteen.",
+      "accent": "fourteen.",
+      "count": 14,
+      "thoughts": [
+        "is the lamp\ntoo orange?",
+        "do I blink\nthis much?",
+        "was take three\nthe one?",
+        "why does my voice\nsound like that?"
+      ],
+      "at": [
+        25,
+        65,
+        113,
+        154
+      ]
+    },
+    {
+      "type": "selftape",
+      "beat": "slump",
+      "seconds": 4.376,
+      "line": "So I opened Ghost Light.",
+      "accent": "Ghost Light.",
+      "count": 14,
+      "flips": [
+        28,
+        60
+      ],
+      "slumpAt": 70,
+      "turnAt": 83
+    },
+    {
+      "type": "screens",
+      "seconds": 5.634,
+      "line": "Your own words.",
+      "accent": "own words.",
+      "shots": [
+        {
+          "src": "story/2026-11-24-take-fourteen/page.png",
+          "at": 0,
+          "tap": {
+            "x": 0.7667,
+            "y": 0.0296,
+            "at": 22
+          }
+        },
+        {
+          "src": "story/2026-11-24-take-fourteen/sheet.png",
+          "at": 46,
+          "fade": true,
+          "tap": {
+            "x": 0.5,
+            "y": 0.6563,
+            "at": 60
+          }
+        },
+        {
+          "src": "story/2026-11-24-take-fourteen/roll.png",
+          "at": 86,
+          "fade": true,
+          "tap": {
+            "x": 0.5,
+            "y": 0.744,
+            "at": 84
+          }
+        },
+        {
+          "src": "story/2026-11-24-take-fourteen/words.png",
+          "at": 108,
+          "fade": true,
+          "tap": {
+            "x": 0.5733,
+            "y": 0.3151,
+            "at": 116
+          }
+        },
+        {
+          "src": "story/2026-11-24-take-fourteen/five.png",
+          "at": 140,
+          "fade": true
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 5.069,
+      "line": "Say it. It rolls.",
+      "accent": "It rolls.",
+      "shots": [
+        {
+          "src": "story/2026-11-24-take-fourteen/intro.png",
+          "at": 0,
+          "tap": {
+            "x": 0.5,
+            "y": 0.9135,
+            "at": 2
+          }
+        },
+        {
+          "src": "story/2026-11-24-take-fourteen/room.png",
+          "at": 26,
+          "fade": true
+        },
+        {
+          "src": "story/2026-11-24-take-fourteen/rolling2.png",
+          "at": 42,
+          "fade": true
+        },
+        {
+          "src": "story/2026-11-24-take-fourteen/after3.png",
+          "at": 72,
+          "fade": true,
+          "push": {
+            "x": 0.786,
+            "y": 0.925
+          }
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "tiktok": "My inner monologue on take fourteen of a self tape. In Ghost Light you pick your own words to roll and to stop. #selftape #actorslife #audition #actortok #actors",
+    "youtube_title": "My inner monologue on take fourteen of a self tape #shorts",
+    "youtube_description": "Take fourteen of a self tape and Milo's inner voice will not stop. In Ghost Light's Tape room he sets his own words to roll and to stop, and a countdown to get back to his mark. He says places, it rolls. He says scene, and every take is waiting in Tapes.\nFree on the App Store. Built by a working actor. The voice is AI.\n#selftape #audition #actorslife #acting",
+    "instagram": "My inner monologue on take fourteen of a self tape.\n\nIs the lamp too orange. Do I really blink this much. Was take three the one.\n\nWhat Milo changed in Ghost Light's Tape room:\n1. His own word to roll: places.\n2. His own word to stop: scene.\n3. A countdown, so he can walk back to his mark.\n\nEvery take waits in Tapes. Free on the App Store, built by a working actor. Link in bio.\n\n#selftape #audition #actorslife #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 1200,
+  "source": {
+    "plan": "Callboard row 2026-11-24 (wildcard, backstage, noir), ideas inbox i42, the earliest planned row on 2026-11-19; Milo episode, hook spoken first and big on screen from frame 0, Ghost Light only",
+    "checked": "2026-11-19, main 12c2e9a9: apps/mobile/src/components/TapeSettingsSheet.tsx ('Countdown when you tap' Off/3/5/10 seconds, 'Your words', 'To roll', 'To stop'), src/lib/tapeSettings.ts, app/tapes.tsx, app/tape/[id].tsx (the hints and the room's first page use the actor's own words)",
+    "app": "Ghost Light web preview built from actorrise main apps/mobile (12c2e9a9) plus web-preview.patch, dark theme, demo account, 2026-11-19",
+    "flow": "flows/tape-your-own-words.json (shots -> public/story/2026-11-24-take-fourteen/*.png): the Tape page, Tape settings, 'places' to roll, 'scene' to stop, 5 seconds, the room's first page, the camera, rolling on 'places' through the recorder's scripted ear, three takes on the Tapes button",
+    "camera": "the camera feed is a drawing of Milo (FAKE_CAM, an SVG made for this film), so no real or generated person is in the frame",
+    "changed_from_plan": "the scarf snags on the lamp in the slump, not on a walk back to the mark; the Tapes list is not opened because the web preview draws take thumbnails black, the Tapes button's count of 3 is the proof on screen; no piece is loaded in the room (No script), so no play is named",
+    "voice": "George, one take at stability 0.5, Scribe 0.97, sped up 1.25x with fit_take.py; AI voice, labelled on every platform",
+    "new_scene_types": "selftape (Milo's self tape corner: floor lamp, his mark, the phone on the windowsill with its red dot, a clapper counting takes) with three beats: hook, doubts (thought bubbles, the lamp glows hotter), slump (the clapper flips to 16, he slides down the wall, the scarf pulls the lamp over, the tote spills, the phone lights up)",
+    "motifs": "milo-self-tape-corner,windowsill-phone-red-dot,take-counter-clapper,thought-bubbles-lamp-blink-voice,slides-down-the-wall,scarf-caught-on-floor-lamp,tote-spills",
+    "end": "specs/2026-11-24-take-fourteen-end.json, joined with scripts/join.sh; the end line is cut from the take",
+    "trypost": {
+      "tiktok": "01a1f2a5-1d30-7162-9565-fb00db0b9f56",
+      "youtube": "01a1f2a5-1d3a-7084-a380-6e440cbeffb0",
+      "instagram": "01a1f2a5-1d42-7351-a8bd-32175f872b36",
+      "status": "draft"
+    },
+    "feature": "tape"
+  }
+}

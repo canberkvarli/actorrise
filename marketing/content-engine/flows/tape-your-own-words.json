@@ -1,0 +1,166 @@
+{
+ "start": "/tapes",
+ "lead": 300,
+ "note": "Tape settings (TapeSettingsSheet.tsx, shipped 2026-11-18): the countdown when you tap, and your own words to roll and to stop. Opened from the Tape page; the room's first page and its hints then use the new words, and the scripted ear rolls on 'places' and stops on 'scene'. FAKE_CAM=/tmp/cam/up.y4m is a drawing of Milo (the film's drawn actor), so no real or generated person is in the camera.",
+ "steps": [
+  {
+   "wait": 1800
+  },
+  {
+   "shot": "page"
+  },
+  {
+   "click": {
+    "css": "[aria-label=\"Tape settings and your slate\"]"
+   }
+  },
+  {
+   "wait": 1200
+  },
+  {
+   "shot": "sheet"
+  },
+  {
+   "type": "places",
+   "into": "action",
+   "delay": 70
+  },
+  {
+   "wait": 400
+  },
+  {
+   "shot": "roll"
+  },
+  {
+   "type": "scene",
+   "into": "cut",
+   "delay": 70
+  },
+  {
+   "blur": true
+  },
+  {
+   "wait": 500
+  },
+  {
+   "shot": "words"
+  },
+  {
+   "click": "5 seconds"
+  },
+  {
+   "wait": 600
+  },
+  {
+   "shot": "five"
+  },
+  {
+   "click": {
+    "css": "[aria-label=\"Close\"] >> nth=2"
+   }
+  },
+  {
+   "wait": 1200
+  },
+  {
+   "shot": "page2"
+  },
+  {
+   "click": "Start taping"
+  },
+  {
+   "wait": 1800
+  },
+  {
+   "shot": "intro"
+  },
+  {
+   "click": "Turn on the camera"
+  },
+  {
+   "wait": 4500
+  },
+  {
+   "shot": "room"
+  },
+  {
+   "say": "places",
+   "ms": 300
+  },
+  {
+   "wait": 1200
+  },
+  {
+   "shot": "rolling1"
+  },
+  {
+   "wait": 2200
+  },
+  {
+   "shot": "rolling2"
+  },
+  {
+   "say": "scene",
+   "ms": 300
+  },
+  {
+   "wait": 250
+  },
+  {
+   "shot": "cut1"
+  },
+  {
+   "wait": 700
+  },
+  {
+   "shot": "cut2"
+  },
+  {
+   "wait": 2500
+  },
+  {
+   "shot": "after"
+  },
+  {
+   "say": "places",
+   "ms": 300
+  },
+  {
+   "wait": 2000
+  },
+  {
+   "say": "scene",
+   "ms": 300
+  },
+  {
+   "wait": 3000
+  },
+  {
+   "say": "places",
+   "ms": 300
+  },
+  {
+   "wait": 2000
+  },
+  {
+   "say": "scene",
+   "ms": 300
+  },
+  {
+   "wait": 3000
+  },
+  {
+   "shot": "after3"
+  },
+  {
+   "click": "Tapes"
+  },
+  {
+   "wait": 1800
+  },
+  {
+   "shot": "tapes"
+  }
+ ],
+ "tail": 300
+}

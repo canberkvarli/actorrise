@@ -119,7 +119,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -3997,6 +3997,128 @@ const PillowScene: React.FC<{ s: Pillow }> = ({ s }) => {
   );
 };
 
+// ---------- take fourteen of a self tape (2026-11-24, backstage: the Tape room's own words and countdown) ----------
+/** Milo's self tape corner at home: a floor lamp, his mark taped on the floor, the phone propped on the windowsill with its
+ *  red dot on, and a clapper on the floor that counts the takes. Three beats share the room:
+ *  hook (take 14, the hook as big text from frame 0), doubts (his inner voice: one thought bubble after another, the lamp
+ *  glows hotter on the first), slump (the clapper flips on, he slides down the wall, the scarf is caught on the lamp and
+ *  pulls it over, the tote spills; then the turn: the phone on the sill lights up). */
+type SelfTape = { type: "selftape"; seconds: number; line: string; accent: string; beat: "hook" | "doubts" | "slump"; count?: number;
+  /** scene frames the clapper flips to the next take */ flips?: number[]; thoughts?: string[]; at?: number[]; slumpAt?: number; turnAt?: number };
+const ST_FLOOR = 1384, ST_LX = 150, ST_MX = 440, ST_MY = 930;
+const SelfTapeScene: React.FC<{ s: SelfTape }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const flips = s.flips ?? [], thoughts = s.thoughts ?? [];
+  const at = (k: number) => s.at?.[k] ?? 30 + k * 34;
+  const slumpAt = s.beat === "slump" ? s.slumpAt ?? 30 : 1e6, turnAt = s.beat === "slump" ? s.turnAt ?? 62 : 1e6;
+  const d = spring({ frame: f - slumpAt, fps, config: { damping: 12, mass: 0.8, stiffness: 150 } });
+  const o = spring({ frame: f - turnAt, fps, config: { damping: 13, mass: 0.7 } });
+  const passed = flips.filter((x) => f >= x).length;
+  const last = passed ? flips[passed - 1] : -100;
+  const bump = spring({ frame: f - last, fps, config: { damping: 8, mass: 0.4 } });
+  const hot = s.beat === "doubts" ? prog(f, at(0), at(0) + 14) * (1 - prog(f, at(1) + 10, at(1) + 30) * 0.6) : 0;
+  const fl = 0.9 + 0.1 * Math.sin(f / 6);
+  const tiltL = d * 15;
+  const rad = (tiltL * Math.PI) / 180;
+  // where the lamp shade's near corner is once the lamp leans (the scarf is tied to it)
+  const hx = ST_LX + Math.cos(rad) * 60 + Math.sin(rad) * 520, hy = ST_FLOOR - Math.cos(rad) * 520 + Math.sin(rad) * 60;
+  const my = ST_MY + d * 236, mtilt = d * 12;
+  const panic = s.beat === "hook" ? 0.3 : s.beat === "doubts" ? Math.min(0.95, 0.35 + 0.6 * prog(f, at(0), at(Math.max(0, thoughts.length - 1)) + 10)) : 0.7 * (1 - o);
+  const spots = [{ x: 286, y: 652, w: 430 }, { x: 772, y: 668, w: 410 }, { x: 250, y: 1150, w: 440 }, { x: 706, y: 1124, w: 480 }];
+  const rec = Math.sin(f / 5) > -0.2 ? 1 : 0.25;
+  return (
+    <AbsoluteFill>
+      {flips.map((x, i) => <React.Fragment key={i}><Sfx name="cine/click" at={x} vol={0.7} /><Sfx name="thud" at={x + 2} vol={0.45} /></React.Fragment>)}
+      {thoughts.map((_, k) => <React.Fragment key={k}><Sfx name="pop" at={at(k)} vol={0.6} /><Sfx name={k % 2 ? "boop_hi" : "boop_lo"} at={at(k) + 4} vol={0.4} /></React.Fragment>)}
+      {s.beat === "slump" && <><Sfx name="toss" at={slumpAt} vol={0.6} /><Sfx name="thud" at={slumpAt + 6} vol={0.7} /><Sfx name="cine/toing" at={slumpAt + 9} vol={0.4} /><Sfx name="cine/ping" at={turnAt + 4} vol={0.55} /></>}
+      {/* the lamp's light, hotter when he starts to doubt it */}
+      <AbsoluteFill style={{ background: `radial-gradient(circle ${430 + hot * 120}px at ${ST_LX + d * 130}px 900px, rgba(232,121,43,${(0.3 + hot * 0.3) * fl}) 0%, rgba(232,121,43,0) 100%)` }} />
+      <AbsoluteFill style={{ background: `radial-gradient(circle 250px at 800px 960px, rgba(232,121,43,${0.5 * o}) 0%, rgba(232,121,43,0) 100%)` }} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <defs><clipPath id="stfloor"><rect x={0} y={0} width={1080} height={ST_FLOOR} /></clipPath></defs>
+        <Ink d={`M50 ${ST_FLOOR} C 360 ${ST_FLOOR - 8}, 720 ${ST_FLOOR + 8}, 1030 ${ST_FLOOR}`} start={0} dur={14} w={8} />
+        {/* the window, night outside, and the sill the phone leans on */}
+        <Ink d="M690 742 L 916 742 L 916 1030 L 690 1030 Z" start={2} dur={14} w={6} fill={DARK() ? "#070605" : "#dfe7ee"} />
+        <g opacity={prog(f, 10, 18)}>
+          <path d="M803 742 L 803 1030 M690 880 L 916 880" stroke={C.ink} strokeWidth={5} />
+          <circle cx={862} cy={800} r={22} fill="#f1ece2" opacity={0.85} />
+          <path d="M664 1036 L 942 1036" stroke={C.ink} strokeWidth={12} strokeLinecap="round" />
+          {/* the phone, propped, its red dot on */}
+          <g transform="translate(796 968) rotate(-7)">
+            <rect x={-34} y={-62} width={68} height={124} rx={13} fill={C_PAPER.stage} stroke={C.ink} strokeWidth={6} />
+            <rect x={-22} y={-44} width={44} height={10} rx={5} fill={C_PAPER.orange} opacity={o} />
+            <circle cx={0} cy={-46} r={5} fill={C.ink} opacity={1 - o} />
+          </g>
+          <circle cx={752} cy={912} r={11} fill="#e5484d" opacity={rec * (1 - o)} />
+        </g>
+        {/* his mark */}
+        <Ink d={`M${ST_MX - 46} ${ST_FLOOR - 22} L ${ST_MX + 46} ${ST_FLOOR + 22} M${ST_MX + 46} ${ST_FLOOR - 22} L ${ST_MX - 46} ${ST_FLOOR + 22}`} start={8} dur={10} w={9} color={C.orange} />
+        {/* the clapper that counts the takes */}
+        <g transform={`translate(786 1232) rotate(${-3 + (1 - Math.min(1, bump)) * (passed ? 8 : 0)})`} opacity={prog(f, 12, 20)}>
+          <rect x={-112} y={-36} width={224} height={120} rx={8} fill={PAGE} stroke={C.ink} strokeWidth={6} />
+          <g transform={`rotate(${-9 - (1 - Math.min(1, bump)) * (passed ? 16 : 0)} -112 -42)`}>
+            <rect x={-112} y={-74} width={224} height={34} rx={6} fill={C.ink} />
+            {[0, 1, 2, 3].map((i) => <path key={i} d={`M${-86 + i * 54} -74 l 22 0 l -18 34 l -22 0 Z`} fill={C.paper} />)}
+          </g>
+          <text x={-92} y={38} fontFamily={F.sans} fontWeight={600} fontSize={34} letterSpacing={4} fill={C.ink}>TAKE</text>
+          <text x={62} y={62} textAnchor="middle" fontFamily={F.serif} fontWeight={600} fontSize={92 + 14 * (1 - Math.min(1, bump)) * (passed ? 1 : 0)} fill={C.orange}>{(s.count ?? 14) + passed}</text>
+        </g>
+        {/* the floor lamp; in the slump the scarf pulls it over */}
+        <g transform={`rotate(${tiltL} ${ST_LX} ${ST_FLOOR})`}>
+          <Ink d={`M${ST_LX} ${ST_FLOOR} L ${ST_LX} 900`} start={2} dur={12} w={9} />
+          <Ink d={`M${ST_LX - 56} ${ST_FLOOR} L ${ST_LX + 56} ${ST_FLOOR}`} start={2} dur={8} w={12} />
+          <Ink d={`M${ST_LX - 84} 900 L ${ST_LX - 54} 790 L ${ST_LX + 54} 790 L ${ST_LX + 84} 900 Z`} start={4} dur={12} w={6} fill={`rgba(232,121,43,${0.75 + hot * 0.25})`} />
+        </g>
+        {/* Milo on his mark */}
+        <g clipPath="url(#stfloor)">
+          <g transform={`translate(0 ${d * 236}) rotate(${mtilt} ${ST_MX} ${ST_MY + 330})`}>
+            <Ink d={`M${ST_MX} ${ST_MY + 92} L ${ST_MX} ${ST_MY + 112} C ${ST_MX - 62} ${ST_MY + 122}, ${ST_MX - 84} ${ST_MY + 160}, ${ST_MX - 88} ${ST_MY + 216} L ${ST_MX - 92} ${ST_MY + 330} L ${ST_MX + 92} ${ST_MY + 330} L ${ST_MX + 88} ${ST_MY + 216} C ${ST_MX + 84} ${ST_MY + 160}, ${ST_MX + 62} ${ST_MY + 122}, ${ST_MX} ${ST_MY + 112}`} start={4} dur={14} w={6} fill={DARK() ? "#2b2723" : "rgba(232,121,43,0.35)"} />
+            <Ink d={`M${ST_MX - 84} ${ST_MY + 170} C ${ST_MX - 122} ${ST_MY + 230}, ${ST_MX - 124} ${ST_MY + 290}, ${ST_MX - 112} ${ST_MY + 340} M${ST_MX + 84} ${ST_MY + 170} C ${ST_MX + 122} ${ST_MY + 230}, ${ST_MX + 124} ${ST_MY + 290}, ${ST_MX + 112} ${ST_MY + 340}`} start={10} dur={10} w={6} />
+          </g>
+          <g opacity={1 - d}>
+            <Ink d={`M${ST_MX - 44} ${ST_MY + 330} L ${ST_MX - 46} ${ST_MY + 446} L ${ST_MX - 70} ${ST_MY + 452} M${ST_MX + 44} ${ST_MY + 330} L ${ST_MX + 46} ${ST_MY + 446} L ${ST_MX + 70} ${ST_MY + 452}`} start={12} dur={10} w={6} />
+          </g>
+        </g>
+        {/* sitting: his legs out in front of him */}
+        {d > 0.05 && <path d={`M${ST_MX + 50} ${ST_FLOOR - 40} L ${ST_MX + 236} ${ST_FLOOR - 30} L ${ST_MX + 250} ${ST_FLOOR - 78} M${ST_MX + 40} ${ST_FLOOR - 14} L ${ST_MX + 206} ${ST_FLOOR - 10} L ${ST_MX + 218} ${ST_FLOOR - 56}`} fill="none" stroke={C.ink} strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" opacity={d} />}
+        {/* the scarf, caught on the lamp as always, pulled tight */}
+        {s.beat === "slump" && (
+          <g opacity={prog(f, 6, 12)}>
+            <path d={`M${hx} ${hy - 10} L ${hx + 8} ${hy + 22} L ${ST_MX - 30} ${my + 96} L ${ST_MX - 52} ${my + 62} Z`} fill={MUSTARD} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+            <circle cx={hx} cy={hy + 4} r={16} fill={MUSTARD} stroke={C.ink} strokeWidth={6} />
+          </g>
+        )}
+        <Milo x={ST_MX + d * 14} y={my} r={84} tilt={mtilt} panic={panic} hope={o} start={4} tote={[584, ST_FLOOR - 92]} spill={prog(f, slumpAt + 6, slumpAt + 20)} />
+        {/* saying it again, between doubts */}
+        {s.beat === "hook" && [0, 1, 2].map((i) => (
+          <path key={i} d={`M${ST_MX + 104 + i * 22} ${ST_MY + 4 - i * 12} q ${12 + i * 4} ${14 + i * 5}, 0 ${28 + i * 10}`} fill="none" stroke={C.ink} strokeWidth={5} strokeLinecap="round" opacity={0.25 + 0.75 * Math.abs(Math.sin(f / 3 + i))} />
+        ))}
+        {/* what the inner voice says */}
+        {thoughts.map((t, k) => {
+          if (f < at(k)) return null;
+          const sp = spots[k % spots.length], pop = spring({ frame: f - at(k), fps, config: { damping: 9, mass: 0.5 } });
+          const ls = t.split("\n"), h = ls.length > 1 ? 156 : 112, wob = Math.sin((f + sp.x) / 9) * 4;
+          const tx = ST_MX + (sp.x < ST_MX ? -60 : 70), ty = ST_MY + (sp.y < ST_MY ? -92 : 70);
+          return (
+            <g key={k}>
+              {[0.52, 0.76].map((u, i) => <circle key={i} cx={sp.x + (tx - sp.x) * u} cy={sp.y + (ty - sp.y) * u} r={(15 - i * 6) * Math.min(1, pop)} fill="#f1ece2" stroke={C_PAPER.ink} strokeWidth={4} />)}
+              <g transform={`translate(${sp.x} ${sp.y + wob}) scale(${pop})`}>
+                <rect x={-sp.w / 2} y={-h / 2} width={sp.w} height={h} rx={h / 2} fill={k === 0 && hot > 0.3 ? "#f6b37c" : "#f1ece2"} stroke={C_PAPER.ink} strokeWidth={6} />
+                {ls.map((l, i) => <text key={i} x={0} y={(i - (ls.length - 1) / 2) * 52 + 15} textAnchor="middle" fontFamily={F.sans} fontWeight={600} fontSize={44} fill={C_PAPER.ink}>{l}</text>)}
+              </g>
+            </g>
+          );
+        })}
+      </svg>
+      {/* hook beat: big, bold, there from frame 0 (it is the cover) */}
+      <AbsoluteFill style={{ alignItems: "center", padding: `${s.beat === "hook" ? 262 : 290}px 56px 0` }}>
+        <Rise at={s.beat === "slump" ? turnAt : s.beat === "hook" ? 2 : 6}><Headline text={s.line} accent={s.accent} color={C.ink} size={s.beat === "hook" ? 96 : 92} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
   const f = useCurrentFrame();
   const t = f / FPS;
@@ -4093,6 +4215,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "oneam" ? <OneAmScene s={sc} /> :
       sc.type === "peeks" ? <PeeksScene s={sc} /> :
       sc.type === "pillow" ? <PillowScene s={sc} /> :
+      sc.type === "selftape" ? <SelfTapeScene s={sc} /> :
       <EndScene s={sc} />;
   };
 
