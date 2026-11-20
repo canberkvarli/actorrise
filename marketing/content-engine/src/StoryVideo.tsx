@@ -33,7 +33,7 @@ const C_PAPER = {
 const C = { ...C_PAPER };
 /** Drawn looks. paper: warm paper, serif, orange italic key word. marker: off white, black sans,
  * a yellow highlighter swipe behind the key word (same idea as the reel's marker look). */
-export type StoryLook = "paper" | "marker" | "midnight" | "bold" | "noir" | "riso";
+export type StoryLook = "paper" | "marker" | "midnight" | "bold" | "noir" | "riso" | "sketch";
 const HL = "#ffe15a";
 // Fills for drawn shapes and pages; the look sets them (dark shapes on the midnight sheet).
 let PAPER_FILL = "#f8f4ec";
@@ -54,8 +54,11 @@ const applyLook = (look: StoryLook) => {
     : look === "noir" ? { paper: "#0d0b09", ink: "#f1ece2", inkSoft: "rgba(241,236,226,0.5)", orange: "#f08a3c" }
     // riso (2026-11-20, Canberk asked for a new style): a two ink risograph print. Riso blue line work on
     // cream stock, fluorescent pink as the second ink, printed a few pixels off register, halftone dots, grain.
+    // sketch (2026-11-20): a different way of DRAWING, not a palette. Graphite pencil on sketchbook paper:
+    // every line is redrawn wobbly and doubled like a quick pencil sketch, the fills go soft, one red pencil.
+    : look === "sketch" ? { paper: "#f3f0e8", ink: "#3b3a38", inkSoft: "rgba(59,58,56,0.5)", orange: "#d8452b" }
     : look === "riso" ? { paper: "#f2ead9", ink: "#2340a0", inkSoft: "rgba(35,64,160,0.55)", orange: "#ff3d7f" } : {});
-  PAPER_FILL = look === "midnight" ? "#1a2038" : look === "noir" ? "#1c1916" : look === "riso" ? "#f6efe0" : "#f8f4ec";
+  PAPER_FILL = look === "midnight" ? "#1a2038" : look === "noir" ? "#1c1916" : look === "riso" ? "#f6efe0" : look === "sketch" ? "url(#hatch)" : "#f8f4ec";
   PAGE = look === "midnight" ? "#262d4a" : look === "noir" ? "#27231f" : look === "riso" ? "#fbf6ea" : "#ffffff";
   Object.assign(F, F_PAPER, {});
 };
@@ -253,7 +256,37 @@ const RisoGrain: React.FC = () => (
   <AbsoluteFill style={{ backgroundImage: RISO_GRAIN, opacity: 0.22, mixBlendMode: "multiply", pointerEvents: "none" }} />
 );
 
-const Paper: React.FC = () => LOOK === "riso" ? <RisoPaper /> : (
+/** sketch: the pencil filter. Two displaced copies of every line (a firm stroke and a faint second pass)
+ *  so it reads as drawn by hand, plus graphite grain eaten into the strokes. Real app screens never get it. */
+const SketchDefs: React.FC = () => (
+  <svg width={0} height={0} style={{ position: "absolute" }}>
+    <defs>
+      <pattern id="hatch" patternUnits="userSpaceOnUse" width="18" height="18" patternTransform="rotate(38)">
+        <rect width="18" height="18" fill="#f7f5ef" />
+        <line x1="0" y1="4" x2="18" y2="4" stroke="#3b3a38" strokeOpacity={0.33} strokeWidth={2.2} />
+        <line x1="0" y1="12" x2="18" y2="13" stroke="#3b3a38" strokeOpacity={0.18} strokeWidth={1.6} />
+      </pattern>
+    </defs>
+    <filter id="pencil" x="-3%" y="-3%" width="106%" height="106%" colorInterpolationFilters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves={2} seed={3} result="n1" />
+      <feDisplacementMap in="SourceGraphic" in2="n1" scale={16} xChannelSelector="R" yChannelSelector="G" result="d1" />
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves={2} seed={11} result="n2" />
+      <feDisplacementMap in="SourceGraphic" in2="n2" scale={26} xChannelSelector="G" yChannelSelector="R" result="d2" />
+      <feColorMatrix in="d2" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.5 0" result="d2f" />
+      <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves={1} seed={5} result="g" />
+      <feColorMatrix in="g" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.6 1.45" result="ga" />
+      <feMerge result="m"><feMergeNode in="d2f" /><feMergeNode in="d1" /></feMerge>
+      <feComposite in="m" in2="ga" operator="in" />
+    </filter>
+  </svg>
+);
+const SketchPaper: React.FC = () => (
+  <AbsoluteFill style={{ background: `radial-gradient(ellipse 95% 75% at 50% 42%, #faf8f3 0%, ${C.paper} 70%, #e6e1d6 100%)` }}>
+    <AbsoluteFill style={{ backgroundImage: RISO_GRAIN, opacity: 0.12, mixBlendMode: "multiply", filter: "grayscale(1)" }} />
+  </AbsoluteFill>
+);
+
+const Paper: React.FC = () => LOOK === "riso" ? <RisoPaper /> : LOOK === "sketch" ? <SketchPaper /> : (
   <AbsoluteFill
     style={{
       background: LOOK === "noir"
@@ -4399,6 +4432,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
     <SpeechCtx.Provider value={spans}>
     <AbsoluteFill style={{ background: C.paper, overflow: "hidden" }}>
       <Paper />
+      {LOOK === "sketch" && <SketchDefs />}
       {spec.music && (
         <Audio src={staticFile(`music/${spec.id}.wav`)}
           volume={(f) => {
@@ -4443,7 +4477,8 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
               <SceneStartCtx.Provider value={i === 0 ? -PREROLL : moves[i] ? starts[i] - T : starts[i]}>
                 <AbsoluteFill style={{ transform: `translateX(${x}px)`,
                   // riso: the second ink printed off register, so every line carries a pink ghost
-                  filter: LOOK === "riso" ? "drop-shadow(7px 5px 0 rgba(255,61,127,0.55))" : undefined }}>{renderScene(sc, i)}</AbsoluteFill>
+                  filter: LOOK === "riso" ? "drop-shadow(7px 5px 0 rgba(255,61,127,0.55))"
+                    : LOOK === "sketch" && sc.type !== "screens" ? "url(#pencil)" : undefined }}>{renderScene(sc, i)}</AbsoluteFill>
               </SceneStartCtx.Provider>
             </Sequence>
           </React.Fragment>

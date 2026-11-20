@@ -3,6 +3,15 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-20, afternoon: "sketch", a different way of drawing (wins over everything below)
+
+Canberk on riso: "just different colors, not a different style of drawing." Right. The new style is
+`"look": "sketch"`: graphite pencil on sketchbook paper. Every line is redrawn wobbly with a faint second
+pass and pencil grain eaten into it, fills are pencil cross hatching, one red pencil accent. It changes the
+line work itself, not the palette. Real app screens (`screens` scenes) never get the pencil filter, they stay
+crisp at true size. Palette looks (riso, noir, midnight, bold) count as colour variations, not new styles;
+a new STYLE must change how things are drawn (line, fill, texture, shapes).
+
 ## 2026-11-20: a new drawing style, "riso" (wins over everything below)
 
 Canberk wants a new style for the next film. New look `"look": "riso"`: a two ink risograph print, riso
