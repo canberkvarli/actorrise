@@ -3,6 +3,16 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-20: a new drawing style, "riso" (wins over everything below)
+
+Canberk wants a new style for the next film. New look `"look": "riso"`: a two ink risograph print, riso
+blue line work on cream stock, fluorescent pink as the second ink printed a few pixels off register (every
+line carries a pink ghost), pink halftone dots, paper grain. Milo's design stays the same in every style.
+The plan from here (Canberk agreed): one style per series so viewers recognise it from the first frame, plus
+one test slot a week for a new style; a style that wins two weeks running gets its own series. A second
+voice comes in as a CHARACTER talking back in short lines (the rival who always brings Juliet, Lily's
+voice), never a second narrator; George stays Milo's inner voice.
+
 ## 2026-11-16, later: one brand, one actor, clickbait hooks (wins over everything below)
 
 **Ghost Light is the only brand now (Canberk: "unified").** Never say or show "ActorRise" or

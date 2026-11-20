@@ -33,7 +33,7 @@ const C_PAPER = {
 const C = { ...C_PAPER };
 /** Drawn looks. paper: warm paper, serif, orange italic key word. marker: off white, black sans,
  * a yellow highlighter swipe behind the key word (same idea as the reel's marker look). */
-export type StoryLook = "paper" | "marker" | "midnight" | "bold" | "noir";
+export type StoryLook = "paper" | "marker" | "midnight" | "bold" | "noir" | "riso";
 const HL = "#ffe15a";
 // Fills for drawn shapes and pages; the look sets them (dark shapes on the midnight sheet).
 let PAPER_FILL = "#f8f4ec";
@@ -51,9 +51,12 @@ const applyLook = (look: StoryLook) => {
     // bold (2026-11-22): the reel's bold look for drawn films. Orange field, near black ink, the key word in white.
     : look === "bold" ? { paper: "#e8792b", ink: "#15100c", inkSoft: "rgba(21,16,12,0.6)", orange: "#ffffff" }
     // noir (2026-11-23): lights off. Warm near black sheet, cream ink, the brand orange as the only colour.
-    : look === "noir" ? { paper: "#0d0b09", ink: "#f1ece2", inkSoft: "rgba(241,236,226,0.5)", orange: "#f08a3c" } : {});
-  PAPER_FILL = look === "midnight" ? "#1a2038" : look === "noir" ? "#1c1916" : "#f8f4ec";
-  PAGE = look === "midnight" ? "#262d4a" : look === "noir" ? "#27231f" : "#ffffff";
+    : look === "noir" ? { paper: "#0d0b09", ink: "#f1ece2", inkSoft: "rgba(241,236,226,0.5)", orange: "#f08a3c" }
+    // riso (2026-11-20, Canberk asked for a new style): a two ink risograph print. Riso blue line work on
+    // cream stock, fluorescent pink as the second ink, printed a few pixels off register, halftone dots, grain.
+    : look === "riso" ? { paper: "#f2ead9", ink: "#2340a0", inkSoft: "rgba(35,64,160,0.55)", orange: "#ff3d7f" } : {});
+  PAPER_FILL = look === "midnight" ? "#1a2038" : look === "noir" ? "#1c1916" : look === "riso" ? "#f6efe0" : "#f8f4ec";
+  PAGE = look === "midnight" ? "#262d4a" : look === "noir" ? "#27231f" : look === "riso" ? "#fbf6ea" : "#ffffff";
   Object.assign(F, F_PAPER, {});
 };
 loadFont({ family: F.serif, url: staticFile("fonts/playfair.woff2"), weight: "600" });
@@ -237,7 +240,20 @@ const Cue: React.FC<{ text: string; color: string; at?: number }> = ({ text, col
   );
 };
 
-const Paper: React.FC = () => (
+const RISO_GRAIN = `url("data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0.14  0 0 0 0 0.2  0 0 0 0 0.5  0 0 0 0.55 0"/></filter><rect width="300" height="300" filter="url(#n)"/></svg>')}")`;
+/** riso: halftone dots of the pink ink fading down the sheet, plus paper grain over everything. */
+const RisoPaper: React.FC = () => (
+  <AbsoluteFill style={{ background: C.paper }}>
+    <AbsoluteFill style={{ backgroundImage: "radial-gradient(circle, rgba(255,61,127,0.32) 2.6px, transparent 3.2px)", backgroundSize: "15px 15px",
+      WebkitMaskImage: "linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.5) 100%)",
+      maskImage: "linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.5) 100%)" }} />
+  </AbsoluteFill>
+);
+const RisoGrain: React.FC = () => (
+  <AbsoluteFill style={{ backgroundImage: RISO_GRAIN, opacity: 0.22, mixBlendMode: "multiply", pointerEvents: "none" }} />
+);
+
+const Paper: React.FC = () => LOOK === "riso" ? <RisoPaper /> : (
   <AbsoluteFill
     style={{
       background: LOOK === "noir"
@@ -4425,12 +4441,15 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
               durationInFrames={frames + (moves[i] ? T : 0) + (i === 0 ? PREROLL : 0)}
             >
               <SceneStartCtx.Provider value={i === 0 ? -PREROLL : moves[i] ? starts[i] - T : starts[i]}>
-                <AbsoluteFill style={{ transform: `translateX(${x}px)` }}>{renderScene(sc, i)}</AbsoluteFill>
+                <AbsoluteFill style={{ transform: `translateX(${x}px)`,
+                  // riso: the second ink printed off register, so every line carries a pink ghost
+                  filter: LOOK === "riso" ? "drop-shadow(7px 5px 0 rgba(255,61,127,0.55))" : undefined }}>{renderScene(sc, i)}</AbsoluteFill>
               </SceneStartCtx.Provider>
             </Sequence>
           </React.Fragment>
         );
       })}
+      {LOOK === "riso" && <RisoGrain />}
       {spec.voice?.lines?.length && spec.voice.subtitles !== false ? (
         <StoryCaptions lines={spec.voice.lines}
           until={spec.scenes[spec.scenes.length - 1]?.type === "end" ? spec.scenes.slice(0, -1).reduce((n, sc) => n + sc.seconds, 0) : 1e9} />
