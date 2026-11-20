@@ -13,6 +13,7 @@ import {
 } from "remotion";
 import { evolvePath } from "@remotion/paths";
 import { loadFont } from "@remotion/fonts";
+import { CollageDefs, CollageBg, CMilo, CPerson, CTitle, CNote, Place, P as CP } from "./collage";
 
 export const FPS = 30;
 const T = 22; // frames per camera move
@@ -33,7 +34,7 @@ const C_PAPER = {
 const C = { ...C_PAPER };
 /** Drawn looks. paper: warm paper, serif, orange italic key word. marker: off white, black sans,
  * a yellow highlighter swipe behind the key word (same idea as the reel's marker look). */
-export type StoryLook = "paper" | "marker" | "midnight" | "bold" | "noir" | "riso" | "sketch";
+export type StoryLook = "paper" | "marker" | "midnight" | "bold" | "noir" | "riso" | "sketch" | "collage";
 const HL = "#ffe15a";
 // Fills for drawn shapes and pages; the look sets them (dark shapes on the midnight sheet).
 let PAPER_FILL = "#f8f4ec";
@@ -56,9 +57,11 @@ const applyLook = (look: StoryLook) => {
     // cream stock, fluorescent pink as the second ink, printed a few pixels off register, halftone dots, grain.
     // sketch (2026-11-20): a different way of DRAWING, not a palette. Graphite pencil on sketchbook paper:
     // every line is redrawn wobbly and doubled like a quick pencil sketch, the fills go soft, one red pencil.
+    // collage (2026-11-20): the cut-paper world (src/collage.tsx). Teal paper sheet, cream type, red accent.
+    : look === "collage" ? { paper: "#1f5c5a", ink: "#f3ead8", inkSoft: "rgba(243,234,216,0.6)", orange: "#e8792b" }
     : look === "sketch" ? { paper: "#f3f0e8", ink: "#3b3a38", inkSoft: "rgba(59,58,56,0.5)", orange: "#d8452b" }
     : look === "riso" ? { paper: "#f2ead9", ink: "#2340a0", inkSoft: "rgba(35,64,160,0.55)", orange: "#ff3d7f" } : {});
-  PAPER_FILL = look === "midnight" ? "#1a2038" : look === "noir" ? "#1c1916" : look === "riso" ? "#f6efe0" : look === "sketch" ? "url(#hatch)" : "#f8f4ec";
+  PAPER_FILL = look === "midnight" ? "#1a2038" : look === "noir" ? "#1c1916" : look === "riso" ? "#f6efe0" : look === "sketch" ? "url(#hatch)" : look === "collage" ? "#f3ead8" : "#f8f4ec";
   PAGE = look === "midnight" ? "#262d4a" : look === "noir" ? "#27231f" : look === "riso" ? "#fbf6ea" : "#ffffff";
   Object.assign(F, F_PAPER, {});
 };
@@ -125,7 +128,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -286,7 +289,7 @@ const SketchPaper: React.FC = () => (
   </AbsoluteFill>
 );
 
-const Paper: React.FC = () => LOOK === "riso" ? <RisoPaper /> : LOOK === "sketch" ? <SketchPaper /> : (
+const Paper: React.FC = () => LOOK === "riso" ? <RisoPaper /> : LOOK === "sketch" ? <SketchPaper /> : LOOK === "collage" ? <CollageBg floorY={2400} /> : (
   <AbsoluteFill
     style={{
       background: LOOK === "noir"
@@ -4218,6 +4221,35 @@ const MiloStanding: React.FC<{ x: number; y: number; start?: number; legs?: numb
   </>
 );
 const OP_FLOOR = 1462;
+// ---------- cutout: a generic cut-paper collage scene (look "collage", src/collage.tsx) ----------
+/** Build a collage beat from data: a wall and floor of paper, a cast placed on the sheet, handwritten scraps.
+ *  The line is the torn title card at the top (the hook on the first scene: there from frame 0, the cover).
+ *  New props for a film (a bus stop, a bed) go in new collage components built from the pieces in collage.tsx. */
+type CastMember = { who: "milo" | "person"; x: number; y: number; s?: number; at?: number; dress?: string; hair?: string; skin?: string; long?: boolean;
+  /** frame windows when this one talks (mouth flaps) */ talk?: [number, number][]; panic?: number; flip?: boolean; tote?: boolean; from?: "top" | "left" | "right" };
+type Cutout = { type: "cutout"; seconds: number; line: string; accent?: string; wall?: string; floor?: string; floorY?: number; titleY?: number;
+  cast: CastMember[]; notes?: { text: string; x: number; y: number; rot?: number; at?: number; size?: number }[] };
+const CutoutScene: React.FC<{ s: Cutout }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const talking = (w?: [number, number][]) => (w ?? []).some(([a, b]) => f >= a && f <= b) ? 0.5 + 0.5 * Math.abs(Math.sin(f / 2.2)) : 0;
+  return (
+    <AbsoluteFill>
+      <CollageBg wall={s.wall} floor={s.floor} floorY={s.floorY} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {s.cast.map((c, i) => (
+          <Place key={i} at={c.at ?? 0} from={c.from}>
+            {c.who === "milo"
+              ? <CMilo x={c.x} y={c.y} s={c.s} panic={c.panic} talk={talking(c.talk)} flip={c.flip} tote={c.tote} />
+              : <CPerson x={c.x} y={c.y} s={c.s} dress={c.dress ?? CP.red} hair={c.hair} skin={c.skin} long={c.long} talk={talking(c.talk)} />}
+          </Place>
+        ))}
+        {(s.notes ?? []).map((n, i) => <CNote key={i} text={n.text} x={n.x} y={n.y} rot={n.rot} at={n.at ?? 0} size={n.size} />)}
+      </svg>
+      <CTitle text={s.line} accent={s.accent} y={s.titleY ?? 260} />
+    </AbsoluteFill>
+  );
+};
+
 const OpheliasScene: React.FC<{ s: Ophelias }> = ({ s }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -4423,6 +4455,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "pillow" ? <PillowScene s={sc} /> :
       sc.type === "selftape" ? <SelfTapeScene s={sc} /> :
       sc.type === "ophelias" ? <OpheliasScene s={sc} /> :
+      sc.type === "cutout" ? <CutoutScene s={sc} /> :
       <EndScene s={sc} />;
   };
 
@@ -4433,6 +4466,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
     <AbsoluteFill style={{ background: C.paper, overflow: "hidden" }}>
       <Paper />
       {LOOK === "sketch" && <SketchDefs />}
+      {LOOK === "collage" && <CollageDefs />}
       {spec.music && (
         <Audio src={staticFile(`music/${spec.id}.wav`)}
           volume={(f) => {

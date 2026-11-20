@@ -58,7 +58,7 @@ def take_score(heard, expected):
     import difflib
     heard = re.sub(r"\([^)]*\)", " ", heard)  # Scribe writes acted sounds as (laughs)
     fix = lambda t: re.sub(r"ghost\s*light", "ghost light", t, flags=re.I)
-    heard, expected = fix(heard), fix(expected)
+    heard, expected = fix(heard), fix(spoken(expected))
     h, x = clean_words(heard), clean_words(expected)
     score = difflib.SequenceMatcher(None, h, x).ratio()
     stutter = bool(re.search(r"\b(\w{1,3})-\1", heard.lower())) or bool(re.search(r"\b([a-z])\1{2,}", heard.lower()))
@@ -85,7 +85,14 @@ def clean_take(text, voice_id, key, tries=4):
     return best
 
 
+def spoken(text):
+    """What the voice actually says. "POV:" is for the screen only (Canberk, 2026-11-20): the narrator reads
+    what comes after it, wherever it sits (after a v3 tag, or after another sentence)."""
+    return re.sub(r"(^|(?<=\]\s)|(?<=[.!?]\s))POV\s*:\s*", "", text.strip(), flags=re.I)
+
+
 def tts(text, voice_id, key, settings=None):
+    text = spoken(text)
     body = {"text": text, "model_id": MODEL,
             "voice_settings": settings or ({"stability": STABILITY, "similarity_boost": 0.8} if MODEL.startswith("eleven_v3")
                                            else {"stability": 0.3, "similarity_boost": 0.8, "style": 0.6, "use_speaker_boost": True})}

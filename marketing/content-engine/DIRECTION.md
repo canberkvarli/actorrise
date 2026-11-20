@@ -3,6 +3,22 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-20, later: three new worlds, cut-paper collage first; the voice never says "POV" (wins over everything below)
+
+Canberk saw three new concepts (reference/concepts/concepts.png and .html: A notebook doodle, B manga
+panels, C cut-paper collage). "All three is good", and he really likes the cut-paper collage. A new concept
+means new characters, new world and new drawing language, not a filter or a palette on the old drawings.
+- **Cut-paper collage is built**: `"look": "collage"` plus src/collage.tsx (torn paper with soft shadows, no
+  outlines, paper fibre, Archivo Black on torn cream cards, Caveat for handwritten scraps; CMilo, CPerson,
+  CTitle, CNote, Place, CollageBg, CollageDefs) and a data driven `cutout` scene type for simple beats.
+  Every film from now on is collage until the other two are built. New props for a film (a bus stop, a bed,
+  a library desk) are new collage pieces made the same way: flat coloured paper shapes, filter "torn",
+  never the outlined Ink drawings. Milo in paper: navy coat, mustard scarf, messy black hair, kraft tote.
+  The `screens` scenes (real app screens in the phone) sit on the collage sheet as they are.
+- Doodle (A) and manga (B) get built next and then each takes a series (one world per series).
+- **"POV" is never spoken.** The hook on screen keeps "POV:", the voice starts after it ("you're the sixth
+  Juliet today"). voice.py strips it from `say` as a safety net; write `say` without it anyway.
+
 ## 2026-11-20, afternoon: "sketch", a different way of drawing (wins over everything below)
 
 Canberk on riso: "just different colors, not a different style of drawing." Right. The new style is
