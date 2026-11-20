@@ -164,7 +164,8 @@ gets a `discover_*` function in `web_play_scraper.py` and a `--source` flag here
   pointed us to when asked (email, 2026-11-18). Paul (The Acts of Life), Detective H.D.
   (Law & Order: Fairy Tale Unit), Matt (Check Please), Detective Itsy (Law & Order: Rhymes
   and Misdemeanors), Todd (Meet the Roommates; cut at "made in the shade", the rest is
-  sound cues). Each links to where the play is licensed (Open Curtain, TRW for Rhymes).
+  sound cues). Each links to that play's page on jonathanrand.com, as he asked when he gave
+  permission (2026-11-20; it pointed to Open Curtain and TRW until then).
   Linda (Check Please) left out: one actor playing three voices, with speaker labels. His
   six scenes are not in yet. Years are floors, unverified: Check Please 2003 (Theatre
   Saskatchewan record), Meet the Roommates 2008 (a 2008 production), the other three 2023
