@@ -15,6 +15,9 @@ means new characters, new world and new drawing language, not a filter or a pale
   a library desk) are new collage pieces made the same way: flat coloured paper shapes, filter "torn",
   never the outlined Ink drawings. Milo in paper: navy coat, mustard scarf, messy black hair, kraft tote.
   The `screens` scenes (real app screens in the phone) sit on the collage sheet as they are.
+- People are real little paper bodies, never triangles (Canberk): neck, shoulders, two arms with hands,
+  a dress or trousers, shoes, a hair style (long, bun, short, curly), poses (down, script, hip, wave), a
+  slight idle sway and blink. Vary skin, hair and outfits across a crowd. Milo has arms too.
 - Doodle (A) and manga (B) get built next and then each takes a series (one world per series).
 - **"POV" is never spoken.** The hook on screen keeps "POV:", the voice starts after it ("you're the sixth
   Juliet today"). voice.py strips it from `say` as a safety net; write `say` without it anyway.

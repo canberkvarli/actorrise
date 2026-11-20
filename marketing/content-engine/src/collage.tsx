@@ -79,6 +79,10 @@ export const CMilo: React.FC<{ x: number; y: number; s?: number; panic?: number;
         <rect x={-62} y={-200} width={44} height={200} fill={P.ink} />
         <rect x={18} y={-200} width={44} height={200} fill={P.ink} />
         <rect x={-95} y={-420} width={190} height={250} rx={34} fill={P.navy} />
+        {/* arms: coat sleeves with hands; the right one holds the tote strap */}
+        <g transform={`rotate(${12 + panic * 22} -92 -400)`}><rect x={-112} y={-404} width={40} height={190} rx={18} fill={P.navy} /><circle cx={-92} cy={-206} r={22} fill={P.skin} /></g>
+        <g transform={`rotate(${tote ? -18 : -12} 92 -400)`}><rect x={72} y={-404} width={40} height={180} rx={18} fill={P.navy} /><circle cx={92} cy={-216} r={22} fill={P.skin} /></g>
+        <rect x={-14} y={-440} width={28} height={30} fill={P.skin} />
         {/* head */}
         <circle cx={0} cy={-500} r={90} fill={P.skin} />
         {/* messy hair: torn spikes */}
@@ -107,22 +111,60 @@ export const CMilo: React.FC<{ x: number; y: number; s?: number; panic?: number;
   );
 };
 
-/** Anyone else, in paper. dress/hair colours vary them; `long` gives long hair. (x, y) = middle of the feet. */
-export const CPerson: React.FC<{ x: number; y: number; s?: number; dress?: string; hair?: string; skin?: string; long?: boolean; talk?: number }> = ({ x, y, s = 1, dress = P.red, hair = P.hair2, skin = P.skin, long = true, talk = 0 }) => (
-  <g transform={`translate(${x} ${y}) scale(${s})`}>
-    <g filter="url(#torn)">
-      <path d="M-80 0 L0 -330 L80 0 Z" fill={dress} />
-      {long && <path d="M-74 -420 q74 -110 148 0 v150 h-26 v-120 h-96 v120 h-26 z" fill={hair} />}
-      <circle cx={0} cy={-400} r={64} fill={skin} />
-      {!long && <path d="M-66 -420 q66 -80 132 0 l-8 -30 q-58 -50 -116 0 z" fill={hair} />}
-      {long && <path d="M-70 -420 q70 -86 140 0 q-30 -30 -70 -26 q-40 -4 -70 26 z" fill={hair} />}
+/** Anyone else, in paper: a real little body, not a triangle. Neck, shoulders, two arms with hands, a skirt
+ *  or trousers, shoes, a hair style. (x, y) = middle of the feet, s = scale (1 is about 500px tall).
+ *  outfit: "dress" | "trousers"; hairStyle: "long" | "bun" | "short" | "curly";
+ *  arms: "down" | "script" (holds a page up to read) | "hip" | "wave"; a little idle sway is built in. */
+export const CPerson: React.FC<{ x: number; y: number; s?: number; dress?: string; top?: string; hair?: string; skin?: string; long?: boolean;
+  outfit?: "dress" | "trousers"; hairStyle?: "long" | "bun" | "short" | "curly"; arms?: "down" | "script" | "hip" | "wave"; talk?: number; seed?: number }> =
+  ({ x, y, s = 1, dress = P.red, top, hair = P.hair2, skin = P.skin, long, outfit = "dress", hairStyle, arms = "down", talk = 0, seed = 0 }) => {
+  const f = useCurrentFrame();
+  const style = hairStyle ?? (long === false ? "short" : "long");
+  const sway = Math.sin((f + seed * 17) / 14) * 2.2;
+  const blink = (f + seed * 23) % 110 < 4 ? 0.2 : 1;
+  const shirt = top ?? dress;
+  const wave = arms === "wave" ? Math.sin(f / 4) * 14 : 0;
+  // arm = sleeve strip + hand, pivoting at the shoulder
+  const Arm: React.FC<{ side: -1 | 1; ang: number; len?: number }> = ({ side, ang, len = 150 }) => (
+    <g transform={`translate(${side * 62} -318) rotate(${ang})`}>
+      <rect x={-17} y={0} width={34} height={len} rx={16} fill={shirt} />
+      <circle cx={0} cy={len + 6} r={19} fill={skin} />
     </g>
-    <g filter="url(#tornS)">
-      <circle cx={-22} cy={-400} r={7} fill={P.hair} /><circle cx={22} cy={-400} r={7} fill={P.hair} />
-      {talk > 0.05 ? <ellipse cx={0} cy={-368} rx={10} ry={3 + talk * 8} fill="#5a1d14" /> : <rect x={-12} y={-372} width={24} height={6} rx={3} fill={P.hair} />}
+  );
+  const armL = arms === "script" ? -52 : arms === "hip" ? 34 : 10;
+  const armR = arms === "script" ? 52 : arms === "hip" ? -34 : arms === "wave" ? -160 + wave : -10;
+  return (
+    <g transform={`translate(${x} ${y}) scale(${s}) rotate(${sway} 0 0)`}>
+      <g filter="url(#torn)">
+        {style === "long" && <path d="M-72 -440 q72 -100 144 0 l6 170 h-32 v-130 h-92 v130 h-32 z" fill={hair} />}
+        {/* shoes and legs */}
+        <rect x={-46} y={-14} width={40} height={18} rx={8} fill={P.ink} />
+        <rect x={6} y={-14} width={40} height={18} rx={8} fill={P.ink} />
+        {outfit === "trousers"
+          ? (<><rect x={-44} y={-170} width={36} height={160} fill={P.ink} /><rect x={8} y={-170} width={36} height={160} fill={P.ink} /></>)
+          : (<><rect x={-36} y={-90} width={24} height={80} fill={skin} /><rect x={12} y={-90} width={24} height={80} fill={skin} />
+              <path d="M-58 -230 L58 -230 L92 -84 L-92 -84 Z" fill={dress} /></>)}
+        {/* torso with shoulders */}
+        <rect x={-66} y={-340} width={132} height={outfit === "trousers" ? 186 : 118} rx={30} fill={shirt} />
+        {/* neck + head */}
+        <rect x={-15} y={-372} width={30} height={40} fill={skin} />
+        <circle cx={0} cy={-420} r={62} fill={skin} />
+        {style === "long" && <path d="M-66 -440 q66 -82 132 0 q-30 -28 -66 -24 q-36 -4 -66 24 z" fill={hair} />}
+        {style === "bun" && (<><circle cx={0} cy={-492} r={34} fill={hair} /><path d="M-64 -430 q64 -86 128 0 q-64 -40 -128 0 z" fill={hair} /></>)}
+        {style === "short" && <path d="M-64 -434 q64 -84 128 0 l-6 -26 q-58 -52 -116 0 z" fill={hair} />}
+        {style === "curly" && [-54, -27, 0, 27, 54].map((cx, k) => <circle key={k} cx={cx} cy={-466 + Math.abs(cx) * 0.45} r={30} fill={hair} />)}
+        <Arm side={-1} ang={armL} />
+        <Arm side={1} ang={armR} />
+        {arms === "script" && <rect x={-58} y={-300} width={116} height={96} fill={P.white} transform="rotate(-4 0 -252)" />}
+      </g>
+      <g filter="url(#tornS)">
+        <ellipse cx={-22} cy={-420} rx={7} ry={7 * blink} fill={P.hair} /><ellipse cx={22} cy={-420} rx={7} ry={7 * blink} fill={P.hair} />
+        {talk > 0.05 ? <ellipse cx={0} cy={-388} rx={10} ry={3 + talk * 8} fill="#5a1d14" /> : <rect x={-12} y={-392} width={24} height={6} rx={3} fill={P.hair} />}
+        <circle cx={-36} cy={-398} r={9} fill={P.pink} opacity={0.5} /><circle cx={36} cy={-398} r={9} fill={P.pink} opacity={0.5} />
+      </g>
     </g>
-  </g>
-);
+  );
+};
 
 /** The hook on a torn cream card, Archivo Black, the key words in red. Big and there from frame 0 (it is the cover). */
 export const CTitle: React.FC<{ text: string; accent?: string; y?: number; size?: number }> = ({ text, accent, y = 250, size = 74 }) => {

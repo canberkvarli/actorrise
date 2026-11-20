@@ -4225,7 +4225,8 @@ const OP_FLOOR = 1462;
 /** Build a collage beat from data: a wall and floor of paper, a cast placed on the sheet, handwritten scraps.
  *  The line is the torn title card at the top (the hook on the first scene: there from frame 0, the cover).
  *  New props for a film (a bus stop, a bed) go in new collage components built from the pieces in collage.tsx. */
-type CastMember = { who: "milo" | "person"; x: number; y: number; s?: number; at?: number; dress?: string; hair?: string; skin?: string; long?: boolean;
+type CastMember = { who: "milo" | "person"; x: number; y: number; s?: number; at?: number; dress?: string; top?: string; hair?: string; skin?: string; long?: boolean;
+  outfit?: "dress" | "trousers"; hairStyle?: "long" | "bun" | "short" | "curly"; arms?: "down" | "script" | "hip" | "wave";
   /** frame windows when this one talks (mouth flaps) */ talk?: [number, number][]; panic?: number; flip?: boolean; tote?: boolean; from?: "top" | "left" | "right" };
 type Cutout = { type: "cutout"; seconds: number; line: string; accent?: string; wall?: string; floor?: string; floorY?: number; titleY?: number;
   cast: CastMember[]; notes?: { text: string; x: number; y: number; rot?: number; at?: number; size?: number }[] };
@@ -4240,7 +4241,7 @@ const CutoutScene: React.FC<{ s: Cutout }> = ({ s }) => {
           <Place key={i} at={c.at ?? 0} from={c.from}>
             {c.who === "milo"
               ? <CMilo x={c.x} y={c.y} s={c.s} panic={c.panic} talk={talking(c.talk)} flip={c.flip} tote={c.tote} />
-              : <CPerson x={c.x} y={c.y} s={c.s} dress={c.dress ?? CP.red} hair={c.hair} skin={c.skin} long={c.long} talk={talking(c.talk)} />}
+              : <CPerson x={c.x} y={c.y} s={c.s} dress={c.dress ?? CP.red} top={c.top} hair={c.hair} skin={c.skin} long={c.long} outfit={c.outfit} hairStyle={c.hairStyle} arms={c.arms} seed={i} talk={talking(c.talk)} />}
           </Place>
         ))}
         {(s.notes ?? []).map((n, i) => <CNote key={i} text={n.text} x={n.x} y={n.y} rot={n.rot} at={n.at ?? 0} size={n.size} />)}
