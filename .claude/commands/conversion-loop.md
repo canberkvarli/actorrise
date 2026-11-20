@@ -198,44 +198,20 @@ ask for numbers or a cheaper tier.
 piece, search the corpus and tell them what is there, or say plainly that it is not. This is
 mid-conversation: if a trial offer fits, make it plainly and give the next step. No CURTAIN.
 
-**New emails**, to the five people under "Write to these five" in the brief. They are the
-most active free actors that no automated email is about to reach. Never write by hand to
-someone in section 2: the server emails them a day after their wall.
+**No more search notes** (Canberk, 2026-11-20: "it does seem creepy, ppl might be like oh is he
+watching me"). Section 5 of the brief ("Write to these five") is no longer written to: nothing is
+sent, and nothing is drafted that quotes what one person searched, saved, opened or finished.
+From 2026-10-03 to 2026-11-19 the loop sent those notes itself; that exception is gone, and
+nothing in this run is sent. Everything is a draft.
 
-- About what they did. Their `what they've done` column is the material. "you've saved 16
-  pieces" is the email. "I noticed you're an engaged user" is not.
-- Not about Plus. One question, and the question is about them.
-- Three to five sentences.
-- End on `Canberk`. **No reply-UNSUBSCRIBE line** (Canberk, 2026-09-30: it made a note to one
-  person read like a campaign). If they answer asking to stop, it is filed like any other.
-  The line still belongs on anything sent to a list through `/admin/emails`.
-- Check each one: `uv run python scripts/voice_check.py --kind note -` and fix what it finds.
-- **"It isn't in the library" is the claim that bites.** Check a title in THREE places before
-  saying it is absent: `plays.title` (joined from `monologues.play_id`), `monologues.title`,
-  and `monologues.character_name`. On 2026-10-05 a note said nothing from Sentimental Value
-  was in; the film's rows carry it only as the play title, and another actor had opened two
-  of them that same day. If a search only hit `monologues.title`, it has not checked.
-  `scripts/library_check.py "<title or character>"` (over `remote.py` in the cloud) is that
-  check, done for you: visible pieces only, by play, in all three places, and a full name
-  tried word by word ("Bella Baxter" is filed as "Bella"). A hit on a character name alone is
-  a different person until the play says otherwise ("Hamilton" is a character in Kids). For
-  a note about a kind of piece, `library_check.py --emotion <word>` counts by primary emotion.
-  A note whose facts came from this check is verified, cloud or laptop: send it.
-- **Send these, don't draft them**, under the one exception in CLAUDE.md ("Never autonomously",
-  Canberk 2026-10-03). Before sending each one, confirm in this run: every fact in it was
-  checked against the database; the voice check is clean; the person is an individual actor
-  (not a student or school domain, not a throwaway, not a child); no offer, price, link,
-  CURTAIN, or thread. Send with the Gmail `send_message` tool, `htmlBody` only. If any
-  condition fails, leave it as a draft and say which in the summary. The summary lists every
-  note sent with its subject, under "Notes sent", not "drafts waiting".
-- After sending, log each one: `scripts/contact_log.py add <address> --kind note --subject
-  "SENT <subject>"`. That row is in the `contact_log` table, which the brief reads to leave them
-  out of section 5 from then on; the database never sees a Gmail draft, so without it the same
-  people come back the next day. (Until 2026-11-02 this was `outputs/conversion/written.txt`.
-  The file is still read where it exists, but nothing new goes in it: a cloud run cannot see it.)
-- Skip anyone with no real activity to talk about, and say in the summary that you did.
-- Skip a throwaway address (a mail-drop domain, no name), and anyone whose searches say
-  they are a child. Say in the summary that you did, without saying who.
+The daily outreach is for money and users instead, as drafts for Canberk:
+- **Organizations first.** Teachers, schools, districts and programs (the Organizations rules
+  below): the warm ones waiting, the one chase, the class links. A school or district plan with
+  a price does not exist yet; never name one in a draft until Canberk sets it. Offer what exists:
+  free Plus for the educator and the class link for students 13 and up.
+- **The app.** Ghost Light on the iPhone may be mentioned in any draft where it fits.
+- An individual actor gets a draft only when they wrote first (a reply, a Cue handoff, a
+  feedback comment that asks something), answered on their thread.
 
 Do not draft to anyone on `email_do_not_contact`, anyone with `marketing_opt_in` false, or
 anyone who had a lifecycle email in the last 7 days. The brief already filters for all three.
@@ -346,9 +322,7 @@ CONVERSION LOOP, <date>
 Money: $<total> a month (web $<stripe>, app $<app>), <n> payers; last 30 days collected $<cash>
   <one line only if it changed since yesterday: who paid, who stopped>
 
-Notes sent: <n> of <listed>
-  <first name>: "<subject>", <one line on why them>
-  left as drafts: <n>, which condition failed; skipped: <n>, why in a word
+Outreach drafted: <n>, one line each: who (organization or person who wrote first), what it offers
 
 Inbox: <n> replies, <n> opt-outs filed, <n> bounces filed, <n> drafts waiting for you
   <one line per reply that needs you, or "nothing needs you">
@@ -408,7 +382,7 @@ If a number is zero, print the zero. If a step did not run, say which and why.
 
 ## What this never does
 
-- Send, post, or push. Drafts only, except the one kind of note CLAUDE.md allows (step 3).
+- Send or post. Drafts only, no exceptions since 2026-11-20 (step 3).
 - Change the triggered email copy or turn the switch on.
 - Email anyone the brief did not list, or go looking for more people to write to.
 - Write a name or an address anywhere that is committed.
