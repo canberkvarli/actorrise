@@ -644,7 +644,8 @@ export default function PlatformLayout({
 
       {/* A no-card trial that would stop for want of a card. Not in a run or
           a scene: nothing should sit over the actor mid-line. */}
-      {!isImmersive && <CardNeededBanner />}
+      {/* /billing/success carries its own, larger ask */}
+      {!isImmersive && pathname !== "/billing/success" && <CardNeededBanner />}
 
       {/* Main Content - extra padding on mobile so content scrolls above bottom nav */}
       <main className={isImmersive ? "" : "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0"}>

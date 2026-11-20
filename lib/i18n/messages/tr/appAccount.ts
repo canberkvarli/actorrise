@@ -125,6 +125,9 @@ export const appAccount: Widen<typeof en> = {
     bodyNoDate: "Ücretsiz Plus’ın yakında bitiyor. Devam etmek için bir kart ekle.",
     cta: "Kart ekle",
     opening: "bir saniye",
+    successTitle: "Plus’ı korumak için bir adım kaldı",
+    successBody: "Ücretsiz Plus’ın {date} tarihine kadar sürüyor. Şimdi bir kart eklersen sonrasında devam eder; eklemezsen sadece durur, hiçbir ücret alınmaz.",
+    successBodyNoDate: "Şimdi bir kart eklersen Plus ücretsiz günlerden sonra devam eder; eklemezsen sadece durur, hiçbir ücret alınmaz.",
   },
   appAccountPlusOffer: {
     gainRead: "Kütüphanedeki her monolog, baştan sona",

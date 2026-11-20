@@ -37,6 +37,8 @@ export type UserEventName =
   | "upgrade_modal_viewed"
   | "trial_offer_shown"
   | "trial_offer_dismissed"
+  | "card_ask_shown"
+  | "card_ask_clicked"
   | "checkout_started"
   | "paywall_hit"
   | "paywall_dismissed"

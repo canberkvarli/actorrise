@@ -510,6 +510,11 @@ async def create_portal_session(current_user: User = Depends(get_current_user), 
     if not subscription or not subscription.stripe_customer_id:
         raise HTTPException(status_code=400, detail="No active subscription found")
 
+    # A card added in the portal must lift the add-a-card ask as soon as they are back,
+    # not after card_on_file()'s ten minutes.
+    if subscription.stripe_subscription_id:
+        _CARD_CACHE.pop(str(subscription.stripe_subscription_id), None)
+
     try:
         portal_session = stripe.billing_portal.Session.create(
             customer=subscription.stripe_customer_id,

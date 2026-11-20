@@ -142,6 +142,9 @@ CLIENT_EVENT_NAMES = frozenset(
         "upgrade_modal_viewed",  # {feature, tier_current}
         "trial_offer_shown",  # {trigger, tier_current}
         "trial_offer_dismissed",  # {trigger, tier_current}
+        # The no-card trial's ask to add a card (components/billing/CardNeededBanner.tsx).
+        "card_ask_shown",  # {where: bar|success}
+        "card_ask_clicked",  # {where: bar|success}
         "checkout_started",  # {tier, billing_period, trial, entry_point}
         # One name for every moment a price is shown, whatever drew it. `gate`
         # is the old feature or trigger value; `kind` is wall (a limit said no)

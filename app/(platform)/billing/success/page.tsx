@@ -16,6 +16,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useT } from "@/lib/i18n";
+import { useSubscription } from "@/hooks/useSubscription";
+import { CardNeededBanner } from "@/components/billing/CardNeededBanner";
 
 interface SubscriptionData {
   tier_name: string;
@@ -28,6 +30,8 @@ export default function SuccessPage() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const t = useT();
+  // The shared /me cache predates checkout; refresh it so the add-a-card ask sees the trial.
+  const { mutate: refreshShared } = useSubscription();
   const period = subscription?.billing_period;
   const periodLabel =
     period === "annual"
@@ -47,6 +51,7 @@ export default function SuccessPage() {
 
         const response = await api.get<SubscriptionData>("/api/subscriptions/me");
         setSubscription(response.data);
+        refreshShared();
       } catch (error) {
         console.error("Failed to fetch subscription:", error);
       } finally {
@@ -81,6 +86,8 @@ export default function SuccessPage() {
         </h1>
         <p className="text-xl text-muted-foreground">{t("appAccountSuccess.active")}</p>
       </motion.div>
+
+      <CardNeededBanner where="success" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

@@ -123,6 +123,9 @@ export const appAccount = {
     bodyNoDate: "Your free Plus ends soon. Add a card to keep it.",
     cta: "Add a card",
     opening: "one moment",
+    successTitle: "One more step to keep Plus",
+    successBody: "Your free Plus runs until {date}. Add a card now and it carries on after that; skip it and it just stops, nothing charged.",
+    successBodyNoDate: "Add a card now and Plus carries on after the free days; skip it and it just stops, nothing charged.",
   },
   appAccountPlusOffer: {
     gainRead: "Every monologue in the library, start to finish",
