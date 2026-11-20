@@ -1,0 +1,590 @@
+{
+  "id": "2026-11-25-stop-bringing-ophelia",
+  "look": "paper",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "Stop bringing Ophelia.",
+        "say": "[amused] Stop bringing Ophelia.",
+        "at": 0.462,
+        "sub": false,
+        "words": [
+          {
+            "w": "Stop",
+            "s": 0.0,
+            "e": 0.03
+          },
+          {
+            "w": "bringing",
+            "s": 0.066,
+            "e": 0.35
+          },
+          {
+            "w": "Ophelia.",
+            "s": 0.414,
+            "e": 0.926
+          }
+        ],
+        "dur": 1.046
+      },
+      {
+        "text": "Five actors in the lobby, and every single one was whispering O, what a noble mind.",
+        "say": "Five actors in the lobby, and every single one was whispering O, what a noble mind.",
+        "at": 1.529,
+        "words": [
+          {
+            "w": "Five",
+            "s": 0.0,
+            "e": 0.563
+          },
+          {
+            "w": "actors",
+            "s": 0.609,
+            "e": 0.883
+          },
+          {
+            "w": "in",
+            "s": 0.926,
+            "e": 1.011
+          },
+          {
+            "w": "the",
+            "s": 1.027,
+            "e": 1.075
+          },
+          {
+            "w": "lobby,",
+            "s": 1.118,
+            "e": 1.587
+          },
+          {
+            "w": "and",
+            "s": 1.619,
+            "e": 1.715
+          },
+          {
+            "w": "every",
+            "s": 1.747,
+            "e": 1.907
+          },
+          {
+            "w": "single",
+            "s": 1.953,
+            "e": 2.227
+          },
+          {
+            "w": "one",
+            "s": 2.291,
+            "e": 2.483
+          },
+          {
+            "w": "was",
+            "s": 2.515,
+            "e": 2.611
+          },
+          {
+            "w": "whispering",
+            "s": 2.651,
+            "e": 2.995
+          },
+          {
+            "w": "O,",
+            "s": 3.219,
+            "e": 3.635
+          },
+          {
+            "w": "what",
+            "s": 3.686,
+            "e": 3.891
+          },
+          {
+            "w": "a",
+            "s": 3.971,
+            "e": 4.051
+          },
+          {
+            "w": "noble",
+            "s": 4.078,
+            "e": 4.211
+          },
+          {
+            "w": "mind.",
+            "s": 4.301,
+            "e": 4.66
+          }
+        ],
+        "dur": 4.78
+      },
+      {
+        "text": "So I backed away, my scarf caught on a chair, and I opened Ghost Light.",
+        "say": "[playful] So I backed away, my scarf caught on a chair, and I opened Ghost Light.",
+        "at": 6.934,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.022
+          },
+          {
+            "w": "I",
+            "s": 0.054,
+            "e": 0.086
+          },
+          {
+            "w": "backed",
+            "s": 0.122,
+            "e": 0.342
+          },
+          {
+            "w": "away,",
+            "s": 0.406,
+            "e": 0.982
+          },
+          {
+            "w": "my",
+            "s": 1.024,
+            "e": 1.11
+          },
+          {
+            "w": "scarf",
+            "s": 1.174,
+            "e": 1.494
+          },
+          {
+            "w": "caught",
+            "s": 1.521,
+            "e": 1.686
+          },
+          {
+            "w": "on",
+            "s": 1.707,
+            "e": 1.75
+          },
+          {
+            "w": "a",
+            "s": 1.782,
+            "e": 1.814
+          },
+          {
+            "w": "chair,",
+            "s": 1.878,
+            "e": 2.326
+          },
+          {
+            "w": "and",
+            "s": 2.358,
+            "e": 2.454
+          },
+          {
+            "w": "I",
+            "s": 2.518,
+            "e": 2.582
+          },
+          {
+            "w": "opened",
+            "s": 2.618,
+            "e": 2.838
+          },
+          {
+            "w": "Ghost",
+            "s": 2.891,
+            "e": 3.158
+          },
+          {
+            "w": "Light.",
+            "s": 3.2,
+            "e": 3.542
+          }
+        ],
+        "dur": 3.662
+      },
+      {
+        "text": "I tapped Search and typed, a poor girl in love with a nobleman, under a minute.",
+        "say": "[upbeat] I tapped Search and typed, a poor girl in love with a nobleman, under a minute.",
+        "at": 11.172,
+        "sub": false,
+        "words": [
+          {
+            "w": "I",
+            "s": 0.0,
+            "e": 0.008
+          },
+          {
+            "w": "tapped",
+            "s": 0.054,
+            "e": 0.328
+          },
+          {
+            "w": "Search",
+            "s": 0.374,
+            "e": 0.648
+          },
+          {
+            "w": "and",
+            "s": 0.68,
+            "e": 0.776
+          },
+          {
+            "w": "typed,",
+            "s": 0.83,
+            "e": 1.288
+          },
+          {
+            "w": "a",
+            "s": 1.384,
+            "e": 1.48
+          },
+          {
+            "w": "poor",
+            "s": 1.544,
+            "e": 1.8
+          },
+          {
+            "w": "girl",
+            "s": 1.851,
+            "e": 2.056
+          },
+          {
+            "w": "in",
+            "s": 2.098,
+            "e": 2.184
+          },
+          {
+            "w": "love",
+            "s": 2.21,
+            "e": 2.312
+          },
+          {
+            "w": "with",
+            "s": 2.338,
+            "e": 2.44
+          },
+          {
+            "w": "a",
+            "s": 2.472,
+            "e": 2.504
+          },
+          {
+            "w": "nobleman,",
+            "s": 2.546,
+            "e": 3.144
+          },
+          {
+            "w": "under",
+            "s": 3.176,
+            "e": 3.336
+          },
+          {
+            "w": "a",
+            "s": 3.368,
+            "e": 3.4
+          },
+          {
+            "w": "minute.",
+            "s": 3.437,
+            "e": 3.72
+          }
+        ],
+        "dur": 3.84
+      },
+      {
+        "text": "And up came Louisa, from Schiller's Love and Intrigue, heartbroken like Ophelia, and almost nobody brings her.",
+        "say": "[delighted] And up came Louisa, from Schiller's Love and Intrigue, heartbroken like Ophelia, and almost nobody brings her.",
+        "at": 15.554,
+        "sub": false,
+        "words": [
+          {
+            "w": "And",
+            "s": 0.0,
+            "e": 0.048
+          },
+          {
+            "w": "up",
+            "s": 0.112,
+            "e": 0.24
+          },
+          {
+            "w": "came",
+            "s": 0.278,
+            "e": 0.432
+          },
+          {
+            "w": "Louisa,",
+            "s": 0.48,
+            "e": 1.072
+          },
+          {
+            "w": "from",
+            "s": 1.098,
+            "e": 1.2
+          },
+          {
+            "w": "Schiller's",
+            "s": 1.232,
+            "e": 1.52
+          },
+          {
+            "w": "Love",
+            "s": 1.571,
+            "e": 1.776
+          },
+          {
+            "w": "and",
+            "s": 1.792,
+            "e": 1.84
+          },
+          {
+            "w": "Intrigue,",
+            "s": 1.904,
+            "e": 2.64
+          },
+          {
+            "w": "heartbroken",
+            "s": 2.688,
+            "e": 3.248
+          },
+          {
+            "w": "like",
+            "s": 3.274,
+            "e": 3.376
+          },
+          {
+            "w": "Ophelia,",
+            "s": 3.44,
+            "e": 4.048
+          },
+          {
+            "w": "and",
+            "s": 4.104,
+            "e": 4.272
+          },
+          {
+            "w": "almost",
+            "s": 4.318,
+            "e": 4.592
+          },
+          {
+            "w": "nobody",
+            "s": 4.638,
+            "e": 4.912
+          },
+          {
+            "w": "brings",
+            "s": 4.949,
+            "e": 5.168
+          },
+          {
+            "w": "her.",
+            "s": 5.216,
+            "e": 5.488
+          }
+        ],
+        "dur": 5.608
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 21.889,
+        "sub": false,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.179
+          },
+          {
+            "w": "Ghost",
+            "s": 0.201,
+            "e": 0.307
+          },
+          {
+            "w": "Light.",
+            "s": 0.35,
+            "e": 0.819
+          },
+          {
+            "w": "Built",
+            "s": 0.862,
+            "e": 1.075
+          },
+          {
+            "w": "by",
+            "s": 1.139,
+            "e": 1.267
+          },
+          {
+            "w": "a",
+            "s": 1.299,
+            "e": 1.331
+          },
+          {
+            "w": "working",
+            "s": 1.371,
+            "e": 1.651
+          },
+          {
+            "w": "actor.",
+            "s": 1.705,
+            "e": 2.099
+          }
+        ],
+        "dur": 2.219
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-25-stop-bringing-ophelia/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.25
+  },
+  "scenes": [
+    {
+      "type": "ophelias",
+      "beat": "hook",
+      "seconds": 1.429,
+      "line": "Stop bringing Ophelia.",
+      "accent": "Ophelia."
+    },
+    {
+      "type": "ophelias",
+      "beat": "five",
+      "seconds": 5.405,
+      "line": "Five Ophelias.",
+      "accent": "Ophelias.",
+      "at": [
+        27,
+        45,
+        60,
+        75,
+        93
+      ]
+    },
+    {
+      "type": "ophelias",
+      "beat": "snag",
+      "seconds": 4.238,
+      "line": "So I opened Ghost Light.",
+      "accent": "Ghost Light.",
+      "backAt": 28,
+      "snagAt": 70,
+      "turnAt": 100
+    },
+    {
+      "type": "screens",
+      "seconds": 4.382,
+      "line": "Describe her.",
+      "accent": "her.",
+      "shots": [
+        {
+          "src": "story/2026-11-25-stop-bringing-ophelia/book.png",
+          "at": 0,
+          "tap": {
+            "x": 0.171,
+            "y": 0.93,
+            "at": 22
+          }
+        },
+        {
+          "src": "story/2026-11-25-stop-bringing-ophelia/search.png",
+          "at": 48,
+          "note": {
+            "x": 0.05,
+            "y": 0.492,
+            "w": 0.9,
+            "h": 0.2,
+            "text": "not Ophelia",
+            "rot": -2
+          }
+        },
+        {
+          "src": "story/2026-11-25-stop-bringing-ophelia/typed.png",
+          "at": 68,
+          "fade": true,
+          "note": {
+            "x": 0.05,
+            "y": 0.492,
+            "w": 0.9,
+            "h": 0.2,
+            "text": "not Ophelia",
+            "rot": -2
+          }
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 6.285,
+      "line": "Bring Louisa.",
+      "accent": "Louisa.",
+      "shots": [
+        {
+          "src": "story/2026-11-25-stop-bringing-ophelia/typed.png",
+          "at": 0,
+          "note": {
+            "x": 0.05,
+            "y": 0.492,
+            "w": 0.9,
+            "h": 0.2,
+            "text": "not Ophelia",
+            "rot": -2
+          },
+          "tap": {
+            "x": 0.856,
+            "y": 0.312,
+            "at": 0
+          }
+        },
+        {
+          "src": "story/2026-11-25-stop-bringing-ophelia/results.png",
+          "at": 20,
+          "tap": {
+            "x": 0.5,
+            "y": 0.3,
+            "at": 70
+          }
+        },
+        {
+          "src": "story/2026-11-25-stop-bringing-ophelia/open.png",
+          "at": 100
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "tiktok": "Stop bringing Ophelia. Bring Louisa from Schiller's Love and Intrigue instead. Found in Ghost Light. The voice is AI. #monologue #audition #actorslife #actortok #theatrekid",
+    "youtube_title": "Stop bringing Ophelia. #shorts",
+    "youtube_description": "Five actors in the lobby, all whispering O, what a noble mind. So Milo typed what he needed into Ghost Light: a poor girl in love with a nobleman, under a minute.\nUp came Louisa, from Friedrich Schiller's Love and Intrigue. 59 seconds, heartbroken like Ophelia, and almost nobody brings her. Free on the App Store. Built by a working actor. The voice is AI.\n#monologue #audition #actorslife #acting",
+    "instagram": "Stop bringing Ophelia.\n\nHow many Ophelias has the panel heard today? Milo counted five in the lobby alone.\n\nSo he described what he needed in Ghost Light: a poor girl in love with a nobleman, under a minute. Up came Louisa, from Schiller's Love and Intrigue. 59 seconds, heartbroken like Ophelia, and almost nobody brings her.\n\nFree on the App Store, built by a working actor. Link in bio. The voice is AI.\n\n#monologue #audition #actorslife #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 300,
+  "source": {
+    "plan": "Callboard row 2026-11-25 (storyhowto, nobody-brings, paper), the earliest planned row on 2026-11-20; Nobody Brings #2, a Milo episode, hook 'Stop bringing Ophelia.' spoken first and big on screen from frame 0, Ghost Light only, about 25s",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "sql": "select m.*, p.* from monologues m join plays p on p.id=m.play_id where p.copyright_status='public_domain' and m.character_gender ilike 'f%' and m.estimated_duration_seconds between 35 and 60 and coalesce(m.overdone_score,0)<=0.05 and p.author not ilike '%shakespeare%' (then the pieces the app's own search returned were checked by id)",
+    "checked": "2026-11-20: monologue 40303 Louisa, 'Where can he be now?' (Love and Intrigue: A Tragedy, Friedrich Schiller, 1784, play 2852, public_domain, Gutenberg 6784), 59 seconds, 109 words, overdone_score 0. The two cards under it are public domain too: Lady H (Martha; or, The Fair at Richmond, play 2970) and Lalain (The Goddess of Reason, Mary Johnston, play 3258)",
+    "changed_from_plan": "the row's search, 'dramatic, woman, under a minute, not Shakespeare', returns Katherine, Lady Macbeth and Miranda first in the app (the search does not read 'not Shakespeare'), so the film types a description that does bring a non Shakespeare piece up first: 'a poor girl in love with a nobleman, under a minute' (Louisa first, marked best pick). The why-it-works line is 'heartbroken like Ophelia, and almost nobody brings her' (overdone 0)",
+    "app": "Ghost Light web preview built from actorrise main apps/mobile (9da05c7) plus web-preview.patch, dark theme, demo account, 2026-11-20",
+    "flow": "flows/search-stop-bringing-ophelia.json (shots -> public/story/2026-11-25-stop-bringing-ophelia/*.png): Book, Search, the typed description, 30 monologues with Louisa first, her page",
+    "sticky_note": "Tonight's speech on the search screen showed a line of a copyrighted play (Read It Now!, play 3437), which may not be filmed; a drawn sticky note ('not Ophelia') sits over that card. Nothing on the screen is mocked",
+    "voice": "George, one take at stability 0.5, Scribe 0.99, sped up 1.25x with fit_take.py; AI voice, labelled on every platform",
+    "new_scene_types": "ophelias (an audition lobby where five actors hold the same OPHELIA page, flowers in their hair, Milo in the middle) with three beats: hook, five (each one's bubble pops with 'O, what a noble mind', counted 1 to 5), snag (he backs away, the scarf is caught on a folding chair, the tote tips over, the phone comes up)",
+    "motifs": "milo-among-five-ophelias,ophelia-pages-flowers-in-hair,same-line-bubbles-counted,backs-away-scarf-caught-on-folding-chair,tote-spills,sticky-note-not-ophelia",
+    "end": "specs/2026-11-25-stop-bringing-ophelia-end.json, joined with scripts/join.sh; the end line is cut from the take",
+    "feature": "search",
+    "trypost": {
+      "tiktok": "01a1f7c7-3367-736f-81c9-cd4fb78a572f",
+      "youtube": "01a1f7c7-3370-716a-9943-499d6a427c3c",
+      "instagram": "01a1f7c7-3378-71b9-951d-09679faae872",
+      "status": "draft"
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "start": "/search",
+  "lead": 600,
+  "steps": [
+    {
+      "wait": 2500
+    },
+    {
+      "goto": "/saves"
+    },
+    {
+      "wait": 1800
+    },
+    {
+      "shot": "book"
+    },
+    {
+      "click": {
+        "css": "a[href='/search']"
+      }
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "shot": "search"
+    },
+    {
+      "type": "a poor girl in love with a nobleman, under a minute",
+      "into": {
+        "css": "input"
+      },
+      "delay": 30
+    },
+    {
+      "blur": true
+    },
+    {
+      "wait": 500
+    },
+    {
+      "shot": "typed"
+    },
+    {
+      "click": {
+        "css": "[aria-label='Search']"
+      }
+    },
+    {
+      "waitFor": "monologues."
+    },
+    {
+      "wait": 3000
+    },
+    {
+      "shot": "results"
+    },
+    {
+      "click": "Where can he be now"
+    },
+    {
+      "wait": 3500
+    },
+    {
+      "shot": "open"
+    },
+    {
+      "wait": 400
+    }
+  ],
+  "tail": 300
+}

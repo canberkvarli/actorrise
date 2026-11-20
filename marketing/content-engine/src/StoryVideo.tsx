@@ -119,7 +119,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -4119,6 +4119,163 @@ const SelfTapeScene: React.FC<{ s: SelfTape }> = ({ s }) => {
   );
 };
 
+// ---------- Milo among the Ophelias (2026-11-25, Nobody Brings: "Stop bringing Ophelia.") ----------
+/** An audition lobby where every actor but Milo holds the same Ophelia page. Three beats, like the self tape:
+ *  `hook` (the room, the hook big from frame 0), `five` (each one's bubble pops with the same line and a count),
+ *  `snag` (a tighter drawing: he backs away, the scarf is caught on a folding chair, the tote spills, the phone lights up). */
+type Ophelias = { type: "ophelias"; seconds: number; line: string; accent: string; beat: "hook" | "five" | "snag"; page?: string; bubble?: string;
+  /** scene frames the five bubbles pop (the first scene of a film starts 62 frames in) */ at?: number[]; /** snag beat: scene frames he starts backing away, the scarf pulls tight, the phone comes up */ backAt?: number; snagAt?: number; turnAt?: number };
+const OpheliaFig: React.FC<{ x: number; y: number; k?: number; page: string; seed: number; lean?: number }> = ({ x, y, k = 1, page, seed, lean = 0 }) => {
+  const f = useCurrentFrame();
+  const talk = Math.sin((f + seed * 5) / 3.1) > 0.05;
+  const bob = Math.sin((f + seed * 11) / 10) * 3;
+  return (
+    <g transform={`translate(${x} ${y + bob}) rotate(${lean}) scale(${k})`}>
+      {/* long loose hair, the same on every one */}
+      <path d="M-52 -4 C -66 -78, 66 -78, 52 -4 L 62 132 C 44 146, 32 118, 28 62 L -28 62 C -32 118, -44 146, -62 132 Z" fill={C.ink} />
+      {/* the same dress */}
+      <path d="M-28 44 L 28 44 L 64 262 L -64 262 Z" fill="#dfe7ee" stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+      <circle cx={0} cy={0} r={44} fill={PAPER_FILL} stroke={C.ink} strokeWidth={5} />
+      <path d="M-44 -12 C -30 -40, 30 -40, 44 -12 C 24 -22, -24 -22, -44 -12 Z" fill={C.ink} />
+      {/* the same flowers in the hair */}
+      {[[-32, -30], [-11, -41], [11, -41], [32, -30]].map(([fx, fy], i) => (
+        <g key={i}>
+          <circle cx={fx} cy={fy} r={10} fill="#ffffff" stroke={C.ink} strokeWidth={3.5} />
+          <circle cx={fx} cy={fy} r={4} fill={i % 2 ? C.orange : MUSTARD} />
+        </g>
+      ))}
+      <circle cx={-15} cy={2} r={4.5} fill={C.ink} />
+      <circle cx={15} cy={2} r={4.5} fill={C.ink} />
+      {talk ? <ellipse cx={0} cy={23} rx={7} ry={8} fill={C.ink} /> : <path d="M-8 23 L 8 23" stroke={C.ink} strokeWidth={4} strokeLinecap="round" />}
+      {/* the same page */}
+      <g transform={`rotate(${seed % 2 ? 4 : -4} 0 160)`}>
+        <rect x={-56} y={98} width={112} height={132} rx={4} fill="#ffffff" stroke={C.ink} strokeWidth={4} />
+        <text x={0} y={136} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={700} fontSize={20} letterSpacing={1.5} fill={C_PAPER.orange}>{page}</text>
+        <path d="M-38 158 L 38 158 M-38 176 L 28 176 M-38 194 L 34 194 M-38 212 L 18 212" stroke={C_PAPER.inkSoft} strokeWidth={3} strokeLinecap="round" />
+        <circle cx={-56} cy={150} r={11} fill={PAPER_FILL} stroke={C.ink} strokeWidth={4} />
+        <circle cx={56} cy={176} r={11} fill={PAPER_FILL} stroke={C.ink} strokeWidth={4} />
+      </g>
+    </g>
+  );
+};
+/** Milo from the neck down, standing (the head, hair and scarf are the Milo component). */
+const MiloStanding: React.FC<{ x: number; y: number; start?: number; legs?: number }> = ({ x, y, start = 4, legs = 1 }) => (
+  <>
+    <Ink d={`M${x} ${y + 92} L ${x} ${y + 112} C ${x - 62} ${y + 122}, ${x - 84} ${y + 160}, ${x - 88} ${y + 216} L ${x - 92} ${y + 330} L ${x + 92} ${y + 330} L ${x + 88} ${y + 216} C ${x + 84} ${y + 160}, ${x + 62} ${y + 122}, ${x} ${y + 112}`} start={start} dur={14} w={6} fill="#f6d2b4" />
+    <Ink d={`M${x - 84} ${y + 170} C ${x - 122} ${y + 230}, ${x - 124} ${y + 290}, ${x - 112} ${y + 340} M${x + 84} ${y + 170} C ${x + 122} ${y + 230}, ${x + 124} ${y + 290}, ${x + 112} ${y + 340}`} start={start + 6} dur={10} w={6} />
+    <g opacity={legs}>
+      <Ink d={`M${x - 44} ${y + 330} L ${x - 46} ${y + 446} L ${x - 70} ${y + 452} M${x + 44} ${y + 330} L ${x + 46} ${y + 446} L ${x + 70} ${y + 452}`} start={start + 8} dur={10} w={6} />
+    </g>
+  </>
+);
+const OP_FLOOR = 1462;
+const OpheliasScene: React.FC<{ s: Ophelias }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const page = s.page ?? "OPHELIA", bubble = s.bubble ?? "O, what a noble mind";
+  if (s.beat === "snag") {
+    const backAt = s.backAt ?? 8, snagAt = s.snagAt ?? 34, turnAt = s.turnAt ?? 70;
+    const back = spring({ frame: f - backAt, fps, config: { damping: 200 }, durationInFrames: Math.max(8, snagAt - backAt) });
+    const yank = spring({ frame: f - snagAt, fps, config: { damping: 7, mass: 0.6, stiffness: 180 } });
+    const o = spring({ frame: f - turnAt, fps, config: { damping: 13, mass: 0.7 } });
+    const mx = 600 - back * 250 + yank * 54, my = 990, tilt = -yank * 11 + (f >= snagAt ? Math.sin((f - snagAt) / 2.2) * 5 * Math.max(0, 1 - (f - snagAt) / 22) : 0);
+    const CX = 790, CY = 1058; // the chair's near post, where the scarf is caught
+    const taut = prog(f, snagAt - 6, snagAt);
+    const nx = mx + 44, ny = my + 104;
+    const sag = (1 - taut) * 130;
+    const spill = prog(f, snagAt + 4, snagAt + 18);
+    return (
+      <AbsoluteFill>
+        <Sfx name="slide" at={backAt} vol={0.35} />
+        <Sfx name="cine/toing" at={snagAt} vol={0.6} />
+        <Sfx name="toss" at={snagAt + 4} vol={0.6} />
+        <Sfx name="thud" at={snagAt + 10} vol={0.6} />
+        <Sfx name="cine/ping" at={turnAt + 4} vol={0.55} />
+        <AbsoluteFill style={{ background: `radial-gradient(circle 300px at ${mx - 150}px ${my + 250}px, rgba(232,121,43,${0.5 * o}) 0%, rgba(232,121,43,0) 100%)` }} />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <Ink d={`M50 ${OP_FLOOR} C 360 ${OP_FLOOR - 8}, 720 ${OP_FLOOR + 8}, 1030 ${OP_FLOOR}`} start={0} dur={14} w={8} />
+          {/* three of them behind, still at it, leaning in to look */}
+          <Ink d="M560 906 C 700 900, 860 910, 1020 904 M586 906 L 586 980" start={2} dur={14} w={6} color={C.inkSoft} />
+          <g opacity={prog(f, 2, 10)}>
+            {[[650, 730, 0], [800, 700, 1], [925, 742, 2]].map(([ox, oy, k]) => <OpheliaFig key={k} x={ox} y={oy} k={0.62} page={page} seed={k + 2} lean={-4 - k * 2} />)}
+          </g>
+          {/* the folding chair that has his scarf */}
+          <g opacity={prog(f, 2, 10)} transform={`rotate(${-yank * 5 * Math.max(0, 1 - (f - snagAt) / 26)} 820 ${OP_FLOOR})`}>
+            <path d={`M${CX} ${CY} L ${CX + 10} ${OP_FLOOR} M${CX + 150} ${CY + 4} L ${CX + 140} ${OP_FLOOR} M${CX + 6} 1262 L ${CX + 144} 1262 M${CX + 8} 1262 L ${CX - 50} ${OP_FLOOR} M${CX + 144} 1262 L ${CX + 110} ${OP_FLOOR}`} fill="none" stroke={C.ink} strokeWidth={9} strokeLinecap="round" />
+            <rect x={CX - 2} y={CY + 16} width={156} height={84} rx={10} fill="#efe2c6" stroke={C.ink} strokeWidth={6} />
+            <path d={`M${CX - 30} 1262 L ${CX + 150} 1262`} stroke={C.ink} strokeWidth={14} strokeLinecap="round" />
+          </g>
+          {/* the scarf: slack as he backs away, then tight */}
+          <path d={`M${nx} ${ny - 16} Q ${(nx + CX) / 2} ${(ny + CY) / 2 + sag}, ${CX - 4} ${CY - 12} L ${CX + 6} ${CY + 26} Q ${(nx + CX) / 2} ${(ny + CY) / 2 + sag + 44}, ${nx - 6} ${ny + 26} Z`} fill={MUSTARD} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+          <circle cx={CX + 2} cy={CY + 6} r={20} fill={MUSTARD} stroke={C.ink} strokeWidth={6} />
+          <g transform={`rotate(${tilt} ${mx} ${my + 452})`}>
+            <MiloStanding x={mx} y={my} start={0} />
+            {/* the phone comes up in his hand */}
+            <g opacity={o} transform={`translate(${mx - 150} ${my + 300 - o * 70}) rotate(-12)`}>
+              <rect x={-36} y={-66} width={72} height={132} rx={14} fill={C_PAPER.stage} stroke={C.ink} strokeWidth={6} />
+              <rect x={-22} y={-44} width={44} height={10} rx={5} fill={C_PAPER.orange} />
+              <path d="M-20 -18 L 20 -18 M-20 2 L 12 2" stroke="rgba(239,230,216,0.6)" strokeWidth={5} strokeLinecap="round" />
+            </g>
+          </g>
+          <Milo x={mx} y={my} r={84} tilt={tilt} panic={0.75 * (1 - o) * Math.max(0.4, taut)} hope={o} start={0} tote={[654, OP_FLOOR - 92]} spill={spill} />
+          {f >= snagAt && f < turnAt + 6 && [0, 1, 2].map((i) => {
+            const p = spring({ frame: f - snagAt - i * 3, fps, config: { damping: 9, mass: 0.5 } });
+            return <path key={i} d={`M${(nx + CX) / 2 - 40 + i * 44} ${(ny + CY) / 2 - 56 - i * 10} l ${-6 + i * 6} -44`} stroke={C.orange} strokeWidth={8} strokeLinecap="round" opacity={Math.min(1, p) * (1 - prog(f, turnAt - 6, turnAt + 6))} />;
+          })}
+        </svg>
+        <AbsoluteFill style={{ alignItems: "center", padding: "290px 56px 0" }}>
+          <Rise at={turnAt}><Headline text={s.line} accent={s.accent} color={C.ink} size={92} /></Rise>
+        </AbsoluteFill>
+      </AbsoluteFill>
+    );
+  }
+  const five = s.beat === "five";
+  const at = (k: number) => (five ? s.at?.[k] ?? 14 + k * 20 : 1e6);
+  // three behind, two in front, Milo in the middle of them
+  const figs: [number, number, number][] = [[176, 742, 0.86], [520, 716, 0.86], [848, 742, 0.86], [164, 1100, 1.02], [846, 1100, 1.02]];
+  const bub: [number, number][] = [[196, 566], [556, 520], [800, 600], [250, 940], [770, 952]];
+  const MX = 506, MY = 1010;
+  const popped = figs.filter((_, k) => f >= at(k)).length;
+  const panic = five ? Math.min(0.95, 0.3 + 0.14 * popped) : 0.3;
+  const look = five ? 0 : Math.sin(f / 9) * 7;
+  return (
+    <AbsoluteFill>
+      {figs.map((_, k) => (five ? <React.Fragment key={k}><Sfx name="pop" at={at(k)} vol={0.6} /><Sfx name={k % 2 ? "boop_hi" : "boop_lo"} at={at(k) + 3} vol={0.4} /></React.Fragment> : null))}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Ink d={`M50 ${OP_FLOOR} C 360 ${OP_FLOOR - 8}, 720 ${OP_FLOOR + 8}, 1030 ${OP_FLOOR}`} start={0} dur={14} w={8} />
+        {/* the bench the back three sit along */}
+        <Ink d="M70 968 C 380 962, 700 972, 1010 966 M96 968 L 96 1050 M984 966 L 984 1050" start={2} dur={16} w={6} color={C.inkSoft} />
+        {figs.slice(0, 3).map(([x, y, k], i) => <OpheliaFig key={i} x={x} y={y} k={k} page={page} seed={i} lean={(1 - i) * -3} />)}
+        <MiloStanding x={MX} y={MY} />
+        <Milo x={MX} y={MY} r={84} tilt={look} panic={panic} start={0} tote={[676, OP_FLOOR - 86]} />
+        {figs.slice(3).map(([x, y, k], i) => <OpheliaFig key={i + 3} x={x} y={y} k={k} page={page} seed={i + 3} lean={i ? -5 : 5} />)}
+        {/* the same line out of every mouth, counted */}
+        {figs.map(([x, y, k], i) => {
+          if (f < at(i)) return null;
+          const pop = spring({ frame: f - at(i), fps, config: { damping: 9, mass: 0.5 } });
+          const [bx, by] = bub[i], w = 336, h = 84, wob = Math.sin((f + i * 13) / 9) * 3;
+          const hx = x + (bx > x ? 20 : -20) * k, hy = y - 50 * k;
+          return (
+            <g key={i}>
+              {[0.45, 0.75].map((u, j) => <circle key={j} cx={bx + (hx - bx) * u} cy={by + 40 + (hy - by - 40) * u} r={(12 - j * 5) * Math.min(1, pop)} fill="#ffffff" stroke={C_PAPER.ink} strokeWidth={4} />)}
+              <g transform={`translate(${bx} ${by + wob}) scale(${pop})`}>
+                <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={h / 2} fill="#ffffff" stroke={C_PAPER.ink} strokeWidth={5} />
+                <text x={10} y={10} textAnchor="middle" fontFamily={F.serifI} fontStyle="italic" fontSize={31} fill={C_PAPER.ink}>{bubble}</text>
+                <circle cx={-w / 2 + 6} cy={-h / 2 + 4} r={25} fill={C_PAPER.orange} stroke={C_PAPER.ink} strokeWidth={5} />
+                <text x={-w / 2 + 6} y={-h / 2 + 15} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={700} fontSize={30} fill="#ffffff">{i + 1}</text>
+              </g>
+            </g>
+          );
+        })}
+      </svg>
+      {/* hook beat: big, bold, there from frame 0 (it is the cover) */}
+      <AbsoluteFill style={{ alignItems: "center", padding: `${five ? 286 : 262}px 56px 0` }}>
+        <Rise at={five ? 6 : 2}><Headline text={s.line} accent={s.accent} color={C.ink} size={five ? 92 : 112} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
   const f = useCurrentFrame();
   const t = f / FPS;
@@ -4216,6 +4373,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "peeks" ? <PeeksScene s={sc} /> :
       sc.type === "pillow" ? <PillowScene s={sc} /> :
       sc.type === "selftape" ? <SelfTapeScene s={sc} /> :
+      sc.type === "ophelias" ? <OpheliasScene s={sc} /> :
       <EndScene s={sc} />;
   };
 
