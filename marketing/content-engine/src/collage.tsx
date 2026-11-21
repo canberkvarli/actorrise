@@ -67,7 +67,7 @@ export const Place: React.FC<{ at?: number; x?: number; y?: number; children: Re
 
 /** Milo in paper. (x, y) = the middle of his feet. s = scale (1 is about 560px tall).
  *  panic 0..1 widens his eyes and lifts his brows; talk = mouth open 0..1; bob = a little idle bounce. */
-export const CMilo: React.FC<{ x: number; y: number; s?: number; panic?: number; talk?: number; tote?: boolean; flip?: boolean }> = ({ x, y, s = 1, panic = 0, talk = 0, tote = true, flip = false }) => {
+export const CMilo: React.FC<{ x: number; y: number; s?: number; panic?: number; talk?: number; tote?: boolean; flip?: boolean; phone?: number }> = ({ x, y, s = 1, panic = 0, talk = 0, tote = true, flip = false, phone = 0 }) => {
   const f = useCurrentFrame();
   const blink = f % 96 < 4 ? 0.15 : 1;
   const bob = Math.sin(f / 9) * 3;
@@ -80,7 +80,9 @@ export const CMilo: React.FC<{ x: number; y: number; s?: number; panic?: number;
         <rect x={18} y={-200} width={44} height={200} fill={P.ink} />
         <rect x={-95} y={-420} width={190} height={250} rx={34} fill={P.navy} />
         {/* arms: coat sleeves with hands; the right one holds the tote strap */}
-        <g transform={`rotate(${12 + panic * 22} -92 -400)`}><rect x={-112} y={-404} width={40} height={190} rx={18} fill={P.navy} /><circle cx={-92} cy={-206} r={22} fill={P.skin} /></g>
+        <g transform={`rotate(${12 + panic * 22 + phone * 128} -92 -400)`}><rect x={-112} y={-404} width={40} height={190} rx={18} fill={P.navy} /><circle cx={-92} cy={-206} r={22} fill={P.skin} />
+          {/* phone > 0: the arm is up and he is talking into his phone (a dark paper slab with a lit screen) */}
+          {phone > 0.5 && (<g transform="rotate(168 -92 -196)"><rect x={-118} y={-262} width={52} height={96} rx={8} fill={P.ink} /><rect x={-111} y={-254} width={38} height={72} fill="#f6d9a0" /></g>)}</g>
         <g transform={`rotate(${tote ? -18 : -12} 92 -400)`}><rect x={72} y={-404} width={40} height={180} rx={18} fill={P.navy} /><circle cx={92} cy={-216} r={22} fill={P.skin} /></g>
         <rect x={-14} y={-440} width={28} height={30} fill={P.skin} />
         {/* head */}
@@ -184,6 +186,28 @@ export const CTitle: React.FC<{ text: string; accent?: string; y?: number; size?
     </svg>
   );
 };
+
+/** A long hook on a torn cream card, set on the lines you give it (CTitle only makes two). The lines listed in
+ *  `red` are the key words. Big and there from frame 0: it is the cover. */
+export const CHook: React.FC<{ lines: string[]; red?: number[]; y?: number; size?: number }> = ({ lines, red = [lines.length - 1], y = 262, size = 70 }) => {
+  const longest = Math.max(...lines.map((l) => l.length));
+  size = Math.min(size, Math.floor(880 / (longest * 0.8)));
+  const h = 64 + lines.length * size * 1.16;
+  return (
+    <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+      <rect x={70} y={y} width={940} height={h} fill={P.cream} filter="url(#torn)" />
+      {lines.map((l, k) => (
+        <text key={k} x={540} y={y + 30 + size * (k + 0.9) * 1.16} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={size}
+          fill={red.includes(k) ? P.red : P.ink}>{l.toUpperCase()}</text>
+      ))}
+    </svg>
+  );
+};
+
+/** A little torn paper heart, centred on (0, 0), about 2r wide. */
+export const CHeart: React.FC<{ r?: number; fill?: string }> = ({ r = 30, fill = P.red }) => (
+  <path d={`M0 ${r * 0.9} C ${-r * 1.5} ${-r * 0.2}, ${-r * 0.75} ${-r * 1.25}, 0 ${-r * 0.45} C ${r * 0.75} ${-r * 1.25}, ${r * 1.5} ${-r * 0.2}, 0 ${r * 0.9} Z`} fill={fill} filter="url(#tornS)" />
+);
 
 /** A handwritten scrap of paper (a thought, a line of a speech, a label). */
 export const CNote: React.FC<{ text: string; x: number; y: number; rot?: number; size?: number; w?: number; at?: number }> = ({ text, x, y, rot = 4, size = 56, w, at = 0 }) => {

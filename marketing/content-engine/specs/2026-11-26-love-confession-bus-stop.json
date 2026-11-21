@@ -1,0 +1,541 @@
+{
+  "id": "2026-11-26-love-confession-bus-stop",
+  "look": "collage",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "You rehearse a love confession at the bus stop.",
+        "say": "[amused] You rehearse a love confession at the bus stop.",
+        "at": 0.354,
+        "sub": false,
+        "words": [
+          {
+            "w": "You",
+            "s": 0.0,
+            "e": 0.01
+          },
+          {
+            "w": "rehearse",
+            "s": 0.061,
+            "e": 0.458
+          },
+          {
+            "w": "a",
+            "s": 0.49,
+            "e": 0.522
+          },
+          {
+            "w": "love",
+            "s": 0.56,
+            "e": 0.714
+          },
+          {
+            "w": "confession",
+            "s": 0.76,
+            "e": 1.226
+          },
+          {
+            "w": "at",
+            "s": 1.247,
+            "e": 1.29
+          },
+          {
+            "w": "the",
+            "s": 1.306,
+            "e": 1.354
+          },
+          {
+            "w": "bus",
+            "s": 1.402,
+            "e": 1.546
+          },
+          {
+            "w": "stop.",
+            "s": 1.597,
+            "e": 1.866
+          }
+        ],
+        "dur": 1.986
+      },
+      {
+        "text": "It's dusk, I'm telling my phone I love it, and when the bus pulls up I just keep going.",
+        "say": "It's dusk, I'm telling my phone I love it, and when the bus pulls up I just keep going.",
+        "at": 2.454,
+        "words": [
+          {
+            "w": "It's",
+            "s": 0.0,
+            "e": 0.598
+          },
+          {
+            "w": "dusk,",
+            "s": 0.662,
+            "e": 1.238
+          },
+          {
+            "w": "I'm",
+            "s": 1.27,
+            "e": 1.43
+          },
+          {
+            "w": "telling",
+            "s": 1.454,
+            "e": 1.622
+          },
+          {
+            "w": "my",
+            "s": 1.686,
+            "e": 1.814
+          },
+          {
+            "w": "phone",
+            "s": 1.846,
+            "e": 2.006
+          },
+          {
+            "w": "I",
+            "s": 2.07,
+            "e": 2.134
+          },
+          {
+            "w": "love",
+            "s": 2.159,
+            "e": 2.262
+          },
+          {
+            "w": "it,",
+            "s": 2.326,
+            "e": 2.774
+          },
+          {
+            "w": "and",
+            "s": 2.806,
+            "e": 2.902
+          },
+          {
+            "w": "when",
+            "s": 2.927,
+            "e": 3.03
+          },
+          {
+            "w": "the",
+            "s": 3.046,
+            "e": 3.094
+          },
+          {
+            "w": "bus",
+            "s": 3.142,
+            "e": 3.286
+          },
+          {
+            "w": "pulls",
+            "s": 3.339,
+            "e": 3.606
+          },
+          {
+            "w": "up",
+            "s": 3.67,
+            "e": 3.798
+          },
+          {
+            "w": "I",
+            "s": 3.958,
+            "e": 4.118
+          },
+          {
+            "w": "just",
+            "s": 4.156,
+            "e": 4.31
+          },
+          {
+            "w": "keep",
+            "s": 4.348,
+            "e": 4.502
+          },
+          {
+            "w": "going.",
+            "s": 4.566,
+            "e": 5.334
+          }
+        ],
+        "dur": 5.454
+      },
+      {
+        "text": "So now the whole bus is leaning in, someone hands me a tissue, and asks what it's from.",
+        "say": "[playful] So now the whole bus is leaning in, someone hands me a tissue, and asks what it's from.",
+        "at": 8.29,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.01
+          },
+          {
+            "w": "now",
+            "s": 0.058,
+            "e": 0.202
+          },
+          {
+            "w": "the",
+            "s": 0.234,
+            "e": 0.33
+          },
+          {
+            "w": "whole",
+            "s": 0.352,
+            "e": 0.458
+          },
+          {
+            "w": "bus",
+            "s": 0.522,
+            "e": 0.714
+          },
+          {
+            "w": "is",
+            "s": 0.757,
+            "e": 0.842
+          },
+          {
+            "w": "leaning",
+            "s": 0.882,
+            "e": 1.162
+          },
+          {
+            "w": "in,",
+            "s": 1.226,
+            "e": 1.674
+          },
+          {
+            "w": "someone",
+            "s": 1.706,
+            "e": 1.93
+          },
+          {
+            "w": "hands",
+            "s": 1.973,
+            "e": 2.186
+          },
+          {
+            "w": "me",
+            "s": 2.229,
+            "e": 2.314
+          },
+          {
+            "w": "a",
+            "s": 2.346,
+            "e": 2.378
+          },
+          {
+            "w": "tissue,",
+            "s": 2.434,
+            "e": 2.89
+          },
+          {
+            "w": "and",
+            "s": 2.922,
+            "e": 3.018
+          },
+          {
+            "w": "asks",
+            "s": 3.082,
+            "e": 3.338
+          },
+          {
+            "w": "what",
+            "s": 3.364,
+            "e": 3.466
+          },
+          {
+            "w": "it's",
+            "s": 3.488,
+            "e": 3.594
+          },
+          {
+            "w": "from.",
+            "s": 3.658,
+            "e": 3.978
+          }
+        ],
+        "dur": 4.098
+      },
+      {
+        "text": "So I opened Ghost Light, typed Smirnov, and there he was, in Chekhov's The Boor, falling in love against his will.",
+        "say": "[upbeat] So I opened Ghost Light, typed Smirnov, and there he was, in Chekhov's The Boor, falling in love against his will.",
+        "at": 13.218,
+        "sub": false,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.01
+          },
+          {
+            "w": "I",
+            "s": 0.074,
+            "e": 0.138
+          },
+          {
+            "w": "opened",
+            "s": 0.184,
+            "e": 0.458
+          },
+          {
+            "w": "Ghost",
+            "s": 0.501,
+            "e": 0.714
+          },
+          {
+            "w": "Light,",
+            "s": 0.757,
+            "e": 1.226
+          },
+          {
+            "w": "typed",
+            "s": 1.269,
+            "e": 1.482
+          },
+          {
+            "w": "Smirnov,",
+            "s": 1.568,
+            "e": 2.442
+          },
+          {
+            "w": "and",
+            "s": 2.474,
+            "e": 2.57
+          },
+          {
+            "w": "there",
+            "s": 2.592,
+            "e": 2.698
+          },
+          {
+            "w": "he",
+            "s": 2.741,
+            "e": 2.826
+          },
+          {
+            "w": "was,",
+            "s": 2.906,
+            "e": 3.466
+          },
+          {
+            "w": "in",
+            "s": 3.509,
+            "e": 3.594
+          },
+          {
+            "w": "Chekhov's",
+            "s": 3.642,
+            "e": 4.042
+          },
+          {
+            "w": "The",
+            "s": 4.058,
+            "e": 4.106
+          },
+          {
+            "w": "Boor,",
+            "s": 4.17,
+            "e": 4.81
+          },
+          {
+            "w": "falling",
+            "s": 4.85,
+            "e": 5.13
+          },
+          {
+            "w": "in",
+            "s": 5.173,
+            "e": 5.258
+          },
+          {
+            "w": "love",
+            "s": 5.297,
+            "e": 5.45
+          },
+          {
+            "w": "against",
+            "s": 5.482,
+            "e": 5.706
+          },
+          {
+            "w": "his",
+            "s": 5.754,
+            "e": 5.898
+          },
+          {
+            "w": "will.",
+            "s": 5.95,
+            "e": 6.218
+          }
+        ],
+        "dur": 6.338
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 20.498,
+        "sub": false,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.09
+          },
+          {
+            "w": "Ghost",
+            "s": 0.132,
+            "e": 0.346
+          },
+          {
+            "w": "Light.",
+            "s": 0.388,
+            "e": 0.73
+          },
+          {
+            "w": "Built",
+            "s": 0.826,
+            "e": 1.306
+          },
+          {
+            "w": "by",
+            "s": 1.37,
+            "e": 1.498
+          },
+          {
+            "w": "a",
+            "s": 1.578,
+            "e": 1.658
+          },
+          {
+            "w": "working",
+            "s": 1.678,
+            "e": 1.818
+          },
+          {
+            "w": "actor.",
+            "s": 1.882,
+            "e": 2.266
+          }
+        ],
+        "dur": 2.386
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-26-love-confession-bus-stop/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.25
+  },
+  "scenes": [
+    {
+      "type": "busstop",
+      "beat": "hook",
+      "seconds": 2.354,
+      "line": "POV: you rehearse a love confession at the bus stop.",
+      "hook": [
+        "POV: you rehearse",
+        "a love confession",
+        "at the bus stop."
+      ],
+      "red": [
+        1
+      ]
+    },
+    {
+      "type": "busstop",
+      "beat": "bus",
+      "seconds": 5.836,
+      "line": "The bus comes. I keep going.",
+      "accent": "I keep going.",
+      "scrap": "I love you as I have never loved before.",
+      "scrapAt": 68,
+      "busAt": 103,
+      "doorAt": 141,
+      "walkAt": 145
+    },
+    {
+      "type": "busstop",
+      "beat": "inside",
+      "seconds": 4.928,
+      "line": "The whole bus leans in.",
+      "accent": "leans in.",
+      "leanAt": 47,
+      "tissueAt": 82,
+      "ask": "what's that from?",
+      "askAt": 117
+    },
+    {
+      "type": "screens",
+      "seconds": 7.23,
+      "line": "Type his name.",
+      "accent": "his name.",
+      "shots": [
+        {
+          "src": "story/2026-11-26-love-confession-bus-stop/search.png",
+          "at": 0
+        },
+        {
+          "src": "story/2026-11-26-love-confession-bus-stop/typed.png",
+          "at": 59,
+          "fade": true,
+          "tap": {
+            "x": 0.856,
+            "y": 0.312,
+            "at": 78
+          }
+        },
+        {
+          "src": "story/2026-11-26-love-confession-bus-stop/results.png",
+          "at": 96,
+          "tap": {
+            "x": 0.5,
+            "y": 0.654,
+            "at": 126
+          }
+        },
+        {
+          "src": "story/2026-11-26-love-confession-bus-stop/open.png",
+          "at": 160
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "tiktok": "POV: you rehearse a love confession at the bus stop. It's Smirnov, from Chekhov's The Boor. Found in Ghost Light. The voice is AI. #monologue #audition #actorslife #actortok #theatrekid",
+    "youtube_title": "POV: you rehearse a love confession at the bus stop. #shorts",
+    "youtube_description": "POV: you rehearse a love confession at the bus stop.\nMilo kept going when the bus pulled up, and a passenger asked what it was from. It's Smirnov, from Anton Chekhov's The Boor: a man who swore off love, proposing anyway. 58 seconds. Type his name in Ghost Light. Free on the App Store. Built by a working actor. The voice is AI.\n#monologue #audition #actorslife #acting",
+    "instagram": "POV: you rehearse a love confession at the bus stop.\n\nThe speech Milo would not stop for is Smirnov, from Chekhov's The Boor. A man who swore off love, proposing anyway. 58 seconds.\n\n1. Open Ghost Light and tap Search\n2. Type Smirnov\n3. Open the one that starts \"My mind is not clear\"\n4. Tap Run it\n\nFree on the App Store, built by a working actor. Link in bio. The voice is AI.\n\n#monologue #audition #actorslife #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 300,
+  "source": {
+    "plan": "Callboard row 2026-11-26 (drawn, drawn-life, collage), the earliest planned row on 2026-11-21: Milo rehearses a love confession at the bus stop, hook 'POV: you rehearse a love confession at the bus stop.' on screen from frame 0, the voice starts at 'you rehearse', Ghost Light only, about 25s",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "sql": "select m.*, p.* from monologues m join plays p on p.id=m.play_id where p.copyright_status='public_domain' and m.estimated_duration_seconds between 40 and 115 and coalesce(m.overdone_score,0)<=0.2 and m.themes::text ilike '%love%' and (m.text ilike '%I love you%' or m.text ilike '%I love thee%'); then where m.character_name ilike 'Smirnov%'",
+    "checked": "2026-11-21: monologue 7641 Smirnov, 'My mind is not clear' (The Boor, Anton Tchekoff, play 144, public_domain, Gutenberg 36984), 58 seconds, 107 words, overdone_score 0.2. The scrap in the film, 'I love you as I have never loved before.', is a line of that speech. Typing Smirnov in the app returns 14 monologues, all Smirnov from The Boor, all public domain",
+    "changed_from_plan": "the row's glimpse types 'monologue about love, under two minutes'. In the app that search returns Northlake (The Merchant Prince of Cornville, a speech against love) and Paolo (The Rights of the Soul) first and a film card with its poster third (The Holiday), and other love confession descriptions put film cards first too, so the glimpse types the character's name, Smirnov, which brings only his public domain speeches up",
+    "app": "Ghost Light web preview built from actorrise main apps/mobile (c8bf1d5) plus web-preview.patch, dark theme, demo account, 2026-11-21",
+    "flow": "flows/search-love-confession-bus-stop.json (shots -> public/story/2026-11-26-love-confession-bus-stop/*.png): Search, Smirnov typed, 14 monologues, his page. Tonight's speech on the search screen is Anne from Enter the Hero (Theresa Helburn, public domain)",
+    "voice": "George, one take at stability 0.5, Scribe 0.99, sped up 1.25x with fit_take.py; AI voice, labelled on every platform",
+    "new_scene_types": "busstop (cut-paper collage) with three beats: hook (the stop at dusk, paper hearts rising from his phone), bus (the bus pulls up, the doors fold back, he steps on mid sentence, the scarf stays hooked on the stop sign), inside (four paper passengers lean in, a tissue comes across, 'what's that from?'). New collage pieces: CHook (a hook card on three lines), CHeart, Milo's phone arm (CMilo phone). In the collage look the captions bar is dark and the ink thread and speed streaks are off",
+    "motifs": "bus-stop-at-dusk,paper-hearts-from-phone,red-bus-24,scarf-hooked-on-stop-sign,passengers-lean-in,tissue,whats-that-from",
+    "end": "specs/2026-11-26-love-confession-bus-stop-end.json, joined with scripts/join.sh; the end line is cut from the take",
+    "feature": "character",
+    "trypost": {
+      "tiktok": "01a1fcf0-5594-7359-bf6d-9894967676b9",
+      "youtube": "01a1fcf0-559e-7305-af0f-862420839412",
+      "instagram": "01a1fcf0-55a6-7317-96c8-02dad99d9625",
+      "status": "draft"
+    }
+  }
+}

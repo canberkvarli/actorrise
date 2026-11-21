@@ -13,7 +13,7 @@ import {
 } from "remotion";
 import { evolvePath } from "@remotion/paths";
 import { loadFont } from "@remotion/fonts";
-import { CollageDefs, CollageBg, CMilo, CPerson, CTitle, CNote, Place, P as CP } from "./collage";
+import { CollageDefs, CollageBg, CMilo, CPerson, CTitle, CNote, CHook, CHeart, Place, P as CP, ease as cease } from "./collage";
 
 export const FPS = 30;
 const T = 22; // frames per camera move
@@ -128,7 +128,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -4251,6 +4251,200 @@ const CutoutScene: React.FC<{ s: Cutout }> = ({ s }) => {
   );
 };
 
+// ---------- busstop: a love confession at the bus stop, cut-paper collage (2026-11-26) ----------
+/** Milo rehearses a love confession into his phone at a bus stop at dusk, paper hearts rising. Three beats:
+ *  "hook" (the stop, the hook card from frame 0), "bus" (the bus pulls up, the doors open, he steps on mid
+ *  sentence and his scarf stays hooked on the stop sign), "inside" (the passengers lean in, one hands him a
+ *  tissue, one asks what it is from). All new torn paper pieces; nothing from the outlined Ink world. */
+type BusStop = { type: "busstop"; beat: "hook" | "bus" | "inside"; seconds: number; line: string; accent?: string;
+  /** hook beat: the hook on the lines it should break on, and which lines are red */ hook?: string[]; red?: number[];
+  /** a line of the speech on a handwritten scrap */ scrap?: string; scrapAt?: number;
+  busAt?: number; doorAt?: number; walkAt?: number; leanAt?: number; tissueAt?: number; ask?: string; askAt?: number };
+const DUSK = { sky: "#3a3463", plum: "#7b3f6a", ember: "#c9573a", gold: "#eba650", sun: "#f6d58a", far: "#28244a", road: "#2a2934", curb: "#565369", glass: "#bfe0d6", bus: "#c8361b", busDark: "#8f2413" };
+const BS_FLOOR = 1232, BS_DY = 112; // everything in the street is drawn for a floor at 1232, then moved down
+/** The street at dusk: three torn bands of sunset, a paper sun, far buildings with lit windows, the road. */
+const DuskStreet: React.FC = () => (
+  <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+    <rect width={1080} height={1920} fill={DUSK.sky} filter="url(#fibre)" />
+    <g transform={`translate(0 ${BS_DY})`}>
+    <rect x={-30} y={800} width={1140} height={460} fill={DUSK.plum} filter="url(#torn)" />
+    <circle cx={846} cy={1010} r={104} fill={DUSK.sun} filter="url(#torn)" />
+    <rect x={-30} y={960} width={1140} height={300} fill={DUSK.ember} filter="url(#torn)" />
+    <rect x={-30} y={1090} width={1140} height={170} fill={DUSK.gold} filter="url(#torn)" />
+    {[[30, 250, 190], [250, 330, 150], [690, 210, 170], [880, 300, 230]].map(([x, h, w], k) => (
+      <g key={k}>
+        <rect x={x} y={BS_FLOOR - h} width={w} height={h + 10} fill={DUSK.far} filter="url(#torn)" />
+        {[0, 1, 2, 3].map((j) => ((k + j) % 3 ? <rect key={j} x={x + 26 + (j % 2) * 62} y={BS_FLOOR - h + 34 + Math.floor(j / 2) * 70} width={30} height={36} fill={DUSK.gold} opacity={0.85} filter="url(#tornS)" /> : null))}
+      </g>
+    ))}
+    <rect x={-30} y={BS_FLOOR} width={1140} height={720} fill={DUSK.road} filter="url(#torn)" />
+    <rect x={-30} y={BS_FLOOR} width={1140} height={30} fill={DUSK.curb} />
+    </g>
+  </svg>
+);
+/** The stop: a pole, a red BUS sign, a little timetable. (x = the pole) */
+const StopSign: React.FC<{ x: number }> = ({ x }) => (
+  <g>
+    <rect x={x - 10} y={690} width={20} height={BS_FLOOR - 690} fill="#b9b4a6" filter="url(#torn)" />
+    <rect x={x - 88} y={610} width={176} height={120} rx={16} fill={CP.red} filter="url(#torn)" />
+    <text x={x} y={692} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={58} fill={CP.cream}>BUS</text>
+    <rect x={x - 40} y={860} width={80} height={110} fill={CP.white} filter="url(#tornS)" transform={`rotate(-3 ${x} 915)`} />
+    {[0, 1, 2, 3].map((k) => <rect key={k} x={x - 26} y={880 + k * 20} width={52 - (k % 2) * 16} height={7} fill={CP.ink} opacity={0.55} transform={`rotate(-3 ${x} 915)`} />)}
+  </g>
+);
+/** Hearts that keep rising from (x, y), each on its own drift, fading as they climb `rise` px. */
+const Hearts: React.FC<{ x: number; y: number; from?: number; rise?: number; n?: number }> = ({ x, y, from = 0, rise = 190, n = 6 }) => {
+  const f = useCurrentFrame();
+  return (
+    <>
+      {Array.from({ length: n }).map((_, k) => {
+        const period = 46, t = ((f - from + 400 - k * (period / n) * 1.0) % period) / period;
+        if (f < from) return null;
+        const hx = x + Math.sin(k * 2.4 + t * 3.2) * (34 + k * 9) + (k % 2 ? 26 : -22);
+        const hy = y - t * rise;
+        return <g key={k} transform={`translate(${hx} ${hy}) rotate(${Math.sin(k + t * 4) * 16}) scale(${0.55 + 0.6 * Math.sin(Math.min(1, t * 2.4) * Math.PI / 2)})`} opacity={t < 0.75 ? 1 : (1 - t) * 4}>
+          <CHeart r={k % 3 === 0 ? 30 : 22} fill={k % 2 ? CP.pink : CP.red} />
+        </g>;
+      })}
+    </>
+  );
+};
+const BusStopScene: React.FC<{ s: BusStop }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const talk = 0.45 + 0.55 * Math.abs(Math.sin(f / 2.3));
+  if (s.beat === "hook") {
+    const MX = 600, MY = BS_FLOOR + 14, MS = 0.95;
+    return (
+      <AbsoluteFill>
+        <Sfx name="cine/plink" at={PREROLL + 4} vol={0.5} />
+        <Sfx name="cine/ping" at={PREROLL + 34} vol={0.4} />
+        <DuskStreet />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <g transform={`translate(0 ${BS_DY})`}>
+            <StopSign x={210} />
+            <CMilo x={MX} y={MY} s={MS} talk={talk} phone={1} />
+            <Hearts x={MX - 150 * MS} y={MY - 590 * MS} rise={170} />
+          </g>
+        </svg>
+        <CHook lines={s.hook ?? [s.line]} red={s.red} />
+      </AbsoluteFill>
+    );
+  }
+  if (s.beat === "bus") {
+    const busAt = s.busAt ?? 14, doorAt = s.doorAt ?? 58, walkAt = s.walkAt ?? 74;
+    const arrive = spring({ frame: f - busAt, fps, config: { damping: 15, mass: 1.1, stiffness: 70 } });
+    const BX = 430 + (1 - arrive) * 900; // the bus's left edge
+    const rock = f > busAt + 26 ? Math.sin((f - busAt - 26) / 3) * 4 * Math.max(0, 1 - (f - busAt - 26) / 16) : 0;
+    const open = cease(f, doorAt, doorAt + 12);
+    const walk = cease(f, walkAt, walkAt + 34);
+    const MS = 0.88, DOOR = 430 + 170; // the doorway's middle, once the bus has stopped
+    const mx = 330 + (DOOR - 330) * walk, my = BS_FLOOR + 14 - walk * 44 - Math.abs(Math.sin(walk * Math.PI * 3)) * 16 * (walk < 1 ? 1 : 0);
+    const POLE = 150;
+    const taut = cease(f, walkAt + 24, walkAt + 36);
+    const twang = f > walkAt + 36 ? Math.sin((f - walkAt - 36) / 1.6) * 7 * Math.max(0, 1 - (f - walkAt - 36) / 18) : 0;
+    const nx = mx + 30 * MS, ny = my - 400 * MS; // the scarf at his neck
+    return (
+      <AbsoluteFill>
+        <Sfx name="slide" at={busAt} vol={0.5} />
+        <Sfx name="thud" at={busAt + 24} vol={0.5} />
+        <Sfx name="pop" at={doorAt} vol={0.6} />
+        <Sfx name="boop_lo" at={walkAt + 6} vol={0.4} />
+        <Sfx name="boop_hi" at={walkAt + 18} vol={0.4} />
+        <Sfx name="cine/toing" at={walkAt + 34} vol={0.6} />
+        <DuskStreet />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <g transform={`translate(0 ${BS_DY})`}>
+          <StopSign x={POLE} />
+          {/* the bus: one long red sheet, a cream stripe, pale glass with heads behind it, wheels, a route number */}
+          <g transform={`translate(${BX} ${rock})`}>
+            <rect x={0} y={640} width={900} height={540} rx={40} fill={DUSK.bus} filter="url(#torn)" />
+            <rect x={0} y={1010} width={900} height={40} fill={CP.cream} />
+            <rect x={300} y={590} width={250} height={84} rx={10} fill={CP.ink} filter="url(#torn)" />
+            <text x={425} y={652} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={54} fill={DUSK.gold}>24</text>
+            {[330, 520].map((wx, k) => (
+              <g key={k}>
+                <rect x={wx} y={720} width={160} height={210} fill={DUSK.glass} filter="url(#tornS)" />
+                <circle cx={wx + 80} cy={842} r={44} fill={k ? CP.skin3 : CP.skin2} filter="url(#tornS)" />
+                <path d={`M${wx + 34} 842 q46 -84 92 0 q-46 -30 -92 0 z`} fill={k ? CP.hair : CP.hair2} filter="url(#tornS)" />
+                <rect x={wx + 26} y={886} width={108} height={44} rx={18} fill={k ? CP.green : CP.navy} />
+              </g>
+            ))}
+            {/* the doorway (lit inside), then the two doors folding back */}
+            <rect x={80} y={720} width={180} height={440} fill="#f6d9a0" filter="url(#tornS)" />
+            <rect x={80} y={1120} width={180} height={40} fill={DUSK.busDark} />
+            <rect x={80 - open * 4} y={720} width={90 * (1 - open * 0.82)} height={440} fill={DUSK.busDark} filter="url(#tornS)" />
+            <rect x={170 + 90 * open * 0.82 + open * 4} y={720} width={90 * (1 - open * 0.82)} height={440} fill={DUSK.busDark} filter="url(#tornS)" />
+            <circle cx={22} cy={1090} r={22} fill={DUSK.sun} filter="url(#tornS)" />
+            {[330, 720].map((cx, k) => (<g key={k} filter="url(#torn)"><circle cx={cx} cy={1180} r={74} fill={CP.ink} /><circle cx={cx} cy={1180} r={30} fill={CP.kraft} /></g>))}
+          </g>
+          {/* the scarf stays hooked on the stop sign: slack, then tight */}
+          {walk > 0.05 && (
+            <path d={`M${POLE + 70} ${640 + twang} Q ${(POLE + nx) / 2} ${(640 + ny) / 2 + (1 - taut) * 150 + twang}, ${nx} ${ny - 16} L ${nx} ${ny + 22} Q ${(POLE + nx) / 2} ${(640 + ny) / 2 + (1 - taut) * 150 + 40 + twang}, ${POLE + 70} ${682 + twang} Z`} fill={CP.mustard} filter="url(#tornS)" />
+          )}
+          <CMilo x={mx} y={my} s={MS} talk={talk} phone={1} panic={taut * 0.5} />
+          <Hearts x={mx - 150 * MS} y={my - 590 * MS} rise={150} n={5} />
+          </g>
+          {s.scrap && <CNote text={s.scrap} x={540} y={606} rot={-2} size={54} at={s.scrapAt ?? 6} />}
+        </svg>
+        <CTitle text={s.line} accent={s.accent} y={262} />
+      </AbsoluteFill>
+    );
+  }
+  // inside the bus: he is still going, everyone leans in, a tissue arrives
+  const leanAt = s.leanAt ?? 14, tissueAt = s.tissueAt ?? 70, askAt = s.askAt ?? 110;
+  const lean = cease(f, leanAt, leanAt + 26);
+  const MX = 520, MY = 1262, MS = 0.86;
+  const give = spring({ frame: f - tissueAt, fps, config: { damping: 12, mass: 0.6 } });
+  const lights = (k: number) => 1080 - ((f * 9 + k * 300) % 1500);
+  const Lean: React.FC<{ x: number; y: number; deg: number; children: React.ReactNode }> = ({ x, y, deg, children }) => <g transform={`rotate(${deg * lean} ${x} ${y})`}>{children}</g>;
+  return (
+    <AbsoluteFill>
+      <Sfx name="slide" at={leanAt} vol={0.35} />
+      <Sfx name="pop" at={tissueAt} vol={0.6} />
+      <Sfx name="cine/ping" at={askAt} vol={0.5} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <rect width={1080} height={1920} fill={CP.cream} filter="url(#fibre)" />
+        <g transform="translate(0 96)">
+        {/* the windows: dusk going by, street lights sliding past */}
+        {[40, 386, 732].map((wx, k) => (
+          <g key={k}>
+            <rect x={wx} y={640} width={308} height={270} fill={DUSK.sky} filter="url(#torn)" />
+            <rect x={wx + 6} y={820} width={296} height={84} fill={DUSK.ember} />
+            {[0, 1, 2, 3, 4].map((j) => { const lx = lights(j); return lx > wx + 20 && lx < wx + 288 ? <circle key={j} cx={lx} cy={730} r={16} fill={DUSK.sun} /> : null; })}
+          </g>
+        ))}
+        <rect x={-30} y={930} width={1140} height={340} fill={CP.tealDeep} filter="url(#torn)" />
+        <rect x={-30} y={1262} width={1140} height={700} fill={DUSK.road} filter="url(#torn)" />
+        {/* the rail and its hanging straps */}
+        <rect x={-20} y={596} width={1120} height={16} fill={CP.mustard} filter="url(#tornS)" />
+        {[150, 400, 690, 940].map((sx, k) => <g key={k} transform={`rotate(${Math.sin((f + k * 9) / 7) * 5} ${sx} 604)`}><rect x={sx - 5} y={604} width={10} height={54} fill={CP.ink} /><rect x={sx - 24} y={654} width={48} height={34} rx={12} fill={CP.kraft} filter="url(#tornS)" /></g>)}
+        {/* passengers, each a different little paper body, all leaning in */}
+        <Lean x={150} y={1270} deg={9}><CPerson x={150} y={1270} s={0.8} top={CP.green} dress={CP.green} outfit="trousers" hairStyle="bun" hair={CP.hair} skin={CP.skin3} seed={1} /></Lean>
+        <Lean x={318} y={1236} deg={7}><CPerson x={318} y={1236} s={0.7} dress={CP.pink} top={CP.white} hairStyle="curly" hair={CP.hair2} skin={CP.skin} seed={2} /></Lean>
+        <Lean x={964} y={1270} deg={-9}><CPerson x={964} y={1270} s={0.78} dress={CP.navy} top={CP.kraft} outfit="trousers" hairStyle="short" hair="#8d8a84" skin={CP.skin2} seed={3} /></Lean>
+        <Lean x={800} y={1246} deg={-6}><CPerson x={800} y={1246} s={0.8} dress={CP.rust} top={CP.rust} hairStyle="long" hair={CP.hair} skin={CP.skin2} seed={4} talk={f >= askAt && f < askAt + 34 ? talk : 0} /></Lean>
+        {/* the two seats in front of the ones sitting */}
+        <rect x={40} y={1070} width={230} height={220} rx={30} fill={CP.red} filter="url(#torn)" />
+        <rect x={860} y={1076} width={230} height={214} rx={30} fill={CP.red} filter="url(#torn)" />
+        <CMilo x={MX} y={MY} s={MS} talk={talk} phone={1} />
+        <Hearts x={MX - 150 * MS} y={MY - 590 * MS} rise={130} n={4} />
+        {/* the tissue: an arm comes across from the woman on the right */}
+        {f >= tissueAt && (
+          <g opacity={Math.min(1, give * 1.5)}>
+            <line x1={768} y1={1000} x2={768 - 96 * give} y2={1000 + 24 * give} stroke={CP.rust} strokeWidth={30} strokeLinecap="round" filter="url(#tornS)" />
+            <circle cx={768 - 110 * give} cy={1000 + 28 * give} r={17} fill={CP.skin2} filter="url(#tornS)" />
+            <rect x={768 - 110 * give - 62} y={1000 + 28 * give - 34} width={62} height={62} fill={CP.white} filter="url(#tornS)" transform={`rotate(${12 + Math.sin(f / 5) * 5} ${768 - 110 * give - 30} ${1000 + 28 * give})`} />
+          </g>
+        )}
+        {s.ask && <CNote text={s.ask} x={790} y={640} rot={4} size={56} at={askAt} />}
+        </g>
+      </svg>
+      <CTitle text={s.line} accent={s.accent} y={262} />
+    </AbsoluteFill>
+  );
+};
+
 const OpheliasScene: React.FC<{ s: Ophelias }> = ({ s }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -4375,7 +4569,7 @@ const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = (
   const op = interpolate(lt, [-0.05, 0.1, dur(line) + 0.05, dur(line) + 0.25], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
     <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", padding: "0 170px 450px 80px", opacity: op, pointerEvents: "none" }}>
-      <div style={{ background: DARK() ? "#05070f" : C.ink, border: DARK() ? "2px solid rgba(243,239,230,0.28)" : undefined, borderRadius: 22, padding: "16px 28px", boxShadow: "0 8px 30px rgba(33,26,21,0.25)",
+      <div style={{ background: DARK() ? "#05070f" : LOOK === "collage" ? "#1f2a2a" : C.ink, border: DARK() ? "2px solid rgba(243,239,230,0.28)" : undefined, borderRadius: 22, padding: "16px 28px", boxShadow: "0 8px 30px rgba(33,26,21,0.25)",
         textAlign: "center", fontFamily: F.serif, fontWeight: 600, fontSize: 50, lineHeight: 1.2, color: "#fbf7f0", maxWidth: 830 }}>
         {chunk.map((w, i) => {
           const on = lt >= w.s - 0.02;
@@ -4457,6 +4651,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "selftape" ? <SelfTapeScene s={sc} /> :
       sc.type === "ophelias" ? <OpheliasScene s={sc} /> :
       sc.type === "cutout" ? <CutoutScene s={sc} /> :
+      sc.type === "busstop" ? <BusStopScene s={sc} /> :
       <EndScene s={sc} />;
   };
 
@@ -4493,14 +4688,14 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
           <Audio src={staticFile(l.audio!)} volume={spec.voice?.volume ?? 1} />
         </Sequence>
       ))}
-      <Thread slots={slots} cam={camEase} />
+      {LOOK !== "collage" && <Thread slots={slots} cam={camEase} />}
       {spec.scenes.map((sc, i) => {
         const frames = Math.round(sc.seconds * FPS);
         const x = slot[i] * 1080 - camEase;
         return (
           <React.Fragment key={i}>
             {moves[i] && <Sfx name="slide" at={starts[i] - T} vol={0.28} />}
-            {moves[i] && (
+            {moves[i] && LOOK !== "collage" && (
               <Sequence from={starts[i] - T - 2} durationInFrames={T + 14}>
                 <Streaks seed={i} />
               </Sequence>
