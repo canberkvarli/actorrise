@@ -75,7 +75,7 @@ plus the week's folder. Each writes files there and reports back in under 200 wo
 >    {"match_type": "EXACT", "value": "yes"}}}}`. It works once the `staff` user property
 >    is registered in GA4 Admin as a user-scoped custom dimension; if the field errors, run
 >    without it and mark the numbers "incl. staff".
-> 9. No Vercel item: the billing feed returns 404 on the Hobby plan (dropped 2026-10-08).
+> 9. No Vercel item (dropped 2026-10-08). The site is back on Pro since 2026-11-22.
 >
 > A failed query is not a zero. If something errors, print the error and leave the row out.
 

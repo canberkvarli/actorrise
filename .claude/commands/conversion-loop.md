@@ -370,13 +370,12 @@ Stripe sessions: `stripe.checkout.Session.list(created={"gte": <14 days ago>})`,
 Five lines on a quiet day. If a trial ends inside 3 days, that is a "Moved" line the day
 before it ends and the day after, with whether it paid.
 
-No Vercel line (Canberk, 2026-10-08: "drop it for vercel"). The site is on the Hobby plan
-since 2026-10-03 and `/v1/billing/charges` answered 404 `costs_not_found` for every day
-since; Hobby does not publish usage through that feed. The caps still exist (200k ISR
-writes, 1M CDN requests a cycle, the cycle runs from the 4th), so if the site ever pauses,
-the usage page in the Vercel dashboard is where to look, and a crawler goes in the
-disallow list in `app/robots.ts` as AhrefsBot and shapbot did. Google and Bing are never
-blocked.
+No Vercel line (Canberk, 2026-10-08: "drop it for vercel"). The site was on Hobby from
+2026-10-03; it went down there and Canberk moved it back to **Pro on 2026-11-22** (about
+$20 a month plus usage, a cost against the money line). Pro does not pause at a cap, it
+bills the overage, so a crawler that floods the site now costs money instead of taking it
+offline: one goes in the disallow list in `app/robots.ts` as AhrefsBot and shapbot did.
+Google and Bing are never blocked. Usage lives on the Vercel dashboard's usage page.
 
 If a number is zero, print the zero. If a step did not run, say which and why.
 
