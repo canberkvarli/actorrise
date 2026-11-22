@@ -39,7 +39,7 @@ def _user(db, uid, account_type="actor", created=None, email=None):
         id=uid,
         email=email or f"a{uid}@example.com",
         account_type=account_type,
-        created_at=created or NOW,
+        created_at=created or reverse_trial.ENDED - timedelta(hours=1),
     )
     db.add(u)
     db.commit()
@@ -83,6 +83,13 @@ def test_accounts_from_before_launch_are_left_alone(db):
     u = _user(db, 24, created=reverse_trial.LAUNCH - timedelta(days=1))
     assert reverse_trial.on_onboarded(db, u) is None
     assert _events(db, 24, "reverse_trial_arm") == []
+
+
+def test_accounts_made_after_the_test_ended_get_no_week(db):
+    u = _user(db, 30, created=reverse_trial.ENDED)
+    assert reverse_trial.on_onboarded(db, u, "web") is None
+    assert db.query(UserSubscription).filter_by(user_id=30).count() == 0
+    assert _events(db, 30, "reverse_trial_arm") == []
 
 
 def test_anonymous_app_accounts_are_left_alone(db):

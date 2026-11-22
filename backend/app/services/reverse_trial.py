@@ -17,7 +17,12 @@ The week is a taste (services/taste.py): an ordinary comp row, source
 gets the three-day taste at the read wall later, and their checkout carries
 no second trial: the next wall asks for the money.
 
-Only accounts created on or after LAUNCH, only real addresses (not Ghost
+ENDED 2026-11-23 (Canberk: "need them to put card on file"). Of 141 signups
+given the week, 1 started a checkout and none started a card trial; of 179
+without it, 6 started a checkout and 2 a card trial. So accounts made from
+ENDED on get no week and no arm event; a week already running finishes.
+
+Only accounts created on or after LAUNCH and before ENDED, only real addresses (not Ghost
 Light's anonymous accounts), only the web, and never teachers or students,
 who already get a month through their class (taste.is_eligible).
 """
@@ -34,6 +39,7 @@ from app.services import taste
 logger = logging.getLogger(__name__)
 
 LAUNCH = datetime(2026, 10, 31, tzinfo=timezone.utc)
+ENDED = datetime(2026, 11, 22, 23, tzinfo=timezone.utc)
 HOURS = 7 * 24
 ARM_EVENT = "reverse_trial_arm"
 STARTED_EVENT = "reverse_trial_started"
@@ -55,7 +61,7 @@ def _aware(dt: Optional[datetime]) -> Optional[datetime]:
 def in_test(user) -> bool:
     """Whether this account is part of the test at all."""
     created = _aware(getattr(user, "created_at", None))
-    if created is None or created < LAUNCH:
+    if created is None or created < LAUNCH or created >= ENDED:
         return False
     email = (getattr(user, "email", None) or "").lower()
     if not email or email.endswith("@anon.actorrise.com"):
