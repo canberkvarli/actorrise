@@ -1,0 +1,519 @@
+{
+  "id": "2026-11-27-asked-for-contemporary",
+  "look": "collage",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "Asked for contemporary. Got Chekhov. Again.",
+        "say": "[amused] Asked for contemporary. Got Chekhov. Again.",
+        "sub": false,
+        "at": 0.521,
+        "words": [
+          {
+            "w": "Asked",
+            "s": 0.0,
+            "e": 0.035
+          },
+          {
+            "w": "for",
+            "s": 0.051,
+            "e": 0.099
+          },
+          {
+            "w": "contemporary.",
+            "s": 0.138,
+            "e": 0.675
+          },
+          {
+            "w": "Got",
+            "s": 0.787,
+            "e": 1.123
+          },
+          {
+            "w": "Chekhov.",
+            "s": 1.187,
+            "e": 2.051
+          },
+          {
+            "w": "Again.",
+            "s": 2.121,
+            "e": 2.531
+          }
+        ],
+        "dur": 2.651
+      },
+      {
+        "text": "My friend June needs something written this century, so I asked the librarian, and she slid over The Seagull.",
+        "say": "My friend June needs something written this century, so I asked the librarian, and she slid over The Seagull.",
+        "at": 3.35,
+        "words": [
+          {
+            "w": "My",
+            "s": 0.0,
+            "e": 0.598
+          },
+          {
+            "w": "friend",
+            "s": 0.634,
+            "e": 0.854
+          },
+          {
+            "w": "June",
+            "s": 0.905,
+            "e": 1.11
+          },
+          {
+            "w": "needs",
+            "s": 1.142,
+            "e": 1.302
+          },
+          {
+            "w": "something",
+            "s": 1.334,
+            "e": 1.622
+          },
+          {
+            "w": "written",
+            "s": 1.654,
+            "e": 1.878
+          },
+          {
+            "w": "this",
+            "s": 1.89,
+            "e": 1.942
+          },
+          {
+            "w": "century,",
+            "s": 1.998,
+            "e": 2.646
+          },
+          {
+            "w": "so",
+            "s": 2.688,
+            "e": 2.774
+          },
+          {
+            "w": "I",
+            "s": 2.806,
+            "e": 2.838
+          },
+          {
+            "w": "asked",
+            "s": 2.87,
+            "e": 3.03
+          },
+          {
+            "w": "the",
+            "s": 3.062,
+            "e": 3.158
+          },
+          {
+            "w": "librarian,",
+            "s": 3.215,
+            "e": 3.926
+          },
+          {
+            "w": "and",
+            "s": 3.958,
+            "e": 4.054
+          },
+          {
+            "w": "she",
+            "s": 4.07,
+            "e": 4.118
+          },
+          {
+            "w": "slid",
+            "s": 4.169,
+            "e": 4.374
+          },
+          {
+            "w": "over",
+            "s": 4.425,
+            "e": 4.63
+          },
+          {
+            "w": "The",
+            "s": 4.694,
+            "e": 4.886
+          },
+          {
+            "w": "Seagull.",
+            "s": 4.928,
+            "e": 5.398
+          }
+        ],
+        "dur": 5.518
+      },
+      {
+        "text": "I asked again and got Ibsen, and then the Complete Shakespeare landed on my scarf.",
+        "say": "[playful] I asked again and got Ibsen, and then the Complete Shakespeare landed on my scarf.",
+        "at": 9.572,
+        "words": [
+          {
+            "w": "I",
+            "s": 0.0,
+            "e": 0.008
+          },
+          {
+            "w": "asked",
+            "s": 0.04,
+            "e": 0.2
+          },
+          {
+            "w": "again",
+            "s": 0.242,
+            "e": 0.456
+          },
+          {
+            "w": "and",
+            "s": 0.488,
+            "e": 0.584
+          },
+          {
+            "w": "got",
+            "s": 0.632,
+            "e": 0.776
+          },
+          {
+            "w": "Ibsen,",
+            "s": 0.84,
+            "e": 1.224
+          },
+          {
+            "w": "and",
+            "s": 1.336,
+            "e": 1.672
+          },
+          {
+            "w": "then",
+            "s": 1.698,
+            "e": 1.8
+          },
+          {
+            "w": "the",
+            "s": 1.816,
+            "e": 1.864
+          },
+          {
+            "w": "Complete",
+            "s": 1.906,
+            "e": 2.248
+          },
+          {
+            "w": "Shakespeare",
+            "s": 2.286,
+            "e": 2.696
+          },
+          {
+            "w": "landed",
+            "s": 2.733,
+            "e": 2.952
+          },
+          {
+            "w": "on",
+            "s": 2.994,
+            "e": 3.08
+          },
+          {
+            "w": "my",
+            "s": 3.122,
+            "e": 3.208
+          },
+          {
+            "w": "scarf.",
+            "s": 3.282,
+            "e": 3.72
+          }
+        ],
+        "dur": 3.84
+      },
+      {
+        "text": "So I opened Ghost Light, typed contemporary, for a woman in her twenties, and up came David Auburn, Gil Kofman and Don Zolidis.",
+        "say": "[upbeat] So I opened Ghost Light, typed contemporary, for a woman in her twenties, and up came David Auburn, Gil Kofman and Don Zolidis.",
+        "sub": false,
+        "at": 13.922,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.01
+          },
+          {
+            "w": "I",
+            "s": 0.074,
+            "e": 0.138
+          },
+          {
+            "w": "opened",
+            "s": 0.184,
+            "e": 0.458
+          },
+          {
+            "w": "Ghost",
+            "s": 0.501,
+            "e": 0.714
+          },
+          {
+            "w": "Light,",
+            "s": 0.757,
+            "e": 1.034
+          },
+          {
+            "w": "typed",
+            "s": 1.12,
+            "e": 1.546
+          },
+          {
+            "w": "contemporary,",
+            "s": 1.59,
+            "e": 2.282
+          },
+          {
+            "w": "for",
+            "s": 2.322,
+            "e": 2.442
+          },
+          {
+            "w": "a",
+            "s": 2.474,
+            "e": 2.506
+          },
+          {
+            "w": "woman",
+            "s": 2.549,
+            "e": 2.762
+          },
+          {
+            "w": "in",
+            "s": 2.784,
+            "e": 2.826
+          },
+          {
+            "w": "her",
+            "s": 2.858,
+            "e": 2.954
+          },
+          {
+            "w": "twenties,",
+            "s": 3.004,
+            "e": 3.466
+          },
+          {
+            "w": "and",
+            "s": 3.578,
+            "e": 3.914
+          },
+          {
+            "w": "up",
+            "s": 3.957,
+            "e": 4.042
+          },
+          {
+            "w": "came",
+            "s": 4.094,
+            "e": 4.298
+          },
+          {
+            "w": "David",
+            "s": 4.352,
+            "e": 4.618
+          },
+          {
+            "w": "Auburn,",
+            "s": 4.674,
+            "e": 5.322
+          },
+          {
+            "w": "Gil",
+            "s": 5.37,
+            "e": 5.514
+          },
+          {
+            "w": "Kofman",
+            "s": 5.578,
+            "e": 5.898
+          },
+          {
+            "w": "and",
+            "s": 5.994,
+            "e": 6.282
+          },
+          {
+            "w": "Don",
+            "s": 6.346,
+            "e": 6.538
+          },
+          {
+            "w": "Zolidis.",
+            "s": 6.57,
+            "e": 7.434
+          }
+        ],
+        "dur": 7.554
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "sub": false,
+        "at": 21.835,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.098
+          },
+          {
+            "w": "Ghost",
+            "s": 0.141,
+            "e": 0.354
+          },
+          {
+            "w": "Light.",
+            "s": 0.397,
+            "e": 0.866
+          },
+          {
+            "w": "Built",
+            "s": 0.909,
+            "e": 1.122
+          },
+          {
+            "w": "by",
+            "s": 1.186,
+            "e": 1.314
+          },
+          {
+            "w": "a",
+            "s": 1.314,
+            "e": 1.315
+          },
+          {
+            "w": "working",
+            "s": 1.354,
+            "e": 1.634
+          },
+          {
+            "w": "actor.",
+            "s": 1.698,
+            "e": 2.146
+          }
+        ],
+        "dur": 2.266
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-27-asked-for-contemporary/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.25
+  },
+  "scenes": [
+    {
+      "type": "libdesk",
+      "beat": "hook",
+      "seconds": 3.25,
+      "line": "Asked for contemporary. Got Chekhov. Again.",
+      "hook": [
+        "Asked for",
+        "contemporary.",
+        "Got Chekhov.",
+        "Again."
+      ],
+      "red": [
+        2,
+        3
+      ]
+    },
+    {
+      "type": "libdesk",
+      "beat": "ask",
+      "seconds": 6.222,
+      "line": "She slid over The Seagull.",
+      "accent": "The Seagull.",
+      "ask": "something written this century?",
+      "askAt": 30,
+      "slideAt": 126
+    },
+    {
+      "type": "libdesk",
+      "beat": "pile",
+      "seconds": 4.35,
+      "line": "Then Ibsen. Then Shakespeare.",
+      "accent": "Then Shakespeare.",
+      "ibsenAt": 30,
+      "shakesAt": 86
+    },
+    {
+      "type": "screens",
+      "seconds": 7.863,
+      "line": "Say it your way.",
+      "accent": "your way.",
+      "shots": [
+        {
+          "src": "story/2026-11-27-asked-for-contemporary/search.png",
+          "at": 0
+        },
+        {
+          "src": "story/2026-11-27-asked-for-contemporary/typed.png",
+          "at": 36,
+          "fade": true,
+          "tap": {
+            "x": 0.856,
+            "y": 0.312,
+            "at": 104
+          }
+        },
+        {
+          "src": "story/2026-11-27-asked-for-contemporary/results.png",
+          "at": 116,
+          "tap": {
+            "x": 0.5,
+            "y": 0.38,
+            "at": 196
+          }
+        },
+        {
+          "src": "story/2026-11-27-asked-for-contemporary/open.png",
+          "at": 212
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "tiktok": "Asked for contemporary. Got Chekhov. Again. Ghost Light found David Auburn, Gil Kofman and Don Zolidis. The voice is AI. #monologue #audition #actorslife #actortok #theatrekid",
+    "youtube_title": "Asked for contemporary. Got Chekhov. Again. #shorts",
+    "youtube_description": "Asked for contemporary. Got Chekhov. Again.\nMilo asked the librarian for something written this century and got The Seagull, then Ibsen, then the Complete Shakespeare. In Ghost Light he typed what he needed and up came Are You Ready? by David Auburn, American Magic by Gil Kofman and The Audition by Don Zolidis. Free on the App Store. Built by a working actor. The voice is AI.\n#monologue #audition #actorslife #acting",
+    "instagram": "Asked for contemporary. Got Chekhov. Again.\n\nWho else has been handed The Seagull when they asked for something written this century?\n\nWhat Milo typed in Ghost Light: contemporary theatre monologue for a woman in her twenties. What came up: Are You Ready? by David Auburn, American Magic by Gil Kofman, The Audition by Don Zolidis.\n\nFree on the App Store, built by a working actor. Link in bio. The voice is AI.\n\n#monologue #audition #actorslife #actorsofinstagram #contemporarytheatre"
+  },
+  "cover_ms": 300,
+  "source": {
+    "plan": "Callboard row 2026-11-27 (storyhowto, story-howto), the earliest planned row on 2026-11-22; look collage per DIRECTION 2026-11-20 (the row said bold)",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "sql": "select m.*, p.* from monologues m join plays p on p.id=m.play_id where p.title in ('Are you ready?','American Magic','The Audition','My Own Personal Mermaid')",
+    "checked": "2026-11-22: monologue 44218 Woman (Are you ready?, David Auburn, play 3515, 2001, copyrighted, fair_use, source_url set) 2:37; 45293 Woman (American Magic, Gil Kofman, play 4147, 2008) 2:34; Elizabeth (The Audition, Don Zolidis) 1:41. In the Ghost Light app 'contemporary theatre monologue for a woman in her twenties' returns these three first, 30 monologues",
+    "changed_from_plan": "the row's search ('contemporary, a woman in her twenties, two minutes') puts film cards with posters first in the app (Her, Source Code, Broadcast News), so the film types a wording that brings three contemporary plays up first. The app shows play and playwright, not the year, so no year is claimed. These are copyrighted: the speech text on the results cards, the opened page and Tonight's speech (Mags, My Own Personal Mermaid) is blurred in the screenshots; names, plays, playwrights and lengths stay sharp",
+    "app": "Ghost Light web preview built from actorrise main apps/mobile (ed12f1ed) plus web-preview.patch, dark theme, demo account, 2026-11-22",
+    "flow": "flows/search-asked-for-contemporary.json (shots -> public/story/2026-11-27-asked-for-contemporary/*.png)",
+    "voice": "George, one take at stability 0.5, Scribe 0.99, sped up 1.25x with fit_take.py; AI voice, labelled on every platform",
+    "new_scene_types": "libdesk (cut-paper collage) with three beats: hook, ask, pile. New collage pieces: LibraryWall (shelves of paper spines), LibraryDesk, PBook, dust puffs, the scarf caught under Shakespeare",
+    "motifs": "library-desk,paper-librarian,chekhov-slides-over,ibsen-lands,complete-shakespeare-thud,dust,scarf-under-the-stack",
+    "end": "specs/2026-11-27-asked-for-contemporary-end.json, joined with scripts/join.sh",
+    "feature": "search",
+    "trypost": {
+      "tiktok": "01a20214-d5ce-735a-9520-b655b2a4f098",
+      "youtube": "01a20214-d5d8-7378-b0ad-2d11cb8b6d57",
+      "instagram": "01a20214-d5df-72c9-9de2-9c6b7616d40f",
+      "status": "draft"
+    }
+  }
+}

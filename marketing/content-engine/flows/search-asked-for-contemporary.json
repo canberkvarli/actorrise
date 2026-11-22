@@ -1,0 +1,69 @@
+{
+  "start": "/search",
+  "lead": 600,
+  "steps": [
+    {
+      "wait": 6000
+    },
+    {
+      "goto": "/saves"
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "click": {
+        "css": "a[href='/search']"
+      }
+    },
+    {
+      "wait": 3500
+    },
+    {
+      "shot": "search"
+    },
+    {
+      "type": "contemporary theatre monologue for a woman in her twenties",
+      "into": {
+        "css": "input"
+      },
+      "delay": 30
+    },
+    {
+      "blur": true
+    },
+    {
+      "wait": 500
+    },
+    {
+      "shot": "typed"
+    },
+    {
+      "click": {
+        "css": "[aria-label='Search']"
+      }
+    },
+    {
+      "waitFor": "monologues."
+    },
+    {
+      "wait": 3000
+    },
+    {
+      "shot": "results"
+    },
+    {
+      "click": "the food critic for the Times"
+    },
+    {
+      "wait": 4000
+    },
+    {
+      "shot": "open"
+    },
+    {
+      "wait": 400
+    }
+  ],
+  "tail": 300
+}

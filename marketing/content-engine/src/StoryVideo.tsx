@@ -128,7 +128,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -4251,6 +4251,139 @@ const CutoutScene: React.FC<{ s: Cutout }> = ({ s }) => {
   );
 };
 
+// ---------- libdesk: asked for contemporary, got Chekhov, cut-paper collage (2026-11-27) ----------
+/** Milo asks a paper librarian for something written this century. Three beats: "hook" (the desk, the hook card
+ *  from frame 0, Chekhov already on the desk), "ask" (his ask on a scrap, The Seagull slides across the desk),
+ *  "pile" (Ibsen lands on it, then the Complete Shakespeare drops on his scarf and the dust rises).
+ *  All new torn paper pieces: shelves of paper spines, the desk, the books, the dust. */
+type LibDesk = { type: "libdesk"; beat: "hook" | "ask" | "pile"; seconds: number; line: string; accent?: string;
+  hook?: string[]; red?: number[]; ask?: string; askAt?: number; slideAt?: number; ibsenAt?: number; shakesAt?: number };
+const LIB = { wall: "#24423f", shelf: "#3a2a20", wood: "#a9713d", woodDark: "#7d4f28", floor: "#b5532e", dust: "#efe4cc",
+  spines: ["#b5532e", "#e2a72a", "#2d3e66", "#5f8f5a", "#c8361b", "#d9cbb0", "#7b3f6a", "#1f5c5a", "#8a5a3c"] };
+const LIB_DESK = 1170, LIB_FLOOR = 1500, LIB_STACK = 470;
+/** The library: a wall of paper spines on three shelves, the floor, a QUIET card. */
+const LibraryWall: React.FC = () => (
+  <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+    <rect width={1080} height={1920} fill={LIB.wall} filter="url(#fibre)" />
+    <rect x={30} y={590} width={1020} height={640} fill={LIB.shelf} filter="url(#torn)" />
+    {[0, 1, 2].map((r) => {
+      let x = 52; const out: React.ReactNode[] = [];
+      for (let k = 0; x < 1000; k++) {
+        const w = 34 + ((k * 37 + r * 53) % 40), h = 128 + ((k * 29 + r * 17) % 44), lean = (k * 7 + r * 3) % 11 === 0 ? 7 : 0;
+        out.push(<rect key={k} x={x} y={612 + r * 204 + (180 - h)} width={w} height={h} fill={LIB.spines[(k * 5 + r * 2) % LIB.spines.length]} filter="url(#tornS)" transform={lean ? `rotate(${lean} ${x} ${792 + r * 204})` : undefined} />);
+        x += w + 7;
+      }
+      return <g key={r}>{out}<rect x={30} y={792 + r * 204} width={1020} height={16} fill="#241812" /></g>;
+    })}
+    <rect x={-30} y={LIB_FLOOR} width={1140} height={460} fill={LIB.floor} filter="url(#torn)" />
+  </svg>
+);
+/** The desk: one long wooden sheet with a darker front panel and a little QUIET card. Drawn over the librarian's legs. */
+const LibraryDesk: React.FC = () => (
+  <g>
+    <rect x={330} y={LIB_DESK} width={800} height={LIB_FLOOR - LIB_DESK + 16} fill={LIB.woodDark} filter="url(#torn)" />
+    <rect x={300} y={LIB_DESK - 14} width={860} height={54} fill={LIB.wood} filter="url(#torn)" />
+    <g transform="rotate(-3 900 1300)"><rect x={800} y={1262} width={200} height={84} fill={CP.cream} filter="url(#tornS)" />
+      <text x={900} y={1322} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={44} fill={CP.ink}>QUIET</text></g>
+  </g>
+);
+/** A paper book lying flat, its spine to us: the name in Archivo Black, a year on a handwritten line. (x = middle, y = its bottom) */
+const PBook: React.FC<{ x: number; y: number; w: number; h: number; fill: string; name: string; sub?: string; rot?: number; ink?: string }> = ({ x, y, w, h, fill, name, sub, rot = 0, ink = CP.cream }) => (
+  <g transform={`translate(${x} ${y}) rotate(${rot})`}>
+    <rect x={-w / 2} y={-h} width={w} height={h} fill={fill} filter="url(#torn)" />
+    <rect x={-w / 2 + 14} y={-h + 8} width={10} height={h - 16} fill={ink} opacity={0.5} />
+    <text x={sub ? -w / 2 + 40 : 0} y={-h / 2 + (sub && h > 110 ? -4 : 15)} textAnchor={sub ? "start" : "middle"} fontFamily="ArchivoBlack" fontSize={sub && h > 110 ? 46 : 40} fill={ink}>{name}</text>
+    {sub && (h > 110
+      ? <text x={-w / 2 + 40} y={-h / 2 + 46} fontFamily="Caveat" fontSize={46} fill={ink}>{sub}</text>
+      : <text x={w / 2 - 22} y={-h / 2 + 15} textAnchor="end" fontFamily="Caveat" fontSize={44} fill={ink}>{sub}</text>)}
+  </g>
+);
+const LibDeskScene: React.FC<{ s: LibDesk }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const talkNow = (a: number, b: number) => f >= a && f <= b ? 0.45 + 0.55 * Math.abs(Math.sin(f / 2.3)) : 0;
+  const MX = 196, MS = 0.84, LX = 770, LY = 1392, LS = 1.0;
+  const Librarian: React.FC<{ arms?: "down" | "hip" | "script" | "wave"; talk?: number }> = ({ arms = "down", talk = 0 }) =>
+    <CPerson x={LX} y={LY} s={LS} outfit="dress" dress={CP.green} top="#7b3f6a" hair="#8f8a84" hairStyle="bun" skin={CP.skin2} arms={arms} talk={talk} seed={3} />;
+  const top = LIB_DESK - 14; // books sit on the desk top
+  if (s.beat === "hook") {
+    return (
+      <AbsoluteFill>
+        <Sfx name="slide" at={PREROLL + 2} vol={0.45} />
+        <Sfx name="thud" at={PREROLL + 14} vol={0.45} />
+        <LibraryWall />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <Librarian arms="hip" />
+          <LibraryDesk />
+          <PBook x={LIB_STACK} y={top} w={380} h={84} fill={CP.red} name="CHEKHOV" sub="1896" rot={-2} />
+          <CMilo x={MX} y={LIB_FLOOR + 8} s={MS} flip panic={0.55} />
+        </svg>
+        <CHook lines={s.hook ?? [s.line]} red={s.red} />
+      </AbsoluteFill>
+    );
+  }
+  if (s.beat === "ask") {
+    const askAt = s.askAt ?? 8, slideAt = s.slideAt ?? 80;
+    const k = spring({ frame: f - slideAt, fps, config: { damping: 14, mass: 0.8, stiffness: 90 } });
+    const bx = 760 + (LIB_STACK - 760) * k;
+    return (
+      <AbsoluteFill>
+        <Sfx name="pop" at={askAt} vol={0.5} />
+        <Sfx name="slide" at={slideAt} vol={0.6} />
+        <Sfx name="thud" at={slideAt + 12} vol={0.5} />
+        <LibraryWall />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <Librarian arms={f > slideAt - 6 ? "hip" : "down"} />
+          <LibraryDesk />
+          {f >= slideAt && <PBook x={bx} y={top} w={380} h={84} fill={CP.red} name="CHEKHOV" sub="1896" rot={-2 * k} />}
+          <CMilo x={MX} y={LIB_FLOOR + 8} s={MS} flip talk={talkNow(askAt, slideAt - 4)} panic={f > slideAt + 10 ? 0.6 : 0} />
+          {s.ask && <CNote text={s.ask} x={420} y={690} rot={-3} size={58} at={askAt} />}
+        </svg>
+        <CTitle text={s.line} accent={s.accent} y={262} />
+      </AbsoluteFill>
+    );
+  }
+  // pile: Ibsen lands on Chekhov, then the Complete Shakespeare drops on the scarf and the dust rises
+  const ibsenAt = s.ibsenAt ?? 30, shakesAt = s.shakesAt ?? 80;
+  const drop = (at: number) => { const k = interpolate(f, [at - 9, at], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.in(Easing.quad) }); return (1 - k) * -1100; };
+  const squash = f >= shakesAt ? Math.max(0, 1 - (f - shakesAt) / 10) : 0;
+  const shake = f >= shakesAt ? Math.sin((f - shakesAt) * 1.9) * 7 * Math.max(0, 1 - (f - shakesAt) / 14) : 0;
+  const pinned = f >= shakesAt;
+  const nx = MX - 30 * MS, ny = LIB_FLOOR + 8 - 400 * MS; // the scarf at his neck (he is flipped)
+  const tug = pinned ? Math.sin((f - shakesAt) / 5) * 0.5 + 0.5 : 0;
+  return (
+    <AbsoluteFill>
+      <Sfx name="thud" at={ibsenAt} vol={0.5} />
+      <Sfx name="cine/impact" at={shakesAt} vol={0.55} />
+      <Sfx name="cine/toing" at={shakesAt + 10} vol={0.5} />
+      <LibraryWall />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <g transform={`translate(0 ${shake})`}>
+          <Librarian arms={f > shakesAt + 8 ? "hip" : "down"} />
+          <LibraryDesk />
+          <CMilo x={MX} y={LIB_FLOOR + 8} s={MS} flip panic={pinned ? 1 : f > ibsenAt ? 0.6 : 0.3} talk={talkNow(0, ibsenAt - 12)} />
+          <PBook x={LIB_STACK} y={top + squash * 6} w={380} h={84} fill={CP.red} name="CHEKHOV" sub="1896" rot={-2} />
+          {f >= ibsenAt - 9 && <PBook x={LIB_STACK + 16} y={top - 84 + drop(ibsenAt) + squash * 5} w={350} h={84} fill={CP.navy} name="IBSEN" sub="1879" rot={2} />}
+          {/* the scarf: pulled tight from his neck up into the stack, caught under Shakespeare */}
+          {pinned && <path d={`M${nx + 62} ${ny - 4} L ${LIB_STACK - 150 + tug * 4} ${top - 176} l 46 6 L ${nx + 104} ${ny + 30} Z`} fill={CP.mustard} filter="url(#tornS)" />}
+          {f >= shakesAt - 9 && (
+            <g transform={`translate(${LIB_STACK + 4} ${top - 168 + drop(shakesAt)}) scale(${1 + squash * 0.06} ${1 - squash * 0.1})`}>
+              <PBook x={0} y={0} w={470} h={168} fill={CP.kraft} ink={CP.ink} name="SHAKESPEARE" sub="the complete works, 1623" rot={-1} />
+            </g>
+          )}
+        </g>
+        {/* dust: pale paper puffs rising off the stack */}
+        {pinned && Array.from({ length: 9 }).map((_, k) => {
+          const t = Math.min(1, (f - shakesAt - k * 1.5) / (38 + k * 4)); if (t <= 0) return null;
+          const dx = (k - 4) * 66 + Math.sin(k * 2.1 + t * 3) * 22, dy = -t * (150 + (k % 3) * 70);
+          return <circle key={k} cx={LIB_STACK + dx} cy={top - 60 + dy + (k % 2) * 50} r={(20 + (k % 4) * 9) * (0.5 + t)} fill={LIB.dust} opacity={0.8 * (1 - t)} filter="url(#tornS)" />;
+        })}
+      </svg>
+      <CTitle text={s.line} accent={s.accent} y={262} />
+    </AbsoluteFill>
+  );
+};
+
 // ---------- busstop: a love confession at the bus stop, cut-paper collage (2026-11-26) ----------
 /** Milo rehearses a love confession into his phone at a bus stop at dusk, paper hearts rising. Three beats:
  *  "hook" (the stop, the hook card from frame 0), "bus" (the bus pulls up, the doors open, he steps on mid
@@ -4652,6 +4785,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "ophelias" ? <OpheliasScene s={sc} /> :
       sc.type === "cutout" ? <CutoutScene s={sc} /> :
       sc.type === "busstop" ? <BusStopScene s={sc} /> :
+      sc.type === "libdesk" ? <LibDeskScene s={sc} /> :
       <EndScene s={sc} />;
   };
 
