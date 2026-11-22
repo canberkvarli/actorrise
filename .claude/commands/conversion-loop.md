@@ -206,9 +206,12 @@ nothing in this run is sent. Everything is a draft.
 
 The daily outreach is for money and users instead, as drafts for Canberk:
 - **Organizations first.** Teachers, schools, districts and programs (the Organizations rules
-  below): the warm ones waiting, the one chase, the class links. A school or district plan with
-  a price does not exist yet; never name one in a draft until Canberk sets it. Offer what exists:
-  free Plus for the educator and the class link for students 13 and up.
+  below): the warm ones waiting, the one chase, the class links. A first email offers what is
+  free: Plus for the educator and the class link for students 13 and up. Once a class is on it,
+  the paid next step is the pricing page's (Canberk, 2026-11-22): Classroom $249 a year (one
+  teacher, up to 40 students), Program $499 a year (one school, up to 150), a quote for a
+  district or studio. A teacher who said no to a price this year is asked again when their
+  school sets next year's budget, not sooner.
 - **The app.** Ghost Light on the iPhone may be mentioned in any draft where it fits.
 - An individual actor gets a draft only when they wrote first (a reply, a Cue handoff, a
   feedback comment that asks something), answered on their thread.

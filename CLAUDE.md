@@ -357,8 +357,10 @@ setting the fields by hand.
   2026-11-20: it reads as being watched ("ppl might be like oh is he watching me"). Nothing that
   quotes what one person searched, saved or opened goes to them, as a send or a draft. The
   daily outreach is drafts only, and it looks for money and users: teachers, schools, districts
-  and programs, and actors told about the Ghost Light app. A school or district plan with a
-  price does not exist yet; a draft never names one until Canberk sets it.
+  and programs, and actors told about the Ghost Light app. The school prices are the
+  pricing page's (Canberk, 2026-11-22, "yes use the prices"): **Classroom $249 a year** (one
+  teacher, up to 40 students), **Program $499 a year** (one school, up to 150), a quote for a
+  district or studio. A draft names them only to a teacher whose class is already on it.
 - Post to social
 - Push marketing-page commits
 - Make up testimonials, user quotes, or stats
