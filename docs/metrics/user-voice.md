@@ -353,3 +353,15 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** none, a playwright
 **They said:** "Feel free to host whichever monologues from my resources page you think would be useful to actors on ActorRise. For each piece, please include my name and the play title, and link directly to that play's profile page on my site rather than to the Resources page. Thanks for checking. I'm glad these pieces will be easier for students to find."
 **Heard as:** licence granted in writing; links must go to each play's page on his site
+
+## 2026-11-22
+
+**Replying to:** a search note (Gruesome Playground Injuries, not in the library)
+**Account:** free actor, UK
+**They said:** "I was looking for Kayleen, though I'm completely open to other pieces that work well on camera. I'm looking for something up to 2 minutes long for: Updating my Spotlight profile, A drama school funding/scholarship self-tape. I'm a woman, playing age 25–35."
+**Heard as:** content gap, contemporary stage (Kayleen); wants on-camera pieces for a woman 25 to 35, under two minutes
+
+**Replying to:** an old thread from the founding-actor days
+**Account:** paying Plus monthly since the summer
+**They said:** "Just wanna see if the site is still running, cause I see I got charged for this month. I also want to temporarily disable the subscription until I'm ready again."
+**Heard as:** price, wants a pause rather than a cancel; did not know the site is now Ghost Light
