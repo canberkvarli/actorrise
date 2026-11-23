@@ -1,0 +1,17 @@
+{
+  "start": "/search",
+  "lead": 600,
+  "steps": [
+    {"wait": 6000},
+    {"goto": "/saves"},
+    {"wait": 2500},
+    {"click": {"css": "a[href='/search']"}},
+    {"wait": 4500},
+    {"shot": "home"},
+    {"click": "Read it"},
+    {"wait": 5000},
+    {"shot": "open"},
+    {"wait": 400}
+  ],
+  "tail": 300
+}

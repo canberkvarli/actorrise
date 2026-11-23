@@ -128,7 +128,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | Sofa | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -4384,6 +4384,151 @@ const LibDeskScene: React.FC<{ s: LibDesk }> = ({ s }) => {
   );
 };
 
+// ---------- sofa: three weeks without saying a monologue out loud, cut-paper collage (2026-11-28) ----------
+/** Milo on the sofa on a Sunday, his audition folder on the shelf above him. Three beats: "hook" (the room, Milo
+ *  flat on the sofa, the hook card from frame 0, the scarf trailing to the spilled tote), "dust" (close on the
+ *  shelf: dust settles on the folder, a paper spider comes down its thread and hangs a tiny sign), "tomorrow"
+ *  (the tear-off calendar keeps flipping to TOMORROW while a pot plant grows over the folder).
+ *  All new torn paper pieces: the sofa, the cushion, the shelf, the folder, the spider, the calendar, the plant. */
+type Sofa = { type: "sofa"; beat: "hook" | "dust" | "tomorrow"; seconds: number; line: string; accent?: string;
+  hook?: string[]; red?: number[]; note?: string; noteAt?: number; spiderAt?: number; sign?: string; flips?: number[]; growAt?: number };
+const SOFA = { wall: "#3b3552", floor: "#b5532e", sofa: "#5f8f5a", sofaDark: "#47704a", shelf: "#a9713d", folder: "#c8361b", dust: "#efe4cc", leaf: "#3f7d4e", leaf2: "#6aa35f", pot: "#b5532e" };
+/** The audition folder: a red paper folder standing on the shelf, a cream label. (x = middle, y = its bottom) */
+const PFolder: React.FC<{ x: number; y: number; k?: number; dust?: number }> = ({ x, y, k = 1, dust = 0 }) => (
+  <g transform={`translate(${x} ${y}) scale(${k})`}>
+    <rect x={-150} y={-208} width={300} height={208} fill={SOFA.folder} filter="url(#torn)" transform="rotate(-2)" />
+    <rect x={-150} y={-232} width={120} height={40} fill={SOFA.folder} filter="url(#tornS)" transform="rotate(-2)" />
+    <rect x={-112} y={-150} width={224} height={84} fill={CP.cream} filter="url(#tornS)" transform="rotate(-2)" />
+    <text x={0} y={-94} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={38} fill={CP.ink} transform="rotate(-2)">AUDITIONS</text>
+    {dust > 0 && <rect x={-156} y={-226} width={312} height={26} fill={SOFA.dust} opacity={0.9 * dust} filter="url(#tornS)" transform="rotate(-2)" />}
+  </g>
+);
+/** The shelf wall, close: a plum wall, one long wooden shelf. */
+const ShelfWall: React.FC<{ y: number }> = ({ y }) => (
+  <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+    <rect width={1080} height={1920} fill={SOFA.wall} filter="url(#fibre)" />
+    <rect x={60} y={y} width={960} height={44} fill={SOFA.shelf} filter="url(#torn)" />
+    <rect x={150} y={y + 44} width={34} height={90} fill="#7d4f28" filter="url(#tornS)" />
+    <rect x={896} y={y + 44} width={34} height={90} fill="#7d4f28" filter="url(#tornS)" />
+  </svg>
+);
+const SofaScene: React.FC<{ s: Sofa }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  if (s.beat === "hook") {
+    const FL = 1400;
+    return (
+      <AbsoluteFill>
+        <Sfx name="cine/plink" at={PREROLL + 4} vol={0.45} />
+        <Sfx name="thud" at={PREROLL + 30} vol={0.35} />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <rect width={1080} height={1920} fill={SOFA.wall} filter="url(#fibre)" />
+          <rect x={-30} y={FL} width={1140} height={560} fill={SOFA.floor} filter="url(#torn)" />
+          {/* the shelf above the sofa, the folder already a little dusty */}
+          <rect x={470} y={900} width={470} height={30} fill={SOFA.shelf} filter="url(#torn)" />
+          <PFolder x={700} y={900} k={0.78} dust={0.7} />
+          {/* the sofa: back, seat, two arms, a cushion */}
+          <rect x={120} y={1010} width={800} height={250} rx={40} fill={SOFA.sofaDark} filter="url(#torn)" />
+          <rect x={150} y={1206} width={740} height={150} fill={SOFA.sofa} filter="url(#torn)" />
+          <rect x={196} y={1090} width={150} height={120} rx={26} fill={CP.pink} filter="url(#torn)" transform="rotate(-8 270 1150)" />
+          {/* Milo flat on his back, head on the cushion, staring at the ceiling */}
+          <g transform="translate(800 1150) rotate(-90)"><CMilo x={0} y={0} s={0.8} tote={false} panic={0.35} /></g>
+          <rect x={80} y={1120} width={110} height={290} rx={36} fill={SOFA.sofa} filter="url(#torn)" />
+          <rect x={880} y={1120} width={110} height={290} rx={36} fill={SOFA.sofa} filter="url(#torn)" />
+          {/* the scarf trails off the sofa to the tote, which has tipped over on the floor */}
+          <path d="M452 1196 l44 4 l-20 236 l150 30 l-6 40 l-190 -36 z" fill={CP.mustard} filter="url(#tornS)" />
+          <g transform="rotate(-78 640 1440)">
+            <rect x={590} y={1380} width={130} height={140} fill={CP.kraft} filter="url(#torn)" />
+          </g>
+          <rect x={690} y={1404} width={96} height={70} fill={CP.white} filter="url(#tornS)" transform="rotate(14 738 1440)" />
+          <rect x={770} y={1430} width={90} height={66} fill={CP.cream} filter="url(#tornS)" transform="rotate(-9 815 1463)" />
+          {/* slow Zs */}
+          {[0, 1, 2].map((k) => { const t = ((f + k * 22) % 66) / 66; return <text key={k} x={300 + k * 34 + t * 30} y={1010 - t * 150 - k * 26} fontFamily="ArchivoBlack" fontSize={34 + k * 12} fill={CP.cream} opacity={0.75 * (1 - t)}>z</text>; })}
+        </svg>
+        <CHook lines={s.hook ?? [s.line]} red={s.red} />
+      </AbsoluteFill>
+    );
+  }
+  const SH = 1150, FX = 400; // shelf top, folder middle
+  const Milo = (panic: number) => <CMilo x={140} y={1650} s={0.7} flip tote={false} panic={panic} />;
+  if (s.beat === "dust") {
+    const spiderAt = s.spiderAt ?? 60, noteAt = s.noteAt ?? 6;
+    const dust = cease(f, 4, 50);
+    const drop = spring({ frame: f - spiderAt, fps, config: { damping: 9, mass: 0.7, stiffness: 70 } });
+    const sy = 560 + drop * 330, sx = FX + 370 + Math.sin(f / 11) * 8;
+    const signK = spring({ frame: f - spiderAt - 22, fps, config: { damping: 10, mass: 0.5 } });
+    return (
+      <AbsoluteFill>
+        <Sfx name="pop" at={noteAt} vol={0.45} />
+        <Sfx name="cine/toing" at={spiderAt} vol={0.5} />
+        <Sfx name="cine/plink" at={spiderAt + 22} vol={0.5} />
+        <ShelfWall y={SH} />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <PFolder x={FX} y={SH} k={1.2} dust={dust} />
+          {/* dust motes settling */}
+          {Array.from({ length: 10 }).map((_, k) => { const t = ((f + k * 13) % 80) / 80; return <circle key={k} cx={330 + k * 44 + Math.sin(k * 3 + f / 20) * 12} cy={700 + t * 200} r={5 + (k % 3) * 2} fill={SOFA.dust} opacity={0.7 * (1 - t) * dust} />; })}
+          {/* the spider: a thread, a round body, eight legs, two eyes, and its tiny sign */}
+          {f >= spiderAt && (
+            <g>
+              <rect x={sx - 1.5} y={540} width={3} height={sy - 540} fill={CP.cream} opacity={0.8} />
+              <g transform={`translate(${sx} ${sy})`}>
+                <g filter="url(#tornS)">
+                  {[-1, 1].map((d) => [0, 1, 2, 3].map((k) => <rect key={`${d}${k}`} x={d > 0 ? 18 : -62} y={-16 + k * 12} width={44} height={6} rx={3} fill={CP.ink} transform={`rotate(${d * (-28 + k * 18)} ${d * 18} ${-13 + k * 12})`} />))}
+                  <circle cx={0} cy={0} r={34} fill={CP.ink} />
+                  <circle cx={-11} cy={-6} r={8} fill={CP.white} /><circle cx={11} cy={-6} r={8} fill={CP.white} />
+                  <circle cx={-10} cy={-5} r={3.5} fill={CP.ink} /><circle cx={12} cy={-5} r={3.5} fill={CP.ink} />
+                </g>
+                {signK > 0.02 && (
+                  <g transform={`translate(0 ${40}) scale(${signK}) rotate(${Math.sin(f / 9) * 4})`}>
+                    <rect x={-1.5} y={0} width={3} height={34} fill={CP.cream} />
+                    <rect x={-150} y={32} width={300} height={86} fill={CP.white} filter="url(#tornS)" />
+                    <text x={0} y={92} textAnchor="middle" fontFamily="Caveat" fontSize={46} fill={CP.ink}>{s.sign ?? "home sweet home"}</text>
+                  </g>
+                )}
+              </g>
+            </g>
+          )}
+          {Milo(f > spiderAt + 10 ? 0.7 : 0.2)}
+          {s.note && <CNote text={s.note} x={330} y={770} rot={-4} size={60} at={noteAt} />}
+        </svg>
+        <CTitle text={s.line} accent={s.accent} y={262} />
+      </AbsoluteFill>
+    );
+  }
+  // tomorrow: the calendar keeps flipping to TOMORROW, the plant grows over the folder
+  const flips = s.flips ?? [20, 44, 68], growAt = s.growAt ?? 50;
+  const grow = cease(f, growAt, growAt + 50);
+  const leaves: [number, number, number, number][] = [[-250, -70, 30, 0.02], [-210, -150, -30, 0.1], [-150, -220, 20, 0.2], [-90, -270, -40, 0.3], [-20, -250, 35, 0.4], [50, -280, -20, 0.5],
+    [110, -230, 40, 0.6], [150, -150, -35, 0.68], [90, -120, 20, 0.76], [10, -150, -25, 0.84], [-70, -110, 30, 0.9], [170, -60, -15, 0.96]];
+  return (
+    <AbsoluteFill>
+      {flips.map((a, k) => <Sfx key={k} name="toss" at={a} vol={0.45} />)}
+      <Sfx name="cine/toing" at={growAt + 46} vol={0.45} />
+      <ShelfWall y={SH} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <PFolder x={FX} y={SH} k={1.2} dust={1} />
+        {/* the pot at the end of the shelf and its vine creeping over the folder */}
+        <path d={`M${FX + 300} ${SH - 80} q -60 -150 -250 -190 q -160 -30 -300 60`} fill="none" stroke={SOFA.leaf} strokeWidth={12} strokeLinecap="round" strokeDasharray={900} strokeDashoffset={900 * (1 - grow)} />
+        <path d={`M${FX + 240} ${SH} l 20 -96 h 110 l 20 96 z`} fill={SOFA.pot} filter="url(#torn)" />
+        {leaves.map(([dx, dy, r, at], k) => { const q = spring({ frame: f - growAt - at * 50, fps, config: { damping: 9, mass: 0.5 } }); if (q < 0.02) return null;
+          return <g key={k} transform={`translate(${FX + 40 + dx} ${SH + dy}) rotate(${r}) scale(${q})`}><ellipse cx={0} cy={0} rx={62} ry={30} fill={k % 2 ? SOFA.leaf2 : SOFA.leaf} filter="url(#tornS)" /></g>; })}
+        {/* the tear-off calendar: every page says TOMORROW */}
+        <g transform="translate(250 730)">
+          <rect x={-140} y={-150} width={280} height={300} fill={CP.white} filter="url(#torn)" />
+          <rect x={-140} y={-150} width={280} height={64} fill={CP.red} />
+          <text x={0} y={-104} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={34} fill={CP.cream}>I'LL DO ONE</text>
+          <text x={0} y={36} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={40} fill={CP.ink}>TOMORROW</text>
+          <text x={0} y={104} textAnchor="middle" fontFamily="Caveat" fontSize={46} fill={CP.ink}>{`(day ${22 + flips.filter((a) => f >= a + 8).length})`}</text>
+          {flips.map((a, k) => { const t = interpolate(f, [a, a + 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }); if (t <= 0 || t >= 1) return null;
+            return <g key={k} transform={`translate(${t * 260} ${t * t * 520}) rotate(${t * 70})`} opacity={1 - t * 0.3}><rect x={-140} y={-86} width={280} height={236} fill={CP.cream} filter="url(#tornS)" /><text x={0} y={36} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={40} fill={CP.ink}>TOMORROW</text></g>; })}
+        </g>
+        {Milo(0.3 + 0.7 * grow)}
+      </svg>
+      <CTitle text={s.line} accent={s.accent} y={262} />
+    </AbsoluteFill>
+  );
+};
+
 // ---------- busstop: a love confession at the bus stop, cut-paper collage (2026-11-26) ----------
 /** Milo rehearses a love confession into his phone at a bus stop at dusk, paper hearts rising. Three beats:
  *  "hook" (the stop, the hook card from frame 0), "bus" (the bus pulls up, the doors open, he steps on mid
@@ -4786,6 +4931,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "cutout" ? <CutoutScene s={sc} /> :
       sc.type === "busstop" ? <BusStopScene s={sc} /> :
       sc.type === "libdesk" ? <LibDeskScene s={sc} /> :
+      sc.type === "sofa" ? <SofaScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

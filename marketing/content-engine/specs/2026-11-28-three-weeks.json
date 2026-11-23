@@ -1,0 +1,515 @@
+{
+  "id": "2026-11-28-three-weeks",
+  "look": "collage",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "Three weeks without saying a monologue out loud.",
+        "say": "[amused] Three weeks without saying a monologue out loud.",
+        "sub": false,
+        "at": 0.46,
+        "words": [
+          {
+            "w": "Three",
+            "s": 0.0,
+            "e": 0.032
+          },
+          {
+            "w": "weeks",
+            "s": 0.086,
+            "e": 0.352
+          },
+          {
+            "w": "without",
+            "s": 0.384,
+            "e": 0.608
+          },
+          {
+            "w": "saying",
+            "s": 0.645,
+            "e": 0.864
+          },
+          {
+            "w": "a",
+            "s": 0.896,
+            "e": 0.928
+          },
+          {
+            "w": "monologue",
+            "s": 0.96,
+            "e": 1.312
+          },
+          {
+            "w": "out",
+            "s": 1.344,
+            "e": 1.44
+          },
+          {
+            "w": "loud.",
+            "s": 1.504,
+            "e": 1.824
+          }
+        ],
+        "dur": 1.944
+      },
+      {
+        "text": "I'm an actor, I act, but a spider has moved into my audition folder.",
+        "say": "I'm an actor, I act, but a spider has moved into my audition folder.",
+        "at": 2.668,
+        "words": [
+          {
+            "w": "I'm",
+            "s": 0.0,
+            "e": 0.448
+          },
+          {
+            "w": "an",
+            "s": 0.47,
+            "e": 0.512
+          },
+          {
+            "w": "actor,",
+            "s": 0.566,
+            "e": 0.96
+          },
+          {
+            "w": "I",
+            "s": 1.024,
+            "e": 1.088
+          },
+          {
+            "w": "act,",
+            "s": 1.184,
+            "e": 1.792
+          },
+          {
+            "w": "but",
+            "s": 1.872,
+            "e": 2.112
+          },
+          {
+            "w": "a",
+            "s": 2.176,
+            "e": 2.24
+          },
+          {
+            "w": "spider",
+            "s": 2.286,
+            "e": 2.56
+          },
+          {
+            "w": "has",
+            "s": 2.592,
+            "e": 2.688
+          },
+          {
+            "w": "moved",
+            "s": 2.73,
+            "e": 2.944
+          },
+          {
+            "w": "into",
+            "s": 2.97,
+            "e": 3.072
+          },
+          {
+            "w": "my",
+            "s": 3.114,
+            "e": 3.2
+          },
+          {
+            "w": "audition",
+            "s": 3.242,
+            "e": 3.584
+          },
+          {
+            "w": "folder.",
+            "s": 3.639,
+            "e": 4.032
+          }
+        ],
+        "dur": 4.152
+      },
+      {
+        "text": "I keep saying I'll do one tomorrow, and now a plant is growing over it.",
+        "say": "[playful] I keep saying I'll do one tomorrow, and now a plant is growing over it.",
+        "at": 7.652,
+        "words": [
+          {
+            "w": "I",
+            "s": 0.0,
+            "e": 0.008
+          },
+          {
+            "w": "keep",
+            "s": 0.034,
+            "e": 0.136
+          },
+          {
+            "w": "saying",
+            "s": 0.173,
+            "e": 0.392
+          },
+          {
+            "w": "I'll",
+            "s": 0.424,
+            "e": 0.52
+          },
+          {
+            "w": "do",
+            "s": 0.562,
+            "e": 0.648
+          },
+          {
+            "w": "one",
+            "s": 0.68,
+            "e": 0.776
+          },
+          {
+            "w": "tomorrow,",
+            "s": 0.826,
+            "e": 1.416
+          },
+          {
+            "w": "and",
+            "s": 1.464,
+            "e": 1.608
+          },
+          {
+            "w": "now",
+            "s": 1.64,
+            "e": 1.736
+          },
+          {
+            "w": "a",
+            "s": 1.8,
+            "e": 1.864
+          },
+          {
+            "w": "plant",
+            "s": 1.906,
+            "e": 2.12
+          },
+          {
+            "w": "is",
+            "s": 2.162,
+            "e": 2.248
+          },
+          {
+            "w": "growing",
+            "s": 2.28,
+            "e": 2.504
+          },
+          {
+            "w": "over",
+            "s": 2.542,
+            "e": 2.696
+          },
+          {
+            "w": "it.",
+            "s": 2.76,
+            "e": 3.304
+          }
+        ],
+        "dur": 3.424
+      },
+      {
+        "text": "So I opened Ghost Light, and tonight's speech was already waiting, so I tapped Read it, and said Van, from What Happened to the Dollar, out loud.",
+        "say": "[upbeat] So I opened Ghost Light, and tonight's speech was already waiting, so I tapped Read it, and said Van, from What Happened to the Dollar, out loud.",
+        "sub": false,
+        "at": 11.426,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.01
+          },
+          {
+            "w": "I",
+            "s": 0.074,
+            "e": 0.138
+          },
+          {
+            "w": "opened",
+            "s": 0.175,
+            "e": 0.394
+          },
+          {
+            "w": "Ghost",
+            "s": 0.448,
+            "e": 0.714
+          },
+          {
+            "w": "Light,",
+            "s": 0.757,
+            "e": 1.162
+          },
+          {
+            "w": "and",
+            "s": 1.194,
+            "e": 1.29
+          },
+          {
+            "w": "tonight's",
+            "s": 1.322,
+            "e": 1.61
+          },
+          {
+            "w": "speech",
+            "s": 1.647,
+            "e": 1.866
+          },
+          {
+            "w": "was",
+            "s": 1.898,
+            "e": 1.994
+          },
+          {
+            "w": "already",
+            "s": 2.026,
+            "e": 2.25
+          },
+          {
+            "w": "waiting,",
+            "s": 2.298,
+            "e": 3.274
+          },
+          {
+            "w": "so",
+            "s": 3.317,
+            "e": 3.402
+          },
+          {
+            "w": "I",
+            "s": 3.434,
+            "e": 3.466
+          },
+          {
+            "w": "tapped",
+            "s": 3.512,
+            "e": 3.786
+          },
+          {
+            "w": "Read",
+            "s": 3.85,
+            "e": 4.106
+          },
+          {
+            "w": "it,",
+            "s": 4.149,
+            "e": 4.298
+          },
+          {
+            "w": "and",
+            "s": 4.378,
+            "e": 4.618
+          },
+          {
+            "w": "said",
+            "s": 4.657,
+            "e": 4.81
+          },
+          {
+            "w": "Van,",
+            "s": 4.97,
+            "e": 5.514
+          },
+          {
+            "w": "from",
+            "s": 5.642,
+            "e": 6.154
+          },
+          {
+            "w": "What",
+            "s": 6.218,
+            "e": 6.474
+          },
+          {
+            "w": "Happened",
+            "s": 6.513,
+            "e": 6.73
+          },
+          {
+            "w": "to",
+            "s": 6.752,
+            "e": 6.794
+          },
+          {
+            "w": "the",
+            "s": 6.81,
+            "e": 6.858
+          },
+          {
+            "w": "Dollar,",
+            "s": 6.914,
+            "e": 7.306
+          },
+          {
+            "w": "out",
+            "s": 7.418,
+            "e": 7.754
+          },
+          {
+            "w": "loud.",
+            "s": 7.831,
+            "e": 8.65
+          }
+        ],
+        "dur": 8.77
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "sub": false,
+        "at": 20.69,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.186
+          },
+          {
+            "w": "Ghost",
+            "s": 0.212,
+            "e": 0.346
+          },
+          {
+            "w": "Light.",
+            "s": 0.388,
+            "e": 0.922
+          },
+          {
+            "w": "Built",
+            "s": 0.975,
+            "e": 1.242
+          },
+          {
+            "w": "by",
+            "s": 1.306,
+            "e": 1.434
+          },
+          {
+            "w": "a",
+            "s": 1.466,
+            "e": 1.498
+          },
+          {
+            "w": "working",
+            "s": 1.538,
+            "e": 1.818
+          },
+          {
+            "w": "actor.",
+            "s": 1.882,
+            "e": 2.266
+          }
+        ],
+        "dur": 2.386
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-28-three-weeks/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.25
+  },
+  "scenes": [
+    {
+      "type": "sofa",
+      "beat": "hook",
+      "seconds": 2.568,
+      "line": "Three weeks without saying a monologue out loud.",
+      "hook": [
+        "Three weeks",
+        "without saying",
+        "a monologue",
+        "out loud."
+      ],
+      "red": [
+        0,
+        3
+      ]
+    },
+    {
+      "type": "sofa",
+      "beat": "dust",
+      "seconds": 4.984,
+      "line": "A spider moved in.",
+      "accent": "moved in.",
+      "note": "I'm an actor. I act.",
+      "noteAt": 6,
+      "spiderAt": 66,
+      "sign": "home sweet home"
+    },
+    {
+      "type": "sofa",
+      "beat": "tomorrow",
+      "seconds": 3.774,
+      "line": "I'll do one tomorrow.",
+      "accent": "tomorrow.",
+      "flips": [
+        22,
+        40,
+        58
+      ],
+      "growAt": 50
+    },
+    {
+      "type": "screens",
+      "seconds": 9.214,
+      "line": "One speech a night.",
+      "accent": "a night.",
+      "shots": [
+        {
+          "src": "story/2026-11-28-three-weeks/home.png",
+          "at": 0,
+          "tap": {
+            "x": 0.163,
+            "y": 0.65,
+            "at": 118
+          }
+        },
+        {
+          "src": "story/2026-11-28-three-weeks/open.png",
+          "at": 132
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "tiktok": "Three weeks without saying a monologue out loud. How long has it been for you? Ghost Light has one speech waiting every night. The voice is AI. #monologue #audition #actorslife #actortok #theatrekid",
+    "youtube_title": "Three weeks without saying a monologue out loud. #shorts",
+    "youtube_description": "Three weeks without saying a monologue out loud.\nMilo is an actor, he acts, but a spider has moved into his audition folder and a plant is growing over it. So he opened Ghost Light, where tonight's speech was already waiting, and said Van from What Happened to the Dollar by Sam Graber out loud. Free on the App Store. Built by a working actor. The voice is AI.\n#monologue #audition #actorslife #acting",
+    "instagram": "Three weeks without saying a monologue out loud.\n\nSigns it has been too long:\n1. A spider lives in your audition folder.\n2. You said \"tomorrow\" yesterday.\n3. A plant is winning.\n\nGhost Light keeps one speech waiting for you every night. Tap Read it and say it out loud. Tonight Milo got Van from What Happened to the Dollar by Sam Graber.\n\nFree on the App Store, built by a working actor. Link in bio. The voice is AI.\n\n#monologue #audition #actorslife #actorsofinstagram #actortraining"
+  },
+  "cover_ms": 300,
+  "source": {
+    "plan": "Callboard row 2026-11-28 (storyhowto, story-howto), the earliest planned row on 2026-11-23; look collage per DIRECTION 2026-11-20 (the row said noir)",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "sql": "select m.id, m.character_name, m.estimated_duration_seconds, p.* from monologues m join plays p on p.id=m.play_id where p.title ilike 'What Happened to the Dollar%'",
+    "checked": "2026-11-23: Tonight's speech for the demo account was Van, What Happened to the Dollar (Sam Graber, play 3417, 2012, copyrighted, fair_use, source_url set), 1:32 on the read page",
+    "changed_from_plan": "the row asked for public domain text on screen; tonight's real pick was a copyrighted play, so the speech text is blurred on the card and the opened page; character, play, playwright and length stay sharp",
+    "app": "Ghost Light web preview built from actorrise main apps/mobile (7a66bbb0) plus web-preview.patch, dark theme, demo account, 2026-11-23",
+    "flow": "flows/tonight-three-weeks.json (shots -> public/story/2026-11-28-three-weeks/*.png)",
+    "voice": "George, one take at stability 0.5, Scribe 1.00, sped up 1.25x with fit_take.py; AI voice, labelled on every platform",
+    "new_scene_types": "sofa (cut-paper collage) with three beats: hook, dust, tomorrow. New collage pieces: the sofa and cushion, PFolder, ShelfWall, the paper spider and its sign, the tear-off calendar, the pot plant and vine",
+    "motifs": "milo-flat-on-sofa,dusty-audition-folder,spider-home-sweet-home-sign,tear-off-calendar-tomorrow,plant-grows-over-folder,scarf-trails-to-spilled-tote",
+    "end": "specs/2026-11-28-three-weeks-end.json, joined with scripts/join.sh",
+    "feature": "tonight",
+    "trypost": {
+      "tiktok": "01a20736-1857-714b-8dc4-2df7f75a0260",
+      "youtube": "01a20736-1861-70da-8585-bf4d299f9d6e",
+      "instagram": "01a20736-1868-7368-bd2f-979eac270071",
+      "status": "draft"
+    }
+  }
+}
