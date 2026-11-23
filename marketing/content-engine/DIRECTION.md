@@ -3,6 +3,30 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-23: the edit kit, catchy and modern (wins over everything below)
+
+Canberk wants what people do on TikTok now: catchy, nice sounds and effects, transitions. Research said:
+cut to the beat, something changes every 1 to 2 seconds, real transitions (whip, zoom punch, mask), sound
+effects as punctuation (whoosh, pop, click), energetic voice, trending audio. Built into StoryVideo:
+- **Transitions:** per scene `"in": "whip" | "punch" | "tear" | "cut" | "slide"`, or spec `"transition"` for
+  all. whip = fast pan with motion blur and a whoosh; punch = hard cut punching in from 1.22x with a low
+  thump; tear = the next scene tears up over the last with a paper rip (collage); cut = hard cut. Mix them:
+  whip between places, punch on reveals and jokes, tear into the app half, cut on the beat. `slide` (the old
+  slow pan) only when a scene needs to breathe.
+- **New sounds** in public/sfx: whoosh, punch, riser (into the turn "So I opened Ghost Light"), rip; plus pop,
+  boop, thud. Pops on words and taps, a riser before the turn. Always under the voice.
+- **Pace:** nothing on screen stays still longer than about 1.5 seconds; split long beats into two scenes
+  joined by a cut or punch. Scene changes land on a voice line start (they are fitted to the read).
+- **Voice:** George faster and brighter, like telling a friend something great, still clean diction;
+  [excited] or [playful] at a line start, short sentences.
+- **Trending audio (Instagram):** when a reel would benefit, try search-instagram-audio-tool for a trending
+  track and attach it to the Instagram draft with audio_volume about 12 and video_volume 100 (our mix stays
+  on top). Note which track in the post notes.
+- **Formats to make next (Canberk said yes to the brainstorm):** the monologue tier list, the nature
+  documentary of the audition lobby, the speedrun (any%), then the dating profiles, guess the play in 3 words,
+  things casting is tired of, a day in the life of the Juliet script, the horror trailer, app sound ASMR.
+  All in the collage world with Milo, all ending on the real app and the Ghost Light card. Facts true.
+
 ## 2026-11-20, later: three new worlds, cut-paper collage first; the voice never says "POV" (wins over everything below)
 
 Canberk saw three new concepts (reference/concepts/concepts.png and .html: A notebook doodle, B manga

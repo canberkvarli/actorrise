@@ -133,7 +133,13 @@ export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | No
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
 export type StoryVoice = { lines: { text: string; at: number; sub?: boolean; audio?: string; dur?: number; words?: { w: string; s: number; e: number }[] }[]; volume?: number; subtitles?: boolean; take?: string; take_at?: number; takes?: { audio: string; at: number; voice?: string }[] };
-export type StorySpec = { id: string; scenes: StoryScene[]; music?: StoryMusic; look?: StoryLook; voice?: StoryVoice };
+/** How a scene arrives (2026-11-23, the edit kit, Canberk: "catchy, nice sounds and effects, transitions"):
+ *  slide = the paper camera pan (old default), whip = a fast whip pan with motion blur and a whoosh,
+ *  punch = hard cut that punches in from 1.22x with a low thump, tear = the new scene tears up over the old
+ *  one with a paper rip (collage), cut = a hard cut on the beat. Set per scene with "in", or for the
+ *  whole film with spec "transition". */
+export type StoryTransition = "slide" | "whip" | "punch" | "tear" | "cut";
+export type StorySpec = { id: string; scenes: StoryScene[]; music?: StoryMusic; look?: StoryLook; voice?: StoryVoice; transition?: StoryTransition };
 export const storyFrames = (s: StorySpec) =>
   s.scenes.reduce((n, sc) => n + Math.round(sc.seconds * FPS), 0);
 
@@ -4870,12 +4876,21 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
   }
   // Phone shots that follow another phone shot stay in place (screen swap), no camera move.
   const ph = (t?: string) => t === "phone" || t === "screens";
-  const moves = spec.scenes.map((sc, i) => i > 0 && !(ph(sc.type) && ph(spec.scenes[i - 1].type)));
+  const trans: (StoryTransition | "swap" | "none")[] = spec.scenes.map((sc, i) =>
+    i === 0 ? "none" : ph(sc.type) && ph(spec.scenes[i - 1].type) ? "swap"
+      : ((sc as { in?: StoryTransition }).in ?? spec.transition ?? "slide"));
+  const moves = trans.map((t) => t === "slide" || t === "whip");
+  const TT = trans.map((t) => (t === "whip" ? 9 : T)); // frames the camera takes to arrive
   const slot: number[] = [];
   spec.scenes.forEach((_, i) => slot.push(i === 0 ? 0 : slot[i - 1] + (moves[i] ? 1 : 0)));
   let cam = 0;
+  let blur = 0;
   spec.scenes.forEach((_, i) => {
-    if (i > 0 && moves[i]) cam += prog(frame, starts[i] - T, starts[i]);
+    if (i > 0 && moves[i]) {
+      const p = prog(frame, starts[i] - TT[i], starts[i]);
+      cam += p;
+      if (trans[i] === "whip") blur = Math.max(blur, 26 * Math.sin(Math.PI * p));
+    }
   });
   // gentle sway so the camera is never fully parked
   const sway = 26 * Math.sin(frame / 38);
@@ -4969,26 +4984,43 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
         </Sequence>
       ))}
       {LOOK !== "collage" && <Thread slots={slots} cam={camEase} />}
+      {blur > 0.5 && (
+        <svg width={0} height={0} style={{ position: "absolute" }}>
+          <filter id="mblur" x="-10%" y="0" width="120%" height="100%"><feGaussianBlur stdDeviation={`${blur.toFixed(1)} 0`} /></filter>
+        </svg>
+      )}
       {spec.scenes.map((sc, i) => {
         const frames = Math.round(sc.seconds * FPS);
         const x = slot[i] * 1080 - camEase;
+        const tr = trans[i];
+        const from = i === 0 ? -PREROLL : moves[i] ? starts[i] - TT[i] : starts[i];
+        const under = trans[i + 1] === "tear" ? 12 : 0; // stay underneath while the next scene tears in
+        const look = LOOK === "riso" ? "drop-shadow(7px 5px 0 rgba(255,61,127,0.55))"
+          : LOOK === "sketch" && sc.type !== "screens" ? "url(#pencil)" : "";
+        const filt = [look, blur > 0.5 ? "url(#mblur)" : ""].filter(Boolean).join(" ") || undefined;
+        // punch: scale in from 1.22 over 8 frames; tear: a torn edge sweeps up from the bottom over 12 frames
+        const lf = frame - starts[i];
+        const punch = tr === "punch" && lf >= 0 && lf < 10 ? 1 + 0.22 * (1 - Easing.out(Easing.cubic)(lf / 10)) : 1;
+        let clip: string | undefined;
+        if (tr === "tear" && lf < 12) {
+          const top = 1920 * (1 - Easing.out(Easing.cubic)(Math.max(0, lf) / 12));
+          const pts = Array.from({ length: 19 }, (_, k) => `${(k * 60).toFixed(0)}px ${(top + ((k * 37 + i * 11) % 5) * 9 - 18).toFixed(0)}px`);
+          clip = `polygon(${pts.join(", ")}, 1080px 1920px, 0px 1920px)`;
+        }
         return (
           <React.Fragment key={i}>
-            {moves[i] && <Sfx name="slide" at={starts[i] - T} vol={0.28} />}
-            {moves[i] && LOOK !== "collage" && (
+            {tr === "slide" && <Sfx name="slide" at={starts[i] - T} vol={0.28} />}
+            {tr === "whip" && <Sfx name="whoosh" at={starts[i] - TT[i] - 2} vol={0.42} />}
+            {tr === "punch" && <Sfx name="punch" at={starts[i]} vol={0.5} />}
+            {tr === "tear" && <Sfx name="rip" at={starts[i] - 1} vol={0.45} />}
+            {tr === "slide" && LOOK !== "collage" && (
               <Sequence from={starts[i] - T - 2} durationInFrames={T + 14}>
                 <Streaks seed={i} />
               </Sequence>
             )}
-            <Sequence
-              from={i === 0 ? -PREROLL : moves[i] ? starts[i] - T : starts[i]}
-              durationInFrames={frames + (moves[i] ? T : 0) + (i === 0 ? PREROLL : 0)}
-            >
-              <SceneStartCtx.Provider value={i === 0 ? -PREROLL : moves[i] ? starts[i] - T : starts[i]}>
-                <AbsoluteFill style={{ transform: `translateX(${x}px)`,
-                  // riso: the second ink printed off register, so every line carries a pink ghost
-                  filter: LOOK === "riso" ? "drop-shadow(7px 5px 0 rgba(255,61,127,0.55))"
-                    : LOOK === "sketch" && sc.type !== "screens" ? "url(#pencil)" : undefined }}>{renderScene(sc, i)}</AbsoluteFill>
+            <Sequence from={from} durationInFrames={frames + (moves[i] ? TT[i] : 0) + (i === 0 ? PREROLL : 0) + under}>
+              <SceneStartCtx.Provider value={from}>
+                <AbsoluteFill style={{ transform: `translateX(${x}px) scale(${punch})`, filter: filt, clipPath: clip }}>{renderScene(sc, i)}</AbsoluteFill>
               </SceneStartCtx.Provider>
             </Sequence>
           </React.Fragment>
