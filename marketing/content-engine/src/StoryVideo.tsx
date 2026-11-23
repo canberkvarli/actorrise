@@ -4878,7 +4878,8 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
   const ph = (t?: string) => t === "phone" || t === "screens";
   const trans: (StoryTransition | "swap" | "none")[] = spec.scenes.map((sc, i) =>
     i === 0 ? "none" : ph(sc.type) && ph(spec.scenes[i - 1].type) ? "swap"
-      : ((sc as { in?: StoryTransition }).in ?? spec.transition ?? "slide"));
+      : (((t: StoryTransition) => (t === "tear" ? "cut" : t))((sc as { in?: StoryTransition }).in ?? spec.transition ?? "slide")));
+  // tear is retired (Canberk, 2026-11-24: "paper tear not good"); a tear in a spec plays as a hard cut
   const moves = trans.map((t) => t === "slide" || t === "whip");
   const TT = trans.map((t) => (t === "whip" ? 9 : T)); // frames the camera takes to arrive
   const slot: number[] = [];
@@ -5010,7 +5011,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
         return (
           <React.Fragment key={i}>
             {tr === "slide" && <Sfx name="slide" at={starts[i] - T} vol={0.28} />}
-            {tr === "whip" && <Sfx name="whoosh" at={starts[i] - TT[i] - 2} vol={0.42} />}
+            {tr === "whip" && <Sfx name="whoosh" at={starts[i] - TT[i] - 2} vol={0.3} />}
             {tr === "punch" && <Sfx name="punch" at={starts[i]} vol={0.5} />}
             {tr === "tear" && <Sfx name="rip" at={starts[i] - 1} vol={0.45} />}
             {tr === "slide" && LOOK !== "collage" && (
