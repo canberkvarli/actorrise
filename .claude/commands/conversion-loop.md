@@ -353,6 +353,11 @@ making in a month as well, I know it fluctuates but it's important"). Gross, bef
   Stripe's `cancellation_details`. (2026-10-27: the loop read the last PAID invoice instead,
   counted a payer who had cancelled on 10-22 for five days, and printed $72 against the
   admin's $60.) Cash: the sum of `amount_paid` on `status='paid'` invoices in the last 30 days.
+  **Read it, do not recompute it.** `loop_snapshot.py take` stores the admin's own numbers
+  under `money` (`mrr_now_usd`, `paying_count`, `cash_monthly_usd`); print those. A yearly
+  comp whose 100%-off coupon ends before its renewal previews at $99 though it has never
+  paid, and the admin leaves it out (`_has_paid`). A hand-rolled preview loop counted three
+  of those on 2026-11-25 and printed $72.75 from 7 payers against the admin's $48 from 4.
 - App: RevenueCat's MRR from `revenuecat_report.py` (trials are $0 there already).
 - Payers: the web subscriptions that count plus the app ones that are `active` and paid.
 If either source fails, print what came back and say which part is missing; never a
