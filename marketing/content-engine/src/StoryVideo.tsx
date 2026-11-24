@@ -128,7 +128,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | Sofa | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | Sofa | Scroll | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -4535,6 +4535,195 @@ const SofaScene: React.FC<{ s: Sofa }> = ({ s }) => {
   );
 };
 
+// ---------- scroll: the notice says ninety seconds, the speech is three minutes, cut-paper collage (2026-11-29) ----------
+/** Milo's favourite speech is a paper scroll. Four beats: "hook" (he holds it up, it drops to the floor and rolls
+ *  away, the hook card from frame 0, the tote already tipped over), "unroll" (the hallway slides by, the roll
+ *  keeps going with his scarf wound into it, a time flag pops up at every half minute, the ninety second one in
+ *  red), "notice" (the audition notice on the wall, the fat roll with its length slapped on it, the scarf pulled
+ *  tight), "page" (after the app: the scroll snaps back to one page with its real length on a tag).
+ *  All new torn paper pieces: the scroll, the roll, the hallway doors, the time flags, the notice. */
+type Scroll = { type: "scroll"; beat: "hook" | "unroll" | "notice" | "page"; seconds: number; line: string; accent?: string;
+  hook?: string[]; red?: number[]; /** what the scroll is, two short lines */ label?: [string, string];
+  /** unroll: the time flags, and which one the notice stops at */ marks?: string[]; stop?: number; stopNote?: string;
+  /** notice: its lines (the last one is the limit, in red), the length slapped on the roll */ notice?: string[]; tag?: string; tagAt?: number; ringAt?: number;
+  /** page: the real length of the piece he found */ len?: string; name?: string; snapAt?: number; lenAt?: number };
+const SCR = { wall: "#2c5a52", hall: "#3d3a5c", floor: "#8a4b2f", door: "#2a2030", doorTrim: "#d9cbb0", paper: "#fbf7ee", rule: "#b9ad96", skirt: "#e6d9bf" };
+const SCR_FL = 1180;
+/** The end of the scroll, still rolled: a paper disc with its spiral, turning as it goes. (x, y = its middle) */
+const PRoll: React.FC<{ x: number; y: number; r: number; turn?: number }> = ({ x, y, r, turn = 0 }) => (
+  <g transform={`translate(${x} ${y})`}>
+    <circle r={r} fill={SCR.paper} filter="url(#torn)" />
+    <g transform={`rotate(${turn})`}>
+      <circle r={r * 0.68} fill={SCR.rule} opacity={0.55} /><circle r={r * 0.5} fill={SCR.paper} />
+      <circle r={r * 0.3} fill={SCR.rule} opacity={0.55} /><circle r={r * 0.14} fill={SCR.paper} />
+      <rect x={-3} y={-r * 0.95} width={6} height={r * 0.5} fill={SCR.rule} />
+    </g>
+  </g>
+);
+/** The scroll lying along the floor from x1 to x2: a long cream band with the lines of the speech across it. */
+const PBand: React.FC<{ x1: number; x2: number; y: number; h?: number; shift?: number }> = ({ x1, x2, y, h = 112, shift = 0 }) => {
+  if (x2 - x1 < 6) return null;
+  const ticks: React.ReactNode[] = [];
+  for (let x = x1 + 22 - (((shift % 26) + 26) % 26); x < x2 - 14; x += 26) { const k = Math.round((x + shift) / 26); if (x > x1 + 8) ticks.push(<rect key={k} x={x} y={y + 16 + (k % 5 === 0 ? 14 : 0)} width={6} height={h - 34 - ((k * 7) % 4) * 10} fill={SCR.rule} opacity={k % 9 === 0 ? 0 : 0.75} />); }
+  return <g><rect x={x1} y={y} width={x2 - x1} height={h} fill={SCR.paper} filter="url(#torn)" />{ticks}</g>;
+};
+const ScrollScene: React.FC<{ s: Scroll }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const N = Math.round(s.seconds * fps);
+  const BY = SCR_FL + 44; // top of the band on the floor
+  const Room: React.FC<{ wall?: string }> = ({ wall = SCR.wall }) => (
+    <g>
+      <rect width={1080} height={1920} fill={wall} filter="url(#fibre)" />
+      <rect x={-30} y={SCR_FL} width={1140} height={820} fill={SCR.floor} filter="url(#torn)" />
+      <rect x={-30} y={SCR_FL - 26} width={1140} height={30} fill={SCR.skirt} filter="url(#tornS)" />
+    </g>
+  );
+  if (s.beat === "hook") {
+    const lf = f - PREROLL, MX = 300, MS = 0.86, MY = SCR_FL + 10;
+    const barY = MY - 216 * MS, x1 = MX - 132 * MS, x2 = MX + 150 * MS;
+    const roll = cease(lf, 10, Math.max(40, N - 8));
+    const rx = x2 + 40 + roll * (1240 - x2);
+    return (
+      <AbsoluteFill>
+        <Sfx name="cine/plink" at={PREROLL + 3} vol={0.45} />
+        <Sfx name="slide" at={PREROLL + 10} vol={0.5} />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <Room />
+          {/* the tote, tipped over behind him, scripts sliding out */}
+          <g transform="rotate(-80 92 1130)"><rect x={40} y={1070} width={130} height={140} fill={CP.kraft} filter="url(#torn)" /></g>
+          <rect x={18} y={SCR_FL + 6} width={96} height={70} fill={CP.white} filter="url(#tornS)" transform={`rotate(12 66 ${SCR_FL + 40})`} />
+          <rect x={-20} y={SCR_FL + 56} width={90} height={66} fill={CP.cream} filter="url(#tornS)" transform={`rotate(-9 25 ${SCR_FL + 90})`} />
+          <CMilo x={MX} y={MY} s={MS} tote={false} talk={lf > 4 && lf < N - 20 ? 0.4 + 0.4 * Math.abs(Math.sin(f / 2.4)) : 0} />
+          {/* the scroll: a sheet hanging from his hands to the floor, then away along it */}
+          <rect x={x1} y={barY} width={x2 - x1} height={BY + 112 - barY} fill={SCR.paper} filter="url(#torn)" />
+          {Array.from({ length: 5 }).map((_, k) => <rect key={k} x={x1 + 26} y={barY + 150 + k * 24} width={(x2 - x1 - 52) * (k === 4 ? 0.6 : 1)} height={6} fill={SCR.rule} opacity={0.75} />)}
+          {s.label && (<>
+            <text x={(x1 + x2) / 2} y={barY + 74} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={40} fill={CP.ink}>{s.label[0].toUpperCase()}</text>
+            <text x={(x1 + x2) / 2} y={barY + 122} textAnchor="middle" fontFamily="Caveat" fontSize={42} fill={CP.red}>{s.label[1]}</text></>)}
+          <PBand x1={x2 - 8} x2={Math.min(1120, rx)} y={BY} />
+          <rect x={x1 - 14} y={barY - 18} width={x2 - x1 + 28} height={38} rx={19} fill={SCR.skirt} filter="url(#tornS)" />
+          <circle cx={x1 + 4} cy={barY} r={19} fill={CP.skin} filter="url(#tornS)" /><circle cx={x2 - 4} cy={barY} r={19} fill={CP.skin} filter="url(#tornS)" />
+          <PRoll x={rx} y={BY + 50} r={66} turn={roll * 900} />
+        </svg>
+        <CHook lines={s.hook ?? [s.line]} red={s.red} />
+      </AbsoluteFill>
+    );
+  }
+  if (s.beat === "unroll") {
+    const SPEED = 11, pan = f * SPEED, RX = 800, MXu = 150, MSu = 0.72, MYu = SCR_FL + 12;
+    const marks = s.marks ?? [], stop = s.stop ?? -1;
+    const at = (k: number) => Math.round(N * (0.1 + 0.8 * (k / Math.max(1, marks.length - 1))));
+    const hop = -Math.abs(Math.sin(f / 3.2)) * 16;
+    const nx = MXu + 34 * MSu, ny = MYu + hop - 396 * MSu;
+    return (
+      <AbsoluteFill>
+        {marks.map((_, k) => <Sfx key={k} name={k === stop ? "thud" : "pop"} at={at(k)} vol={k === stop ? 0.55 : 0.4} />)}
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <Room wall={SCR.hall} />
+          {/* the hallway going by: doors with their numbers, a neighbour looking out, a pot plant */}
+          {Array.from({ length: 6 }).map((_, k) => { const x = 620 + k * 700 - pan; if (x < -340 || x > 1120) return null;
+            return (<g key={k}>
+              <rect x={x - 16} y={606} width={312} height={SCR_FL - 606} fill={SCR.doorTrim} filter="url(#torn)" />
+              <rect x={x} y={622} width={280} height={SCR_FL - 622} fill={k % 3 === 1 ? "#17110d" : SCR.door} />
+              {k % 3 !== 1 && <circle cx={x + 236} cy={920} r={13} fill={CP.mustard} />}
+              <rect x={x + 96} y={670} width={88} height={56} fill={CP.cream} filter="url(#tornS)" />
+              <text x={x + 140} y={712} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={36} fill={CP.ink}>{`${2 + Math.floor(k / 3)}${"ABC"[k % 3]}`}</text>
+              {k % 3 === 1 && <CPerson x={x + 140} y={SCR_FL - 2} s={0.84} outfit="trousers" top={CP.red} hair={CP.hair2} hairStyle="curly" skin={CP.skin3} arms="hip" seed={k} />}
+            </g>); })}
+          {[0, 1].map((k) => { const x = 1180 + k * 1400 - pan; if (x < -200 || x > 1200) return null;
+            return <g key={k}><ellipse cx={x} cy={970} rx={46} ry={110} fill={CP.green} filter="url(#torn)" transform={`rotate(-14 ${x} 1060)`} /><ellipse cx={x + 40} cy={990} rx={40} ry={96} fill="#3f7d4e" filter="url(#torn)" transform={`rotate(16 ${x} 1060)`} />
+              <path d={`M${x - 50} 1060 h 100 l -16 ${SCR_FL - 1060} h -68 z`} fill={CP.rust} filter="url(#torn)" /></g>; })}
+          <PBand x1={-40} x2={RX} y={BY} shift={pan} />
+          {/* a flag at every half minute, planted as the roll passes; the notice stops at the red one */}
+          {marks.map((m, k) => { const a = at(k); if (f < a) return null; const x = RX - 30 - (f - a) * SPEED; if (x < -200) return null;
+            const q = spring({ frame: f - a, fps, config: { damping: 9, mass: 0.5 } }), red = k === stop;
+            return (<g key={k} transform={`translate(${x} ${BY + 16}) scale(${q}) rotate(${red ? -5 : 4})`}>
+              <rect x={-4} y={-150} width={8} height={156} fill={CP.ink} />
+              <rect x={-2} y={red ? -300 : -214} width={red ? 330 : 170} height={red ? 172 : 86} fill={red ? CP.red : CP.white} filter="url(#tornS)" />
+              <text x={red ? 163 : 83} y={red ? -212 : -154} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={red ? 76 : 50} fill={red ? CP.cream : CP.ink}>{m}</text>
+              {red && s.stopNote && <text x={163} y={-152} textAnchor="middle" fontFamily="Caveat" fontSize={44} fill={CP.cream}>{s.stopNote}</text>}
+            </g>); })}
+          {/* Milo towed along by his scarf, which is wound into the roll */}
+          <path d={`M${nx} ${ny - 12} L ${RX - 20} ${BY + 6} l 10 28 L ${nx} ${ny + 26} Z`} fill={CP.mustard} filter="url(#tornS)" />
+          <g transform={`translate(0 ${hop}) rotate(9 ${MXu} ${MYu})`}><CMilo x={MXu} y={MYu} s={MSu} tote={false} panic={0.85} talk={0.5 + 0.5 * Math.abs(Math.sin(f / 2.6))} /></g>
+          <PRoll x={RX} y={BY + 50} r={62} turn={f * 11} />
+        </svg>
+        <CTitle text={s.line} accent={s.accent} y={262} />
+      </AbsoluteFill>
+    );
+  }
+  if (s.beat === "notice") {
+    const ringAt = s.ringAt ?? Math.round(N * 0.3), tagAt = s.tagAt ?? Math.round(N * 0.62);
+    const nt = s.notice ?? ["AUDITIONS", "90 SECONDS"];
+    const ring = cease(f, ringAt, ringAt + 9);
+    const tq = spring({ frame: f - tagAt, fps, config: { damping: 10, mass: 0.6, stiffness: 160 } });
+    const hit = f >= tagAt ? Math.sin((f - tagAt) * 1.7) * 9 * Math.max(0, 1 - (f - tagAt) / 14) : 0;
+    const MXn = 236, MYn = 1322, MSn = 0.8, RXn = 690, RYn = 1128, tug = f >= tagAt ? Math.sin((f - tagAt) / 4) * 8 : 0;
+    const nx = MXn + tug + 34 * MSn, ny = MYn - 396 * MSn;
+    return (
+      <AbsoluteFill>
+        <Sfx name="pop" at={ringAt} vol={0.5} />
+        <Sfx name="cine/impact" at={tagAt} vol={0.5} />
+        <Sfx name="cine/toing" at={tagAt + 9} vol={0.45} />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <rect width={1080} height={1920} fill={SCR.wall} filter="url(#fibre)" />
+          <rect x={-30} y={1290} width={1140} height={680} fill={SCR.floor} filter="url(#torn)" />
+          {/* the notice, pinned */}
+          <g transform="translate(0 -270) rotate(-2 540 800)">
+            <rect x={130} y={560} width={820} height={130 + nt.length * 104} fill={CP.white} filter="url(#torn)" />
+            {nt.map((l, k) => { const last = k === nt.length - 1;
+              return <text key={k} x={540} y={682 + k * 104 + (last ? 16 : 0)} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={last ? 76 : k === 0 ? 46 : 60} fill={last ? CP.red : CP.ink}>{l.toUpperCase()}</text>; })}
+            <rect x={540 - 330 * ring} y={720 + (nt.length - 1) * 104} width={660 * ring} height={12} rx={6} fill={CP.red} />
+            <circle cx={540} cy={578} r={22} fill={CP.red} filter="url(#tornS)" />
+          </g>
+          {/* the scarf, pulled tight into the roll */}
+          <path d={`M${nx} ${ny - 10} L ${RXn - 60} ${RYn - 30} l 6 34 L ${nx} ${ny + 28} Z`} fill={CP.mustard} filter="url(#tornS)" />
+          <CMilo x={MXn + tug} y={MYn} s={MSn} tote={false} panic={f >= tagAt ? 1 : 0.45} talk={f < ringAt + 20 ? 0.4 + 0.4 * Math.abs(Math.sin(f / 2.5)) : 0} />
+          <g transform={`translate(0 ${hit})`}>
+            <PBand x1={-40} x2={RXn - 90} y={RYn + 66} h={90} />
+            <PRoll x={RXn} y={RYn} r={150} turn={-18 + Math.sin(f / 16) * 3} />
+            {s.label && <g transform={`translate(${RXn + 60} ${RYn - 214}) rotate(3)`}><rect x={-200} y={-46} width={400} height={74} fill={CP.white} filter="url(#tornS)" /><text x={0} y={8} textAnchor="middle" fontFamily="Caveat" fontSize={50} fill={CP.ink}>{`${s.label[0]}, ${s.label[1]}`}</text></g>}
+            {f >= tagAt && s.tag && (
+              <g transform={`translate(${RXn + 20} ${RYn - 30}) rotate(-7) scale(${2.4 - 1.4 * Math.min(1, tq)})`} opacity={Math.min(1, tq * 2)}>
+                <rect x={-150} y={-76} width={300} height={152} fill={CP.red} filter="url(#torn)" />
+                <text x={0} y={36} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={104} fill={CP.cream}>{s.tag}</text>
+              </g>)}
+          </g>
+        </svg>
+        
+      </AbsoluteFill>
+    );
+  }
+  // page: the scroll snaps back into one page
+  const snapAt = s.snapAt ?? 2, lenAt = s.lenAt ?? snapAt + 12;
+  const k = cease(f, snapAt, snapAt + 9), MXp = 430, MSp = 0.98, MYp = SCR_FL + 10;
+  const px = MXp - 150, py = MYp - 330 * MSp, pq = spring({ frame: f - lenAt, fps, config: { damping: 9, mass: 0.5 } });
+  return (
+    <AbsoluteFill>
+      <Sfx name="cine/toing" at={snapAt} vol={0.5} />
+      <Sfx name="pop" at={lenAt} vol={0.5} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Room />
+        <CMilo x={MXp} y={MYp} s={MSp} tote={false} talk={0.3 + 0.3 * Math.abs(Math.sin(f / 2.6))} />
+        {k < 1 && <><rect x={px + 6} y={py + 240} width={214} height={(1 - k) * (BY + 112 - py - 240)} fill={SCR.paper} filter="url(#torn)" /><PBand x1={px + 200} x2={px + 200 + (1 - k) * 980} y={BY + (1 - k) * 0 - k * (BY - py - 200)} /></>}
+        <g transform={`rotate(${-5 + (1 - k) * 4} ${px + 110} ${py + 140})`}>
+          <rect x={px} y={py} width={220} height={282} fill={SCR.paper} filter="url(#torn)" />
+          {s.name && <text x={px + 110} y={py + 52} textAnchor="middle" fontFamily="Caveat" fontSize={36} fill={CP.red}>{s.name}</text>}
+          {Array.from({ length: 7 }).map((_, j) => <rect key={j} x={px + 24} y={py + 80 + j * 26} width={172 * (j === 6 ? 0.55 : 1)} height={6} fill={SCR.rule} opacity={0.8} />)}
+          <circle cx={px + 26} cy={py + 268} r={19} fill={CP.skin} filter="url(#tornS)" /><circle cx={px + 196} cy={py + 268} r={19} fill={CP.skin} filter="url(#tornS)" />
+        </g>
+        {s.len && pq > 0.02 && (
+          <g transform={`translate(${px + 330} ${py - 20}) rotate(6) scale(${pq})`}>
+            <rect x={-120} y={-64} width={240} height={128} fill={CP.green} filter="url(#torn)" />
+            <text x={0} y={30} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={84} fill={CP.cream}>{s.len}</text>
+          </g>)}
+      </svg>
+      <CTitle text={s.line} accent={s.accent} y={262} />
+    </AbsoluteFill>
+  );
+};
+
 // ---------- busstop: a love confession at the bus stop, cut-paper collage (2026-11-26) ----------
 /** Milo rehearses a love confession into his phone at a bus stop at dusk, paper hearts rising. Three beats:
  *  "hook" (the stop, the hook card from frame 0), "bus" (the bus pulls up, the doors open, he steps on mid
@@ -4948,6 +5137,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "busstop" ? <BusStopScene s={sc} /> :
       sc.type === "libdesk" ? <LibDeskScene s={sc} /> :
       sc.type === "sofa" ? <SofaScene s={sc} /> :
+      sc.type === "scroll" ? <ScrollScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

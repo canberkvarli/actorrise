@@ -1,0 +1,86 @@
+{
+  "id": "2026-11-29-ninety-seconds-end",
+  "look": "noir",
+  "cut": "hard",
+  "music": {
+    "style": "beat",
+    "volume": 0.2
+  },
+  "voice": {
+    "volume": 1,
+    "lines": [
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 0.0,
+        "sub": false,
+        "audio": "voice/2026-11-29-ninety-seconds-end/end.mp3",
+        "dur": 2.288,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.15,
+            "e": 0.235
+          },
+          {
+            "w": "Ghost",
+            "s": 0.275,
+            "e": 0.477
+          },
+          {
+            "w": "Light.",
+            "s": 0.517,
+            "e": 0.993
+          },
+          {
+            "w": "Built",
+            "s": 1.038,
+            "e": 1.265
+          },
+          {
+            "w": "by",
+            "s": 1.305,
+            "e": 1.387
+          },
+          {
+            "w": "a",
+            "s": 1.417,
+            "e": 1.448
+          },
+          {
+            "w": "working",
+            "s": 1.485,
+            "e": 1.75
+          },
+          {
+            "w": "actor.",
+            "s": 1.811,
+            "e": 2.174
+          }
+        ]
+      }
+    ]
+  },
+  "beats": [
+    {
+      "kind": "end",
+      "seconds": 2.8,
+      "brand": "Ghost Light",
+      "line": "Built by a working actor.",
+      "action": "Free on the App Store",
+      "bg": "ink",
+      "store": true,
+      "snap": true,
+      "sfx": [],
+      "beats": [
+        0,
+        0.55,
+        1.1
+      ]
+    }
+  ],
+  "source": {
+    "part_of": "2026-11-29-ninety-seconds",
+    "why": "the sharp Ghost Light card (DIRECTION 2026-11-10 afternoon), joined after the story with scripts/join.sh"
+  }
+}

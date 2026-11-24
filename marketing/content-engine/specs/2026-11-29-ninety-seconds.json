@@ -1,0 +1,602 @@
+{
+  "id": "2026-11-29-ninety-seconds",
+  "look": "collage",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "The notice says ninety seconds. Your monologue is three minutes.",
+        "say": "[amused] The notice says ninety seconds. Your monologue is three minutes.",
+        "sub": false,
+        "at": 0.351,
+        "words": [
+          {
+            "w": "The",
+            "s": 0.0,
+            "e": 0.01
+          },
+          {
+            "w": "notice",
+            "s": 0.052,
+            "e": 0.313
+          },
+          {
+            "w": "says",
+            "s": 0.348,
+            "e": 0.495
+          },
+          {
+            "w": "ninety",
+            "s": 0.529,
+            "e": 0.737
+          },
+          {
+            "w": "seconds.",
+            "s": 0.797,
+            "e": 1.283
+          },
+          {
+            "w": "Your",
+            "s": 1.367,
+            "e": 1.706
+          },
+          {
+            "w": "monologue",
+            "s": 1.752,
+            "e": 2.13
+          },
+          {
+            "w": "is",
+            "s": 2.151,
+            "e": 2.192
+          },
+          {
+            "w": "three",
+            "s": 2.222,
+            "e": 2.373
+          },
+          {
+            "w": "minutes.",
+            "s": 2.418,
+            "e": 2.798
+          }
+        ],
+        "dur": 2.911
+      },
+      {
+        "text": "My favourite speech is Cassius, from Julius Caesar, and it goes out the door and down the hall.",
+        "say": "My favourite speech is Cassius, from Julius Caesar, and it goes out the door and down the hall.",
+        "at": 3.472,
+        "words": [
+          {
+            "w": "My",
+            "s": 0.0,
+            "e": 0.646
+          },
+          {
+            "w": "favourite",
+            "s": 0.683,
+            "e": 1.01
+          },
+          {
+            "w": "speech",
+            "s": 1.053,
+            "e": 1.312
+          },
+          {
+            "w": "is",
+            "s": 1.353,
+            "e": 1.434
+          },
+          {
+            "w": "Cassius,",
+            "s": 1.483,
+            "e": 2.039
+          },
+          {
+            "w": "from",
+            "s": 2.064,
+            "e": 2.161
+          },
+          {
+            "w": "Julius",
+            "s": 2.205,
+            "e": 2.464
+          },
+          {
+            "w": "Caesar,",
+            "s": 2.508,
+            "e": 2.888
+          },
+          {
+            "w": "and",
+            "s": 2.98,
+            "e": 3.252
+          },
+          {
+            "w": "it",
+            "s": 3.292,
+            "e": 3.373
+          },
+          {
+            "w": "goes",
+            "s": 3.41,
+            "e": 3.555
+          },
+          {
+            "w": "out",
+            "s": 3.585,
+            "e": 3.677
+          },
+          {
+            "w": "the",
+            "s": 3.692,
+            "e": 3.737
+          },
+          {
+            "w": "door",
+            "s": 3.797,
+            "e": 4.039
+          },
+          {
+            "w": "and",
+            "s": 4.1,
+            "e": 4.282
+          },
+          {
+            "w": "down",
+            "s": 4.319,
+            "e": 4.464
+          },
+          {
+            "w": "the",
+            "s": 4.48,
+            "e": 4.524
+          },
+          {
+            "w": "hall.",
+            "s": 4.598,
+            "e": 5.283
+          }
+        ],
+        "dur": 5.396
+      },
+      {
+        "text": "But the notice wants comedic, under ninety seconds, and my scarf is rolled up in it.",
+        "say": "[playful] But the notice wants comedic, under ninety seconds, and my scarf is rolled up in it.",
+        "at": 9.198,
+        "words": [
+          {
+            "w": "But",
+            "s": 0.0,
+            "e": 0.011
+          },
+          {
+            "w": "the",
+            "s": 0.042,
+            "e": 0.133
+          },
+          {
+            "w": "notice",
+            "s": 0.167,
+            "e": 0.375
+          },
+          {
+            "w": "wants",
+            "s": 0.414,
+            "e": 0.617
+          },
+          {
+            "w": "comedic,",
+            "s": 0.67,
+            "e": 1.254
+          },
+          {
+            "w": "under",
+            "s": 1.29,
+            "e": 1.466
+          },
+          {
+            "w": "ninety",
+            "s": 1.501,
+            "e": 1.708
+          },
+          {
+            "w": "seconds,",
+            "s": 1.769,
+            "e": 2.254
+          },
+          {
+            "w": "and",
+            "s": 2.345,
+            "e": 2.617
+          },
+          {
+            "w": "my",
+            "s": 2.658,
+            "e": 2.739
+          },
+          {
+            "w": "scarf",
+            "s": 2.809,
+            "e": 3.163
+          },
+          {
+            "w": "is",
+            "s": 3.184,
+            "e": 3.223
+          },
+          {
+            "w": "rolled",
+            "s": 3.258,
+            "e": 3.466
+          },
+          {
+            "w": "up",
+            "s": 3.505,
+            "e": 3.587
+          },
+          {
+            "w": "in",
+            "s": 3.608,
+            "e": 3.648
+          },
+          {
+            "w": "it.",
+            "s": 3.708,
+            "e": 4.254
+          }
+        ],
+        "dur": 4.367
+      },
+      {
+        "text": "So I opened Ghost Light, typed comedic, under ninety seconds, Oscar Wilde, and up came Lady Hunstanton.",
+        "say": "[upbeat] So I opened Ghost Light, typed comedic, under ninety seconds, Oscar Wilde, and up came Lady Hunstanton.",
+        "sub": false,
+        "at": 13.927,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.01
+          },
+          {
+            "w": "I",
+            "s": 0.07,
+            "e": 0.131
+          },
+          {
+            "w": "opened",
+            "s": 0.166,
+            "e": 0.373
+          },
+          {
+            "w": "Ghost",
+            "s": 0.414,
+            "e": 0.615
+          },
+          {
+            "w": "Light,",
+            "s": 0.656,
+            "e": 0.918
+          },
+          {
+            "w": "typed",
+            "s": 0.989,
+            "e": 1.342
+          },
+          {
+            "w": "comedic,",
+            "s": 1.396,
+            "e": 1.948
+          },
+          {
+            "w": "under",
+            "s": 1.979,
+            "e": 2.13
+          },
+          {
+            "w": "ninety",
+            "s": 2.166,
+            "e": 2.373
+          },
+          {
+            "w": "seconds,",
+            "s": 2.433,
+            "e": 2.919
+          },
+          {
+            "w": "Oscar",
+            "s": 3.0,
+            "e": 3.403
+          },
+          {
+            "w": "Wilde,",
+            "s": 3.464,
+            "e": 4.01
+          },
+          {
+            "w": "and",
+            "s": 4.07,
+            "e": 4.252
+          },
+          {
+            "w": "up",
+            "s": 4.292,
+            "e": 4.373
+          },
+          {
+            "w": "came",
+            "s": 4.423,
+            "e": 4.615
+          },
+          {
+            "w": "Lady",
+            "s": 4.676,
+            "e": 4.918
+          },
+          {
+            "w": "Hunstanton.",
+            "s": 4.964,
+            "e": 5.585
+          }
+        ],
+        "dur": 5.698
+      },
+      {
+        "text": "A Woman of No Importance, one page, one minute nine.",
+        "say": "[delighted] A Woman of No Importance, one page, one minute nine.",
+        "at": 20.171,
+        "words": [
+          {
+            "w": "A",
+            "s": 0.0,
+            "e": 0.008
+          },
+          {
+            "w": "Woman",
+            "s": 0.047,
+            "e": 0.25
+          },
+          {
+            "w": "of",
+            "s": 0.29,
+            "e": 0.371
+          },
+          {
+            "w": "No",
+            "s": 0.411,
+            "e": 0.492
+          },
+          {
+            "w": "Importance,",
+            "s": 0.542,
+            "e": 1.098
+          },
+          {
+            "w": "one",
+            "s": 1.189,
+            "e": 1.462
+          },
+          {
+            "w": "page,",
+            "s": 1.535,
+            "e": 2.008
+          },
+          {
+            "w": "one",
+            "s": 2.038,
+            "e": 2.129
+          },
+          {
+            "w": "minute",
+            "s": 2.164,
+            "e": 2.371
+          },
+          {
+            "w": "nine.",
+            "s": 2.444,
+            "e": 3.159
+          }
+        ],
+        "dur": 3.273
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "sub": false,
+        "at": 23.852,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.085
+          },
+          {
+            "w": "Ghost",
+            "s": 0.125,
+            "e": 0.327
+          },
+          {
+            "w": "Light.",
+            "s": 0.367,
+            "e": 0.843
+          },
+          {
+            "w": "Built",
+            "s": 0.888,
+            "e": 1.115
+          },
+          {
+            "w": "by",
+            "s": 1.155,
+            "e": 1.237
+          },
+          {
+            "w": "a",
+            "s": 1.267,
+            "e": 1.298
+          },
+          {
+            "w": "working",
+            "s": 1.335,
+            "e": 1.6
+          },
+          {
+            "w": "actor.",
+            "s": 1.661,
+            "e": 2.024
+          }
+        ],
+        "dur": 2.138
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-29-ninety-seconds/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.32
+  },
+  "scenes": [
+    {
+      "type": "scroll",
+      "beat": "hook",
+      "seconds": 3.372,
+      "line": "The notice says ninety seconds. Your monologue is three minutes.",
+      "hook": [
+        "The notice says",
+        "ninety seconds.",
+        "Your monologue is",
+        "three minutes."
+      ],
+      "red": [
+        1,
+        3
+      ],
+      "label": [
+        "Cassius",
+        "Julius Caesar"
+      ]
+    },
+    {
+      "type": "scroll",
+      "beat": "unroll",
+      "seconds": 5.726,
+      "in": "whip",
+      "line": "Out the door. Down the hall.",
+      "accent": "Down the hall.",
+      "marks": [
+        "1:00",
+        "1:30",
+        "2:00",
+        "2:30",
+        "3:00"
+      ],
+      "stop": 1,
+      "stopNote": "the notice stops here"
+    },
+    {
+      "type": "scroll",
+      "beat": "notice",
+      "seconds": 4.729,
+      "in": "punch",
+      "line": "Comedic. Ninety seconds.",
+      "accent": "Ninety seconds.",
+      "notice": [
+        "Auditions today",
+        "Comedic monologue",
+        "90 seconds max"
+      ],
+      "tag": "3:00",
+      "label": [
+        "Cassius",
+        "Julius Caesar"
+      ],
+      "ringAt": 50,
+      "tagAt": 80
+    },
+    {
+      "type": "screens",
+      "seconds": 6.244,
+      "in": "cut",
+      "line": "Say what you need.",
+      "accent": "you need.",
+      "shots": [
+        {
+          "src": "story/2026-11-29-ninety-seconds/search.png",
+          "at": 0
+        },
+        {
+          "src": "story/2026-11-29-ninety-seconds/typed.png",
+          "at": 30,
+          "fade": true,
+          "tap": {
+            "x": 0.856,
+            "y": 0.312,
+            "at": 80
+          }
+        },
+        {
+          "src": "story/2026-11-29-ninety-seconds/results.png",
+          "at": 92,
+          "tap": {
+            "x": 0.5,
+            "y": 0.38,
+            "at": 140
+          }
+        },
+        {
+          "src": "story/2026-11-29-ninety-seconds/open.png",
+          "at": 152
+        }
+      ]
+    },
+    {
+      "type": "scroll",
+      "beat": "page",
+      "seconds": 3.631,
+      "in": "punch",
+      "line": "Now it is one page.",
+      "accent": "one page.",
+      "len": "1:09",
+      "name": "Lady Hunstanton",
+      "snapAt": 40,
+      "lenAt": 62
+    }
+  ],
+  "captions": {
+    "tiktok": "The notice says ninety seconds. Your monologue is three minutes. How long is yours, honestly? Ghost Light found Lady Hunstanton at 1:09. The voice is AI. #monologue #audition #actorslife #actortok #theatrekid",
+    "youtube_title": "The notice says ninety seconds. Your monologue is three minutes.",
+    "youtube_description": "The notice says ninety seconds. Your monologue is three minutes.\nMilo's favourite speech is Cassius from Julius Caesar, and it goes out the door and down the hall. In Ghost Light he typed comedic, under 90 seconds, Oscar Wilde, and up came Lady Hunstanton from A Woman of No Importance, 1:09. Free on the App Store. Built by a working actor. The voice is AI.\n#monologue #audition #actorslife #acting",
+    "instagram": "The notice says ninety seconds. Your monologue is three minutes.\n\nMilo brought Cassius from Julius Caesar. It went out the door and down the hall.\n\nWhat he did in Ghost Light:\n1. Tap Search.\n2. Type: comedic, under 90 seconds, Oscar Wilde.\n3. Open Lady Hunstanton from A Woman of No Importance. 1:09, one page.\n\nFree on the App Store, built by a working actor. Link in bio. The voice is AI.\n\n#monologue #audition #actorslife #actorsofinstagram #oscarwilde"
+  },
+  "cover_ms": 300,
+  "source": {
+    "plan": "Callboard row 2026-11-29 (storyhowto, story-howto), the earliest planned row on 2026-11-24; look collage per DIRECTION 2026-11-20 (the row said paper)",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "sql": "select m.id, m.character_name, m.estimated_duration_seconds, m.overdone_score, p.title, p.author, p.copyright_status from monologues m join plays p on p.id=m.play_id where m.id in (39672, 4518, 4385, 625)",
+    "checked": "2026-11-24: monologue 39672 Lady Hunstanton (A Woman of No Importance, Oscar Wilde, play 50, 1893, public domain) 1:09, overdone 0; 625 Cassius (Julius Caesar, Shakespeare, 'I know that virtue to be in you, Brutus') 180s = 3:00, public domain. In the Ghost Light app 'comedic, under 90 seconds, Oscar Wilde' returns Lady Hunstanton 1:09, Lord Illingworth 1:18, Lord Augustus 1:04 first, 30 monologues",
+    "changed_from_plan": "the row's search ('comedic, under 90 seconds') returns Jackie (The Comedian, a film, with its text) first and Philo (a row cut from an essay on Plautus, not a play) second, so the film types 'comedic, under 90 seconds, Oscar Wilde', which brings three public domain pieces under 90 seconds up first. Milo's long speech is named (Cassius, Julius Caesar) because its library length is exactly three minutes. The notice title card was dropped in the notice beat (the notice is the text). Total 26.6s",
+    "app": "Ghost Light web preview built from actorrise main apps/mobile (7a66bbb) plus web-preview.patch, dark theme, demo account, 2026-11-24",
+    "flow": "flows/search-ninety-seconds.json (shots -> public/story/2026-11-29-ninety-seconds/*.png)",
+    "voice": "George, one take at stability 0.5, Scribe 0.95, sped up 1.32x with fit_take.py; AI voice, labelled on every platform",
+    "new_scene_types": "scroll (cut-paper collage) with four beats: hook, unroll, notice, page. New collage pieces: the scroll sheet and PBand, PRoll, the hallway doors with numbers, the neighbour in 2B, pot plants, time flags, the pinned notice, the length tags",
+    "motifs": "speech-as-paper-scroll,roll-down-the-hallway,half-minute-flags,scarf-wound-into-the-roll,pinned-90-seconds-notice,3:00-tag,scroll-snaps-to-one-page,tipped-tote",
+    "end": "specs/2026-11-29-ninety-seconds-end.json, joined with scripts/join.sh",
+    "feature": "search",
+    "trypost": {
+      "tiktok": "01a20c64-f052-72cd-ae30-4a75a7013234",
+      "youtube": "01a20c64-f05b-7325-b9c1-9289874f442b",
+      "instagram": "01a20c64-f062-7344-96a8-eae75baf7b82",
+      "status": "draft"
+    }
+  }
+}
