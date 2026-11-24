@@ -186,7 +186,7 @@ export const marketing: Widen<typeof en> = {
     featReadsOne: "Ayda 1 tam monolog",
     featUnlimitedRehearsals: "Sınırsız monolog provası",
     featRehearsals:
-      "{count} ücretsiz prova, sonra bir hafta ücretsiz Plus, bir sahne bitirirsen iki hafta",
+      "{count} ücretsiz prova, sonra 3 gün ücretsiz Plus",
     featUnlimitedSearches: "Sınırsız AI araması",
     featSearches: "Ayda {count} AI araması",
     featScenePartnerTrial: "1 ScenePartner denemesi",

@@ -28,7 +28,7 @@ function getFeaturesList(tier: PricingTier): string[] {
   if (rehearsals === -1) {
     features.push("Unlimited monologue rehearsals");
   } else if (rehearsals && rehearsals > 0) {
-    features.push(`${rehearsals} free rehearsals, then a week of Plus free, two if you finish a scene`);
+    features.push(`${rehearsals} free rehearsals, then 3 days of Plus free`);
   }
 
   // AI searches
@@ -185,7 +185,7 @@ export function LandingPricing() {
             Your craft, your plan.
           </h2>
           <p className="stage-direction mt-4 text-sm text-muted-foreground">
-            (new here? <span className="text-foreground">plus starts with a 2-week free trial.</span>{" "}
+            (new here? <span className="text-foreground">plus starts with a 3-day free trial.</span>{" "}
             $0 today, cancel anytime.)
           </p>
           <p className="stage-direction mt-1.5 text-sm text-muted-foreground">

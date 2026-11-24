@@ -183,7 +183,7 @@ export const marketing = {
     featReads: "{count} full monologues a month",
     featReadsOne: "1 full monologue a month",
     featUnlimitedRehearsals: "Unlimited monologue rehearsals",
-    featRehearsals: "{count} free rehearsals, then a week of Plus free, two if you finish a scene",
+    featRehearsals: "{count} free rehearsals, then 3 days of Plus free",
     featUnlimitedSearches: "Unlimited AI searches",
     featSearches: "{count} AI searches/mo",
     featScenePartnerTrial: "1 ScenePartner trial",
