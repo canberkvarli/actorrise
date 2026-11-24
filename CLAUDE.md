@@ -244,7 +244,7 @@ If a user replies UNSUBSCRIBE (or otherwise asks to stop), file it right away: `
 
 ## Trial-link CTA (dramatic one-word ask)
 
-No coupon codes. FOUNDER3 is retired as of 2026-07-22. Actors just use the Stripe trial: Plus membership, 2 weeks free, card on file, then the yearly charge (cancel anytime before it hits). Do NOT offer or reference FOUNDER3 or any coupon in new drafts.
+No coupon codes. FOUNDER3 is retired as of 2026-07-22. Actors just use the Stripe trial: Plus membership, 3 days free (2 weeks until 2026-11-24), card on file, then the yearly charge (cancel anytime before it hits). Do NOT offer or reference FOUNDER3 or any coupon in new drafts.
 
 INDIVIDUAL ACTORS ONLY (corrected 2026-09-02): the CURTAIN CTA is for **individual actors** — current platform users and individual actor signups. When offering them the trial, close with a short, theatrical, one-word reply CTA instead of a generic "happy to answer questions" line: "If you want in, reply CURTAIN and I'll send you the link." One-word replies convert fastest with that audience, so keep the CTA to a single word.
 
@@ -252,17 +252,18 @@ NEVER use CURTAIN in organizational outreach — theaters, studios, acting coach
 
 FIRST-TOUCH ONLY (added 2026-08-19): even for individual actors, the CURTAIN CTA belongs ONLY in a first-touch email. NEVER use it mid-conversation (a reply on an existing thread, an inbound lead, or anyone already talking with Canberk). In an ongoing conversation, just make the offer plainly and give the next step directly, no CURTAIN line.
 
-Trial link (base), 2 weeks / 14 days: https://buy.stripe.com/00w8wR4Xqd7o7JGa3X6g802
+Trial link (base), 3 days, since 2026-11-24: https://buy.stripe.com/aFa28t0Ha5EWggcb816g803
 
-LINK LENGTHS DIFFER, CHECK BEFORE SENDING. Three live Stripe payment links exist and only the first matches the "2 weeks free" copy above:
-- `00w8wR4Xqd7o7JGa3X6g802` — Plus $99/yr, **14-day** trial. This is the one to send.
+LINK LENGTHS DIFFER, CHECK BEFORE SENDING. Four live Stripe payment links exist and only the first matches the "3 days free" copy above:
+- `aFa28t0Ha5EWggcb816g803` — Plus $99/yr, **3-day** trial, card always (made 2026-11-24). This is the one to send.
+- `00w8wR4Xqd7o7JGa3X6g802` — Plus $99/yr, **14-day** trial. The one sent until 2026-11-24, do NOT send now.
 - `00w6oJgG8gjAaVSgsl6g801` — Plus $99/yr, **90-day** trial. Older founder-era link, do NOT send with 2-week copy.
 - `28EbJ30Had7o1li8ZT6g800` — Pro $199/yr, **90-day** trial.
 
 THE IN-APP TRIAL IS NOT 2 WEEKS (changed 2026-09-29, shortened 2026-11-16 and 2026-11-24). Inside the product the trial is **3 days for everyone, card on file** (Canberk, 2026-11-24: "i need money and need ppl to hit it for sure"; it was 3 days or a week for a finished scene from 11-16, a week or two before). The iOS app's App Store intro offer goes to 3 days too, which Canberk sets in App Store Connect. **Planned for about 2026-12-01: no trial on the web at all, checkout charges the first day; the app keeps its 3 days** ("we are a premium app, we already give free stuff"). The server decides (`backend/app/services/trial_length.py`) and every surface prints what `/api/subscriptions/me` returns as `trial_days`. It rolls into Plus monthly at $12. So:
-- The Stripe link above is still 14 days, and copy that sends THAT link still says "2 weeks free".
+- The Stripe link above is 3 days since 2026-11-24, and copy that sends it says "3 days free".
 - Copy that sends someone into the app (`ghostlight.actor/trial`, a wall, an ask) must NOT promise a length by hand. The triggered emails fill `{span}` per person for this reason.
-- Whether the email link should drop to 7 days to match is open, Canberk's call.
+- The email link matches the product since 2026-11-24: both are 3 days (Canberk).
 
 Automated emails to people who looked at a price live in `backend/emails/lifecycle/*.txt` and send from `backend/app/services/email/triggered.py`. There are two: `checkout_abandoned` and `paywall_seen_no_trial`. They are OFF until the "Triggered emails" switch in `/admin/emails` is turned on. `/conversion-loop` is the daily run that reads the funnel and the inbox and leaves drafts; it never sends.
 
@@ -270,7 +271,7 @@ Two decisions about those, both Canberk's, 2026-09-29. Do not undo either withou
 - **No email about a trial ending.** Not a heads-up before the card is charged, not a question after a trial lapses. Both were written and he removed both.
 - **No reply-UNSUBSCRIBE line on the triggered emails.** They end on `canberk`. This is the one exception to the Opt-out requirement above, which still holds for every other email to current users. The unsubscribe link under the letter stays.
 
-PREFILLED-EMAIL RULE (critical, do not skip): when someone replies CURTAIN, send them the link with their email appended as `?prefilled_email=<their address>`, using the exact address they replied from (that is their Ghost Light account email). Example: https://buy.stripe.com/00w8wR4Xqd7o7JGa3X6g802?prefilled_email=giosboss4@gmail.com . The webhook grants Plus by matching the checkout email to their Ghost Light account, so a prefilled link makes the match automatic. Never send the bare base link to a specific person, and do not embed the link in cold outreach (only send after a CURTAIN reply).
+PREFILLED-EMAIL RULE (critical, do not skip): when someone replies CURTAIN, send them the link with their email appended as `?prefilled_email=<their address>`, using the exact address they replied from (that is their Ghost Light account email). Example: https://buy.stripe.com/aFa28t0Ha5EWggcb816g803?prefilled_email=giosboss4@gmail.com . The webhook grants Plus by matching the checkout email to their Ghost Light account, so a prefilled link makes the match automatic. Never send the bare base link to a specific person, and do not embed the link in cold outreach (only send after a CURTAIN reply).
 
 Note: CURTAIN is now the trial SIGN-UP word only. Marketing/re-engagement opt-outs use a separate, plain word: UNSUBSCRIBE (see the Opt-out requirement section above). The two no longer overlap, so a CURTAIN reply always means "sign me up for the trial" and an UNSUBSCRIBE reply always means "take me off the list." No context-guessing needed. (Changed 2026-08-17: opt-out was previously also CURTAIN, which was too appealing and got over-used.)
 
