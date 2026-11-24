@@ -256,7 +256,7 @@ Trial link (base), 3 days, since 2026-11-24: https://buy.stripe.com/aFa28t0Ha5EW
 
 LINK LENGTHS DIFFER, CHECK BEFORE SENDING. Four live Stripe payment links exist and only the first matches the "3 days free" copy above:
 - `aFa28t0Ha5EWggcb816g803` — Plus $99/yr, **3-day** trial, card always (made 2026-11-24). This is the one to send.
-- `00w8wR4Xqd7o7JGa3X6g802` — Plus $99/yr, **14-day** trial. The one sent until 2026-11-24, do NOT send now.
+- `00w8wR4Xqd7o7JGa3X6g802` — Plus $99/yr, **14-day** trial. The one sent until 2026-11-24; DEACTIVATED in Stripe 2026-11-24, it no longer opens.
 - `00w6oJgG8gjAaVSgsl6g801` — Plus $99/yr, **90-day** trial. Older founder-era link, do NOT send with 2-week copy.
 - `28EbJ30Had7o1li8ZT6g800` — Pro $199/yr, **90-day** trial.
 
