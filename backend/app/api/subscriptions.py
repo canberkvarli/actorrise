@@ -70,7 +70,7 @@ class SubscriptionResponse(BaseModel):
 
 
 def _trial_fields(db: Session, user_id: int) -> dict[str, Any]:
-    from app.services.trial_length import EARNED_TRIAL_DAYS, trial_days_for
+    from app.services.trial_length import BASE_TRIAL_DAYS, EARNED_TRIAL_DAYS, trial_days_for
 
     from app.services import taste
 
@@ -81,7 +81,7 @@ def _trial_fields(db: Session, user_id: int) -> dict[str, Any]:
     days = trial_days_for(db, user_id)
     return {
         "trial_days": days,
-        "trial_earned": days == EARNED_TRIAL_DAYS,
+        "trial_earned": days == EARNED_TRIAL_DAYS and EARNED_TRIAL_DAYS > BASE_TRIAL_DAYS,
         "taste": state,
         "no_card_trial": no_card,
     }
@@ -359,7 +359,7 @@ async def create_checkout_session(
                 status_code=400,
                 detail="The free trial is only for first-time Plus members.",
             )
-        # A week free, or two for an actor who has finished a scene, then it
+        # 3 days free (services/trial_length.py), then it
         # rolls into the Plus plan they picked: monthly ($12/mo) or yearly.
         # The length is decided here, never by the client: the request says
         # "trial", not how long. Until 2026-10-31 every trial rolled into

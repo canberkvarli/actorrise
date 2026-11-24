@@ -2,7 +2,7 @@
  * A trial length as the words the product prints.
  *
  * The length is decided on the server (backend/app/services/trial_length.py):
- * a week, or two for an actor who has finished a scene. It arrives on
+ * 3 days for everyone since 2026-11-24. It arrives on
  * /api/subscriptions/me as trial_days. Nothing in the client carries its own
  * number. Twelve surfaces used to say "2 weeks" by hand, which is how a changed
  * offer goes on being quoted at the old length.
@@ -79,7 +79,7 @@ export function plusHref(from: string, tasted: boolean): string {
     : `/checkout?tier=plus&period=monthly&trial=1&from=${from}`;
 }
 
-export const DEFAULT_TRIAL_DAYS = 7;
+export const DEFAULT_TRIAL_DAYS = 3;
 
 export function trialWords(
   days: number | undefined | null,

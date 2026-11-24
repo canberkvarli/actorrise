@@ -20,7 +20,7 @@ Placeholders, filled per person:
 |---|---|
 | `{name}` | first name, lowercase. With no name the greeting is just `hey,` |
 | `{link}` | the one link, carrying `?e=<touch>` so a click is counted |
-| `{span}` | the trial this person would get: `a week`, or `two weeks` once they have finished a scene |
+| `{span}` | the trial this person would get: `3 days` since 2026-11-24 |
 
 ## Rules a test holds every file to
 

@@ -1,7 +1,9 @@
-"""How long a Plus trial runs for this actor: 3 days, or a week if they earned it.
+"""How long a Plus trial runs for this actor: 3 days, for everyone.
 
-3 and 7 since 2026-11-16 (Canberk; 7 and 14 before). The longer trial belongs
-to anyone who has finished a scene. It is the one
+3 flat since 2026-11-24 (Canberk: "i need money and need ppl to hit it for
+sure"), on the web and in the app alike; the web trial is to go entirely about
+2026-12-01. 3 and 7 from 2026-11-16, 7 and 14 before. Until 11-24 the longer
+trial belonged to anyone who had finished a scene. It is the one
 behaviour that shows the product working, and until now it won nothing: of the
 22 actors who started the guided scene in its first three days, 6 finished.
 
@@ -34,7 +36,9 @@ from app.models.actor import RehearsalSession
 logger = logging.getLogger(__name__)
 
 BASE_TRIAL_DAYS = 3
-EARNED_TRIAL_DAYS = 7
+# Finishing a scene earns nothing longer since 2026-11-24. Kept, and equal, so
+# the earned path can come back as one number.
+EARNED_TRIAL_DAYS = BASE_TRIAL_DAYS
 
 
 def has_finished_a_scene(db, user_id: int) -> bool:
@@ -64,4 +68,6 @@ def has_finished_a_scene(db, user_id: int) -> bool:
 
 
 def trial_days_for(db, user_id: int) -> int:
+    if EARNED_TRIAL_DAYS == BASE_TRIAL_DAYS:
+        return BASE_TRIAL_DAYS
     return EARNED_TRIAL_DAYS if has_finished_a_scene(db, user_id) else BASE_TRIAL_DAYS

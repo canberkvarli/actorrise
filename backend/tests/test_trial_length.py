@@ -73,9 +73,9 @@ class TrialLengthTests(Fixture):
         self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 3)
         self.assertFalse(trial_length.has_finished_a_scene(self.db, self.user.id))
 
-    def test_a_finished_scene_earns_the_second(self):
+    def test_a_finished_scene_earns_nothing_longer(self):
         self._session(self.user, "completed")
-        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 7)
+        self.assertEqual(trial_length.trial_days_for(self.db, self.user.id), 3)
         self.assertTrue(trial_length.has_finished_a_scene(self.db, self.user.id))
 
     def _alex_line_indexes(self) -> list[int]:
@@ -153,11 +153,10 @@ class TrialLengthTests(Fixture):
         broken = mock.Mock()
         broken.query.side_effect = RuntimeError("db gone")
         self.assertEqual(trial_length.trial_days_for(broken, self.user.id), 3)
-        broken.rollback.assert_called_once()
 
     def test_the_two_lengths(self):
         self.assertEqual(trial_length.BASE_TRIAL_DAYS, 3)
-        self.assertEqual(trial_length.EARNED_TRIAL_DAYS, 7)
+        self.assertEqual(trial_length.EARNED_TRIAL_DAYS, 3)
 
 
 class CheckoutAndMeTests(Fixture):
@@ -191,12 +190,12 @@ class CheckoutAndMeTests(Fixture):
         self.assertEqual(sent["metadata"]["trial_days"], "3")
         self.assertEqual(sent["metadata"]["trial_earned"], "0")
 
-    def test_checkout_runs_two_for_a_finished_scene(self):
+    def test_checkout_runs_three_for_a_finished_scene_too(self):
         self._session(self.user, "completed")
         sent = self._checkout()
-        self.assertEqual(sent["subscription_data"]["trial_period_days"], 7)
-        self.assertEqual(sent["metadata"]["trial_days"], "7")
-        self.assertEqual(sent["metadata"]["trial_earned"], "1")
+        self.assertEqual(sent["subscription_data"]["trial_period_days"], 3)
+        self.assertEqual(sent["metadata"]["trial_days"], "3")
+        self.assertEqual(sent["metadata"]["trial_earned"], "0")
 
     def test_the_request_cannot_name_a_length(self):
         # The model takes `trial`, a yes or no. A length sent alongside it is
@@ -235,7 +234,7 @@ class CheckoutAndMeTests(Fixture):
         self.assertEqual((me.trial_days, me.trial_earned), (3, False))
         self._session(self.user, "completed")
         me = asyncio.run(subscriptions.get_my_subscription(current_user=self.user, db=self.db))
-        self.assertEqual((me.trial_days, me.trial_earned), (7, True))
+        self.assertEqual((me.trial_days, me.trial_earned), (3, False))
 
 
 if __name__ == "__main__":

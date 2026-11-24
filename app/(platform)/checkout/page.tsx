@@ -13,7 +13,6 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { PLUS_ANNUAL, PLUS_MONTHLY } from "@/lib/paywall/offer";
 import { useLocale, useT } from "@/lib/i18n";
 import { capIn, chargeDateIn, moneyIn, useTrialText } from "@/components/billing/trialText";
-import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconArrowLeft, IconX } from "@tabler/icons-react";
@@ -71,8 +70,8 @@ function CheckoutContent() {
   const tierName = searchParams.get("tier");
   const period = searchParams.get("period") || "monthly";
   const { subscription } = useSubscription();
-  // A week, or two for an actor who has finished a scene. The server decides
-  // and runs it; this page only prints what /me says.
+  // 3 days for everyone (backend/app/services/trial_length.py). The server
+  // decides and runs it; this page only prints what /me says.
   const words = useTrialText();
   const t = useT();
   const locale = useLocale();
@@ -357,8 +356,7 @@ function CheckoutContent() {
               <span suppressHydrationWarning>{chargeDateIn(locale, new Date(), words.days)}</span>
               {subscription?.no_card_trial
                 ? t("appAccountCheckout.trialNoteNoCardB")
-                : t("appAccountCheckout.trialNoteB")}{" "}
-              <EarnSecondWeek />
+                : t("appAccountCheckout.trialNoteB")}
             </p>
           </div>
         )}

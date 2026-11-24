@@ -19,9 +19,9 @@ describe("trialWords", () => {
     expect(w.earned).toBe(true);
   });
 
-  it("falls back to a week while /me has not loaded", () => {
-    expect(trialWords(undefined).days).toBe(7);
-    expect(trialWords(0).days).toBe(7);
+  it("falls back to 3 days while /me has not loaded", () => {
+    expect(trialWords(undefined).days).toBe(3);
+    expect(trialWords(0).days).toBe(3);
   });
 
   it("says days for any other length", () => {

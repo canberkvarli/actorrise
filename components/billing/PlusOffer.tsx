@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 
 import { ClassRoute } from "@/components/billing/ClassRoute";
-import { EarnSecondWeek } from "@/components/billing/EarnSecondWeek";
 import { useSubscription } from "@/hooks/useSubscription";
 import { trackPaywallCtaClicked } from "@/lib/analytics";
 import {
@@ -133,7 +132,7 @@ export function PlusOffer({ feature, lead, onDismiss, dismissLabel }: PlusOfferP
       </div>
 
       <p className="t-plus__fine" suppressHydrationWarning>
-        {offer.fine} <EarnSecondWeek />
+        {offer.fine}
       </p>
       <ClassRoute className="t-plus__fine" />
 
