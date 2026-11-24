@@ -257,8 +257,8 @@ Trial link (base), 3 days, since 2026-11-24: https://buy.stripe.com/aFa28t0Ha5EW
 LINK LENGTHS DIFFER, CHECK BEFORE SENDING. Four live Stripe payment links exist and only the first matches the "3 days free" copy above:
 - `aFa28t0Ha5EWggcb816g803` — Plus $99/yr, **3-day** trial, card always (made 2026-11-24). This is the one to send.
 - `00w8wR4Xqd7o7JGa3X6g802` — Plus $99/yr, **14-day** trial. The one sent until 2026-11-24; DEACTIVATED in Stripe 2026-11-24, it no longer opens.
-- `00w6oJgG8gjAaVSgsl6g801` — Plus $99/yr, **90-day** trial. Older founder-era link, do NOT send with 2-week copy.
-- `28EbJ30Had7o1li8ZT6g800` — Pro $199/yr, **90-day** trial.
+- `00w6oJgG8gjAaVSgsl6g801` — Plus $99/yr, **90-day** trial. Older founder-era link; DEACTIVATED in Stripe 2026-11-25.
+- `28EbJ30Had7o1li8ZT6g800` — Pro $199/yr, **90-day** trial. DEACTIVATED in Stripe 2026-11-25.
 
 THE IN-APP TRIAL IS NOT 2 WEEKS (changed 2026-09-29, shortened 2026-11-16 and 2026-11-24). Inside the product the trial is **3 days for everyone, card on file** (Canberk, 2026-11-24: "i need money and need ppl to hit it for sure"; it was 3 days or a week for a finished scene from 11-16, a week or two before). The iOS app's App Store intro offer goes to 3 days too, which Canberk sets in App Store Connect. **Planned for about 2026-12-01: no trial on the web at all, checkout charges the first day; the app keeps its 3 days** ("we are a premium app, we already give free stuff"). The server decides (`backend/app/services/trial_length.py`) and every surface prints what `/api/subscriptions/me` returns as `trial_days`. It rolls into Plus monthly at $12. So:
 - The Stripe link above is 3 days since 2026-11-24, and copy that sends it says "3 days free".
