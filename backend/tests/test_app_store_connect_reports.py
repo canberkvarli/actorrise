@@ -59,3 +59,21 @@ class DailyInstances(unittest.TestCase):
             got = asc._daily_instances(c, "rep", 2)
         self.assertEqual([i["id"] for i in got], ["2026-11-19", "2026-11-18"])
         self.assertTrue(all("sort" not in p for p in seen))
+
+
+class SumEvents(unittest.TestCase):
+    def test_downloads_report_counts_by_download_type(self):
+        rows = [
+            {"download type": "First-time download", "counts": "3"},
+            {"download type": "Redownload", "counts": "2"},
+            {"download type": "First-time download", "counts": "1"},
+            {"download type": "Auto-update", "counts": "9"},
+        ]
+        sums, notes = asc._sum_events(rows, {"downloads": ("first-time", "first time"), "redownloads": ("redownload",)})
+        self.assertEqual(sums, {"downloads": 4, "redownloads": 2})
+        self.assertEqual(notes, [])
+
+    def test_engagement_report_still_reads_event(self):
+        rows = [{"event": "Impression", "counts": "10"}, {"event": "Page view", "counts": "2"}]
+        sums, _ = asc._sum_events(rows, {"impressions": ("impression",), "page_views": ("page view",)})
+        self.assertEqual(sums, {"impressions": 10, "page_views": 2})

@@ -219,7 +219,10 @@ def _sum_events(rows: Iterable[dict[str, str]], wanted: dict[str, tuple[str, ...
     sums = {k: 0 for k in wanted}
     seen_event_col = False
     for row in rows:
-        event = row.get("event") or row.get("event type") or ""
+        # The engagement report names its rows in "Event"; the downloads report
+        # in "Download Type" (First-time download, Redownload, ...). Reading only
+        # "Event" stored every download day as 0 from 11-19 on.
+        event = row.get("event") or row.get("event type") or row.get("download type") or ""
         counts = row.get("counts") or row.get("count") or row.get("units") or "0"
         if event:
             seen_event_col = True
