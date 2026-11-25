@@ -129,6 +129,7 @@ they are here. When he gives a new standing rule, add it here, not to a memory f
   within 24 hours of the last build wait for the next push after it. Put `[deploy]` in the
   commit message only for a fix that cannot wait. Image optimization is off
   (`unoptimized` in `next.config.ts`) for Hobby's 5,000 transformations.
+  Preview deployments are off in the Vercel project (2026-11-25), so only `main` builds.
 - Run the full backend suite before pushing: `cd backend && .venv/bin/python -m pytest tests/ -q`.
 
 **The database**
