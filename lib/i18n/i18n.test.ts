@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { detectLocale, pickLocale, readLocaleCookie, localeCookieString, TURKISH_ON_WEB } from "./locale";
 import { interpolate, translate, translateList } from "./index";
 
-describe("the web is English only", () => {
-  it("resolves every visitor to English, a saved Turkish choice included", () => {
-    expect(TURKISH_ON_WEB).toBe(false);
-    expect(detectLocale({ cookie: "NEXT_LOCALE=tr", languages: ["tr-TR"], timeZone: "Europe/Istanbul" })).toBe("en");
+describe("the web has Turkish on", () => {
+  it("detectLocale follows the rules below", () => {
+    expect(TURKISH_ON_WEB).toBe(true);
+    expect(detectLocale({ cookie: "NEXT_LOCALE=tr", languages: ["en-US"], timeZone: "America/New_York" })).toBe("tr");
+    expect(detectLocale({ languages: ["en-US"], timeZone: "America/New_York" })).toBe("en");
   });
 });
 

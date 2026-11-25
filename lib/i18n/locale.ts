@@ -22,14 +22,13 @@
 export const LOCALES = ["en", "tr"] as const;
 
 /**
- * The web is English only (Canberk, 2026-11-03). The Turkish UI lives in Ghost
- * Light, where a Turkish actor brings their own script and rehearses it; the
- * web's monologue library is for English-speaking actors. With this off every
- * visitor resolves to English (a saved "tr" cookie included) and the EN/TR
- * switch is not drawn. The Turkish strings and the rules below are kept, so
- * turning it back on is this one line.
+ * Turkish is on the web again (Canberk, 2026-11-25), after being English only
+ * from 2026-11-03. A Turkish actor gets the Turkish UI and, through the
+ * language gate, the Turkish library; ScenePartner rehearses their own script
+ * in Turkish (the speech language follows the script, lib/speech-language.ts).
+ * Set false to send every visitor to English again and hide the EN/TR switch.
  */
-export const TURKISH_ON_WEB = false;
+export const TURKISH_ON_WEB = true;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en";
 export const LOCALE_COOKIE = "NEXT_LOCALE";
