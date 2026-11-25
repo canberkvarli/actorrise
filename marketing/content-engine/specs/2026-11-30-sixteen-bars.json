@@ -1,0 +1,556 @@
+{
+  "id": "2026-11-30-sixteen-bars",
+  "look": "collage",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "Don't walk into a musical audition with only sixteen bars.",
+        "say": "[amused] Don't walk into a musical audition with only sixteen bars.",
+        "sub": false,
+        "at": 0.416,
+        "words": [
+          {
+            "w": "Don't",
+            "s": 0.0,
+            "e": 0.076
+          },
+          {
+            "w": "walk",
+            "s": 0.127,
+            "e": 0.332
+          },
+          {
+            "w": "into",
+            "s": 0.358,
+            "e": 0.46
+          },
+          {
+            "w": "a",
+            "s": 0.492,
+            "e": 0.524
+          },
+          {
+            "w": "musical",
+            "s": 0.572,
+            "e": 0.908
+          },
+          {
+            "w": "audition",
+            "s": 0.95,
+            "e": 1.292
+          },
+          {
+            "w": "with",
+            "s": 1.318,
+            "e": 1.42
+          },
+          {
+            "w": "only",
+            "s": 1.458,
+            "e": 1.612
+          },
+          {
+            "w": "sixteen",
+            "s": 1.668,
+            "e": 2.06
+          },
+          {
+            "w": "bars.",
+            "s": 2.15,
+            "e": 2.956
+          }
+        ],
+        "dur": 3.076
+      },
+      {
+        "text": "The notice wants sixteen bars and a one minute monologue, and my tote has forty songs in it.",
+        "say": "The notice wants sixteen bars and a one minute monologue, and my tote has forty songs in it.",
+        "at": 3.484,
+        "words": [
+          {
+            "w": "The",
+            "s": 0.0,
+            "e": 0.336
+          },
+          {
+            "w": "notice",
+            "s": 0.382,
+            "e": 0.656
+          },
+          {
+            "w": "wants",
+            "s": 0.698,
+            "e": 0.912
+          },
+          {
+            "w": "sixteen",
+            "s": 0.968,
+            "e": 1.36
+          },
+          {
+            "w": "bars",
+            "s": 1.45,
+            "e": 1.808
+          },
+          {
+            "w": "and",
+            "s": 1.84,
+            "e": 1.936
+          },
+          {
+            "w": "a",
+            "s": 1.968,
+            "e": 2.0
+          },
+          {
+            "w": "one",
+            "s": 2.032,
+            "e": 2.128
+          },
+          {
+            "w": "minute",
+            "s": 2.165,
+            "e": 2.384
+          },
+          {
+            "w": "monologue,",
+            "s": 2.416,
+            "e": 3.152
+          },
+          {
+            "w": "and",
+            "s": 3.184,
+            "e": 3.28
+          },
+          {
+            "w": "my",
+            "s": 3.344,
+            "e": 3.472
+          },
+          {
+            "w": "tote",
+            "s": 3.51,
+            "e": 3.664
+          },
+          {
+            "w": "has",
+            "s": 3.712,
+            "e": 3.856
+          },
+          {
+            "w": "forty",
+            "s": 3.898,
+            "e": 4.112
+          },
+          {
+            "w": "songs",
+            "s": 4.166,
+            "e": 4.432
+          },
+          {
+            "w": "in",
+            "s": 4.454,
+            "e": 4.496
+          },
+          {
+            "w": "it.",
+            "s": 4.56,
+            "e": 4.752
+          }
+        ],
+        "dur": 4.872
+      },
+      {
+        "text": "I have a belt, I do not have a monologue, and the sheet music just buried my scarf.",
+        "say": "[playful] I have a belt, I do not have a monologue, and the sheet music just buried my scarf.",
+        "at": 8.992,
+        "words": [
+          {
+            "w": "I",
+            "s": 0.0,
+            "e": 0.016
+          },
+          {
+            "w": "have",
+            "s": 0.042,
+            "e": 0.144
+          },
+          {
+            "w": "a",
+            "s": 0.24,
+            "e": 0.336
+          },
+          {
+            "w": "belt,",
+            "s": 0.374,
+            "e": 0.72
+          },
+          {
+            "w": "I",
+            "s": 0.752,
+            "e": 0.784
+          },
+          {
+            "w": "do",
+            "s": 0.826,
+            "e": 0.912
+          },
+          {
+            "w": "not",
+            "s": 0.944,
+            "e": 1.04
+          },
+          {
+            "w": "have",
+            "s": 1.066,
+            "e": 1.168
+          },
+          {
+            "w": "a",
+            "s": 1.2,
+            "e": 1.232
+          },
+          {
+            "w": "monologue,",
+            "s": 1.28,
+            "e": 1.744
+          },
+          {
+            "w": "and",
+            "s": 1.808,
+            "e": 2.0
+          },
+          {
+            "w": "the",
+            "s": 2.016,
+            "e": 2.064
+          },
+          {
+            "w": "sheet",
+            "s": 2.106,
+            "e": 2.32
+          },
+          {
+            "w": "music",
+            "s": 2.362,
+            "e": 2.576
+          },
+          {
+            "w": "just",
+            "s": 2.627,
+            "e": 2.832
+          },
+          {
+            "w": "buried",
+            "s": 2.869,
+            "e": 3.088
+          },
+          {
+            "w": "my",
+            "s": 3.13,
+            "e": 3.216
+          },
+          {
+            "w": "scarf.",
+            "s": 3.29,
+            "e": 3.728
+          }
+        ],
+        "dur": 3.848
+      },
+      {
+        "text": "So I opened Ghost Light, typed Little Shop of Horrors, and up came Seymour, forty eight seconds, so I tapped Run it.",
+        "say": "[upbeat] So I opened Ghost Light, typed Little Shop of Horrors, and up came Seymour, forty eight seconds, so I tapped Run it.",
+        "sub": false,
+        "at": 13.67,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.01
+          },
+          {
+            "w": "I",
+            "s": 0.074,
+            "e": 0.138
+          },
+          {
+            "w": "opened",
+            "s": 0.184,
+            "e": 0.458
+          },
+          {
+            "w": "Ghost",
+            "s": 0.501,
+            "e": 0.714
+          },
+          {
+            "w": "Light,",
+            "s": 0.757,
+            "e": 1.29
+          },
+          {
+            "w": "typed",
+            "s": 1.333,
+            "e": 1.546
+          },
+          {
+            "w": "Little",
+            "s": 1.592,
+            "e": 1.866
+          },
+          {
+            "w": "Shop",
+            "s": 1.905,
+            "e": 2.058
+          },
+          {
+            "w": "of",
+            "s": 2.101,
+            "e": 2.186
+          },
+          {
+            "w": "Horrors,",
+            "s": 2.234,
+            "e": 2.826
+          },
+          {
+            "w": "and",
+            "s": 2.858,
+            "e": 2.954
+          },
+          {
+            "w": "up",
+            "s": 2.997,
+            "e": 3.082
+          },
+          {
+            "w": "came",
+            "s": 3.134,
+            "e": 3.338
+          },
+          {
+            "w": "Seymour,",
+            "s": 3.394,
+            "e": 4.042
+          },
+          {
+            "w": "forty",
+            "s": 4.085,
+            "e": 4.298
+          },
+          {
+            "w": "eight",
+            "s": 4.32,
+            "e": 4.426
+          },
+          {
+            "w": "seconds,",
+            "s": 4.482,
+            "e": 5.13
+          },
+          {
+            "w": "so",
+            "s": 5.173,
+            "e": 5.258
+          },
+          {
+            "w": "I",
+            "s": 5.322,
+            "e": 5.386
+          },
+          {
+            "w": "tapped",
+            "s": 5.423,
+            "e": 5.642
+          },
+          {
+            "w": "Run",
+            "s": 5.722,
+            "e": 5.962
+          },
+          {
+            "w": "it.",
+            "s": 6.026,
+            "e": 6.218
+          }
+        ],
+        "dur": 6.338
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "sub": false,
+        "at": 20.81,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.102
+          },
+          {
+            "w": "Ghost",
+            "s": 0.145,
+            "e": 0.358
+          },
+          {
+            "w": "Light.",
+            "s": 0.401,
+            "e": 0.934
+          },
+          {
+            "w": "Built",
+            "s": 0.988,
+            "e": 1.254
+          },
+          {
+            "w": "by",
+            "s": 1.318,
+            "e": 1.446
+          },
+          {
+            "w": "a",
+            "s": 1.478,
+            "e": 1.51
+          },
+          {
+            "w": "working",
+            "s": 1.55,
+            "e": 1.83
+          },
+          {
+            "w": "actor.",
+            "s": 1.894,
+            "e": 2.214
+          }
+        ],
+        "dur": 2.334
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-11-30-sixteen-bars/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.25
+  },
+  "scenes": [
+    {
+      "type": "piano",
+      "beat": "hook",
+      "seconds": 3.384,
+      "line": "Don't walk into a musical audition with only sixteen bars.",
+      "hook": [
+        "Don't walk into",
+        "a musical audition",
+        "with only",
+        "sixteen bars."
+      ],
+      "red": [
+        3
+      ],
+      "notice": [
+        "Musical auditions",
+        "16 bars",
+        "and a one minute",
+        "monologue"
+      ]
+    },
+    {
+      "type": "piano",
+      "beat": "tote",
+      "seconds": 5.508,
+      "in": "whip",
+      "line": "Forty songs. Zero monologues.",
+      "accent": "Zero monologues.",
+      "count": 40,
+      "unit": "songs",
+      "scrap": "not one speech"
+    },
+    {
+      "type": "piano",
+      "beat": "avalanche",
+      "seconds": 4.678,
+      "in": "punch",
+      "line": "I have a belt. No monologue.",
+      "accent": "No monologue.",
+      "note": "my scarf!"
+    },
+    {
+      "type": "screens",
+      "seconds": 7.09,
+      "in": "cut",
+      "line": "Type the show.",
+      "accent": "the show.",
+      "shots": [
+        {
+          "src": "story/2026-11-30-sixteen-bars/search.png",
+          "at": 0
+        },
+        {
+          "src": "story/2026-11-30-sixteen-bars/typed.png",
+          "at": 30,
+          "fade": true,
+          "tap": {
+            "x": 0.856,
+            "y": 0.312,
+            "at": 80
+          }
+        },
+        {
+          "src": "story/2026-11-30-sixteen-bars/results.png",
+          "at": 92,
+          "tap": {
+            "x": 0.5,
+            "y": 0.38,
+            "at": 140
+          }
+        },
+        {
+          "src": "story/2026-11-30-sixteen-bars/open.png",
+          "at": 152,
+          "tap": {
+            "x": 0.46,
+            "y": 0.405,
+            "at": 196
+          }
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "tiktok": "Don't walk into a musical audition with only sixteen bars. They ask for a monologue too. Seymour, Little Shop of Horrors (Howard Ashman), 0:48, in Ghost Light. The voice is AI. #musicaltheatre #audition #monologue #actortok #theatrekid",
+    "youtube_title": "Don't walk into a musical audition with only sixteen bars.",
+    "youtube_description": "Don't walk into a musical audition with only sixteen bars.\nThe notice wants sixteen bars and a one minute monologue. Milo has forty songs in his tote and not one speech. In Ghost Light he typed Little Shop of Horrors and up came Seymour, 0:48, with the show and Howard Ashman's credit. Free on the App Store. Built by a working actor. The voice is AI.\n#musicaltheatre #audition #monologue #acting",
+    "instagram": "Don't walk into a musical audition with only sixteen bars.\n\nThe notice says sixteen bars AND a one minute monologue. Which one did you forget last time?\n\nMilo had forty songs and zero speeches. What he did in Ghost Light:\n1. Tap Search.\n2. Type the show: Little Shop of Horrors.\n3. Open Seymour (book and lyrics by Howard Ashman), 0:48.\n4. Tap Run it.\n\nFree on the App Store, built by a working actor. Link in bio. The voice is AI.\n\n#musicaltheatre #audition #monologue #actorslife #littleshopofhorrors"
+  },
+  "cover_ms": 300,
+  "source": {
+    "plan": "Callboard row 2026-11-30 (storyhowto, story-howto), the earliest planned row on 2026-11-25; look collage",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "sql": "select m.id, m.character_name, m.estimated_duration_seconds, m.overdone_score, p.title, p.author, p.copyright_status from monologues m join plays p on p.id=m.play_id where p.title ilike '%little shop%'",
+    "checked": "2026-11-25: play 4595 Little Shop of Horrors (Howard Ashman, copyrighted): 46167 Seymour 48s, 46168 Seymour 60s, 46169 Audrey 50s, 46170 Orin Scrivello 58s, overdone 0. In the Ghost Light app 'Little Shop of Horrors' returns Seymour 0:48, Seymour 1 min, Audrey 0:50 first, 30 monologues",
+    "changed_from_plan": "the row's search ('a monologue for a musical audition, under a minute') and two other described asks return film cards first (The Greatest Showman, tick, tick... BOOM!, Rent), not the new stage pieces, so the film types the show's name. Not swapped to i36: the hook and the new library pieces stay true. Copyrighted: show, character, writer and length only, the speech text is blurred on every screen (and Tonight's speech on the search screen)",
+    "app": "Ghost Light web preview built from actorrise main apps/mobile (cb05dbc0) plus web-preview.patch, dark theme, demo account, 2026-11-25",
+    "flow": "flows/search-musical-audition.json (shots, blurred -> public/story/2026-11-30-sixteen-bars/*.png)",
+    "voice": "George, one take at stability 0.5, Scribe 0.94 (it hears 'sixteen' as '16'), sped up 1.25x with fit_take.py; AI voice, labelled on every platform",
+    "new_scene_types": "piano (cut-paper collage) with three beats: hook, tote, avalanche. New collage pieces: PUpright (the rehearsal piano), PSheet (sheet music), the pinned audition notice, the song counter",
+    "motifs": "pinned-musical-audition-notice,tote-tipped-out,sheet-music-fountain,forty-songs-counter,upright-piano,sheet-music-avalanche,scarf-buried-under-songs",
+    "end": "specs/2026-11-30-sixteen-bars-end.json, joined with scripts/join.sh",
+    "feature": "search",
+    "trypost": {
+      "tiktok": "01a21185-7d2d-704b-998c-dfefe9b68414",
+      "youtube": "01a21185-7d36-718e-8a92-9b212feab636",
+      "instagram": "01a21185-7d3e-7359-a5cc-2aec4ba4507c",
+      "status": "draft"
+    }
+  }
+}

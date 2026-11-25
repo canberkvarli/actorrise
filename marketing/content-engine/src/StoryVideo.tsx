@@ -128,7 +128,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | Sofa | Scroll | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | Sofa | Scroll | Piano | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -4724,6 +4724,148 @@ const ScrollScene: React.FC<{ s: Scroll }> = ({ s }) => {
   );
 };
 
+// ---------- piano: sixteen bars and no monologue, cut-paper collage (2026-11-30) ----------
+/** Milo at a musical audition. Three beats: "hook" (the notice pinned on the wall asks for sixteen bars AND a one
+ *  minute monologue, the hook card from frame 0), "tote" (he tips the tote out: sheet music fountains across the
+ *  floor, a counter runs up to forty, not one speech), "avalanche" (the pile of songs slides off the rehearsal
+ *  piano and buries his scarf). All new torn paper pieces: the upright piano, the sheets of music, the notice. */
+type Piano = { type: "piano"; beat: "hook" | "tote" | "avalanche"; seconds: number; line: string; accent?: string;
+  hook?: string[]; red?: number[]; /** hook: the notice, last line in red */ notice?: string[]; ringAt?: number;
+  /** tote: how many songs, the word under the number, and the scrap that lands after */ count?: number; unit?: string; scrap?: string; scrapAt?: number;
+  /** avalanche: when the pile goes, and the scrap after it lands */ slideAt?: number; note?: string };
+const PNO = { wall: "#7a2f4b", wall2: "#23505c", wall3: "#3b3566", floor: "#c9923f", skirt: "#f0e2c4", wood: "#3f241b", woodHi: "#65392a", rule: "#9a8f78" };
+const PNO_FL = 1200;
+const prand = (k: number, m: number) => { const v = Math.sin(k * 127.1 + m * 311.7) * 43758.5453; return v - Math.floor(v); };
+/** One sheet of music: a white page, three staves, a few notes. (x, y) = its middle. */
+const PSheet: React.FC<{ x: number; y: number; rot?: number; s?: number; k?: number }> = ({ x, y, rot = 0, s = 1, k = 0 }) => (
+  <g transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`}>
+    <rect x={-62} y={-80} width={124} height={160} fill={k % 3 === 1 ? CP.cream : CP.white} filter="url(#tornS)" />
+    {[0, 1, 2].map((b) => (<g key={b}>
+      {[0, 1, 2, 3, 4].map((l) => <rect key={l} x={-48} y={-58 + b * 46 + l * 6} width={96} height={2} fill={PNO.rule} />)}
+      {[0, 1, 2].map((n) => { const nx = -34 + n * 30 + ((b * 7 + k * 3) % 9), ny = -34 + b * 46 - ((n * 5 + b * 3 + k) % 4) * 6;
+        return <g key={n}><ellipse cx={nx} cy={ny} rx={7} ry={5} fill={CP.ink} transform={`rotate(-18 ${nx} ${ny})`} /><rect x={nx + 5} y={ny - 26} width={2.5} height={26} fill={CP.ink} /></g>; })}
+    </g>))}
+  </g>
+);
+/** The rehearsal room upright. (x, y) = bottom left corner on the floor, w wide. */
+const PUpright: React.FC<{ x: number; y: number; w?: number }> = ({ x, y, w = 430 }) => (
+  <g>
+    <rect x={x} y={y - 440} width={w} height={440} fill={PNO.wood} filter="url(#torn)" />
+    <rect x={x - 18} y={y - 464} width={w + 36} height={36} fill={PNO.woodHi} filter="url(#tornS)" />
+    <rect x={x + 70} y={y - 400} width={w - 140} height={120} fill={PNO.woodHi} filter="url(#tornS)" />
+    <rect x={x - 26} y={y - 250} width={w + 52} height={70} fill={PNO.woodHi} filter="url(#torn)" />
+    <rect x={x - 12} y={y - 242} width={w + 24} height={36} fill={CP.white} />
+    {Array.from({ length: Math.floor((w + 24) / 26) }).map((_, k) => <rect key={`l${k}`} x={x - 12 + k * 26} y={y - 242} width={2} height={36} fill={PNO.rule} />)}
+    {Array.from({ length: Math.floor((w + 24) / 26) - 1 }).map((_, k) => (k % 7 === 2 || k % 7 === 6) ? null : <rect key={`b${k}`} x={x + 6 + k * 26} y={y - 242} width={15} height={22} fill={CP.ink} />)}
+    <rect x={x + w / 2 - 44} y={y - 30} width={30} height={14} rx={6} fill={CP.mustard} /><rect x={x + w / 2 + 14} y={y - 30} width={30} height={14} rx={6} fill={CP.mustard} />
+  </g>
+);
+const PianoScene: React.FC<{ s: Piano }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const N = Math.round(s.seconds * fps);
+  const Room: React.FC<{ wall: string }> = ({ wall }) => (
+    <g>
+      <rect width={1080} height={1920} fill={wall} filter="url(#fibre)" />
+      <rect x={-30} y={PNO_FL} width={1140} height={800} fill={PNO.floor} filter="url(#torn)" />
+      <rect x={-30} y={PNO_FL - 26} width={1140} height={30} fill={PNO.skirt} filter="url(#tornS)" />
+    </g>
+  );
+  if (s.beat === "hook") {
+    const lf = f - PREROLL, nt = s.notice ?? ["Musical auditions", "16 bars", "and a one minute", "monologue"];
+    const ringAt = PREROLL + (s.ringAt ?? Math.round((N - PREROLL) * 0.5)), ring = cease(f, ringAt, ringAt + 9);
+    const NX = 432, NW = 490, NY = 700, sizes = [31, 84, 33, 60], ys = [66, 158, 214, 290];
+    return (
+      <AbsoluteFill>
+        <Sfx name="cine/plink" at={PREROLL + 3} vol={0.45} />
+        <Sfx name="pop" at={ringAt} vol={0.5} />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <Room wall={PNO.wall} />
+          {/* a strip of the piano at the edge of the room, a few songs already on it */}
+          <PUpright x={690} y={PNO_FL + 6} w={470} />
+          <PSheet x={800} y={PNO_FL - 500} rot={-7} k={1} /><PSheet x={880} y={PNO_FL - 512} rot={5} k={2} />
+          {/* the audition notice, pinned */}
+          <g transform={`rotate(2 ${NX + NW / 2} ${NY + 170})`}>
+            <rect x={NX} y={NY} width={NW} height={340} fill={CP.white} filter="url(#torn)" />
+            {nt.slice(0, 4).map((l, k) => <text key={k} x={NX + NW / 2} y={NY + ys[k]} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={sizes[k]} fill={k === 3 ? CP.red : CP.ink}>{l.toUpperCase()}</text>)}
+            <rect x={NX + NW / 2 - 215 * ring} y={NY + 304} width={430 * ring} height={11} rx={5} fill={CP.red} />
+            <circle cx={NX + NW / 2} cy={NY + 16} r={20} fill={CP.mustard} filter="url(#tornS)" />
+          </g>
+          <CMilo x={176} y={PNO_FL + 24} s={0.84} panic={f >= ringAt ? 0.8 : 0.15} talk={lf > 4 && lf < N - PREROLL - 6 ? 0.4 + 0.4 * Math.abs(Math.sin(f / 2.4)) : 0} />
+        </svg>
+        <CHook lines={s.hook ?? [s.line]} red={s.red} />
+      </AbsoluteFill>
+    );
+  }
+  if (s.beat === "tote") {
+    const total = s.count ?? 40, SH = 24, T0 = 5, GAP = Math.max(1.4, (N * 0.62 - T0) / SH), FLY = 15;
+    const TX = 610, TY = PNO_FL + 44; // the tote, on its side, mouth to the right
+    const prog = Math.min(1, Math.max(0, (f - T0) / (SH * GAP)));
+    const shown = Math.round(total * cease(f, T0, T0 + SH * GAP));
+    const scrapAt = s.scrapAt ?? Math.round(T0 + SH * GAP + 6);
+    const cq = spring({ frame: f - T0, fps, config: { damping: 10, mass: 0.6 } });
+    const bump = shown >= total ? spring({ frame: f - Math.round(T0 + SH * GAP), fps, config: { damping: 7, mass: 0.5 } }) : 0;
+    return (
+      <AbsoluteFill>
+        <Sfx name="slide" at={T0} vol={0.45} />
+        {Array.from({ length: 6 }).map((_, k) => <Sfx key={k} name="pop" at={Math.round(T0 + FLY + k * GAP * 4)} vol={0.3} />)}
+        <Sfx name="thud" at={Math.round(T0 + SH * GAP)} vol={0.5} />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <Room wall={PNO.wall2} />
+          <CMilo x={200} y={PNO_FL + 20} s={0.8} tote={false} panic={0.35 + prog * 0.6} talk={0.35 + 0.4 * Math.abs(Math.sin(f / 2.5))} />
+          {/* the songs, landed and landing */}
+          {Array.from({ length: SH }).map((_, k) => { const a = T0 + k * GAP; if (f < a) return null;
+            const t = Math.min(1, (f - a) / FLY), e = 1 - (1 - t) * (1 - t);
+            const lx = 130 + prand(k, 1) * 760, ly = PNO_FL + 70 + prand(k, 2) * 230, r1 = (prand(k, 3) - 0.5) * 70;
+            const x = TX + (lx - TX) * e, y = TY - 60 + (ly - TY + 60) * e - Math.sin(Math.PI * t) * (260 + prand(k, 4) * 280);
+            return <PSheet key={k} x={x} y={y} rot={r1 + (1 - t) * 240 * (k % 2 ? 1 : -1)} s={0.86 + prand(k, 5) * 0.3} k={k} />; })}
+          {/* the tote tipped over, still pouring */}
+          <g transform={`rotate(${-74 + Math.sin(f / 2) * (prog < 1 ? 3 : 0)} ${TX} ${TY})`}>
+            <rect x={TX - 78} y={TY - 180} width={156} height={180} fill={CP.kraft} filter="url(#torn)" />
+            <rect x={TX - 52} y={TY - 232} width={14} height={62} fill={CP.kraft} /><rect x={TX + 38} y={TY - 232} width={14} height={62} fill={CP.kraft} />
+          </g>
+          {/* the count */}
+          <g transform={`translate(700 790) rotate(-5) scale(${cq * (1 + bump * 0.12)})`}>
+            <rect x={-190} y={-124} width={380} height={236} fill={CP.red} filter="url(#torn)" />
+            <text x={0} y={18} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={150} fill={CP.cream}>{shown}</text>
+            <text x={0} y={82} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={46} fill={CP.cream}>{(s.unit ?? "songs").toUpperCase()}</text>
+          </g>
+          {s.scrap && <CNote text={s.scrap} x={700} y={1010} rot={-4} size={58} at={scrapAt} />}
+        </svg>
+        <CTitle text={s.line} accent={s.accent} y={262} />
+      </AbsoluteFill>
+    );
+  }
+  // avalanche: the pile slides off the piano and buries his scarf
+  const slideAt = s.slideAt ?? Math.round(N * 0.28), PX = 520, PW = 430, SH = 16, hitAt = slideAt + 15;
+  const lean = cease(f, slideAt - 8, slideAt), tug = cease(f, hitAt, hitAt + 6);
+  const MX = 214, MY = PNO_FL + 22, MS = 0.8;
+  const wob = f >= hitAt ? Math.sin((f - hitAt) / 3.4) * 2.5 : 0;
+  const nx = MX + 34 * MS + tug * 54, ny = MY - 396 * MS + tug * 46;
+  return (
+    <AbsoluteFill>
+      <Sfx name="slide" at={slideAt} vol={0.55} />
+      <Sfx name="thud" at={hitAt} vol={0.6} />
+      <Sfx name="cine/toing" at={hitAt + 8} vol={0.45} />
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Room wall={PNO.wall3} />
+        <PUpright x={PX} y={PNO_FL + 6} w={PW} />
+        {/* the scarf: its tail runs along the floor to the piano, and goes tight when the pile lands */}
+        <path d={`M${nx} ${ny} L ${MX + 96 + tug * 60} ${PNO_FL + 52 - tug * 150} L ${PX - 60 - tug * 40} ${PNO_FL + 62 + tug * 20}`} fill="none" stroke={CP.mustard} strokeWidth={34} strokeLinejoin="round" strokeLinecap="round" filter="url(#tornS)" />
+        <g transform={`rotate(${tug * 15 + wob} ${MX} ${MY})`}><CMilo x={MX} y={MY} s={MS} tote={false} panic={f >= slideAt ? 1 : 0.3} talk={0.35 + 0.4 * Math.abs(Math.sin(f / 2.5))} /></g>
+        {/* forty songs on the lid, then on the scarf */}
+        {Array.from({ length: SH }).map((_, k) => { const a = slideAt + k * 0.9, t = Math.min(1, Math.max(0, (f - a) / 14)), e = t * t;
+          const sx = PX + 60 + (k % 8) * 44 + lean * -20, sy = PNO_FL - 478 - Math.floor(k / 8) * 22 - (k % 3) * 5, sr = (prand(k, 6) - 0.5) * 16 - lean * 10;
+          const lx = 340 + prand(k, 7) * 330, ly = PNO_FL + 44 + prand(k, 8) * 150, lr = (prand(k, 9) - 0.5) * 90;
+          const x = sx + (lx - sx) * (1 - (1 - t) * (1 - t)), y = sy + (ly - sy) * e;
+          return <PSheet key={k} x={x} y={y} rot={sr + (lr - sr) * t - Math.sin(Math.PI * t) * 120} s={1.04} k={k} />; })}
+        {s.note && <CNote text={s.note} x={640} y={640} rot={3} size={58} at={hitAt + 6} />}
+      </svg>
+      <CTitle text={s.line} accent={s.accent} y={262} />
+    </AbsoluteFill>
+  );
+};
+
 // ---------- busstop: a love confession at the bus stop, cut-paper collage (2026-11-26) ----------
 /** Milo rehearses a love confession into his phone at a bus stop at dusk, paper hearts rising. Three beats:
  *  "hook" (the stop, the hook card from frame 0), "bus" (the bus pulls up, the doors open, he steps on mid
@@ -5138,6 +5280,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "libdesk" ? <LibDeskScene s={sc} /> :
       sc.type === "sofa" ? <SofaScene s={sc} /> :
       sc.type === "scroll" ? <ScrollScene s={sc} /> :
+      sc.type === "piano" ? <PianoScene s={sc} /> :
       <EndScene s={sc} />;
   };
 
