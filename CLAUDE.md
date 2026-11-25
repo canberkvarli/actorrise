@@ -122,6 +122,13 @@ they are here. When he gives a new standing rule, add it here, not to a memory f
   a model that names a column the database lacks makes every request 500 (a prod search outage,
   2026-07-23). Migrations are `backend/scripts/add_*.py`, `CREATE ... IF NOT EXISTS`, RLS on.
 - Marketing pages (landing, pricing, for-teachers) need his go-ahead before they are pushed.
+- **Vercel is back on Hobby (2026-11-25, Canberk).** Hobby pauses the site at a cap instead
+  of billing (it was down 11-20 to 11-22). The ISR-write cap (200K a month) is the one that
+  breaks, because every site build throws the ISR cache away. So
+  `scripts/vercel-ignore-build.sh` builds main at most once a day: site changes pushed
+  within 24 hours of the last build wait for the next push after it. Put `[deploy]` in the
+  commit message only for a fix that cannot wait. Image optimization is off
+  (`unoptimized` in `next.config.ts`) for Hobby's 5,000 transformations.
 - Run the full backend suite before pushing: `cd backend && .venv/bin/python -m pytest tests/ -q`.
 
 **The database**

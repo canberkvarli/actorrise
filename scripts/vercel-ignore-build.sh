@@ -40,5 +40,25 @@ if git diff --quiet "$prev" HEAD -- . \
   exit 0
 fi
 
+# At most one production build a day (2026-11-25, back to Hobby). Every build
+# throws the ISR cache away and crawlers re-render the monologue pages, and on
+# Pro 11-21 to 11-24 that ran at about 8,500 ISR writes a day, some 255K a
+# month against Hobby's 200K: 48 site builds from 11-04 to 11-25 were the
+# reason. Site changes pushed within a day of the last build wait for the next
+# push after it. "[deploy]" in the commit message builds now, for a fix.
+msg="${VERCEL_GIT_COMMIT_MESSAGE:-}"
+case "$msg" in
+  *"[deploy]"*)
+    echo "Building: [deploy] in the commit message."
+    exit 1
+    ;;
+esac
+prev_at=$(git log -1 --format=%ct "$prev" 2>/dev/null || echo 0)
+age=$(( $(date +%s) - prev_at ))
+if [ "$age" -lt 86400 ]; then
+  echo "Skipping: the last build ($prev) is $((age / 3600))h old; site changes wait for the daily build. Add [deploy] to build now."
+  exit 0
+fi
+
 echo "Building: site files changed since $prev."
 exit 1

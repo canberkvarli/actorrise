@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   images: {
+    // No Vercel image optimization (2026-11-25, back to Hobby): about 4,300
+    // transformations a month against Hobby's 5,000. Posters from Amazon and
+    // OMDb are served at their own sizes, and the rest are small local files.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
