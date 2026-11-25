@@ -52,6 +52,21 @@ class RecordTests(unittest.TestCase):
         self.assertEqual(row.properties, {"provider": "google"})
         self.assertEqual(row.user_id, self.user.id)
 
+    def test_turkish_ui_is_written_on_the_event(self):
+        from app.services import library_language
+
+        token = library_language.set_request_languages(library_language.TURKISH_LANGUAGES)
+        try:
+            events.record_user_event(self.user.id, "signup_completed", {"provider": "google"})
+        finally:
+            library_language._REQUEST_LANGUAGES.reset(token)
+        row = self.db.query(UserEvent).one()
+        self.assertEqual(row.properties, {"ui_language": "tr", "provider": "google"})
+
+    def test_english_ui_writes_no_language(self):
+        events.record_user_event(self.user.id, "signup_completed")
+        self.assertEqual(self.db.query(UserEvent).one().properties, {})
+
     def test_unknown_name_is_dropped(self):
         self.assertFalse(events.record_user_event(self.user.id, "made_up"))
         self.assertEqual(self.db.query(UserEvent).count(), 0)

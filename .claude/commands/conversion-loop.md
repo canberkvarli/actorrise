@@ -92,6 +92,12 @@ an annual one has already paid for the year) is a "Moved" line. If it disagrees 
 section 6, the webhook missed something: say so under "Broken". If it fails, say so and do
 not read it as zero.
 
+Section 6b is Turkish actors (Canberk, 2026-11-25: "i wanna see it in my daily log if we have
+some"): anyone who used the Turkish UI (counted from 2026-11-25) or uploaded a script in Turkish
+in the last 7 days, with whether they saw a price, checked out or pay. Print it in the summary
+as one line, "Turkish: <n> people, <n> saw a price, <n> checkout, <n> paying", or "Turkish:
+nobody this week". A new Turkish payer is a "Moved" line.
+
 Section 7 is the audition tracker (Canberk, 2026-10-08: "add the auditions tab too"). It is
 moderators only until he opens it up, so the staff row is him trying it and the real-user
 row stays at zero until launch; print both. Read: how many auditions were added this week

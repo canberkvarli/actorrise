@@ -260,6 +260,37 @@ order by e.created_at desc
 """
 
 
+# Turkish actors (Canberk, 2026-11-25: "add turkish users to the conversion, i
+# wanna see it in my daily log"). Two signals: an event sent from the Turkish UI
+# (record_user_event writes ui_language "tr", from 2026-11-25 on), or a script
+# they uploaded in Turkish (the Play hook marks it). Last 7 days, real users.
+TURKISH_PEOPLE = f"""
+with tr as (
+  select e.user_id from user_events e
+  where e.properties->>'ui_language' = 'tr' and e.created_at > now() - interval '7 days'
+  union
+  select us.user_id from user_scripts us
+  join scenes sc on sc.user_script_id = us.id join plays p on p.id = sc.play_id
+  where p.language = 'tr' and us.user_id is not null
+    and us.created_at > now() - interval '7 days')
+select coalesce(u.name, ''), u.email, u.created_at::date,
+       (select count(*) from user_events e where e.user_id = u.id
+          and e.created_at > now() - interval '7 days') events_7d,
+       (select count(distinct us.id) from user_scripts us
+          join scenes sc on sc.user_script_id = us.id join plays p on p.id = sc.play_id
+          where us.user_id = u.id and p.language = 'tr') turkish_uploads,
+       exists (select 1 from user_events e where e.user_id = u.id
+          and e.event_name in ('paywall_hit', 'upgrade_modal_viewed', 'trial_offer_shown')
+          and e.created_at > now() - interval '7 days') saw_price,
+       exists (select 1 from user_events e where e.user_id = u.id
+          and e.event_name = 'checkout_started'
+          and e.created_at > now() - interval '7 days') checkout,
+       {PAID} paying
+from (select distinct user_id from tr) t join users u on u.id = t.user_id
+where {REAL}
+order by events_7d desc
+"""
+
 # The audition tracker (services/auditions), moderators only while Canberk
 # tries it (2026-10-08), so for now these rows are his own. Staff is counted
 # separately rather than hidden, so the section is not blank until launch.
@@ -563,6 +594,7 @@ def build(conn) -> str:
             store_note = "No sync result kept yet (asc_last_sync is written from 2026-11-17).\n"
     reads7, readers7, reads14, readers14 = q(APP_READS)[0]
     guided = guided_section(conn)
+    turkish = q(TURKISH_PEOPLE)
     gap_overall, gap_kinds = gap_rows(q(GAP_SEARCHES))
 
     parts = [
@@ -614,6 +646,11 @@ def build(conn) -> str:
         table(("status", "plan", "people"), q(APP_SUBS)),
         "Events this week (purchases, renewals, trials, expirations), as Apple reported them:\n",
         table(("day", "type", "product", "period", "who"), q(APP_EVENTS)),
+        "## 6b. Turkish actors, last 7 days\n",
+        "Anyone who used the Turkish UI (counted from 2026-11-25) or uploaded a script in",
+        "Turkish. Real users only.\n",
+        table(("name", "email", "signed up", "events", "Turkish uploads", "saw a price", "checkout", "paying"),
+              [r[:5] + tuple("yes" if v else "no" for v in r[5:]) for r in turkish]),
         "## 7. Auditions, the tracker\n",
         "Moderators only until Canberk opens it up, so `staff = true` is him trying it.",
         "Created this week against last, how many are still scheduled, by how many people.\n",

@@ -304,6 +304,15 @@ def record_user_event(
     try:
         if event_name not in EVENT_NAMES:
             return False
+        # Which actors use the Turkish UI (Canberk, 2026-11-25: "add turkish
+        # users to the conversion, i wanna see it in my daily log"). Nothing
+        # else stores a person's language; the request carries it. Only "tr" is
+        # written: no key is English. In front, like the device, so the
+        # twelve-key cap cannot drop it.
+        from app.services.ui_language import is_turkish
+
+        if is_turkish():
+            properties = {"ui_language": "tr", **(properties or {})}
         row = UserEvent(
             user_id=user_id,
             event_name=event_name,
