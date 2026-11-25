@@ -87,7 +87,7 @@ export function useToggleFavorite() {
     },
     onError: (err, { id, on }, ctx) => {
       if (ctx?.previous) qc.setQueryData(KEY, ctx.previous);
-      // A free account at the save cap (5, FREE_SAVES_LIMIT on the server):
+      // A free account at the save cap (3, FREE_SAVES_LIMIT on the server):
       // the read screen already put the piece on the offline shelf, so take it
       // back off, and open the paywall instead of failing quietly.
       if (on && err instanceof ApiError && err.status === 403) {

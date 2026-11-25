@@ -39,17 +39,17 @@ def free(monkeypatch):
     monkeypatch.setattr(mono_api, "_user_has_unlimited_reads", lambda *a, **k: False)
 
 
-def test_the_cap_is_five():
-    assert mono_api.FREE_SAVES_LIMIT == 5
+def test_the_cap_is_three():
+    assert mono_api.FREE_SAVES_LIMIT == 3
 
 
 def test_under_the_cap_saves(free):
-    assert mono_api._free_save_refused(_Db(4), USER) is None
+    assert mono_api._free_save_refused(_Db(2), USER) is None
 
 
 def test_at_the_cap_is_refused_with_the_offer(free):
-    assert mono_api._free_save_refused(_Db(5), USER) == {
-        "error": "saves_plus", "used": 5, "limit": 5,
+    assert mono_api._free_save_refused(_Db(3), USER) == {
+        "error": "saves_plus", "used": 3, "limit": 3,
     }
 
 

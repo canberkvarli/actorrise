@@ -1060,17 +1060,17 @@ function Spine({ m }: { m: Monologue }) {
 /** The picks for the payoff. Never throws: an empty list is a real answer here. */
 async function fetchPicks(answers: OnboardingAnswers): Promise<Monologue[]> {
   try {
-    // Three since 2026-11-16 (was six): a free account holds five saves
-    // (FREE_SAVES_LIMIT on the server), and these are kept for them, so three
-    // leaves two to save by hand before the offer.
+    // Two since 2026-11-25 (three from 11-16, six before): a free account
+    // holds three saves (FREE_SAVES_LIMIT on the server), and these are kept
+    // for them, so two leaves one to save by hand before the offer.
     let res = await api.get<{ results: Monologue[]; total: number }>(
-      `/api/monologues/search?${buildPayoffParams(answers, { limit: 3 })}`
+      `/api/monologues/search?${buildPayoffParams(answers, { limit: 2 })}`
     );
     let list = res.data.results ?? [];
     if (!list.length) {
       // Thin-results fallback: drop the narrowing filters, keep gender+age.
       res = await api.get<{ results: Monologue[]; total: number }>(
-        `/api/monologues/search?${buildPayoffParams(answers, { limit: 3, broad: true })}`
+        `/api/monologues/search?${buildPayoffParams(answers, { limit: 2, broad: true })}`
       );
       list = res.data.results ?? [];
     }

@@ -33,9 +33,9 @@ def canonical_tiers() -> list[PricingTier]:
             stripe_annual_price_id=None,
             features={
                 "ai_searches_per_month": 10,
-                # 5 since 2026-11-16, and enforced since then (FREE_SAVES_LIMIT in
-                # api/monologues.py); 10 was written here and never read.
-                "bookmarks_limit": 5,
+                # 3 since 2026-11-25 (5 from 2026-11-16), enforced by FREE_SAVES_LIMIT
+                # in api/monologues.py; 10 was written here and never read.
+                "bookmarks_limit": 3,
                 "recommendations": True,
                 "download_formats": ["pdf", "docx"],
                 "priority_support": False,
@@ -53,7 +53,7 @@ def canonical_tiers() -> list[PricingTier]:
                 "scene_partner_sessions": 1,  # 1 since 2026-10-21 (was 3), Canberk. The guided first scene is unmetered (POST /runs/guided).
                 # 2 since 2026-10-21 (was 3, level with scene sessions), Canberk's call.
                 # Paid tiers stay -1. Live value is in pricing_tiers.features.
-                "monologue_sessions": 2,
+                "monologue_sessions": 1,  # lifetime; 1 since 2026-11-25 (was 2)
                 "scene_partner_trial_only": True,
             },
             is_active=True,

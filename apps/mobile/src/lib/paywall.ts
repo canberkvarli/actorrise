@@ -10,7 +10,7 @@ import { pick } from '../i18n/pick';
  * The earned moments: the fourth read of the day, the second run of the month,
  * the second script, the end of a Run it preview. The rest are the actor
  * asking for it (the curtain's "the week", Account, Settings) or a quiet lock
- * they tapped (copying, a filter). `save_limit` is the sixth save on a free
+ * they tapped (copying, a filter). `save_limit` is the fourth save on a free
  * account (FREE_SAVES_LIMIT on the server). `welcome` is the end of the three questions,
  * before the first night's room.
  */
@@ -44,7 +44,7 @@ export const WHY_LINE: Partial<Record<PaywallTrigger, string>> = {
   get script_limit() { return pick('(one script of your own is free.)', '(kendi metinlerinden biri ücretsiz.)'); },
   get scene_limit() { return pick('(one scene of each script is free. the rest come with the whole stage.)', '(her metinden bir sahne ücretsiz. gerisi sahnenin tamamıyla gelir.)'); },
   get run_it() { return pick('(the whole speech, run with you.)', '(monoloğun tamamı, seninle.)'); },
-  get save_limit() { return pick('(five saved pieces are free. plus keeps them all.)', '(beş kayıtlı parça ücretsiz. plus hepsini saklar.)'); },
+  get save_limit() { return pick('(three saved pieces are free. plus keeps them all.)', '(üç kayıtlı parça ücretsiz. plus hepsini saklar.)'); },
   get copy() { return pick('(copying comes with the whole stage.)', '(kopyalama, sahnenin tamamıyla gelir.)'); },
   get welcome() { return pick('(everything, from your first night.)', '(her şey, ilk geceden itibaren.)'); },
   get tape_mark() { return pick('(your tapes, saved clean.)', '(kayıtların, filigransız.)'); },

@@ -18,8 +18,8 @@ export function openSavesWallIfCapped(err: unknown): boolean {
 }
 
 /**
- * The wall at the save cap. A free account holds five saved monologues
- * (FREE_SAVES_LIMIT on the server, 2026-11-16); the next save opens this.
+ * The wall at the save cap. A free account holds three saved monologues
+ * (FREE_SAVES_LIMIT on the server, 3 since 2026-11-25); the next save opens this.
  *
  * Saves happen from a dozen places (cards, the slide-over, the piece page), so
  * rather than a modal beside every button the hook raises one window event and

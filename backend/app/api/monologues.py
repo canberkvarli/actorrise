@@ -1202,12 +1202,13 @@ async def request_content(
 FREE_FIND_FOR_ME_PER_MONTH = 1
 _FIND_FOR_ME_EVENT = "find_for_me_used"
 
-#: Monologues a free account can hold saved at once, web and app alike
-#: (2026-11-16, Canberk). Onboarding keeps 3 of them, so 2 are saved by hand
-#: and the next one meets the offer. Until now saves were uncapped:
+#: Monologues a free account can hold saved at once, web and app alike.
+#: 3 since 2026-11-25 (was 5 from 2026-11-16), Canberk: "lessen things".
+#: Onboarding keeps 2 of them, so 1 is saved by hand and the next one meets
+#: the offer. Until now saves were uncapped:
 #: bookmarks_limit was in the tier row and nothing read it. Plus is unlimited.
 #: Pieces saved before the cap stay; only a new save is refused.
-FREE_SAVES_LIMIT = 5
+FREE_SAVES_LIMIT = 3
 
 
 def _free_save_refused(db: Session, user: User, request: Request | None = None) -> dict | None:
