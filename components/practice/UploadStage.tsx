@@ -145,7 +145,10 @@ export function UploadStage({
 
   /* The server's own sentence for this pass, when it differs from the name of
      the pass. This is the line that actually changes while you watch. */
-  const detail = last?.detail && last.detail !== last.group ? last.detail : null;
+  /* The detail is the server's own sentence, in English: shown in English only;
+     another language has the translated headline above it instead. */
+  const detail =
+    locale === "en" && last?.detail && last.detail !== last.group ? last.detail : null;
 
   return (
     <motion.div
@@ -359,7 +362,7 @@ export function UploadStage({
                           className="m-0 truncate text-[11px]"
                           style={{ fontFamily: "var(--t-direction)", color: "var(--t-faint)" }}
                         >
-                          {step.detail || step.group}
+                          {locale === "en" ? step.detail || step.group : phaseText(t, locale, step.group)}
                         </p>
                       ))}
                     </div>
