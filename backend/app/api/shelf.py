@@ -24,6 +24,7 @@ from app.models.shelf import ON_SHELF, ShelfScene, WORK_KINDS
 from app.models.user import User
 from app.services import shelf_labels
 from app.services.rehearsal.access import FREE_LIBRARY_ADDS, has_whole_library
+from app.services.ui_language import say
 
 router = APIRouter(prefix="/api/shelf", tags=["shelf"])
 
@@ -96,7 +97,10 @@ def _assert_room_on_shelf(db: Session, user: User) -> None:
     if _adds_left(db, user) == 0:
         raise HTTPException(status_code=403, detail={
             "error": "library_upgrade_required",
-            "message": "Your free shelf holds one classic. Plus puts the whole library on your shelf.",
+            "message": say(
+                "Your free shelf holds one classic. Plus puts the whole library on your shelf.",
+                "Ücretsiz rafına tek bir klasik sığar. Plus ile kütüphanenin tamamı rafında.",
+            ),
             "upgrade_url": "/pricing",
         })
 

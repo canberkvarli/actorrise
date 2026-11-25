@@ -24,9 +24,23 @@ from app.models.actor import UserScript
 from app.models.billing import PricingTier, UsageMetrics, UserSubscription
 from app.models.user import User
 from app.services.benefits import get_effective_benefits
+from app.services.ui_language import say
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
+
+
+# The feature names above, in Turkish: (after a number, as a subject).
+_TR_FEATURE_NAMES = {
+    "AI searches": ("yapay zekâ araması", "Yapay zekâ aramaları"),
+    "ScenePartner sessions": ("ScenePartner seansı", "ScenePartner seansları"),
+    "Monologue work sessions": ("monolog provası", "Monolog provaları"),
+    "CraftCoach sessions": ("CraftCoach seansı", "CraftCoach seansları"),
+}
+
+
+def _tr_name(feature_name: str) -> tuple:
+    return _TR_FEATURE_NAMES.get(feature_name, ("kullanım", "Bu özellik"))
 
 
 class FeatureGate:
@@ -154,7 +168,10 @@ class FeatureGate:
                     status_code=403,
                     detail={
                         "error": "feature_not_available",
-                        "message": "Script uploads are not available on your current plan. Upgrade to start uploading scripts.",
+                        "message": say(
+                            "Script uploads are not available on your current plan. Upgrade to start uploading scripts.",
+                            "Metin yükleme şu anki planında yok. Yüklemeye başlamak için planını yükselt.",
+                        ),
                         "upgrade_url": "/pricing",
                     },
                 )
@@ -195,7 +212,10 @@ class FeatureGate:
                     status_code=403,
                     detail={
                         "error": "script_upload_limit_exceeded",
-                        "message": f"You've reached your limit of {limit} script{'s' if limit != 1 else ''} {period_label}. Upgrade your plan for more.",
+                        "message": say(
+                            f"You've reached your limit of {limit} script{'s' if limit != 1 else ''} {period_label}. Upgrade your plan for more.",
+                            f"{'Bu ayki' if is_paid else 'Toplam'} {limit} metin sınırına ulaştın. Daha fazlası için planını yükselt.",
+                        ),
                         "limit": limit,
                         "used": current_count,
                         "upgrade_url": "/pricing",
@@ -210,7 +230,10 @@ class FeatureGate:
                     status_code=403,
                     detail={
                         "error": "feature_not_available",
-                        "message": "Personalized recommendations are not available on your current plan. Upgrade to access AI-powered recommendations tailored to your profile.",
+                        "message": say(
+                            "Personalized recommendations are not available on your current plan. Upgrade to access AI-powered recommendations tailored to your profile.",
+                            "Kişisel öneriler şu anki planında yok. Profiline göre yapay zekâ önerileri için planını yükselt.",
+                        ),
                         "upgrade_url": "/pricing",
                     },
                 )
@@ -221,7 +244,10 @@ class FeatureGate:
                     status_code=403,
                     detail={
                         "error": "feature_not_available",
-                        "message": "Advanced analytics are not available on your current plan. Upgrade to access detailed insights into your monologue search patterns and performance.",
+                        "message": say(
+                            "Advanced analytics are not available on your current plan. Upgrade to access detailed insights into your monologue search patterns and performance.",
+                            "Gelişmiş analizler şu anki planında yok. Aramaların ve çalışman hakkında ayrıntılı bilgi için planını yükselt.",
+                        ),
                         "upgrade_url": "/pricing",
                     },
                 )
@@ -232,7 +258,10 @@ class FeatureGate:
                 status_code=403,
                 detail={
                     "error": "feature_not_available",
-                    "message": f"Feature '{self.feature}' is not available on your current plan.",
+                    "message": say(
+                        f"Feature '{self.feature}' is not available on your current plan.",
+                        "Bu özellik şu anki planında yok.",
+                    ),
                     "upgrade_url": "/pricing",
                 },
             )
@@ -271,7 +300,10 @@ class FeatureGate:
                 status_code=403,
                 detail={
                     "error": "feature_not_available",
-                    "message": f"{feature_name} are not available on your current plan. Upgrade to access this feature.",
+                    "message": say(
+                        f"{feature_name} are not available on your current plan. Upgrade to access this feature.",
+                        f"{_tr_name(feature_name)[1]} şu anki planında yok. Bu özellik için planını yükselt.",
+                    ),
                     "upgrade_url": "/pricing",
                 },
             )
@@ -297,7 +329,10 @@ class FeatureGate:
                 status_code=403,
                 detail={
                     "error": f"{usage_field}_limit_exceeded",
-                    "message": f"You've reached your limit of {limit} {feature_name} {period}. Upgrade your plan for more.",
+                    "message": say(
+                        f"You've reached your limit of {limit} {feature_name} {period}. Upgrade your plan for more.",
+                        f"{'Toplam' if lifetime else 'Bu ayki'} {limit} {_tr_name(feature_name)[0]} sınırına ulaştın. Daha fazlası için planını yükselt.",
+                    ),
                     "limit": limit,
                     "used": usage,
                     "upgrade_url": "/pricing",

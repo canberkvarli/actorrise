@@ -59,6 +59,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 from app.core.brand import BRAND_NAME
+from app.services.ui_language import say
 
 router = APIRouter(prefix="/api/monologues", tags=["monologues"])
 
@@ -1142,7 +1143,10 @@ async def search_monologues(
             status_code=500,
             detail={
                 "error": "search_error",
-                "message": "Search is temporarily unavailable. Please try again in a moment.",
+                "message": say(
+                    "Search is temporarily unavailable. Please try again in a moment.",
+                    "Arama şu an çalışmıyor. Birazdan tekrar dene.",
+                ),
             },
         )
 

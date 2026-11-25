@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 
 from app.models.billing import UserSubscription
 from app.services.benefits import get_effective_benefits
+from app.services.ui_language import say
 
 # Curated free-tier library scenes (matched by title — stable across
 # environments, unlike ids). Free actors can rehearse these in full; the rest
@@ -46,13 +47,19 @@ def assert_can_rehearse(db, user, scene, script=None) -> None:
     if scene.is_library:
         detail = {
             "error": "library_upgrade_required",
-            "message": "This scene is part of the full library. Your free plan includes a starter set of scenes to rehearse. Upgrade to Plus for the whole catalog.",
+            "message": say(
+                "This scene is part of the full library. Your free plan includes a starter set of scenes to rehearse. Upgrade to Plus for the whole catalog.",
+                "Bu sahne tam kütüphanenin parçası. Ücretsiz planında prova için bir başlangıç seti var. Kataloğun tamamı için Plus’a geç.",
+            ),
             "upgrade_url": "/pricing",
         }
     else:
         detail = {
             "error": "trial_example_only",
-            "message": "Free rehearsal is limited to the example script. Upgrade to Plus to rehearse your own scripts.",
+            "message": say(
+                "Free rehearsal is limited to the example script. Upgrade to Plus to rehearse your own scripts.",
+                "Ücretsiz prova örnek metinle sınırlı. Kendi metinlerini prova etmek için Plus’a geç.",
+            ),
             "upgrade_url": "/pricing",
         }
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)

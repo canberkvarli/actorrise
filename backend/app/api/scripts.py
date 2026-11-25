@@ -40,6 +40,7 @@ from app.models.user import User
 from app.services.character_names import canonicalize_scene_characters
 from app.services.script_parser import PARSER_VERSION, ScriptParser
 from app.services.rehearsal.language import detect as detect_language, script_language
+from app.services.ui_language import say
 
 router = APIRouter(prefix="/api/scripts", tags=["scripts"])
 
@@ -3612,7 +3613,10 @@ async def add_scenes_to_script(
             status_code=403,
             detail={
                 "error": "feature_not_available",
-                "message": "More scenes from one script come with Plus.",
+                "message": say(
+                    "More scenes from one script come with Plus.",
+                    "Bir metinden daha fazla sahne Plus ile gelir.",
+                ),
                 "upgrade_url": "/pricing",
             },
         )

@@ -31,6 +31,7 @@ from app.services.community import RETIRED_EVENT_TYPES
 from app.services.library_language import current_languages, script_clause
 from app.services.search.semantic_search import language_clause
 from app.core.brand import BRAND_NAME, site_url
+from app.services.ui_language import say
 
 # Community library needs at least this many shared scripts before it stops
 # showing the "still gathering" cold-start state.
@@ -426,7 +427,10 @@ def send_room_invite(
     if not has_whole_library(db, current_user):
         raise HTTPException(status_code=403, detail={
             "error": "greenroom_host_plus_required",
-            "message": "Starting a rehearsal room is part of Plus. Your scene partner joins free, from any link you send them.",
+            "message": say(
+                "Starting a rehearsal room is part of Plus. Your scene partner joins free, from any link you send them.",
+                "Prova odası açmak Plus’a özel. Sahne partnerin, gönderdiğin bağlantıdan ücretsiz katılır.",
+            ),
             "upgrade_url": "/pricing",
         })
     email = (body.email or "").strip()
