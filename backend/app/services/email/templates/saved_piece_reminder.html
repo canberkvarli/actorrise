@@ -1,13 +1,13 @@
 {% extends "base_personal.html" %}
 
-{% block title %}your {{ character }} monologue{% endblock %}
+{% block title %}your saved monologue{% endblock %}
 
 {% block content %}
         <p>hey{% if user_name %} {{ user_name }}{% endif %},</p>
 
-        <p>you saved {{ character }} from {{ play }} a few days ago and never came back to it. i do that all the time, bookmark something and forget it exists.</p>
+        <p>you saved a monologue a few days ago and never came back to it. i do that all the time, bookmark something and forget it exists.</p>
 
-        <p>here it is again: <a href="{{ link }}" style="font-weight:500;">{{ character }} from {{ play }}</a></p>
+        <p>it's still in <a href="{{ link }}" style="font-weight:500;">your collection</a>.</p>
 
         <p>give it two minutes. hit rehearse and run it out loud, or cut it down to audition size. that's the whole reason you saved it.</p>
 

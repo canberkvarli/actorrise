@@ -63,7 +63,7 @@ MIN_GAP_HOURS = 48  # and never two inside this
 
 SUBJECTS = {
     "day3": {
-        "favorite": "have you run {character} yet?",
+        "favorite": "have you run it yet?",
         "search": "did you find one?",
         "none": "try one search",
     },
@@ -76,7 +76,7 @@ SUBJECTS = {
 # The same, for an actor whose UI is Turkish (users.ui_language).
 SUBJECTS_TR = {
     "day3": {
-        "favorite": "{character} monoloğunu prova ettin mi?",
+        "favorite": "kaydettiğin monoloğu prova ettin mi?",
         "search": "bir şey bulabildin mi?",
         "none": "bir arama dene",
     },
@@ -141,7 +141,7 @@ def _favorite_anchor(db, uid: int) -> dict | None:
         "anchor": "favorite",
         "character": mono.character_name or "that character",
         "play": mono.play.title or "the play",
-        "link": f"{SITE_URL}/monologue/{mono.id}",
+        "link": f"{SITE_URL}/monologues",  # the collection, never the piece by name (2026-11-26)
         "favorite_reminded_at": fav.reminder_sent_at,
     }
 

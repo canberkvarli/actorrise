@@ -37,9 +37,9 @@ from app.services.ui_language import email_language
 logger = logging.getLogger(__name__)
 
 SITE_URL = site_url()
-SUBJECT = "you saved {character} and never opened it"
+SUBJECT = "you saved a monologue and never opened it"
 # For an actor whose UI is Turkish (users.ui_language).
-SUBJECT_TR = "{character} monoloğunu kaydettin ama hiç açmadın"
+SUBJECT_TR = "bir monolog kaydettin ama hiç açmadın"
 
 
 def _paid_user_ids(db) -> set[int]:
@@ -115,7 +115,7 @@ def select_candidates(db, hours_min: int, hours_max: int, active_hour: int | Non
             "lang": lang,
             "character": mono.character_name or ("o karakter" if tr else "that character"),
             "play": mono.play.title or ("o oyun" if tr else "the play"),
-            "link": f"{SITE_URL}/monologue/{mono.id}",
+            "link": f"{SITE_URL}/monologues",  # the collection, never the piece by name (2026-11-26)
             "saved_at": fav.created_at,
         })
     return out

@@ -1,14 +1,14 @@
 {% extends "base_personal.html" %}
 
-{% block title %}{% if anchor == "favorite" %}{{ character }} monoloğun{% else %}bir arama{% endif %}{% endblock %}
+{% block title %}{% if anchor == "favorite" %}kaydettiğin monolog{% else %}bir arama{% endif %}{% endblock %}
 
 {% block content %}
         <p>selam{% if user_name %} {{ user_name }}{% endif %},</p>
 
 {% if anchor == "favorite" %}
-        <p>birkaç gün önce {{ play }} oyunundan {{ character }} monoloğunu kaydettin. hiç yüksek sesle söyledin mi?</p>
+        <p>birkaç gün önce bir monolog kaydettin. hiç yüksek sesle söyledin mi?</p>
 
-        <p>işte burada: <a href="{{ link }}" style="font-weight:500;">{{ character }}, {{ play }}</a>. prova et’e bas ve bir kez çalış. iki dakika, o kadar.</p>
+        <p><a href="{{ link }}" style="font-weight:500;">koleksiyonunda</a> duruyor. prova et’e bas ve bir kez çalış. iki dakika, o kadar.</p>
 {% elif anchor == "search" %}
         <p>gerçekten işine yarayacak bir monolog bulabildin mi?</p>
 

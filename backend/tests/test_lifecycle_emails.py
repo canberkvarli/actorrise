@@ -199,7 +199,7 @@ class RenderTests(unittest.TestCase):
             self.assertIn("canberk", plain)
 
     def test_subjects(self):
-        self.assertEqual(lifecycle.render(self.tpl, {"touch": "day3", **FAV}, None)[0], "have you run Viola yet?")
+        self.assertEqual(lifecycle.render(self.tpl, {"touch": "day3", **FAV}, None)[0], "have you run it yet?")
         self.assertEqual(lifecycle.render(self.tpl, {"touch": "day10", **FAV}, None)[0], "one question")
 
     def test_search_is_never_quoted_back(self):

@@ -1,14 +1,14 @@
 {% extends "base_personal.html" %}
 
-{% block title %}{% if anchor == "favorite" %}your {{ character }} monologue{% else %}one search{% endif %}{% endblock %}
+{% block title %}{% if anchor == "favorite" %}your saved monologue{% else %}one search{% endif %}{% endblock %}
 
 {% block content %}
         <p>hey{% if user_name %} {{ user_name }}{% endif %},</p>
 
 {% if anchor == "favorite" %}
-        <p>you saved {{ character }} from {{ play }} a few days ago. have you said it out loud yet?</p>
+        <p>you saved a monologue a few days ago. have you said it out loud yet?</p>
 
-        <p>here it is: <a href="{{ link }}" style="font-weight:500;">{{ character }} from {{ play }}</a>. hit rehearse and run it once. two minutes, that's it.</p>
+        <p>it's in <a href="{{ link }}" style="font-weight:500;">your collection</a>. hit rehearse and run it once. two minutes, that's it.</p>
 {% elif anchor == "search" %}
         <p>did you find a monologue you can actually use yet?</p>
 

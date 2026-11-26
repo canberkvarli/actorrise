@@ -60,10 +60,10 @@ class LifecycleTests(TurkishCase):
 
     def test_every_anchor_both_touches_in_turkish(self):
         phrases = {
-            ("day3", "favorite"): "monoloğunu kaydettin",
+            ("day3", "favorite"): "bir monolog kaydettin",
             ("day3", "search"): "bir monolog bulabildin mi",
             ("day3", "none"): "henüz hiç arama yapmadın",
-            ("day10", "favorite"): "monoloğu hâlâ kayıtlı",
+            ("day10", "favorite"): "kaydettiklerin hâlâ ",
             ("day10", "search"): "kütüphane de ",
             ("day10", "none"): "arama da",
         }
@@ -85,15 +85,15 @@ class LifecycleTests(TurkishCase):
 
     def test_turkish_subjects(self):
         fav = {"touch": "day3", "lang": "tr", **ANCHORS[0]}
-        self.assertEqual(lifecycle.render(self.tpl, fav, None)[0], "Hamlet monoloğunu prova ettin mi?")
+        self.assertEqual(lifecycle.render(self.tpl, fav, None)[0], "kaydettiğin monoloğu prova ettin mi?")
         self.assertEqual(lifecycle.render(self.tpl, {**fav, "touch": "day10"}, None)[0], "tek bir soru")
 
     def test_english_is_unchanged(self):
         fav = {"touch": "day3", "user_name": "Maya Lopez", **ANCHORS[0]}
         for person in (fav, {**fav, "lang": "en"}):
             subject, html, plain = lifecycle.render(self.tpl, person, None)
-            self.assertEqual(subject, "have you run Hamlet yet?")
-            self.assertTrue(plain.startswith("hey maya,\n\nyou saved Hamlet from Hamlet a few days ago."))
+            self.assertEqual(subject, "have you run it yet?")
+            self.assertTrue(plain.startswith("hey maya,\n\nyou saved a monologue a few days ago."))
             self.assertTrue(plain.endswith("reply unsubscribe and i'll take you off, no worries."))
             self.assertIn('<html lang="en">', html)
             self.assertNotIn("selam", html)
@@ -149,7 +149,7 @@ class SavedPieceTests(TurkishCase):
         tpl = EmailTemplates()
         html = tpl.render_saved_piece_reminder("Viola", "Twelfth Night", "https://x/m/7", "Maya", unsubscribe_url="u")
         plain = tpl.render_saved_piece_reminder_plain("Viola", "Twelfth Night", "https://x/m/7", "Maya")
-        self.assertIn("you saved Viola from Twelfth Night a few days ago", html)
+        self.assertIn("you saved a monologue a few days ago", html)
         self.assertTrue(plain.startswith("hey maya,\n"))
         self.assertIn('<html lang="en">', html)
 
@@ -266,3 +266,22 @@ class LowerNameTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NothingSavedIsNamedTests(unittest.TestCase):
+    """Canberk, 2026-11-26: an email never names what the actor saved or searched."""
+
+    def test_no_piece_or_play_in_any_saved_email(self):
+        tpl = EmailTemplates()
+        for lang in ("en", "tr"):
+            for touch in ("day3", "day10"):
+                person = {"touch": touch, "lang": lang, "anchor": "favorite", "character": "Zebulon",
+                          "play": "Quixotica", "link": "https://x/monologues", "user_name": "Maya"}
+                for text in lifecycle.render(tpl, person, "u"):
+                    self.assertNotIn("Zebulon", text)
+                    self.assertNotIn("Quixotica", text)
+            html = tpl.render_saved_piece_reminder("Zebulon", "Quixotica", "https://x/monologues", "Maya", unsubscribe_url="u", lang=lang)
+            plain = tpl.render_saved_piece_reminder_plain("Zebulon", "Quixotica", "https://x/monologues", "Maya", lang=lang)
+            for text in (html, plain):
+                self.assertNotIn("Zebulon", text)
+                self.assertNotIn("Quixotica", text)

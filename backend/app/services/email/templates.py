@@ -418,11 +418,11 @@ class EmailTemplates:
             return "\n".join([
                 f"selam {name}," if name else "selam,",
                 "",
-                f"birkaç gün önce {play} oyunundan {character} monoloğunu kaydettin "
+                "birkaç gün önce bir monolog kaydettin "
                 "ama bir daha dönmedin. ben de hep yapıyorum, bir şeyi kaydedip "
                 "varlığını unutuyorum.",
                 "",
-                f"işte yine burada: {link}",
+                f"hâlâ koleksiyonunda duruyor: {link}",
                 "",
                 "iki dakika ayır. prova et’e bas ve yüksek sesle çalış, ya da seçmeye "
                 "uygun uzunluğa kısalt. zaten bu yüzden kaydetmiştin.",
@@ -436,11 +436,11 @@ class EmailTemplates:
         return "\n".join([
             greeting,
             "",
-            f"you saved {character} from {play} a few days ago and never came "
+            "you saved a monologue a few days ago and never came "
             "back to it. i do that all the time, bookmark something and forget "
             "it exists.",
             "",
-            f"here it is again: {link}",
+            f"it's still in your collection: {link}",
             "",
             "give it two minutes. hit rehearse and run it out loud, or cut it "
             "down to audition size. that's the whole reason you saved it.",
@@ -499,9 +499,9 @@ class EmailTemplates:
             lines = [f"selam {name}," if name else "selam,", ""]
             if anchor == "favorite":
                 lines += [
-                    f"birkaç gün önce {play} oyunundan {character} monoloğunu kaydettin. hiç yüksek sesle söyledin mi?",
+                    "birkaç gün önce bir monolog kaydettin. hiç yüksek sesle söyledin mi?",
                     "",
-                    f"işte burada: {link}",
+                    f"koleksiyonunda duruyor: {link}",
                     "",
                     "prova et’e bas ve bir kez çalış. iki dakika, o kadar.",
                 ]
@@ -527,9 +527,9 @@ class EmailTemplates:
         lines = [f"hey {name}," if name else "hey,", ""]
         if anchor == "favorite":
             lines += [
-                f"you saved {character} from {play} a few days ago. have you said it out loud yet?",
+                "you saved a monologue a few days ago. have you said it out loud yet?",
                 "",
-                f"here it is: {link}",
+                f"it's in your collection: {link}",
                 "",
                 "hit rehearse and run it once. two minutes, that's it.",
             ]
@@ -589,7 +589,7 @@ class EmailTemplates:
         if kwargs.get("lang") == "tr":
             name = lower_name(self._first_name(user_name) or "", "tr")
             if anchor == "favorite":
-                tail = f"bu arada {play} oyunundan {character} monoloğu hâlâ kayıtlı duruyor, istersen: {link}"
+                tail = f"bu arada kaydettiklerin hâlâ koleksiyonunda, istersen: {link}"
             elif anchor == "search":
                 tail = f"kütüphane de burada, ne zaman istersen: {link}"
             else:
@@ -610,7 +610,7 @@ class EmailTemplates:
             ])
         name = (self._first_name(user_name) or "").lower()
         if anchor == "favorite":
-            tail = f"and {character} from {play} is still saved if you want it: {link}"
+            tail = f"and what you saved is still in your collection if you want it: {link}"
         elif anchor == "search":
             tail = f"and the library is right here whenever you want it: {link}"
         else:

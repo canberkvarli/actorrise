@@ -151,8 +151,9 @@ they are here. When he gives a new standing rule, add it here, not to a memory f
   recorded on GET /api/auth/me from `X-ActorRise-Locale` (web and iOS). The automatic emails
   (welcome, day 3/10, saved piece, the two price-look emails, audition reminders) have Turkish
   versions in `templates/tr/` and `emails/*/tr/`, picked by `services/ui_language.email_language()`.
-  New actor email: write the Turkish one too. The day 3/10 emails never quote the actor's search
-  back, in either language (Canberk, 2026-11-26).
+  New actor email: write the Turkish one too. No automatic email names what the actor searched
+  or saved, in either language (Canberk, 2026-11-26): day 3/10 and the saved-piece reminder say
+  "a monologue you saved" and link to the library, never the piece.
 - **Language gate (CAN-19).** The UI language picks the library, everywhere: the Turkish UI
   (`X-ActorRise-Locale: tr`, sent by `lib/api.ts`) is served **Turkish only**, everything else
   **English only** (Canberk, 2026-11-03: "no Turkish actor can do English pieces; they have to
