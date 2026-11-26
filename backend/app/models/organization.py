@@ -17,7 +17,7 @@ from sqlalchemy import Column, DateTime, Integer, String, Text, func, text
 # migration every time Canberk meets a new sort of organization.
 ORGANIZATION_KINDS = ("school", "studio", "chapter", "company")
 
-# Partner pipeline, 2026-10-25. An org that used ActorRise gets asked to link to
+# Partner pipeline, 2026-10-25. An org that used Ghost Light gets asked to link to
 # it, and may agree to appear on the landing page. "yes" alone shows nothing:
 # the landing reads only rows with partner_show set AND partner_approval filled
 # in (who said yes, when, in their words), the same written-yes rule as

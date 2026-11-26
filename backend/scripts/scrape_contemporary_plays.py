@@ -204,7 +204,7 @@ UA_HELP = """
   403 from the CDN. Every non-browser User-Agent gets this, including ours.
 
   robots.txt permits the paths this script reads, so the block is a blanket bot
-  shield rather than a refusal aimed at ActorRise. Two honest ways forward:
+  shield rather than a refusal aimed at Ghost Light. Two honest ways forward:
 
     1. Ask them. docs/licensing/draft-stage-partners-email.md is already written;
        an allowed UA (or an outright yes to the excerpts) makes this moot.

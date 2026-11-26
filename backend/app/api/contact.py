@@ -61,7 +61,7 @@ def _build_contact_html(name: str, email: str, category: str, message: str) -> s
 @router.post("")
 def send_contact_message(body: ContactRequest) -> dict:
     """
-    Send a contact form message to ActorRise. Delivered to canberk@actorrise.com via Resend.
+    Send a contact form message to Ghost Light. Delivered to canberk@actorrise.com via Resend.
     """
     if body.category not in CATEGORIES:
         raise HTTPException(

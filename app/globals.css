@@ -129,7 +129,7 @@
   --popover: oklch(0.98 0.005 70);
   --popover-foreground: var(--foreground);
 
-  /* Primary: ActorRise orange – deeper shade so white text has good contrast */
+  /* Primary: Ghost Light orange – deeper shade so white text has good contrast */
   --primary: oklch(0.58 0.18 45);
   --primary-foreground: oklch(0.99 0 0);
 
@@ -391,7 +391,7 @@
     line-height: 1.7;
   }
 
-  /* Brand wordmark – "ActorRise". Font: Playfair Display (use "Playfair Display" in Canva to match). */
+  /* Brand wordmark – "Ghost Light". Font: Playfair Display (use "Playfair Display" in Canva to match). */
   .font-brand {
     font-family: var(--font-brand), var(--font-serif), serif;
     letter-spacing: 0.04em;
@@ -4397,7 +4397,7 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
    between two fixed plates rather than fading into the page. */
 /* The two caps sit over the running notices. They were opaque blocks with a
    hard edge, so a name was guillotined mid-word at the boundary — "Farid
-   joined ActorRise · Some|the board". A gradient edge lets the run fade into
+   joined Ghost Light · Some|the board". A gradient edge lets the run fade into
    the cap instead of being cut by it. */
 .t-marquee__cap {
   position: relative;
@@ -8006,7 +8006,7 @@ html[data-curtain="lift"]::after { right: 0; --to: 101%; box-shadow: -16px 0 50p
 
 /* ==========================================================================
    MONOLOGUE v2 — the piece, three ways, with a margin
-   (design: "ActorRise Monologue v2.dc.html")
+   (design: "Ghost Light Monologue v2.dc.html")
 
    The prototype is light-only: every colour in it is a hardcoded oklch()
    literal. Transcribing those would opt the whole page out of dark mode, which

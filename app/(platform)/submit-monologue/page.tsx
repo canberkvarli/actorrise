@@ -163,7 +163,7 @@ export default function SubmitMonologuePage() {
         className="mb-8"
       >
         {/* The sparkles icon beside the title was decorative, and the subtitle
-            said "the ActorRise community" and "copyright compliance" — the app
+            said "the Ghost Light community" and "copyright compliance" — the app
             talking about itself in the third person, in a compliance register.
             The rights requirement is stated twice more below, where it binds. */}
         <p className="stage-direction mb-2 text-xs text-muted-foreground/70">

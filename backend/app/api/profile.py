@@ -179,7 +179,7 @@ def get_profile_stats(
         profile.type,
         profile.union_status,
     ]
-    # Headshot is deliberately NOT part of completion. ActorRise is not a
+    # Headshot is deliberately NOT part of completion. Ghost Light is not a
     # casting-submission platform, only 5% ever upload one, and treating it as a
     # completion field left every headshot-less profile stuck at ~94% and nagged
     # for a photo it does not need. It stays a pure bonus the actor can add later.

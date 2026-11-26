@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Repair source_url values that were stored as Postgres array literals.
 
-ActorRise is a monologue library, not a play library: where a piece comes from
+Ghost Light is a monologue library, not a play library: where a piece comes from
 a full script we carry the excerpt and link out to the original. That link is
 `plays.source_url`, and the UI already renders it on both the result card
 (`MonologueCard.tsx`) and the detail view (`MonologueDetailContent.tsx`).

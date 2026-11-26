@@ -1590,7 +1590,7 @@ def _drop_title_block(sections: List[Dict]) -> List[Dict]:
         A short scene. Author: Sample Script.
 
     which reads as a cue and a line, so the title joins the cast and can be
-    handed to an actor to read. ActorRise's own sample script does this.
+    handed to an actor to read. Ghost Light's own sample script does this.
 
     Three things have to hold together before anything is dropped, because a
     character with one line still has a line. It has to be the first speech in

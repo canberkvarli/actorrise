@@ -1,4 +1,4 @@
-# ActorRise – Render Blueprint
+# Ghost Light – Render Blueprint
 # Deploy: connect this repo in Render, then use "New" → "Blueprint" and point to this file.
 # Or create a Web Service manually and set build to Docker with dockerfilePath: ./backend/Dockerfile, dockerContext: ./backend.
 

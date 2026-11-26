@@ -1,4 +1,4 @@
--- The 30 free actors using ActorRise the most in the last 30 days.
+-- The 30 free actors using Ghost Light the most in the last 30 days.
 -- For the founder email: "what would make you pay $12 for this?"
 --
 -- Score is saves + scene sessions + searches, all in the window. Free means no

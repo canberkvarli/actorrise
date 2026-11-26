@@ -2,7 +2,7 @@ import { trackEvent } from "./events";
 import { paywallProps, type PaywallKind } from "./paywall-events";
 
 /**
- * GA4 custom event tracking for ActorRise.
+ * GA4 custom event tracking for Ghost Light.
  *
  * Wraps window.gtag with type-safe helpers so we never call gtag directly
  * from components. All helpers are SSR-safe (guarded with typeof window).

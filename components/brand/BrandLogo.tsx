@@ -5,9 +5,9 @@ import { BRAND } from "@/lib/brand";
 
 /** Icon-only logo (e.g. favicon, auth). Use transparent_logo.png for icon-only. */
 const LOGO_ICON = "/transparent_logo.png";
-/** Full logo with "ActorRise" wordmark -- white text for dark bg. */
+/** Full logo with "Ghost Light" wordmark -- white text for dark bg. */
 const LOGO_WITH_TEXT = "/transparent_textlogo.png";
-/** Full logo with "ActorRise" wordmark -- dark text for light bg. */
+/** Full logo with "Ghost Light" wordmark -- dark text for light bg. */
 const LOGO_WITH_TEXT_DARK = "/transparent_textlogo_dark.png";
 
 type Size = "header" | "auth";

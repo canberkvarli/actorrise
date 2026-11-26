@@ -1,4 +1,4 @@
-/* ActorRise service worker — installable + offline shell. Dependency-free. */
+/* Ghost Light service worker — installable + offline shell. Dependency-free. */
 /* Bump on any change to what is cached or how. The activate handler deletes
    every cache whose key is not this one, so a new name is the only thing that
    clears what a previous worker stored — and the name had never changed since

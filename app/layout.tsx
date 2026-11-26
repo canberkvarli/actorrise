@@ -58,7 +58,7 @@ const cormorantGaramond = localFont({
   preload: false,
 });
 
-/** Brand/logo font – use for "ActorRise" wordmark. Same font is in Canva as "Playfair Display". */
+/** Brand/logo font – use for "Ghost Light" wordmark. Same font is in Canva as "Playfair Display". */
 const playfairDisplay = localFont({
   variable: "--font-brand",
   src: [{ path: "../lib/fonts/files/playfair-display-normal-400-900.woff2", weight: "400 900", style: "normal" }],

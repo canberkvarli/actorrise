@@ -68,7 +68,7 @@ def _event(a: Audition, now: datetime, site: str) -> list[str]:
 
 
 def build_calendar(auditions: list[Audition], *, now: datetime, site: str) -> str:
-    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//ActorRise//Auditions//EN",
+    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", f"PRODID:-//{BRAND_NAME}//Auditions//EN",
              "CALSCALE:GREGORIAN", f"X-WR-CALNAME:Auditions ({BRAND_NAME})",
              "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H"]
     for a in auditions:

@@ -1405,7 +1405,7 @@ def list_do_not_contact(
 class ScanBouncesRequest(BaseModel):
     since_days: int = 30
     # Defaults to a preview. This writes the list that decides who never hears
-    # from ActorRise again, so seeing the addresses first is the easy path.
+    # from Ghost Light again, so seeing the addresses first is the easy path.
     dry_run: bool = True
 
 

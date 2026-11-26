@@ -4,7 +4,7 @@
 The `child` age bucket exists and holds 18 pieces. The vocabulary works —
 teachers can search it, "kid" and "children" map to it — but the shelf is empty,
 and pointing an educator at an empty filter is worse than not having the filter.
-ActorRise gives teachers and their students free Plus, so this is the gap that
+Ghost Light gives teachers and their students free Plus, so this is the gap that
 offer actually runs into.
 
 It has to come from the public domain. The audition aggregators do carry youth

@@ -1,5 +1,5 @@
 """
-Billing and subscription models for ActorRise monetization system.
+Billing and subscription models for Ghost Light monetization system.
 
 This module contains models for:
 - PricingTier: Subscription plan definitions (Free, Solo, Plus, Pro)

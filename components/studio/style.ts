@@ -1,5 +1,5 @@
 /**
- * The Studio's design tokens. Its own look, not ActorRise's, in Linear's spirit:
+ * The Studio's design tokens. Its own look, not Ghost Light's, in Linear's spirit:
  * black and white, Inter, hairlines, small crisp controls. Colour is reserved for heat
  * (lib/studio/heat.ts): only a strong, sudden movement earns it.
  */

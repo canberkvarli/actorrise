@@ -1,4 +1,4 @@
-# ActorRise API - Docker image for Render (or any container host)
+# Ghost Light API - Docker image for Render (or any container host)
 FROM python:3.12-slim
 
 WORKDIR /app

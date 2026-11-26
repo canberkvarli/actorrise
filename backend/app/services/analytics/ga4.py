@@ -33,7 +33,7 @@ browser holds it in the `_ga` cookie, so the frontend reads it at checkout and
 passes it through Stripe metadata as `ga_client_id`. When it is present the trial
 lands on the same GA4 user as the search and the signup that preceded it, and the
 whole path is one funnel. When it is absent (payment-link checkouts, where there
-was never an ActorRise page in the flow) we fall back to a deterministic
+was never a Ghost Light page in the flow) we fall back to a deterministic
 synthetic id derived from the user id, so the conversion is still counted, just
 not joined to a session.
 """

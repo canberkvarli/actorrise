@@ -286,7 +286,7 @@ Alternative approaches for production use:
    - Metadata only, no full text
    - Check current status before relying on it
 
-Recommendation for ActorRise:
+Recommendation for Ghost Light:
 - Start with Wikisource and Perseus (already implemented, working)
 - Apply for HTRC membership for future HathiTrust integration
 - Focus on other sources (Gutenberg, Archive.org) which have working APIs

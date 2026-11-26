@@ -124,7 +124,7 @@ def scan_bounces(
     Read the sending mailbox, parse bounce notices, suppress permanent failures.
 
     dry_run defaults to True on purpose: this writes to the list that decides
-    who never hears from ActorRise again, so seeing the addresses before
+    who never hears from Ghost Light again, so seeing the addresses before
     committing to them should be the easy path, not the careful one.
     """
     address = os.getenv("SMTP_EMAIL", "canberk@actorrise.com")

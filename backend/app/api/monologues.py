@@ -3363,7 +3363,7 @@ def report_monologue(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ) -> dict:
-    """Report an issue with a monologue. Sends an email to the ActorRise team."""
+    """Report an issue with a monologue. Emails it to the founder."""
     if body.issue_type not in REPORT_ISSUE_TYPES:
         raise HTTPException(
             status_code=400,

@@ -1,4 +1,4 @@
-"""Prompt templates for ActorRise AI features.
+"""Prompt templates for Ghost Light AI features.
 
 This module contains all prompts used in the application,
 structured as LangChain PromptTemplates for easy management and versioning.

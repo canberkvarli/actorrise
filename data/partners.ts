@@ -1,6 +1,6 @@
 import { BRAND } from "@/lib/brand";
 /**
- * Organizations that list ActorRise: chapters, theaters, studios, schools, newsletters.
+ * Organizations that list Ghost Light: chapters, theaters, studios, schools, newsletters.
  * Add logo files to public/partners/ and reference as /partners/filename.svg
  *
  * Nothing renders until `approved: true`. That flag means the organization has said
@@ -17,7 +17,7 @@ import { BRAND } from "@/lib/brand";
  *   shortName: "VTA",
  *   url: "https://www.vtasite.org",
  *   logo: "/partners/vta.png",
- *   blurb: "Lists ActorRise in the chapter resource guide.",
+ *   blurb: "Lists Ghost Light in the chapter resource guide.",
  *   category: "chapter",
  *   approved: false,
  * },

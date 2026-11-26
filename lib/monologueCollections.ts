@@ -37,7 +37,7 @@ export type CollectionFilters = {
 
 export type Collection = {
   slug: string;
-  /** Browser tab / search result title (root layout appends " | ActorRise"). */
+  /** Browser tab / search result title (root layout appends " | Ghost Light"). */
   title: string;
   /** H1 split so the leading word can carry the italic accent. */
   h1: { em: string; rest: string };

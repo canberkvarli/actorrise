@@ -1,4 +1,4 @@
-"""What ActorRise actually earns per month, straight from Stripe.
+"""What Ghost Light actually earns per month, straight from Stripe.
 
 Two numbers, and only two:
 

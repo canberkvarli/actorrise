@@ -1,4 +1,4 @@
-"""LangChain infrastructure for ActorRise AI features.
+"""LangChain infrastructure for Ghost Light AI features.
 
 This module provides the foundation for:
 - MonologueMatch: AI-powered monologue search and analysis

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Clear plays.full_text where the stored text is a different work.
 
-ActorRise carries monologues, not plays. `plays.full_text` exists only as an
+Ghost Light carries monologues, not plays. `plays.full_text` exists only as an
 extraction source — nothing user-facing reads it (search defers it, no API
 returns it). So text that is not the play it claims to be has no value and one
 active cost: it is a live invitation to extract monologues under the wrong

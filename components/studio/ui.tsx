@@ -6,7 +6,7 @@
  * medium labels, hairline borders, a key hint where there is a shortcut.
  *
  * They read shadcn's theme variables, which StudioStyles redefines on
- * .studio-root only, so the rest of ActorRise keeps its own theme.
+ * .studio-root only, so the rest of Ghost Light keeps its own theme.
  */
 
 import { Slot } from "@radix-ui/react-slot";

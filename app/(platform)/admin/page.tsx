@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import { useMarkSeen } from "@/hooks/useMarkSeen";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
+import { BRAND as SITE_BRAND } from "@/lib/brand";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -614,7 +615,7 @@ function getDefaultRange(preset: "7" | "30") {
 
 function exportStatsToCsv(stats: AdminStats) {
   const rows: string[] = [];
-  rows.push("ActorRise Admin Stats Export");
+  rows.push(`${SITE_BRAND.name} Admin Stats Export`);
   rows.push(`Period,${stats.from},${stats.to}`);
   rows.push("");
 

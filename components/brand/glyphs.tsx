@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import * as React from "react";
 
 /**
- * ActorRise stage glyphs. One stroke weight, round caps, currentColor, no captions.
+ * Ghost Light stage glyphs. One stroke weight, round caps, currentColor, no captions.
  * Place them contextually: the skull over a Hamlet piece, the clapper in Film & TV
  * search, the suitcase on an empty book. See CONTEXT for the mapping.
  *
