@@ -973,6 +973,9 @@ def reset_catalogue_cache() -> None:
     global _catalogue_head_cache, _catalogue_loaded_at
     global _catalogue_title_authors, _catalogue_author_words
     global _character_cache, _character_loaded_at
+    global _author_cache, _author_loaded_at
+    _author_cache = None
+    _author_loaded_at = 0.0
     _catalogue_title_authors = {}
     _catalogue_author_words = set()
     _catalogue_cache = None
@@ -1143,6 +1146,107 @@ def detect_catalogue_character(db, query: str) -> Optional[Dict[str, object]]:
             and _surname_in_play(db, entry[0], surname)
         ):
             return {"character": first, "names": list(entry[0])}
+    return None
+
+
+# Playwright lookup, sibling to the title and character catalogues. Until
+# 2026-11-26 an author was only recognised from a hand-kept list in
+# query_optimizer (Shakespeare, Chekhov, Ibsen...), so "John Webster" went to
+# the vector index and came back Henry VIII and The Duchess of Padua while his
+# two plays (120 pieces) sat in the library. The list of who we carry is the
+# plays table itself.
+# normalised author key -> (stored author, monologue count)
+_author_cache: Optional[Dict[str, tuple]] = None
+_author_loaded_at: float = 0.0
+
+#: A surname typed alone is only taken as the playwright when they are the one
+#: author by that name and have a real shelf, so a stray word cannot hijack a
+#: search.
+_MIN_AUTHOR_SURNAME_MONOS = 5
+_MIN_AUTHOR_SURNAME_CHARS = 5
+
+
+def _author_key(author) -> str:
+    """'John Webster' -> 'john webster'; initials and credit words dropped."""
+    if not author:
+        return ""
+    return " ".join(w for w in _normalize(str(author)).split()
+                    if len(w) >= 2 and w not in _NOT_AUTHOR_WORDS)
+
+
+def _load_author_catalogue(db) -> Dict[str, tuple]:
+    global _author_cache, _author_loaded_at
+    now = time.time()
+    if _author_cache is not None and now - _author_loaded_at < _CATALOGUE_TTL_SECONDS:
+        return _author_cache
+    from sqlalchemy import text as sa_text
+
+    # An actor's own upload carries whatever they typed as the author, often
+    # their own name: never a playwright to route to.
+    rows = db.execute(
+        sa_text(
+            "SELECT p.author, count(m.id) FROM plays p "
+            "JOIN monologues m ON m.play_id = p.id "
+            "WHERE p.author IS NOT NULL "
+            "AND p.copyright_status IS DISTINCT FROM 'user_uploaded' "
+            "GROUP BY p.author"
+        )
+    ).fetchall()
+    cat: Dict[str, tuple] = {}
+    for row in rows:
+        raw, cnt = row[0], int(row[1] or 0)
+        key = _author_key(raw)
+        if len(key) < _MIN_TITLE_CHARS:
+            continue
+        prev = cat.get(key)
+        if prev is None or cnt > prev[1]:
+            cat[key] = (raw, cnt + (prev[1] if prev else 0))
+        else:
+            cat[key] = (prev[0], prev[1] + cnt)
+    _author_cache = cat
+    _author_loaded_at = now
+    return cat
+
+
+def detect_catalogue_author(db, query: str, filler: frozenset | set = frozenset()) -> Optional[str]:
+    """The stored author a query names, or None.
+
+    - A full name ("john webster", "monologues by oscar wilde") matches
+      anywhere in the query as whole words; the longest name wins, so
+      "John Webster" never resolves to a "Webster" with fewer words.
+    - A surname alone ("wilde", "webster monologue") only when the query is
+      that surname plus `filler`, exactly one author carries it, and that
+      author has at least five pieces. "webster" alone is three people
+      (John, Benjamin, Jean) and stays None.
+    """
+    if db is None or not query or not query.strip():
+        return None
+    try:
+        cat = _load_author_catalogue(db)
+    except Exception:
+        return None
+    words = _normalize(query).split()
+    if not words:
+        return None
+    padded = f" {' '.join(words)} "
+    best = None
+    for key, (raw, _cnt) in cat.items():
+        if " " in key and f" {key} " in padded:
+            if best is None or len(key) > len(best[0]):
+                best = (key, raw)
+    if best:
+        return best[1]
+
+    rest = [w for w in words if w not in filler]
+    if len(rest) != 1:
+        return None
+    surname = rest[0]
+    if (len(surname) < _MIN_AUTHOR_SURNAME_CHARS or surname in _ONE_PLAY_STOP
+            or surname in _GENERIC_ROLE_WORDS):
+        return None
+    owners = [(raw, cnt) for key, (raw, cnt) in cat.items() if key.split()[-1] == surname]
+    if len(owners) == 1 and owners[0][1] >= _MIN_AUTHOR_SURNAME_MONOS:
+        return owners[0][0]
     return None
 
 

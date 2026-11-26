@@ -44,6 +44,7 @@ from app.services.search.query_optimizer import (is_filter_only_query,
 from app.services.search.acronym import collapse_dotted_acronyms
 from app.services.search.attribute_fallback import attribute_search
 from app.services.search.title_lookup import (compute_content_gap,
+                                              detect_catalogue_author,
                                               detect_catalogue_character,
                                               detect_catalogue_title,
                                               detect_title_lookup,
@@ -52,6 +53,7 @@ from app.services.search.title_lookup import (compute_content_gap,
                                               find_title_monologues,
                                               strip_trailing_words,
                                               promote_title_matches)
+from app.services.search.query_optimizer import KeywordExtractor
 from app.services.search.scene_intent import detect_two_person_scene_intent
 from app.services.search.recommender import Recommender
 from app.services.search.semantic_search import MIN_RELEVANCE_TO_SHOW, STRONG_COSINE_SIM, SemanticSearch
@@ -655,6 +657,17 @@ async def search_monologues(
             # similarity question is the right one and the vector path keeps it.
             author_rows: list[Monologue] = []
             author_filter = (filters or {}).get("author")
+            # A playwright named in the query, read off the plays we carry
+            # (2026-11-26: "John Webster" was not on the optimizer's hand list,
+            # went to the vector index and came back Henry VIII). Only when the
+            # request did not already pick an author.
+            named_author: Optional[str] = None
+            if not (author_filter and isinstance(author_filter, str)):
+                named_author = detect_catalogue_author(
+                    db, search_q, filler=_AUTHOR_QUERY_FILLER
+                )
+                if named_author:
+                    author_filter = named_author
             if (
                 not title_rows
                 and author_filter
@@ -691,17 +704,39 @@ async def search_monologues(
                 if crossed_tab and prepass_kind == "title":
                     match_strategy = "title_cross_tab"
             else:
-                # Semantic search returns (list of (Monologue, score), quote_match_types)
-                all_results_with_scores, quote_match_types = search_service.search(
-                    search_q,
-                    limit=fetch_limit,
-                    filters=filters,
-                    user_id=cast(int, current_user.id),
-                    actor_profile=actor_profile_for_search,
-                    ignore_constraints=(
-                        [k.strip() for k in ignore.split(",") if k.strip()] if ignore else None
-                    ),
-                )
+                _ignore = [k.strip() for k in ignore.split(",") if k.strip()] if ignore else None
+                # "revenge, John Webster": the words are a similarity question,
+                # the name says whose shelf to ask it of. Narrowed only for a
+                # playwright the optimizer's own list does not already catch
+                # (that path keeps its dismissable chip), and only when nothing
+                # named a show or a character. An empty narrowed page falls back.
+                _narrow_to = None
+                if named_author and not prepass_rows:
+                    _known = KeywordExtractor.KEYWORD_MAPPINGS.get("author", {})
+                    if not any(w in _known for w in re.sub(r"[^a-z0-9\s]", " ", search_q.lower()).split()):
+                        _narrow_to = named_author
+                all_results_with_scores = []
+                if _narrow_to:
+                    all_results_with_scores, quote_match_types = search_service.search(
+                        search_q,
+                        limit=fetch_limit,
+                        filters={**(filters or {}), "author": _narrow_to},
+                        user_id=cast(int, current_user.id),
+                        actor_profile=actor_profile_for_search,
+                        ignore_constraints=_ignore,
+                    )
+                    if all_results_with_scores:
+                        match_strategy = "author_narrowed"
+                if not all_results_with_scores:
+                    # Semantic search returns (list of (Monologue, score), quote_match_types)
+                    all_results_with_scores, quote_match_types = search_service.search(
+                        search_q,
+                        limit=fetch_limit,
+                        filters=filters,
+                        user_id=cast(int, current_user.id),
+                        actor_profile=actor_profile_for_search,
+                        ignore_constraints=_ignore,
+                    )
                 has_scores = True
                 # If the query names a show we carry ("mean girls jr"), its pieces
                 # must lead the results — semantic ranking can bury literal title
