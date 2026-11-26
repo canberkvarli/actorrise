@@ -3,6 +3,25 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-26, later: SHAREABLE, and never the same film twice (wins over everything below, including the formula just below)
+
+Canberk: the ideas and the designs keep making "the same thing basically". People want to share and send
+things to each other. Make it shareable, not something super specific.
+- **The test for every idea: would an actor send this to an actor friend, or tag their scene partner, with
+  "this is so us"?** If it only works for someone who needs one feature tonight, it is not the idea.
+- **Broad, universal actor life first**: types of actors in every audition lobby, things only actors say,
+  the stages of getting off book, what casting says vs what it means, every rehearsal ever, the actor
+  friend who..., rating audition excuses, the callback group chat. Memes and POVs anyone in theatre gets in
+  one second, funny first. No obscure play or character as the hook; a famous one (Juliet, Hamlet) is fine.
+- **The app is the light touch at the end** (a few seconds, "...or just use Ghost Light"), not a tutorial.
+  How-to films are at most 1 a week.
+- **Captions invite sharing**: "send this to your scene partner", "tag the actor who does this", a question.
+- **Never the same thing twice in a row**: rotate the FORMAT (POV, list "types of...", tier list, nature
+  documentary, quiz, speedrun, fake text conversation, expectation vs reality) and the LOOK every film. No two
+  films in a row share a format or a look; no format more than twice a week. Looks available now: collage,
+  paper (the original ink drawings), noir, midnight, bold; doodle and manga get built next.
+- The "two pillars" formula below is replaced by this: variety and shareability beat repeating a winner.
+
 ## 2026-11-26: the pattern in the winners, and the formula from here (wins over everything below)
 
 30 days of numbers (Instagram views / saves; TikTok @ghostlight.app views):
