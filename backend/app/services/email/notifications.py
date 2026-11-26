@@ -15,7 +15,7 @@ from app.services.email.templates import EmailTemplates
 from app.core.brand import BRAND_NAME, site_url
 
 
-def send_welcome_email(user_email: str, user_name: Optional[str] = None) -> dict:
+def send_welcome_email(user_email: str, user_name: Optional[str] = None, lang: str = "en") -> dict:
     """
     Send welcome email to new signups.
 
@@ -33,10 +33,11 @@ def send_welcome_email(user_email: str, user_name: Optional[str] = None) -> dict
     try:
         client = ResendEmailClient()
         templates = EmailTemplates()
-        subject = f"Welcome to {BRAND_NAME}"
+        subject = f"{BRAND_NAME}’a hoş geldin" if lang == "tr" else f"Welcome to {BRAND_NAME}"
         html = templates.render_welcome(
-            user_name=user_name or "there",
+            user_name=user_name or ("" if lang == "tr" else "there"),
             monologue_count=_searchable_monologue_count(),
+            lang=lang,
         )
         return client.send_email(to=user_email, subject=subject, html=html)
     except Exception as e:
@@ -52,9 +53,15 @@ def send_welcome_email_later(user_email: str, user_name: Optional[str] = None) -
     signing up at once on 2026-10-22 ran the pool dry that way.
     """
 
+    # Read here, in the signup request: the thread below has no request
+    # context, so it would always see English.
+    from app.services.ui_language import request_language
+
+    lang = request_language()
+
     def run() -> None:
         try:
-            send_welcome_email(user_email=user_email, user_name=user_name)
+            send_welcome_email(user_email=user_email, user_name=user_name, lang=lang)
         except Exception:  # noqa: BLE001 - logged inside send_welcome_email
             pass
 

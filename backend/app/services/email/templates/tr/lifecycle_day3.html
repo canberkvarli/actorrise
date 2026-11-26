@@ -1,0 +1,25 @@
+{% extends "base_personal.html" %}
+
+{% block title %}{% if anchor == "favorite" %}{{ character }} monoloğun{% else %}bir arama{% endif %}{% endblock %}
+
+{% block content %}
+        <p>selam{% if user_name %} {{ user_name }}{% endif %},</p>
+
+{% if anchor == "favorite" %}
+        <p>birkaç gün önce {{ play }} oyunundan {{ character }} monoloğunu kaydettin. hiç yüksek sesle söyledin mi?</p>
+
+        <p>işte burada: <a href="{{ link }}" style="font-weight:500;">{{ character }}, {{ play }}</a>. prova et’e bas ve bir kez çalış. iki dakika, o kadar.</p>
+{% elif anchor == "search" %}
+        <p>gerçekten işine yarayacak bir monolog bulabildin mi?</p>
+
+        <p>bulamadıysan, <a href="{{ link }}" style="font-weight:500;">kütüphane burada</a>. hiçbir şey uymuyorsa bu e-postayı yanıtla, ne aradığını söyle. ben kendim bir tane bulurum.</p>
+{% else %}
+        <p>birkaç gün önce kaydoldun ama henüz hiç arama yapmadın. acelesi yok, bir tane dene.</p>
+
+        <p>bir hocaya anlatır gibi yaz, mesela "iki dakikadan kısa, dramatik bir monolog", ve <a href="{{ link }}" style="font-weight:500;">bak ne çıkıyor</a>.</p>
+{% endif %}
+
+        <p style="margin-top:28px;">canberk</p>
+
+        <p class="ar-muted" style="margin-top:20px; color:{{ c.muted }}; font-size:13px;">çıkmak istersen ÇIK yaz, listeden çıkarırım, hiç dert değil.</p>
+{% endblock %}

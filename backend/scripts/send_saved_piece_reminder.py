@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from app.core.database import SessionLocal
-from app.services.email.saved_piece_reminder import (SUBJECT, run_reminders,
+from app.services.email.saved_piece_reminder import (SUBJECT, SUBJECT_TR, run_reminders,
                                                      select_candidates)
 from app.services.email.templates import EmailTemplates
 
@@ -43,10 +43,12 @@ def main() -> None:
         tpl = EmailTemplates()
         preview = []
         for p in people[:10]:
-            plain = tpl.render_saved_piece_reminder_plain(p["character"], p["play"], p["link"], p["user_name"])
+            lang = p.get("lang", "en")
+            plain = tpl.render_saved_piece_reminder_plain(p["character"], p["play"], p["link"], p["user_name"], lang=lang)
+            subject = (SUBJECT_TR if lang == "tr" else SUBJECT).format(character=p['character'], play=p['play'])
             preview.append(
                 f"TO: {p['email']}   (saved {p['saved_at']})\n"
-                f"SUBJECT: {SUBJECT.format(character=p['character'], play=p['play'])}\n\n{plain}\n" + "=" * 70
+                f"SUBJECT: {subject}\n\n{plain}\n" + "=" * 70
             )
         Path(args.out).write_text("\n".join(preview), encoding="utf-8")
         print(f"eligible: {len(people)}  — DRY RUN, nothing sent. {min(len(people),10)} previews -> {args.out}")

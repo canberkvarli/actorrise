@@ -302,6 +302,11 @@ def get_me(
     db: Session = Depends(get_db),
 ):
     """Get current user information."""
+    # Which language to write to them in, for emails sent with no request
+    # around them (services/ui_language).
+    from app.services.ui_language import record as record_ui_language
+
+    record_ui_language(db, current_user)
     is_founding_actor = db.query(
         exists().where(FoundingActor.user_id == current_user.id)
     ).scalar()

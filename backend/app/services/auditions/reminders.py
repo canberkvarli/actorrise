@@ -27,8 +27,9 @@ from app.models.email_do_not_contact import EmailDoNotContact
 from app.models.user import User
 from app.services.auditions.core import asks_for_own_piece, aware, count_runs, pieces_for, reminder_moments, when
 from app.services.email.marketing import build_unsubscribe_url
-from app.services.email.templates import EmailTemplates
+from app.services.email.templates import EmailTemplates, lower_name
 from app.services.events import record_user_event
+from app.services.ui_language import email_language
 from app.core.brand import site_url
 
 logger = logging.getLogger(__name__)
@@ -79,8 +80,13 @@ def due_moments(a: Audition, now: datetime) -> list[str]:
     return [m for m in due if m in wanted]
 
 
-def load_copy(moment: str) -> tuple[str, str]:
-    raw = (COPY_DIR / f"{moment}.txt").read_text(encoding="utf-8")
+def load_copy(moment: str, lang: str = "en") -> tuple[str, str]:
+    """(subject, body) from emails/auditions/<moment>.txt, or tr/<moment>.txt
+    for a Turkish reader when it exists."""
+    path = COPY_DIR / f"{moment}.txt"
+    if lang == "tr" and (COPY_DIR / "tr" / f"{moment}.txt").exists():
+        path = COPY_DIR / "tr" / f"{moment}.txt"
+    raw = path.read_text(encoding="utf-8")
     head, _, body = raw.partition("\n")
     label, _, subject = head.partition(":")
     if label.strip().lower() != "subject" or not subject.strip():
@@ -92,8 +98,60 @@ def _clock(dt: datetime) -> str:
     return dt.strftime("%I:%M %p").lstrip("0").lower().replace(":00", "")
 
 
+# strftime's %A follows the process locale, which is English on the server.
+TR_DAYS = ("Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar")
+
+
+def _clock_tr(dt: datetime) -> str:
+    """The 24 hour clock Turkish is read in: "10.40", "19.00"."""
+    return f"{dt.hour}.{dt.minute:02d}"
+
+
+def _fields_tr(a: Audition, moment: str, name: str, runs: int, local: datetime, days: int,
+               has_material: bool) -> dict:
+    """The words of _fields for a Turkish reader. Phrased so no suffix ever
+    lands on a value the actor typed (a project, a place), since Turkish
+    suffixes follow the word they attach to."""
+    tape = a.kind == "self_tape"
+    days_phrase = "3 gün sonra" if days >= 3 else "2 gün sonra" if days == 2 else "yarın" if days == 1 else "yakında"
+    at = f"{TR_DAYS[local.weekday()]} günü, saat {_clock_tr(local)}"
+    when_phrase = f"için self tape teslimi {at}" if tape else f"için seçme {at}"
+    if a.user_script_id:
+        step = "seçme metnin yüklü. bu akşam bir kez çalış, o güne kadar daha iyi oturur."
+    elif a.material_raw and asks_for_own_piece(a):
+        step = f"bunun için hâlâ bir parça lazım ({a.material_raw}). hazırlık odana bir bak."
+    elif a.material_raw:
+        step = "gönderdikleri seçme metnini hazırlık odana ekle, o güne kadar çalışabilirsin."
+    else:
+        step = "neyle gideceğine bu akşam karar vermeye değer."
+    if tape:
+        tomorrow = f"{a.project} için self tape teslimi yarın, saat {_clock_tr(local)}."
+    else:
+        where = f", {a.location}" if a.location else ""
+        tomorrow = f"yarın, saat {_clock_tr(local)}{where}."
+    if not has_material:
+        runs_line = "bu akşam bir dakikan olursa hazırlık odanı aç:"
+    elif runs > 1:
+        runs_line = f"{runs} kez çalıştın. yatmadan önce bir kez daha:"
+    elif runs == 1:
+        runs_line = "bir kez çalıştın. yatmadan önce bir kez daha:"
+    else:
+        runs_line = "burada henüz hiç çalışmadın. yatmadan önce bir kez:"
+    return {
+        "name": name,
+        "project": a.project,
+        "role_line": f" ({a.role})" if a.role else "",
+        "days_phrase": days_phrase,
+        "when_phrase": when_phrase,
+        "step_line": step,
+        "tomorrow_line": tomorrow,
+        "bring_line": f" yanında {a.bring} olsun." if a.bring else "",
+        "runs_line": runs_line,
+    }
+
+
 def _fields(a: Audition, moment: str, name: str, runs: int, now: Optional[datetime] = None,
-            has_material: Optional[bool] = None) -> tuple[dict, dict]:
+            has_material: Optional[bool] = None, lang: str = "en") -> tuple[dict, dict]:
     """(plain fields, link fields). Links are kept apart so the HTML can wrap them."""
     zone = _zone(a)
     local = when(a).astimezone(zone)
@@ -137,6 +195,8 @@ def _fields(a: Audition, moment: str, name: str, runs: int, now: Optional[dateti
         "bring_line": f" bring {a.bring}." if a.bring else "",
         "runs_line": runs_line,
     }
+    if lang == "tr":
+        fields = _fields_tr(a, moment, name, runs, local, days, has_material)
     base = f"{SITE_URL}/auditions/{a.id}?ar={moment}"
     out = f"{API_PUBLIC_URL}/api/auditions/outcome/{a.outcome_token}?o="
     links = {"link": base, "good": out + "good", "callback": out + "callback", "no": out + "no"}
@@ -151,19 +211,21 @@ def _fill(text: str, fields: dict, links: dict) -> str:
 
 def render(a: Audition, moment: str, user_name: Optional[str], *, runs: int,
            unsubscribe_url: Optional[str], tpl: Optional[EmailTemplates] = None,
-           now: Optional[datetime] = None, has_material: Optional[bool] = None) -> tuple[str, str, str]:
-    subject, body = load_copy(moment)
-    name = (EmailTemplates._first_name(user_name) or "").lower()
-    fields, links = _fields(a, moment, name, runs, now, has_material)
+           now: Optional[datetime] = None, has_material: Optional[bool] = None,
+           lang: str = "en") -> tuple[str, str, str]:
+    subject, body = load_copy(moment, lang)
+    name = lower_name(EmailTemplates._first_name(user_name) or "", lang)
+    fields, links = _fields(a, moment, name, runs, now, has_material, lang)
     if not name:
-        body = body.replace("hey {name},", "hey,")
+        hello = "selam" if lang == "tr" else "hey"
+        body = body.replace(f"{hello} {{name}},", f"{hello},")
     subject = _fill(subject, fields, {})
     plain = _fill(body, fields, links)
     esc_fields = {k: str(escape(v)) for k, v in fields.items()}
     anchors = {k: str(Markup('<a href="{0}" style="font-weight:500;">{0}</a>').format(v)) for k, v in links.items()}
     paragraphs = [Markup(_fill(str(escape(block)), esc_fields, anchors)) for block in body.strip().split("\n\n")]
     html = (tpl or EmailTemplates()).env.get_template("triggered.html").render(
-        subject=subject, paragraphs=paragraphs, unsubscribe_url=unsubscribe_url
+        subject=subject, paragraphs=paragraphs, unsubscribe_url=unsubscribe_url, lang=lang
     )
     return subject, html, plain
 
@@ -291,7 +353,7 @@ def run(db: Session, *, now: Optional[datetime] = None, send: bool = False, clie
             pieces = pieces_for(db, a)
             runs, _ = count_runs(db, a, pieces)
             subject, html, plain = render(a, moment, u.name, runs=runs, unsubscribe_url=unsub, tpl=tpl, now=now,
-                                          has_material=bool(a.user_script_id or pieces))
+                                          has_material=bool(a.user_script_id or pieces), lang=email_language(u))
             client.send_email(to=u.email, subject=subject, html=html, plain_text=plain, unsubscribe_url=unsub)
             db.add(AuditionEvent(audition_id=a.id, user_id=a.user_id, kind="reminder_sent", data={"moment": moment}))
             db.commit()

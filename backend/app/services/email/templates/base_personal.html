@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang or 'en' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,7 +55,9 @@
                        accidentally ship an email with no way out of the list. #}
                     {% if unsubscribe_url %}
                     <div class="ar-muted ar-rule" style="margin-top:36px; padding-top:16px; border-top:1px solid {{ c.rule }}; color:{{ c.muted }}; font-size:13px; line-height:1.5;">
-                        {% if unsubscribe_note %}
+                        {% if lang == "tr" %}
+                        bunları almak istemiyor musun? <a href="{{ unsubscribe_url }}" style="color:{{ c.muted }}; text-decoration:underline;">buradan çık</a>, göndermeyi bırakırım, hiç dert değil.
+                        {% elif unsubscribe_note %}
                         {{ unsubscribe_note }} <a href="{{ unsubscribe_url }}" style="color:{{ c.muted }}; text-decoration:underline;">unsubscribe</a>.
                         {% else %}
                         didn't mean to sign up for these? <a href="{{ unsubscribe_url }}" style="color:{{ c.muted }}; text-decoration:underline;">undo it here</a> and i'll stop, no hard feelings. i only send these to actors who actually want them.

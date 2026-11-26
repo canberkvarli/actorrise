@@ -49,8 +49,10 @@ from app.models.user_event import UserEvent
 from app.services.email import lifecycle
 from app.services.email.marketing import build_unsubscribe_url
 from app.services.email.resend_client import ResendEmailClient
-from app.services.email.templates import EmailTemplates
+from app.core.brand import BRAND_NAME
+from app.services.email.templates import EmailTemplates, lower_name
 from app.services.events import record_user_event
+from app.services.ui_language import email_language
 
 logger = logging.getLogger(__name__)
 
@@ -131,11 +133,14 @@ def _has_held_a_subscription(db) -> set[int]:
     return {r[0] for r in rows}
 
 
-def trial_span_for(db, user_id: int) -> str:
-    """The trial as words for {span}: "a week", "two weeks", "3 days"."""
+def trial_span_for(db, user_id: int, lang: str = "en") -> str:
+    """The trial as words for {span}: "a week", "two weeks", "3 days".
+    In Turkish "bir hafta", "iki hafta", "3 gün" (a noun after a number stays singular)."""
     from app.services.trial_length import trial_days_for
 
     days = trial_days_for(db, user_id)
+    if lang == "tr":
+        return {1: "bir gün", 7: "bir hafta", 14: "iki hafta"}.get(days, f"{days} gün")
     return {1: "a day", 7: "a week", 14: "two weeks"}.get(days, f"{days} days")
 
 
@@ -184,6 +189,7 @@ def select_candidates(db, touch: str, now: datetime | None = None) -> list[dict]
             continue
         if not lifecycle.has_room(db, user.id, now):
             continue
+        lang = email_language(user)
         out.append(
             {
                 "user_id": user.id,
@@ -193,15 +199,20 @@ def select_candidates(db, touch: str, now: datetime | None = None) -> list[dict]
                 "anchor": trigger.anchor,
                 "anchored_at": anchors[user.id],
                 "link": _link(touch),
-                "span": trial_span_for(db, user.id),
+                "span": trial_span_for(db, user.id, lang) if lang == "tr" else trial_span_for(db, user.id),
+                "lang": lang,
             }
         )
     return out
 
 
-def load_copy(touch: str) -> tuple[str, str]:
-    """(subject, body) from backend/emails/lifecycle/<touch>.txt."""
-    raw = (COPY_DIR / f"{touch}.txt").read_text(encoding="utf-8")
+def load_copy(touch: str, lang: str = "en") -> tuple[str, str]:
+    """(subject, body) from backend/emails/lifecycle/<touch>.txt, or from
+    lifecycle/tr/<touch>.txt for a Turkish reader when that file exists."""
+    path = COPY_DIR / f"{touch}.txt"
+    if lang == "tr" and (COPY_DIR / "tr" / f"{touch}.txt").exists():
+        path = COPY_DIR / "tr" / f"{touch}.txt"
+    raw = path.read_text(encoding="utf-8")
     head, _, body = raw.partition("\n")
     label, _, subject = head.partition(":")
     if label.strip().lower() != "subject" or not subject.strip():
@@ -209,11 +220,13 @@ def load_copy(touch: str) -> tuple[str, str]:
     return subject.strip(), body.strip() + "\n"
 
 
-def _fill(text: str, name: str, link, span: str) -> str:
-    greeting = f"hey {name}," if name else "hey,"
+def _fill(text: str, name: str, link, span: str, lang: str = "en") -> str:
+    hello = "selam" if lang == "tr" else "hey"
+    greeting = f"{hello} {name}," if name else f"{hello},"
     return (
-        text.replace("hey {name},", greeting)
+        text.replace(f"{hello} {{name}},", greeting)
         .replace("{name}", name)
+        .replace("{brand}", BRAND_NAME)
         .replace("{span}", span)
         .replace("{link}", link)
     )
@@ -221,11 +234,12 @@ def _fill(text: str, name: str, link, span: str) -> str:
 
 def render(person: dict, unsubscribe_url: str | None, tpl: EmailTemplates | None = None) -> tuple[str, str, str]:
     """(subject, html, plain) for one candidate."""
-    subject, body = load_copy(person["touch"])
-    name = (EmailTemplates._first_name(person.get("user_name")) or "").lower()
+    lang = person.get("lang", "en")
+    subject, body = load_copy(person["touch"], lang)
+    name = lower_name(EmailTemplates._first_name(person.get("user_name")) or "", lang)
     link, span = person["link"], person["span"]
 
-    plain = _fill(body, name, link, span)
+    plain = _fill(body, name, link, span, lang)
 
     # The same words as a letter: one <p> per paragraph, everything escaped,
     # and the link the only markup. The letter ends on the name; the way out
@@ -233,11 +247,11 @@ def render(person: dict, unsubscribe_url: str | None, tpl: EmailTemplates | None
     # List-Unsubscribe header the client sets.
     anchor = Markup('<a href="{0}" style="font-weight:500;">{0}</a>').format(link)
     paragraphs = [
-        Markup(_fill(str(escape(block)), str(escape(name)), str(anchor), str(escape(span))))
+        Markup(_fill(str(escape(block)), str(escape(name)), str(anchor), str(escape(span)), lang))
         for block in body.strip().split("\n\n")
     ]
     html = (tpl or EmailTemplates()).env.get_template("triggered.html").render(
-        subject=subject, paragraphs=paragraphs, unsubscribe_url=unsubscribe_url
+        subject=subject, paragraphs=paragraphs, unsubscribe_url=unsubscribe_url, lang=lang
     )
     return subject, html, plain
 

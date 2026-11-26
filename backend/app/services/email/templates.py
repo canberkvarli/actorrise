@@ -11,8 +11,19 @@ Provides HTML email templates for:
 from pathlib import Path
 from typing import Optional
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound, select_autoescape
 from app.core.brand import BRAND_NAME, SITE_DOMAIN, site_url
+
+# The Turkish "reply UNSUBSCRIBE" line, for the emails whose English has one.
+TR_REPLY_OUT = "çıkmak istersen ÇIK yaz, listeden çıkarırım, hiç dert değil."
+
+
+def lower_name(name: str, lang: str = "en") -> str:
+    """A name in lowercase for the casual greeting. Turkish has its own I:
+    "Işıl" is "ışıl" and "İpek" is "ipek", which str.lower() gets wrong."""
+    if lang == "tr":
+        name = name.replace("I", "ı").replace("İ", "i")
+    return name.lower()
 
 
 def library_claim(monologue_count: Optional[int] = None) -> str:
@@ -54,6 +65,16 @@ class EmailTemplates:
         # The product's name and site, so templates say {{ brand }} (app/core/brand.py).
         self.env.globals["brand"] = BRAND_NAME
         self.env.globals["site_url"] = site_url()
+
+    def template_for(self, name: str, lang: str = "en"):
+        """`name`, or its Turkish version in templates/tr/ for a Turkish reader
+        (users.ui_language, services/ui_language). English when there is none."""
+        if lang == "tr":
+            try:
+                return self.env.get_template(f"tr/{name}")
+            except TemplateNotFound:
+                pass
+        return self.env.get_template(name)
 
     def render_submission_received(
         self,
@@ -159,9 +180,11 @@ class EmailTemplates:
         **kwargs,
     ) -> str:
         """Render welcome email for new signups."""
-        template = self.env.get_template('welcome.html')
+        lang = kwargs.get("lang", "en")
+        template = self.template_for('welcome.html', lang)
         return template.render(
-            user_name=user_name or "there",
+            lang=lang,
+            user_name=user_name or ("" if lang == "tr" else "there"),
             unsubscribe_url=unsubscribe_url,
             library_claim=library_claim(monologue_count),
         )
@@ -364,13 +387,19 @@ class EmailTemplates:
         **kwargs,
     ) -> str:
         """Day-1 nudge back to a monologue the actor saved but never worked."""
-        template = self.env.get_template('saved_piece_reminder.html')
+        lang = kwargs.get("lang", "en")
+        template = self.template_for('saved_piece_reminder.html', lang)
         return template.render(
+            lang=lang,
             character=character,
             play=play,
             link=link,
             user_name=(user_name or "").split()[0] if user_name else None,
-            preheader="it takes two minutes. cut it, or just say it out loud once.",
+            preheader=(
+                "iki dakika sürer. kısalt ya da bir kez yüksek sesle söyle."
+                if lang == "tr"
+                else "it takes two minutes. cut it, or just say it out loud once."
+            ),
             unsubscribe_url=unsubscribe_url,
         )
 
@@ -384,6 +413,24 @@ class EmailTemplates:
         user_name: Optional[str] = None,
         **kwargs,
     ) -> str:
+        if kwargs.get("lang") == "tr":
+            name = lower_name((user_name or "").split()[0], "tr") if user_name else ""
+            return "\n".join([
+                f"selam {name}," if name else "selam,",
+                "",
+                f"birkaç gün önce {play} oyunundan {character} monoloğunu kaydettin "
+                "ama bir daha dönmedin. ben de hep yapıyorum, bir şeyi kaydedip "
+                "varlığını unutuyorum.",
+                "",
+                f"işte yine burada: {link}",
+                "",
+                "iki dakika ayır. prova et’e bas ve yüksek sesle çalış, ya da seçmeye "
+                "uygun uzunluğa kısalt. zaten bu yüzden kaydetmiştin.",
+                "",
+                "canberk",
+                "",
+                TR_REPLY_OUT,
+            ])
         name = (user_name or "").split()[0].lower() if user_name else ""
         greeting = f"hey {name}," if name else "hey,"
         return "\n".join([
@@ -420,16 +467,21 @@ class EmailTemplates:
         unsubscribe_url: Optional[str] = None,
         **kwargs,
     ) -> str:
-        template = self.env.get_template('lifecycle_day3.html')
-        preheader = {
+        lang = kwargs.get("lang", "en")
+        template = self.template_for('lifecycle_day3.html', lang)
+        preheader = ({
+            "favorite": "iki dakika. prova et’e bas ve bir kez çalış.",
+            "search": "uyan bir şey çıkmadıysa yanıtla, sana ben bir tane bulayım.",
+            "none": "bir hocaya anlatır gibi yaz.",
+        } if lang == "tr" else {
             "favorite": "two minutes. hit rehearse and run it once.",
             "search": "if nothing fit, reply and i'll dig one up for you.",
             "none": "type it the way you'd say it to a coach.",
-        }.get(anchor, "")
+        }).get(anchor, "")
         return template.render(
             anchor=anchor, link=link, character=character, play=play, query=query,
             user_name=self._first_name(user_name), preheader=preheader,
-            unsubscribe_url=unsubscribe_url,
+            unsubscribe_url=unsubscribe_url, lang=lang,
         )
 
     def render_lifecycle_day3_plain(
@@ -442,6 +494,35 @@ class EmailTemplates:
         user_name: Optional[str] = None,
         **kwargs,
     ) -> str:
+        if kwargs.get("lang") == "tr":
+            name = lower_name(self._first_name(user_name) or "", "tr")
+            lines = [f"selam {name}," if name else "selam,", ""]
+            if anchor == "favorite":
+                lines += [
+                    f"birkaç gün önce {play} oyunundan {character} monoloğunu kaydettin. hiç yüksek sesle söyledin mi?",
+                    "",
+                    f"işte burada: {link}",
+                    "",
+                    "prova et’e bas ve bir kez çalış. iki dakika, o kadar.",
+                ]
+            elif anchor == "search":
+                lines += [
+                    'gerçekten işine yarayacak bir monolog bulabildin mi?',
+                    "",
+                    f"bulamadıysan, kütüphane burada: {link}",
+                    "",
+                    "hiçbir şey uymuyorsa bu e-postayı yanıtla, ne aradığını söyle. ben kendim bir tane bulurum.",
+                ]
+            else:
+                lines += [
+                    "birkaç gün önce kaydoldun ama henüz hiç arama yapmadın. acelesi yok, bir tane dene.",
+                    "",
+                    'bir hocaya anlatır gibi yaz, mesela "iki dakikadan kısa, dramatik bir monolog", '
+                    "bak ne çıkıyor:",
+                    link,
+                ]
+            lines += ["", "canberk", "", TR_REPLY_OUT]
+            return "\n".join(lines)
         name = (self._first_name(user_name) or "").lower()
         lines = [f"hey {name}," if name else "hey,", ""]
         if anchor == "favorite":
@@ -454,9 +535,9 @@ class EmailTemplates:
             ]
         elif anchor == "search":
             lines += [
-                f'you searched for "{query}" a few days ago. did you find something you can actually use?',
+                'did you find a monologue you can actually use yet?',
                 "",
-                f"if not, here's that search again: {link}",
+                f"if not, the library is right here: {link}",
                 "",
                 "and if nothing fits, just reply and tell me what you're after. i'll go find one myself.",
             ]
@@ -482,12 +563,17 @@ class EmailTemplates:
         unsubscribe_url: Optional[str] = None,
         **kwargs,
     ) -> str:
-        template = self.env.get_template('lifecycle_day10.html')
+        lang = kwargs.get("lang", "en")
+        template = self.template_for('lifecycle_day10.html', lang)
         return template.render(
             anchor=anchor, link=link, character=character, play=play, query=query,
             user_name=self._first_name(user_name),
-            preheader="what were you hoping actorrise would do for you? one line is plenty.",
-            unsubscribe_url=unsubscribe_url,
+            preheader=(
+                f"{BRAND_NAME}’ın senin için ne yapmasını umuyordun? tek satır yeter."
+                if lang == "tr"
+                else "what were you hoping actorrise would do for you? one line is plenty."
+            ),
+            unsubscribe_url=unsubscribe_url, lang=lang,
         )
 
     def render_lifecycle_day10_plain(
@@ -500,11 +586,33 @@ class EmailTemplates:
         user_name: Optional[str] = None,
         **kwargs,
     ) -> str:
+        if kwargs.get("lang") == "tr":
+            name = lower_name(self._first_name(user_name) or "", "tr")
+            if anchor == "favorite":
+                tail = f"bu arada {play} oyunundan {character} monoloğu hâlâ kayıtlı duruyor, istersen: {link}"
+            elif anchor == "search":
+                tail = f"kütüphane de burada, ne zaman istersen: {link}"
+            else:
+                tail = f"arama da burada, ne zaman istersen: {link}"
+            return "\n".join([
+                f"selam {name}," if name else "selam,",
+                "",
+                f"{BRAND_NAME}’a kaydolalı yaklaşık on gün oldu. bunu tek başıma yapıyorum, "
+                "o yüzden dobra dobra duymak isterim: senin için ne yapmasını umuyordun, yaptı mı?",
+                "",
+                "tek satır yeter. her yanıtı ben okuyorum.",
+                "",
+                tail,
+                "",
+                "canberk",
+                "",
+                TR_REPLY_OUT,
+            ])
         name = (self._first_name(user_name) or "").lower()
         if anchor == "favorite":
             tail = f"and {character} from {play} is still saved if you want it: {link}"
         elif anchor == "search":
-            tail = f'your last search is still here if you want it back: "{query}" {link}'
+            tail = f"and the library is right here whenever you want it: {link}"
         else:
             tail = f"and the search is right here whenever you want it: {link}"
         return "\n".join([
@@ -526,6 +634,26 @@ class EmailTemplates:
         self, user_name: str, monologue_count: Optional[int] = None, **kwargs
     ) -> str:
         name = user_name or "there"
+        if kwargs.get("lang") == "tr":
+            return "\n".join([
+                f"Merhaba {user_name}," if user_name else "Merhaba,",
+                "",
+                f"{BRAND_NAME}’a hoş geldin. Kaydolduğuna gerçekten sevindim.",
+                "",
+                "Hemen şunları yapabilirsin:",
+                "",
+                "1. Kendi metnini yükle, sahneni yapay zekâlı sahne partneriyle Türkçe prova et",
+                "2. Repliklerini ezberle: önce metinle, sonra ipuçlarıyla, sonra ezbere",
+                "3. Oyuncu profilini oluştur",
+                "",
+                f"{SITE_DOMAIN}/practice adresinden başla.",
+                "",
+                "Bir fikrin, sorun ya da önerin olursa bu e-postayı yanıtla. Hepsini okuyorum.",
+                "",
+                "Canberk",
+                f"Kurucu, {BRAND_NAME}",
+                SITE_DOMAIN,
+            ])
         return "\n".join([
             f"Hey {name},",
             "",

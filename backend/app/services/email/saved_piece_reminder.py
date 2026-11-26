@@ -32,11 +32,14 @@ from app.services.email.resend_client import ResendEmailClient
 from app.services.email.school_address import is_school_student
 from app.services.email.templates import EmailTemplates
 from app.core.brand import site_url
+from app.services.ui_language import email_language
 
 logger = logging.getLogger(__name__)
 
 SITE_URL = site_url()
 SUBJECT = "you saved {character} and never opened it"
+# For an actor whose UI is Turkish (users.ui_language).
+SUBJECT_TR = "{character} monoloğunu kaydettin ama hiç açmadın"
 
 
 def _paid_user_ids(db) -> set[int]:
@@ -103,12 +106,15 @@ def select_candidates(db, hours_min: int, hours_max: int, active_hour: int | Non
         mono = db.get(Monologue, fav.monologue_id)
         if not mono or not mono.play:
             continue
+        lang = email_language(user)
+        tr = lang == "tr"
         out.append({
             "favorite_id": fav.id,
             "email": email,
             "user_name": getattr(user, "name", None),
-            "character": mono.character_name or "that character",
-            "play": mono.play.title or "the play",
+            "lang": lang,
+            "character": mono.character_name or ("o karakter" if tr else "that character"),
+            "play": mono.play.title or ("o oyun" if tr else "the play"),
             "link": f"{SITE_URL}/monologue/{mono.id}",
             "saved_at": fav.created_at,
         })
@@ -163,11 +169,13 @@ def run_reminders(
                     unsub = build_unsubscribe_url(p["email"])
                 except Exception:
                     pass
-                html = tpl.render_saved_piece_reminder(p["character"], p["play"], p["link"], p["user_name"], unsubscribe_url=unsub)
-                plain = tpl.render_saved_piece_reminder_plain(p["character"], p["play"], p["link"], p["user_name"])
+                lang = p.get("lang", "en")
+                html = tpl.render_saved_piece_reminder(p["character"], p["play"], p["link"], p["user_name"], unsubscribe_url=unsub, lang=lang)
+                plain = tpl.render_saved_piece_reminder_plain(p["character"], p["play"], p["link"], p["user_name"], lang=lang)
+                subject = SUBJECT_TR if lang == "tr" else SUBJECT
                 client.send_email(
                     to=p["email"],
-                    subject=SUBJECT.format(character=p["character"], play=p["play"]),
+                    subject=subject.format(character=p["character"], play=p["play"]),
                     html=html,
                     plain_text=plain,
                     unsubscribe_url=unsub,

@@ -1,0 +1,23 @@
+{% extends "base_personal.html" %}
+
+{% block title %}tek bir soru{% endblock %}
+
+{% block content %}
+        <p>selam{% if user_name %} {{ user_name }}{% endif %},</p>
+
+        <p>{{ brand }}’a kaydolalı yaklaşık on gün oldu. bunu tek başıma yapıyorum, o yüzden dobra dobra duymak isterim: senin için ne yapmasını umuyordun, yaptı mı?</p>
+
+        <p>tek satır yeter. her yanıtı ben okuyorum.</p>
+
+{% if anchor == "favorite" %}
+        <p>bu arada {{ play }} oyunundan {{ character }} monoloğu hâlâ kayıtlı duruyor, istersen <a href="{{ link }}" style="font-weight:500;">aç</a>.</p>
+{% elif anchor == "search" %}
+        <p>kütüphane de <a href="{{ link }}" style="font-weight:500;">burada</a>, ne zaman istersen.</p>
+{% else %}
+        <p>arama da <a href="{{ link }}" style="font-weight:500;">burada</a>, ne zaman istersen.</p>
+{% endif %}
+
+        <p style="margin-top:28px;">canberk</p>
+
+        <p class="ar-muted" style="margin-top:20px; color:{{ c.muted }}; font-size:13px;">çıkmak istersen ÇIK yaz, listeden çıkarırım, hiç dert değil.</p>
+{% endblock %}

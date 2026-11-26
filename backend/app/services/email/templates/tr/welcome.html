@@ -1,0 +1,25 @@
+{% extends "base_personal.html" %}
+
+{% block title %}{{ brand }}’a hoş geldin{% endblock %}
+
+{% block content %}
+        <p>{% if user_name %}Merhaba {{ user_name }},{% else %}Merhaba,{% endif %}</p>
+
+        <p>{{ brand }}’a hoş geldin. Kaydolduğuna gerçekten sevindim.</p>
+
+        <p>Hemen şunları yapabilirsin:</p>
+
+        <p>1. Kendi metnini yükle, sahneni yapay zekâlı sahne partneriyle Türkçe prova et<br>
+        2. Repliklerini ezberle: önce metinle, sonra ipuçlarıyla, sonra ezbere<br>
+        3. Oyuncu profilini oluştur</p>
+
+        <p><a href="{{ site_url }}/practice">Buradan başla</a>.</p>
+
+        <p>Bir fikrin, sorun ya da önerin olursa bu e-postayı yanıtla. Hepsini okuyorum.</p>
+
+        <p style="margin-top: 28px;">
+            Canberk<br>
+            <span style="color: #666;">Kurucu, {{ brand }}</span><br>
+            <a href="{{ site_url }}" style="color: #666;">{{ site_url | replace("https://", "") }}</a>
+        </p>
+{% endblock %}

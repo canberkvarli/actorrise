@@ -1,0 +1,11 @@
+subject: bir şey mi ters gitti?
+
+selam {name},
+
+biraz önce plus denemesini başlattın ama bitirmedin. kart adımında bir şey bozulduysa söyle, bugün düzeltirim.
+
+sadece araya bir şey girdiyse, hâlâ burada: {link}
+
+{span} ücretsiz. o süre dolana kadar hiçbir ücret alınmaz, ondan önce istediğin zaman iptal edebilirsin.
+
+canberk

@@ -1,0 +1,15 @@
+subject: {project} nasıl geçti?
+
+selam {name},
+
+birine dokun, senin için kaydını tutayım.
+
+iyi hissettim: {good}
+
+callback aldım: {callback}
+
+bu sefer olmadı: {no}
+
+ne olduysa olsun, bir sonraki de listeye girer.
+
+canberk

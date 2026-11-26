@@ -40,6 +40,7 @@ from app.services.email.marketing import APPLE_RELAY_DOMAIN, build_unsubscribe_u
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.templates import EmailTemplates
 from app.services.events import record_user_event
+from app.services.ui_language import email_language
 from app.core.brand import site_url
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,21 @@ SUBJECTS = {
         "none": "one question",
     },
 }
+# The same, for an actor whose UI is Turkish (users.ui_language).
+SUBJECTS_TR = {
+    "day3": {
+        "favorite": "{character} monoloğunu prova ettin mi?",
+        "search": "bir şey bulabildin mi?",
+        "none": "bir arama dene",
+    },
+    "day10": {
+        "favorite": "tek bir soru",
+        "search": "tek bir soru",
+        "none": "tek bir soru",
+    },
+}
+# _favorite_anchor's English stand-ins for a missing name or title.
+TR_FALLBACKS = {"that character": "o karakter", "the play": "o oyun"}
 
 
 def _paid_user_ids(db) -> set[int]:
@@ -147,7 +163,9 @@ def search_anchor_from_query(raw: str | None) -> dict | None:
     query = " ".join((raw or "").split())[:MAX_QUERY_LEN].strip()
     if len(query) < 3:
         return None
-    return {"anchor": "search", "query": query, "link": f"{SITE_URL}/monologues?q={quote(query)}"}
+    # The search itself is never quoted back, in the text or the link (Canberk,
+    # 2026-11-26: it reads as being watched). It only picks which email they get.
+    return {"anchor": "search", "query": query, "link": f"{SITE_URL}/monologues"}
 
 
 def anchor_for(db, uid: int) -> dict:
@@ -222,6 +240,11 @@ def select_candidates(db, touch: str, active_hour: int | None = None) -> list[di
         reminded = anchor.pop("favorite_reminded_at", None)
         if touch == "day3" and reminded is not None and reminded > now - timedelta(hours=QUIET_HOURS):
             continue
+        lang = email_language(user)
+        if lang == "tr":
+            for key in ("character", "play"):
+                if key in anchor:
+                    anchor[key] = TR_FALLBACKS.get(anchor[key], anchor[key])
         out.append(
             {
                 "user_id": user.id,
@@ -229,6 +252,7 @@ def select_candidates(db, touch: str, active_hour: int | None = None) -> list[di
                 "user_name": getattr(user, "name", None),
                 "touch": touch,
                 "signed_up_at": user.created_at,
+                "lang": lang,
                 **anchor,
             }
         )
@@ -249,7 +273,9 @@ def _claim(db, user_id: int, touch: str, anchor: str) -> bool:
 def render(tpl: EmailTemplates, person: dict, unsubscribe_url: str | None) -> tuple[str, str, str]:
     """(subject, html, plain) for one candidate."""
     touch, anchor = person["touch"], person["anchor"]
-    subject = SUBJECTS[touch][anchor].format(character=person.get("character", ""))
+    lang = person.get("lang", "en")
+    subjects = SUBJECTS_TR if lang == "tr" else SUBJECTS
+    subject = subjects[touch][anchor].format(character=person.get("character", ""))
     kwargs = {
         "anchor": anchor,
         "link": person["link"],
@@ -258,6 +284,8 @@ def render(tpl: EmailTemplates, person: dict, unsubscribe_url: str | None) -> tu
         "query": person.get("query"),
         "user_name": person.get("user_name"),
     }
+    if lang == "tr":
+        kwargs["lang"] = "tr"
     if touch == "day3":
         html = tpl.render_lifecycle_day3(unsubscribe_url=unsubscribe_url, **kwargs)
         plain = tpl.render_lifecycle_day3_plain(**kwargs)

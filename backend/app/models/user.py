@@ -30,6 +30,8 @@ class User(Base):
 
     # Marketing: explicit opt-in only (GDPR/CAN-SPAM compliant)
     marketing_opt_in = Column(Boolean, default=False, nullable=False)
+    # "en" or "tr", from the UI's X-ActorRise-Locale on GET /api/auth/me (scripts/add_ui_language.py).
+    ui_language = Column(String(8), default="en", server_default="en", nullable=False)
     # Secret for the read-only calendar feed /api/auditions/calendar.ics?k=.
     # Made on first request; "Reset link" replaces it.
     calendar_feed_key = Column(String(48), unique=True, nullable=True)

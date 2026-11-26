@@ -1,0 +1,17 @@
+{% extends "base_personal.html" %}
+
+{% block title %}{{ character }} monoloğun{% endblock %}
+
+{% block content %}
+        <p>selam{% if user_name %} {{ user_name }}{% endif %},</p>
+
+        <p>birkaç gün önce {{ play }} oyunundan {{ character }} monoloğunu kaydettin ama bir daha dönmedin. ben de hep yapıyorum, bir şeyi kaydedip varlığını unutuyorum.</p>
+
+        <p>işte yine burada: <a href="{{ link }}" style="font-weight:500;">{{ character }}, {{ play }}</a></p>
+
+        <p>iki dakika ayır. prova et’e bas ve yüksek sesle çalış, ya da seçmeye uygun uzunluğa kısalt. zaten bu yüzden kaydetmiştin.</p>
+
+        <p style="margin-top:28px;">canberk</p>
+
+        <p class="ar-muted" style="margin-top:20px; color:{{ c.muted }}; font-size:13px;">çıkmak istersen ÇIK yaz, listeden çıkarırım, hiç dert değil.</p>
+{% endblock %}

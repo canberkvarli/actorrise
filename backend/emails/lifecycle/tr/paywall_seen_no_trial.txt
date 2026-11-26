@@ -1,0 +1,11 @@
+subject: dün limite takıldın
+
+selam {name},
+
+dün {brand}’ta ücretsiz limite takıldın, tam bir şeyin ortasındayken.
+
+devam etmek istersen plus {span} boyunca ücretsiz. o süre dolana kadar hiçbir ücret alınmaz, ondan önce iptal edebilirsin: {link}
+
+asıl seni durduran fiyatsa, yanıtla ve söyle. bilmeyi tercih ederim.
+
+canberk

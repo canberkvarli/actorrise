@@ -147,6 +147,12 @@ they are here. When he gives a new standing rule, add it here, not to a memory f
   gets the Turkish UI, and the EN/TR switch is drawn. The Turkish library is thin (Hamlet's
   monologues and a couple of scenes), so for a Turkish actor the web is mainly ScenePartner on
   their own script, rehearsed in Turkish. Ghost Light (`apps/mobile`) has Turkish too.
+- **Emails follow the actor's UI language (2026-11-26).** `users.ui_language` ("en"/"tr") is
+  recorded on GET /api/auth/me from `X-ActorRise-Locale` (web and iOS). The automatic emails
+  (welcome, day 3/10, saved piece, the two price-look emails, audition reminders) have Turkish
+  versions in `templates/tr/` and `emails/*/tr/`, picked by `services/ui_language.email_language()`.
+  New actor email: write the Turkish one too. The day 3/10 emails never quote the actor's search
+  back, in either language (Canberk, 2026-11-26).
 - **Language gate (CAN-19).** The UI language picks the library, everywhere: the Turkish UI
   (`X-ActorRise-Locale: tr`, sent by `lib/api.ts`) is served **Turkish only**, everything else
   **English only** (Canberk, 2026-11-03: "no Turkish actor can do English pieces; they have to
@@ -248,6 +254,8 @@ Standard line, place near the sign-off:
 "reply UNSUBSCRIBE and I'll take you off the list, no hard feelings"
 
 NOT on a personal note to ONE user (the daily loop's hand-written notes about what that person did, sent from Gmail). Canberk, 2026-09-30: the line made a personal note read like a campaign. Those end on `Canberk`, full stop. `voice_check.py --kind note` flags the line if it sneaks in. Same exception as the two triggered emails.
+
+Turkish emails say **ÇIK** for the same thing ("çıkmak istersen ÇIK yaz"): a ÇIK reply is an UNSUBSCRIBE.
 
 If a user replies UNSUBSCRIBE (or otherwise asks to stop), file it right away: `cd backend && uv run python scripts/opt_out.py <address> "OPT-OUT: <what they replied to, date>"`. It adds them to `email_do_not_contact` AND turns `marketing_opt_in` off. Since 2026-09-30 the unsubscribe link under every automated email does exactly the same by itself (`app/services/email/opt_out.py`), so both ways of saying stop land in both places, and the resubscribe link lifts an `OPT-OUT:` row again (never a `BOUNCE:` or a payer's row). Keep the unsubscribe link too, this is in addition to it, not a replacement.
 

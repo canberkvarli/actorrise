@@ -108,7 +108,7 @@ class SelectTests(unittest.TestCase):
         with mock.patch.object(lifecycle, "_search_anchor", lambda db, uid: lifecycle.search_anchor_from_query("hamlet")):
             (p,) = lifecycle.select_candidates(self.db, "day3")
             self.assertEqual(p["anchor"], "search")
-            self.assertEqual(p["link"], "https://ghostlight.actor/monologues?q=hamlet")
+            self.assertEqual(p["link"], "https://ghostlight.actor/monologues")
         (p,) = lifecycle.select_candidates(self.db, "day3")
         self.assertEqual(p["anchor"], "none")
         self.assertEqual(p["user_id"], u.id)
@@ -169,7 +169,7 @@ class SearchAnchorTests(unittest.TestCase):
     def test_normalises_and_truncates(self):
         a = lifecycle.search_anchor_from_query("  angry   \n monologue  ")
         self.assertEqual(a["query"], "angry monologue")
-        self.assertEqual(a["link"], "https://ghostlight.actor/monologues?q=angry%20monologue")
+        self.assertEqual(a["link"], "https://ghostlight.actor/monologues")
         self.assertIsNone(lifecycle.search_anchor_from_query("hi"))
         self.assertIsNone(lifecycle.search_anchor_from_query(None))
         self.assertEqual(len(lifecycle.search_anchor_from_query("x" * 500)["query"]), lifecycle.MAX_QUERY_LEN)
@@ -202,11 +202,15 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(lifecycle.render(self.tpl, {"touch": "day3", **FAV}, None)[0], "have you run Viola yet?")
         self.assertEqual(lifecycle.render(self.tpl, {"touch": "day10", **FAV}, None)[0], "one question")
 
-    def test_search_anchor_shows_the_query(self):
-        person = {"touch": "day3", **lifecycle.search_anchor_from_query("funny monologue")}
-        _, html, plain = lifecycle.render(self.tpl, person, None)
-        self.assertIn('"funny monologue"', plain)
-        self.assertIn("funny monologue", html)
+    def test_search_is_never_quoted_back(self):
+        # Canberk, 2026-11-26: quoting someone's search reads as being watched.
+        for touch in ("day3", "day10"):
+            for lang in ("en", "tr"):
+                person = {"touch": touch, "lang": lang, **lifecycle.search_anchor_from_query("funny monologue")}
+                subject, html, plain = lifecycle.render(self.tpl, person, None)
+                for text in (subject, html, plain):
+                    self.assertNotIn("funny", text)
+                    self.assertNotIn("q=", text)
 
 
 class _NoClose:

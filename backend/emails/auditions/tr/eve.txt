@@ -1,0 +1,11 @@
+subject: yarın: {project}
+
+selam {name},
+
+{tomorrow_line}{bring_line}
+
+{runs_line} {link}
+
+bol şans.
+
+canberk

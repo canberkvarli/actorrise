@@ -1,0 +1,11 @@
+subject: {project}: {days_phrase}
+
+selam {name},
+
+{project}{role_line} {when_phrase}. {step_line}
+
+{link}
+
+bir gece önce bir not daha atacağım.
+
+canberk
