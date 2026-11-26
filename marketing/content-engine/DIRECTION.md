@@ -3,6 +3,17 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-26, night: drafts go to Buffer now, not TryPost (wins over every TryPost step below)
+
+- Canberk does not want a monthly bill for posting. Drafts go to Buffer (free plan, 3 channels:
+  TikTok, Instagram, YouTube, organization 6b088e9604b6403758c0a062).
+- Buffer needs a public link to the video. `scripts/publish_media.sh out/<id>.mp4` pushes the film
+  to the public `social-media` branch of this repo and prints a raw.githubusercontent.com link.
+  Films older than 14 days are removed from that branch on each run.
+- Then Buffer create_post with saveToDraft true, once per channel. Never schedule, never send.
+  Canberk approves in Buffer.
+- TryPost stays connected only for reading old numbers until it is cancelled.
+
 ## 2026-11-26, later: SHAREABLE, and never the same film twice (wins over everything below, including the formula just below)
 
 Canberk: the ideas and the designs keep making "the same thing basically". People want to share and send
