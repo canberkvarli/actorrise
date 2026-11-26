@@ -128,7 +128,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | Sofa | Scroll | Piano | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | Sofa | Scroll | Piano | Tier | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -4866,6 +4866,215 @@ const PianoScene: React.FC<{ s: Piano }> = ({ s }) => {
   );
 };
 
+// ---------- tier: the stage door tier list, cut-paper collage (2026-12-01) ----------
+/** Milo ranks every monologue he hears at the stage door on a paper S to F board. Four beats: "hook" (the empty
+ *  board, the hook card from frame 0), "door" (the callback line in the rain, his scarf shut in the stage door, the
+ *  actors ahead muttering), "cards" (a paper card slams onto the board for each famous piece he hears), "top" (the
+ *  find from Ghost Light lands in S with a big hit). All new torn paper pieces: the tier board, the cards, the stage
+ *  door, the rain. Rankings are Milo's taste, never a claim about casting. */
+type TierCard = { name: string; play: string; tier: string; said?: string; note?: string; at?: number; /** cards: frame the muttering starts; a tally that ticks up before the slam */ say?: number; count?: number };
+type Tier = { type: "tier"; beat: "hook" | "door" | "cards" | "top"; seconds: number; line: string; accent?: string;
+  hook?: string[]; red?: number[]; /** door: what the line mutters */ mutters?: string[];
+  /** cards: one per slam; top: the ones already ranked */ cards?: TierCard[];
+  /** top: the find, its length tag, a line of it (public domain only), when it lands */ find?: TierCard & { len?: string }; quote?: string[]; hitAt?: number };
+const TIERS = ["S", "A", "B", "C", "D", "F"];
+const TCOL: Record<string, string> = { S: "#c8361b", A: "#d9742a", B: "#e2a72a", C: "#5f8f5a", D: "#2f7d86", F: "#5b5470" };
+const TR = { back: "#161d20", strip: "#27383a", wall: "#3d2a4d", wall2: "#22454a", floor: "#c9923f", brick: "#6a2f2a", brickHi: "#7d3a31", pave: "#2a313c", puddle: "#3c4a5c", door: "#2f6b4f", doorDark: "#1f4a37", rain: "#cfe3ea" };
+/** One ranked card: the character in Archivo Black, the play in handwriting. Centred on (0, 0). */
+const TCardPiece: React.FC<{ c: TierCard; w: number; h: number; fill?: string }> = ({ c, w, h, fill = CP.cream }) => (
+  <g>
+    <rect x={-w / 2} y={-h / 2} width={w} height={h} fill={fill} filter="url(#torn)" />
+    <text x={0} y={-2} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={Math.min(40, Math.floor((w - 28) / (c.name.length * 0.74)))} fill={CP.ink}>{c.name.toUpperCase()}</text>
+    <text x={0} y={h / 2 - 14} textAnchor="middle" fontFamily="Caveat" fontSize={30} fill={CP.red}>{c.play}</text>
+  </g>
+);
+/** The board: six torn rows, S to F, each with its coloured letter. `placed` cards sit in their rows; a card with
+ *  `at` slams in at that frame (from big, with a shake). (x, y) = top left; w wide, rows rowH tall. */
+const TBoard: React.FC<{ x: number; y: number; w: number; rowH: number; placed?: TierCard[]; wave?: boolean; glow?: number }> = ({ x, y, w, rowH, placed = [], wave, glow = 1e9 }) => {
+  const f = useCurrentFrame();
+  const LW = 112, cw = 236, ch = rowH - 30;
+  let shake = 0; placed.forEach((c) => { if (c.at !== undefined && f >= c.at && f < c.at + 8) shake = Math.sin((f - c.at) * 2.4) * (8 - (f - c.at)) * 1.6; });
+  const inRow: Record<string, number> = {};
+  return (
+    <g transform={`translate(${shake} ${shake * 0.5})`}>
+      <rect x={x - 18} y={y - 18} width={w + 36} height={rowH * 6 + 36} fill={TR.back} filter="url(#torn)" />
+      {TIERS.map((t, k) => { const ry = y + k * rowH; const pulse = wave ? Math.max(0, 1 - Math.abs(((f / 5) % 9) - k) ) : 0;
+        const g = t === "S" && f >= glow ? 0.5 + 0.5 * Math.sin((f - glow) / 2.2) : 0;
+        return (<g key={t}>
+          <rect x={x + LW + 8} y={ry + 6} width={w - LW - 8} height={rowH - 12} fill={g ? "#3a2f2a" : TR.strip} filter="url(#tornS)" />
+          <g transform={`translate(${x + LW / 2} ${ry + rowH / 2}) scale(${1 + pulse * 0.14 + g * 0.1}) rotate(${(k % 2 ? 2 : -2)})`}>
+            <rect x={-LW / 2} y={-rowH / 2 + 6} width={LW} height={rowH - 12} fill={TCOL[t]} filter="url(#tornS)" />
+            <text x={0} y={rowH * 0.2} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={rowH * 0.58} fill={CP.cream}>{t}</text>
+          </g>
+        </g>); })}
+      {placed.map((c, i) => { const k = TIERS.indexOf(c.tier); const n = inRow[c.tier] ?? 0; inRow[c.tier] = n + 1;
+        const cx = x + LW + 30 + cw / 2 + n * (cw + 14), cy = y + k * rowH + rowH / 2;
+        if (c.at !== undefined && f < c.at - 5) return null;
+        const t = c.at === undefined ? 1 : Math.min(1, Math.max(0, (f - (c.at - 5)) / 5)), e = t * t;
+        const sc = 2.6 - 1.6 * e, settle = c.at !== undefined && f >= c.at ? Math.sin((f - c.at) / 1.6) * Math.max(0, 5 - (f - c.at)) : 0;
+        return <g key={i} transform={`translate(${cx} ${cy - (1 - e) * 220}) rotate(${(i % 2 ? 3 : -4) + (1 - e) * 14 + settle}) scale(${sc})`} opacity={Math.min(1, t * 2.5)}><TCardPiece c={c} w={cw} h={ch} /></g>; })}
+    </g>
+  );
+};
+/** Paper rain: thin slanted strips falling for ever. */
+const TRain: React.FC<{ n?: number; seed?: number; op?: number }> = ({ n = 46, seed = 0, op = 0.5 }) => {
+  const f = useCurrentFrame();
+  return <g opacity={op}>{Array.from({ length: n }).map((_, k) => { const x = prand(k, 11 + seed) * 1240 - 60, sp = 30 + prand(k, 12 + seed) * 16;
+    const y = ((prand(k, 13 + seed) * 2100 + f * sp) % 2100) - 120;
+    return <rect key={k} x={x - (y / 2100) * 90} y={y} width={5} height={50 + prand(k, 14) * 30} rx={2} fill={TR.rain} transform={`rotate(8 ${x} ${y})`} />; })}</g>;
+};
+const TierScene: React.FC<{ s: Tier }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const N = Math.round(s.seconds * fps);
+  const talk = 0.35 + 0.4 * Math.abs(Math.sin(f / 2.4));
+  const Room: React.FC<{ wall: string }> = ({ wall }) => (
+    <g>
+      <rect width={1080} height={1920} fill={wall} filter="url(#fibre)" />
+      <rect x={-30} y={1500} width={1140} height={460} fill={TR.floor} filter="url(#torn)" />
+    </g>
+  );
+  if (s.beat === "hook") {
+    const lf = f - PREROLL;
+    const q = spring({ frame: lf - 22, fps, config: { damping: 8, mass: 0.5 } });
+    return (
+      <AbsoluteFill>
+        <Sfx name="cine/plink" at={PREROLL + 3} vol={0.4} />
+        <Sfx name="pop" at={PREROLL + 22} vol={0.45} />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <Room wall={TR.wall} />
+          <TBoard x={356} y={712} w={560} rowH={120} wave />
+          {/* the first card, still unranked, hovering over the board */}
+          <g transform={`translate(${690 + Math.sin(f / 7) * 14} ${800 + Math.cos(f / 5) * 10}) rotate(${Math.sin(f / 9) * 5}) scale(${0.9 + q * 0.12})`}>
+            <rect x={-118} y={-52} width={236} height={104} fill={CP.cream} filter="url(#torn)" />
+            <text x={0} y={22} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={64} fill={CP.red}>?</text>
+          </g>
+          <CMilo x={186} y={1480} s={0.72} panic={0.2} talk={lf > 4 && lf < N - PREROLL - 6 ? talk : 0} />
+        </svg>
+        <CHook lines={s.hook ?? [s.line]} red={s.red} />
+      </AbsoluteFill>
+    );
+  }
+  if (s.beat === "door") {
+    const FL = 1270, DX = 690, DW = 214, DY = 742;
+    const mut = s.mutters ?? [];
+    const MX = 560, MY = FL + 44, MS = 0.64;
+    const tug = cease(f, 4, 12), wob = Math.sin(f / 3.2) * 2.4;
+    const lean = -(9 * tug + wob);
+    const rad = (lean * Math.PI) / 180, nx0 = 62 * MS, ny0 = -392 * MS;
+    const nx = MX + nx0 * Math.cos(rad) - ny0 * Math.sin(rad), ny = MY + nx0 * Math.sin(rad) + ny0 * Math.cos(rad);
+    const people = [{ x: 108, dress: "#7b3f6a", hair: CP.hair2, skin: CP.skin, hs: "long" as const }, { x: 258, dress: CP.green, hair: CP.hair, skin: CP.skin3, hs: "short" as const, outfit: "trousers" as const }, { x: 404, dress: CP.rust, hair: "#8a3b1e", skin: CP.skin2, hs: "bun" as const }];
+    return (
+      <AbsoluteFill>
+        <Sfx name="cine/toing" at={6} vol={0.4} />
+        {mut.map((_, k) => <Sfx key={k} name="pop" at={12 + k * 13} vol={0.32} />)}
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <rect width={1080} height={1920} fill={TR.brick} filter="url(#fibre)" />
+          {Array.from({ length: 26 }).map((_, k) => <rect key={k} x={prand(k, 21) * 1020} y={560 + prand(k, 22) * 660} width={92} height={34} fill={TR.brickHi} opacity={0.75} filter="url(#tornS)" />)}
+          <TRain seed={0} op={0.38} />
+          <rect x={-30} y={FL} width={1140} height={700} fill={TR.pave} filter="url(#torn)" />
+          {[[150, 1400, 150], [520, 1450, 190], [860, 1380, 120]].map(([px, py, pw], k) => <ellipse key={k} cx={px} cy={py} rx={pw} ry={20} fill={TR.puddle} filter="url(#tornS)" />)}
+          {/* the stage door, its lamp and its sign */}
+          <circle cx={DX + DW / 2} cy={DY - 150} r={70 + Math.sin(f / 6) * 4} fill={CP.mustard} opacity={0.22} />
+          <circle cx={DX + DW / 2} cy={DY - 150} r={26} fill="#f6d58a" filter="url(#tornS)" />
+          <g transform={`rotate(-2 ${DX + DW / 2} ${DY - 70})`}><rect x={DX - 46} y={DY - 108} width={DW + 92} height={76} fill={CP.cream} filter="url(#torn)" />
+            <text x={DX + DW / 2} y={DY - 52} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={36} fill={CP.ink}>STAGE DOOR</text></g>
+          <rect x={DX - 16} y={DY - 14} width={DW + 32} height={FL - DY + 20} fill={TR.doorDark} filter="url(#torn)" />
+          <rect x={DX} y={DY} width={DW} height={FL - DY + 4} fill={TR.door} filter="url(#tornS)" />
+          <rect x={DX + 40} y={DY + 44} width={DW - 80} height={120} fill={TR.doorDark} filter="url(#tornS)" />
+          <circle cx={DX + DW - 30} cy={DY + 290} r={13} fill={CP.mustard} />
+          {/* the scarf: shut in the door, pulled tight to his neck, a tail poking out the other side */}
+          <path d={`M${nx} ${ny} L ${DX + 4} ${DY + 250}`} fill="none" stroke={CP.mustard} strokeWidth={30} strokeLinecap="round" filter="url(#tornS)" />
+          <rect x={DX - 8} y={DY + 236} width={20} height={34} fill={TR.doorDark} />
+          {/* the line: three actors running their pieces under their breath */}
+          {people.map((p, k) => <CPerson key={k} x={p.x} y={FL + 40 + (k % 2) * 8} s={0.6} dress={p.dress} hair={p.hair} skin={p.skin} hairStyle={p.hs} outfit={p.outfit} arms="script" seed={k + 3} talk={0.4 + 0.5 * Math.abs(Math.sin((f + k * 9) / 2.3))} />)}
+          <g transform={`rotate(${lean} ${MX} ${MY})`}><CMilo x={MX} y={MY} s={MS} panic={0.75} talk={talk} tote={false} /></g>
+          {mut.map((m, k) => <CNote key={k} text={m} x={[200, 360, 290][k % 3]} y={[820, 730, 620][k % 3]} rot={[-5, 4, -2][k % 3]} size={46} at={12 + k * 13} />)}
+          <TRain n={18} seed={5} op={0.5} />
+        </svg>
+        <CTitle text={s.line} accent={s.accent} y={262} />
+      </AbsoluteFill>
+    );
+  }
+  const BX = 262, BY = 640, BW = 660, RH = 136;
+  const Pinned: React.FC<{ panic: number }> = ({ panic }) => (
+    <g>
+      {/* still pinned: the scarf runs off the edge of the sheet, tight */}
+      <path d={`M${120 + 40} ${1490 - 250} L -30 ${1490 - 330 + Math.sin(f / 3) * 4}`} fill="none" stroke={CP.mustard} strokeWidth={26} strokeLinecap="round" filter="url(#tornS)" />
+      <g transform={`rotate(${4 + Math.sin(f / 3.2) * 1.6} 120 1490)`}><CMilo x={128} y={1490} s={0.6} panic={panic} talk={talk} tote={false} /></g>
+    </g>
+  );
+  if (s.beat === "cards") {
+    const cards = (s.cards ?? []).map((c, k) => ({ ...c, at: c.at ?? Math.round(10 + (k * (N - 30)) / Math.max(1, (s.cards ?? []).length)) }));
+    const sayAt = (k: TierCard) => k.say ?? (k.at ?? 0) - 16;
+    let cur = 0; cards.forEach((c, k) => { if (f >= sayAt(c)) cur = k; });
+    const c = cards[cur]; const since = f - sayAt(c);
+    const ticks = c.count ? Math.max(0, Math.min(c.count, Math.floor(((f - sayAt(c) - 22) / Math.max(1, c.at - 8 - sayAt(c) - 22)) * c.count) + 1)) : 0;
+    const tickGap = c.count ? Math.max(1, (c.at - 8 - sayAt(c) - 22) / c.count) : 1;
+    const who = [{ dress: "#7b3f6a", hair: CP.hair2, skin: CP.skin, hs: "long" as const }, { dress: CP.green, hair: CP.hair, skin: CP.skin3, hs: "short" as const, outfit: "trousers" as const }, { dress: CP.rust, hair: "#8a3b1e", skin: CP.skin2, hs: "bun" as const }][cur % 3];
+    const bq = spring({ frame: since, fps, config: { damping: 10, mass: 0.5 } });
+    return (
+      <AbsoluteFill>
+        {cards.map((k, i) => <React.Fragment key={i}><Sfx name="pop" at={sayAt(k)} vol={0.3} />{k.count ? Array.from({ length: k.count }).map((_, j) => <Sfx key={j} name="boop_hi" at={Math.round(sayAt(k) + 22 + j * Math.max(1, (k.at - 8 - sayAt(k) - 22) / k.count))} vol={0.22} />) : null}<Sfx name="thud" at={k.at} vol={0.7} />{i > 0 && <Sfx name="punch" at={k.at} vol={0.3} />}</React.Fragment>)}
+        <Sfx name="riser" at={N - 40} vol={0.32} />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          <Room wall={TR.wall2} />
+          <TBoard x={BX} y={BY} w={BW} rowH={RH} placed={cards} />
+          {cards.map((k, i) => k.note && f >= k.at + 4 ? <CNote key={i} text={k.note} x={BX + 112 + 30 + 236 + 136} y={BY + TIERS.indexOf(k.tier) * RH + RH / 2 + 6} rot={-3} size={38} w={296} at={k.at + 4} /> : null)}
+          <Pinned panic={0.5 + 0.1 * cur} />
+          {/* who is muttering it, and the first words */}
+          <g transform={`translate(${-140 * (1 - bq)} 0)`}><CPerson x={150} y={590} s={0.52} dress={who.dress} hair={who.hair} skin={who.skin} hairStyle={who.hs} outfit={who.outfit} arms="script" seed={cur} talk={0.5 + 0.5 * Math.abs(Math.sin(f / 2.2))} /></g>
+          <g transform={`translate(${620 + 60 * (1 - bq)} 430) rotate(${cur % 2 ? 2 : -2}) scale(${0.6 + 0.4 * bq})`} opacity={Math.min(1, bq * 2)}>
+            <path d="M-330 20 l-50 34 l56 -4 z" fill={CP.white} />
+            <rect x={-330} y={-100} width={660} height={200} fill={CP.white} filter="url(#torn)" />
+            <text x={0} y={-22} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={Math.min(34, Math.floor(610 / ((c.name.length + c.play.length + 2) * 0.76)))} fill={CP.red}>{`${c.name}, ${c.play}`.toUpperCase()}</text>
+            <text x={0} y={52} textAnchor="middle" fontFamily="Caveat" fontSize={72} fill={CP.ink}>{c.said ?? ""}</text>
+          </g>
+          {c.count && since >= 22 && ticks > 0 ? (
+            <g transform={`translate(880 560) rotate(8) scale(${1 + 0.18 * Math.max(0, 1 - ((f - sayAt(c) - 22) % tickGap) / 4)})`}>
+              <rect x={-74} y={-50} width={148} height={100} fill={CP.red} filter="url(#torn)" />
+              <text x={0} y={24} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={66} fill={CP.cream}>{`x${ticks}`}</text>
+            </g>) : null}
+        </svg>
+      </AbsoluteFill>
+    );
+  }
+  // top: the find lands in S
+  const hit = s.hitAt ?? 16, find = s.find ?? { name: "?", play: "", tier: "S" };
+  const placed: TierCard[] = [...(s.cards ?? []).map((c) => ({ ...c, at: undefined })), { ...find, tier: "S", at: hit }];
+  const qt = s.quote ?? [];
+  const lq = spring({ frame: f - hit - 6, fps, config: { damping: 9, mass: 0.5 } });
+  return (
+    <AbsoluteFill>
+      <Sfx name="punch" at={hit} vol={0.75} />
+      <Sfx name="thud" at={hit} vol={0.9} />
+      <Sfx name="cine/ping" at={hit + 5} vol={0.45} />
+      {[0, 1, 2].map((k) => <Sfx key={k} name="pop" at={hit + 12 + k * 7} vol={0.3} />)}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        <Room wall={TR.wall} />
+        <TBoard x={BX} y={BY} w={BW} rowH={RH} placed={placed} glow={hit} />
+        {/* paper confetti off the hit */}
+        {f >= hit && Array.from({ length: 22 }).map((_, k) => { const t = (f - hit) / 30, a = prand(k, 31) * Math.PI * 2, v = 260 + prand(k, 32) * 420;
+          const x = BX + 112 + 150 + Math.cos(a) * v * Math.min(1, t * 1.6), y = BY + RH / 2 + Math.sin(a) * v * 0.7 * Math.min(1, t * 1.6) + t * t * 150;
+          if (y > 1500 || t > 3.4) return null;
+          return <rect key={k} x={x} y={y} width={22} height={14} fill={[CP.mustard, CP.red, CP.cream, CP.pink, CP.green][k % 5]} transform={`rotate(${f * (6 + k) + k * 40} ${x + 11} ${y + 7})`} filter="url(#tornS)" />; })}
+        {find.len && f >= hit + 6 && (
+          <g transform={`translate(${BX + 112 + 30 + 236 + 100} ${BY + RH / 2}) rotate(6) scale(${lq})`}>
+            <rect x={-78} y={-44} width={156} height={88} fill={CP.mustard} filter="url(#torn)" />
+            <text x={0} y={20} textAnchor="middle" fontFamily="ArchivoBlack" fontSize={54} fill={CP.ink}>{find.len}</text>
+          </g>)}
+        {find.note && <CNote text={find.note} x={BX + 112 + 30 + 300} y={BY + RH + RH / 2 + 4} rot={-3} size={44} w={420} at={hit + 16} />}
+        <Pinned panic={f >= hit ? 0.95 : 0.4} />
+        {/* a line of the speech (public domain) */}
+        <g transform="rotate(-1.5 540 420)">
+          <rect x={86} y={276} width={908} height={56 + qt.length * 78} fill={CP.white} filter="url(#torn)" />
+          {qt.map((l, k) => <text key={k} x={540} y={356 + k * 78} textAnchor="middle" fontFamily="Caveat" fontSize={66} fill={k === 0 ? CP.red : CP.ink}>{l}</text>)}
+        </g>
+      </svg>
+    </AbsoluteFill>
+  );
+};
+
 // ---------- busstop: a love confession at the bus stop, cut-paper collage (2026-11-26) ----------
 /** Milo rehearses a love confession into his phone at a bus stop at dusk, paper hearts rising. Three beats:
  *  "hook" (the stop, the hook card from frame 0), "bus" (the bus pulls up, the doors open, he steps on mid
@@ -5281,6 +5490,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "sofa" ? <SofaScene s={sc} /> :
       sc.type === "scroll" ? <ScrollScene s={sc} /> :
       sc.type === "piano" ? <PianoScene s={sc} /> :
+      sc.type === "tier" ? <TierScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

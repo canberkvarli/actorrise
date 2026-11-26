@@ -1,0 +1,700 @@
+{
+  "id": "2026-12-01-tier-list",
+  "look": "collage",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "after"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "Ranking every monologue I heard at the stage door today.",
+        "say": "[amused] Ranking every monologue I heard at the stage door today.",
+        "sub": false,
+        "at": 0.539,
+        "words": [
+          {
+            "w": "Ranking",
+            "s": 0.0,
+            "e": 0.051
+          },
+          {
+            "w": "every",
+            "s": 0.089,
+            "e": 0.283
+          },
+          {
+            "w": "monologue",
+            "s": 0.326,
+            "e": 0.688
+          },
+          {
+            "w": "I",
+            "s": 0.746,
+            "e": 0.804
+          },
+          {
+            "w": "heard",
+            "s": 0.843,
+            "e": 1.036
+          },
+          {
+            "w": "at",
+            "s": 1.056,
+            "e": 1.094
+          },
+          {
+            "w": "the",
+            "s": 1.109,
+            "e": 1.152
+          },
+          {
+            "w": "stage",
+            "s": 1.201,
+            "e": 1.442
+          },
+          {
+            "w": "door",
+            "s": 1.488,
+            "e": 1.674
+          },
+          {
+            "w": "today.",
+            "s": 1.732,
+            "e": 2.428
+          }
+        ],
+        "dur": 2.536
+      },
+      {
+        "text": "My scarf is shut in the stage door, so I hear every actor in the line.",
+        "say": "[playful] My scarf is shut in the stage door, so I hear every actor in the line.",
+        "at": 3.469,
+        "words": [
+          {
+            "w": "My",
+            "s": 0.0,
+            "e": 0.02
+          },
+          {
+            "w": "scarf",
+            "s": 0.078,
+            "e": 0.367
+          },
+          {
+            "w": "is",
+            "s": 0.387,
+            "e": 0.425
+          },
+          {
+            "w": "shut",
+            "s": 0.472,
+            "e": 0.657
+          },
+          {
+            "w": "in",
+            "s": 0.677,
+            "e": 0.715
+          },
+          {
+            "w": "the",
+            "s": 0.73,
+            "e": 0.773
+          },
+          {
+            "w": "stage",
+            "s": 0.822,
+            "e": 1.063
+          },
+          {
+            "w": "door,",
+            "s": 1.109,
+            "e": 1.527
+          },
+          {
+            "w": "so",
+            "s": 1.565,
+            "e": 1.643
+          },
+          {
+            "w": "I",
+            "s": 1.701,
+            "e": 1.759
+          },
+          {
+            "w": "hear",
+            "s": 1.793,
+            "e": 1.933
+          },
+          {
+            "w": "every",
+            "s": 1.981,
+            "e": 2.222
+          },
+          {
+            "w": "actor",
+            "s": 2.271,
+            "e": 2.512
+          },
+          {
+            "w": "in",
+            "s": 2.532,
+            "e": 2.57
+          },
+          {
+            "w": "the",
+            "s": 2.585,
+            "e": 2.628
+          },
+          {
+            "w": "line.",
+            "s": 2.686,
+            "e": 2.976
+          }
+        ],
+        "dur": 3.085
+      },
+      {
+        "text": "Juliet's Gallop apace, six times today, is an F, Hamlet's To be or not to be is a D, and Shylock is a C.",
+        "say": "Juliet's Gallop apace, six times today, is an F, Hamlet's To be or not to be is a D, and Shylock is a C.",
+        "sub": false,
+        "at": 6.586,
+        "words": [
+          {
+            "w": "Juliet's",
+            "s": 0.0,
+            "e": 0.903
+          },
+          {
+            "w": "Gallop",
+            "s": 0.946,
+            "e": 1.193
+          },
+          {
+            "w": "apace,",
+            "s": 1.251,
+            "e": 1.714
+          },
+          {
+            "w": "six",
+            "s": 1.772,
+            "e": 1.946
+          },
+          {
+            "w": "times",
+            "s": 1.985,
+            "e": 2.178
+          },
+          {
+            "w": "today,",
+            "s": 2.236,
+            "e": 2.642
+          },
+          {
+            "w": "is",
+            "s": 2.68,
+            "e": 2.758
+          },
+          {
+            "w": "an",
+            "s": 2.778,
+            "e": 2.816
+          },
+          {
+            "w": "F,",
+            "s": 2.99,
+            "e": 3.222
+          },
+          {
+            "w": "Hamlet's",
+            "s": 3.425,
+            "e": 4.207
+          },
+          {
+            "w": "To",
+            "s": 4.227,
+            "e": 4.265
+          },
+          {
+            "w": "be",
+            "s": 4.323,
+            "e": 4.439
+          },
+          {
+            "w": "or",
+            "s": 4.459,
+            "e": 4.497
+          },
+          {
+            "w": "not",
+            "s": 4.541,
+            "e": 4.671
+          },
+          {
+            "w": "to",
+            "s": 4.709,
+            "e": 4.787
+          },
+          {
+            "w": "be",
+            "s": 4.845,
+            "e": 4.961
+          },
+          {
+            "w": "is",
+            "s": 5.038,
+            "e": 5.193
+          },
+          {
+            "w": "a",
+            "s": 5.222,
+            "e": 5.251
+          },
+          {
+            "w": "D,",
+            "s": 5.396,
+            "e": 5.888
+          },
+          {
+            "w": "and",
+            "s": 5.917,
+            "e": 6.004
+          },
+          {
+            "w": "Shylock",
+            "s": 6.062,
+            "e": 6.41
+          },
+          {
+            "w": "is",
+            "s": 6.468,
+            "e": 6.584
+          },
+          {
+            "w": "a",
+            "s": 6.613,
+            "e": 6.642
+          },
+          {
+            "w": "C.",
+            "s": 6.816,
+            "e": 7.048
+          }
+        ],
+        "dur": 7.157
+      },
+      {
+        "text": "So I opened Ghost Light, asked for a woman who wants revenge, and up came Isabella, from John Webster's The White Devil.",
+        "say": "[upbeat] So I opened Ghost Light, asked for a woman who wants revenge, and up came Isabella, from John Webster's The White Devil.",
+        "sub": false,
+        "at": 14.467,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.038
+          },
+          {
+            "w": "I",
+            "s": 0.067,
+            "e": 0.096
+          },
+          {
+            "w": "opened",
+            "s": 0.138,
+            "e": 0.386
+          },
+          {
+            "w": "Ghost",
+            "s": 0.435,
+            "e": 0.676
+          },
+          {
+            "w": "Light,",
+            "s": 0.714,
+            "e": 1.14
+          },
+          {
+            "w": "asked",
+            "s": 1.188,
+            "e": 1.43
+          },
+          {
+            "w": "for",
+            "s": 1.444,
+            "e": 1.488
+          },
+          {
+            "w": "a",
+            "s": 1.517,
+            "e": 1.546
+          },
+          {
+            "w": "woman",
+            "s": 1.594,
+            "e": 1.836
+          },
+          {
+            "w": "who",
+            "s": 1.864,
+            "e": 1.951
+          },
+          {
+            "w": "wants",
+            "s": 1.98,
+            "e": 2.125
+          },
+          {
+            "w": "revenge,",
+            "s": 2.183,
+            "e": 2.792
+          },
+          {
+            "w": "and",
+            "s": 2.843,
+            "e": 2.995
+          },
+          {
+            "w": "up",
+            "s": 3.053,
+            "e": 3.169
+          },
+          {
+            "w": "came",
+            "s": 3.215,
+            "e": 3.401
+          },
+          {
+            "w": "Isabella,",
+            "s": 3.459,
+            "e": 3.98
+          },
+          {
+            "w": "from",
+            "s": 4.004,
+            "e": 4.096
+          },
+          {
+            "w": "John",
+            "s": 4.143,
+            "e": 4.328
+          },
+          {
+            "w": "Webster's",
+            "s": 4.372,
+            "e": 4.734
+          },
+          {
+            "w": "The",
+            "s": 4.778,
+            "e": 4.908
+          },
+          {
+            "w": "White",
+            "s": 4.937,
+            "e": 5.082
+          },
+          {
+            "w": "Devil.",
+            "s": 5.14,
+            "e": 5.836
+          }
+        ],
+        "dur": 5.944
+      },
+      {
+        "text": "Seventy one seconds, nobody brought her, so she goes in S.",
+        "say": "[delighted] Seventy one seconds, nobody brought her, so she goes in S.",
+        "sub": false,
+        "at": 20.748,
+        "words": [
+          {
+            "w": "Seventy",
+            "s": 0.0,
+            "e": 0.286
+          },
+          {
+            "w": "one",
+            "s": 0.307,
+            "e": 0.372
+          },
+          {
+            "w": "seconds,",
+            "s": 0.43,
+            "e": 1.068
+          },
+          {
+            "w": "nobody",
+            "s": 1.109,
+            "e": 1.358
+          },
+          {
+            "w": "brought",
+            "s": 1.387,
+            "e": 1.59
+          },
+          {
+            "w": "her,",
+            "s": 1.619,
+            "e": 1.764
+          },
+          {
+            "w": "so",
+            "s": 1.86,
+            "e": 2.054
+          },
+          {
+            "w": "she",
+            "s": 2.083,
+            "e": 2.17
+          },
+          {
+            "w": "goes",
+            "s": 2.204,
+            "e": 2.343
+          },
+          {
+            "w": "in",
+            "s": 2.363,
+            "e": 2.401
+          },
+          {
+            "w": "S.",
+            "s": 2.575,
+            "e": 2.807
+          }
+        ],
+        "dur": 2.916
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "sub": false,
+        "at": 24.286,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.081
+          },
+          {
+            "w": "Ghost",
+            "s": 0.12,
+            "e": 0.313
+          },
+          {
+            "w": "Light.",
+            "s": 0.351,
+            "e": 0.893
+          },
+          {
+            "w": "Built",
+            "s": 0.951,
+            "e": 1.241
+          },
+          {
+            "w": "by",
+            "s": 1.299,
+            "e": 1.414
+          },
+          {
+            "w": "a",
+            "s": 1.443,
+            "e": 1.472
+          },
+          {
+            "w": "working",
+            "s": 1.509,
+            "e": 1.762
+          },
+          {
+            "w": "actor.",
+            "s": 1.82,
+            "e": 2.168
+          }
+        ],
+        "dur": 2.277
+      }
+    ],
+    "takes": [
+      {
+        "audio": "voice/2026-12-01-tier-list/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "take_at": 0.3,
+    "speed": 1.38
+  },
+  "scenes": [
+    {
+      "type": "tier",
+      "beat": "hook",
+      "seconds": 3.369,
+      "line": "Ranking every monologue I heard at the stage door today.",
+      "hook": [
+        "Ranking",
+        "every monologue",
+        "I heard at the",
+        "stage door today."
+      ],
+      "red": [
+        0,
+        1
+      ]
+    },
+    {
+      "type": "tier",
+      "beat": "door",
+      "seconds": 3.117,
+      "in": "whip",
+      "line": "Stuck at the stage door.",
+      "accent": "the stage door.",
+      "mutters": [
+        "Gallop apace...",
+        "To be, or not...",
+        "Hath not a Jew..."
+      ]
+    },
+    {
+      "type": "tier",
+      "beat": "cards",
+      "seconds": 7.881,
+      "in": "punch",
+      "line": "Juliet F. Hamlet D. Shylock C.",
+      "cards": [
+        {
+          "name": "Juliet",
+          "play": "Romeo and Juliet",
+          "tier": "F",
+          "said": "“Gallop apace...”",
+          "note": "heard her six times",
+          "at": 93,
+          "say": 0,
+          "count": 6
+        },
+        {
+          "name": "Hamlet",
+          "play": "Hamlet",
+          "tier": "D",
+          "said": "“To be, or not to be...”",
+          "at": 165,
+          "say": 103
+        },
+        {
+          "name": "Shylock",
+          "play": "Merchant of Venice",
+          "tier": "C",
+          "said": "“Hath not a Jew eyes?”",
+          "at": 207,
+          "say": 182
+        }
+      ]
+    },
+    {
+      "type": "screens",
+      "seconds": 6.281,
+      "in": "cut",
+      "line": "Say it your way.",
+      "accent": "your way.",
+      "shots": [
+        {
+          "src": "story/2026-12-01-tier-list/search.png",
+          "at": 0
+        },
+        {
+          "src": "story/2026-12-01-tier-list/typed.png",
+          "at": 39,
+          "fade": true,
+          "tap": {
+            "x": 0.856,
+            "y": 0.312,
+            "at": 81
+          }
+        },
+        {
+          "src": "story/2026-12-01-tier-list/results.png",
+          "at": 93,
+          "tap": {
+            "x": 0.5,
+            "y": 0.38,
+            "at": 111
+          }
+        },
+        {
+          "src": "story/2026-12-01-tier-list/open.png",
+          "at": 123
+        }
+      ]
+    },
+    {
+      "type": "tier",
+      "beat": "top",
+      "seconds": 3.488,
+      "in": "punch",
+      "line": "Isabella. S tier.",
+      "cards": [
+        {
+          "name": "Juliet",
+          "play": "Romeo and Juliet",
+          "tier": "F",
+          "said": "“Gallop apace...”",
+          "note": "heard her six times"
+        },
+        {
+          "name": "Hamlet",
+          "play": "Hamlet",
+          "tier": "D",
+          "said": "“To be, or not to be...”"
+        },
+        {
+          "name": "Shylock",
+          "play": "Merchant of Venice",
+          "tier": "C",
+          "said": "“Hath not a Jew eyes?”"
+        }
+      ],
+      "find": {
+        "name": "Isabella",
+        "play": "The White Devil",
+        "tier": "S",
+        "len": "1:11",
+        "note": "nobody brought her"
+      },
+      "quote": [
+        "“O that I were a man,",
+        "or that I had power to execute",
+        "my apprehended wishes!”"
+      ],
+      "hitAt": 14
+    }
+  ],
+  "captions": {
+    "tiktok": "Ranking every monologue I heard at the stage door today. Juliet F, Hamlet D, Shylock C, Isabella from The White Devil S. Where would you put her? The voice is AI. #monologue #audition #actortok #tierlist #theatrekid",
+    "youtube_title": "Ranking every monologue I heard at the stage door today.",
+    "youtube_description": "Ranking every monologue I heard at the stage door today.\nMilo's scarf is shut in the stage door, so he hears the whole callback line. Juliet's Gallop apace gets an F, Hamlet's To be or not to be a D, Shylock a C. Then Isabella from John Webster's The White Devil, 1:11, found in Ghost Light by describing her, goes in S. His taste, not a casting rule. Where would you put her? Free on the App Store. Built by a working actor. The voice is AI.\n#monologue #audition #acting #tierlist",
+    "instagram": "Ranking every monologue I heard at the stage door today.\n\nF: Juliet, Gallop apace. Heard her six times.\nD: Hamlet, To be or not to be.\nC: Shylock, Hath not a Jew eyes.\nS: Isabella from John Webster's The White Devil. 1:11, and nobody in the line brought her.\n\nMilo's taste, not a casting rule. Where would you put her?\n\nHe found her in Ghost Light by describing her: a woman who wishes she were a man so she could take revenge. Free on the App Store, built by a working actor. Link in bio. The voice is AI.\n\n#monologue #audition #actorslife #tierlist #shakespeare"
+  },
+  "cover_ms": 300,
+  "source": {
+    "plan": "Callboard row 2026-12-01 (storyhowto, nobody-brings, Canberk's priority 1 tier list), the earliest planned row on 2026-11-26; look collage",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "sql": "select m.id, m.character_name, m.estimated_duration_seconds, m.overdone_score, p.title, p.author, p.copyright_status from monologues m join plays p on p.id=m.play_id where m.id = 32446 or (p.author ilike '%Shakespeare%' and (m.text ilike 'Gallop apace%' or m.text ilike 'To be, or not to be%' or m.text ilike '%Hath not a Jew eyes%'))",
+    "checked": "2026-11-26: 32446 Isabella (The White Devil, John Webster, play 2914, public domain) 71s = 1:11, overdone 0, opens 'O that I were a man, or that I had power To execute my apprehended wishes!'. In the library too: Juliet 'Gallop apace' (67, overdone 0.85), Hamlet 'To be, or not to be' (12213, overdone 1), Shylock's 'Hath not a Jew eyes' speech (1358, overdone 0.9); they appear only as named cards with their first words",
+    "changed_from_plan": "the row's search ('a revenge monologue for a woman, under two minutes, not Shakespeare') returns The Duchess (The Duchess of Malfi), Tamora and Lady Macbeth first and Isabella 24th; the row's fallback 'Isabella White Devil' returns Lodovico and Flamineo first. 'a woman who wishes she were a man so she could take revenge' returns Isabella first with BEST PICK, so the film types that and the voice says 'asked for a woman who wants revenge'. The stage door queue and the scarf are one beat. Total 27.05s",
+    "app": "Ghost Light web preview built from actorrise main apps/mobile (fd0697e1) plus web-preview.patch (applied with git apply; serve.sh's clone of the archived ghostlight repo no longer takes the patch), dark theme, demo account, 2026-11-26",
+    "flow": "flows/search-tier-list.json (shots -> public/story/2026-12-01-tier-list/*.png; Tonight's speech line blurred on search and typed)",
+    "voice": "George, one take at stability 0.5, Scribe 0.98, sped up 1.38x with fit_take.py; AI voice, labelled on every platform",
+    "new_scene_types": "tier (cut-paper collage) with four beats: hook, door, cards, top. New collage pieces: TBoard (the S to F board), TCardPiece (ranked cards), TRain, the stage door with its lamp and sign, the muttering queue, the x6 tally, the 1:11 tag, confetti",
+    "motifs": "tier-board,ranked-paper-cards,stage-door-in-the-rain,scarf-shut-in-the-door,muttering-queue,x6-tally,confetti-on-S",
+    "end": "specs/2026-12-01-tier-list-end.json, joined with scripts/join.sh",
+    "feature": "search",
+    "trypost": {
+      "tiktok": "01a216b1-cccb-72ee-ab68-55fd6a509c2c",
+      "youtube": "01a216b1-ccd8-7374-b055-b51139de06ac",
+      "instagram": "01a216b1-cce1-7118-b65b-ece9ee58564b",
+      "status": "draft"
+    }
+  }
+}
