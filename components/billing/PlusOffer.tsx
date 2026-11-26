@@ -99,6 +99,9 @@ export function PlusOffer({ feature, lead, onDismiss, dismissLabel }: PlusOfferP
         <span className="t-plus__figure">{offer.perMonth}</span>
         <span className="t-plus__per">{offer.perMonthNote}</span>
       </p>
+      {/* A reason to trust a name nobody knows yet (Canberk, 2026-11-26).
+          Shown with it, the walls log WALL_VARIANT "wall_monthly_b". */}
+      <p className="t-plus__trust">{t("appAccountPlusOffer.trust")}</p>
 
       <div className="t-plus__rows">
         {offer.rows.map(([label, figure]) => (

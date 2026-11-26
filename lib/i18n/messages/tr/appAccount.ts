@@ -138,6 +138,7 @@ export const appAccount: Widen<typeof en> = {
     fine: "Kartın kayıtlı kalır. {date} tarihinden önce iptal edersen hiçbir şey ödemezsin.",
     fineNoCard: "Kart gerekmez. {date} tarihine kadar ücretsiz; Plus’ta kalmak için o güne kadar bir kart ekle.",
     perMonthNoteMonthly: "ayda, istediğin zaman iptal et",
+    trust: "Ben Canberk, bir oyuncuyum. Bunu tek başıma yaptım. Ödemeler Stripe üzerinden geçer.",
     keepPlusMonth: "Plus’ta kal, ayda {monthly}",
     thenMonthly: "{monthly}, sonra her ay",
     annual: "ya da yılda {annual}, ayda {perMonth}",

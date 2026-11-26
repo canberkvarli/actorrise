@@ -136,6 +136,7 @@ export const appAccount = {
     fine: "Card on file. Cancel before {date} and you pay nothing.",
     fineNoCard: "No card needed. Free until {date}; add a card by then to keep Plus.",
     perMonthNoteMonthly: "a month, cancel any time",
+    trust: "I'm Canberk, an actor. I built this on my own. Payments go through Stripe.",
     keepPlusMonth: "Keep Plus, {monthly} a month",
     thenMonthly: "{monthly}, then monthly",
     annual: "or {annual} a year, {perMonth} a month",

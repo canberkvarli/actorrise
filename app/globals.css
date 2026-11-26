@@ -1543,6 +1543,12 @@
   letter-spacing: 0.04em;
   color: var(--t-muted-dark);
 }
+.t-plus__trust {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--t-muted-dark);
+}
 .t-plus__rows {
   margin-top: 12px;
   border-top: 1.5px solid var(--t-line-light);

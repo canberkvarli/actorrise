@@ -87,7 +87,8 @@ export function chargeDate(now: Date, days: number): string {
  * read against the year-led one it replaced (those rows carry no variant).
  * Change the words, change the letter.
  */
-export const WALL_VARIANT = "wall_monthly_a";
+// "b" since 2026-11-26: the trust line under the price (PlusOffer).
+export const WALL_VARIANT = "wall_monthly_b";
 
 export function plusOffer(
   from: string,
