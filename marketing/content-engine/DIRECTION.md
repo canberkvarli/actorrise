@@ -3,6 +3,31 @@
 Canberk gives direction in the Content Studio session; it lands here. Newest first. When a line
 here disagrees with SKILL.md, this file wins.
 
+## 2026-11-26: the pattern in the winners, and the formula from here (wins over everything below)
+
+30 days of numbers (Instagram views / saves; TikTok @ghostlight.app views):
+- Winners: 1am off book (IG 1,540 / 21; TT 1,171), Dora "everyone brought Juliet" (1,425 / 16), inner
+  monologue "whenever you're ready" (1,419 / 37), 112 pages (1,389 / 18; TT 742), reader on the train
+  (1,263 / 11), Stop bringing Ophelia (1,197 / 11; TT 888), bus stop POV (TT 793).
+- Losers: searched this week list (465), feature first hooks (Hold the Tape tab 153, Viola 147), generic
+  "sides at noon" (137), AI actors (110 to 265), contemporary (117).
+The pattern, all at once in every winner:
+1. **A moment every actor has lived, with a clock or a crowd on it**: 1am before off book, 2:40 for a 3pm
+   audition, the read-through of 112 pages, "whenever you're ready", the lobby of five Juliets.
+2. **The hook is that moment, not the feature**: POV: ... / Stop bringing ... / a number. Never "Hold the Tape
+   tab" or "Type Viola" as the opener.
+3. **A concrete, named payoff**: a real piece and play (Orlando, Louisa in Schiller's Love and Intrigue, Dora
+   in Shaw), or a real number (two scenes of 112 pages). Vague payoffs lose.
+4. **Drawn story first, the real app second, about 25 to 35 seconds**; winners hold 10 to 13 seconds average.
+5. **Saves come from a list in the caption** (the 3 questions, the 3 steps): keep a short numbered list.
+Two pillars from here, weekly: 3 "last minute panic" films (POV: [time], [stake]) and 2 "Stop bringing X"
+swaps (an overdone piece, then a real little used one that fits the same need), plus 1 format test (tier
+list, nature documentary, speedrun) and 1 free slot. No data list posts, no feature first hooks.
+Watch: the two collage films so far did 306 and 117 on Instagram (TikTok 793 for the bus stop). Too early to
+call; if the next three collage films stay under 500 on Instagram while TikTok holds, tell Canberk.
+Zero comments everywhere: end every caption with one short question actors want to answer ("What's your
+overdone monologue?").
+
 ## 2026-11-24: no paper tear; real sound effects, not synthesised ones (wins over everything below)
 
 Canberk: the paper tear and the whoosh "not good". The tear transition is retired (a spec that asks for
