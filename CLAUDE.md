@@ -75,13 +75,13 @@ Two rules hold there:
   `backend/scripts/` are fine; they do not start the schedulers.
 - **The database is behind the API there.** A cloud session cannot connect to Postgres (web
   traffic only), so the loop's database scripts run through `backend/scripts/remote.py`, which
-  calls `/api/loop/run` with `LOOP_TOKEN`. See `/conversion-loop` step 0.
+  calls `/api/loop/run` with `LOOP_TOKEN`. See `/checkup` step 0.
 - **No memory files there.** What the laptop's memory knows is not in a cloud session. Who was
   written to is the `contact_log` table (`scripts/contact_log.py`), not a file, so the check
   before every email works the same in both places.
 - **Yesterday is a table too.** `loop_snapshots` keeps each day's brief, money, RevenueCat,
   class-link joins and best move for 30 days (`scripts/loop_snapshot.py show|take|keep`), so
-  "what moved" is a real comparison in the cloud. See `/conversion-loop` step 0b.
+  "what moved" is a real comparison in the cloud. See `/checkup` step 0b.
 - **"Is it in the library" works there too.** `scripts/library_check.py` (over `remote.py`)
   is the three-place check, read only, so a cloud run can verify and send search notes.
   When `/marketing-week` last ran is `loop_snapshot.py last marketing_week`, not a folder.
@@ -285,7 +285,7 @@ THE IN-APP TRIAL IS NOT 2 WEEKS (changed 2026-09-29, shortened 2026-11-16 and 20
 - Copy that sends someone into the app (`ghostlight.actor/trial`, a wall, an ask) must NOT promise a length by hand. The triggered emails fill `{span}` per person for this reason.
 - The email link matches the product since 2026-11-24: both are 3 days (Canberk).
 
-Automated emails to people who looked at a price live in `backend/emails/lifecycle/*.txt` and send from `backend/app/services/email/triggered.py`. There are two: `checkout_abandoned` and `paywall_seen_no_trial`. They are OFF until the "Triggered emails" switch in `/admin/emails` is turned on. `/conversion-loop` is the daily run that reads the funnel and the inbox and leaves drafts; it never sends.
+Automated emails to people who looked at a price live in `backend/emails/lifecycle/*.txt` and send from `backend/app/services/email/triggered.py`. There are two: `checkout_abandoned` and `paywall_seen_no_trial`. They are OFF until the "Triggered emails" switch in `/admin/emails` is turned on. `/checkup` is the daily run that reads the funnel and the inbox and leaves drafts; it never sends.
 
 Two decisions about those, both Canberk's, 2026-09-29. Do not undo either without being asked:
 - **No email about a trial ending.** Not a heads-up before the card is charged, not a question after a trial lapses. Both were written and he removed both.

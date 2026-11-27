@@ -143,7 +143,7 @@ The tasks were written before the code. These are the places the code is right a
 | `backend/scripts/widen_lifecycle_touch.sql` (create) | `touch` to `varchar(32)` | D |
 | `backend/emails/lifecycle/*.txt` (create) | Copy drafts for Canberk to approve | D |
 | `backend/scripts/conversion_brief.py` (create) | The daily read: funnel, who walked away, who to write to | E |
-| `.claude/commands/conversion-loop.md` (create) | The daily agent run | E |
+| `.claude/commands/checkup.md` (create) | The daily agent run | E |
 | `backend/scripts/outreach/heavy_users.sql`, `bounced_users.sql` (create) | Founder outreach lists | E |
 
 ---
@@ -1323,7 +1323,7 @@ Read-only (`execution_options(postgresql_readonly=True)`, checked against the se
 ### Task E2: The run
 
 **Files:**
-- Create: `.claude/commands/conversion-loop.md`
+- Create: `.claude/commands/checkup.md`
 
 The command tells the agent to:
 
@@ -1350,7 +1350,7 @@ It never sends, never posts, never pushes.
 
 ### Task E4: Running it every day
 
-- [ ] Canberk runs `/conversion-loop` each morning, or `/loop 24h /conversion-loop` in a session left open. A cloud routine cannot reach the database from here; if this earns its keep, the brief moves behind an admin endpoint and the run moves to the cloud.
+- [ ] Canberk runs `/checkup` each morning, or `/loop 24h /checkup` in a session left open. A cloud routine cannot reach the database from here; if this earns its keep, the brief moves behind an admin endpoint and the run moves to the cloud.
 
 ---
 
@@ -1361,7 +1361,7 @@ It never sends, never posts, never pushes.
 - [ ] Trial is 7 days, 14 for an actor who has finished a scene, and every surface prints the right one
 - [ ] Two new asks live (third save, reads meter); limiter is per gate
 - [ ] Three triggered emails running with the weekly cap, copy approved by Canberk
-- [ ] `/conversion-loop` produces a brief and drafts
+- [ ] `/checkup` produces a brief and drafts
 - [ ] Two founder outreach lists and drafts generated
 - [ ] This file updated with what shipped and baseline against week 1
 

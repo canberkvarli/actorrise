@@ -4,7 +4,7 @@ description: The weekly marketing run. Three agents (numbers, outreach, user ema
 
 # /marketing-week
 
-Canberk's marketing team for one week, run in one sitting. `/conversion-loop` is the daily
+Canberk's marketing team for one week, run in one sitting. `/checkup` is the daily
 run and looks after people already in the product. This is the weekly one and looks outward:
 organisations, and one note to users if there is something real to say. No social posts:
 Canberk, 2026-10-05, "no need for posts".

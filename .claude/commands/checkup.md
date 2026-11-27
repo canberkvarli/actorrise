@@ -1,8 +1,8 @@
 ---
-description: The daily money-path run. Reads the funnel and the inbox, files opt-outs, leaves Gmail drafts. Never sends.
+description: The daily checkup. Diagnoses where Ghost Light is weak (money, funnel, walls, app, schools, inbox, search gaps), files opt-outs, leaves Gmail drafts. Never sends.
 ---
 
-# /conversion-loop
+# /checkup
 
 The daily run for Ghost Light's money path. Plan and reasoning: `docs/plans/conversion-phase1.md`.
 
@@ -91,6 +91,16 @@ Compare against yesterday's `revenuecat` snapshot (step 0b): a new row, a `trial
 an annual one has already paid for the year) is a "Moved" line. If it disagrees with
 section 6, the webhook missed something: say so under "Broken". If it fails, say so and do
 not read it as zero.
+
+**The money line is what reaches Canberk's bank** (Canberk, 2026-11-27: "i need to know how
+much is coming to my bank account every month, that's what matters to me"). Never lead with
+gross MRR: RevenueCat's MRR includes Apple's cut and VAT and counts subscriptions that turned
+off renewal. Report:
+- Stripe: payouts by arrival month (`stripe.Payout.list`, status paid), plus what is
+  available and pending in the balance. About $11 lands per $12 charge.
+- Apple: proceeds, not gross. Monthly subscribers' proceeds per month; a yearly purchase
+  lands once, as a lump, about a month after Apple's fiscal month closes.
+- Gross MRR may follow in brackets, never first.
 
 Section 6b is Turkish actors (Canberk, 2026-11-25: "i wanna see it in my daily log if we have
 some"): anyone who used the Turkish UI (counted from 2026-11-25) or uploaded a script in Turkish
