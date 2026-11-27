@@ -365,3 +365,10 @@ Replies to ActorRise emails, quoted exactly, newest at the bottom. No names, no 
 **Account:** paying Plus monthly since the summer
 **They said:** "Just wanna see if the site is still running, cause I see I got charged for this month. I also want to temporarily disable the subscription until I'm ready again."
 **Heard as:** price, wants a pause rather than a cancel; did not know the site is now Ghost Light
+
+## 2026-11-27
+
+**Replying to:** my reply with three on-camera pieces (search-note thread from 11-19)
+**Account:** free actor, UK
+**They said:** "Thanks so much for sending these over, they're really great options. Appreciate your help!"
+**Heard as:** happy
