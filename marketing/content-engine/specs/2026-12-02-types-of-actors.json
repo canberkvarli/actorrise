@@ -1,0 +1,674 @@
+{
+  "id": "2026-12-02-types-of-actors",
+  "look": "paper",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "milo"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "Types of actors at every audition.",
+        "say": "[amused] Types of actors at every audition.",
+        "at": 0.454,
+        "sub": false,
+        "words": [
+          {
+            "w": "Types",
+            "s": 0.0,
+            "e": 0.031
+          },
+          {
+            "w": "of",
+            "s": 0.072,
+            "e": 0.154
+          },
+          {
+            "w": "actors",
+            "s": 0.207,
+            "e": 0.523
+          },
+          {
+            "w": "at",
+            "s": 0.564,
+            "e": 0.646
+          },
+          {
+            "w": "every",
+            "s": 0.698,
+            "e": 0.954
+          },
+          {
+            "w": "audition.",
+            "s": 1.002,
+            "e": 1.815
+          }
+        ],
+        "dur": 1.931
+      },
+      {
+        "text": "The one warming up their whole body in the hallway, loudly.",
+        "say": "[playful] The one warming up their whole body in the hallway, loudly.",
+        "at": 2.75,
+        "words": [
+          {
+            "w": "The",
+            "s": 0.0,
+            "e": 0.012
+          },
+          {
+            "w": "one",
+            "s": 0.073,
+            "e": 0.258
+          },
+          {
+            "w": "warming",
+            "s": 0.288,
+            "e": 0.504
+          },
+          {
+            "w": "up",
+            "s": 0.545,
+            "e": 0.627
+          },
+          {
+            "w": "their",
+            "s": 0.658,
+            "e": 0.812
+          },
+          {
+            "w": "whole",
+            "s": 0.842,
+            "e": 0.996
+          },
+          {
+            "w": "body",
+            "s": 1.045,
+            "e": 1.242
+          },
+          {
+            "w": "in",
+            "s": 1.263,
+            "e": 1.304
+          },
+          {
+            "w": "the",
+            "s": 1.319,
+            "e": 1.365
+          },
+          {
+            "w": "hallway,",
+            "s": 1.412,
+            "e": 1.796
+          },
+          {
+            "w": "loudly.",
+            "s": 1.849,
+            "e": 2.227
+          }
+        ],
+        "dur": 2.342
+      },
+      {
+        "text": "The one who says they didn't prepare at all, and then nails it.",
+        "say": "The one who says they didn't prepare at all, and then nails it.",
+        "at": 5.177,
+        "words": [
+          {
+            "w": "The",
+            "s": 0.0,
+            "e": 0.6
+          },
+          {
+            "w": "one",
+            "s": 0.646,
+            "e": 0.785
+          },
+          {
+            "w": "who",
+            "s": 0.815,
+            "e": 0.908
+          },
+          {
+            "w": "says",
+            "s": 0.945,
+            "e": 1.092
+          },
+          {
+            "w": "they",
+            "s": 1.117,
+            "e": 1.215
+          },
+          {
+            "w": "didn't",
+            "s": 1.24,
+            "e": 1.4
+          },
+          {
+            "w": "prepare",
+            "s": 1.438,
+            "e": 1.708
+          },
+          {
+            "w": "at",
+            "s": 1.748,
+            "e": 1.831
+          },
+          {
+            "w": "all,",
+            "s": 1.892,
+            "e": 2.262
+          },
+          {
+            "w": "and",
+            "s": 2.292,
+            "e": 2.385
+          },
+          {
+            "w": "then",
+            "s": 2.409,
+            "e": 2.508
+          },
+          {
+            "w": "nails",
+            "s": 2.559,
+            "e": 2.815
+          },
+          {
+            "w": "it.",
+            "s": 2.877,
+            "e": 3.062
+          }
+        ],
+        "dur": 3.177
+      },
+      {
+        "text": "The one running lines with their mum on speakerphone.",
+        "say": "The one running lines with their mum on speakerphone.",
+        "at": 8.438,
+        "words": [
+          {
+            "w": "The",
+            "s": 0.0,
+            "e": 0.6
+          },
+          {
+            "w": "one",
+            "s": 0.646,
+            "e": 0.785
+          },
+          {
+            "w": "running",
+            "s": 0.823,
+            "e": 1.092
+          },
+          {
+            "w": "lines",
+            "s": 1.144,
+            "e": 1.4
+          },
+          {
+            "w": "with",
+            "s": 1.412,
+            "e": 1.462
+          },
+          {
+            "w": "their",
+            "s": 1.482,
+            "e": 1.585
+          },
+          {
+            "w": "mum",
+            "s": 1.646,
+            "e": 1.831
+          },
+          {
+            "w": "on",
+            "s": 1.872,
+            "e": 1.954
+          },
+          {
+            "w": "speakerphone.",
+            "s": 1.992,
+            "e": 2.569
+          }
+        ],
+        "dur": 2.685
+      },
+      {
+        "text": "The one who brought Juliet, and the four next to them who also brought Juliet.",
+        "say": "The one who brought Juliet, and the four next to them who also brought Juliet.",
+        "at": 11.177,
+        "words": [
+          {
+            "w": "The",
+            "s": 0.0,
+            "e": 0.508
+          },
+          {
+            "w": "one",
+            "s": 0.554,
+            "e": 0.692
+          },
+          {
+            "w": "who",
+            "s": 0.723,
+            "e": 0.815
+          },
+          {
+            "w": "brought",
+            "s": 0.838,
+            "e": 1.0
+          },
+          {
+            "w": "Juliet,",
+            "s": 1.07,
+            "e": 1.738
+          },
+          {
+            "w": "and",
+            "s": 1.754,
+            "e": 1.8
+          },
+          {
+            "w": "the",
+            "s": 1.831,
+            "e": 1.923
+          },
+          {
+            "w": "four",
+            "s": 1.96,
+            "e": 2.108
+          },
+          {
+            "w": "next",
+            "s": 2.157,
+            "e": 2.354
+          },
+          {
+            "w": "to",
+            "s": 2.375,
+            "e": 2.415
+          },
+          {
+            "w": "them",
+            "s": 2.44,
+            "e": 2.538
+          },
+          {
+            "w": "who",
+            "s": 2.615,
+            "e": 2.846
+          },
+          {
+            "w": "also",
+            "s": 2.895,
+            "e": 3.092
+          },
+          {
+            "w": "brought",
+            "s": 3.123,
+            "e": 3.338
+          },
+          {
+            "w": "Juliet.",
+            "s": 3.4,
+            "e": 3.892
+          }
+        ],
+        "dur": 4.008
+      },
+      {
+        "text": "The one reading everyone else's sides.",
+        "say": "The one reading everyone else's sides.",
+        "at": 15.254,
+        "words": [
+          {
+            "w": "The",
+            "s": 0.0,
+            "e": 0.554
+          },
+          {
+            "w": "one",
+            "s": 0.6,
+            "e": 0.738
+          },
+          {
+            "w": "reading",
+            "s": 0.777,
+            "e": 1.046
+          },
+          {
+            "w": "everyone",
+            "s": 1.08,
+            "e": 1.354
+          },
+          {
+            "w": "else's",
+            "s": 1.391,
+            "e": 1.662
+          },
+          {
+            "w": "sides.",
+            "s": 1.733,
+            "e": 2.154
+          }
+        ],
+        "dur": 2.269
+      },
+      {
+        "text": "And the one who found a piece nobody else brought.",
+        "say": "[upbeat] And the one who found a piece nobody else brought.",
+        "at": 18.196,
+        "words": [
+          {
+            "w": "And",
+            "s": 0.0,
+            "e": 0.012
+          },
+          {
+            "w": "the",
+            "s": 0.042,
+            "e": 0.135
+          },
+          {
+            "w": "one",
+            "s": 0.181,
+            "e": 0.319
+          },
+          {
+            "w": "who",
+            "s": 0.335,
+            "e": 0.381
+          },
+          {
+            "w": "found",
+            "s": 0.422,
+            "e": 0.627
+          },
+          {
+            "w": "a",
+            "s": 0.658,
+            "e": 0.688
+          },
+          {
+            "w": "piece",
+            "s": 0.74,
+            "e": 0.996
+          },
+          {
+            "w": "nobody",
+            "s": 1.049,
+            "e": 1.365
+          },
+          {
+            "w": "else",
+            "s": 1.402,
+            "e": 1.55
+          },
+          {
+            "w": "brought.",
+            "s": 1.596,
+            "e": 2.319
+          }
+        ],
+        "dur": 2.435
+      },
+      {
+        "text": "He typed Androcles into Ghost Light, and up came Shaw's Androcles and the Lion.",
+        "say": "He typed Androcles into Ghost Light, and up came Shaw's Androcles and the Lion.",
+        "at": 20.648,
+        "sub": false,
+        "words": [
+          {
+            "w": "He",
+            "s": 0.0,
+            "e": 0.267
+          },
+          {
+            "w": "typed",
+            "s": 0.328,
+            "e": 0.636
+          },
+          {
+            "w": "Androcles",
+            "s": 0.698,
+            "e": 1.313
+          },
+          {
+            "w": "into",
+            "s": 1.35,
+            "e": 1.498
+          },
+          {
+            "w": "Ghost",
+            "s": 1.549,
+            "e": 1.805
+          },
+          {
+            "w": "Light,",
+            "s": 1.846,
+            "e": 2.236
+          },
+          {
+            "w": "and",
+            "s": 2.267,
+            "e": 2.359
+          },
+          {
+            "w": "up",
+            "s": 2.4,
+            "e": 2.482
+          },
+          {
+            "w": "came",
+            "s": 2.532,
+            "e": 2.728
+          },
+          {
+            "w": "Shaw's",
+            "s": 2.79,
+            "e": 3.098
+          },
+          {
+            "w": "Androcles",
+            "s": 3.175,
+            "e": 3.713
+          },
+          {
+            "w": "and",
+            "s": 3.744,
+            "e": 3.836
+          },
+          {
+            "w": "the",
+            "s": 3.852,
+            "e": 3.898
+          },
+          {
+            "w": "Lion.",
+            "s": 3.972,
+            "e": 4.328
+          }
+        ],
+        "dur": 4.444
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "at": 25.814,
+        "sub": false,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.178
+          },
+          {
+            "w": "Ghost",
+            "s": 0.204,
+            "e": 0.332
+          },
+          {
+            "w": "Light.",
+            "s": 0.373,
+            "e": 0.855
+          },
+          {
+            "w": "Built",
+            "s": 0.902,
+            "e": 1.132
+          },
+          {
+            "w": "by",
+            "s": 1.173,
+            "e": 1.255
+          },
+          {
+            "w": "a",
+            "s": 1.317,
+            "e": 1.378
+          },
+          {
+            "w": "working",
+            "s": 1.409,
+            "e": 1.625
+          },
+          {
+            "w": "actor.",
+            "s": 1.686,
+            "e": 2.117
+          }
+        ],
+        "dur": 2.232
+      }
+    ],
+    "take_at": 0.3,
+    "takes": [
+      {
+        "audio": "voice/2026-12-02-types-of-actors/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "speed": 1.3
+  },
+  "scenes": [
+    {
+      "type": "types",
+      "beat": "hook",
+      "seconds": 2.65,
+      "line": "Types of actors at every audition.",
+      "accent": "every audition."
+    },
+    {
+      "type": "types",
+      "beat": "warmup",
+      "seconds": 2.427,
+      "in": "punch",
+      "line": "1. The full body warm up.",
+      "accent": "warm up.",
+      "hitAt": 12
+    },
+    {
+      "type": "types",
+      "beat": "unprepared",
+      "seconds": 3.261,
+      "in": "punch",
+      "line": "2. “I didn't prepare.”",
+      "accent": "prepare.”",
+      "hitAt": 80
+    },
+    {
+      "type": "types",
+      "beat": "speaker",
+      "seconds": 2.739,
+      "in": "punch",
+      "line": "3. Mum on speakerphone.",
+      "accent": "speakerphone.",
+      "hitAt": 52
+    },
+    {
+      "type": "types",
+      "beat": "juliets",
+      "seconds": 4.077,
+      "in": "punch",
+      "line": "4. Juliet. Times five.",
+      "accent": "Times five.",
+      "hitAt": 60
+    },
+    {
+      "type": "types",
+      "beat": "sides",
+      "seconds": 2.942,
+      "in": "punch",
+      "line": "5. The sides inspector.",
+      "accent": "inspector.",
+      "hitAt": 40
+    },
+    {
+      "type": "types",
+      "beat": "milo",
+      "seconds": 2.452,
+      "in": "whip",
+      "line": "6. Brought one nobody else did.",
+      "accent": "nobody else did.",
+      "hitAt": 16
+    },
+    {
+      "type": "screens",
+      "seconds": 5.116,
+      "in": "cut",
+      "line": "",
+      "accent": "",
+      "shots": [
+        {
+          "src": "story/2026-12-02-types-of-actors/typed.png",
+          "at": 0,
+          "tap": {
+            "x": 0.856,
+            "y": 0.312,
+            "at": 34
+          }
+        },
+        {
+          "src": "story/2026-12-02-types-of-actors/results.png",
+          "at": 48,
+          "tap": {
+            "x": 0.27,
+            "y": 0.385,
+            "at": 96
+          }
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "tiktok": "Types of actors at every audition. Send this to your audition buddy. Found on Ghost Light, free on the App Store. The voice is AI. Which one are you? Tag the one you always sit next to. #actorslife #audition #actortok #monologue #theatrekid",
+    "youtube_title": "Types of actors at every audition.",
+    "instagram": "see Buffer draft 6b092cd7776ce21276f4f723"
+  },
+  "cover_ms": 300,
+  "source": {
+    "plan": "Callboard row 2026-12-02 (wildcard, backstage, shareable list), the earliest planned row dated today or later on 2026-11-27; look paper",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "sql": "select m.id, m.character_name, m.estimated_duration_seconds, m.overdone_score, p.copyright_status from monologues m join plays p on p.id=m.play_id where p.title ilike 'Androcles and the Lion%' and m.character_name ilike 'Androcles%'",
+    "checked": "2026-11-27: the first result for 'Androcles' in the app is 15297 Androcles (Androcles and the Lion, George Bernard Shaw, play 56, public domain) 2:28, overdone 0.2, BEST PICK; not opened on screen",
+    "changed_from_plan": "described searches ('a funny audition piece for a woman, under a minute, not Shakespeare', 'a nervous man proposing marriage, a comedy, under a minute') put a junk row (Nothing But The Truth) and film cards first, so the 2s glimpse types a character name. Film text never on screen.",
+    "app": "Ghost Light web preview built from actorrise main apps/mobile (fd5bac9) plus web-preview.patch (git apply), dark theme, demo account, 2026-11-27",
+    "flow": "flows/search-types-of-actors.json",
+    "voice": "George, one take at stability 0.5, Scribe 0.99, sped up 1.3x with fit_take.py; AI voice, labelled on every platform",
+    "new_scene_types": "types (paper ink) with beats hook, warmup, unprepared, speaker, juliets, sides, milo. New drawings: TPerson (plain ink person with poses up, shrug, phone, page, hips), TBubble, the NAILED IT stamp, the speakerphone rings, the AUDITIONS sign, Milo watching at the left edge",
+    "motifs": "audition-hallway,numbered-type-cards,full-body-warmup,nailed-it-stamp,mum-on-speakerphone,five-juliets-counted,sides-inspector,milo-watching,milo-phone-glow",
+    "end": "specs/2026-12-02-types-of-actors-end.json, joined with scripts/join.sh",
+    "feature": "search (character name)",
+    "buffer": {
+      "tiktok": "6b092cd61fd46e62e7202e2e",
+      "instagram": "6b092cd7776ce21276f4f723",
+      "youtube": "6b092cd8062ed764a8f1a446",
+      "status": "draft",
+      "media": "https://raw.githubusercontent.com/canberkvarli/actorrise/social-media/2026-12-02-types-of-actors.mp4"
+    }
+  }
+}

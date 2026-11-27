@@ -128,7 +128,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | Sofa | Scroll | Piano | Tier | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | Sofa | Scroll | Piano | Tier | Types | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -5376,6 +5376,238 @@ const OpheliasScene: React.FC<{ s: Ophelias }> = ({ s }) => {
   );
 };
 
+// ---------- types of actors at every audition (2026-12-02, wildcard list, paper look) ----------
+/** A shareable list: one card per type of actor in the audition hallway, the number and the name as the headline,
+ *  Milo at the left edge watching each one go by; the last card is Milo himself, phone up. Original ink drawings. */
+type Types = { type: "types"; beat: "hook" | "warmup" | "unprepared" | "speaker" | "juliets" | "sides" | "milo"; seconds: number; line: string; accent?: string; in?: StoryTransition;
+  /** scene frame of the beat's reveal (the stamp, the mum's bubble, the fifth Juliet), defaults per beat */ hitAt?: number };
+type Pose = "down" | "up" | "shrug" | "phone" | "page" | "hips";
+/** A plain drawn person in the paper ink style. (0,0) is the head's centre; feet at y 396. */
+const TPerson: React.FC<{ x: number; y: number; k?: number; shirt?: string; hair?: "short" | "bun" | "curly" | "long"; pose?: Pose; talk?: boolean; smug?: boolean; tilt?: number; eyes?: number; start?: number; sway?: number }> = ({ x, y, k = 1, shirt = "#dfe7ee", hair = "short", pose = "down", talk, smug, tilt = 0, eyes = 0, start = 0, sway = 0 }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  if (f < start) return null;
+  const pop = spring({ frame: f - start, fps, config: { damping: 12, mass: 0.6 } });
+  const mouthOpen = talk && Math.sin(f / 2.6) > 0;
+  const a = pose === "up" ? sway : 0;
+  const arms: Record<Pose, string> = {
+    down: "M-64 112 C -84 170, -88 210, -82 252 M64 112 C 84 170, 88 210, 82 252",
+    up: `M-60 108 C -86 60, ${-96 + a} 0, ${-80 + a} -64 M60 108 C 86 60, ${96 + a} 0, ${80 + a} -64`,
+    shrug: "M-64 112 L -116 168 L -142 112 M64 112 L 116 168 L 142 112",
+    phone: "M-64 112 C -84 170, -88 210, -82 252 M64 112 C 100 140, 130 150, 160 120",
+    page: "M-64 112 C -70 160, -50 180, -26 176 M64 112 C 70 160, 50 180, 26 176",
+    hips: "M-64 112 L -104 176 L -58 230 M64 112 L 104 176 L 58 230",
+  };
+  return (
+    <g transform={`translate(${x} ${y + (1 - pop) * 30}) rotate(${tilt} 0 396) scale(${k})`} opacity={Math.min(1, pop * 1.5)}>
+      <path d="M-30 252 L -34 388 L -62 396 M30 252 L 34 388 L 62 396" fill="none" stroke={C.ink} strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M-30 52 L 30 52 L 70 120 L 60 254 L -60 254 L -70 120 Z" fill={shirt} stroke={C.ink} strokeWidth={6} strokeLinejoin="round" />
+      <path d={arms[pose]} fill="none" stroke={C.ink} strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" />
+      {pose === "phone" && (
+        <g transform="translate(168 112) rotate(-10)">
+          <rect x={-26} y={-46} width={52} height={92} rx={10} fill={C_PAPER.stage} stroke={C.ink} strokeWidth={5} />
+          <rect x={-16} y={-30} width={32} height={8} rx={4} fill={C_PAPER.orange} />
+        </g>
+      )}
+      {pose === "page" && (
+        <g transform="rotate(-4 0 180)">
+          <rect x={-56} y={130} width={112} height={132} rx={4} fill="#ffffff" stroke={C.ink} strokeWidth={4} />
+          <path d="M-38 160 L 38 160 M-38 180 L 28 180 M-38 200 L 34 200 M-38 220 L 18 220" stroke={C.inkSoft} strokeWidth={3} strokeLinecap="round" />
+        </g>
+      )}
+      {hair === "long" && <path d="M-52 -6 C -64 -76, 64 -76, 52 -6 L 60 110 C 40 120, 30 90, 28 50 L -28 50 C -30 90, -40 120, -60 110 Z" fill={C.ink} />}
+      {hair === "bun" && <circle cx={22} cy={-58} r={22} fill={C.ink} />}
+      <circle cx={0} cy={0} r={50} fill={PAPER_FILL} stroke={C.ink} strokeWidth={5} />
+      {hair === "short" && <path d="M-48 -14 C -44 -62, 44 -68, 50 -16 C 30 -36, -16 -40, -48 -14 Z" fill={C.ink} />}
+      {hair === "bun" && <path d="M-50 -8 C -46 -60, 46 -60, 50 -8 C 30 -34, -30 -34, -50 -8 Z" fill={C.ink} />}
+      {hair === "long" && <path d="M-50 -8 C -40 -58, 40 -58, 50 -8 C 26 -30, -26 -30, -50 -8 Z" fill={C.ink} />}
+      {hair === "curly" && [[-38, -30], [-14, -46], [12, -48], [36, -32], [-46, -6], [46, -8]].map(([cx, cy], i) => <circle key={i} cx={cx} cy={cy} r={17} fill={C.ink} />)}
+      <circle cx={-16 + eyes} cy={2} r={5} fill={C.ink} />
+      <circle cx={16 + eyes} cy={2} r={5} fill={C.ink} />
+      {mouthOpen ? <ellipse cx={0} cy={24} rx={9} ry={11} fill={C.ink} />
+        : smug ? <path d="M-16 22 C -4 32, 10 30, 20 18" fill="none" stroke={C.ink} strokeWidth={4} strokeLinecap="round" />
+        : <path d="M-10 24 L 10 24" stroke={C.ink} strokeWidth={4} strokeLinecap="round" />}
+    </g>
+  );
+};
+/** A speech bubble in ink, tail pointing at (tx, ty). */
+const TBubble: React.FC<{ x: number; y: number; w: number; text: string; at: number; tx: number; ty: number; size?: number; hot?: boolean; h?: number }> = ({ x, y, w, text, at, tx, ty, size = 40, hot, h = 96 }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  if (f < at) return null;
+  const p = spring({ frame: f - at, fps, config: { damping: 10, mass: 0.5 } });
+  const wob = Math.sin((f + x) / 9) * 3;
+  return (
+    <g transform={`translate(${x} ${y + wob}) scale(${p})`}>
+      <path d={`M${-24} ${h / 2 - 6} L ${tx - x} ${ty - y} L ${24} ${h / 2 - 6} Z`} fill={hot ? C_PAPER.orange : "#ffffff"} stroke={C.ink} strokeWidth={5} strokeLinejoin="round" />
+      <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={h / 2} fill={hot ? C_PAPER.orange : "#ffffff"} stroke={C.ink} strokeWidth={5} />
+      <text x={0} y={size * 0.35} textAnchor="middle" fontFamily={F.serifI} fontStyle="italic" fontSize={size} fill={hot ? "#ffffff" : C_PAPER.ink}>{text}</text>
+    </g>
+  );
+};
+const T_FLOOR = 1470;
+const TypesScene: React.FC<{ s: Types }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const b = s.beat;
+  const hit = s.hitAt ?? ({ hook: 30, warmup: 20, unprepared: 40, speaker: 22, juliets: 40, sides: 20, milo: 14 } as Record<string, number>)[b];
+  // Milo at the left edge of every card, watching each type go by (not on the hook or his own card)
+  const watcher = b !== "hook" && b !== "milo";
+  const react = b === "juliets" ? Math.min(0.9, prog(f, 10, hit + 20)) : b === "warmup" ? 0.5 : b === "sides" ? 0.4 : 0.2;
+  const floor = <Ink d={`M40 ${T_FLOOR} C 360 ${T_FLOOR - 8}, 720 ${T_FLOOR + 8}, 1040 ${T_FLOOR}`} start={0} dur={12} w={8} />;
+  const wall = (
+    <>
+      {/* the hallway: a door with the sign, a strip of skirting */}
+      <Ink d="M820 700 L 820 1468 M1000 700 L 1000 1468 M820 700 L 1000 700" start={2} dur={14} w={6} color={C.inkSoft} />
+      <Ink d="M40 1380 L 1040 1380" start={2} dur={12} w={4} color={C.inkSoft} />
+    </>
+  );
+  const sway = Math.sin(f / 4) * 26;
+  let body: React.ReactNode = null;
+  if (b === "hook") {
+    const row: [number, string, "short" | "bun" | "curly" | "long", Pose][] = [[130, "#f2c9a0", "bun", "page"], [300, "#cfe3d4", "short", "up"], [470, "#f3d9e4", "long", "page"], [640, "#dfe7ee", "curly", "phone"], [800, "#efe2c6", "short", "shrug"]];
+    body = (
+      <>
+        <Ink d="M60 1240 L 1020 1240 M90 1240 L 90 1330 M990 1240 L 990 1330" start={0} dur={14} w={7} color={C.inkSoft} />
+        {row.map(([x, sh, h, p], i) => <TPerson key={i} x={x} y={930} k={0.8} shirt={sh} hair={h} pose={p} talk={i === 2} smug={i === 4} start={i * 3} sway={p === "up" ? sway : 0} />)}
+        <g transform="translate(540 700)">
+          <rect x={-150} y={-46} width={300} height={92} fill="#ffffff" stroke={C.ink} strokeWidth={6} transform="rotate(-2)" />
+          <text x={0} y={16} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={42} letterSpacing={6} fill={C_PAPER.orange} transform="rotate(-2)">AUDITIONS</text>
+        </g>
+      </>
+    );
+  } else if (b === "warmup") {
+    body = (
+      <>
+        {wall}
+        <TPerson x={560} y={940} k={1.25} shirt="#cfe3d4" hair="short" pose="up" talk sway={sway} tilt={Math.sin(f / 6) * 7} />
+        {[0, 1, 2].map((i) => <path key={i} d={`M${400 - i * 40} ${880 - i * 30} C ${380 - i * 40} ${820 - i * 30}, ${420 - i * 40} ${770 - i * 30}, ${450 - i * 40} ${750 - i * 30}`} fill="none" stroke={C.orange} strokeWidth={6} strokeLinecap="round" opacity={0.4 + 0.6 * Math.abs(Math.sin(f / 5 + i))} />)}
+        <TBubble x={700} y={700} w={420} text="MEE MAY MAH MOH" at={hit} tx={620} ty={860} size={40} />
+        <TBubble x={300} y={620} w={300} text="BRRRRRR" at={hit + 22} tx={470} ty={840} size={40} />
+      </>
+    );
+  } else if (b === "unprepared") {
+    const stamp = spring({ frame: f - hit, fps, config: { damping: 9, mass: 0.6 } });
+    body = (
+      <>
+        {wall}
+        <TPerson x={560} y={940} k={1.25} shirt="#f3d9e4" hair="long" pose="shrug" smug />
+        <TBubble x={600} y={700} w={560} text="I didn't prepare at all." at={30} tx={580} ty={860} size={42} />
+        {f >= hit && (
+          <g transform={`translate(560 1200) rotate(-12) scale(${0.3 + stamp * 0.7})`} opacity={Math.min(1, stamp * 1.4)}>
+            <rect x={-230} y={-70} width={460} height={140} rx={12} fill="none" stroke={C.orange} strokeWidth={12} />
+            <text x={0} y={30} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={84} letterSpacing={6} fill={C.orange}>NAILED IT</text>
+          </g>
+        )}
+        <Spark x={330} y={1020} k={0.35} at={hit + 4} />
+        <Spark x={800} y={1080} k={0.28} at={hit + 8} />
+      </>
+    );
+  } else if (b === "speaker") {
+    const rings = [0, 1, 2].map((i) => ((f + i * 8) % 24) / 24);
+    body = (
+      <>
+        {wall}
+        <TPerson x={500} y={940} k={1.25} shirt="#efe2c6" hair="curly" pose="phone" talk={f < hit} />
+        {f >= hit && rings.map((r, i) => <path key={i} d={`M${740 + r * 60} ${1010 - r * 50} a ${40 + r * 50} ${40 + r * 50} 0 0 1 0 ${80 + r * 100}`} fill="none" stroke={C.orange} strokeWidth={6} opacity={1 - r} />)}
+        <TBubble x={470} y={700} w={340} text="To be, or not..." at={2} tx={500} ty={860} size={40} />
+        <TBubble x={720} y={810} w={560} h={110} text="MUM: LOUDER, DARLING!" at={hit} tx={720} ty={1040} size={42} hot />
+      </>
+    );
+  } else if (b === "juliets") {
+    const xs = [270, 420, 570, 720, 870];
+    const at = (i: number) => (i === 0 ? 28 : hit + (i - 1) * 7);
+    body = (
+      <>
+        {xs.map((x, i) => (
+          <g key={i}>
+            <Sfx name="pop" at={at(i)} vol={0.5} />
+            <g transform="translate(0 300)"><Juliet x={x} start={at(i)} page="JULIET" bubble="Gallop apace" k={i} /></g>
+            {f >= at(i) && (
+              <g transform={`translate(${x + 40} 1260) scale(${spring({ frame: f - at(i), fps, config: { damping: 9 } })})`}>
+                <circle r={30} fill={i === 4 ? C_PAPER.orange : "#ffffff"} stroke={C.ink} strokeWidth={5} />
+                <text y={12} textAnchor="middle" fontFamily={F_PAPER.sans} fontWeight={600} fontSize={34} fill={i === 4 ? "#ffffff" : C.ink}>{i + 1}</text>
+              </g>
+            )}
+          </g>
+        ))}
+      </>
+    );
+  } else if (b === "sides") {
+    const look = Math.sin(f / 7);
+    body = (
+      <>
+        {wall}
+        <Ink d="M200 1250 L 900 1250 M230 1250 L 230 1340 M870 1250 L 870 1340" start={0} dur={12} w={7} color={C.inkSoft} />
+        <TPerson x={340} y={1010} k={0.8} shirt="#dfe7ee" hair="bun" pose="page" />
+        <TPerson x={740} y={1010} k={0.8} shirt="#f2c9a0" hair="short" pose="page" />
+        {/* the inspector leans over both of them, eyes going side to side */}
+        <TPerson x={540 + look * 60} y={840} k={1.05} shirt="#cfe3d4" hair="curly" pose="hips" tilt={look * 14} eyes={look * 9} />
+        <TBubble x={540} y={660} w={340} text="ooh, whose is that?" at={hit} tx={540 + look * 60} ty={790} size={34} />
+      </>
+    );
+  } else {
+    // Milo's own card: the one who found a piece nobody else brought
+    const o = spring({ frame: f - hit, fps, config: { damping: 13, mass: 0.7 } });
+    body = (
+      <>
+        <AbsoluteFill style={{ background: `radial-gradient(circle 420px at 540px 1060px, rgba(232,121,43,${0.38 * o}) 0%, rgba(232,121,43,0) 100%)` }} />
+        <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+          {floor}
+          {[[150, "#f3d9e4", "long"], [850, "#dfe7ee", "bun"]].map(([x, sh, h], i) => <TPerson key={i} x={x as number} y={1080} k={0.7} shirt={sh as string} hair={h as "long"} pose="page" eyes={i ? -8 : 8} />)}
+          <g transform="translate(540 960) scale(0.95)">
+            <MiloStanding x={0} y={0} start={0} />
+            <g opacity={o} transform={`translate(${-150} ${300 - o * 90}) rotate(-12)`}>
+              <rect x={-40} y={-72} width={80} height={144} rx={14} fill={C_PAPER.stage} stroke={C.ink} strokeWidth={6} />
+              <rect x={-24} y={-48} width={48} height={10} rx={5} fill={C_PAPER.orange} />
+              <path d="M-22 -20 L 22 -20 M-22 0 L 14 0" stroke="rgba(239,230,216,0.6)" strokeWidth={5} strokeLinecap="round" />
+            </g>
+            <Milo x={0} y={0} r={84} hope={o} tilt={-4 + Math.sin(f / 10) * 3} start={0} tote={[170, 360]} />
+          </g>
+          <Spark x={300} y={820} k={0.3} at={hit + 6} />
+          <Spark x={800} y={860} k={0.24} at={hit + 10} />
+        </svg>
+      </>
+    );
+    return (
+      <AbsoluteFill>
+        <Sfx name="cine/ping" at={hit + 2} vol={0.5} />
+        {body}
+        <AbsoluteFill style={{ alignItems: "center", padding: "286px 60px 0" }}>
+          <Rise at={2}><Headline text={s.line} accent={s.accent ?? ""} color={C.ink} size={96} /></Rise>
+        </AbsoluteFill>
+      </AbsoluteFill>
+    );
+  }
+  const sfx: Record<string, [string, number, number][]> = {
+    hook: [["pop", 4, 0.4], ["pop", 10, 0.4]],
+    warmup: [["boop_lo", hit, 0.5], ["boop_hi", hit + 22, 0.5]],
+    unprepared: [["pop", 30, 0.5], ["thud", hit, 0.7], ["cine/ping", hit + 5, 0.4]],
+    speaker: [["pop", 2, 0.4], ["cine/toing", hit, 0.55]],
+    juliets: [["thud", hit + 21, 0.5]],
+    sides: [["pop", hit, 0.5]],
+  };
+  return (
+    <AbsoluteFill>
+      {(sfx[b] ?? []).map(([n, a, v], i) => <Sfx key={i} name={n} at={a} vol={v} />)}
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {floor}
+        {body}
+        {watcher && (
+          <g transform="translate(120 1080) scale(0.5)">
+            <MiloStanding x={0} y={0} start={0} />
+            <Milo x={0} y={0} r={84} panic={react} tilt={6 + Math.sin(f / 9) * 4} start={0} />
+          </g>
+        )}
+      </svg>
+      {/* the headline: on the hook it is the cover, there from frame 0 */}
+      <AbsoluteFill style={{ alignItems: "center", padding: `${b === "hook" ? 270 : 286}px 60px 0` }}>
+        <Rise at={b === "hook" ? 0 : 2}><Headline text={s.line} accent={s.accent ?? ""} color={C.ink} size={b === "hook" ? 120 : 96} /></Rise>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
   const f = useCurrentFrame();
   const t = f / FPS;
@@ -5491,6 +5723,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "scroll" ? <ScrollScene s={sc} /> :
       sc.type === "piano" ? <PianoScene s={sc} /> :
       sc.type === "tier" ? <TierScene s={sc} /> :
+      sc.type === "types" ? <TypesScene s={sc} /> :
       <EndScene s={sc} />;
   };
 
