@@ -1,1 +1,1 @@
-Rendered social videos for Buffer to download. Files are replaced, not kept.
+Rendered Ghost Light films for the social scheduler (Buffer) to download. Kept 14 days.
