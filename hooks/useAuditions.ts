@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import api, { API_URL, getAuthToken } from "@/lib/api";
 import type { Audition, DeletedAudition, ParseResult } from "@/lib/auditions";
+import { fileKind, trackEvent } from "@/lib/events";
 
 const KEY = ["auditions"] as const;
 
@@ -56,13 +57,29 @@ export function useParseBreakdown() {
 
 /** The sides go to ScenePartner exactly as its own upload does; the id comes back at once. */
 export async function uploadSides(file: File): Promise<number | null> {
+  // The upload funnel, same events as /practice. Type and size only.
+  trackEvent("script_upload_started", {
+    file_type: fileKind(file.name),
+    size_kb: Math.round(file.size / 1024),
+    surface: "auditions",
+  });
   const form = new FormData();
   form.append("file", file);
   form.append("mode", "full");
   try {
     const script = await multipart<{ id: number }>("/api/scripts/upload-background", form);
     return script.id;
-  } catch {
+  } catch (e) {
+    const err = e as { status?: number; detail?: { error?: string } };
+    if (err?.detail?.error === "feature_not_available") {
+      trackEvent("script_upload_limit_hit", { stage: "background", surface: "auditions" });
+    } else {
+      trackEvent("script_upload_failed", {
+        stage: "background",
+        reason: err?.status ? `http_${err.status}` : "error",
+        surface: "auditions",
+      });
+    }
     return null;
   }
 }

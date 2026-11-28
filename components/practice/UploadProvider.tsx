@@ -47,6 +47,20 @@ import { useSubscription, useUsageLimits } from "@/hooks/useSubscription";
 import { useMySharing, useShareWithClass } from "@/hooks/useClassShelf";
 import { useAuth } from "@/lib/auth";
 import { useLocale, useT } from "@/lib/i18n";
+import { pageSurface, trackEvent } from "@/lib/events";
+
+/* The upload funnel (opened, started, failed, limit hit) for the daily brief.
+   Tracking only: nothing here changes what the upload does. Reasons are short
+   codes, never an error message, a file name or any of the text. */
+function trackUploadFailed(stage: string, reason: string, extra?: Record<string, number>) {
+  trackEvent("script_upload_failed", { stage, reason, surface: pageSurface(), ...extra });
+}
+function trackLimitHit(stage: string) {
+  trackEvent("script_upload_limit_hit", { stage, surface: pageSurface() });
+}
+function failReason(err: unknown, fallback: string): string {
+  return err instanceof Error && err.name === "AbortError" ? "cancelled" : fallback;
+}
 
 // Known backend progress prefixes and their friendly group labels.
 const STEP_GROUPS: { match: string; label: string }[] = [
@@ -256,9 +270,11 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     // Over the plan's upload limit? Show the upgrade modal up front instead of
     // taking a script only to reject the upload after the fact.
     if (!canUpload) {
+      trackLimitHit("picker");
       setShowUpgradeModal(true);
       return;
     }
+    trackEvent("script_upload_opened", { surface: pageSurface() });
     setShowBringIn(true);
   }, [isBusy, canUpload]);
 
@@ -344,10 +360,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
+      let failCode = "error";
 
       try {
         const token = await getToken();
         if (!token) {
+          trackUploadFailed("extract", "signed_out");
           toast.error(t("appPracticeUpload.signInAgain"));
           return;
         }
@@ -364,9 +382,11 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         });
 
         if (!response.ok) {
+          failCode = `http_${response.status}`;
           const error = await response.json();
           const detail = error.detail;
           if (detail?.error === "feature_not_available") {
+            trackLimitHit("extract");
             setShowUpgradeModal(true);
             return;
           }
@@ -423,6 +443,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                 }
                 return;
               } else if (event.type === "error") {
+                failCode = "extraction_error";
                 throw new Error(event.detail || t("appPracticeUpload.extractionFailed"));
               }
             } catch (parseErr) {
@@ -432,6 +453,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (err: unknown) {
+        trackUploadFailed("extract", failReason(err, failCode));
         const name = err instanceof Error ? err.name : "";
         if (name === "AbortError") {
           toast.info(t("appPracticeUpload.cancelled"));
@@ -466,10 +488,14 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       // the request returns, so cancelBackgroundRef below tells it to stop.
       const controller = new AbortController();
       abortControllerRef.current = controller;
+      let failCode = "error";
 
       try {
         const token = await getToken();
-        if (!token) throw new Error(t("appPracticeUpload.signInAgain"));
+        if (!token) {
+          failCode = "signed_out";
+          throw new Error(t("appPracticeUpload.signInAgain"));
+        }
 
         const form = new FormData();
         form.append("file", file);
@@ -482,8 +508,10 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           signal: controller.signal,
         });
         if (!res.ok) {
+          failCode = `http_${res.status}`;
           const err = await res.json().catch(() => ({}));
           if (err.detail?.error === "feature_not_available") {
+            trackLimitHit("background");
             setShowUpgradeModal(true);
             return;
           }
@@ -513,6 +541,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         toast.success(t("appPracticeUpload.readingInBackground"));
         router.push(`/practice?script=${script.id}`);
       } catch (e: unknown) {
+        trackUploadFailed("background", failReason(e, failCode));
         if (e instanceof Error && e.name === "AbortError") {
           toast.info(t("appPracticeUpload.cancelled"));
         } else {
@@ -596,6 +625,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           if (err.detail?.error === "feature_not_available") {
+            if (!stopped) trackLimitHit("many");
             stopped = true;
             setShowUpgradeModal(true);
           }
@@ -631,6 +661,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           );
         }
         if (failed.length > 0 && !stopped) {
+          trackUploadFailed("many", "some_files_failed", { n: failed.length, total: files.length });
           toast.error(
             t("appPracticeUpload.filesFailed", {
               n: failed.length,
@@ -654,6 +685,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
       // Validation
       if (scripts.some((s) => s.original_filename === file.name)) {
+        trackUploadFailed("validate", "duplicate_name");
         toast.error(
           t("appPracticeUpload.duplicateName"),
         );
@@ -661,6 +693,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       }
       const ext = file.name.split(".").pop()?.toLowerCase();
       if (!ext || !["pdf", "docx", "txt", "text"].includes(ext)) {
+        trackUploadFailed("validate", ext === "doc" ? "old_doc" : "bad_type");
         toast.error(
           ext === "doc"
             ? t("appPracticeUpload.oldDoc")
@@ -670,6 +703,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       }
       const MAX_SIZE_MB = 15;
       if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+        trackUploadFailed("validate", "too_large");
         toast.error(t("appPracticeUpload.tooLarge", { n: MAX_SIZE_MB }));
         return;
       }
@@ -681,9 +715,11 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       }
 
       setScanning(true);
+      let failCode = "error";
       try {
         const token = await getToken();
         if (!token) {
+          trackUploadFailed("scan", "signed_out");
           toast.error(t("appPracticeUpload.signInAgain"));
           setScanning(false);
           return;
@@ -698,8 +734,10 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         });
 
         if (!scanRes.ok) {
+          failCode = `http_${scanRes.status}`;
           const err = await scanRes.json();
           if (err.detail?.error === "feature_not_available") {
+            trackLimitHit("scan");
             setScanning(false);
             setShowUpgradeModal(true);
             return;
@@ -728,6 +766,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         }
         await startExtraction(file, "full");
       } catch (err: unknown) {
+        trackUploadFailed("scan", failReason(err, failCode));
         setScanning(false);
         const message = err instanceof Error ? err.message : t("appPracticeUpload.scanScriptFailed");
         console.error("Scan error:", err);
@@ -1138,7 +1177,10 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       <Dialog
         open={scanResult !== null}
         onOpenChange={(open) => {
-          if (!open) dismissModeChoice();
+          if (!open) {
+            trackUploadFailed("picker", "closed");
+            dismissModeChoice();
+          }
         }}
       >
         <DialogContent className="w-full max-w-2xl gap-0 overflow-hidden p-0">
@@ -1153,12 +1195,16 @@ export function UploadProvider({ children }: { children: ReactNode }) {
               fileName={pendingFile?.name ?? fileName}
               limit={sceneLimit}
               onConfirm={handleScenePick}
-              onCancel={dismissModeChoice}
+              onCancel={() => {
+                trackUploadFailed("picker", "closed");
+                dismissModeChoice();
+              }}
               onUpgrade={() => {
                 // Park the picker, don't destroy it. Whether they subscribe or
                 // change their mind, the map is what they come back to — and if
                 // they subscribe, they come back with a bigger allowance and the
                 // picker reopens already knowing it.
+                trackLimitHit("picker_scenes");
                 setUpgradeReturnsToPicker(true);
                 dismissModeChoice();
                 setShowUpgradeModal(true);

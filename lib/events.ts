@@ -46,6 +46,10 @@ export type UserEventName =
   | "email_clicked"
   | "visit_started"
   | "monologue_read_to_end"
+  | "script_upload_opened"
+  | "script_upload_started"
+  | "script_upload_failed"
+  | "script_upload_limit_hit"
   | "scene_run_abandoned"
   | "audition_parse_corrected"
   | "audition_prep_started"
@@ -79,6 +83,21 @@ export type UserEventName =
   | "studio_camera_shape_kept";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
+
+/** Where on the site something happened, for an event's `surface`: the first
+ *  path segment only ("practice", "auditions", "class"), never an id. */
+export function pageSurface(): string {
+  if (typeof window === "undefined") return "unknown";
+  return window.location.pathname.split("/")[1] || "home";
+}
+
+/** A file's type for an event, from a closed list so a name with no dot can
+ *  never leak into the properties. */
+export function fileKind(name: string): string {
+  const dot = name.lastIndexOf(".");
+  const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : "";
+  return ["pdf", "docx", "doc", "txt", "text", "rtf", "pages", "fdx"].includes(ext) ? ext : "other";
+}
 
 export function trackEvent(event_name: UserEventName, properties?: Props): void {
   if (typeof window === "undefined") return;

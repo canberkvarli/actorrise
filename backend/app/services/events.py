@@ -161,6 +161,14 @@ CLIENT_EVENT_NAMES = frozenset(
         # The end of a piece's text came into view on an open that was not
         # walled: an open is not a read (monologue_views counts opens).
         "monologue_read_to_end",  # {monologue_id, surface: page|panel, seconds}
+        # The script upload funnel. A finished upload is a user_scripts row, so
+        # these are the steps before it and where the rest drop off. surface is
+        # the first path segment (practice, class, auditions). Never a file name
+        # or any of the text.
+        "script_upload_opened",  # {surface}: the "bring in a script" dialog was shown
+        "script_upload_started",  # {file_type: pdf|docx|txt|paste|many|other, size_kb, surface, count?}
+        "script_upload_failed",  # {stage: validate|scan|picker|extract|background|many, reason: short code, surface, n?, total?}
+        "script_upload_limit_hit",  # {stage: picker|scan|extract|background|many|picker_scenes, surface}
         # The iOS app's price screens and purchases, mirrored from PostHog
         # (apps/mobile/src/lib/analytics.ts) so the brief can join them to accounts.
         "app_paywall_shown",  # {reads_used, from, trigger}

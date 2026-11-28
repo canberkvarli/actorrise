@@ -12,7 +12,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { fileKind, pageSurface, trackEvent } from "@/lib/events";
 import { useLocale, useT } from "@/lib/i18n";
+
+/** The upload funnel's second step. The extension and size only, never the
+ *  file's name or a word of its text. */
+function trackStarted(fileType: string, bytes: number, count?: number) {
+  trackEvent("script_upload_started", {
+    file_type: fileType,
+    size_kb: Math.round(bytes / 1024),
+    surface: pageSurface(),
+    ...(count ? { count } : {}),
+  });
+}
 
 /** The extensions the server reads. A .docx is turned into text at the door. */
 export const SCRIPT_ACCEPT = ".pdf,.docx,.txt";
@@ -53,6 +65,11 @@ export function BringInScriptDialog({ open, onOpenChange, onFile, onFiles }: Bri
     event.target.value = ""; // reset so the same file can be re-selected later
     if (files.length === 0) return;
     close();
+    if (files.length > 1 && onFiles) {
+      trackStarted("many", files.reduce((sum, f) => sum + f.size, 0), files.length);
+    } else {
+      trackStarted(fileKind(files[0].name), files[0].size);
+    }
     if (files.length > 1 && onFiles) onFiles(files);
     else onFile(files[0]);
   };
@@ -72,6 +89,7 @@ export function BringInScriptDialog({ open, onOpenChange, onFile, onFiles }: Bri
       type: "text/plain",
     });
     close();
+    trackStarted("paste", file.size);
     onFile(file);
   };
 

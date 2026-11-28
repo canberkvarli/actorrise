@@ -103,6 +103,11 @@ class RecordTests(unittest.TestCase):
                      "app_purchase_started", "app_purchase_completed", "app_purchase_cancelled"):
             self.assertIn(name, events.CLIENT_EVENT_NAMES, name)
 
+    def test_script_upload_funnel_events_are_client_events(self):
+        for name in ("script_upload_opened", "script_upload_started",
+                     "script_upload_failed", "script_upload_limit_hit"):
+            self.assertIn(name, events.CLIENT_EVENT_NAMES, name)
+
     def test_never_raises(self):
         with mock.patch.object(events, "SessionLocal", side_effect=RuntimeError("db down")):
             self.assertFalse(events.record_user_event(self.user.id, "signup_completed"))

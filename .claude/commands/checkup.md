@@ -160,6 +160,10 @@ for these, and put each one that holds under "Where free stops paying" in the su
   the one to feed; an email that brings nobody back is one to rewrite or retire.
 - **Opened vs read to the end** (from 2026-11-28): "monologue read to the end, web"
   against "monologue opened, web". An open is a page load the wall may cover.
+- **Uploads: opened, started, dropped, finished** (from 2026-11-28, web): the uploads table.
+  Payers rehearse their own scripts, so the upload is the step before paying. Name the
+  stage most people drop at (a picker closed, a scan that failed, the plan limit) and how
+  many of those who opened the dialog finished.
 - **Free regulars never walled.** Each is a person getting enough for free; say what they
   use. Never write to them about it: this is for the product, not a note.
 Then run `cd backend && uv run python scripts/posthog_report.py --days 30` for the app's

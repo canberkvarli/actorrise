@@ -6,7 +6,28 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from conversion_brief import return_days, usage_rows  # noqa: E402
+from conversion_brief import return_days, upload_funnel_rows, usage_rows  # noqa: E402
+
+
+class UploadFunnel(unittest.TestCase):
+    def test_people_in_funnel_order_real_only(self):
+        pairs = [
+            ("opened", 1), ("opened", 2), ("opened", 3), ("opened", 99),
+            ("started", 1), ("started", 2),
+            ("dropped: picker, closed", 2),
+            ("met the plan limit: picker", 3),
+            ("dropped: scan, http_500", 1),
+            ("finished (user_scripts)", 1),
+        ]
+        self.assertEqual(upload_funnel_rows(pairs, real={1, 2, 3}), [
+            ("opened", 3), ("started", 2),
+            ("dropped: picker, closed", 1), ("dropped: scan, http_500", 1),
+            ("met the plan limit: picker", 1),
+            ("finished (user_scripts)", 1),
+        ])
+
+    def test_nothing_yet(self):
+        self.assertEqual(upload_funnel_rows([], {1}), [])
 
 
 class UsageRows(unittest.TestCase):

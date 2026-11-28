@@ -553,6 +553,9 @@ USAGE_FEATURES = (
     ("guided first scene", "select user_id u, started_at t from rehearsal_runs where is_guided"),
     ("scene, own script", "select user_id u, started_at t from rehearsal_runs where not is_guided"),
     ("save", "select user_id u, created_at t from monologue_favorites"),
+    # From 2026-11-28 (tracking added that day): the steps before a finished upload.
+    ("script upload opened", "select user_id u, created_at t from user_events where event_name = 'script_upload_opened'"),
+    ("script upload started", "select user_id u, created_at t from user_events where event_name = 'script_upload_started'"),
     ("script upload", "select user_id u, created_at t from user_scripts where not coalesce(is_sample, false)"),
     ("audition added", "select user_id u, created_at t from auditions"),
     ("Cue conversation", "select user_id u, started_at t from cue_conversations"),
@@ -573,6 +576,43 @@ from user_events e join users u on u.id = e.user_id
 where e.event_name = 'visit_started' and e.created_at > now() - interval '30 days'
   and e.created_at::date > u.created_at::date and {real}
 group by 1 order by 2 desc limit 15"""
+# The upload funnel (script_upload_* events from 2026-11-28; a finished upload
+# is a user_scripts row). One (step, user) per row; people are counted in Python
+# so the real-people filter is the section's own.
+UPLOAD_FUNNEL = """
+select distinct step, user_id from (
+  select user_id, case event_name
+           when 'script_upload_opened' then 'opened'
+           when 'script_upload_started' then 'started'
+           when 'script_upload_limit_hit' then 'met the plan limit: ' || coalesce(properties->>'stage', '?')
+           else 'dropped: ' || coalesce(properties->>'stage', '?') || ', ' || coalesce(properties->>'reason', '?')
+         end as step
+  from user_events
+  where event_name in ('script_upload_opened', 'script_upload_started',
+                       'script_upload_failed', 'script_upload_limit_hit')
+    and created_at > {since}
+  union all
+  select user_id, 'finished (user_scripts)' from user_scripts
+  where not coalesce(is_sample, false) and created_at > {since}
+  union all
+  select user_id, 'finished, then reading failed' from user_scripts
+  where not coalesce(is_sample, false) and created_at > {since} and processing_status = 'failed'
+) x"""
+
+
+def upload_funnel_rows(pairs, real: set) -> list[tuple]:
+    """(step, people) in funnel order: opened, started, the drop-offs and limit
+    hits by most people, then finished. `pairs` is (step, user_id) rows."""
+    people: dict[str, set] = {}
+    for step, u in pairs:
+        if u in real:
+            people.setdefault(step, set()).add(u)
+    head = [s for s in ("opened", "started") if s in people]
+    tail = [s for s in ("finished (user_scripts)", "finished, then reading failed") if s in people]
+    middle = sorted((s for s in people if s not in head and s not in tail), key=lambda s: (-len(people[s]), s))
+    return [(s, len(people[s])) for s in head + middle + tail]
+
+
 HAS_PLUS = """select s.user_id from user_subscriptions s join pricing_tiers t on t.id = s.tier_id
   where s.status in ('active', 'trialing') and t.name <> 'free'
     and (s.trial_end is null or s.trial_end > now())
@@ -653,6 +693,11 @@ def usage_section(conn) -> str:
         table(("feature", "free people", "median uses", "top tenth uses", "a wall met them",
                "of those, tapped a price", "payers using it"),
               usage_rows(per, free, set(walls), asked, paying)),
+        f"### Uploads, last {USAGE_DAYS} days: opened, started, failed by stage, finished (people)\n",
+        "Free or not. The steps before a finished upload are tracked from 2026-11-28 (web only;"
+        " the app's are in PostHog as app_sides_added). A picker closed is \"dropped: picker, closed\".\n",
+        table(("step", "people"),
+              upload_funnel_rows(conn.execute(text(UPLOAD_FUNNEL.format(since=since))).fetchall(), real)),
         "### Which walls met free people (people)\n",
         table(("gate", "people"), sorted(gates.items(), key=lambda x: -x[1])),
         "### Free regulars: 3 or more days, and whether a wall ever met them\n",
