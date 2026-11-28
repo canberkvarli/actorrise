@@ -128,7 +128,7 @@ type Screens = {
   /** big spoken cue words under the sideways phone: what the actor says ("action", "cut") */
   cues?: { text: string; at: number; until?: number }[];
 };
-export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | Sofa | Scroll | Piano | Tier | Types | End;
+export type StoryScene = Screens | Night | Books | Thinking | Email | Phone | Notify | Stage | Lobby | Panel | Inbox | Bring | Runs | Kitchen | BookMode | Ten | Callback | Folder | Floor | Ready | Spiral | Rewind | Cafe | Train | Chair | Hall | Fumble | Gone | Thud | Dry | Scatter | Tally | Snap | Fresh | Notice | Tower | Buried | Cards | OneAm | Peeks | Pillow | SelfTape | Ophelias | Cutout | BusStop | LibDesk | Sofa | Scroll | Piano | Tier | Types | Says | End;
 /** Music bed made by scripts/make_music.py into public/music/<id>.wav (render.sh runs it). */
 export type StoryMusic = { style: "sunny" | "pizzicato" | "build" | "festive" | "bed" | "wood" | "beat" | "pulse"; drop?: string | number; volume?: number; seed?: string };
 /** Narration (scripts/voice.py fills audio + words); `at` is seconds from the start of the video. */
@@ -5608,6 +5608,111 @@ const TypesScene: React.FC<{ s: Types }> = ({ s }) => {
   );
 };
 
+
+// ---------- what the director says vs what they mean (2026-12-03, expectation vs reality split screen, bold look) ----------
+/** Split screen: left card "THEY SAY" with the director drawn talking, right card "THEY MEAN" in ink, empty until the
+ *  reveal lands with a hard punch and a thump. Milo reacts in the corner of the right card. Original drawings. */
+type Says = { type: "says"; beat: "hook" | "top" | "interesting" | "fun" | "behind" | "monday"; seconds: number; line: string; accent?: string; in?: StoryTransition;
+  /** what the director says (left card) */ say?: string; /** what they mean (right card, lands at hitAt) */ mean?: string;
+  /** scene frame of the reveal */ hitAt?: number; /** Milo's panic, 0 to 1 */ panic?: number };
+const SaysProp: React.FC<{ beat: Says["beat"]; at: number }> = ({ beat, at }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  if (f < at) return null;
+  const p = spring({ frame: f - at, fps, config: { damping: 10, mass: 0.6 } });
+  const W = "#f8f4ec", O = "#e8792b";
+  let g: React.ReactNode = null;
+  if (beat === "top") {
+    const hand = (f - at) * 9;
+    g = (<>
+      <circle r={74} fill="none" stroke={W} strokeWidth={8} />
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => <path key={i} d="M0 -62 L 0 -52" stroke={W} strokeWidth={5} transform={`rotate(${i * 30})`} />)}
+      <path d="M0 0 L 0 -46" stroke={O} strokeWidth={8} strokeLinecap="round" transform={`rotate(${-4 + Math.min(hand, 4)})`} />
+      <path d="M0 0 L 0 -60" stroke={W} strokeWidth={5} strokeLinecap="round" transform={`rotate(${hand})`} />
+      <text y={124} textAnchor="middle" fontFamily={F_PAPER.serif} fontWeight={600} fontSize={40} fill={O}>11:59 PM</text>
+    </>);
+  } else if (beat === "interesting") {
+    g = (<>
+      <path d="M-62 -62 L 62 62 M62 -62 L -62 62" stroke={O} strokeWidth={22} strokeLinecap="round" />
+    </>);
+  } else if (beat === "fun") {
+    g = (<>
+      <rect x={-62} y={-80} width={124} height={160} rx={6} fill={W} transform="rotate(-6)" />
+      <path d="M-40 -44 L 40 -44" stroke="rgba(21,16,12,0.25)" strokeWidth={4} transform="rotate(-6)" />
+      <text y={6} textAnchor="middle" fontFamily={F_PAPER.serifI} fontStyle="italic" fontSize={30} fill="#15100c" transform="rotate(-6)">notes:</text>
+      <text y={54} textAnchor="middle" fontFamily={F_PAPER.serif} fontSize={40} fill={O} transform="rotate(-6)">...</text>
+    </>);
+  } else if (beat === "behind") {
+    g = (<>
+      <path d="M-70 10 C -60 -40, 60 -40, 70 10 Z" fill="#d9a35b" />
+      <rect x={-72} y={8} width={144} height={18} fill="#7fb069" />
+      <rect x={-72} y={26} width={144} height={14} fill="#c4473a" />
+      <path d="M-72 40 L 72 40 L 66 60 L -66 60 Z" fill="#d9a35b" />
+      <path d="M-90 -70 L 90 90 M90 -70 L -90 90" stroke={O} strokeWidth={16} strokeLinecap="round" />
+    </>);
+  } else if (beat === "monday") {
+    g = (<>
+      <rect x={-80} y={-80} width={160} height={160} rx={10} fill={W} />
+      <rect x={-80} y={-80} width={160} height={46} rx={10} fill={O} />
+      <text y={-46} textAnchor="middle" fontFamily={F_PAPER.serif} fontWeight={600} fontSize={32} fill={W}>MON</text>
+      <text y={50} textAnchor="middle" fontFamily={F_PAPER.serif} fontWeight={600} fontSize={78} fill="#15100c">1</text>
+      <ellipse rx={104} ry={98} fill="none" stroke={O} strokeWidth={8} transform="rotate(-8)" />
+    </>);
+  }
+  return <g transform={`translate(720 1030) scale(${p})`}>{g}</g>;
+};
+const SaysScene: React.FC<{ s: Says }> = ({ s }) => {
+  const f = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const b = s.beat;
+  const hook = b === "hook";
+  const hit = s.hitAt ?? 36;
+  const landed = !hook && f >= hit;
+  const slam = landed ? spring({ frame: f - hit, fps, config: { damping: 9, mass: 0.5 } }) : 0;
+  const shake = landed && f - hit < 8 ? Math.sin((f - hit) * 2.4) * (8 - (f - hit)) * 1.6 : 0;
+  const flash = landed ? Math.max(0, 1 - (f - hit) / 5) : 0;
+  const top = hook ? 760 : 330, bottom = 1400;
+  const L = { x: 40, w: 440 }, R = { x: 500, w: 440 };
+  const panic = s.panic ?? 0.4;
+  const card = (x: number, w: number, bg: string, extra?: React.CSSProperties): React.CSSProperties => ({ position: "absolute", left: x, top, width: w, height: bottom - top, background: bg, border: "6px solid #15100c", borderRadius: 4, ...extra });
+  const tag = (t: string, color: string) => <div style={{ position: "absolute", top: 24, left: 0, right: 0, textAlign: "center", fontFamily: F.serif, fontWeight: 600, fontSize: 34, letterSpacing: 6, color }}>{t}</div>;
+  return (
+    <AbsoluteFill>
+      {!hook && <Sfx name="pop" at={3} vol={0.4} />}
+      {landed && <Sfx name="punch" at={hit} vol={0.8} />}
+      {hook && <><Sfx name="pop" at={6} vol={0.4} /><Sfx name="pop" at={12} vol={0.4} /></>}
+      {/* the two cards */}
+      <div style={card(L.x, L.w, "#f8f4ec", { transform: "rotate(-1deg)" })}>
+        {tag("THEY SAY", "#e8792b")}
+        {s.say && <Rise at={3} style={{ position: "absolute", top: 96, left: 26, right: 26 }}>
+          <div style={{ fontFamily: F.serifI, fontStyle: "italic", fontSize: 62, lineHeight: 1.1, color: "#15100c", textAlign: "center" }}>“{s.say}”</div>
+        </Rise>}
+      </div>
+      <div style={card(R.x, R.w, "#15100c", { transform: `rotate(1deg) translate(${shake}px, ${-shake * 0.5}px)` })}>
+        {tag("THEY MEAN", "#e8792b")}
+        {landed && s.mean && <div style={{ position: "absolute", top: 96, left: 26, right: 26, transform: `scale(${1.35 - 0.35 * slam})`, opacity: Math.min(1, slam * 1.6) }}>
+          <div style={{ fontFamily: F.serif, fontWeight: 600, fontSize: 64, lineHeight: 1.08, color: "#f8f4ec", textAlign: "center" }}>{s.mean}</div>
+        </div>}
+        {hook && <div style={{ position: "absolute", top: 120, left: 0, right: 0, textAlign: "center", fontFamily: F.serif, fontWeight: 600, fontSize: 120, color: "#e8792b" }}>?</div>}
+      </div>
+      <svg viewBox="0 0 1080 1920" style={{ position: "absolute", inset: 0 }}>
+        {/* the director, talking, on the left card */}
+        <TPerson x={260} y={hook ? 1000 : 940} k={hook ? 0.95 : 1.05} shirt="#dfe7ee" hair="curly" pose="page" talk={!hook && f < hit} smug={landed} sway={0} />
+        <SaysProp beat={b} at={hit + 2} />
+        {/* Milo in the corner of the right card, reacting */}
+        <g transform={`translate(${hook ? 720 : 840} ${hook ? 1110 : 1250}) scale(${hook ? 0.55 : 0.42})`}>
+          <MiloStanding x={0} y={0} start={0} />
+          <Milo x={0} y={0} r={84} panic={landed ? panic : hook ? 0.15 : 0.1} tilt={Math.sin(f / 9) * 4 + (landed ? -6 : 0)} start={0} />
+        </g>
+      </svg>
+      {flash > 0 && <AbsoluteFill style={{ background: `rgba(255,255,255,${flash * 0.5})` }} />}
+      {hook && <AbsoluteFill style={{ alignItems: "center", padding: "270px 60px 0" }}>
+        <Headline text={s.line} accent={s.accent ?? ""} color={C.ink} size={116} />
+      </AbsoluteFill>}
+    </AbsoluteFill>
+  );
+};
+
 const StoryCaptions: React.FC<{ lines: StoryVoice["lines"]; until: number }> = ({ lines, until }) => {
   const f = useCurrentFrame();
   const t = f / FPS;
@@ -5724,6 +5829,7 @@ export const StoryVideo: React.FC<{ spec: StorySpec }> = ({ spec }) => {
       sc.type === "piano" ? <PianoScene s={sc} /> :
       sc.type === "tier" ? <TierScene s={sc} /> :
       sc.type === "types" ? <TypesScene s={sc} /> :
+      sc.type === "says" ? <SaysScene s={sc} /> :
       <EndScene s={sc} />;
   };
 

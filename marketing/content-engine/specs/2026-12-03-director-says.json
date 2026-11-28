@@ -1,0 +1,606 @@
+{
+  "id": "2026-12-03-director-says",
+  "look": "bold",
+  "music": {
+    "style": "beat",
+    "volume": 0.24,
+    "drop": "top"
+  },
+  "voice": {
+    "lines": [
+      {
+        "text": "What the director says, versus what they mean.",
+        "say": "[amused] What the director says, versus what they mean.",
+        "sub": false,
+        "at": 0.407,
+        "words": [
+          {
+            "w": "What",
+            "s": 0.0,
+            "e": 0.021
+          },
+          {
+            "w": "the",
+            "s": 0.037,
+            "e": 0.085
+          },
+          {
+            "w": "director",
+            "s": 0.127,
+            "e": 0.469
+          },
+          {
+            "w": "says,",
+            "s": 0.533,
+            "e": 0.789
+          },
+          {
+            "w": "versus",
+            "s": 0.871,
+            "e": 1.365
+          },
+          {
+            "w": "what",
+            "s": 1.403,
+            "e": 1.557
+          },
+          {
+            "w": "they",
+            "s": 1.595,
+            "e": 1.749
+          },
+          {
+            "w": "mean.",
+            "s": 1.8,
+            "e": 2.069
+          }
+        ],
+        "dur": 2.189
+      },
+      {
+        "text": "Let's take it from the top. Meaning, nobody is leaving before midnight.",
+        "say": "[playful] Let's take it from the top. Meaning, nobody is leaving before midnight.",
+        "sub": false,
+        "at": 3.345,
+        "words": [
+          {
+            "w": "Let's",
+            "s": 0.0,
+            "e": 0.16
+          },
+          {
+            "w": "take",
+            "s": 0.186,
+            "e": 0.288
+          },
+          {
+            "w": "it",
+            "s": 0.31,
+            "e": 0.352
+          },
+          {
+            "w": "from",
+            "s": 0.39,
+            "e": 0.544
+          },
+          {
+            "w": "the",
+            "s": 0.56,
+            "e": 0.608
+          },
+          {
+            "w": "top.",
+            "s": 0.688,
+            "e": 1.312
+          },
+          {
+            "w": "Meaning,",
+            "s": 1.36,
+            "e": 1.92
+          },
+          {
+            "w": "nobody",
+            "s": 1.952,
+            "e": 2.144
+          },
+          {
+            "w": "is",
+            "s": 2.166,
+            "e": 2.208
+          },
+          {
+            "w": "leaving",
+            "s": 2.248,
+            "e": 2.528
+          },
+          {
+            "w": "before",
+            "s": 2.565,
+            "e": 2.784
+          },
+          {
+            "w": "midnight.",
+            "s": 2.826,
+            "e": 3.232
+          }
+        ],
+        "dur": 3.352
+      },
+      {
+        "text": "Interesting choice. Meaning, never do that again.",
+        "say": "Interesting choice. Meaning, never do that again.",
+        "sub": false,
+        "at": 6.651,
+        "words": [
+          {
+            "w": "Interesting",
+            "s": 0.0,
+            "e": 0.822
+          },
+          {
+            "w": "choice.",
+            "s": 0.886,
+            "e": 1.654
+          },
+          {
+            "w": "Meaning,",
+            "s": 1.702,
+            "e": 2.102
+          },
+          {
+            "w": "never",
+            "s": 2.166,
+            "e": 2.486
+          },
+          {
+            "w": "do",
+            "s": 2.528,
+            "e": 2.614
+          },
+          {
+            "w": "that",
+            "s": 2.639,
+            "e": 2.742
+          },
+          {
+            "w": "again.",
+            "s": 2.795,
+            "e": 3.19
+          }
+        ],
+        "dur": 3.31
+      },
+      {
+        "text": "Just have fun with it. Meaning, I have no notes, and it isn't working.",
+        "say": "Just have fun with it. Meaning, I have no notes, and it isn't working.",
+        "sub": false,
+        "at": 9.93,
+        "words": [
+          {
+            "w": "Just",
+            "s": 0.0,
+            "e": 0.358
+          },
+          {
+            "w": "have",
+            "s": 0.384,
+            "e": 0.486
+          },
+          {
+            "w": "fun",
+            "s": 0.534,
+            "e": 0.678
+          },
+          {
+            "w": "with",
+            "s": 0.704,
+            "e": 0.806
+          },
+          {
+            "w": "it.",
+            "s": 0.87,
+            "e": 1.414
+          },
+          {
+            "w": "Meaning,",
+            "s": 1.466,
+            "e": 1.894
+          },
+          {
+            "w": "I",
+            "s": 2.022,
+            "e": 2.15
+          },
+          {
+            "w": "have",
+            "s": 2.189,
+            "e": 2.342
+          },
+          {
+            "w": "no",
+            "s": 2.385,
+            "e": 2.47
+          },
+          {
+            "w": "notes,",
+            "s": 2.534,
+            "e": 2.982
+          },
+          {
+            "w": "and",
+            "s": 3.014,
+            "e": 3.11
+          },
+          {
+            "w": "it",
+            "s": 3.132,
+            "e": 3.174
+          },
+          {
+            "w": "isn't",
+            "s": 3.222,
+            "e": 3.59
+          },
+          {
+            "w": "working.",
+            "s": 3.618,
+            "e": 3.878
+          }
+        ],
+        "dur": 3.998
+      },
+      {
+        "text": "We're a little behind. Meaning, lunch is cancelled.",
+        "say": "We're a little behind. Meaning, lunch is cancelled.",
+        "sub": false,
+        "at": 14.043,
+        "words": [
+          {
+            "w": "We're",
+            "s": 0.0,
+            "e": 0.534
+          },
+          {
+            "w": "a",
+            "s": 0.566,
+            "e": 0.598
+          },
+          {
+            "w": "little",
+            "s": 0.625,
+            "e": 0.79
+          },
+          {
+            "w": "behind.",
+            "s": 0.854,
+            "e": 1.654
+          },
+          {
+            "w": "Meaning,",
+            "s": 1.706,
+            "e": 2.262
+          },
+          {
+            "w": "lunch",
+            "s": 2.294,
+            "e": 2.454
+          },
+          {
+            "w": "is",
+            "s": 2.496,
+            "e": 2.582
+          },
+          {
+            "w": "cancelled.",
+            "s": 2.626,
+            "e": 3.158
+          }
+        ],
+        "dur": 3.278
+      },
+      {
+        "text": "And off book by Monday? That one just means Monday.",
+        "say": "And off book by Monday? That one just means Monday.",
+        "sub": false,
+        "at": 17.377,
+        "words": [
+          {
+            "w": "And",
+            "s": 0.0,
+            "e": 0.528
+          },
+          {
+            "w": "off",
+            "s": 0.576,
+            "e": 0.72
+          },
+          {
+            "w": "book",
+            "s": 0.758,
+            "e": 0.912
+          },
+          {
+            "w": "by",
+            "s": 0.954,
+            "e": 1.04
+          },
+          {
+            "w": "Monday?",
+            "s": 1.095,
+            "e": 1.488
+          },
+          {
+            "w": "That",
+            "s": 1.642,
+            "e": 2.256
+          },
+          {
+            "w": "one",
+            "s": 2.288,
+            "e": 2.384
+          },
+          {
+            "w": "just",
+            "s": 2.422,
+            "e": 2.576
+          },
+          {
+            "w": "means",
+            "s": 2.65,
+            "e": 3.024
+          },
+          {
+            "w": "Monday.",
+            "s": 3.097,
+            "e": 3.6
+          }
+        ],
+        "dur": 3.72
+      },
+      {
+        "text": "So tonight Milo runs his lines in the app, with the lines hidden.",
+        "say": "[upbeat] So tonight Milo runs his lines in the app, with the lines hidden.",
+        "at": 21.79,
+        "words": [
+          {
+            "w": "So",
+            "s": 0.0,
+            "e": 0.022
+          },
+          {
+            "w": "tonight",
+            "s": 0.07,
+            "e": 0.406
+          },
+          {
+            "w": "Milo",
+            "s": 0.47,
+            "e": 0.726
+          },
+          {
+            "w": "runs",
+            "s": 0.777,
+            "e": 0.982
+          },
+          {
+            "w": "his",
+            "s": 1.014,
+            "e": 1.11
+          },
+          {
+            "w": "lines",
+            "s": 1.163,
+            "e": 1.43
+          },
+          {
+            "w": "in",
+            "s": 1.451,
+            "e": 1.494
+          },
+          {
+            "w": "the",
+            "s": 1.526,
+            "e": 1.622
+          },
+          {
+            "w": "app,",
+            "s": 1.67,
+            "e": 1.878
+          },
+          {
+            "w": "with",
+            "s": 1.916,
+            "e": 2.07
+          },
+          {
+            "w": "the",
+            "s": 2.102,
+            "e": 2.198
+          },
+          {
+            "w": "lines",
+            "s": 2.251,
+            "e": 2.518
+          },
+          {
+            "w": "hidden.",
+            "s": 2.554,
+            "e": 2.838
+          }
+        ],
+        "dur": 2.958
+      },
+      {
+        "text": "That's Ghost Light. Built by a working actor.",
+        "say": "[warmly] That's Ghost Light. Built by a working actor.",
+        "sub": false,
+        "at": 25.474,
+        "words": [
+          {
+            "w": "That's",
+            "s": 0.0,
+            "e": 0.211
+          },
+          {
+            "w": "Ghost",
+            "s": 0.238,
+            "e": 0.371
+          },
+          {
+            "w": "Light.",
+            "s": 0.414,
+            "e": 0.851
+          },
+          {
+            "w": "Built",
+            "s": 0.889,
+            "e": 1.075
+          },
+          {
+            "w": "by",
+            "s": 1.118,
+            "e": 1.203
+          },
+          {
+            "w": "a",
+            "s": 1.267,
+            "e": 1.331
+          },
+          {
+            "w": "working",
+            "s": 1.371,
+            "e": 1.651
+          },
+          {
+            "w": "actor.",
+            "s": 1.715,
+            "e": 2.099
+          }
+        ],
+        "dur": 2.219
+      }
+    ],
+    "take_at": 0.3,
+    "takes": [
+      {
+        "audio": "voice/2026-12-03-director-says/take00.mp3",
+        "at": 0.3,
+        "voice": "narrator"
+      }
+    ],
+    "speed": 1.25
+  },
+  "scenes": [
+    {
+      "type": "says",
+      "beat": "hook",
+      "seconds": 3.245,
+      "line": "What the director says vs what they mean.",
+      "accent": "what they mean."
+    },
+    {
+      "type": "says",
+      "beat": "top",
+      "seconds": 3.306,
+      "in": "punch",
+      "line": "",
+      "say": "Let's take it from the top.",
+      "mean": "Nobody leaves before midnight.",
+      "panic": 0.5,
+      "hitAt": 44
+    },
+    {
+      "type": "says",
+      "beat": "interesting",
+      "seconds": 3.279,
+      "in": "punch",
+      "line": "",
+      "say": "Interesting choice.",
+      "mean": "Never do that again.",
+      "panic": 0.6,
+      "hitAt": 54
+    },
+    {
+      "type": "says",
+      "beat": "fun",
+      "seconds": 4.113,
+      "in": "punch",
+      "line": "",
+      "say": "Just have fun with it.",
+      "mean": "I have no notes. It's not working.",
+      "panic": 0.7,
+      "hitAt": 47
+    },
+    {
+      "type": "says",
+      "beat": "behind",
+      "seconds": 3.334,
+      "in": "punch",
+      "line": "",
+      "say": "We're a little behind.",
+      "mean": "Lunch is cancelled.",
+      "panic": 0.8,
+      "hitAt": 54
+    },
+    {
+      "type": "says",
+      "beat": "monday",
+      "seconds": 4.413,
+      "in": "punch",
+      "line": "",
+      "say": "Off book by Monday.",
+      "mean": "Monday.",
+      "panic": 0.95,
+      "hitAt": 52
+    },
+    {
+      "type": "screens",
+      "seconds": 3.634,
+      "in": "whip",
+      "line": "",
+      "accent": "",
+      "shots": [
+        {
+          "src": "story/2026-12-03-director-says/run.png",
+          "at": 0,
+          "tap": {
+            "x": 0.29,
+            "y": 0.913,
+            "at": 44
+          }
+        },
+        {
+          "src": "story/2026-12-03-director-says/hidden.png",
+          "at": 54,
+          "fade": true
+        }
+      ]
+    }
+  ],
+  "source": {
+    "plan": "Callboard row 2026-12-03 (wildcard, backstage, expectation vs reality split screen), the earliest planned row dated today or later on 2026-11-28 Istanbul; look bold",
+    "project": "ppvqmbzuqvzpiuqaiqfy",
+    "sql": "select m.id, m.character_name, p.title, p.author, m.estimated_duration_seconds, m.overdone_score, p.copyright_status from monologues m join plays p on p.id=m.play_id where p.copyright_status='public_domain' and m.estimated_duration_seconds between 40 and 75 and m.overdone_score < 0.15 and p.author ilike any(array['%Shaw%','%Wilde%','%Sheridan%','%Goldsmith%','%Chekhov%']) order by m.overdone_score",
+    "checked": "2026-11-28: 38316 Joan (Saint Joan, Bernard Shaw, 1924, Shaw died 1950, public domain) 1:04, overdone 0; opened at /read/38316, Run it, hide the lines",
+    "app": "Ghost Light web preview built from actorrise main apps/mobile plus ghostlight-web/web-preview.patch (git am), demo account, 2026-11-28",
+    "flow": "flows/run-director-says.json",
+    "voice": "George, one take at stability 0.5, Scribe 0.99, sped up 1.25x with fit_take.py; AI voice, labelled on every platform",
+    "new_scene_types": "says (bold look): THEY SAY / THEY MEAN split cards, the director drawn talking with a script, the reveal punches in with a thump, a flash and a shake; props per beat (clock at 11:59 PM, a red X, a blank notes page, a crossed out sandwich, a circled MON 1); Milo reacting in the corner",
+    "motifs": "split-cards-say-mean,director-with-script,clock-1159,red-x,blank-notes,crossed-sandwich,monday-calendar,milo-corner-react",
+    "end": "specs/2026-12-03-director-says-end.json, joined with scripts/join.sh",
+    "feature": "run-lines (hide the lines)",
+    "buffer": {
+      "tiktok": "6b0a7b05d718580fbd6641d8",
+      "instagram": "6b0a7b06d7e53b12ebe56db0",
+      "youtube": "6b0a7b06cf6d91773007ff18",
+      "status": "draft",
+      "media": "https://raw.githubusercontent.com/canberkvarli/actorrise/social-media/2026-12-03-director-says.mp4"
+    }
+  },
+  "cover_ms": 300,
+  "captions": {
+    "tiktok": "What the director says vs what they mean. Tag your director, or send this to your whole cast. Ghost Light runs your lines with you, free on the App Store. The voice is AI. What's one your director always says? #actorslife #theatrekid #actortok #rehearsal #actors",
+    "youtube_title": "What the director says vs what they mean. #shorts",
+    "instagram": "see Buffer draft 6b0a7b06d7e53b12ebe56db0"
+  }
+}

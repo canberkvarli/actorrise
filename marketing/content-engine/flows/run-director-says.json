@@ -1,0 +1,19 @@
+{
+  "start": "/saves",
+  "lead": 600,
+  "note": "Ghost Light, Run it with the lines hidden: Joan (Saint Joan, Shaw, monologue 38316, public domain). 2026-12-03 director says vs means.",
+  "steps": [
+    {"wait": 2500},
+    {"goto": "/read/38316"},
+    {"wait": 3500},
+    {"shot": "open"},
+    {"click": "RUN IT"},
+    {"wait": 3500},
+    {"shot": "run"},
+    {"click": {"css": "[aria-label='hide the lines']"}},
+    {"wait": 1500},
+    {"shot": "hidden"},
+    {"wait": 400}
+  ],
+  "tail": 300
+}
