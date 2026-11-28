@@ -4,7 +4,7 @@
   uv run python scripts/conversion_brief.py                 # to stdout
   uv run python scripts/conversion_brief.py --save          # to <repo>/outputs/conversion/YYYY-MM-DD.md
 
-Five things, in the order they are acted on:
+The sections, in the order they are acted on (9 is what free people use, 30 days):
 
   1. The funnel, this week against last
   2. Who was stopped by a wall in the last two days and did not start a checkout
@@ -16,7 +16,7 @@ Five things, in the order they are acted on:
 Reads only: every query runs in a read-only transaction, and the script checks that
 it is before it asks for anything. The output carries names and
 email addresses, which is why outputs/conversion/ is in .gitignore. Nothing
-here sends anything. It is the input to /conversion-loop, which drafts.
+here sends anything. It is the input to /checkup, which drafts.
 """
 
 import argparse
@@ -535,6 +535,115 @@ def guided_section(conn) -> str:
     return as_table(breakdown(Session(bind=conn), since))
 
 
+# What free people use, 30 days (Canberk, 2026-11-28: "make sure we are taking that
+# into account, that's the most important thing"). The admin pages (searches,
+# sessions, auditions, Cue) one row per feature: how many free people used it,
+# how much, and whether a wall ever met them. A feature used a lot by people no
+# wall reaches is free value standing between them and paying; a wall that meets
+# many and turns none is in the wrong place. "Free" is who has no Plus today
+# (a comp, a taste or a trial counts as Plus). A web open is a monologue_views
+# row: the detail page opened, which the read wall may then cover. The app's own
+# walls go to PostHog, not here: scripts/posthog_report.py.
+USAGE_DAYS = 30
+USAGE_FEATURES = (
+    ("search", "select user_id u, created_at t from search_logs where user_id is not null"),
+    ("monologue opened, web", "select user_id u, created_at t from monologue_views where user_id is not null and client = 'web'"),
+    ("monologue opened, app", "select user_id u, created_at t from monologue_views where user_id is not null and client = 'ghostlight'"),
+    ("monologue rehearsal", "select user_id u, created_at t from user_events where event_name = 'monologue_work_started'"),
+    ("guided first scene", "select user_id u, started_at t from rehearsal_runs where is_guided"),
+    ("scene, own script", "select user_id u, started_at t from rehearsal_runs where not is_guided"),
+    ("save", "select user_id u, created_at t from monologue_favorites"),
+    ("script upload", "select user_id u, created_at t from user_scripts where not coalesce(is_sample, false)"),
+    ("audition added", "select user_id u, created_at t from auditions"),
+    ("Cue conversation", "select user_id u, started_at t from cue_conversations"),
+    ("self-tape", "select user_id u, created_at t from user_tapes"),
+)
+HAS_PLUS = """select s.user_id from user_subscriptions s join pricing_tiers t on t.id = s.tier_id
+  where s.status in ('active', 'trialing') and t.name <> 'free'
+    and (s.trial_end is null or s.trial_end > now())
+    and (s.current_period_end is null or s.current_period_end > now())"""
+PAYING = """select user_id from user_subscriptions
+  where (stripe_subscription_id is not null and status in ('active', 'past_due'))
+     or (source = 'revenuecat' and status = 'active')"""
+
+
+def _pct(sorted_vals: list[int], p: float) -> int:
+    return sorted_vals[min(len(sorted_vals) - 1, int(len(sorted_vals) * p))] if sorted_vals else 0
+
+
+def usage_rows(per: dict, free: set, walled: set, asked: set, paying: set) -> list[tuple]:
+    """One row per feature: (feature, free people, median uses, top tenth uses,
+    free people a wall met, of those who tapped a price, paying people using it).
+    `per` is {feature: {user_id: uses}} over real people only."""
+    rows = []
+    for name, users in per.items():
+        vals = sorted(n for u, n in users.items() if u in free)
+        met = [u for u in users if u in free and u in walled]
+        rows.append((
+            name, len(vals), _pct(vals, 0.5), _pct(vals, 0.9), len(met),
+            sum(1 for u in met if u in asked), sum(1 for u in users if u in paying),
+        ))
+    return rows
+
+
+def return_days(days: dict, free: set) -> str:
+    """'came back' line: free people by how many different days they did anything."""
+    one = sum(1 for u in free if days.get(u) == 1)
+    two = sum(1 for u in free if days.get(u) == 2)
+    more = sum(1 for u in free if days.get(u, 0) >= 3)
+    return f"{one} on 1 day only, {two} on 2 days, {more} on 3 or more"
+
+
+def usage_section(conn) -> str:
+    from sqlalchemy import text
+
+    def ids(sql):
+        return {r[0] for r in conn.execute(text(sql))}
+
+    since = f"now() - interval '{USAGE_DAYS} days'"
+    real = ids(f"select u.id from users u where {REAL} and u.email not like '%@actorrise.com' and u.email not like 'test%'")
+    plus, paying = ids(HAS_PLUS), ids(PAYING)
+    per, days = {}, {}
+    for name, sql in USAGE_FEATURES:
+        rows = conn.execute(text(f"select u, count(*) from ({sql}) x where t > {since} group by u")).fetchall()
+        per[name] = {u: n for u, n in rows if u in real}
+    every = " union all ".join(f"select u, t from ({sql}) x{i}" for i, (_, sql) in enumerate(USAGE_FEATURES))
+    for u, n in conn.execute(text(f"select u, count(distinct t::date) from ({every}) z where t > {since} group by u")):
+        if u in real:
+            days[u] = n
+    active = set(days)
+    free = active - plus
+    walls = {}
+    for u, gate in conn.execute(text(
+            f"select user_id, coalesce(properties->>'gate', properties->>'feature') from user_events "
+            f"where event_name in ('paywall_hit', 'upgrade_modal_viewed') and created_at > {since}")):
+        if u in free:
+            walls.setdefault(u, set()).add(gate)
+    asked = ids(f"select distinct user_id from user_events where event_name in "
+                f"('paywall_cta_clicked', 'checkout_started') and created_at > {since}")
+    gates = {}
+    for gs in walls.values():
+        for g in gs:
+            gates[g] = gates.get(g, 0) + 1
+    regulars = sorted((u for u in free if days[u] >= 3), key=lambda u: -days[u])
+    reg_rows = [(u, days[u], "yes" if u in walls else "no",
+                 ", ".join(f"{k} {per[k][u]}" for k in per if u in per[k])) for u in regulars[:15]]
+    return "\n".join([
+        f"## 9. What free people use, last {USAGE_DAYS} days\n",
+        f"{len(active)} real people did something: {len(free)} free today, {len(active & plus)} on Plus "
+        f"(comp, taste or trial included), {len(active & paying)} paying.",
+        f"Free people by the days they came: {return_days(days, free)}.\n",
+        table(("feature", "free people", "median uses", "top tenth uses", "a wall met them",
+               "of those, tapped a price", "payers using it"),
+              usage_rows(per, free, set(walls), asked, paying)),
+        "### Which walls met free people (people)\n",
+        table(("gate", "people"), sorted(gates.items(), key=lambda x: -x[1])),
+        "### Free regulars: 3 or more days, and whether a wall ever met them\n",
+        table(("user id", "days", "walled", "what they used"), reg_rows),
+        "The app's own price screens are in PostHog: `scripts/posthog_report.py --days 30`.",
+    ])
+
+
 def build(conn) -> str:
     from sqlalchemy import bindparam, text
 
@@ -679,6 +788,7 @@ def build(conn) -> str:
         table(("title", "searches", "people", "last", "note"), absent),
         ("Logged as missing but carried today (the search learned them since, or a tab hid them): "
          + "; ".join(found_since) + ".") if found_since else "",
+        usage_section(conn),
     ]
     return "\n".join(parts)
 

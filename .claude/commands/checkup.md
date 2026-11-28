@@ -142,6 +142,27 @@ tend to the app and improve in any way we can"). Read it for what to fix, not wh
 Only what is new and real goes in the summary, under "The app". The feedback quotes go in
 `docs/metrics/user-voice.md` like a reply would (no name, no address).
 
+Section 9 is what free people use, 30 days, and it is the heart of the checkup (Canberk,
+2026-11-28: "make sure we are taking that into account, that's the most important thing").
+It is what the admin pages show (searches, sessions, auditions, Cue), turned into one
+question: where does free value stop people paying, and where does a wall miss? Read it
+for these, and put each one that holds under "Where free stops paying" in the summary:
+- **A feature used a lot by free people that no wall meets** (high "top tenth uses", low
+  "a wall met them"). That is value given away; name it and the limit that would meet it.
+- **A wall that meets many and turns none** ("a wall met them" high, "tapped a price"
+  zero). The wall is in the wrong place or says the wrong thing.
+- **What payers use that free people never reach** ("payers using it" against "free
+  people"). That is the paid thing; the free path should lead to it.
+- **Return days.** Free people seen on 1 day only. A wall cannot meet someone who never
+  comes back, so when this is most of them, say it plainly: the leak is day two.
+- **Free regulars never walled.** Each is a person getting enough for free; say what they
+  use. Never write to them about it: this is for the product, not a note.
+Then run `cd backend && uv run python scripts/posthog_report.py --days 30` for the app's
+own price screens (the app sends them to PostHog only), and read section 9's
+"monologue opened, app" row against it. Compare against yesterday: say when a number
+moved, and never change a limit or a wall yourself. That is Canberk's call, one change at
+a time.
+
 ## 2. The inbox
 
 Load the Gmail tools and run two searches. A reply that came in before the window is still
@@ -336,10 +357,13 @@ when something did: a payment, a trial started or lapsed, a checkout, an app pur
 expiration, a first real audition, a zero-signup day, a bounce wave, a sync that failed.
 
 ```
-CONVERSION LOOP, <date>
+CHECKUP, <date>
 
-Money: $<total> a month (web $<stripe>, app $<app>), <n> payers; last 30 days collected $<cash>
+Money to your bank: about $<n> a month (Stripe paid out $<month so far>, $<pending> on its way; Apple proceeds about $<n> a month); gross $<total> in brackets, never first
   <one line only if it changed since yesterday: who paid, who stopped>
+
+Where free stops paying: <from section 9 and PostHog, the one or two findings that hold, with the numbers>
+
 
 Outreach drafted: <n>, one line each: who (organization or person who wrote first), what it offers
 
