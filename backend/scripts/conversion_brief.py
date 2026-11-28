@@ -557,7 +557,22 @@ USAGE_FEATURES = (
     ("audition added", "select user_id u, created_at t from auditions"),
     ("Cue conversation", "select user_id u, started_at t from cue_conversations"),
     ("self-tape", "select user_id u, created_at t from user_tapes"),
+    # From 2026-11-28 (tracking added that day): an open is not a read.
+    ("monologue read to the end, web", "select user_id u, created_at t from user_events where event_name = 'monologue_read_to_end'"),
+    ("app price screen", "select user_id u, created_at t from user_events where event_name = 'app_paywall_shown'"),
 )
+# Where a return visit came from (visit_started, from 2026-11-28). A day after
+# the person's signup day only, so a first visit is never "brought back".
+CAME_BACK = """
+select case when e.properties->>'touch' is not null then 'email: ' || (e.properties->>'touch')
+            when e.properties->>'utm_source' is not null then 'utm: ' || (e.properties->>'utm_source')
+            when e.properties->>'referrer' is not null then e.properties->>'referrer'
+            else 'direct (typed, bookmark, app link)' end as source,
+       count(*), count(distinct e.user_id)
+from user_events e join users u on u.id = e.user_id
+where e.event_name = 'visit_started' and e.created_at > now() - interval '30 days'
+  and e.created_at::date > u.created_at::date and {real}
+group by 1 order by 2 desc limit 15"""
 HAS_PLUS = """select s.user_id from user_subscriptions s join pricing_tiers t on t.id = s.tier_id
   where s.status in ('active', 'trialing') and t.name <> 'free'
     and (s.trial_end is null or s.trial_end > now())
@@ -616,11 +631,13 @@ def usage_section(conn) -> str:
     walls = {}
     for u, gate in conn.execute(text(
             f"select user_id, coalesce(properties->>'gate', properties->>'feature') from user_events "
-            f"where event_name in ('paywall_hit', 'upgrade_modal_viewed') and created_at > {since}")):
+            f"where event_name in ('paywall_hit', 'upgrade_modal_viewed') and created_at > {since} "
+            f"union all select user_id, 'app: ' || coalesce(properties->>'trigger', properties->>'from', '?') "
+            f"from user_events where event_name = 'app_paywall_shown' and created_at > {since}")):
         if u in free:
             walls.setdefault(u, set()).add(gate)
     asked = ids(f"select distinct user_id from user_events where event_name in "
-                f"('paywall_cta_clicked', 'checkout_started') and created_at > {since}")
+                f"('paywall_cta_clicked', 'checkout_started', 'app_purchase_started') and created_at > {since}")
     gates = {}
     for gs in walls.values():
         for g in gs:
@@ -640,7 +657,12 @@ def usage_section(conn) -> str:
         table(("gate", "people"), sorted(gates.items(), key=lambda x: -x[1])),
         "### Free regulars: 3 or more days, and whether a wall ever met them\n",
         table(("user id", "days", "walled", "what they used"), reg_rows),
-        "The app's own price screens are in PostHog: `scripts/posthog_report.py --days 30`.",
+        "### What brought people back: visits after their signup day (people)\n",
+        "Free or not. From 2026-11-28, when visit_started began; an email's touch is its ?e=.\n",
+        table(("came from", "visits", "people"),
+              [tuple(r) for r in conn.execute(text(CAME_BACK.format(real=REAL)))]),
+        "The app's price screens are counted here from 2026-11-28 on (app_paywall_shown, on builds"
+        " that send it); before that, and for anonymous readers, PostHog: `scripts/posthog_report.py --days 30`.",
     ])
 
 

@@ -6,6 +6,7 @@ import { MonologueTextRenderer } from "@/components/monologue/MonologueTextRende
 import { GhostLightSketch } from "@/components/brand/sketches";
 import { isBibliographicText, stageDirectionPercentage } from "@/lib/monologueText";
 import { ReadGate } from "@/components/monologue/v2/ReadGate";
+import { ReadToEnd } from "@/components/monologue/ReadToEnd";
 import { ReadWallModal } from "@/components/monologue/ReadWallModal";
 import { useT, type MessageKey } from "@/lib/i18n";
 
@@ -171,6 +172,7 @@ export function ReadView({
               <MonologueText text={monologue.text} />
             ))}
         </div>
+        {!monologue.paywalled && <ReadToEnd monologueId={monologue.id} surface="page" />}
 
         {monologue.paywalled && (
           <>

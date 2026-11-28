@@ -14,6 +14,7 @@ import { PlayCover, clothFor } from "@/components/monologue/PlayCover";
 import { PieceWhisper } from "@/components/community/Whisper";
 import { usePieceActivity } from "@/hooks/useCallboardPulse";
 import { useT } from "@/lib/i18n";
+import { ReadToEnd } from "@/components/monologue/ReadToEnd";
 
 export interface MonologueDetailContentProps {
   monologue: Monologue;
@@ -495,6 +496,7 @@ export function MonologueBody({
             <MonologueText text={monologue.text} />
           ))}
       </div>
+      {!monologue.paywalled && <ReadToEnd monologueId={monologue.id} surface="panel" />}
 
       {/* End mark. A piece should finish somewhere, not just stop. */}
       {measured && (

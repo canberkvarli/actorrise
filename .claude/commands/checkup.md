@@ -155,6 +155,11 @@ for these, and put each one that holds under "Where free stops paying" in the su
   people"). That is the paid thing; the free path should lead to it.
 - **Return days.** Free people seen on 1 day only. A wall cannot meet someone who never
   comes back, so when this is most of them, say it plainly: the leak is day two.
+- **What brought people back** (visit_started, from 2026-11-28): which email, site or
+  direct visit brings a person in on a later day. The source that brings people back is
+  the one to feed; an email that brings nobody back is one to rewrite or retire.
+- **Opened vs read to the end** (from 2026-11-28): "monologue read to the end, web"
+  against "monologue opened, web". An open is a page load the wall may cover.
 - **Free regulars never walled.** Each is a person getting enough for free; say what they
   use. Never write to them about it: this is for the product, not a note.
 Then run `cd backend && uv run python scripts/posthog_report.py --days 30` for the app's

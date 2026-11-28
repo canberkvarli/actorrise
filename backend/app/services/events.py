@@ -154,6 +154,19 @@ CLIENT_EVENT_NAMES = frozenset(
         "paywall_dismissed",  # {gate, kind, surface, tier_current}
         "paywall_cta_clicked",  # {gate, kind, variant, surface, tier_current}
         "email_clicked",  # {touch}
+        # What brought a person in today (Canberk, 2026-11-28: the leak is day
+        # two, 446 of 516 free people came on one day only). Once per person per
+        # UTC day (api/events.py drops the rest). touch is an email's ?e=.
+        "visit_started",  # {touch, utm_source, utm_medium, utm_campaign, referrer, landing}
+        # The end of a piece's text came into view on an open that was not
+        # walled: an open is not a read (monologue_views counts opens).
+        "monologue_read_to_end",  # {monologue_id, surface: page|panel, seconds}
+        # The iOS app's price screens and purchases, mirrored from PostHog
+        # (apps/mobile/src/lib/analytics.ts) so the brief can join them to accounts.
+        "app_paywall_shown",  # {reads_used, from, trigger}
+        "app_purchase_started",  # {plan, trial, from, trigger}
+        "app_purchase_completed",  # {plan, trial, from, trigger}
+        "app_purchase_cancelled",  # {plan, trial, from, trigger}
         # Why a scene run died, next to rehearsal_sessions.failure_reason, which
         # is a closed word list. 2026-09-27: three new actors left the guided
         # scene inside 3 to 16 seconds and "never_began" was all we had.
@@ -330,4 +343,31 @@ def record_user_event(
         logger.debug(
             "user_event dropped: %s %s", event_name, json.dumps(properties, default=str)[:300]
         )
+        return False
+
+
+def visit_recorded_today(user_id: int) -> bool:
+    """Whether this person already has a visit_started today (UTC). One a day is
+    the whole point of the event; the browser keeps its own day too, this is
+    for a second browser or a cleared storage. Fails open: on any error it says
+    no, and the worst case is a second row that day."""
+    try:
+        from datetime import datetime, timezone
+
+        start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        db = SessionLocal()
+        try:
+            return (
+                db.query(UserEvent.id)
+                .filter(
+                    UserEvent.user_id == user_id,
+                    UserEvent.event_name == "visit_started",
+                    UserEvent.created_at >= start,
+                )
+                .first()
+                is not None
+            )
+        finally:
+            db.close()
+    except Exception:
         return False

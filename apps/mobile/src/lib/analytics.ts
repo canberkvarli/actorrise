@@ -254,6 +254,42 @@ export function track<E extends Event>(name: E['name'], props: E['props']): void
   } catch {
     /* ignore */
   }
+  if (MIRRORED.has(name)) mirrorToServer(name, props as Record<string, unknown>);
+}
+
+/**
+ * The money events, also written to the server's user_events as `app_<name>`
+ * (Canberk, 2026-11-28). PostHog cannot be joined to an account, so the daily
+ * brief could not say which app readers met a price. Only these four, only
+ * their small props, and never `message` (a store error string). Fire and
+ * forget: the client is loaded lazily so this file stays importable in tests.
+ */
+const MIRRORED = new Set<string>(['paywall_shown', 'purchase_started', 'purchase_completed', 'purchase_cancelled']);
+
+export function mirroredProps(props: Record<string, unknown>): Record<string, string | number | boolean | null> {
+  const out: Record<string, string | number | boolean | null> = {};
+  for (const k of ['reads_used', 'from', 'trigger', 'plan', 'trial']) {
+    const v = props[k];
+    if (v === null || typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') out[k] = v;
+  }
+  return out;
+}
+
+function mirrorToServer(name: string, props: Record<string, unknown>): void {
+  void (async () => {
+    try {
+      const { API_URL, authHeaders } = await import('../api/client');
+      const headers = await authHeaders();
+      if (!headers.Authorization) return;
+      await fetch(`${API_URL}/api/events`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_name: `app_${name}`, properties: mirroredProps(props) }),
+      });
+    } catch {
+      /* analytics must never break a purchase */
+    }
+  })();
 }
 
 /** Flush before the app is backgrounded so a session is not lost on a swipe-up. */

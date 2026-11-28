@@ -17,7 +17,7 @@ from typing import Any
 
 from app.api.auth import get_current_user
 from app.models.user import User
-from app.services.events import CLIENT_EVENT_NAMES, record_user_event
+from app.services.events import CLIENT_EVENT_NAMES, record_user_event, visit_recorded_today
 from app.services.rehearsal_client import client_browser, client_platform
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
@@ -56,6 +56,8 @@ def post_event(
     current_user: User = Depends(get_current_user),
 ):
     if body.event_name in CLIENT_EVENT_NAMES:
+        if body.event_name == "visit_started" and visit_recorded_today(int(current_user.id)):
+            return Response(status_code=204)
         record_user_event(
             int(current_user.id),
             body.event_name,

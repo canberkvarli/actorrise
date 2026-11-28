@@ -85,6 +85,24 @@ class RecordTests(unittest.TestCase):
         self.assertNotIn("signup_completed", events.CLIENT_EVENT_NAMES)
         self.assertNotIn("first_search_submitted", events.CLIENT_EVENT_NAMES)
 
+    def test_visit_once_a_day(self):
+        self.assertFalse(events.visit_recorded_today(self.user.id))
+        events.record_user_event(self.user.id, "visit_started", {"touch": "day3"})
+        self.assertTrue(events.visit_recorded_today(self.user.id))
+
+    def test_visit_from_yesterday_does_not_count(self):
+        from datetime import datetime, timedelta, timezone
+
+        self.db.add(UserEvent(user_id=self.user.id, event_name="visit_started", properties={},
+                              created_at=datetime.now(timezone.utc) - timedelta(days=1, hours=1)))
+        self.db.commit()
+        self.assertFalse(events.visit_recorded_today(self.user.id))
+
+    def test_tracking_events_are_client_events(self):
+        for name in ("visit_started", "monologue_read_to_end", "app_paywall_shown",
+                     "app_purchase_started", "app_purchase_completed", "app_purchase_cancelled"):
+            self.assertIn(name, events.CLIENT_EVENT_NAMES, name)
+
     def test_never_raises(self):
         with mock.patch.object(events, "SessionLocal", side_effect=RuntimeError("db down")):
             self.assertFalse(events.record_user_event(self.user.id, "signup_completed"))

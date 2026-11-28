@@ -44,6 +44,8 @@ export type UserEventName =
   | "paywall_dismissed"
   | "paywall_cta_clicked"
   | "email_clicked"
+  | "visit_started"
+  | "monologue_read_to_end"
   | "scene_run_abandoned"
   | "audition_parse_corrected"
   | "audition_prep_started"

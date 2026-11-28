@@ -67,6 +67,7 @@ import { HouseLightsRow, HouseLightsSwitch } from "@/components/layout/HouseLigh
 import { SaveAsk } from "@/components/billing/SaveAsk";
 import { SavesWall } from "@/components/billing/SavesWall";
 import { EmailClickBeacon } from "@/components/analytics/EmailClickBeacon";
+import { VisitBeacon } from "@/components/analytics/VisitBeacon";
 import { ClassLinkRedeemer } from "@/components/billing/ClassLinkRedeemer";
 import { Cue } from "@/components/cue/Cue";
 import { CardNeededBanner } from "@/components/billing/CardNeededBanner";
@@ -886,6 +887,7 @@ export default function PlatformLayout({
       {/* useSearchParams: needs its own boundary or the whole layout leaves
           the static shell. */}
       <Suspense fallback={null}>
+        <VisitBeacon />
         <EmailClickBeacon />
       </Suspense>
       {contactOpen && <ContactModal open={contactOpen} onOpenChange={setContactOpen} />}
